@@ -6,6 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/speakeasy-api/sdk-generation v0.0.0-20220929154455-cc3fab82b11e
+	github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20220929152846-ac0c62045257
 	github.com/spf13/cobra v1.5.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
@@ -28,7 +29,6 @@ require (
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20220929152846-ac0c62045257 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.0.0 // indirect

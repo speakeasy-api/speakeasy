@@ -50,12 +50,8 @@ github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/f
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 h1:OkMGxebDjyw0ULyrTYWeN0UNCCkmCWfjPnIA2W6oviI=
 github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06/go.mod h1:+ePHsJ1keEjQtpvf9HHw0f4ZeJ0TLRsxhunSI2hYJSs=
-github.com/speakeasy-api/sdk-generation v0.0.0-20220928144638-506534e5e7f2 h1:2l9J7Pg/2dqclKvfS9t8vgnyphi+5pAnCQly/7vmLmE=
-github.com/speakeasy-api/sdk-generation v0.0.0-20220928144638-506534e5e7f2/go.mod h1:UxOJHvYOHjlAiqm7GaVtdPSOCzWcZnSosWBe9PJUCGs=
-github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.3 h1:l8fhoMISZcmzwxlgp6k+y3akCQNbl8eToE82t49Cpfs=
-github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.3/go.mod h1:GkGNv8JpG5P3dH8SQJdyL+vqg51yiOMhGifqUPcekeM=
-github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20220928142859-f67a13dd6a56 h1:FC97faKCLt8BNjzZ+nJewpnh/9ZSaZyxW06Zvt3L6wM=
-github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20220928142859-f67a13dd6a56/go.mod h1:GkGNv8JpG5P3dH8SQJdyL+vqg51yiOMhGifqUPcekeM=
+github.com/speakeasy-api/sdk-generation v0.0.0-20220929154455-cc3fab82b11e h1:m6HtmbxIbA7yH9d8dwfw/R1VraZZiz26Txmki7fQiao=
+github.com/speakeasy-api/sdk-generation v0.0.0-20220929154455-cc3fab82b11e/go.mod h1:UxOJHvYOHjlAiqm7GaVtdPSOCzWcZnSosWBe9PJUCGs=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20220929152846-ac0c62045257 h1:qxWK1Cuo6oQE/nro8YdT5oCrffFzzk8gFNsriE/tbHQ=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20220929152846-ac0c62045257/go.mod h1:GkGNv8JpG5P3dH8SQJdyL+vqg51yiOMhGifqUPcekeM=
 github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 h1:3rKvk9/Xgj7ugJ3eGq3w4A+IW27U1lmQ+pBOMpbP6e8=
