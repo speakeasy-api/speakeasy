@@ -26,6 +26,8 @@ jobs:
           github-token: ${{ secrets.github_token }}
           skip-commit: "true"
           output-file: "false"
+          preset: "conventionalcommits"
+          skip-on-empty: "true"
       - uses: actions/setup-go@v3
         with:
           go-version: ">=1.19.1"
