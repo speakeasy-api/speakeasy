@@ -1,0 +1,13 @@
+name: Conventional Commits
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  conventional-commits:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conventional Changelog Action
+        uses: TriPSs/conventional-changelog-action@v3.15.0
