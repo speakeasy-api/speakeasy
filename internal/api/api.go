@@ -4,28 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 
-	sdk "github.com/speakeasy-api/speakeasy-client-sdk-go"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/shared"
 	"github.com/spf13/cobra"
 )
 
 func getApis(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	apiKey := os.Getenv("SPEAKEASY_API_KEY")
-	if apiKey == "" {
-		return errors.New("SPEAKEASY_API_KEY not set")
+	s, err := initSDK()
+	if err != nil {
+		return err
 	}
-
-	s := sdk.New()
-	s.ConfigureSecurity(shared.Security{
-		APIKey: shared.APIKey{
-			APIKey: apiKey,
-		},
-	})
 
 	res, err := s.GetApisV1(ctx, operations.GetApisV1Request{})
 	if err != nil {
@@ -38,7 +28,7 @@ func getApis(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("--------------------------------------")
 
-	for _, api := range res.Responses[res.StatusCode][res.ContentType].API {
+	for _, api := range res.Responses[res.StatusCode][res.ContentType].Apis {
 		metadata, err := json.Marshal(api.MetaData)
 		if err != nil {
 			return err
@@ -67,11 +57,6 @@ UpdatedAt: %s
 func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	apiKey := os.Getenv("SPEAKEASY_API_KEY")
-	if apiKey == "" {
-		return errors.New("SPEAKEASY_API_KEY not set")
-	}
-
 	apiID, err := cmd.Flags().GetString("api-id")
 	if err != nil {
 		return err
@@ -80,12 +65,10 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 		return errors.New("api-id not set")
 	}
 
-	s := sdk.New()
-	s.ConfigureSecurity(shared.Security{
-		APIKey: shared.APIKey{
-			APIKey: apiKey,
-		},
-	})
+	s, err := initSDK()
+	if err != nil {
+		return err
+	}
 
 	res, err := s.GetAllAPIEndpointsV1(ctx, operations.GetAllAPIEndpointsV1Request{
 		PathParams: operations.GetAllAPIEndpointsV1PathParams{
@@ -102,7 +85,7 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("--------------------------------------")
 
-	for _, endpoint := range res.Responses[res.StatusCode][res.ContentType].APIEndpoint {
+	for _, endpoint := range res.Responses[res.StatusCode][res.ContentType].APIEndpoints {
 		fmt.Printf(`ApiID: %s
 VersionID: %s
 ApiEndpointID: %s
