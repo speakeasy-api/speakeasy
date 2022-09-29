@@ -1,0 +1,2 @@
+# speakeasy
+The speakeasy CLI
