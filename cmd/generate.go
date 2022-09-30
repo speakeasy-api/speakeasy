@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -92,7 +91,7 @@ func genSDKInit() {
 }
 
 func generateExec(cmd *cobra.Command, args []string) error {
-	return errors.New("no command provided")
+	return cmd.Help()
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {

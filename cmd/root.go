@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -23,6 +22,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	genInit()
+	apiInit()
 }
 
 func Execute(version string) {
@@ -34,5 +34,5 @@ func Execute(version string) {
 }
 
 func rootExec(cmd *cobra.Command, args []string) error {
-	return errors.New("no command provided")
+	return cmd.Help()
 }

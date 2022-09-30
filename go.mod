@@ -6,6 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/speakeasy-api/sdk-generation v0.0.0-20220929154455-cc3fab82b11e
+	github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20220929152846-ac0c62045257
 	github.com/spf13/cobra v1.5.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
