@@ -23,6 +23,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	genInit()
 	apiInit()
+	validateInit()
 }
 
 func Execute(version string) {
