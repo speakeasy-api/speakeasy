@@ -53,8 +53,9 @@ func createConfig() *zap.Config {
 			EncodeDuration: zapcore.StringDurationEncoder,
 			EncodeCaller:   callerEncoder,
 		},
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
+		OutputPaths:       []string{"stdout"},
+		ErrorOutputPaths:  []string{"stderr"},
+		DisableStacktrace: true,
 	}
 }
 

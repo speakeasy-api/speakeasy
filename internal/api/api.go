@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -19,7 +18,7 @@ func getApis(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := s.GetApisV1(ctx, operations.GetApisV1Request{})
+	res, err := s.GetApis(ctx, operations.GetApisRequest{})
 	if err != nil {
 		return err // TODO wrap
 	}
@@ -34,30 +33,9 @@ func getApis(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println("--------------------------------------")
-
-	for _, api := range res.Responses[res.StatusCode][res.ContentType].Apis {
-		metadata, err := json.Marshal(api.MetaData)
-		if err != nil {
-			return err
-		}
-
-		matched := false
-		if api.Matched != nil {
-			matched = *api.Matched
-		}
-
-		fmt.Printf(`ApiID: %s
-VersionID: %s
-Description: %s
-MetaData: %s
-Matched: %t
-CreatedAt: %s
-UpdatedAt: %s
-`, api.APIID, api.VersionID, api.Description, string(metadata), matched, api.CreatedAt, api.UpdatedAt)
-
-		fmt.Println("--------------------------------------")
-	}
+	utils.PrettyPrintArray(res.Responses[res.StatusCode][res.ContentType].Apis, map[string]string{
+		"APIID": "ApiID",
+	})
 
 	return nil
 }
@@ -75,8 +53,8 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := s.GetAllAPIEndpointsV1(ctx, operations.GetAllAPIEndpointsV1Request{
-		PathParams: operations.GetAllAPIEndpointsV1PathParams{
+	res, err := s.GetAllAPIEndpoints(ctx, operations.GetAllAPIEndpointsRequest{
+		PathParams: operations.GetAllAPIEndpointsPathParams{
 			APIID: apiID,
 		},
 	})
@@ -94,21 +72,9 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println("--------------------------------------")
-
-	for _, endpoint := range res.Responses[res.StatusCode][res.ContentType].APIEndpoints {
-		fmt.Printf(`ApiID: %s
-VersionID: %s
-ApiEndpointID: %s
-Description: %s
-Method: %s
-Path: %s
-CreatedAt: %s
-UpdatedAt: %s
-`, endpoint.APIID, endpoint.VersionID, endpoint.APIEndpointID, endpoint.Description, endpoint.Method, endpoint.Path, endpoint.CreatedAt, endpoint.UpdatedAt)
-
-		fmt.Println("--------------------------------------")
-	}
+	utils.PrettyPrintArray(res.Responses[res.StatusCode][res.ContentType].APIEndpoints, map[string]string{
+		"APIID": "ApiID",
+	})
 
 	return nil
 }
@@ -141,13 +107,13 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := s.RegisterSchemaV1(ctx, operations.RegisterSchemaV1Request{
-		PathParams: operations.RegisterSchemaV1PathParams{
+	res, err := s.RegisterSchema(ctx, operations.RegisterSchemaRequest{
+		PathParams: operations.RegisterSchemaPathParams{
 			APIID:     apiID,
 			VersionID: versionID,
 		},
-		Request: operations.RegisterSchemaV1RequestBody{
-			File: operations.RegisterSchemaV1RequestBodyFile{
+		Request: operations.RegisterSchemaRequestBody{
+			File: operations.RegisterSchemaRequestBodyFile{
 				Content: data,
 				File:    path.Base(schemaPath),
 			},
@@ -190,8 +156,8 @@ func getVersionMetadata(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := s.GetVersionMetadataV1(ctx, operations.GetVersionMetadataV1Request{
-		PathParams: operations.GetVersionMetadataV1PathParams{
+	res, err := s.GetVersionMetadata(ctx, operations.GetVersionMetadataRequest{
+		PathParams: operations.GetVersionMetadataPathParams{
 			APIID:     apiID,
 			VersionID: versionID,
 		},
@@ -215,18 +181,11 @@ func getVersionMetadata(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	fmt.Println("--------------------------------------")
-
-	for _, metadata := range res.Responses[res.StatusCode][res.ContentType].VersionMetadata {
-		fmt.Printf(`ApiID: %s
-VersionID: %s
-Key: %s
-Value: %s
-CreatedAt: %s
-`, metadata.APIID, metadata.VersionID, metadata.MetaKey, metadata.MetaValue, metadata.CreatedAt)
-
-		fmt.Println("--------------------------------------")
-	}
+	utils.PrettyPrintArray(res.Responses[res.StatusCode][res.ContentType].VersionMetadata, map[string]string{
+		"APIID":     "ApiID",
+		"MetaKey":   "Key",
+		"MetaValue": "Value",
+	})
 
 	return nil
 }
