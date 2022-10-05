@@ -11,7 +11,7 @@ import (
 
 	"github.com/fatih/color"
 	gitignore "github.com/sabhiram/go-gitignore"
-	"github.com/speakeasy-api/sdk-generation/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"

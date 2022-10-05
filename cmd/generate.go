@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/speakeasy-api/sdk-generation/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/spf13/cobra"
 )
