@@ -22,6 +22,7 @@ require (
 	github.com/getkin/kin-openapi v0.103.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.5 // indirect
+	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/invopop/yaml v0.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -29,6 +30,7 @@ require (
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.0.0 // indirect
