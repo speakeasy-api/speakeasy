@@ -6,9 +6,33 @@ import (
 	"reflect"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var Green = color.New(color.FgGreen).SprintFunc()
+
+func PrintArray[K any](cmd *cobra.Command, arr []K, fieldNameReplacements map[string]string) {
+	printJson, _ := cmd.Flags().GetBool("json")
+
+	if printJson {
+		data, _ := json.Marshal(arr)
+		fmt.Println(string(data))
+	} else {
+		PrettyPrintArray(arr, fieldNameReplacements)
+	}
+}
+
+func PrintValue(cmd *cobra.Command, value interface{}, fieldNameReplacements map[string]string) {
+	printJson, _ := cmd.Flags().GetBool("json")
+
+	if printJson {
+		data, _ := json.Marshal(value)
+		fmt.Println(string(data))
+	} else {
+		fmt.Println("--------------------------------------")
+		PrettyPrint(value, fieldNameReplacements)
+	}
+}
 
 func PrettyPrintArray[K any](arr []K, fieldNameReplacements map[string]string) {
 	if len(arr) == 0 {
