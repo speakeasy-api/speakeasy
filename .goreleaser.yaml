@@ -32,7 +32,7 @@ changelog:
 brews:
   - name: speakeasy
     tap:
-      owner: speakeasy
+      owner: speakeasy-api
       name: homebrew-tap
     homepage: https://www.speakeasyapi.dev
     description: The Speakeasy CLI for interacting with the Speakeasy Platform
