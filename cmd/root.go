@@ -34,6 +34,10 @@ func Execute(version string) {
 	}
 }
 
+func GetRootCommand() *cobra.Command {
+	return rootCmd
+}
+
 func rootExec(cmd *cobra.Command, args []string) error {
 	return cmd.Help()
 }
