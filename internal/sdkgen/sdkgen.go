@@ -9,10 +9,10 @@ import (
 	"path"
 	"strings"
 
-	"github.com/fatih/color"
 	gitignore "github.com/sabhiram/go-gitignore"
 	"github.com/speakeasy-api/openapi-generation/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
@@ -53,9 +53,7 @@ func Generate(ctx context.Context, lang string, schemaPath string, outDir string
 		return errors.New(generate.GetOrderedErrorString(err))
 	}
 
-	green := color.New(color.FgGreen).SprintFunc()
-
-	fmt.Printf("Generating SDK for %s... %s\n", lang, green("done ✓"))
+	fmt.Printf("Generating SDK for %s... %s\n", lang, utils.Green("done ✓"))
 
 	return nil
 }
