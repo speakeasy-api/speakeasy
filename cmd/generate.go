@@ -35,14 +35,17 @@ To configure the pacakge of the generated SDKs you can config a "gen.yaml" file 
 
 Example gen.yaml file for Go SDK:
 
+`+"```"+`
 go:
   packagename: github.com/speakeasy-api/speakeasy-client-sdk-go
 # baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
 # this can also be provided via the --baseurl flag when calling the command line
 baseserverurl: https://api.speakeasyapi.dev 
+`+"```"+`
 
 Example gen.yaml file for Python SDK:
 
+`+"```"+`
 python:
   packagename: speakeasy-client-sdk-python
   version: 0.1.0
@@ -50,6 +53,7 @@ python:
 # baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
 # this can also be provided via the --baseurl flag when calling the command line
 baseserverurl: https://api.speakeasyapi.dev 
+`+"```"+`
 
 # Ignore Files
 
