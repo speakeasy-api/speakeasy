@@ -17,7 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Generate(ctx context.Context, lang string, schemaPath string, outDir string, baseURL string) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL string) error {
 	if !slices.Contains(generate.SupportLangs, lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -38,13 +38,20 @@ func Generate(ctx context.Context, lang string, schemaPath string, outDir string
 		return fmt.Errorf("failed to clean out dir %s: %w", outDir, err)
 	}
 
-	writeFuncOpt := generate.WithOnWriteFileFunc(func() func(filename string, data []byte) error {
+	opts := []generate.GeneratorOptions{
+		generate.WithLogger(log.Logger()),
+		generate.WithCustomerID(customerID),
+	}
+
+	opts = append(opts, generate.WithOnWriteFileFunc(func() func(filename string, data []byte) error {
 		return func(filename string, data []byte) error {
 			return writeFile(outDir, filename, data)
 		}
-	}())
+	}()))
 
-	g, err := generate.New(writeFuncOpt, generate.WithLogger(log.Logger()))
+	opts = append(opts, generate.WithRunLocation("cli"))
+
+	g, err := generate.New(opts...)
 	if err != nil {
 		return err
 	}
