@@ -113,7 +113,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 
 	baseURL, _ := cmd.Flags().GetString("baseurl")
 
-	if err := sdkgen.Generate(cmd.Context(), lang, schemaPath, outDir, baseURL); err != nil {
+	if err := sdkgen.Generate(cmd.Context(), vCfg.GetString("id"), lang, schemaPath, outDir, baseURL); err != nil {
 		rootCmd.SilenceUsage = true
 		return err
 	}
