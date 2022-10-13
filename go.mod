@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
-	github.com/speakeasy-api/openapi-generation v0.0.0-20221013120815-d957bf4183c0
+	github.com/speakeasy-api/openapi-generation v0.0.0-20221013151612-6e258efc2653
 	github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20221005095431-56b0c8d5f289
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.13.0
