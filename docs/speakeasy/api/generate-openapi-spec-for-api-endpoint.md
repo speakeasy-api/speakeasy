@@ -1,10 +1,14 @@
-## speakeasy api generate-openapi-spec-for-api-endpoint
+# generate-openapi-spec-for-api-endpoint  
+`speakeasy api generate-openapi-spec-for-api-endpoint`  
 
-Generate OpenAPI spec for API endpoint
 
-### Synopsis
+Generate OpenAPI spec for API endpoint  
+
+## Details
 
 Generate an OpenAPI specification for a particular ApiEndpoint
+
+## Usage
 
 ```
 speakeasy api generate-openapi-spec-for-api-endpoint [flags]
@@ -20,7 +24,6 @@ speakeasy api generate-openapi-spec-for-api-endpoint [flags]
       --version-id string        Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

@@ -1,10 +1,14 @@
-## speakeasy api query-event-log
+# query-event-log  
+`speakeasy api query-event-log`  
 
-Query event log
 
-### Synopsis
+Query event log  
+
+## Details
 
 Query the event log to retrieve a list of requests
+
+## Usage
 
 ```
 speakeasy api query-event-log [flags]
@@ -18,7 +22,6 @@ speakeasy api query-event-log [flags]
       --json             Output in JSON format
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

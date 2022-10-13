@@ -1,10 +1,14 @@
-## speakeasy api find-api-endpoint
+# find-api-endpoint  
+`speakeasy api find-api-endpoint`  
 
-Find ApiEndpoint
 
-### Synopsis
+Find ApiEndpoint  
+
+## Details
 
 Find an ApiEndpoint via its displayName (set by operationId from OpenAPI schema)
+
+## Usage
 
 ```
 speakeasy api find-api-endpoint [flags]
@@ -20,7 +24,6 @@ speakeasy api find-api-endpoint [flags]
       --version-id string     Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

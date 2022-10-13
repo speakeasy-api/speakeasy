@@ -1,10 +1,14 @@
-## speakeasy api get-schemas
+# get-schemas  
+`speakeasy api get-schemas`  
 
-Get schemas
 
-### Synopsis
+Get schemas  
+
+## Details
 
 Get information about all schemas associated with a particular apiID
+
+## Usage
 
 ```
 speakeasy api get-schemas [flags]
@@ -19,7 +23,6 @@ speakeasy api get-schemas [flags]
       --version-id string   Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

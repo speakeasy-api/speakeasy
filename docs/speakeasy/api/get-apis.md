@@ -1,10 +1,14 @@
-## speakeasy api get-apis
+# get-apis  
+`speakeasy api get-apis`  
 
-Get all Apis
 
-### Synopsis
+Get all Apis  
+
+## Details
 
 Get a list of all Apis and there versions for a given workspace
+
+## Usage
 
 ```
 speakeasy api get-apis [flags]
@@ -17,7 +21,6 @@ speakeasy api get-apis [flags]
       --json   Output in JSON format
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

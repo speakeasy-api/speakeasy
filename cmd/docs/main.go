@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/cmd"
-	"github.com/spf13/cobra/doc"
+	"github.com/speakeasy-api/speakeasy/internal/docs"
 )
 
 var linkRegex = regexp.MustCompile(`\((.*?\.md)\)`)
@@ -18,7 +18,13 @@ func main() {
 
 	root.DisableAutoGenTag = true
 
-	if err := doc.GenMarkdownTree(root, "./docs"); err != nil {
+	docsDir := "./docs"
+
+	if err := os.RemoveAll(docsDir); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := docs.GenerateDocs(root, docsDir); err != nil {
 		log.Fatal(err)
 	}
 
@@ -26,6 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	readme, _, _ := strings.Cut(string(readmeData), "## CLI")
 
 	speakeasyData, err := os.ReadFile("./docs/speakeasy.md")
 	if err != nil {
@@ -36,15 +44,10 @@ func main() {
 		return fmt.Sprintf("(docs/%s)", strings.Trim(match, "()"))
 	})
 
-	speakeasyDoc = strings.Replace(speakeasyDoc, "## speakeasy", "## Usage", 1)
+	speakeasyDoc = strings.ReplaceAll(speakeasyDoc, "## ", "### ")
+	speakeasyDoc = strings.Replace(speakeasyDoc, "# speakeasy", "## CLI", 1)
 
-	// boundary := `## Usage`
-
-	// idx := strings.Index(string(readmeData), boundary)
-
-	// readme := strings.TrimSuffix(string(readmeData), string(readmeData)[idx:])
-
-	if err := os.WriteFile("./README.md", []byte(fmt.Sprintf("%s\n\n%s", string(readmeData), speakeasyDoc)), 0o644); err != nil {
+	if err := os.WriteFile("./README.md", []byte(fmt.Sprintf("%s%s", readme, speakeasyDoc)), os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 }

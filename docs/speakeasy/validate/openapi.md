@@ -1,10 +1,14 @@
-## speakeasy validate openapi
+# openapi  
+`speakeasy validate openapi`  
 
-Validate an OpenAPI schema
 
-### Synopsis
+Validate an OpenAPI schema  
+
+## Details
 
 Validates an OpenAPI schema is valid and conforms to the Speakeasy OpenAPI specification.
+
+## Usage
 
 ```
 speakeasy validate openapi [flags]
@@ -17,7 +21,6 @@ speakeasy validate openapi [flags]
   -s, --schema string   path to the openapi schema
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy validate](speakeasy_validate.md)	 - Validate OpenAPI schemas + more (coming soon)
-
+* [speakeasy validate](../validate.md)	 - Validate OpenAPI schemas + more (coming soon)

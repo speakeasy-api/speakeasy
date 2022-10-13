@@ -1,10 +1,14 @@
-## speakeasy api register-schema
+# register-schema  
+`speakeasy api register-schema`  
 
-Register schema
 
-### Synopsis
+Register schema  
+
+## Details
 
 Register a schema for a particular apiID and versionID
+
+## Usage
 
 ```
 speakeasy api register-schema [flags]
@@ -19,7 +23,6 @@ speakeasy api register-schema [flags]
       --version-id string   Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

@@ -1,10 +1,14 @@
-## speakeasy api get-api-versions
+# get-api-versions  
+`speakeasy api get-api-versions`  
 
-Get Api versions
 
-### Synopsis
+Get Api versions  
+
+## Details
 
 Get all Api versions for a particular apiID
+
+## Usage
 
 ```
 speakeasy api get-api-versions [flags]
@@ -17,7 +21,6 @@ speakeasy api get-api-versions [flags]
       --json   Output in JSON format
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

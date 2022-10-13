@@ -1,10 +1,14 @@
-## speakeasy api get-all-api-endpoints
+# get-all-api-endpoints  
+`speakeasy api get-all-api-endpoints`  
 
-Get all API endpoints
 
-### Synopsis
+Get all API endpoints  
+
+## Details
 
 Get all Api endpoints for a particular apiID
+
+## Usage
 
 ```
 speakeasy api get-all-api-endpoints [flags]
@@ -18,7 +22,6 @@ speakeasy api get-all-api-endpoints [flags]
       --json            Output in JSON format
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

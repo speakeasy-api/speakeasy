@@ -1,8 +1,10 @@
-## speakeasy generate sdk
+# sdk  
+`speakeasy generate sdk`  
 
-Generating Client SDKs from OpenAPI specs (go, python + more coming soon)
 
-### Synopsis
+Generating Client SDKs from OpenAPI specs (go, python + more coming soon)  
+
+## Details
 
 Using the "speakeasy generate sdk" command you can generate client SDK packages for various languages
 that are ready to use and publish to your favorite package registry.
@@ -57,6 +59,8 @@ By default (without a .genignore file/folders) the SDK generator will ignore the
 
 
 
+## Usage
+
 ```
 speakeasy generate sdk [flags]
 ```
@@ -71,7 +75,6 @@ speakeasy generate sdk [flags]
   -s, --schema string    path to the openapi schema
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy generate](speakeasy_generate.md)	 - Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)
-
+* [speakeasy generate](../generate.md)	 - Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)
