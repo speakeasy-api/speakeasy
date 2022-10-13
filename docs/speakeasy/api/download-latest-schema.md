@@ -1,10 +1,14 @@
-## speakeasy api download-latest-schema
+# download-latest-schema  
+`speakeasy api download-latest-schema`  
 
-Download latest schema
 
-### Synopsis
+Download latest schema  
+
+## Details
 
 Download the latest schema for a particular apiID
+
+## Usage
 
 ```
 speakeasy api download-latest-schema [flags]
@@ -18,7 +22,6 @@ speakeasy api download-latest-schema [flags]
       --version-id string   Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

@@ -1,10 +1,14 @@
-## speakeasy api get-all-api-endpoints-for-version
+# get-all-api-endpoints-for-version  
+`speakeasy api get-all-api-endpoints-for-version`  
 
-Get all API endpoints for version
 
-### Synopsis
+Get all API endpoints for version  
+
+## Details
 
 Get all ApiEndpoints for a particular apiID and versionID
+
+## Usage
 
 ```
 speakeasy api get-all-api-endpoints-for-version [flags]
@@ -19,7 +23,6 @@ speakeasy api get-all-api-endpoints-for-version [flags]
       --version-id string   Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

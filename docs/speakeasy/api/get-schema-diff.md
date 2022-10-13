@@ -1,10 +1,14 @@
-## speakeasy api get-schema-diff
+# get-schema-diff  
+`speakeasy api get-schema-diff`  
 
-Get schema diff
 
-### Synopsis
+Get schema diff  
+
+## Details
 
 Get a diff of two schema revisions for an Api
+
+## Usage
 
 ```
 speakeasy api get-schema-diff [flags]
@@ -21,7 +25,6 @@ speakeasy api get-schema-diff [flags]
       --version-id string           Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

@@ -1,10 +1,14 @@
-## speakeasy api generate-postman-collection
+# generate-postman-collection  
+`speakeasy api generate-postman-collection`  
 
-Generate Postman collection
 
-### Synopsis
+Generate Postman collection  
+
+## Details
 
 Generate a Postman collection for a particular Api
+
+## Usage
 
 ```
 speakeasy api generate-postman-collection [flags]
@@ -18,7 +22,6 @@ speakeasy api generate-postman-collection [flags]
       --version-id string   Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

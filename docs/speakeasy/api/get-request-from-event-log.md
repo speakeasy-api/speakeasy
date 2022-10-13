@@ -1,10 +1,14 @@
-## speakeasy api get-request-from-event-log
+# get-request-from-event-log  
+`speakeasy api get-request-from-event-log`  
 
-Get request from event log
 
-### Synopsis
+Get request from event log  
+
+## Details
 
 Get information about a particular request
+
+## Usage
 
 ```
 speakeasy api get-request-from-event-log [flags]
@@ -18,7 +22,6 @@ speakeasy api get-request-from-event-log [flags]
       --request-id string   Request ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

@@ -1,10 +1,14 @@
-## speakeasy api download-schema-revision
+# download-schema-revision  
+`speakeasy api download-schema-revision`  
 
-Download schema revision
 
-### Synopsis
+Download schema revision  
+
+## Details
 
 Download a particular schema revision for an Api
+
+## Usage
 
 ```
 speakeasy api download-schema-revision [flags]
@@ -19,7 +23,6 @@ speakeasy api download-schema-revision [flags]
       --version-id string    Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

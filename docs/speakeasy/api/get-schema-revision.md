@@ -1,10 +1,14 @@
-## speakeasy api get-schema-revision
+# get-schema-revision  
+`speakeasy api get-schema-revision`  
 
-Get schema revision
 
-### Synopsis
+Get schema revision  
+
+## Details
 
 Get information about a particular schema revision for an Api
+
+## Usage
 
 ```
 speakeasy api get-schema-revision [flags]
@@ -20,7 +24,6 @@ speakeasy api get-schema-revision [flags]
       --version-id string    Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

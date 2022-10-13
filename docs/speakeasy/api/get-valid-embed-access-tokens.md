@@ -1,10 +1,14 @@
-## speakeasy api get-valid-embed-access-tokens
+# get-valid-embed-access-tokens  
+`speakeasy api get-valid-embed-access-tokens`  
 
-Get valid embed access tokens
 
-### Synopsis
+Get valid embed access tokens  
+
+## Details
 
 Get all valid embed access tokens for the current workspace
+
+## Usage
 
 ```
 speakeasy api get-valid-embed-access-tokens [flags]
@@ -17,7 +21,6 @@ speakeasy api get-valid-embed-access-tokens [flags]
       --json   Output in JSON format
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI

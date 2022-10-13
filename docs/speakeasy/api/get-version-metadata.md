@@ -1,10 +1,14 @@
-## speakeasy api get-version-metadata
+# get-version-metadata  
+`speakeasy api get-version-metadata`  
 
-Get version metadata
 
-### Synopsis
+Get version metadata  
+
+## Details
 
 Get all metadata for a particular apiID and versionID
+
+## Usage
 
 ```
 speakeasy api get-version-metadata [flags]
@@ -19,7 +23,6 @@ speakeasy api get-version-metadata [flags]
       --version-id string   Version ID
 ```
 
-### SEE ALSO
+### Parent Command
 
-* [speakeasy api](speakeasy_api.md)	 - Access the Speakeasy API via the CLI
-
+* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI
