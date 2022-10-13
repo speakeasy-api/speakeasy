@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
-	github.com/speakeasy-api/openapi-generation v0.0.0-20221013111649-dc198061ab77
+	github.com/speakeasy-api/openapi-generation v0.0.0-20221013120815-d957bf4183c0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20221005095431-56b0c8d5f289
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.13.0
@@ -35,6 +35,7 @@ require (
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
