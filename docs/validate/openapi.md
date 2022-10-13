@@ -23,4 +23,4 @@ speakeasy validate openapi [flags]
 
 ### Parent Command
 
-* [speakeasy validate](../validate.md)	 - Validate OpenAPI schemas + more (coming soon)
+* [speakeasy validate](README.md)	 - Validate OpenAPI schemas + more (coming soon)

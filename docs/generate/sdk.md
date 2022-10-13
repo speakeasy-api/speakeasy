@@ -77,4 +77,4 @@ speakeasy generate sdk [flags]
 
 ### Parent Command
 
-* [speakeasy generate](../generate.md)	 - Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)
+* [speakeasy generate](README.md)	 - Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)
