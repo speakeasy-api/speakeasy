@@ -35,7 +35,7 @@ func main() {
 
 	readme, _, _ := strings.Cut(string(readmeData), "## CLI")
 
-	speakeasyData, err := os.ReadFile("./docs/speakeasy.md")
+	speakeasyData, err := os.ReadFile("./docs/README.md")
 	if err != nil {
 		log.Fatal(err)
 	}

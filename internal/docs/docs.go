@@ -69,7 +69,13 @@ func GenerateDoc(cmd *cobra.Command) (string, error) {
 	if cmd.HasParent() {
 		builder.WriteString("### Parent Command\n\n")
 		parent := cmd.Parent()
-		builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", parent.CommandPath(), fmt.Sprintf("../%s.md", parent.Name()), parent.Short))
+
+		link := "README.md"
+		if cmd.HasAvailableSubCommands() {
+			link = "../README.md"
+		}
+
+		builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", parent.CommandPath(), link, parent.Short))
 	}
 
 	children := cmd.Commands()
@@ -84,7 +90,13 @@ func GenerateDoc(cmd *cobra.Command) (string, error) {
 			if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
 				continue
 			}
-			builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", child.CommandPath(), fmt.Sprintf("%s/%s.md", cmd.Name(), child.Name()), child.Short))
+
+			link := fmt.Sprintf("%s.md", child.Name())
+			if child.HasAvailableSubCommands() {
+				link = fmt.Sprintf("%s/README.md", child.Name())
+			}
+
+			builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", child.CommandPath(), link, child.Short))
 		}
 	}
 
@@ -111,5 +123,11 @@ func printOptions(builder *strings.Builder, cmd *cobra.Command) error {
 }
 
 func getPath(cmd *cobra.Command) string {
-	return strings.ReplaceAll(cmd.CommandPath(), " ", "/") + ".md"
+	fullPath := strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name())
+
+	if cmd.HasAvailableSubCommands() {
+		return strings.ReplaceAll(fullPath, " ", "/") + "/README.md"
+	}
+
+	return strings.ReplaceAll(fullPath, " ", "/") + ".md"
 }

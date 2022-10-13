@@ -22,7 +22,7 @@ speakeasy validate [flags]
 
 ### Parent Command
 
-* [speakeasy](../speakeasy.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy validate openapi](validate/openapi.md)	 - Validate an OpenAPI schema
+* [speakeasy validate openapi](openapi.md)	 - Validate an OpenAPI schema

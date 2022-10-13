@@ -28,6 +28,6 @@ speakeasy [flags]
 
 ### Sub Commands
 
-* [speakeasy api](speakeasy/api.md)	 - Access the Speakeasy API via the CLI
-* [speakeasy generate](speakeasy/generate.md)	 - Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)
-* [speakeasy validate](speakeasy/validate.md)	 - Validate OpenAPI schemas + more (coming soon)
+* [speakeasy api](api/README.md)	 - Access the Speakeasy API via the CLI
+* [speakeasy generate](generate/README.md)	 - Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)
+* [speakeasy validate](validate/README.md)	 - Validate OpenAPI schemas + more (coming soon)

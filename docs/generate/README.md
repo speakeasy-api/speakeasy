@@ -22,7 +22,7 @@ speakeasy generate [flags]
 
 ### Parent Command
 
-* [speakeasy](../speakeasy.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy generate sdk](generate/sdk.md)	 - Generating Client SDKs from OpenAPI specs (go, python + more coming soon)
+* [speakeasy generate sdk](sdk.md)	 - Generating Client SDKs from OpenAPI specs (go, python + more coming soon)

@@ -24,4 +24,4 @@ speakeasy api get-all-api-endpoints [flags]
 
 ### Parent Command
 
-* [speakeasy api](../api.md)	 - Access the Speakeasy API via the CLI
+* [speakeasy api](README.md)	 - Access the Speakeasy API via the CLI
