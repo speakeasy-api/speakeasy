@@ -198,6 +198,8 @@ github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06/go.mod h1:+e
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/speakeasy-api/openapi-generation v0.1.0 h1:LYBVOerxnEhqN8bvT97ZQuwrEN8hm72bV4cDXis7+Yk=
 github.com/speakeasy-api/openapi-generation v0.1.0/go.mod h1:9B5/hU5Zs9aYhrbR57AHTby2w6jbmmxaYOShY3DIg5M=
+github.com/speakeasy-api/openapi-generation v0.2.1 h1:tMmSrhF5Kt4RSbAapFcsSxqFRJkANaT/x4VIHB7sXMg=
+github.com/speakeasy-api/openapi-generation v0.2.1/go.mod h1:9B5/hU5Zs9aYhrbR57AHTby2w6jbmmxaYOShY3DIg5M=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20221005095431-56b0c8d5f289 h1:mkVSpROfXdyDIdiV9ewXFsNlVsKNmkyf/CRl4soOeJY=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.0.4-0.20221005095431-56b0c8d5f289/go.mod h1:GkGNv8JpG5P3dH8SQJdyL+vqg51yiOMhGifqUPcekeM=
 github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 h1:3rKvk9/Xgj7ugJ3eGq3w4A+IW27U1lmQ+pBOMpbP6e8=
