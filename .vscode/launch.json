@@ -10,14 +10,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceRoot}/main.go",
-      "args": [
-        "api",
-        "generate-openapi-spec",
-        "--api-id",
-        "registry",
-        "--version-id",
-        "v1.0.0"
-      ]
+      "args": ["generate", "sdk"]
     }
   ]
 }
