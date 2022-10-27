@@ -34,16 +34,10 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Responses[res.StatusCode][res.ContentType].APIEndpoints, map[string]string{
+	utils.PrintArray(cmd, res.APIEndpoints, map[string]string{
 		"APIID":         "ApiID",
 		"APIEndpointID": "ApiEndpointID",
 	})
@@ -80,16 +74,10 @@ func getAllAPIEndpointsForVersion(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Responses[res.StatusCode][res.ContentType].APIEndpoints, map[string]string{
+	utils.PrintArray(cmd, res.APIEndpoints, map[string]string{
 		"APIID":         "ApiID",
 		"APIEndpointID": "ApiEndpointID",
 	})
@@ -132,16 +120,10 @@ func getApiEndpoint(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.Responses[res.StatusCode][res.ContentType].APIEndpoint, map[string]string{
+	utils.PrintValue(cmd, res.APIEndpoint, map[string]string{
 		"APIID":         "ApiID",
 		"APIEndpointID": "ApiEndpointID",
 	})
@@ -184,16 +166,10 @@ func findApiEndpoint(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.Responses[res.StatusCode][res.ContentType].APIEndpoint, map[string]string{
+	utils.PrintValue(cmd, res.APIEndpoint, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -237,22 +213,16 @@ func generateOpenAPISpecForAPIEndpoint(cmd *cobra.Command, args []string) error 
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	specDiff := res.Responses[res.StatusCode][res.ContentType].GenerateOpenAPISpecDiff
+	specDiff := res.GenerateOpenAPISpecDiff
 
 	if diff && specDiff.CurrentSchema != "" {
 		edits := myers.ComputeEdits(span.URIFromPath("openapi"), specDiff.CurrentSchema, specDiff.NewSchema)
 		fmt.Println(gotextdiff.ToUnified("openapi", "openapi", specDiff.CurrentSchema, edits))
 	} else {
-		fmt.Println(res.Responses[res.StatusCode][res.ContentType].GenerateOpenAPISpecDiff.NewSchema)
+		fmt.Println(res.GenerateOpenAPISpecDiff.NewSchema)
 	}
 
 	return nil
@@ -293,16 +263,10 @@ func generatePostmanCollectionForAPIEndpoint(cmd *cobra.Command, args []string) 
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println(res.Responses[res.StatusCode][res.ContentType].PostmanCollection)
+	fmt.Println(res.PostmanCollection)
 
 	return nil
 }

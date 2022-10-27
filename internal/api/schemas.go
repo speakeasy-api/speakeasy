@@ -55,13 +55,7 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
 	fmt.Printf("schema successfully registered for: %s - %s %s\n", apiID, versionID, utils.Green("✓"))
@@ -98,16 +92,10 @@ func getSchemas(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Responses[res.StatusCode][res.ContentType].Schemata, map[string]string{
+	utils.PrintArray(cmd, res.Schemata, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -149,16 +137,10 @@ func getSchemaRevision(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.Responses[res.StatusCode][res.ContentType].Schema, map[string]string{
+	utils.PrintValue(cmd, res.Schema, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -206,16 +188,10 @@ func getSchemaDiff(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.Responses[res.StatusCode][res.ContentType].SchemaDiff, nil)
+	utils.PrintValue(cmd, res.SchemaDiff, nil)
 
 	return nil
 }
@@ -249,16 +225,10 @@ func downloadLatestSchema(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println(string(res.Responses[res.StatusCode][res.ContentType].Schema))
+	fmt.Println(string(res.Schema))
 
 	return nil
 }
@@ -298,16 +268,10 @@ func downloadSchemaRevision(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println(string(res.Responses[res.StatusCode][res.ContentType].Schema))
+	fmt.Println(string(res.Schema))
 
 	return nil
 }
