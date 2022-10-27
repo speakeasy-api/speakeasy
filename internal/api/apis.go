@@ -25,16 +25,10 @@ func getApis(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Responses[res.StatusCode][res.ContentType].Apis, map[string]string{
+	utils.PrintArray(cmd, res.Apis, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -64,16 +58,10 @@ func getApiVersions(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Responses[res.StatusCode][res.ContentType].Apis, map[string]string{
+	utils.PrintArray(cmd, res.Apis, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -111,22 +99,16 @@ func generateOpenAPISpec(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	specDiff := res.Responses[res.StatusCode][res.ContentType].GenerateOpenAPISpecDiff
+	specDiff := res.GenerateOpenAPISpecDiff
 
 	if diff && specDiff.CurrentSchema != "" {
 		edits := myers.ComputeEdits(span.URIFromPath("openapi"), specDiff.CurrentSchema, specDiff.NewSchema)
 		fmt.Println(gotextdiff.ToUnified("openapi", "openapi", specDiff.CurrentSchema, edits))
 	} else {
-		fmt.Println(res.Responses[res.StatusCode][res.ContentType].GenerateOpenAPISpecDiff.NewSchema)
+		fmt.Println(res.GenerateOpenAPISpecDiff.NewSchema)
 	}
 
 	return nil
@@ -161,16 +143,10 @@ func generatePostmanCollection(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println(string(res.Responses[res.StatusCode][res.ContentType].PostmanCollection))
+	fmt.Println(string(res.PostmanCollection))
 
 	return nil
 }

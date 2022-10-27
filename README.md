@@ -19,6 +19,14 @@ Want to learn more about our generation methodology ? Checkout out this [blog po
   * Create and manage workspaces
   * Manage OpenAPI schemas
 
+## Installation
+
+### Homebrew
+
+```bash
+brew install speakeasy-api/homebrew-tap/speakeasy
+```
+
 ## CLI  
 `speakeasy`  
 

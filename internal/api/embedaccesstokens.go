@@ -21,16 +21,10 @@ func getValidEmbedAccessTokens(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		statusRes, ok := res.Responses[res.StatusCode]
-		if !ok {
-			return fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		errorRes := statusRes[res.ContentType]
-		return fmt.Errorf("error: %s, statusCode: %d", errorRes.Error.Message, res.StatusCode)
+		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Responses[res.StatusCode][res.ContentType].EmbedTokens, nil)
+	utils.PrintArray(cmd, res.EmbedTokens, nil)
 
 	return nil
 }
