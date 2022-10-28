@@ -11,7 +11,7 @@ import (
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)",
+	Short: "Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more",
 	Long:  `The "generate" command provides a set of commands for generating client SDKs, OpenAPI specs (coming soon) and more (coming soon).`,
 	RunE:  generateExec,
 }
@@ -31,7 +31,7 @@ It will also use generic defaults for things such as package name (openapi), etc
 
 # Configuration
 
-To configure the pacakge of the generated SDKs you can config a "gen.yaml" file in the root of the output directory.
+To configure the package of the generated SDKs you can config a "gen.yaml" file in the root of the output directory.
 
 Example gen.yaml file for Go SDK:
 
