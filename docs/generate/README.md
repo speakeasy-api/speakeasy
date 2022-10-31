@@ -2,7 +2,7 @@
 `speakeasy generate`  
 
 
-Generate Client SDKs, OpenAPI specs (coming soon) and more (coming soon)  
+Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more  
 
 ## Details
 
@@ -25,4 +25,4 @@ speakeasy generate [flags]
 * [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy generate sdk](sdk.md)	 - Generating Client SDKs from OpenAPI specs (go, python + more coming soon)
+* [speakeasy generate sdk](sdk.md)	 - Generating Client SDKs from OpenAPI specs (go, python, typescript + more coming soon)
