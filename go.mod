@@ -8,7 +8,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/speakeasy-api/openapi-generation v1.0.2
-	github.com/speakeasy-api/speakeasy-client-sdk-go v0.1.1
+	github.com/speakeasy-api/speakeasy-client-sdk-go v0.1.3
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.23.0
