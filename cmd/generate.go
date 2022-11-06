@@ -55,6 +55,23 @@ python:
 baseserverurl: https://api.speakeasyapi.dev 
 `+"```"+`
 
+## Configuring Comments
+
+By default the generated SDKs will include comments for each operation and model. You can configure the comments by adding a `+"`comments`"+` section to the `+"`gen.yaml`"+` file.
+ 
+Example gen.yaml file:
+
+`+"```"+`
+go:
+  packagename: github.com/speakeasy-api/speakeasy-client-sdk-go
+comments:
+  disabled: true                         # disable all comments
+  omitdescriptionifsummarypresent: true  # if true and comments enabled, the description will be omitted if a summary is present for an operation
+# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
+# this can also be provided via the --baseurl flag when calling the command line
+baseserverurl: https://api.speakeasyapi.dev 
+`+"```"+`
+
 # Ignore Files
 
 The SDK generator will clear the output directory before generating the SDKs, to ensure old files are removed. 
