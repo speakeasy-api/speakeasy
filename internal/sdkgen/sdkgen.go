@@ -24,6 +24,15 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 
 	fmt.Printf("Generating SDK for %s...\n", lang)
 
+	if strings.TrimSpace(outDir) == "." {
+		wd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get current working directory: %w", err)
+		}
+
+		outDir = wd
+	}
+
 	conf, err := getConfig(outDir, baseURL)
 	if err != nil {
 		return fmt.Errorf("failed to load %s/gen.yaml: %w", outDir, err)
@@ -112,6 +121,8 @@ func loadIgnores(outDir string) (*gitignore.GitIgnore, error) {
 		"gen.yaml",
 		"README.md",
 		"readme.md",
+		"LICENSE",
+		"!node_modules/**",
 	}
 
 	for _, d := range defaults {
