@@ -17,7 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL string) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL string, debug bool) error {
 	if !slices.Contains(generate.SupportLangs, lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -50,15 +50,27 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(log.Logger()),
 		generate.WithCustomerID(customerID),
+		generate.WithFileFuncs(func() func(filename string, data []byte, checkExisting bool) error {
+			return func(filename string, data []byte, checkExisting bool) error {
+				return writeFile(outDir, filename, data, checkExisting)
+			}
+		}(), func() func(filename string) ([]byte, error) {
+			return func(filename string) ([]byte, error) {
+				filePath := path.Join(outDir, filename)
+
+				if _, err := os.Stat(filePath); err != nil {
+					return nil, err
+				}
+
+				return os.ReadFile(filePath)
+			}
+		}()),
+		generate.WithRunLocation("cli"),
 	}
 
-	opts = append(opts, generate.WithOnWriteFileFunc(func() func(filename string, data []byte) error {
-		return func(filename string, data []byte) error {
-			return writeFile(outDir, filename, data)
-		}
-	}()))
-
-	opts = append(opts, generate.WithRunLocation("cli"))
+	if debug {
+		opts = append(opts, generate.WithDebuggingEnabled())
+	}
 
 	g, err := generate.New(opts...)
 	if err != nil {
@@ -92,6 +104,11 @@ func getConfig(outDir string, baseURL string) (*generate.Config, error) {
 		},
 		Go: generate.GoConfig{
 			PackageName: "openapi",
+		},
+		Typescript: generate.TypescriptConfig{
+			PackageName: "openapi",
+			Version:     "0.0.1",
+			Author:      "Speakeasy",
 		},
 		BaseServerURL: baseURL,
 	}
@@ -185,7 +202,7 @@ func cleanDir(dirToClean string, rootDir string, ignorer *gitignore.GitIgnore) (
 	return fullyClean, nil
 }
 
-func writeFile(outDir, filename string, data []byte) error {
+func writeFile(outDir, filename string, data []byte, checkExisting bool) error {
 	outFileName := path.Join(outDir, filename)
 
 	dir := path.Dir(outFileName)
@@ -198,17 +215,19 @@ func writeFile(outDir, filename string, data []byte) error {
 	}
 
 	// If file already exists check if the new content is the same as the existing content
-	if _, err := os.Stat(outFileName); !os.IsNotExist(err) {
-		existing, err := os.ReadFile(outFileName)
-		if err != nil {
-			return err
-		}
+	if checkExisting {
+		if _, err := os.Stat(outFileName); !os.IsNotExist(err) {
+			existing, err := os.ReadFile(outFileName)
+			if err != nil {
+				return err
+			}
 
-		if bytes.Equal(data, existing) {
-			return nil
-		} else {
-			// TODO write this to a debug directory?
-			return fmt.Errorf("found file with different contents on same run - %s", outFileName)
+			if bytes.Equal(data, existing) {
+				return nil
+			} else {
+				// TODO write this to a debug directory?
+				return fmt.Errorf("found file with different contents on same run - %s", outFileName)
+			}
 		}
 	}
 

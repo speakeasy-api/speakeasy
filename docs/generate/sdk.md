@@ -27,6 +27,7 @@ Example gen.yaml file for Go SDK:
 ```
 go:
   packagename: github.com/speakeasy-api/speakeasy-client-sdk-go
+  version: 0.1.0
 # baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
 # this can also be provided via the --baseurl flag when calling the command line
 baseserverurl: https://api.speakeasyapi.dev 
@@ -39,27 +40,25 @@ python:
   packagename: speakeasy-client-sdk-python
   version: 0.1.0
   description: Speakeasy API Client SDK for Python
+  author: Speakeasy API
 # baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
 # this can also be provided via the --baseurl flag when calling the command line
 baseserverurl: https://api.speakeasyapi.dev 
 ```
 
-## Configuring Comments
-
-By default the generated SDKs will include comments for each operation and model. You can configure the comments by adding a `comments` section to the `gen.yaml` file.
- 
-Example gen.yaml file:
+Example gen.yaml file for Typescript SDK:
 
 ```
-go:
-  packagename: github.com/speakeasy-api/speakeasy-client-sdk-go
-comments:
-  disabled: true                         # disable all comments
-  omitdescriptionifsummarypresent: true  # if true and comments enabled, the description will be omitted if a summary is present for an operation
-# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
+typescript:
+  packagename: speakeasy-client-sdk-typescript
+  version: 0.1.0
+  author: Speakeasy API
+# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec
 # this can also be provided via the --baseurl flag when calling the command line
-baseserverurl: https://api.speakeasyapi.dev 
+baseserverurl: https://api.speakeasyapi.dev
 ```
+
+For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
 
 # Ignore Files
 
@@ -74,6 +73,7 @@ By default (without a .genignore file/folders) the SDK generator will ignore the
 	- .git
 	- README.md
 	- readme.md
+	- LICENSE
 
 
 
@@ -87,6 +87,7 @@ speakeasy generate sdk [flags]
 
 ```
   -b, --baseurl string   base URL for the api (only required if OpenAPI spec doesn't specify root server URLs
+  -d, --debug            enable writing debug files with broken code
   -h, --help             help for sdk
   -l, --lang string      language to generate sdk for (available options: [go, python, typescript]) (default "go")
   -o, --out string       path to the output directory

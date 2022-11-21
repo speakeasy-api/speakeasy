@@ -19,7 +19,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
 	}
 
-	g, err := generate.New(generate.WithOnWriteFileFunc(func(filename string, data []byte) error { return nil }), generate.WithLogger(log.Logger()))
+	g, err := generate.New(generate.WithFileFuncs(func(filename string, data []byte, checkExisting bool) error { return nil }, func(filename string) ([]byte, error) { return nil, nil }), generate.WithLogger(log.Logger()))
 	if err != nil {
 		return err
 	}
