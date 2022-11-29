@@ -135,6 +135,7 @@ func loadIgnores(outDir string) (*gitignore.GitIgnore, error) {
 		".git",
 		".genignore",
 		".gitignore",
+		".gitattributes",
 		"gen.yaml",
 		"README.md",
 		"readme.md",
