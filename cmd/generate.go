@@ -69,6 +69,18 @@ typescript:
 baseserverurl: https://api.speakeasyapi.dev
 `+"```"+`
 
+Example gen.yaml file for Java SDK:
+
+`+"```"+`
+java:
+  packagename: dev.speakeasyapi.javasdk
+  projectname: speakeasy-client-sdk-java
+  version: 0.1.0
+# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec
+# this can also be provided via the --baseurl flag when calling the command line
+baseserverurl: https://api.speakeasyapi.dev
+`+"```"+`
+
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
 
 # Ignore Files

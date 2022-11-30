@@ -2,7 +2,7 @@
 `speakeasy generate sdk`  
 
 
-Generating Client SDKs from OpenAPI specs (go, python, typescript + more coming soon)  
+Generating Client SDKs from OpenAPI specs (go, python, typescript, java + more coming soon)  
 
 ## Details
 
@@ -13,6 +13,7 @@ The following languages are currently supported:
 	- go
 	- python
 	- typescript
+	- java
 	- more coming soon
 
 By default the command will generate a Go SDK, but you can specify a different language using the --lang flag.
@@ -58,6 +59,18 @@ typescript:
 baseserverurl: https://api.speakeasyapi.dev
 ```
 
+Example gen.yaml file for Java SDK:
+
+```
+java:
+  packagename: dev.speakeasyapi.javasdk
+  projectname: speakeasy-client-sdk-java
+  version: 0.1.0
+# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec
+# this can also be provided via the --baseurl flag when calling the command line
+baseserverurl: https://api.speakeasyapi.dev
+```
+
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
 
 # Ignore Files
@@ -89,7 +102,7 @@ speakeasy generate sdk [flags]
   -b, --baseurl string   base URL for the api (only required if OpenAPI spec doesn't specify root server URLs
   -d, --debug            enable writing debug files with broken code
   -h, --help             help for sdk
-  -l, --lang string      language to generate sdk for (available options: [go, python, typescript]) (default "go")
+  -l, --lang string      language to generate sdk for (available options: [go, python, typescript, java]) (default "go")
   -o, --out string       path to the output directory
   -s, --schema string    path to the openapi schema
 ```
