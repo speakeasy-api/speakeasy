@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
-	github.com/speakeasy-api/openapi-generation v1.6.0
+	github.com/speakeasy-api/openapi-generation v1.6.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go v0.1.3
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.13.0
@@ -27,7 +27,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gammban/numtow v0.0.2 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
-	github.com/getkin/kin-openapi v0.104.0 // indirect
+	github.com/getkin/kin-openapi v0.110.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.5 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
