@@ -17,7 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL string, debug bool) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL, genVersion string, debug bool) error {
 	if !slices.Contains(generate.SupportLangs, lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -66,6 +66,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 			}
 		}()),
 		generate.WithRunLocation("cli"),
+		generate.WithGenVersion(genVersion),
 	}
 
 	if debug {

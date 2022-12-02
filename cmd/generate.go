@@ -101,8 +101,13 @@ By default (without a .genignore file/folders) the SDK generator will ignore the
 `, strings.Join(generate.SupportLangs, "\n	- ")),
 }
 
+var genVersion string
+
 func genInit() {
 	rootCmd.AddCommand(generateCmd)
+
+	genVersion = rootCmd.Version
+
 	genSDKInit()
 }
 
@@ -152,7 +157,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), vCfg.GetString("id"), lang, schemaPath, outDir, baseURL, debug); err != nil {
+	if err := sdkgen.Generate(cmd.Context(), vCfg.GetString("id"), lang, schemaPath, outDir, baseURL, genVersion, debug); err != nil {
 		rootCmd.SilenceUsage = true
 		return err
 	}
