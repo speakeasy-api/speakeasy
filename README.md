@@ -1,8 +1,7 @@
-# The Speakeasy CLI - Generate Client SDKs and more
+# The Speakeasy CLI - Generate Client SDKs Like a Human Wrote Them
 ![181640742-31ab234a-3b39-432e-b899-21037596b360](https://user-images.githubusercontent.com/68016351/196461357-fcb8d90f-cd67-498e-850f-6146c58d0114.png)
 
-[Speakeasy](https://www.speakeasyapi.dev/) is a complete platform for API Developer Experience. Achieve the vision of self service APIs by moving beyond API docs. Give your API users a seamless onboarding and integration experience in minutes. Today Speakeasy powers: 
-Use this CLI to generate and manage Idiomatic Client SDKs that just work. The CLI invokes generators built from the ground up with a focus on a langauge ergonomics and extensibility.
+[Speakeasy](https://www.speakeasyapi.dev/) is a complete platform for API Developer Experience. Achieve the vision of self service APIs by moving beyond API docs. Give your API users a seamless onboarding and integration experience in minutes. Use this CLI to generate and manage Idiomatic Client SDKs that just work. The CLI invokes generators built from the ground up with a focus on a langauge ergonomics and extensibility.
 
 ![ezgif-1-941c72f269](https://user-images.githubusercontent.com/68016351/206042347-a3dc40de-4339-4b88-9fff-39513c1c8216.gif)
 
