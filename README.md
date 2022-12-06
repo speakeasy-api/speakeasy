@@ -38,13 +38,7 @@ brew install speakeasy-api/homebrew-tap/speakeasy
 ## CLI
 `speakeasy`  
 
-The speakeasy cli tool provides access to the speakeasyapi.dev toolchain  
-
-### Details
-
- A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs: go, python, typescript, java + more languages coming soon.
-	- Validating OpenAPI specs (line numbers coming soon)
+The speakeasy cli tool provides access to the Speakeasy platform and toolchain
 
 ### Usage
 
