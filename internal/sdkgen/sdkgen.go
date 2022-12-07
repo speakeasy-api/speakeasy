@@ -45,14 +45,14 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 	}
 
 	if !autoYes {
-		fmt.Print(fmt.Sprintf("Contents of %s will be overwritten. Continue? [Y/n]:", outDir))
+		fmt.Print(fmt.Sprintf("Contents of %s will be overwritten. Continue? [y/N]:", outDir))
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("an error occured while reading input. Please try again: %w", err)
 		}
-		input = strings.TrimSuffix(input, "\n")
-		if input != "Y" && input != "y" {
+		input = strings.ToLower(strings.TrimSuffix(input, "\n"))
+		if input != "y" && input != "yes" {
 			return errors.New("user aborted")
 		}
 	}
