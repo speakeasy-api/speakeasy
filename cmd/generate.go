@@ -125,6 +125,8 @@ func genSDKInit() {
 
 	genSDKCmd.Flags().BoolP("debug", "d", false, "enable writing debug files with broken code")
 
+	genSDKCmd.Flags().BoolP("auto-yes", "y", false, "auto answer yes to all prompts")
+
 	genSDKCmd.RunE = genSDKs
 
 	generateCmd.AddCommand(genSDKCmd)
@@ -157,7 +159,12 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), vCfg.GetString("id"), lang, schemaPath, outDir, baseURL, genVersion, debug); err != nil {
+	autoYes, err := cmd.Flags().GetBool("auto-yes")
+	if err != nil {
+		return err
+	}
+
+	if err := sdkgen.Generate(cmd.Context(), vCfg.GetString("id"), lang, schemaPath, outDir, baseURL, genVersion, debug, autoYes); err != nil {
 		rootCmd.SilenceUsage = true
 		return err
 	}
