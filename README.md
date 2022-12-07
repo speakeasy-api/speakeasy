@@ -55,6 +55,7 @@ speakeasy generate sdk [flags]
   -l, --lang string      language to generate sdk for (available options: [go, python, typescript, java]) (default "go")
   -o, --out string       path to the output directory
   -s, --schema string    path to the openapi schema
+  -y, --auto-yes string  auto answer yes to all prompts
 ```
 
 For in depth documentation please see our [docs](https://docs.speakeasyapi.dev/docs/speakeasy-cli/getting-started). 

@@ -1,6 +1,7 @@
 package sdkgen
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -17,7 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL, genVersion string, debug bool) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL, genVersion string, debug bool, autoYes bool) error {
 	if !slices.Contains(generate.SupportLangs, lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -41,6 +42,19 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 	schema, err := os.ReadFile(schemaPath)
 	if err != nil {
 		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+	}
+
+	if !autoYes {
+		fmt.Print(fmt.Sprintf("Contents of %s will be overwritten. Continue? [Y/n]:", outDir))
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("an error occured while reading input. Please try again: %w", err)
+		}
+		input = strings.TrimSuffix(input, "\n")
+		if input != "Y" && input != "y" {
+			return errors.New("user aborted")
+		}
 	}
 
 	if err := cleanOutDir(outDir); err != nil {
