@@ -18,9 +18,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL, genVersion string, debug bool, autoYes bool) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL, genVersion string, debug bool, autoYes bool) []error {
 	if !slices.Contains(generate.SupportLangs, lang) {
-		return fmt.Errorf("language not supported: %s", lang)
+		return []error{fmt.Errorf("language not supported: %s", lang)}
 	}
 
 	fmt.Printf("Generating SDK for %s...\n", lang)
@@ -28,7 +28,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 	if strings.TrimSpace(outDir) == "." {
 		wd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get current working directory: %w", err)
+			return []error{fmt.Errorf("failed to get current working directory: %w", err)}
 		}
 
 		outDir = wd
@@ -36,12 +36,12 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 
 	conf, err := getConfig(outDir, baseURL)
 	if err != nil {
-		return fmt.Errorf("failed to load %s/gen.yaml: %w", outDir, err)
+		return []error{fmt.Errorf("failed to load %s/gen.yaml: %w", outDir, err)}
 	}
 
 	schema, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+		return []error{fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)}
 	}
 
 	if !autoYes {
@@ -49,16 +49,16 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			return fmt.Errorf("an error occured while reading input. Please try again: %w", err)
+			return []error{fmt.Errorf("an error occured while reading input. Please try again: %w", err)}
 		}
 		input = strings.ToLower(strings.TrimSuffix(input, "\n"))
 		if input != "y" && input != "yes" {
-			return errors.New("user aborted")
+			return []error{errors.New("user aborted")}
 		}
 	}
 
 	if err := cleanOutDir(outDir); err != nil {
-		return fmt.Errorf("failed to clean out dir %s: %w", outDir, err)
+		return []error{fmt.Errorf("failed to clean out dir %s: %w", outDir, err)}
 	}
 
 	opts := []generate.GeneratorOptions{
@@ -89,11 +89,11 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 
 	g, err := generate.New(opts...)
 	if err != nil {
-		return err
+		return []error{err}
 	}
 
-	if err := g.Generate(context.Background(), schema, generate.Language(lang), conf); err != nil {
-		return errors.New(generate.GetOrderedErrorString(err))
+	if errs := g.Generate(context.Background(), schema, generate.Language(lang), conf); len(errs) > 0 {
+		return errs
 	}
 
 	fmt.Printf("Generating SDK for %s... %s\n", lang, utils.Green("done ✓"))
