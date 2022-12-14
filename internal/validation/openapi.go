@@ -2,7 +2,6 @@ package validation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
@@ -11,21 +10,21 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
-func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
+func ValidateOpenAPI(ctx context.Context, schemaPath string) []error {
 	fmt.Println("Validating OpenAPI spec...")
 
 	schema, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+		return []error{fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)}
 	}
 
 	g, err := generate.New(generate.WithFileFuncs(func(filename string, data []byte, checkExisting bool) error { return nil }, func(filename string) ([]byte, error) { return nil, nil }), generate.WithLogger(log.Logger()))
 	if err != nil {
-		return err
+		return []error{err}
 	}
 
-	if err := g.Validate(context.Background(), schema); err != nil {
-		return errors.New(generate.GetOrderedErrorString(err))
+	if errs := g.Validate(context.Background(), schema); len(errs) > 0 {
+		return errs
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()
