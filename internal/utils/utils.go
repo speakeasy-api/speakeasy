@@ -9,7 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Green = color.New(color.FgGreen).SprintFunc()
+var (
+	Green = color.New(color.FgGreen).SprintFunc()
+	Red   = color.New(color.FgRed).SprintFunc()
+)
 
 func PrintArray[K any](cmd *cobra.Command, arr []K, fieldNameReplacements map[string]string) {
 	printJson, _ := cmd.Flags().GetBool("json")
