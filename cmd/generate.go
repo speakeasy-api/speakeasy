@@ -6,6 +6,7 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -166,7 +167,14 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 
 	if errs := sdkgen.Generate(cmd.Context(), vCfg.GetString("id"), lang, schemaPath, outDir, baseURL, genVersion, debug, autoYes); len(errs) > 0 {
 		rootCmd.SilenceUsage = true
-		return errs[0]
+
+		fmt.Println()
+		for _, err := range errs {
+			fmt.Println(err.Error())
+		}
+		fmt.Println()
+
+		return fmt.Errorf("%s", utils.Red(fmt.Sprintf("Failed to generate SDKs for %s ✖", lang)))
 	}
 
 	return nil
