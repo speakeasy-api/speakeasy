@@ -39,3 +39,12 @@ brews:
     license: Apache-2.0
     test: |
       system "#{bin}/speakeasy --version"
+  - name: speakeasy@{{ .Major }}.{{ .Minor }}.{{ .Patch }}
+    tap:
+      owner: speakeasy-api
+      name: homebrew-tap
+    homepage: https://www.speakeasyapi.dev
+    description: The Speakeasy CLI for interacting with the Speakeasy Platform
+    license: Apache-2.0
+    test: |
+      system "#{bin}/speakeasy --version"
