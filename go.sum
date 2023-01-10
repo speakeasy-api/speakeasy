@@ -239,8 +239,8 @@ github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1y
 github.com/onsi/gomega v1.17.0/go.mod h1:HnhC7FXeEQY45zxNK3PPoIUhzk/80Xly9PcubAlGdZY=
 github.com/onsi/gomega v1.19.0 h1:4ieX6qQjPP/BfC3mpsAtIGGlxTWPeA3Inl/7DtXw1tw=
 github.com/onsi/gomega v1.19.0/go.mod h1:LY+I3pBVzYsTBU1AnDwOSxaYi9WoWiqgwooUqq9yPro=
-github.com/pb33f/libopenapi v0.4.8 h1:D/+Q4AIqjc7VNiiwW5I48ye+HS7lrJNQCs3Bez3I6k8=
-github.com/pb33f/libopenapi v0.4.8/go.mod h1:UcUNPQcwq4ojgQgthV+zbeUs25lhDlD4bM9Da8n2vdU=
+github.com/pb33f/libopenapi v0.4.13 h1:wJ9QWeLnO+HqOpG4eAeE6y7pgcvZJgpgSS4QwEyraz0=
+github.com/pb33f/libopenapi v0.4.13/go.mod h1:UcUNPQcwq4ojgQgthV+zbeUs25lhDlD4bM9Da8n2vdU=
 github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
 github.com/pelletier/go-toml v1.9.5/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/pelletier/go-toml/v2 v2.0.5 h1:ipoSadvV8oGUjnUbMub59IDPPwfxF694nG/jwbMiyQg=
@@ -278,8 +278,8 @@ github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNX
 github.com/sergi/go-diff v1.2.0 h1:XU+rvMAioB0UC3q1MFrIQy4Vo5/4VsRDQQXHsEya6xQ=
 github.com/sergi/go-diff v1.2.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
-github.com/speakeasy-api/openapi-generation v1.10.0 h1:MkoT2hxTf/pIaWMKuZBrCRRx4Zw7piAQkqq4wkOVjMQ=
-github.com/speakeasy-api/openapi-generation v1.10.0/go.mod h1:eL+E8E2RscQVEorR8g3lTLzxo7ctjWSQlwNo6vToM7s=
+github.com/speakeasy-api/openapi-generation v1.10.1 h1:tLbDSYWJ0UmMyV3wJX5s22s8CWnEs9Be/UfjzQVL+7I=
+github.com/speakeasy-api/openapi-generation v1.10.1/go.mod h1:YP8oP4H4l3tzZhRckgYEykl3vOfVt8axdqbdx6+BaKQ=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.1.3 h1:+8KDzksf+IgIz4NuEMopi0yP2ly59zMGSHdc1ZwEQ9s=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.1.3/go.mod h1:GkGNv8JpG5P3dH8SQJdyL+vqg51yiOMhGifqUPcekeM=
 github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 h1:3rKvk9/Xgj7ugJ3eGq3w4A+IW27U1lmQ+pBOMpbP6e8=
