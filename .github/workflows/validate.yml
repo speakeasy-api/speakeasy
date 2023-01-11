@@ -20,6 +20,6 @@ jobs:
           success-state: Title follows the specification.
           failure-state: Title does not follow the specification.
           context-name: conventional-pr-title
-          preset: conventional-changelog-angular@latest
+          preset: conventional-changelog-conventionalcommits@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
