@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -33,12 +34,12 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 		return err // TODO wrap
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.RegisterSchema(ctx, operations.RegisterSchemaRequest{
+	res, err := s.Schemas.RegisterSchema(ctx, operations.RegisterSchemaRequest{
 		PathParams: operations.RegisterSchemaPathParams{
 			APIID:     apiID,
 			VersionID: versionID,
@@ -76,12 +77,12 @@ func getSchemas(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetSchemas(ctx, operations.GetSchemasRequest{
+	res, err := s.Schemas.GetSchemas(ctx, operations.GetSchemasRequest{
 		PathParams: operations.GetSchemasPathParams{
 			APIID:     apiID,
 			VersionID: versionID,
@@ -120,12 +121,12 @@ func getSchemaRevision(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetSchemaRevision(ctx, operations.GetSchemaRevisionRequest{
+	res, err := s.Schemas.GetSchemaRevision(ctx, operations.GetSchemaRevisionRequest{
 		PathParams: operations.GetSchemaRevisionPathParams{
 			APIID:      apiID,
 			VersionID:  versionID,
@@ -170,12 +171,12 @@ func getSchemaDiff(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetSchemaDiff(ctx, operations.GetSchemaDiffRequest{
+	res, err := s.Schemas.GetSchemaDiff(ctx, operations.GetSchemaDiffRequest{
 		PathParams: operations.GetSchemaDiffPathParams{
 			APIID:            apiID,
 			VersionID:        versionID,
@@ -209,12 +210,12 @@ func downloadLatestSchema(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.DownloadSchema(ctx, operations.DownloadSchemaRequest{
+	res, err := s.Schemas.DownloadSchema(ctx, operations.DownloadSchemaRequest{
 		PathParams: operations.DownloadSchemaPathParams{
 			APIID:     apiID,
 			VersionID: versionID,
@@ -251,12 +252,12 @@ func downloadSchemaRevision(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.DownloadSchemaRevision(ctx, operations.DownloadSchemaRevisionRequest{
+	res, err := s.Schemas.DownloadSchemaRevision(ctx, operations.DownloadSchemaRevisionRequest{
 		PathParams: operations.DownloadSchemaRevisionPathParams{
 			APIID:      apiID,
 			VersionID:  versionID,

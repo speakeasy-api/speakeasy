@@ -8,7 +8,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/speakeasy-api/openapi-generation v1.10.1
-	github.com/speakeasy-api/speakeasy-client-sdk-go v0.1.3
+	github.com/speakeasy-api/speakeasy-client-sdk-go v0.10.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.24.0
@@ -24,6 +24,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/daveshanley/vacuum v0.0.47 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
@@ -50,6 +51,7 @@ require (
 	github.com/pb33f/libopenapi v0.4.13 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
 	github.com/pterm/pterm v0.12.50 // indirect
 	github.com/rivo/uniseg v0.3.4 // indirect

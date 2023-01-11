@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/pkg/generate"
+	"github.com/speakeasy-api/speakeasy/internal/auth"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
@@ -138,6 +140,10 @@ func generateExec(cmd *cobra.Command, args []string) error {
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {
+	if err := auth.Authenticate(false); err != nil {
+		return err
+	}
+
 	lang, _ := cmd.Flags().GetString("lang")
 
 	schemaPath, err := cmd.Flags().GetString("schema")
@@ -165,7 +171,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if errs := sdkgen.Generate(cmd.Context(), vCfg.GetString("id"), lang, schemaPath, outDir, baseURL, genVersion, debug, autoYes); len(errs) > 0 {
+	if errs := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, baseURL, genVersion, debug, autoYes); len(errs) > 0 {
 		rootCmd.SilenceUsage = true
 
 		fmt.Println()

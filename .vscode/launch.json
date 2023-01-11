@@ -10,7 +10,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceRoot}/main.go",
-      "args": ["generate", "sdk"]
+      "args": ["api", "get-apis"]
     }
   ]
 }

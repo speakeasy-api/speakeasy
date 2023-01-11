@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,10 @@ func validateExec(cmd *cobra.Command, args []string) error {
 }
 
 func validateOpenAPI(cmd *cobra.Command, args []string) error {
+	if err := auth.Authenticate(false); err != nil {
+		return err
+	}
+
 	schemaPath, err := cmd.Flags().GetString("schema")
 	if err != nil {
 		return err
