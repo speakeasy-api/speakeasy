@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	// Replace these with a local server for development
-	// appURL = "https://app.speakeasyapi.dev"
-	// apiURL = "https://api.prod.speakeasyapi.dev"
-	appURL = "http://localhost:35291"
-	apiURL = "http://localhost:35290"
+	// Comment these out and uncomment the localhost ones to test locally
+	appURL = "https://app.speakeasyapi.dev"
+	apiURL = "https://api.prod.speakeasyapi.dev"
+	// appURL = "http://localhost:35291"
+	// apiURL = "http://localhost:35290"
 )
 
 type authResult struct {
