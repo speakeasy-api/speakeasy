@@ -2,11 +2,11 @@
 `speakeasy validate`  
 
 
-Validate OpenAPI schemas + more (coming soon)  
+Validate OpenAPI documents + more (coming soon)  
 
 ## Details
 
-The "validate" command provides a set of commands for validating OpenAPI specs and more (coming soon).
+The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).
 
 ## Usage
 
@@ -25,4 +25,4 @@ speakeasy validate [flags]
 * [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy validate openapi](openapi.md)	 - Validate an OpenAPI schema
+* [speakeasy validate openapi](openapi.md)	 - Validate an OpenAPI document

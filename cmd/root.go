@@ -28,13 +28,17 @@ func init() {
 	}
 }
 
-func Execute(version string) {
-	rootCmd.Version = version
-
+func Init() {
 	genInit()
 	apiInit()
 	validateInit()
 	authInit()
+}
+
+func Execute(version string) {
+	rootCmd.Version = version
+
+	Init()
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
