@@ -7,6 +7,7 @@ import (
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -19,12 +20,12 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetAllAPIEndpoints(ctx, operations.GetAllAPIEndpointsRequest{
+	res, err := s.APIEndpoints.GetAllAPIEndpoints(ctx, operations.GetAllAPIEndpointsRequest{
 		PathParams: operations.GetAllAPIEndpointsPathParams{
 			APIID: apiID,
 		},
@@ -58,12 +59,12 @@ func getAllAPIEndpointsForVersion(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetAllForVersionAPIEndpoints(ctx, operations.GetAllForVersionAPIEndpointsRequest{
+	res, err := s.APIEndpoints.GetAllForVersionAPIEndpoints(ctx, operations.GetAllForVersionAPIEndpointsRequest{
 		PathParams: operations.GetAllForVersionAPIEndpointsPathParams{
 			APIID:     apiID,
 			VersionID: versionID,
@@ -103,12 +104,12 @@ func getApiEndpoint(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetAPIEndpoint(ctx, operations.GetAPIEndpointRequest{
+	res, err := s.APIEndpoints.GetAPIEndpoint(ctx, operations.GetAPIEndpointRequest{
 		PathParams: operations.GetAPIEndpointPathParams{
 			APIID:         apiID,
 			VersionID:     versionID,
@@ -149,12 +150,12 @@ func findApiEndpoint(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.FindAPIEndpoint(ctx, operations.FindAPIEndpointRequest{
+	res, err := s.APIEndpoints.FindAPIEndpoint(ctx, operations.FindAPIEndpointRequest{
 		PathParams: operations.FindAPIEndpointPathParams{
 			APIID:       apiID,
 			VersionID:   versionID,
@@ -196,12 +197,12 @@ func generateOpenAPISpecForAPIEndpoint(cmd *cobra.Command, args []string) error 
 
 	diff, _ := cmd.Flags().GetBool("diff")
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GenerateOpenAPISpecForAPIEndpoint(ctx, operations.GenerateOpenAPISpecForAPIEndpointRequest{
+	res, err := s.APIEndpoints.GenerateOpenAPISpecForAPIEndpoint(ctx, operations.GenerateOpenAPISpecForAPIEndpointRequest{
 		PathParams: operations.GenerateOpenAPISpecForAPIEndpointPathParams{
 			APIID:         apiID,
 			VersionID:     versionID,
@@ -246,12 +247,12 @@ func generatePostmanCollectionForAPIEndpoint(cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GeneratePostmanCollectionForAPIEndpoint(ctx, operations.GeneratePostmanCollectionForAPIEndpointRequest{
+	res, err := s.APIEndpoints.GeneratePostmanCollectionForAPIEndpoint(ctx, operations.GeneratePostmanCollectionForAPIEndpointRequest{
 		PathParams: operations.GeneratePostmanCollectionForAPIEndpointPathParams{
 			APIID:         apiID,
 			VersionID:     versionID,

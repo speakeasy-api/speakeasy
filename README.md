@@ -34,14 +34,7 @@ Want to learn more about our methodology? Here is a [blog post](https://www.spea
 brew install speakeasy-api/homebrew-tap/speakeasy
 ```
 
-## CLI
-`speakeasy`  
-
-The speakeasy cli tool provides access to the Speakeasy platform and toolchain
-
-### Usage
-
-#### SDK Generation
+## SDK Generation
 
 **Command**:
 ```
@@ -60,7 +53,7 @@ speakeasy generate sdk [flags]
 
 For in depth documentation please see our [docs](https://docs.speakeasyapi.dev/docs/speakeasy-cli/getting-started). 
 
-#### Schema Validation
+## Schema Validation
 
 **Command**:
 ```
@@ -72,7 +65,7 @@ speakeasy validate openapi [flags]
   -s, --schema string   path to the openapi schema
 ```
 
-### OpenAPI Support 
+## OpenAPI Support
 
 * [ ] Global and per method ServerURL configuration (include base url and templating) - https://swagger.io/docs/specification/api-host-and-base-path/
 * [ ] Global and per method Security configuration - https://swagger.io/docs/specification/authentication/
@@ -129,7 +122,7 @@ speakeasy validate openapi [flags]
 * [ ] Support for snippet generation
 * [ ] Support for readme generation
 
-### Advanced Generation Features: 
+## Advanced Generation Features
 
 * [SDK Gen Configuration](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/configuration/index.html) - Learn how to configure the SDK generator to your needs.
 * [Generated Comments](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/generated-comments/index.html) - Learn how comments are generated from your OpenAPI document and how to customize them.
@@ -139,8 +132,38 @@ speakeasy validate openapi [flags]
 * [Capturing Telemetry on SDK Usage](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/capturing-telemetry/index.html) - Learn how you can capture telemetry to get an understanding of how your SDKs are being used.
 * [Automated SDK Generation](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/automate-sdks/index.html) - Use our Github Action and Workflows to setup CI/CD for generating and publishing your SDKs.
 
-### Doc Links
+<!-- WARNING: The below content is replaced by running `go run cmd/docs/main.go` please don't manually edit anything below this line -->
+## CLI  
+`speakeasy`  
 
-* [speakeasy api](docs/api/README.md) - Access the Speakeasy Platform API via the CLI
-* [speakeasy generate](docs/generate/README.md) - Generate Client SDKs
-* [speakeasy validate](docs/validate/README.md)	- Validate OpenAPI schemas
+
+The speakeasy cli tool provides access to the speakeasyapi.dev toolchain  
+
+### Details
+
+ A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
+	- Generating Client SDKs from OpenAPI specs (go, python, typescript(web/server), + more coming soon)
+	- Interacting with the Speakeasy API to create and manage your API workspaces	(coming soon)
+	- Generating OpenAPI specs from your API traffic 								(coming soon)
+	- Validating OpenAPI specs 														(coming soon)
+	- Generating Postman collections from OpenAPI Specs 							(coming soon)
+
+
+### Usage
+
+```
+speakeasy [flags]
+```
+
+#### Options
+
+```
+  -h, --help   help for speakeasy
+```
+
+#### Sub Commands
+
+* [speakeasy api](docs/api/README.md)	 - Access the Speakeasy API via the CLI
+* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
+* [speakeasy generate](docs/generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
+* [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents + more (coming soon)

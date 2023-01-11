@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -21,12 +22,12 @@ func getVersionMetadata(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetVersionMetadata(ctx, operations.GetVersionMetadataRequest{
+	res, err := s.Metadata.GetVersionMetadata(ctx, operations.GetVersionMetadataRequest{
 		PathParams: operations.GetVersionMetadataPathParams{
 			APIID:     apiID,
 			VersionID: versionID,

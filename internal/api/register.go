@@ -1,7 +1,10 @@
 //nolint:errcheck
 package api
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/speakeasy-api/speakeasy/internal/auth"
+	"github.com/spf13/cobra"
+)
 
 func RegisterAPICommands(root *cobra.Command) {
 	cmds := []func(*cobra.Command){
@@ -38,12 +41,22 @@ func registerPrintableApiCommand(root *cobra.Command, newCommand *cobra.Command)
 	root.AddCommand(newCommand)
 }
 
+func authCommand(exec func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		if err := auth.Authenticate(false); err != nil {
+			return err
+		}
+
+		return exec(cmd, args)
+	}
+}
+
 func registerGetApis(root *cobra.Command) {
 	registerPrintableApiCommand(root, &cobra.Command{
 		Use:   "get-apis",
 		Short: "Get all Apis",
 		Long:  `Get a list of all Apis and there versions for a given workspace`,
-		RunE:  getApis,
+		RunE:  authCommand(getApis),
 	})
 }
 
@@ -52,7 +65,7 @@ func registerGetApiVersions(root *cobra.Command) {
 		Use:   "get-api-versions",
 		Short: "Get Api versions",
 		Long:  `Get all Api versions for a particular apiID`,
-		RunE:  getApiVersions,
+		RunE:  authCommand(getApiVersions),
 	})
 }
 
@@ -61,7 +74,7 @@ func registerGenerateOpenAPISpec(root *cobra.Command) {
 		Use:   "generate-openapi-spec",
 		Short: "Generate OpenAPI spec",
 		Long:  `Generate an OpenAPI specification for a particular Api`,
-		RunE:  generateOpenAPISpec,
+		RunE:  authCommand(generateOpenAPISpec),
 	}
 	cmd.Flags().String("api-id", "", "Api ID")
 	cmd.MarkFlagRequired("api-id")
@@ -76,7 +89,7 @@ func registerGeneratePostmanCollection(root *cobra.Command) {
 		Use:   "generate-postman-collection",
 		Short: "Generate Postman collection",
 		Long:  `Generate a Postman collection for a particular Api`,
-		RunE:  generatePostmanCollection,
+		RunE:  authCommand(generatePostmanCollection),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -90,7 +103,7 @@ func registerGetAllAPIEndpoints(root *cobra.Command) {
 		Use:   "get-all-api-endpoints",
 		Short: "Get all API endpoints",
 		Long:  `Get all Api endpoints for a particular apiID`,
-		RunE:  getAllAPIEndpoints,
+		RunE:  authCommand(getAllAPIEndpoints),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -102,7 +115,7 @@ func registerGetAllAPIEndpointsForVersion(root *cobra.Command) {
 		Use:   "get-all-api-endpoints-for-version",
 		Short: "Get all API endpoints for version",
 		Long:  `Get all ApiEndpoints for a particular apiID and versionID`,
-		RunE:  getAllAPIEndpointsForVersion,
+		RunE:  authCommand(getAllAPIEndpointsForVersion),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -116,7 +129,7 @@ func registerGetApiEndpoint(root *cobra.Command) {
 		Use:   "get-api-endpoint",
 		Short: "Get ApiEndpoint",
 		Long:  `Get an ApiEndpoint`,
-		RunE:  getApiEndpoint,
+		RunE:  authCommand(getApiEndpoint),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -132,7 +145,7 @@ func registerFindApiEndpoint(root *cobra.Command) {
 		Use:   "find-api-endpoint",
 		Short: "Find ApiEndpoint",
 		Long:  `Find an ApiEndpoint via its displayName (set by operationId from OpenAPI schema)`,
-		RunE:  findApiEndpoint,
+		RunE:  authCommand(findApiEndpoint),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -148,7 +161,7 @@ func registerGenerateOpenAPISpecForAPIEndpoint(root *cobra.Command) {
 		Use:   "generate-openapi-spec-for-api-endpoint",
 		Short: "Generate OpenAPI spec for API endpoint",
 		Long:  `Generate an OpenAPI specification for a particular ApiEndpoint`,
-		RunE:  generateOpenAPISpecForAPIEndpoint,
+		RunE:  authCommand(generateOpenAPISpecForAPIEndpoint),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -165,7 +178,7 @@ func registerGeneratePostmanCollectionForAPIEndpoint(root *cobra.Command) {
 		Use:   "generate-postman-collection-for-api-endpoint",
 		Short: "Generate Postman collection for API endpoint",
 		Long:  `Generate a Postman collection for a particular ApiEndpoint`,
-		RunE:  generatePostmanCollectionForAPIEndpoint,
+		RunE:  authCommand(generatePostmanCollectionForAPIEndpoint),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -181,7 +194,7 @@ func registerRegisterSchema(root *cobra.Command) {
 		Use:   "register-schema",
 		Short: "Register schema",
 		Long:  `Register a schema for a particular apiID and versionID`,
-		RunE:  registerSchema,
+		RunE:  authCommand(registerSchema),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -197,7 +210,7 @@ func registerGetSchemas(root *cobra.Command) {
 		Use:   "get-schemas",
 		Short: "Get schemas",
 		Long:  `Get information about all schemas associated with a particular apiID`,
-		RunE:  getSchemas,
+		RunE:  authCommand(getSchemas),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -211,7 +224,7 @@ func registerGetSchemaRevision(root *cobra.Command) {
 		Use:   "get-schema-revision",
 		Short: "Get schema revision",
 		Long:  `Get information about a particular schema revision for an Api`,
-		RunE:  getSchemaRevision,
+		RunE:  authCommand(getSchemaRevision),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -227,7 +240,7 @@ func registerGetSchemaDiff(root *cobra.Command) {
 		Use:   "get-schema-diff",
 		Short: "Get schema diff",
 		Long:  `Get a diff of two schema revisions for an Api`,
-		RunE:  getSchemaDiff,
+		RunE:  authCommand(getSchemaDiff),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -245,7 +258,7 @@ func registerDownloadLatestSchema(root *cobra.Command) {
 		Use:   "download-latest-schema",
 		Short: "Download latest schema",
 		Long:  `Download the latest schema for a particular apiID`,
-		RunE:  downloadLatestSchema,
+		RunE:  authCommand(downloadLatestSchema),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -259,7 +272,7 @@ func registerDownloadSchemaRevision(root *cobra.Command) {
 		Use:   "download-schema-revision",
 		Short: "Download schema revision",
 		Long:  `Download a particular schema revision for an Api`,
-		RunE:  downloadSchemaRevision,
+		RunE:  authCommand(downloadSchemaRevision),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -275,7 +288,7 @@ func registerGetVersionMetadata(root *cobra.Command) {
 		Use:   "get-version-metadata",
 		Short: "Get version metadata",
 		Long:  `Get all metadata for a particular apiID and versionID`,
-		RunE:  getVersionMetadata,
+		RunE:  authCommand(getVersionMetadata),
 	}
 	cmd.Flags().String("api-id", "", "API ID")
 	cmd.MarkFlagRequired("api-id")
@@ -289,7 +302,7 @@ func registerQueryEventLog(root *cobra.Command) {
 		Use:   "query-event-log",
 		Short: "Query event log",
 		Long:  `Query the event log to retrieve a list of requests`,
-		RunE:  queryEventLog,
+		RunE:  authCommand(queryEventLog),
 	}
 	cmd.Flags().String("filters", "", "JSON string of filters")
 	registerPrintableApiCommand(root, cmd)
@@ -300,7 +313,7 @@ func registerGetRequestFromEventLog(root *cobra.Command) {
 		Use:   "get-request-from-event-log",
 		Short: "Get request from event log",
 		Long:  `Get information about a particular request`,
-		RunE:  getRequestFromEventLog,
+		RunE:  authCommand(getRequestFromEventLog),
 	}
 	cmd.Flags().String("request-id", "", "Request ID")
 	cmd.MarkFlagRequired("request-id")
@@ -312,6 +325,6 @@ func registerGetValidEmbedAccessTokens(root *cobra.Command) {
 		Use:   "get-valid-embed-access-tokens",
 		Short: "Get valid embed access tokens",
 		Long:  `Get all valid embed access tokens for the current workspace`,
-		RunE:  getValidEmbedAccessTokens,
+		RunE:  authCommand(getValidEmbedAccessTokens),
 	})
 }

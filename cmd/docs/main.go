@@ -14,6 +14,8 @@ import (
 var linkRegex = regexp.MustCompile(`\((.*?\.md)\)`)
 
 func main() {
+	cmd.Init()
+
 	root := cmd.GetRootCommand()
 
 	root.DisableAutoGenTag = true
