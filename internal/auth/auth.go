@@ -106,7 +106,7 @@ func testAuth(apiKey string) error {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to successfully contact the Speakeasy Platform: %w", err)
+		return fmt.Errorf("failed to successfully authenticate with the Speakeasy Platform. Contact Speakeasy Support for Help support@speakeasyapi.dev: %w", err)
 	}
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("api key invalid! Please try to reauthenticate: %d", res.StatusCode)
