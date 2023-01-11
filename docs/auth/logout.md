@@ -2,7 +2,7 @@
 `speakeasy auth logout`  
 
 
-logout of the cli  
+Logout of the CLI  
 
 ## Details
 
@@ -22,4 +22,4 @@ speakeasy auth logout [flags]
 
 ### Parent Command
 
-* [speakeasy auth](README.md)	 - authenticate the cli
+* [speakeasy auth](README.md)	 - Authenticate the CLI

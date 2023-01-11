@@ -2,7 +2,7 @@
 `speakeasy auth login`  
 
 
-authenticate the cli  
+Authenticate the CLI  
 
 ## Details
 
@@ -22,4 +22,4 @@ speakeasy auth login [flags]
 
 ### Parent Command
 
-* [speakeasy auth](README.md)	 - authenticate the cli
+* [speakeasy auth](README.md)	 - Authenticate the CLI

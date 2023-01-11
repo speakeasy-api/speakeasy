@@ -2,7 +2,7 @@
 `speakeasy auth`  
 
 
-authenticate the cli  
+Authenticate the CLI  
 
 ## Details
 
@@ -25,5 +25,5 @@ speakeasy auth [flags]
 * [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy auth login](login.md)	 - authenticate the cli
-* [speakeasy auth logout](logout.md)	 - logout of the cli
+* [speakeasy auth login](login.md)	 - Authenticate the CLI
+* [speakeasy auth logout](logout.md)	 - Logout of the CLI

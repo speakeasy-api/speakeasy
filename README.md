@@ -164,6 +164,6 @@ speakeasy [flags]
 #### Sub Commands
 
 * [speakeasy api](docs/api/README.md)	 - Access the Speakeasy API via the CLI
-* [speakeasy auth](docs/auth/README.md)	 - authenticate the cli
+* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy generate](docs/generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
 * [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents + more (coming soon)
