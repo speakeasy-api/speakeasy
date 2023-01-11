@@ -76,7 +76,13 @@ func save() error {
 	}
 
 	if err := vCfg.WriteConfig(); err != nil {
-		return err
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
+
+		if err := vCfg.SafeWriteConfig(); err != nil {
+			return err
+		}
 	}
 
 	return nil

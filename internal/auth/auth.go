@@ -16,8 +16,10 @@ import (
 
 const (
 	// Replace these with a local server for development
-	appURL = "https://app.speakeasyapi.dev"
-	apiURL = "https://api.prod.speakeasyapi.dev"
+	// appURL = "https://app.speakeasyapi.dev"
+	// apiURL = "https://api.prod.speakeasyapi.dev"
+	appURL = "http://localhost:35291"
+	apiURL = "http://localhost:35290"
 )
 
 type authResult struct {
@@ -57,6 +59,8 @@ func Authenticate(force bool) error {
 
 	if err := browser.OpenURL(url); err != nil {
 		fmt.Println("Please open the following URL in your browser:", url)
+	} else {
+		fmt.Println("Opening URL in your browser:", url)
 	}
 
 	res := <-done
@@ -72,7 +76,7 @@ func Authenticate(force bool) error {
 		return fmt.Errorf("failed to save API key: %w", err)
 	}
 
-	fmt.Println("Authentication successful!")
+	fmt.Printf("Authenticated with workspace successfully - %s/workspaces/%s\n", appURL, res.WorkspaceID)
 
 	return nil
 }
