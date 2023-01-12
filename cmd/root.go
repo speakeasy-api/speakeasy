@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -65,7 +64,6 @@ func Execute(version string) {
 	validateInit()
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
