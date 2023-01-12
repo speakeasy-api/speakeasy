@@ -48,7 +48,7 @@ func createConfig() *zap.Config {
 			LineEnding:    zapcore.DefaultLineEnding,
 			// https://godoc.org/go.uber.org/zap/zapcore#EncoderConfig
 			// EncodeName is optional but all others must be set
-			EncodeLevel:    zapcore.CapitalLevelEncoder,
+			EncodeLevel:    zapcore.CapitalColorLevelEncoder,
 			EncodeTime:     timeEncoder,
 			EncodeDuration: zapcore.StringDurationEncoder,
 			EncodeCaller:   callerEncoder,
