@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/speakeasy-api/speakeasy/internal/auth"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
 )
@@ -48,9 +51,10 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if errs := validation.ValidateOpenAPI(cmd.Context(), schemaPath); len(errs) > 0 {
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath); err != nil {
 		rootCmd.SilenceUsage = true
-		return errs[0]
+
+		return fmt.Errorf(utils.Red("%s"), err)
 	}
 
 	return nil

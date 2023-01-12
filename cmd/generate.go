@@ -171,16 +171,10 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if errs := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, baseURL, genVersion, debug, autoYes); len(errs) > 0 {
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, baseURL, genVersion, debug, autoYes); err != nil {
 		rootCmd.SilenceUsage = true
 
-		fmt.Println()
-		for _, err := range errs {
-			fmt.Println(err.Error())
-		}
-		fmt.Println()
-
-		return fmt.Errorf("%s", utils.Red(fmt.Sprintf("Failed to generate SDKs for %s ✖", lang)))
+		return fmt.Errorf(utils.Red("%w"), err)
 	}
 
 	return nil
