@@ -4,11 +4,11 @@ go 1.19
 
 require (
 	github.com/fatih/color v1.13.0
-	github.com/google/uuid v1.3.0
 	github.com/hexops/gotextdiff v1.0.3
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/speakeasy-api/openapi-generation v1.10.6
-	github.com/speakeasy-api/speakeasy-client-sdk-go v0.1.3
+	github.com/speakeasy-api/speakeasy-client-sdk-go v0.10.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.24.0
@@ -24,6 +24,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/daveshanley/vacuum v0.0.49 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
@@ -33,6 +34,7 @@ require (
 	github.com/gammban/numtow v0.0.2 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/color v1.5.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect

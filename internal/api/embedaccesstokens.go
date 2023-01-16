@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -10,12 +11,12 @@ import (
 func getValidEmbedAccessTokens(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetValidEmbedAccessTokens(ctx)
+	res, err := s.Embeds.GetValidEmbedAccessTokens(ctx)
 	if err != nil {
 		return err // TODO wrap
 	}

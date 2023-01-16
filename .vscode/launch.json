@@ -5,12 +5,19 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Package",
+      "name": "Debug CLI",
       "type": "go",
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceRoot}/main.go",
-      "args": ["generate", "sdk"]
+      "args": ["api", "get-apis"]
+    },
+    {
+      "name": "Debug Docs",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceRoot}/cmd/docs/main.go"
     }
   ]
 }

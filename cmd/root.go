@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"log"
+	"fmt"
 	"os"
-	"path"
 
-	"github.com/google/uuid"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var rootCmd = &cobra.Command{
@@ -23,45 +21,24 @@ var rootCmd = &cobra.Command{
 	RunE: rootExec,
 }
 
-var vCfg = viper.New()
-
 func init() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
+	if err := config.Load(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
+}
 
-	cfgDir := path.Join(home, ".speakeasy")
-
-	vCfg.SetConfigName("config")
-	vCfg.SetConfigType("yaml")
-	vCfg.AddConfigPath(cfgDir)
-
-	if err := vCfg.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			log.Fatal(err)
-		}
-	}
-
-	if vCfg.GetString("id") == "" {
-		vCfg.Set("id", uuid.New().String())
-
-		if err := os.MkdirAll(cfgDir, os.ModePerm); err != nil {
-			log.Fatal(err)
-		}
-
-		if err := vCfg.SafeWriteConfig(); err != nil {
-			log.Fatal(err)
-		}
-	}
+func Init() {
+	genInit()
+	apiInit()
+	validateInit()
+	authInit()
 }
 
 func Execute(version string) {
 	rootCmd.Version = version
 
-	genInit()
-	apiInit()
-	validateInit()
+	Init()
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

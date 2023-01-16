@@ -7,6 +7,7 @@ import (
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -14,12 +15,12 @@ import (
 func getApis(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetApis(ctx, operations.GetApisRequest{})
+	res, err := s.Apis.GetApis(ctx, operations.GetApisRequest{})
 	if err != nil {
 		return err // TODO wrap
 	}
@@ -43,12 +44,12 @@ func getApiVersions(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetAllAPIVersions(ctx, operations.GetAllAPIVersionsRequest{
+	res, err := s.Apis.GetAllAPIVersions(ctx, operations.GetAllAPIVersionsRequest{
 		PathParams: operations.GetAllAPIVersionsPathParams{
 			APIID: apiID,
 		},
@@ -83,12 +84,12 @@ func generateOpenAPISpec(cmd *cobra.Command, args []string) error {
 
 	diff, _ := cmd.Flags().GetBool("diff")
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GenerateOpenAPISpec(ctx, operations.GenerateOpenAPISpecRequest{
+	res, err := s.Apis.GenerateOpenAPISpec(ctx, operations.GenerateOpenAPISpecRequest{
 		PathParams: operations.GenerateOpenAPISpecPathParams{
 			APIID:     apiID,
 			VersionID: versionID,
@@ -127,12 +128,12 @@ func generatePostmanCollection(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GeneratePostmanCollection(ctx, operations.GeneratePostmanCollectionRequest{
+	res, err := s.Apis.GeneratePostmanCollection(ctx, operations.GeneratePostmanCollectionRequest{
 		PathParams: operations.GeneratePostmanCollectionPathParams{
 			APIID:     apiID,
 			VersionID: versionID,

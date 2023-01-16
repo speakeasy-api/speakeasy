@@ -6,6 +6,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -23,12 +24,12 @@ func queryEventLog(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.QueryEventLog(ctx, operations.QueryEventLogRequest{
+	res, err := s.Requests.QueryEventLog(ctx, operations.QueryEventLogRequest{
 		QueryParams: operations.QueryEventLogQueryParams{
 			Filters: f,
 		},
@@ -57,12 +58,12 @@ func getRequestFromEventLog(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := initSDK()
+	s, err := sdk.InitSDK("")
 	if err != nil {
 		return err
 	}
 
-	res, err := s.GetRequestFromEventLog(ctx, operations.GetRequestFromEventLogRequest{
+	res, err := s.Requests.GetRequestFromEventLog(ctx, operations.GetRequestFromEventLogRequest{
 		PathParams: operations.GetRequestFromEventLogPathParams{
 			RequestID: requestID,
 		},
