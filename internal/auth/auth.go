@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -28,7 +29,8 @@ type authResult struct {
 }
 
 func Authenticate(force bool) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
 
 	existingApiKey, setByEnvVar := config.GetSpeakeasyAPIKey()
 	if existingApiKey != "" && !force {
@@ -63,7 +65,13 @@ func Authenticate(force bool) error {
 		fmt.Println("Opening URL in your browser:", url)
 	}
 
-	res := <-done
+	var res authResult
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("authentication timed out")
+	case res = <-done:
+	}
+
 	if res.err != nil {
 		return res.err
 	}
