@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	gitignore "github.com/sabhiram/go-gitignore"
@@ -108,7 +109,22 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 }
 
 func getConfig(outDir string, baseURL string) (*generate.Config, error) {
-	data, err := os.ReadFile(path.Join(outDir, "gen.yaml"))
+	searchDir := filepath.Clean(outDir)
+
+	// TODO: this may not work as expected on Windows
+	for {
+		if _, err := os.Stat(filepath.Join(searchDir, "gen.yaml")); err == nil {
+			break
+		}
+
+		if searchDir == "/" || searchDir == "." || searchDir == "" {
+			break
+		}
+
+		searchDir = filepath.Clean(filepath.Dir(searchDir))
+	}
+
+	data, err := os.ReadFile(filepath.Join(searchDir, "gen.yaml"))
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
