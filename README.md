@@ -1,23 +1,29 @@
 # The Speakeasy CLI - Generate Client SDKs Like a Human Wrote Them
 ![181640742-31ab234a-3b39-432e-b899-21037596b360](https://user-images.githubusercontent.com/68016351/196461357-fcb8d90f-cd67-498e-850f-6146c58d0114.png)
 
-[Speakeasy](https://www.speakeasyapi.dev/) is a complete platform for API Developer Experience. Achieve the vision of self service APIs by moving beyond API docs. Give your API users a seamless onboarding and integration experience in minutes. Use this CLI to generate and manage Idiomatic Client SDKs that just work. The CLI invokes generators built from the ground up with a focus on a langauge ergonomics and extensibility.
+Speakeasy is the fastest way to ship developer experience for your APIs.
 
 ![ezgif-1-941c72f269](https://user-images.githubusercontent.com/68016351/206042347-a3dc40de-4339-4b88-9fff-39513c1c8216.gif)
 
-## Overview
+## What is Speakeasy ?
 
-This CLI is a tool for interacting with the [Speakeasy](https://docs.speakeasyapi.dev/docs/speakeasy-cli/) platform and its various functions:
+[Speakeasy](https://www.speakeasyapi.dev/) gives your users the DevEx that makes API integrations easy. Don’t put the burden of integration on your users. Take your APIs to market with best in class sdks and a complete self-service experience from shipping great sdks to managing keys, logs and more.
 
-* Generating idiomatic client SDKs from OpenAPI3 specs:
-  * Live: Go, Python3, Typescript(Node), Java (alpha)
-  * Coming soon: Terraform, Rust, Ruby, C# and more languages on upon request! 
-  
+## What is the Speakeasy CLI ?
+
+This CLI is a tool for interacting with the [Speakeasy](https://docs.speakeasyapi.dev/docs/speakeasy-cli/) platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more.
+
+Current functions of the CLI include: 
+
+* Generating idiomatic client SDKs from OpenAPI3.X specs:
+  * Live: Go, Python3, Typescript(Node), Java 
+  * Coming soon: Terraform, Rust, Ruby, C# and more languages on upon request!
 * Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages. 
+* Authenticating with the platform and managing API keys. 
 
 ## Design Choices
 
-All the SDKs we generate are designed to be as idiomatic to the language they are generated for as possible while being similar enough to each other to allow some familarity between them, but also to allow for an effiecient generation engine that is capabale of supporting many languages. Some of the design decisions we made are listed below:
+All the SDKs we generate are designed to be as idiomatic to the language they are generated for as possible while being similar enough to each other to allow some familiarity between them, but also to allow for an efficient generation engine that is capabale of supporting many languages. Some of the design decisions we made are listed below:
 
 * Each of the SDKs generally implement a base SDK class that contains the methods for each of the API endpoints defined in a spec.
 * Where possible we generate fully typed models from the OpenAPI document and seperate those models defined as components in the docs and those that are defined inline with operations.
@@ -34,7 +40,30 @@ Want to learn more about our methodology? Here is a [blog post](https://www.spea
 brew install speakeasy-api/homebrew-tap/speakeasy
 ```
 
-## SDK Generation
+## Getting Started with the Speakeasy CLI
+
+Once you installed the Speakeasy CLI, you can verify it's working by running:
+
+```bash
+speakeasy --help
+```
+
+See the [docs](https://docs.speakeasyapi.dev/docs/speakeasy-cli/getting-started) for more information on how to get started with the Speakeasy CLI.
+
+### Authenticating Speakeasy CLI 
+
+Speakeasy CLI depends on Speakeasy Platform APIs. Connect your Speakeasy CLI with Speakeasy Platform by running:
+
+```bash
+speakeasy auth login
+```
+You'll be redirected to a login URL to select an existing workspace or create a new workspace on the platform. If you're local network prevents 
+accessing the login page prompted by the CLI you can login manually at [app.speakeasyapi.dev](), retrieve an API key and populate a local environment
+variable named `SPEAKEASY_API_KEY` with the key.
+
+<img width="1268" alt="Screenshot 2023-01-29 at 23 12 05" src="https://user-images.githubusercontent.com/68016351/215410983-b41dab8c-12b1-472c-a2fb-3325b881ff8e.png">
+
+### SDK Generation
 
 **Command**:
 ```
@@ -131,23 +160,14 @@ speakeasy validate openapi [flags]
 * [Using custom HTTPs Clients with the SDK](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/custom-http-client/index.html) - Learn how to provide a custom HTTP Client to the SDKs at runtime.
 * [Capturing Telemetry on SDK Usage](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/capturing-telemetry/index.html) - Learn how you can capture telemetry to get an understanding of how your SDKs are being used.
 * [Automated SDK Generation](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/automate-sdks/index.html) - Use our Github Action and Workflows to setup CI/CD for generating and publishing your SDKs.
+* [Override Generated Names](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/override-names/) - Speakeasy uses your OpenAPI schema to infer names for class types, methods, and parameters. However, you can override these names to tailor the generated SDK to your preferences.
+* [Add retries to your SDKs](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/retries) - The generator supports the ability to generate SDKs that will automatically retry requests that fail due to network errors or any configured HTTP Status code.
+
+## Getting Support
+
+If you need support using Speakeasy CLI, please contact us via [email](info@speakeasyapi.dev), [slack](https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1df0lalk5-HCAlpcQiqPw8vGukQWhexw) or file a Github issue and we'll respond ASAP !
 
 <!-- WARNING: The below content is replaced by running `go run cmd/docs/main.go` please don't manually edit anything below this line -->
-## CLI  
-`speakeasy`  
-
-
-The speakeasy cli tool provides access to the speakeasyapi.dev toolchain  
-
-### Details
-
- A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript(web/server), + more coming soon)
-	- Interacting with the Speakeasy API to create and manage your API workspaces	(coming soon)
-	- Generating OpenAPI specs from your API traffic 								(coming soon)
-	- Validating OpenAPI specs 														(coming soon)
-	- Generating Postman collections from OpenAPI Specs 							(coming soon)
-
 
 ### Usage
 
