@@ -32,6 +32,8 @@ All the SDKs we generate are designed to be as idiomatic to the language they ar
 
 Want to learn more about our methodology? Here is a [blog post](https://www.speakeasyapi.dev/post/client-sdks-as-a-service) to learn more about our generators as compared to the OSS options. If you're interested in having managed Github repos generated for your SDKs or enterprise support reach out to us [here](https://www.speakeasyapi.dev/request-access) or [come chat with us](https://calendly.com/d/drw-t98-rpq/simon-sagar-speakeasy). We'd love to help you build out API dev ex.
 
+> We may capture telemetry on usage of the CLI to better understand API (OpenAPI) features so that we can build better code generators and other tools over time
+
 ## Installation
 
 ### Homebrew
@@ -83,6 +85,8 @@ speakeasy generate sdk [flags]
 For in depth documentation please see our [docs](https://docs.speakeasyapi.dev/docs/speakeasy-cli/getting-started). 
 
 ## Schema Validation
+
+Note, Schema validation doesn't require logging in to the Speakeasy Platform.
 
 **Command**:
 ```
