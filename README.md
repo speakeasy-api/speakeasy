@@ -58,7 +58,7 @@ Speakeasy CLI depends on Speakeasy Platform APIs. Connect your Speakeasy CLI wit
 speakeasy auth login
 ```
 You'll be redirected to a login URL to select an existing workspace or create a new workspace on the platform. If you're local network prevents 
-accessing the login page prompted by the CLI you can login manually at [app.speakeasyapi.dev](), retrieve an API key and populate a local environment
+accessing the login page prompted by the CLI you can login manually at [app.speakeasyapi.dev](https://app.speakeasyapi.dev), retrieve an API key and populate a local environment
 variable named `SPEAKEASY_API_KEY` with the key.
 
 <img width="1268" alt="Screenshot 2023-01-29 at 23 12 05" src="https://user-images.githubusercontent.com/68016351/215410983-b41dab8c-12b1-472c-a2fb-3325b881ff8e.png">
