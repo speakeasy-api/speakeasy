@@ -27,6 +27,7 @@ jobs:
           skip-commit: "true"
           output-file: "false"
           skip-on-empty: "false"
+          preset: conventionalcommits
       - uses: actions/setup-go@v3
         with:
           go-version: ">=1.19.1"
