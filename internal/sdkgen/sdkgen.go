@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	gitignore "github.com/sabhiram/go-gitignore"
-	"github.com/speakeasy-api/openapi-generation/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/exp/slices"

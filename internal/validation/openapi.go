@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/speakeasy-api/openapi-generation/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
