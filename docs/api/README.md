@@ -39,6 +39,7 @@ speakeasy api [flags]
 * [speakeasy api get-api-endpoint](get-api-endpoint.md)	 - Get ApiEndpoint
 * [speakeasy api get-api-versions](get-api-versions.md)	 - Get Api versions
 * [speakeasy api get-apis](get-apis.md)	 - Get all Apis
+* [speakeasy api get-plugins](get-plugins.md)	 - Get plugins
 * [speakeasy api get-request-from-event-log](get-request-from-event-log.md)	 - Get request from event log
 * [speakeasy api get-schema-diff](get-schema-diff.md)	 - Get schema diff
 * [speakeasy api get-schema-revision](get-schema-revision.md)	 - Get schema revision
@@ -47,3 +48,5 @@ speakeasy api [flags]
 * [speakeasy api get-version-metadata](get-version-metadata.md)	 - Get version metadata
 * [speakeasy api query-event-log](query-event-log.md)	 - Query event log
 * [speakeasy api register-schema](register-schema.md)	 - Register schema
+* [speakeasy api run-plugin](run-plugin.md)	 - Run plugin
+* [speakeasy api upsert-plugin](upsert-plugin.md)	 - Upsert plugin
