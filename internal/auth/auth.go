@@ -2,9 +2,7 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,8 +17,8 @@ const (
 	// Comment these out and uncomment the localhost ones to test locally
 	appURL = "https://app.speakeasyapi.dev"
 	apiURL = "https://api.prod.speakeasyapi.dev"
-	// appURL = "http://localhost:35291"
-	// apiURL = "http://localhost:35290"
+	//appURL = "http://localhost:35291"
+	//apiURL = "http://localhost:35290"
 )
 
 type authResult struct {
@@ -133,31 +131,28 @@ func startServer(done chan authResult) (string, *http.Server) {
 			resultSent = true
 		}
 	}
+	var res config.SpeakeasyAuthInfo
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "*")
-
-		if r.Method != http.MethodPost {
+		if r.Method != http.MethodGet {
 			return
 		}
 
-		data, err := io.ReadAll(r.Body)
-		if err != nil {
-			sendResult(authResult{err: err})
-			return
-		}
+		res.APIKey = r.URL.Query().Get("apiKey")
+		res.CustomerID = r.URL.Query().Get("customerId")
+		res.WorkspaceID = r.URL.Query().Get("workspaceId")
 
-		var res config.SpeakeasyAuthInfo
-		if err := json.Unmarshal(data, &res); err != nil {
-			sendResult(authResult{err: err})
-			return
-		}
-
+		http.Redirect(w, r, "/complete", http.StatusTemporaryRedirect)
+	})
+	mux.HandleFunc("/complete", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 
+		if len(res.APIKey) == 0 || len(res.CustomerID) == 0 || len(res.WorkspaceID) == 0 {
+			sendResult(authResult{err: fmt.Errorf("empty values in AuthInfo %v", res)})
+			return
+		}
+		w.Write([]byte("Authentication successful! You can now close this tab."))
 		sendResult(authResult{SpeakeasyAuthInfo: res})
 	})
 
