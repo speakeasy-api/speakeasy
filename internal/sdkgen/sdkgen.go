@@ -20,7 +20,7 @@ import (
 )
 
 func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL, genVersion string, debug bool, autoYes bool) error {
-	if generate.CheckLanguageSupported(lang) {
+	if !generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
 
