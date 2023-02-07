@@ -1,7 +1,6 @@
 package sdkgen
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -12,6 +11,7 @@ import (
 	"strings"
 
 	gitignore "github.com/sabhiram/go-gitignore"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/filetracking"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -20,7 +20,7 @@ import (
 )
 
 func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL, genVersion string, debug bool, autoYes bool) error {
-	if !slices.Contains(generate.SupportLangs, lang) {
+	if generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
 
@@ -45,20 +45,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
 	}
 
-	if !autoYes {
-		fmt.Print(fmt.Sprintf("Contents of %s will be overwritten. Continue? [y/N]:", outDir))
-		reader := bufio.NewReader(os.Stdin)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("an error occured while reading input. Please try again: %w", err)
-		}
-		input = strings.ToLower(strings.TrimSuffix(input, "\n"))
-		if input != "y" && input != "yes" {
-			return errors.New("user aborted")
-		}
-	}
-
-	if err := cleanOutDir(outDir); err != nil {
+	if err := filetracking.CleanDir(outDir, autoYes); err != nil {
 		return fmt.Errorf("failed to clean out dir %s: %w", outDir, err)
 	}
 
@@ -95,7 +82,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, baseURL
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, generate.Language(lang), conf); len(errs) > 0 {
+	if errs := g.Generate(context.Background(), schema, lang, conf); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error(err.Error())
 		}

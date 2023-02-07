@@ -21,7 +21,7 @@ var generateCmd = &cobra.Command{
 
 var genSDKCmd = &cobra.Command{
 	Use:   "sdk",
-	Short: fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s + more coming soon)", strings.Join(generate.SupportLangs, ", ")),
+	Short: fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s + more coming soon)", strings.Join(generate.GetSupportedLanguages(), ", ")),
 	Long: fmt.Sprintf(`Using the "speakeasy generate sdk" command you can generate client SDK packages for various languages
 that are ready to use and publish to your favorite package registry.
 
@@ -101,7 +101,7 @@ By default (without a .genignore file/folders) the SDK generator will ignore the
 	- readme.md
 	- LICENSE
 
-`, strings.Join(generate.SupportLangs, "\n	- ")),
+`, strings.Join(generate.GetSupportedLanguages(), "\n	- ")),
 }
 
 var genVersion string
@@ -116,7 +116,7 @@ func genInit() {
 
 //nolint:errcheck
 func genSDKInit() {
-	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(generate.SupportLangs, ", ")))
+	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(generate.GetSupportedLanguages(), ", ")))
 
 	genSDKCmd.Flags().StringP("schema", "s", "", "path to the openapi schema")
 	genSDKCmd.MarkFlagRequired("schema")
