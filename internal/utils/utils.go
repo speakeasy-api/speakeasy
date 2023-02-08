@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	Green = color.New(color.FgGreen).SprintFunc()
-	Red   = color.New(color.FgRed).SprintFunc()
+	Green  = color.New(color.FgGreen).SprintFunc()
+	Red    = color.New(color.FgRed).SprintFunc()
+	Yellow = color.New(color.FgYellow).SprintFunc()
 )
 
 func PrintArray[K any](cmd *cobra.Command, arr []K, fieldNameReplacements map[string]string) {

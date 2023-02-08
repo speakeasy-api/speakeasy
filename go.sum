@@ -302,12 +302,8 @@ github.com/sergi/go-diff v1.2.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNX
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/speakeasy-api/easytemplate v0.5.0 h1:gHhA1NuMzlLR72gSG2RS4r+4ioe+MuEwfHPweALbD1Y=
 github.com/speakeasy-api/easytemplate v0.5.0/go.mod h1:xECDxPIcyR5V1/moOULFbFvrydYgn9YpuabGPHS97A4=
-github.com/speakeasy-api/openapi-generation/v2 v2.0.2 h1:5CL8z9EDiLQqx7VcueiBYLNwy7ehfR1nD4siFTuZhNs=
-github.com/speakeasy-api/openapi-generation/v2 v2.0.2/go.mod h1:5VhoAtFkBEMnFZFk/9EKCmC7xe6zq94nsu97wPxHSp8=
-github.com/speakeasy-api/openapi-generation/v2 v2.1.0 h1:cknNckFx1W+2v0aYUjTvNQ6k/wEqKZxdJsdFNyfEAXs=
-github.com/speakeasy-api/openapi-generation/v2 v2.1.0/go.mod h1:5VhoAtFkBEMnFZFk/9EKCmC7xe6zq94nsu97wPxHSp8=
-github.com/speakeasy-api/openapi-generation/v2 v2.1.1 h1:Z1wi0mSMcwgRq9Kzqfsmay8PJPj1FBT9bghfSbC64Zc=
-github.com/speakeasy-api/openapi-generation/v2 v2.1.1/go.mod h1:5VhoAtFkBEMnFZFk/9EKCmC7xe6zq94nsu97wPxHSp8=
+github.com/speakeasy-api/openapi-generation/v2 v2.1.2 h1:B9DIqj4DUhvj07Rr70qgejdqn2sjrSF8U5qj0RTqKrY=
+github.com/speakeasy-api/openapi-generation/v2 v2.1.2/go.mod h1:5VhoAtFkBEMnFZFk/9EKCmC7xe6zq94nsu97wPxHSp8=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.10.0 h1:mj6M4mVShHStGBrY9QIkYTCUJSn22P3blEaQasUW95s=
 github.com/speakeasy-api/speakeasy-client-sdk-go v0.10.0/go.mod h1:8AvDv5/iARErPuUE3SHfz1PLVdrA7blwz2LDP7ZQG38=
 github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 h1:3rKvk9/Xgj7ugJ3eGq3w4A+IW27U1lmQ+pBOMpbP6e8=
