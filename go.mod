@@ -8,7 +8,7 @@ require (
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/speakeasy-api/openapi-generation/v2 v2.1.2
-	github.com/speakeasy-api/speakeasy-client-sdk-go v0.10.0
+	github.com/speakeasy-api/speakeasy-client-sdk-go v1.1.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.24.0
