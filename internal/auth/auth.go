@@ -17,8 +17,8 @@ const (
 	// Comment these out and uncomment the localhost ones to test locally
 	appURL = "https://app.speakeasyapi.dev"
 	apiURL = "https://api.prod.speakeasyapi.dev"
-	//appURL = "http://localhost:35291"
-	//apiURL = "http://localhost:35290"
+	// appURL = "http://localhost:35291"
+	// apiURL = "http://localhost:35290"
 )
 
 type authResult struct {
@@ -152,7 +152,7 @@ func startServer(done chan authResult) (string, *http.Server) {
 			sendResult(authResult{err: fmt.Errorf("empty values in AuthInfo %v", res)})
 			return
 		}
-		w.Write([]byte("Authentication successful! You can now close this tab."))
+		_, _ = w.Write([]byte("Authentication successful! You can now close this tab."))
 		sendResult(authResult{SpeakeasyAuthInfo: res})
 	})
 

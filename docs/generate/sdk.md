@@ -2,7 +2,7 @@
 `speakeasy generate sdk`  
 
 
-Generating Client SDKs from OpenAPI specs (go, python, typescript, java + more coming soon)  
+Generating Client SDKs from OpenAPI specs (go, java, php, python, typescript + more coming soon)  
 
 ## Details
 
@@ -11,9 +11,10 @@ that are ready to use and publish to your favorite package registry.
 
 The following languages are currently supported:
 	- go
+	- java
+	- php
 	- python
 	- typescript
-	- java
 	- more coming soon
 
 By default the command will generate a Go SDK, but you can specify a different language using the --lang flag.
@@ -103,9 +104,9 @@ speakeasy generate sdk [flags]
   -b, --baseurl string   base URL for the api (only required if OpenAPI spec doesn't specify root server URLs
   -d, --debug            enable writing debug files with broken code
   -h, --help             help for sdk
-  -l, --lang string      language to generate sdk for (available options: [go, python, typescript, java]) (default "go")
+  -l, --lang string      language to generate sdk for (available options: [go, java, php, python, typescript]) (default "go")
   -o, --out string       path to the output directory
-  -s, --schema string    path to the openapi schema
+  -s, --schema string    path to the openapi schema (default "./openapi.yaml")
 ```
 
 ### Parent Command
