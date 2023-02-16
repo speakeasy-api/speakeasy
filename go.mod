@@ -6,8 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
-	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
-	github.com/speakeasy-api/openapi-generation/v2 v2.2.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.2.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.1.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -59,6 +58,7 @@ require (
 	github.com/pterm/pterm v0.12.53 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1 // indirect
 	github.com/speakeasy-api/easytemplate v0.5.0 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
