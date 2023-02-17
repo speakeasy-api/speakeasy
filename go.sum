@@ -88,8 +88,8 @@ github.com/dlclark/regexp2 v1.7.0 h1:7lJfhqlPssTb1WQx4yvTHN0uElPEv52sbaECrAQxjAo
 github.com/dlclark/regexp2 v1.7.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/dop251/goja v0.0.0-20211022113120-dc8c55024d06/go.mod h1:R9ET47fwRVRPZnOGvHxxhuZcbrMCuiqOz3Rlrh4KSnk=
 github.com/dop251/goja v0.0.0-20221118162653-d4bf6fde1b86/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
-github.com/dop251/goja v0.0.0-20230128084908-78b980256d04 h1:iQQgQ1wBsFmpu6OjINCY2ekdknKNNpxO/GOzzww2Amk=
-github.com/dop251/goja v0.0.0-20230128084908-78b980256d04/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
+github.com/dop251/goja v0.0.0-20230216180835-5937a312edda h1:yWEvdMtib3RbPysHDTNf/c3gerF5r+iMcmhlAeE6hEk=
+github.com/dop251/goja v0.0.0-20230216180835-5937a312edda/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
 github.com/dop251/goja_nodejs v0.0.0-20210225215109-d91c329300e7/go.mod h1:hn7BA7c8pLvoGndExHudxTDKZ84Pyvv+90pbBjbTz0Y=
 github.com/dop251/goja_nodejs v0.0.0-20211022123610-8dd9abb0616d/go.mod h1:DngW8aVqWbuLRMHItjPUyqdj+HWPvnQe8V8y1nDpIbM=
 github.com/dop251/goja_nodejs v0.0.0-20221211191749-434192f0843e h1:DJ5cKH4HUYevCd09vMIbwc8U02eBKLFR2q1O1hSAJcY=
@@ -105,6 +105,8 @@ github.com/envoyproxy/go-control-plane v0.9.9-0.20201210154907-fd9021fe5dad/go.m
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/ettle/strcase v0.1.1 h1:htFueZyVeE1XNnMEfbqp5r67qAN/4r6ya1ysq8Q+Zcw=
 github.com/ettle/strcase v0.1.1/go.mod h1:hzDLsPC7/lwKyBOywSHEP89nt2pDgdy+No1NBA9o9VY=
+github.com/evanw/esbuild v0.17.8 h1:QzE7cRRq7y3qH7ZKGN0/nUGbdZPyikfNaMaCMNUufnU=
+github.com/evanw/esbuild v0.17.8/go.mod h1:iINY06rn799hi48UqEnaQvVfZWe6W9bET78LbvN8VWk=
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/forPelevin/gomoji v1.1.7 h1:jwzyCapS0H7pqtNy10n1LU1fn35Fmx9OoFOGYwbDJsk=
@@ -300,10 +302,10 @@ github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNX
 github.com/sergi/go-diff v1.2.0 h1:XU+rvMAioB0UC3q1MFrIQy4Vo5/4VsRDQQXHsEya6xQ=
 github.com/sergi/go-diff v1.2.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
-github.com/speakeasy-api/easytemplate v0.5.0 h1:gHhA1NuMzlLR72gSG2RS4r+4ioe+MuEwfHPweALbD1Y=
-github.com/speakeasy-api/easytemplate v0.5.0/go.mod h1:xECDxPIcyR5V1/moOULFbFvrydYgn9YpuabGPHS97A4=
-github.com/speakeasy-api/openapi-generation/v2 v2.2.3 h1:w4QXPnl5IZXU0gCd/KmQ0vzcntMK1HUkWAF5DnZCTls=
-github.com/speakeasy-api/openapi-generation/v2 v2.2.3/go.mod h1:ajlR9FhW8aw9ita7X37JGTkUlgjDDqk2N+rOVQmiuhU=
+github.com/speakeasy-api/easytemplate v0.6.1 h1:td1dsZ7yEcQPqHm60TujtIYK8cWuNyGz5begD79CKCk=
+github.com/speakeasy-api/easytemplate v0.6.1/go.mod h1:Rzjlu38DxW83QK4Img7hXYuPHCMz1BWG3ByYLjGJzr8=
+github.com/speakeasy-api/openapi-generation/v2 v2.2.4 h1:LHhibIWke8DmsW0WnqlU+dOqgqBRWC+Sf7evRykGZxE=
+github.com/speakeasy-api/openapi-generation/v2 v2.2.4/go.mod h1:Ptx8fEO09K7PF2t2AfqPuGC2//my/GhQkd/5RBbzflY=
 github.com/speakeasy-api/speakeasy-client-sdk-go v1.1.1 h1:7EzpwEdyB7B1/JwFdMYaqdwxTstwMx6lz6myvNko9o4=
 github.com/speakeasy-api/speakeasy-client-sdk-go v1.1.1/go.mod h1:8AvDv5/iARErPuUE3SHfz1PLVdrA7blwz2LDP7ZQG38=
 github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 h1:3rKvk9/Xgj7ugJ3eGq3w4A+IW27U1lmQ+pBOMpbP6e8=
@@ -523,6 +525,7 @@ golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220412211240-33da011f77ad/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.3.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.4.0 h1:Zr2JFtRQNX3BCZ8YtxRE9hNJYC8J6I1MVbMg6owUp18=
