@@ -6,7 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
-	github.com/speakeasy-api/openapi-generation/v2 v2.2.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.2.4
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.1.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -27,10 +27,11 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/daveshanley/vacuum v0.0.50 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
-	github.com/dop251/goja v0.0.0-20230128084908-78b980256d04 // indirect
+	github.com/dop251/goja v0.0.0-20230216180835-5937a312edda // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20221211191749-434192f0843e // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
+	github.com/evanw/esbuild v0.17.8 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gammban/numtow v0.0.2 // indirect
@@ -60,7 +61,7 @@ require (
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.1.1 // indirect
-	github.com/speakeasy-api/easytemplate v0.5.0 // indirect
+	github.com/speakeasy-api/easytemplate v0.6.1 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
