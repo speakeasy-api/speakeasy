@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
@@ -21,19 +22,35 @@ var validateOpenAPICmd = &cobra.Command{
 	Long:  `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
 }
 
+var validateConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Validates a Speakeasy configuration file for SDK generation",
+	Long:  `Validates a Speakeasy configuration file for SDK generation.`,
+}
+
 func validateInit() {
 	rootCmd.AddCommand(validateCmd)
-	validateOpenInit()
+	validateOpenAPIInit()
+	validateConfigInit()
 }
 
 //nolint:errcheck
-func validateOpenInit() {
+func validateOpenAPIInit() {
 	validateOpenAPICmd.Flags().StringP("schema", "s", "", "path to the OpenAPI document")
-	validateOpenAPICmd.MarkFlagRequired("schema")
+	_ = validateOpenAPICmd.MarkFlagRequired("schema")
 
 	validateOpenAPICmd.RunE = validateOpenAPI
 
 	validateCmd.AddCommand(validateOpenAPICmd)
+}
+
+func validateConfigInit() {
+	validateConfigCmd.Flags().StringP("dir", "d", "", "path to the directory containing the Speakeasy configuration file")
+	_ = validateConfigCmd.MarkFlagRequired("dir")
+
+	validateConfigCmd.RunE = validateConfig
+
+	validateCmd.AddCommand(validateConfigCmd)
 }
 
 func validateExec(cmd *cobra.Command, args []string) error {
@@ -53,6 +70,25 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 
 		return fmt.Errorf(utils.Red("%s"), err)
 	}
+
+	return nil
+}
+
+func validateConfig(cmd *cobra.Command, args []string) error {
+	// no authentication required for validating configs
+
+	dir, err := cmd.Flags().GetString("dir")
+	if err != nil {
+		return err
+	}
+
+	if err := sdkgen.ValidateConfig(cmd.Context(), dir); err != nil {
+		rootCmd.SilenceUsage = true
+
+		return fmt.Errorf(utils.Red("%s"), err)
+	}
+
+	fmt.Printf("%s\n", utils.Green("Config valid ✓"))
 
 	return nil
 }

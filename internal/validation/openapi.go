@@ -21,7 +21,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 
 	l := log.Logger()
 
-	g, err := generate.New(generate.WithFileFuncs(func(filename string, data []byte, checkExisting bool) error { return nil }, func(filename string) ([]byte, error) { return nil, nil }), generate.WithLogger(l))
+	g, err := generate.New(generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error { return nil }, func(filename string) ([]byte, error) { return nil, nil }), generate.WithLogger(l))
 	if err != nil {
 		return err
 	}
