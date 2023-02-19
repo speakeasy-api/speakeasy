@@ -100,13 +100,12 @@ speakeasy generate sdk [flags]
 ### Options
 
 ```
-  -y, --auto-yes         auto answer yes to all prompts
-  -b, --baseurl string   base URL for the api (only required if OpenAPI spec doesn't specify root server URLs
-  -d, --debug            enable writing debug files with broken code
-  -h, --help             help for sdk
-  -l, --lang string      language to generate sdk for (available options: [go, java, php, python, typescript]) (default "go")
-  -o, --out string       path to the output directory
-  -s, --schema string    path to the openapi schema (default "./openapi.yaml")
+  -y, --auto-yes        auto answer yes to all prompts
+  -d, --debug           enable writing debug files with broken code
+  -h, --help            help for sdk
+  -l, --lang string     language to generate sdk for (available options: [go, java, php, python, typescript]) (default "go")
+  -o, --out string      path to the output directory
+  -s, --schema string   path to the openapi schema (default "./openapi.yaml")
 ```
 
 ### Parent Command

@@ -25,4 +25,5 @@ speakeasy validate [flags]
 * [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
+* [speakeasy validate config](config.md)	 - Validates a Speakeasy configuration file for SDK generation
 * [speakeasy validate openapi](openapi.md)	 - Validate an OpenAPI document
