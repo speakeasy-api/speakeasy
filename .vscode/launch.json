@@ -10,7 +10,12 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceRoot}/main.go",
-      "args": ["api", "get-apis"]
+      "args": [
+        "validate",
+        "config",
+        "-d",
+        "${workspaceRoot}/../sdk-generation-action/repo"
+      ]
     },
     {
       "name": "Debug Docs",

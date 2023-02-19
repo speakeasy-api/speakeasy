@@ -54,17 +54,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 			}
 
 			return os.WriteFile(filename, data, os.ModePerm)
-		}, func() func(filename string) ([]byte, error) {
-			return func(filename string) ([]byte, error) {
-				filePath := path.Join(outDir, filename)
-
-				if _, err := os.Stat(filePath); err != nil {
-					return nil, err
-				}
-
-				return os.ReadFile(filePath)
-			}
-		}()),
+		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(genVersion),
 	}
@@ -107,17 +97,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 			}
 
 			return os.WriteFile(filename, data, os.ModePerm)
-		}, func() func(filename string) ([]byte, error) {
-			return func(filename string) ([]byte, error) {
-				filePath := path.Join(outDir, filename)
-
-				if _, err := os.Stat(filePath); err != nil {
-					return nil, err
-				}
-
-				return os.ReadFile(filePath)
-			}
-		}()),
+		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 	}
 
