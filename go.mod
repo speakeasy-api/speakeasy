@@ -6,7 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
-	github.com/speakeasy-api/openapi-generation/v2 v2.3.4
+	github.com/speakeasy-api/openapi-generation/v2 v2.3.5
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.1.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
