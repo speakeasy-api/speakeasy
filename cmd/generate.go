@@ -124,8 +124,6 @@ func genSDKInit() {
 	genSDKCmd.Flags().StringP("out", "o", "", "path to the output directory")
 	genSDKCmd.MarkFlagRequired("out")
 
-	genSDKCmd.Flags().StringP("baseurl", "b", "", "base URL for the api (only required if OpenAPI spec doesn't specify root server URLs")
-
 	genSDKCmd.Flags().BoolP("debug", "d", false, "enable writing debug files with broken code")
 
 	genSDKCmd.Flags().BoolP("auto-yes", "y", false, "auto answer yes to all prompts")
@@ -156,11 +154,6 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	baseURL, err := cmd.Flags().GetString("baseurl")
-	if err != nil {
-		return err
-	}
-
 	debug, err := cmd.Flags().GetBool("debug")
 	if err != nil {
 		return err
@@ -171,7 +164,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, baseURL, genVersion, debug, autoYes); err != nil {
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, debug, autoYes); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return fmt.Errorf(utils.Red("%w"), err)
