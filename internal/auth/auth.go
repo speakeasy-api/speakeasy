@@ -41,6 +41,10 @@ func Authenticate(force bool) error {
 		}
 	}
 
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		return fmt.Errorf("authentication is required to run this action, please set the SPEAKEASY_API_KEY environment variable")
+	}
+
 	if !force {
 		fmt.Println("Authentication needed")
 	}
