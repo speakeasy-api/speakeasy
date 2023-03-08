@@ -6,7 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
-	github.com/speakeasy-api/openapi-generation/v2 v2.7.6
+	github.com/speakeasy-api/openapi-generation/v2 v2.7.7
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.8.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -78,6 +78,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
