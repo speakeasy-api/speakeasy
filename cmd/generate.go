@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	markdown "github.com/MichaelMure/go-term-markdown"
+	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -40,68 +42,79 @@ Example gen.yaml file for Go SDK:
 
 `+"```"+`
 go:
-  packagename: github.com/speakeasy-api/speakeasy-client-sdk-go
+  packageName: github.com/speakeasy-api/speakeasy-client-sdk-go
   version: 0.1.0
-# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
-# this can also be provided via the --baseurl flag when calling the command line
-baseserverurl: https://api.speakeasyapi.dev 
+generate:
+  # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
+  baseServerUrl: https://api.speakeasyapi.dev 
 `+"```"+`
 
 Example gen.yaml file for Python SDK:
 
 `+"```"+`
 python:
-  packagename: speakeasy-client-sdk-python
+  packageName: speakeasy-client-sdk-python
   version: 0.1.0
   description: Speakeasy API Client SDK for Python
   author: Speakeasy API
-# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec 
-# this can also be provided via the --baseurl flag when calling the command line
-baseserverurl: https://api.speakeasyapi.dev 
+generate:
+  # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
+  baseServerUrl: https://api.speakeasyapi.dev 
 `+"```"+`
 
 Example gen.yaml file for Typescript SDK:
 
 `+"```"+`
 typescript:
-  packagename: speakeasy-client-sdk-typescript
+  packageName: speakeasy-client-sdk-typescript
   version: 0.1.0
   author: Speakeasy API
-# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec
-# this can also be provided via the --baseurl flag when calling the command line
-baseserverurl: https://api.speakeasyapi.dev
+generate:
+  # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
+  baseServerUrl: https://api.speakeasyapi.dev 
 `+"```"+`
 
 Example gen.yaml file for Java SDK:
 
 `+"```"+`
 java:
-  packagename: dev.speakeasyapi.javasdk
-  projectname: speakeasy-client-sdk-java
+  groupID: dev.speakeasyapi
+  artifactID: javasdk
+  projectName: speakeasy-client-sdk-java
   version: 0.1.0
-# baseserverurl optional, if not specified it will use the server URL from the OpenAPI spec
-# this can also be provided via the --baseurl flag when calling the command line
-baseserverurl: https://api.speakeasyapi.dev
+generate:
+  # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
+  baseServerUrl: https://api.speakeasyapi.dev 
+`+"```"+`
+
+Example gen.yaml file for PHP SDK:
+
+`+"```"+`
+php:
+  packageName: speakeasy-client-sdk-php
+  namespace: "speakeasyapi\\sdk"
+  version: 0.1.0
+generate:
+  # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
+  baseServerUrl: https://api.speakeasyapi.dev 
 `+"```"+`
 
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
-
-# Ignore Files
-
-The SDK generator will clear the output directory before generating the SDKs, to ensure old files are removed. 
-If you have any files you want to keep you can place a ".genignore" file in the root of the output directory.
-The ".genignore" file follows the same syntax as a ".gitignore" file.
-
-By default (without a .genignore file/folders) the SDK generator will ignore the following files:
-	- gen.yaml
-	- .genignore
-	- .gitignore
-	- .git
-	- README.md
-	- readme.md
-	- LICENSE
-
 `, strings.Join(generate.GetSupportedLanguages(), "\n	- ")),
+}
+
+var genSDKVersionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of the SDK generator",
+	Long:  `Print the version number of the SDK generator including the latest changelog entry`,
+	Run:   getLatestVersionInfo,
+}
+
+var genSDKChangelogCmd = &cobra.Command{
+	Use:   "changelog",
+	Short: "Prints information about changes to the SDK generator",
+	Long:  `Prints information about changes to the SDK generator with the ability to filter by version and format the output for the terminal or parsing`,
+	RunE:  getChangelogs,
 }
 
 var genVersion string
@@ -130,6 +143,12 @@ func genSDKInit() {
 
 	genSDKCmd.RunE = genSDKs
 
+	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (default: the latest change)")
+	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version to get changelogs between this and the target version")
+	genSDKChangelogCmd.Flags().BoolP("raw", "r", false, "don't format the output for the terminal")
+
+	genSDKCmd.AddCommand(genSDKVersionCmd)
+	genSDKCmd.AddCommand(genSDKChangelogCmd)
 	generateCmd.AddCommand(genSDKCmd)
 }
 
@@ -170,5 +189,53 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf(utils.Red("%w"), err)
 	}
 
+	return nil
+}
+
+func getLatestVersionInfo(cmd *cobra.Command, args []string) {
+	version := changelog.GetLatestVersion()
+
+	changeLog := changelog.GetChangeLog(changelog.WithSpecificVersion(version))
+
+	fmt.Printf("Version: %s\n\n", version)
+	fmt.Println(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+}
+
+func getChangelogs(cmd *cobra.Command, args []string) error {
+	targetVersion, err := cmd.Flags().GetString("target")
+	if err != nil {
+		return err
+	}
+
+	previousVersion, err := cmd.Flags().GetString("previous")
+	if err != nil {
+		return err
+	}
+
+	raw, err := cmd.Flags().GetBool("raw")
+	if err != nil {
+		return err
+	}
+
+	opts := []changelog.Option{}
+
+	if targetVersion != "" {
+		opts = append(opts, changelog.WithTargetVersion(targetVersion))
+
+		if previousVersion != "" {
+			opts = append(opts, changelog.WithPreviousVersion(previousVersion))
+		}
+	} else {
+		opts = append(opts, changelog.WithSpecificVersion(changelog.GetLatestVersion()))
+	}
+
+	changeLog := changelog.GetChangeLog(opts...)
+
+	if raw {
+		fmt.Println(changeLog)
+		return nil
+	}
+
+	fmt.Println(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
 	return nil
 }
