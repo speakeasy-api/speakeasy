@@ -3,6 +3,8 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
 	"reflect"
 
 	"github.com/fatih/color"
@@ -86,4 +88,16 @@ func PrettyPrint(value interface{}, fieldNameReplacements map[string]string) {
 
 		fmt.Printf("%s: %v\n", fieldName, value)
 	}
+}
+
+func CreateDirectory(filename string) error {
+	dir := path.Dir(filename)
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err := os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

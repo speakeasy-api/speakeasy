@@ -98,6 +98,23 @@ speakeasy validate openapi [flags]
   -s, --schema string   path to the openapi schema
 ```
 
+## OpenAPI Usage
+Note, OpenAPI usage doesn't require logging in to the Speakeasy Platform.
+
+The following command outputs usage information containing counts of OpenAPI features for a given OpenAPI schema to a CSV.
+
+**Command**:
+```
+speakeasy usage [flags]
+```
+**Options**:
+```
+  -d, --debug         enable writing debug files with broken code
+  -f, --file string   Path to file to generate usage information for
+  -h, --help          help for usage
+  -o, --out string    Path to output file
+```
+
 ## OpenAPI Support
 
 * [ ] Global and per method ServerURL configuration (include base url and templating) - https://swagger.io/docs/specification/api-host-and-base-path/
