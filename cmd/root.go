@@ -33,6 +33,7 @@ func Init() {
 	apiInit()
 	validateInit()
 	authInit()
+	usageInit()
 }
 
 func Execute(version string) {
