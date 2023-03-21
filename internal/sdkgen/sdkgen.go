@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/filetracking"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -56,7 +57,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 			return os.WriteFile(filename, data, os.ModePerm)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
-		generate.WithGenVersion(genVersion),
+		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 	}
 
 	if debug {
