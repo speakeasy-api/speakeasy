@@ -3,10 +3,11 @@ module github.com/speakeasy-api/speakeasy
 go 1.19
 
 require (
+	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/fatih/color v1.13.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
-	github.com/speakeasy-api/openapi-generation/v2 v2.12.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.12.7
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.8.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -21,7 +22,6 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
-	github.com/MichaelMure/go-term-markdown v0.1.4 // indirect
 	github.com/MichaelMure/go-term-text v0.3.1 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
