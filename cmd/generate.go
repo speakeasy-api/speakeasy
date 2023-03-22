@@ -113,7 +113,7 @@ var genSDKVersionCmd = &cobra.Command{
 var genSDKChangelogCmd = &cobra.Command{
 	Use:   "changelog",
 	Short: "Prints information about changes to the SDK generator",
-	Long:  `Prints information about changes to the SDK generator with the ability to filter by version and format the output for the terminal or parsing`,
+	Long:  `Prints information about changes to the SDK generator with the ability to filter by version and format the output for the terminal or parsing. By default it will print the latest changelog entry.`,
 	RunE:  getChangelogs,
 }
 
@@ -145,6 +145,7 @@ func genSDKInit() {
 
 	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (default: the latest change)")
 	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version to get changelogs between this and the target version")
+	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for")
 	genSDKChangelogCmd.Flags().BoolP("raw", "r", false, "don't format the output for the terminal")
 
 	genSDKCmd.AddCommand(genSDKVersionCmd)
@@ -212,6 +213,11 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	specificVersion, err := cmd.Flags().GetString("specific")
+	if err != nil {
+		return err
+	}
+
 	raw, err := cmd.Flags().GetBool("raw")
 	if err != nil {
 		return err
@@ -225,6 +231,8 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 		if previousVersion != "" {
 			opts = append(opts, changelog.WithPreviousVersion(previousVersion))
 		}
+	} else if specificVersion != "" {
+		opts = append(opts, changelog.WithSpecificVersion(specificVersion))
 	} else {
 		opts = append(opts, changelog.WithSpecificVersion(changelog.GetLatestVersion()))
 	}
