@@ -141,6 +141,9 @@ func genSDKInit() {
 
 	genSDKCmd.Flags().BoolP("auto-yes", "y", false, "auto answer yes to all prompts")
 
+	genSDKCmd.Flags().StringP("installationURL", "i", "", "the language specific installation URL for installation instructions if the SDK is not published to a package manager")
+	genSDKCmd.Flags().BoolP("published", "p", false, "whether the SDK is published to a package manager or not, determines the type of installation instructions to generate")
+
 	genSDKCmd.RunE = genSDKs
 
 	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (default: the latest change)")
@@ -184,7 +187,17 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, debug, autoYes); err != nil {
+	installationURL, err := cmd.Flags().GetString("installationURL")
+	if err != nil {
+		return err
+	}
+
+	published, err := cmd.Flags().GetBool("published")
+	if err != nil {
+		return err
+	}
+
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return fmt.Errorf(utils.Red("%w"), err)

@@ -14,7 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVersion string, debug bool, autoYes bool) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVersion, installationURL string, debug, autoYes, published bool) error {
 	if !generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -58,6 +58,8 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
+		generate.WithInstallationURL(installationURL),
+		generate.WithPublished(published),
 	}
 
 	if debug {
