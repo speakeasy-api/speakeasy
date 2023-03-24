@@ -29,8 +29,8 @@ type Logger struct {
 var _ logging.Logger = (*Logger)(nil)
 
 func NewLogger(associatedFile string) *Logger {
-	// If this is running via our action it will have a repo/ prefix that needs to be removed to associate the file correctly
-	associatedFile = strings.TrimPrefix(associatedFile, "repo/")
+	// If this is running via our action it will have a /repo/ prefix that needs to be removed to associate the file correctly
+	associatedFile = strings.TrimPrefix(associatedFile, "/repo/")
 
 	return &Logger{
 		associatedFile: associatedFile,
