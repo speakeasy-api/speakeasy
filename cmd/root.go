@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var rootCmd = &cobra.Command{
@@ -21,9 +22,11 @@ var rootCmd = &cobra.Command{
 	RunE: rootExec,
 }
 
+var l = log.NewLogger("")
+
 func init() {
 	if err := config.Load(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		l.Error("", zap.Error(err))
 		os.Exit(1)
 	}
 }
@@ -38,10 +41,12 @@ func Init() {
 
 func Execute(version string) {
 	rootCmd.Version = version
+	rootCmd.SilenceErrors = true
 
 	Init()
 
 	if err := rootCmd.Execute(); err != nil {
+		l.Error("", zap.Error(err))
 		os.Exit(1)
 	}
 }

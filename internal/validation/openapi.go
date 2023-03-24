@@ -9,6 +9,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"go.uber.org/zap"
 )
 
 func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
@@ -19,7 +20,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
 	}
 
-	l := log.Logger()
+	l := log.NewLogger(schemaPath)
 
 	g, err := generate.New(generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error { return nil }, func(filename string) ([]byte, error) { return nil, nil }), generate.WithLogger(l))
 	if err != nil {
@@ -35,10 +36,10 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 			if vErr != nil {
 				if vErr.Severity == errors.SeverityError {
 					hasErrors = true
-					l.Error(err.Error())
+					l.Error("", zap.Error(err))
 				} else {
 					hasWarnings = true
-					l.Warn(err.Error())
+					l.Warn("", zap.Error(err))
 				}
 			}
 		}

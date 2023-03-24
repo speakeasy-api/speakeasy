@@ -11,10 +11,14 @@
       "mode": "auto",
       "program": "${workspaceRoot}/main.go",
       "args": [
-        "validate",
-        "config",
-        "-d",
-        "${workspaceRoot}/../sdk-generation-action/repo"
+        "generate",
+        "sdk",
+        "-s",
+        "../speakeasy-registry/web/packages/docsite/static/openapi.yaml",
+        "-o",
+        "../speakeasy-client-sdk-python",
+        "-l",
+        "python"
       ]
     },
     {

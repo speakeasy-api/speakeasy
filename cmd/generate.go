@@ -10,7 +10,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -200,7 +199,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published); err != nil {
 		rootCmd.SilenceUsage = true
 
-		return fmt.Errorf(utils.Red("%w"), err)
+		return err
 	}
 
 	return nil
