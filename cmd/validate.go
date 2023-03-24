@@ -59,7 +59,6 @@ func validateExec(cmd *cobra.Command, args []string) error {
 
 func validateOpenAPI(cmd *cobra.Command, args []string) error {
 	// no authentication required for validating specs
-
 	schemaPath, err := cmd.Flags().GetString("schema")
 	if err != nil {
 		return err
@@ -68,7 +67,7 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath); err != nil {
 		rootCmd.SilenceUsage = true
 
-		return fmt.Errorf(utils.Red("%s"), err)
+		return err
 	}
 
 	return nil

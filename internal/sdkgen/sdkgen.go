@@ -12,6 +12,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"go.uber.org/zap"
 )
 
 func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVersion, installationURL string, debug, autoYes, published bool) error {
@@ -39,7 +40,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 		return fmt.Errorf("failed to clean out dir %s: %w", outDir, err)
 	}
 
-	l := log.Logger()
+	l := log.NewLogger(schemaPath)
 
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
@@ -73,10 +74,10 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 
 	if errs := g.Generate(context.Background(), schema, lang, outDir); len(errs) > 0 {
 		for _, err := range errs {
-			l.Error(err.Error())
+			l.Error("", zap.Error(err))
 		}
 
-		return fmt.Errorf("Failed to generate SDKs for %s ✖", lang)
+		return fmt.Errorf("failed to generate SDKs for %s ✖", lang)
 	}
 
 	fmt.Printf("Generating SDK for %s... %s\n", lang, utils.Green("done ✓"))
@@ -85,7 +86,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {
-	l := log.Logger()
+	l := log.NewLogger("gen.yaml") // TODO if we want to associate annotations with this file we need to get the actual path
 
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),

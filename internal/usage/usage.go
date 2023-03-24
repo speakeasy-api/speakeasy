@@ -2,17 +2,19 @@ package usage
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
-	"os"
+	"go.uber.org/zap"
 )
 
 func OutputUsage(cmd *cobra.Command, file, out string, debug bool) error {
 	ctx := cmd.Context()
 
-	l := log.Logger()
+	l := log.NewLogger(file)
 
 	fmt.Printf("Generating CSV for %s...\n", file)
 
@@ -33,18 +35,18 @@ func OutputUsage(cmd *cobra.Command, file, out string, debug bool) error {
 		generate.WithRunLocation("cli"),
 	}
 
+	if debug {
+		opts = append(opts, generate.WithDebuggingEnabled())
+	}
+
 	g, err := generate.New(opts...)
 	if err != nil {
 		return err
 	}
 
-	if debug {
-		opts = append(opts, generate.WithDebuggingEnabled())
-	}
-
 	if errs := g.GenerateCSV(ctx, schema, out); len(errs) > 0 {
 		for _, err := range errs {
-			l.Error(err.Error())
+			l.Error("", zap.Error(err))
 		}
 
 		return fmt.Errorf("failed to generate CSV for %s ✖", file)
