@@ -8,7 +8,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.16.4
+	github.com/speakeasy-api/openapi-generation/v2 v2.16.5
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.8.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -32,13 +32,13 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daveshanley/vacuum v0.0.52 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
-	github.com/dlclark/regexp2 v1.7.0 // indirect
-	github.com/dop251/goja v0.0.0-20230216180835-5937a312edda // indirect
-	github.com/dop251/goja_nodejs v0.0.0-20221211191749-434192f0843e // indirect
+	github.com/dlclark/regexp2 v1.8.1 // indirect
+	github.com/dop251/goja v0.0.0-20230304130813-e2f543bf4b4c // indirect
+	github.com/dop251/goja_nodejs v0.0.0-20230322100729-2550c7b6c124 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
-	github.com/evanw/esbuild v0.17.8 // indirect
+	github.com/evanw/esbuild v0.17.14 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gammban/numtow v0.0.2 // indirect
@@ -46,6 +46,7 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/gomarkdown/markdown v0.0.0-20191123064959-2c17d62f5098 // indirect
+	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/color v1.5.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -73,7 +74,7 @@ require (
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.2.0 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.6.3 // indirect
+	github.com/speakeasy-api/easytemplate v0.7.0 // indirect
 	github.com/speakeasy-api/sdk-gen-config v0.3.1 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
