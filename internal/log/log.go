@@ -96,7 +96,14 @@ func getGithubAnnotationAttributes(associatedFile string, err error) string {
 
 	vErr := errors.GetValidationErr(err)
 	if vErr != nil {
-		return fmt.Sprintf(" file=%s,line=%d,title=Validation Error", filepath.Clean(associatedFile), vErr.LineNumber)
+		severity := "Error"
+
+		switch vErr.Severity {
+		case errors.SeverityWarn:
+			severity = "Warning"
+		}
+
+		return fmt.Sprintf(" file=%s,line=%d,title=Validation %s", filepath.Clean(associatedFile), vErr.LineNumber, severity)
 	}
 
 	uErr := errors.GetUnsupportedErr(err)
