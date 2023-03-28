@@ -2,3 +2,4 @@ dist/
 bin/
 .idea/
 *.iml
+summary.md

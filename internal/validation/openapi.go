@@ -7,6 +7,7 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
@@ -28,7 +29,8 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 	}
 
 	hasWarnings := false
-	if errs := g.Validate(context.Background(), schema); len(errs) > 0 {
+	errs := g.Validate(context.Background(), schema)
+	if len(errs) > 0 {
 		hasErrors := false
 
 		for _, err := range errs {
@@ -42,18 +44,30 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 					l.Warn("", zap.Error(err))
 				}
 			}
+
+			uErr := errors.GetUnsupportedErr(err)
+			if uErr != nil {
+				hasWarnings = true
+				l.Warn("", zap.Error(err))
+			}
 		}
 
+		status := "OpenAPI spec invalid ✖"
+		github.GenerateSummary(status, errs)
+
 		if hasErrors {
-			return fmt.Errorf("OpenAPI spec invalid ✖")
+			return fmt.Errorf(status)
 		}
 	}
 
 	if hasWarnings {
-		fmt.Printf("OpenAPI spec %s\n", utils.Yellow("valid with warnings"))
+		github.GenerateSummary("OpenAPI spec valid with warnings ⚠", errs)
+		fmt.Printf("OpenAPI spec %s\n", utils.Yellow("valid with warnings ⚠"))
 		return nil
 	}
 
+	github.GenerateSummary("OpenAPI spec valid ✓", errs)
 	fmt.Printf("OpenAPI spec %s\n", utils.Green("valid ✓"))
+
 	return nil
 }
