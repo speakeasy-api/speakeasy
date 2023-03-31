@@ -8,7 +8,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.16.5
+	github.com/speakeasy-api/openapi-generation/v2 v2.16.7
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.8.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -63,7 +63,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/pb33f/libopenapi v0.6.5-0.20230317185924-b548712849c7 // indirect
+	github.com/pb33f/libopenapi v0.7.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -75,7 +75,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.2.0 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.7.0 // indirect
-	github.com/speakeasy-api/sdk-gen-config v0.3.1 // indirect
+	github.com/speakeasy-api/sdk-gen-config v0.3.2 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
