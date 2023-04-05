@@ -50,9 +50,7 @@ func getApiVersions(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Apis.GetAllAPIVersions(ctx, operations.GetAllAPIVersionsRequest{
-		PathParams: operations.GetAllAPIVersionsPathParams{
-			APIID: apiID,
-		},
+		APIID: apiID,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -90,10 +88,8 @@ func generateOpenAPISpec(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Apis.GenerateOpenAPISpec(ctx, operations.GenerateOpenAPISpecRequest{
-		PathParams: operations.GenerateOpenAPISpecPathParams{
-			APIID:     apiID,
-			VersionID: versionID,
-		},
+		APIID:     apiID,
+		VersionID: versionID,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -134,10 +130,8 @@ func generatePostmanCollection(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Apis.GeneratePostmanCollection(ctx, operations.GeneratePostmanCollectionRequest{
-		PathParams: operations.GeneratePostmanCollectionPathParams{
-			APIID:     apiID,
-			VersionID: versionID,
-		},
+		APIID:     apiID,
+		VersionID: versionID,
 	})
 	if err != nil {
 		return err // TODO wrap

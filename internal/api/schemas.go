@@ -40,11 +40,9 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Schemas.RegisterSchema(ctx, operations.RegisterSchemaRequest{
-		PathParams: operations.RegisterSchemaPathParams{
-			APIID:     apiID,
-			VersionID: versionID,
-		},
-		Request: operations.RegisterSchemaRequestBody{
+		APIID:     apiID,
+		VersionID: versionID,
+		RequestBody: operations.RegisterSchemaRequestBody{
 			File: operations.RegisterSchemaRequestBodyFile{
 				Content: data,
 				File:    path.Base(schemaPath),
@@ -83,10 +81,8 @@ func getSchemas(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Schemas.GetSchemas(ctx, operations.GetSchemasRequest{
-		PathParams: operations.GetSchemasPathParams{
-			APIID:     apiID,
-			VersionID: versionID,
-		},
+		APIID:     apiID,
+		VersionID: versionID,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -127,11 +123,9 @@ func getSchemaRevision(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Schemas.GetSchemaRevision(ctx, operations.GetSchemaRevisionRequest{
-		PathParams: operations.GetSchemaRevisionPathParams{
-			APIID:      apiID,
-			VersionID:  versionID,
-			RevisionID: revisionID,
-		},
+		APIID:      apiID,
+		VersionID:  versionID,
+		RevisionID: revisionID,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -177,12 +171,10 @@ func getSchemaDiff(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Schemas.GetSchemaDiff(ctx, operations.GetSchemaDiffRequest{
-		PathParams: operations.GetSchemaDiffPathParams{
-			APIID:            apiID,
-			VersionID:        versionID,
-			BaseRevisionID:   baseRevisionID,
-			TargetRevisionID: targetRevisionID,
-		},
+		APIID:            apiID,
+		VersionID:        versionID,
+		BaseRevisionID:   baseRevisionID,
+		TargetRevisionID: targetRevisionID,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -216,10 +208,8 @@ func downloadLatestSchema(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Schemas.DownloadSchema(ctx, operations.DownloadSchemaRequest{
-		PathParams: operations.DownloadSchemaPathParams{
-			APIID:     apiID,
-			VersionID: versionID,
-		},
+		APIID:     apiID,
+		VersionID: versionID,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -258,11 +248,9 @@ func downloadSchemaRevision(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Schemas.DownloadSchemaRevision(ctx, operations.DownloadSchemaRevisionRequest{
-		PathParams: operations.DownloadSchemaRevisionPathParams{
-			APIID:      apiID,
-			VersionID:  versionID,
-			RevisionID: revisionID,
-		},
+		APIID:      apiID,
+		VersionID:  versionID,
+		RevisionID: revisionID,
 	})
 	if err != nil {
 		return err // TODO wrap

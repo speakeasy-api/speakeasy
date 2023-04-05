@@ -28,10 +28,8 @@ func getVersionMetadata(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Metadata.GetVersionMetadata(ctx, operations.GetVersionMetadataRequest{
-		PathParams: operations.GetVersionMetadataPathParams{
-			APIID:     apiID,
-			VersionID: versionID,
-		},
+		APIID:     apiID,
+		VersionID: versionID,
 	})
 	if err != nil {
 		return err // TODO wrap

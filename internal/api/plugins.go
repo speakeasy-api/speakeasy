@@ -3,12 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 func getPlugins(cmd *cobra.Command, args []string) error {
@@ -62,12 +63,10 @@ func upsertPlugin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	res, err := s.Plugins.UpsertPlugin(ctx, operations.UpsertPluginRequest{
-		Request: shared.Plugin{
-			PluginID: pluginID,
-			Code:     string(code),
-			Title:    title,
-		},
+	res, err := s.Plugins.UpsertPlugin(ctx, shared.Plugin{
+		PluginID: pluginID,
+		Code:     string(code),
+		Title:    title,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -106,12 +105,8 @@ func runPlugin(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Plugins.RunPlugin(ctx, operations.RunPluginRequest{
-		QueryParams: operations.RunPluginQueryParams{
-			Filters: f,
-		},
-		PathParams: operations.RunPluginPathParams{
-			PluginID: pluginID,
-		},
+		Filters:  f,
+		PluginID: pluginID,
 	})
 	if err != nil {
 		return err // TODO wrap

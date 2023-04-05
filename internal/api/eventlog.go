@@ -30,9 +30,7 @@ func queryEventLog(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Requests.QueryEventLog(ctx, operations.QueryEventLogRequest{
-		QueryParams: operations.QueryEventLogQueryParams{
-			Filters: f,
-		},
+		Filters: f,
 	})
 	if err != nil {
 		return err // TODO wrap
@@ -64,9 +62,7 @@ func getRequestFromEventLog(cmd *cobra.Command, args []string) error {
 	}
 
 	res, err := s.Requests.GetRequestFromEventLog(ctx, operations.GetRequestFromEventLogRequest{
-		PathParams: operations.GetRequestFromEventLogPathParams{
-			RequestID: requestID,
-		},
+		RequestID: requestID,
 	})
 	if err != nil {
 		return err // TODO wrap
