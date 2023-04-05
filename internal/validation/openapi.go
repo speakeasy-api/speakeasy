@@ -52,12 +52,19 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 			}
 		}
 
-		status := "OpenAPI spec invalid ✖"
-		github.GenerateSummary(status, errs)
-
 		if hasErrors {
+			status := "OpenAPI spec invalid ✖"
+			github.GenerateSummary(status, errs)
 			return fmt.Errorf(status)
 		}
+	}
+
+	for _, warn := range g.GetWarnings() {
+		hasWarnings = true
+		if errs == nil {
+			errs = []error{}
+		}
+		errs = append(errs, warn)
 	}
 
 	if hasWarnings {
@@ -66,7 +73,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 		return nil
 	}
 
-	github.GenerateSummary("OpenAPI spec valid ✓", errs)
+	github.GenerateSummary("OpenAPI spec valid ✓", nil)
 	fmt.Printf("OpenAPI spec %s\n", utils.Green("valid ✓"))
 
 	return nil
