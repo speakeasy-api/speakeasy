@@ -8,7 +8,7 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.17.8
+	github.com/speakeasy-api/openapi-generation/v2 v2.17.9
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
@@ -75,7 +75,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.2.0 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.7.0 // indirect
-	github.com/speakeasy-api/sdk-gen-config v0.3.2 // indirect
+	github.com/speakeasy-api/sdk-gen-config v0.4.0 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
