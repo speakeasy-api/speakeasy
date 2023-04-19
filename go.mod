@@ -1,11 +1,13 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.19
+go 1.20
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/fatih/color v1.13.0
+	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
+	github.com/pb33f/libopenapi v0.7.1-0.20230418092249-99bf12c1c7dc
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.18.2
@@ -63,7 +65,6 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/pb33f/libopenapi v0.7.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
