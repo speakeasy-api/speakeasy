@@ -37,6 +37,7 @@ func Init() {
 	validateInit()
 	authInit()
 	usageInit()
+	mergeInit()
 }
 
 func Execute(version string) {

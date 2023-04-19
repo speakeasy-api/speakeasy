@@ -241,5 +241,6 @@ speakeasy [flags]
 * [speakeasy api](docs/api/README.md)	 - Access the Speakeasy API via the CLI
 * [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy generate](docs/generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
+* [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy usage](docs/usage.md)	 - Output usage information for a given OpenAPI schema to a CSV
 * [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents + more (coming soon)

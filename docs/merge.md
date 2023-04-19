@@ -1,5 +1,5 @@
 # merge  
-`speakeasy generate merge`  
+`speakeasy merge`  
 
 
 Merge multiple OpenAPI documents into a single document  
@@ -12,7 +12,7 @@ Note: That any duplicate operations, components, etc. will be overwritten by the
 ## Usage
 
 ```
-speakeasy generate merge [flags]
+speakeasy merge [flags]
 ```
 
 ### Options
@@ -25,4 +25,4 @@ speakeasy generate merge [flags]
 
 ### Parent Command
 
-* [speakeasy generate](README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
+* [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
