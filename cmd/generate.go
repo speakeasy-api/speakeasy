@@ -9,7 +9,9 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/merge"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -100,6 +102,15 @@ generate:
 
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
 `, strings.Join(generate.GetSupportedLanguages(), "\n	- ")),
+	RunE: genSDKs,
+}
+
+var mergeCmd = &cobra.Command{
+	Use:   "merge",
+	Short: "Merge multiple OpenAPI documents into a single document",
+	Long: `Merge multiple OpenAPI documents into a single document, useful for merging multiple OpenAPI documents into a single document for generating a client SDK.
+Note: That any duplicate operations, components, etc. will be overwritten by the next document in the list.`,
+	RunE: mergeExec,
 }
 
 var genSDKVersionCmd = &cobra.Command{
@@ -143,16 +154,20 @@ func genSDKInit() {
 	genSDKCmd.Flags().StringP("installationURL", "i", "", "the language specific installation URL for installation instructions if the SDK is not published to a package manager")
 	genSDKCmd.Flags().BoolP("published", "p", false, "whether the SDK is published to a package manager or not, determines the type of installation instructions to generate")
 
-	genSDKCmd.RunE = genSDKs
-
 	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (default: the latest change)")
 	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version to get changelogs between this and the target version")
 	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for")
 	genSDKChangelogCmd.Flags().BoolP("raw", "r", false, "don't format the output for the terminal")
 
+	mergeCmd.Flags().StringArrayP("schemas", "s", []string{}, "paths to the openapi schemas to merge")
+	mergeCmd.MarkFlagRequired("schemas")
+	mergeCmd.Flags().StringP("out", "o", "", "path to the output file")
+	mergeCmd.MarkFlagRequired("out")
+
 	genSDKCmd.AddCommand(genSDKVersionCmd)
 	genSDKCmd.AddCommand(genSDKChangelogCmd)
 	generateCmd.AddCommand(genSDKCmd)
+	generateCmd.AddCommand(mergeCmd)
 }
 
 func generateExec(cmd *cobra.Command, args []string) error {
@@ -257,5 +272,25 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	return nil
+}
+
+func mergeExec(cmd *cobra.Command, args []string) error {
+	inSchemas, err := cmd.Flags().GetStringArray("schemas")
+	if err != nil {
+		return err
+	}
+
+	outFile, err := cmd.Flags().GetString("out")
+	if err != nil {
+		return err
+	}
+
+	if err := merge.MergeOpenAPIDocuments(inSchemas, outFile); err != nil {
+		return err
+	}
+
+	fmt.Println(utils.Green(fmt.Sprintf("Successfully merged %d schemas into %s", len(inSchemas), outFile)))
+
 	return nil
 }
