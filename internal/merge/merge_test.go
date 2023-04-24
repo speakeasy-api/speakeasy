@@ -91,7 +91,7 @@ servers:
 `,
 		},
 		{
-			name: "servers are merged",
+			name: "servers are merged if they share common urls",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
@@ -118,6 +118,70 @@ servers:
       description: production api server
     - url: http://localhost:8081
       description: local server 2
+`,
+		},
+		{
+			name: "servers are moved to operations if they don't share common urls",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+servers:
+  - url: http://localhost:8080
+    description: local server
+    x-test: test
+paths:
+  /test:
+    get:
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+servers:
+  - url: https://api.example.com
+    description: production api server
+paths:
+  /test2:
+    get:
+      responses:
+        200:
+          description: OK
+  /test3:
+    get:
+      servers:
+        - url: https://api2.example.com
+      responses:
+        200:
+          description: OK`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+    /test:
+        get:
+            responses:
+                "200":
+                    description: OK
+            servers:
+                - url: http://localhost:8080
+                  description: local server
+                  x-test: test
+    /test2:
+        get:
+            responses:
+                "200":
+                    description: OK
+            servers:
+                - url: https://api.example.com
+                  description: production api server
+    /test3:
+        get:
+            servers:
+                - url: https://api2.example.com
+                - url: https://api.example.com
+                  description: production api server
+            responses:
+                "200":
+                    description: OK
 `,
 		},
 		{

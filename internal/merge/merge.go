@@ -95,7 +95,15 @@ func mergeDocuments(mergedDoc, doc *v3.Document) (*v3.Document, error) {
 		mergedDoc.Extensions = mergeExtensions(mergedDoc.Extensions, doc.Extensions)
 	}
 
-	mergedDoc.Servers = mergeServers(mergedDoc.Servers, doc.Servers)
+	mergedServers, opServers := mergeServers(mergedDoc.Servers, doc.Servers, true)
+	if len(opServers) > 0 {
+		setOperationServers(mergedDoc, mergedDoc.Servers)
+		setOperationServers(doc, opServers)
+
+		mergedDoc.Servers = nil
+	} else {
+		mergedDoc.Servers = mergedServers
+	}
 
 	// TODO we might need to merge this such that the security from different docs are combined in an OR fashion
 	if doc.Security != nil {
@@ -212,7 +220,7 @@ func mergePathItems(mergedPathItem, pathItem *v3.PathItem) *v3.PathItem {
 
 	mergedPathItem.Parameters = mergeParameters(mergedPathItem.Parameters, pathItem.Parameters)
 
-	mergedPathItem.Servers = mergeServers(mergedPathItem.Servers, pathItem.Servers)
+	mergedPathItem.Servers, _ = mergeServers(mergedPathItem.Servers, pathItem.Servers, false)
 
 	if pathItem.Extensions != nil {
 		mergedPathItem.Extensions = mergeExtensions(mergedPathItem.Extensions, pathItem.Extensions)
@@ -221,12 +229,31 @@ func mergePathItems(mergedPathItem, pathItem *v3.PathItem) *v3.PathItem {
 	return mergedPathItem
 }
 
-func mergeServers(mergedServers, servers []*v3.Server) []*v3.Server {
+func mergeServers(mergedServers, servers []*v3.Server, global bool) ([]*v3.Server, []*v3.Server) {
 	if len(mergedServers) == 0 {
-		return servers
+		return servers, nil
 	}
 
 	if len(servers) > 0 {
+		mergeable := !global
+
+		if len(mergedServers) > 0 {
+			for _, server := range servers {
+				for _, mergedServer := range mergedServers {
+					// We share common servers, so we can merge them
+					if mergedServer.URL == server.URL {
+						mergeable = true
+					}
+				}
+			}
+		} else {
+			mergeable = true
+		}
+
+		if !mergeable {
+			return nil, servers
+		}
+
 		for _, server := range servers {
 			replaced := false
 
@@ -244,7 +271,7 @@ func mergeServers(mergedServers, servers []*v3.Server) []*v3.Server {
 		}
 	}
 
-	return mergedServers
+	return mergedServers, nil
 }
 
 func mergeParameters(mergedParameters, parameters []*v3.Parameter) []*v3.Parameter {
@@ -381,4 +408,16 @@ func mergeExtensions(mergedExtensions, extensions map[string]interface{}) map[st
 	}
 
 	return mergedExtensions
+}
+
+func setOperationServers(doc *v3.Document, opServers []*v3.Server) {
+	if doc.Paths == nil {
+		return
+	}
+
+	for _, pathItem := range doc.Paths.PathItems {
+		for _, op := range pathItem.GetOperations() {
+			op.Servers, _ = mergeServers(op.Servers, opServers, false)
+		}
+	}
 }
