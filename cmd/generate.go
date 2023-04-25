@@ -144,6 +144,9 @@ func genSDKInit() {
 	genSDKCmd.Flags().StringP("installationURL", "i", "", "the language specific installation URL for installation instructions if the SDK is not published to a package manager")
 	genSDKCmd.Flags().BoolP("published", "p", false, "whether the SDK is published to a package manager or not, determines the type of installation instructions to generate")
 
+	genSDKCmd.Flags().StringP("repo", "r", "", "the repository URL for the SDK")
+	genSDKCmd.Flags().StringP("repo-subdir", "b", "", "the subdirectory of the repository where the SDK is located in the repo")
+
 	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (default: the latest change)")
 	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version to get changelogs between this and the target version")
 	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for")
@@ -195,7 +198,17 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published); err != nil {
+	repo, err := cmd.Flags().GetString("repo")
+	if err != nil {
+		return err
+	}
+
+	repoSubdir, err := cmd.Flags().GetString("repo-subdir")
+	if err != nil {
+		return err
+	}
+
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published, repo, repoSubdir); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
