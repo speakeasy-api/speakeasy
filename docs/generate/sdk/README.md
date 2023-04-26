@@ -105,6 +105,8 @@ speakeasy generate sdk [flags]
   -l, --lang string              language to generate sdk for (available options: [go, java, php, python, terraform, typescript]) (default "go")
   -o, --out string               path to the output directory
   -p, --published                whether the SDK is published to a package manager or not, determines the type of installation instructions to generate
+  -r, --repo string              the repository URL for the SDK
+  -b, --repo-subdir string       the subdirectory of the repository where the SDK is located in the repo
   -s, --schema string            path to the openapi schema (default "./openapi.yaml")
 ```
 
