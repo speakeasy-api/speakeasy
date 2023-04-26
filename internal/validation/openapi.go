@@ -29,7 +29,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 	}
 
 	hasWarnings := false
-	errs := g.Validate(context.Background(), schema)
+	errs := g.Validate(context.Background(), schema, schemaPath)
 	if len(errs) > 0 {
 		hasErrors := false
 

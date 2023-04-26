@@ -73,7 +73,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, lang, outDir); len(errs) > 0 {
+	if errs := g.Generate(context.Background(), schema, schemaPath, lang, outDir); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error("", zap.Error(err))
 		}

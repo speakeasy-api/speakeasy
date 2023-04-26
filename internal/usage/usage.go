@@ -44,7 +44,7 @@ func OutputUsage(cmd *cobra.Command, file, out string, debug bool) error {
 		return err
 	}
 
-	if errs := g.GenerateCSV(ctx, schema, out); len(errs) > 0 {
+	if errs := g.GenerateCSV(ctx, schema, file, out); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error("", zap.Error(err))
 		}
