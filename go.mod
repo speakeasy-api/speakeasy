@@ -7,14 +7,14 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
-	github.com/pb33f/libopenapi v0.8.0
+	github.com/pb33f/libopenapi v0.8.1
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.24.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.25.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
 )
@@ -33,7 +33,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/daveshanley/vacuum v0.0.55 // indirect
+	github.com/daveshanley/vacuum v0.1.0 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.8.1 // indirect
 	github.com/dop251/goja v0.0.0-20230304130813-e2f543bf4b4c // indirect
@@ -71,8 +71,8 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
-	github.com/pterm/pterm v0.12.54 // indirect
-	github.com/rivo/uniseg v0.4.3 // indirect
+	github.com/pterm/pterm v0.12.57 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.2.0 // indirect
