@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-
+	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -13,19 +13,21 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate OpenAPI documents + more (coming soon)",
 	Long:  `The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).`,
-	RunE:  validateExec,
+	RunE:  utils.InteractiveRunFn("What do you want to validate?"),
 }
 
 var validateOpenAPICmd = &cobra.Command{
 	Use:   "openapi",
 	Short: "Validate an OpenAPI document",
 	Long:  `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
+	RunE:  validateOpenAPI,
 }
 
 var validateConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Validates a Speakeasy configuration file for SDK generation",
 	Long:  `Validates a Speakeasy configuration file for SDK generation.`,
+	RunE:  validateConfig,
 }
 
 func validateInit() {
@@ -39,8 +41,6 @@ func validateOpenAPIInit() {
 	validateOpenAPICmd.Flags().StringP("schema", "s", "", "path to the OpenAPI document")
 	_ = validateOpenAPICmd.MarkFlagRequired("schema")
 
-	validateOpenAPICmd.RunE = validateOpenAPI
-
 	validateCmd.AddCommand(validateOpenAPICmd)
 }
 
@@ -48,17 +48,12 @@ func validateConfigInit() {
 	validateConfigCmd.Flags().StringP("dir", "d", "", "path to the directory containing the Speakeasy configuration file")
 	_ = validateConfigCmd.MarkFlagRequired("dir")
 
-	validateConfigCmd.RunE = validateConfig
-
 	validateCmd.AddCommand(validateConfigCmd)
-}
-
-func validateExec(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
 }
 
 func validateOpenAPI(cmd *cobra.Command, args []string) error {
 	// no authentication required for validating specs
+
 	schemaPath, err := cmd.Flags().GetString("schema")
 	if err != nil {
 		return err
@@ -69,6 +64,9 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 
 		return err
 	}
+
+	uploadCommand := promptui.Styler(promptui.FGCyan, promptui.FGBold)("speakeasy api register-schema --schema=" + schemaPath)
+	fmt.Printf("\nYou can upload your schema to Speakeasy using the following command:\n%s\n", uploadCommand)
 
 	return nil
 }

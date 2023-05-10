@@ -1,12 +1,14 @@
 package cmd
 
 import (
-	"os"
-
+	"fmt"
+	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"os"
 )
 
 var rootCmd = &cobra.Command{
@@ -19,7 +21,8 @@ var rootCmd = &cobra.Command{
 	- Generating OpenAPI specs from your API traffic 								(coming soon)
 	- Generating Postman collections from OpenAPI Specs 							(coming soon)
 `,
-	RunE: rootExec,
+	RunE:              rootExec,
+	PersistentPreRunE: utils.GetMissingFlagsPreRun,
 }
 
 var l = log.NewLogger("")
@@ -57,5 +60,9 @@ func GetRootCommand() *cobra.Command {
 }
 
 func rootExec(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
+	welcomeString := promptui.Styler(promptui.FGYellow, promptui.FGBold)("Welcome to the Speakeasy CLI!")
+	helpString := promptui.Styler(promptui.FGFaint, promptui.FGItalic)("This is interactive mode. For usage, run speakeasy -h instead")
+	println(fmt.Sprintf("%s\n%s\n", welcomeString, helpString))
+
+	return utils.InteractiveExec(cmd, args, "What do you want to do?")
 }

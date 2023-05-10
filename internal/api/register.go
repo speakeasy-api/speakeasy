@@ -64,12 +64,17 @@ func registerGetApis(root *cobra.Command) {
 }
 
 func registerGetApiVersions(root *cobra.Command) {
-	registerPrintableApiCommand(root, &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "get-api-versions",
 		Short: "Get Api versions",
 		Long:  `Get all Api versions for a particular apiID`,
 		RunE:  authCommand(getApiVersions),
-	})
+	}
+
+	cmd.Flags().String("api-id", "", "Api ID")
+	cmd.MarkFlagRequired("api-id")
+
+	registerPrintableApiCommand(root, cmd)
 }
 
 func registerGenerateOpenAPISpec(root *cobra.Command) {
