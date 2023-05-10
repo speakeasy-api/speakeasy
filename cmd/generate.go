@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"strings"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
@@ -17,7 +18,7 @@ var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more",
 	Long:  `The "generate" command provides a set of commands for generating client SDKs, OpenAPI specs (coming soon) and more (coming soon).`,
-	RunE:  generateExec,
+	RunE:  utils.InteractiveRunFn("What do you want to generate?"),
 }
 
 var genSDKCmd = &cobra.Command{
@@ -155,10 +156,6 @@ func genSDKInit() {
 	genSDKCmd.AddCommand(genSDKVersionCmd)
 	genSDKCmd.AddCommand(genSDKChangelogCmd)
 	generateCmd.AddCommand(genSDKCmd)
-}
-
-func generateExec(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {

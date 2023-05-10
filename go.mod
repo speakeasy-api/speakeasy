@@ -7,12 +7,14 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
+	github.com/manifoldco/promptui v0.9.0
 	github.com/pb33f/libopenapi v0.8.1
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.26.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/spf13/cobra v1.6.1
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.24.0
@@ -31,6 +33,7 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
+	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daveshanley/vacuum v0.1.0 // indirect
@@ -85,7 +88,6 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.7 // indirect
