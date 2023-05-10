@@ -3,7 +3,7 @@
 
 Speakeasy is the fastest way to ship developer experience for your APIs.
 
-![ezgif-1-941c72f269](https://user-images.githubusercontent.com/68016351/206042347-a3dc40de-4339-4b88-9fff-39513c1c8216.gif)
+![ezgif com-video-to-gif (1)](https://github.com/speakeasy-api/speakeasy/assets/90289500/ff6972c4-4e8a-4a5c-a976-75e97cc42f5a)
 
 ## What is Speakeasy ?
 
