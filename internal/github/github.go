@@ -40,7 +40,7 @@ func GenerateSummary(status string, errs []error) {
 
 		uErr := errors.GetUnsupportedErr(err)
 		if uErr != nil {
-			contents = append(contents, []string{"WARN", uErr.Error(), "unsupported", strconv.Itoa(uErr.GetLineNumber())})
+			contents = append(contents, []string{"WARN", uErr.Error(), "unsupported", strconv.Itoa(uErr.LineNumber)})
 			continue
 		}
 
@@ -75,7 +75,7 @@ func SortErrors(errs []error) {
 		jUErr := errors.GetUnsupportedErr(j)
 
 		if iUErr != nil && jUErr != nil {
-			return iUErr.GetLineNumber() < jUErr.GetLineNumber()
+			return iUErr.LineNumber < jUErr.LineNumber
 		} else if iUErr != nil {
 			return true
 		} else if jUErr != nil {

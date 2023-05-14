@@ -108,7 +108,7 @@ func getGithubAnnotationAttributes(associatedFile string, err error) string {
 
 	uErr := errors.GetUnsupportedErr(err)
 	if uErr != nil {
-		return fmt.Sprintf(" file=%s,line=%d,title=Unsupported", filepath.Clean(associatedFile), uErr.GetLineNumber())
+		return fmt.Sprintf(" file=%s,line=%d,title=Unsupported", filepath.Clean(associatedFile), uErr.LineNumber)
 	}
 
 	return ""

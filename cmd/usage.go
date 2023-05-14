@@ -29,10 +29,6 @@ func usageInit() {
 	rootCmd.AddCommand(usageCmd)
 }
 
-func usageExec(cmd *cobra.Command, args []string) error {
-	return cmd.Help()
-}
-
 func genUsage(cmd *cobra.Command, args []string) error {
 	file, err := cmd.Flags().GetString(fileFlag)
 	if err != nil {
