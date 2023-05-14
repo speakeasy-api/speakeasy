@@ -4,11 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
-const baseURL = "http://localhost:5050"
+// TODO: Replace client with Speakeasy SDK after updating the SDK
+
+var baseURL = os.Getenv("SPEAKEASY_SERVER_URL")
 
 type suggestionResponse struct {
 	Suggestion string `json:"suggestion"`
@@ -19,12 +25,49 @@ type suggestionRequest struct {
 	LineNumber int    `json:"line_number"`
 }
 
-func Upload() (string, error) {
-	req, err := http.NewRequest("POST", baseURL+"/upload", nil)
+func Upload(filePath string) (string, error) {
+	openAIKey, err := getOpenAIKey()
+	if err != nil {
+		return "", err
+	}
+
+	apiKey, err := getSpeakeasyAPIKey()
+	if err != nil {
+		return "", err
+	}
+
+	fileData, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreatePart(map[string][]string{
+		"Content-Disposition": {"form-data; name=\"file\"; filename=\"" + filepath.Base(filePath) + "\""},
+		"Content-Type":        {detectFileType(filePath)}, // Set the MIME type here
+	})
+	if err != nil {
+		return "", err
+	}
+	_, err = part.Write(fileData)
+	if err != nil {
+		return "", err
+	}
+	
+	err = writer.Close()
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", baseURL+"/v1/llm/openapi", body)
 	if err != nil {
 		return "", fmt.Errorf("error creating request for upload: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("x-openai-key", openAIKey)
+	req.Header.Set("x-api-key", apiKey)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -46,7 +89,17 @@ func Upload() (string, error) {
 	return token, nil
 }
 
-func Suggest(token string, error string, lineNumber int) (string, error) {
+func Suggestion(token string, error string, lineNumber int) (string, error) {
+	openAIKey, err := getOpenAIKey()
+	if err != nil {
+		return "", err
+	}
+
+	apiKey, err := getSpeakeasyAPIKey()
+	if err != nil {
+		return "", err
+	}
+
 	reqBody := suggestionRequest{
 		Error:      error,
 		LineNumber: lineNumber,
@@ -57,13 +110,15 @@ func Suggest(token string, error string, lineNumber int) (string, error) {
 		return "", fmt.Errorf("error marshaling request payload: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", baseURL+"/suggest", bytes.NewBuffer(jsonPayload))
+	req, err := http.NewRequest("POST", baseURL+"/v1/llm/openapi/suggestion", bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return "", fmt.Errorf("error creating request for suggest: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-session-token", token)
+	req.Header.Set("x-openai-key", openAIKey)
+	req.Header.Set("x-api-key", apiKey)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -85,4 +140,52 @@ func Suggest(token string, error string, lineNumber int) (string, error) {
 	}
 
 	return response.Suggestion, nil
+}
+
+func Clear(token string) error {
+	apiKey, err := getSpeakeasyAPIKey()
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("DELETE", baseURL+"/v1/llm/openapi", nil)
+	if err != nil {
+		return fmt.Errorf("error creating request for suggest: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-session-token", token)
+	req.Header.Set("x-api-key", apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error making request for suggest: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func getOpenAIKey() (string, error) {
+	key := os.Getenv("SPEAKEASY_API_KEY_OPENAI")
+	if key == "" {
+		return "", fmt.Errorf("SPEAKEASY_API_KEY_OPENAI must be set")
+	}
+
+	return key, nil
+}
+
+func getSpeakeasyAPIKey() (string, error) {
+	key, _ := config.GetSpeakeasyAPIKey()
+	if key == "" {
+		return "", fmt.Errorf("no api key available, please set SPEAKEASY_API_KEY or run 'speakeasy auth' to authenticate the CLI with the Speakeasy Platform")
+	}
+
+	return key, nil
 }

@@ -3,16 +3,14 @@ package validation
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/suggestions"
-	"os"
-	"strings"
-
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
+	"os"
 )
 
 func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions bool) error {
@@ -37,9 +35,9 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 		suggestionToken := ""
 
 		if findSuggestions {
-			suggestionToken, err = suggestions.Upload()
+			suggestionToken, err = suggestions.Upload(schemaPath)
 			if err != nil {
-				l.Error("cannot find llm suggestions due to error", zap.Error(err))
+				l.Error("cannot fetch llm suggestions due to error", zap.Error(err))
 				findSuggestions = false
 			}
 		}
@@ -51,28 +49,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 					hasErrors = true
 					l.Error("", zap.Error(err))
 					if findSuggestions {
-						errString := err.Error()
-						lineNumber, lineNumberErr := suggestions.GetLineNumber(errString)
-						if lineNumberErr == nil {
-							fmt.Println() // extra line for spacing
-							fmt.Println("Asking for a Suggestion")
-							suggestion, suggestionErr := suggestions.Suggest(suggestionToken, errString, lineNumber)
-							if suggestionErr == nil && suggestion != "" && !strings.Contains(suggestion, "I do not know") {
-								split := strings.Split(strings.Split(suggestion, "Suggested Fix:")[1], "Explanation:")
-								fix, yamlErr := suggestions.FormatYaml(suggestions.EscapeString(split[0][2:]))
-								if yamlErr == nil {
-									fmt.Println(utils.Green("Suggested Fix:"))
-									fmt.Println(utils.Green(fix))
-									fmt.Println() // extra line for spacing
-									fmt.Println(utils.Yellow("Explanation:"))
-									explanation := strings.TrimSpace(fmt.Sprintf("%s", suggestions.EscapeString(split[1][2:len(split[1])-1])))
-									fmt.Println(utils.Yellow(fmt.Sprintf("%s", explanation)))
-									fmt.Println() // extra line for spacing
-									fmt.Println(fmt.Sprintf("Type %s and Enter to accept the suggestion, type %s and Enter to skip:", utils.Green("yes"), utils.Red("no")))
-									suggestions.WaitForInput()
-								}
-							}
-						}
+						suggestions.FindSuggestion(err, suggestionToken)
 					}
 				} else {
 					hasWarnings = true
@@ -85,6 +62,10 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 				hasWarnings = true
 				l.Warn("", zap.Error(err))
 			}
+		}
+
+		if findSuggestions {
+			suggestions.Clear(suggestionToken)
 		}
 
 		if hasErrors {
