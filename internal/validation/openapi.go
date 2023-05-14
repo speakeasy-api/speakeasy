@@ -3,17 +3,17 @@ package validation
 import (
 	"context"
 	"fmt"
-	"os"
-
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
+	"os"
 )
 
-func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
+func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions bool) error {
 	fmt.Println("Validating OpenAPI spec...")
 
 	schema, err := os.ReadFile(schemaPath)
@@ -32,6 +32,15 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 	errs := g.Validate(context.Background(), schema, schemaPath)
 	if len(errs) > 0 {
 		hasErrors := false
+		suggestionToken := ""
+
+		if findSuggestions {
+			suggestionToken, err = suggestions.Upload(schemaPath)
+			if err != nil {
+				l.Error("cannot fetch llm suggestions due to error", zap.Error(err))
+				findSuggestions = false
+			}
+		}
 
 		for _, err := range errs {
 			vErr := errors.GetValidationErr(err)
@@ -39,6 +48,9 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 				if vErr.Severity == errors.SeverityError {
 					hasErrors = true
 					l.Error("", zap.Error(err))
+					if findSuggestions {
+						suggestions.FindSuggestion(err, suggestionToken)
+					}
 				} else {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
@@ -50,6 +62,10 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 				hasWarnings = true
 				l.Warn("", zap.Error(err))
 			}
+		}
+
+		if findSuggestions {
+			suggestions.Clear(suggestionToken)
 		}
 
 		if hasErrors {
