@@ -34,6 +34,10 @@ brews:
     tap:
       owner: speakeasy-api
       name: homebrew-tap
+      pull_request:
+        enabled: true
+        base: main
+      branch: release-main
     homepage: https://www.speakeasyapi.dev
     description: The Speakeasy CLI for interacting with the Speakeasy Platform
     license: Apache-2.0
@@ -43,6 +47,10 @@ brews:
     tap:
       owner: speakeasy-api
       name: homebrew-tap
+      pull_request:
+        enabled: true
+        base: main
+      branch: release-{{ .Major }}-{{ .Minor }}-{{ .Patch }}
     homepage: https://www.speakeasyapi.dev
     description: The Speakeasy CLI for interacting with the Speakeasy Platform
     license: Apache-2.0
