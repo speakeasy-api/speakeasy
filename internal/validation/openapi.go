@@ -37,7 +37,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 		if findSuggestions {
 			suggestionToken, err = suggestions.Upload(schemaPath)
 			if err != nil {
-				l.Error("cannot fetch llm suggestions due to error", zap.Error(err))
+				l.Error("cannot fetch llm suggestions", zap.Error(err))
 				findSuggestions = false
 			}
 		}

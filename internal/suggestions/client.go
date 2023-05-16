@@ -10,9 +10,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
-// TODO: Replace client with Speakeasy SDK after updating the SDK
+const timeout = time.Minute * 2
 
 var baseURL = os.Getenv("SPEAKEASY_SERVER_URL")
 
@@ -50,11 +51,12 @@ func Upload(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	_, err = part.Write(fileData)
 	if err != nil {
 		return "", err
 	}
-	
+
 	err = writer.Close()
 	if err != nil {
 		return "", err
@@ -69,7 +71,9 @@ func Upload(filePath string) (string, error) {
 	req.Header.Set("x-openai-key", openAIKey)
 	req.Header.Set("x-api-key", apiKey)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: timeout,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("error making request for upload: %v", err)
@@ -120,7 +124,9 @@ func Suggestion(token string, error string, lineNumber int) (string, error) {
 	req.Header.Set("x-openai-key", openAIKey)
 	req.Header.Set("x-api-key", apiKey)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: timeout,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("error making request for suggest: %v", err)
@@ -133,6 +139,9 @@ func Suggestion(token string, error string, lineNumber int) (string, error) {
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
 
 	var response suggestionResponse
 	if err := json.Unmarshal(body, &response); err != nil {
@@ -157,7 +166,9 @@ func Clear(token string) error {
 	req.Header.Set("x-session-token", token)
 	req.Header.Set("x-api-key", apiKey)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: timeout,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request for suggest: %v", err)

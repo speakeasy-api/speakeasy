@@ -2,7 +2,7 @@ package suggestions
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/manifoldco/promptui"
 	"gopkg.in/yaml.v2"
 	"path/filepath"
 	"regexp"
@@ -11,12 +11,17 @@ import (
 )
 
 func getLineNumber(errStr string) (int, error) {
-	lineStr := strings.Split(errStr, "[line ")[1]
-	lineNumStr := strings.Split(lineStr, "]")[0]
+	lineStr := strings.Split(errStr, "[line ")
+	if len(lineStr) < 2 {
+		return 0, fmt.Errorf("line number cannot be found in err %s", errStr)
+	}
+
+	lineNumStr := strings.Split(lineStr[1], "]")[0]
 	lineNum, err := strconv.Atoi(lineNumStr)
 	if err != nil {
 		return 0, err
 	}
+
 	return lineNum, nil
 }
 
@@ -72,24 +77,38 @@ func formatYaml(input string) (string, error) {
 	return outputStr, nil
 }
 
-func waitForInput() {
-	var input string
-	for {
-		fmt.Scan(&input)
-		if strings.ToLower(input) == "yes" {
-			// TODO: Update an actual openapi revision, maybe push to speakeasy registry
-			fmt.Println(utils.Green("Suggestion Accepted"))
-			fmt.Println() // extra space
-			break
-		}
-
-		if strings.ToLower(input) == "no" {
-			// TODO: Update an actual openapi revision, maybe push to speakeasy registry
-			fmt.Println(utils.Red("Suggestion Rejected"))
-			fmt.Println() // extra space
-			break
-		}
+func acceptSuggestion() bool {
+	templates := &promptui.SelectTemplates{
+		Label:    "{{ . | cyan | bold }}",
+		Active:   "🐝 {{ .Emoji | yellow }} {{ .Name | yellow | bold }}",
+		Inactive: "   {{ .Emoji | white }} {{ .Name | white | bold }}",
+		Selected: "> {{ .Emoji | green }} {{ .Name | green | bold }}",
 	}
+
+	prompt := promptui.Select{
+		HideHelp: true,
+		Label:    "Would you like to accept the suggestion?",
+		Items: []map[string]interface{}{
+			{
+				"Emoji": "✅",
+				"Name":  "Yes",
+			},
+			{
+				"Emoji": "❌",
+				"Name":  "No",
+			},
+		},
+		Templates: templates,
+		Size:      2,
+	}
+
+	index, _, err := prompt.Run()
+
+	if err != nil {
+		return false
+	}
+
+	return index == 0
 }
 
 func detectFileType(filename string) string {
@@ -110,29 +129,41 @@ func FindSuggestion(err error, token string) {
 	lineNumber, lineNumberErr := getLineNumber(errString)
 	if lineNumberErr == nil {
 		fmt.Println() // extra line for spacing
-		fmt.Println("Asking for a Suggestion")
+		fmt.Println(promptui.Styler(promptui.FGBold)("Asking for a Suggestion!"))
 		suggestion, suggestionErr := Suggestion(token, errString, lineNumber)
 		if suggestionErr == nil && suggestion != "" && !strings.Contains(suggestion, "I cannot provide an answer") {
 			fixSplit := strings.Split(suggestion, "Suggested Fix:")
 			if len(fixSplit) < 2 {
-				fmt.Println(utils.Yellow("No Suggestion Found"))
+				fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
 				return
 			}
-			split := strings.Split(fixSplit[1], "Explanation:")
-			fix, yamlErr := formatYaml(escapeString(split[0][2:]))
+
+			finalSplit := strings.Split(fixSplit[1], "Explanation:")
+			if len(finalSplit) < 2 || len(finalSplit[0]) < 3 || len(finalSplit[1]) < 3 {
+				fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
+				return
+			}
+
+			fix, yamlErr := formatYaml(escapeString(finalSplit[0][2:]))
+			explanation := strings.TrimSpace(fmt.Sprintf("%s", escapeString(finalSplit[1][2:len(finalSplit[1])-1])))
 			if yamlErr == nil {
-				fmt.Println(utils.Green("Suggested Fix:"))
-				fmt.Println(utils.Green(fix))
+				fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Suggested Fix:"))
+				fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGItalic)(fix))
 				fmt.Println() // extra line for spacing
-				fmt.Println(utils.Yellow("Explanation:"))
-				explanation := strings.TrimSpace(fmt.Sprintf("%s", escapeString(split[1][2:len(split[1])-1])))
-				fmt.Println(utils.Yellow(fmt.Sprintf("%s", explanation)))
+				fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGBold)("Explanation:"))
+				fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGItalic)(explanation))
 				fmt.Println() // extra line for spacing
-				fmt.Println(fmt.Sprintf("Type %s and Enter to accept the suggestion, type %s and Enter to skip:", utils.Green("yes"), utils.Red("no")))
-				waitForInput()
+				if acceptSuggestion() {
+					// TODO: Best effort attempt to edit the OpenAPI File in place
+					fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Suggestion Accepted"))
+					fmt.Println() // extra space
+				} else {
+					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("Suggestion Declined"))
+					fmt.Println() // extra space
+				}
 			}
 		} else {
-			fmt.Println(utils.Yellow("No Suggestion Found"))
+			fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
 		}
 	}
 }
