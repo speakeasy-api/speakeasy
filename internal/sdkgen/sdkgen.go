@@ -68,6 +68,11 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 		opts = append(opts, generate.WithDebuggingEnabled())
 	}
 
+	// Enable outputting of internal tests for internal speakeasy use cases
+	if os.Getenv("SPEAKEASY_OUTPUT_TESTS") == "true" {
+		opts = append(opts, generate.WithOutputTests())
+	}
+
 	g, err := generate.New(opts...)
 	if err != nil {
 		return err
