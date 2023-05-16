@@ -62,6 +62,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 		generate.WithInstallationURL(installationURL),
 		generate.WithPublished(published),
 		generate.WithRepoDetails(repo, repoSubDir),
+		generate.WithAllowRemoteReferences(),
 	}
 
 	if debug {
