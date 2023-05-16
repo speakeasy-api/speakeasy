@@ -17,8 +17,9 @@ speakeasy api get-api-versions [flags]
 ### Options
 
 ```
-  -h, --help   help for get-api-versions
-      --json   Output in JSON format
+      --api-id string   Api ID
+  -h, --help            help for get-api-versions
+      --json            Output in JSON format
 ```
 
 ### Parent Command

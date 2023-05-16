@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVersion, installationURL string, debug, autoYes, published bool, repo, repoSubDir string) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string) error {
 	if !generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -70,7 +70,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 	}
 
 	// Enable outputting of internal tests for internal speakeasy use cases
-	if os.Getenv("SPEAKEASY_OUTPUT_TESTS") == "true" {
+	if outputTests {
 		opts = append(opts, generate.WithOutputTests())
 	}
 

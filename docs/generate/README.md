@@ -25,4 +25,4 @@ speakeasy generate [flags]
 * [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy generate sdk](sdk/README.md)	 - Generating Client SDKs from OpenAPI specs (go, java, php, python, terraform, typescript + more coming soon)
+* [speakeasy generate sdk](sdk/README.md)	 - Generating Client SDKs from OpenAPI specs (go, java, php, python, ruby, terraform, typescript + more coming soon)

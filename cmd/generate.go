@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
@@ -148,6 +149,9 @@ func genSDKInit() {
 	genSDKCmd.Flags().StringP("repo", "r", "", "the repository URL for the SDK")
 	genSDKCmd.Flags().StringP("repo-subdir", "b", "", "the subdirectory of the repository where the SDK is located in the repo")
 
+	genSDKCmd.Flags().BoolP("output-tests", "t", false, "output internal tests for internal speakeasy use cases")
+	genSDKCmd.Flags().MarkHidden("output-tests")
+
 	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (default: the latest change)")
 	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version to get changelogs between this and the target version")
 	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for")
@@ -205,7 +209,12 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published, repo, repoSubdir); err != nil {
+	outputTests, err := cmd.Flags().GetBool("output-tests")
+	if err != nil {
+		return err
+	}
+
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
