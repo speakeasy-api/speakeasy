@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
-	"os"
 )
 
 var rootCmd = &cobra.Command{
@@ -60,6 +61,10 @@ func GetRootCommand() *cobra.Command {
 }
 
 func rootExec(cmd *cobra.Command, args []string) error {
+	if !utils.IsInteractive() {
+		return cmd.Help()
+	}
+
 	welcomeString := promptui.Styler(promptui.FGYellow, promptui.FGBold)("Welcome to the Speakeasy CLI!")
 	helpString := promptui.Styler(promptui.FGFaint, promptui.FGItalic)("This is interactive mode. For usage, run speakeasy -h instead")
 	println(fmt.Sprintf("%s\n%s\n", welcomeString, helpString))

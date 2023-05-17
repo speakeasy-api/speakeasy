@@ -2,13 +2,23 @@ package utils
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
+	"golang.org/x/term"
 )
 
+func IsInteractive() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
 func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
+	if !IsInteractive() {
+		return cmd.Help()
+	}
+
 	selected := SelectCommand(label, cmd.Commands())
 
 	selected.SetContext(cmd.Context())
@@ -38,7 +48,6 @@ func SelectCommand(label string, commands []*cobra.Command) *cobra.Command {
 	}
 
 	index, _, err := prompt.Run()
-
 	if err != nil {
 		fmt.Printf("Prompt failed %v\n", err)
 		os.Exit(1)

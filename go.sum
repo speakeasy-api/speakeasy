@@ -425,8 +425,6 @@ github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeV
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/speakeasy-api/easytemplate v0.7.0 h1:TWjHsf2KiRl2to56rXs2IK8B2/vJir7jMpIHEqQvb7Q=
 github.com/speakeasy-api/easytemplate v0.7.0/go.mod h1:TZukKvzzqorzug8vAyKMeSh8cHDC2MwftcalRdDLg4k=
-github.com/speakeasy-api/openapi-generation/v2 v2.28.0 h1:ymnVODwkhsGs2d0gZX7COBy6cLz+4pqwpGEUNyBYe6M=
-github.com/speakeasy-api/openapi-generation/v2 v2.28.0/go.mod h1:4nrYkHvPrQ166PbxpsfX2FJE2kQTdPUlOmQXA4MmDNY=
 github.com/speakeasy-api/openapi-generation/v2 v2.29.0 h1:juXkS8AY4O7ALyMnu12ml5iE1yaQp9bjk8FZVesL5ZM=
 github.com/speakeasy-api/openapi-generation/v2 v2.29.0/go.mod h1:4nrYkHvPrQ166PbxpsfX2FJE2kQTdPUlOmQXA4MmDNY=
 github.com/speakeasy-api/sdk-gen-config v0.4.2 h1:7mcoLMF4Q4VLkT2TYvjfOMOwxMdnGhFMihTPNIanYCM=
