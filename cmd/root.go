@@ -45,7 +45,11 @@ func Init(version, artifactArch string) {
 	authInit()
 	usageInit()
 	mergeInit()
+<<<<<<< HEAD
 	updateInit(version, artifactArch)
+=======
+	suggestInit()
+>>>>>>> 94557f4 (feat: new top level command)
 }
 
 func Execute(version, artifactArch string) {
