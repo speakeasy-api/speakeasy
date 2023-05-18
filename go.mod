@@ -8,12 +8,12 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.8.1
+	github.com/pb33f/libopenapi v0.8.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.30.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.31.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.2
@@ -40,7 +40,7 @@ require (
 	github.com/cloudevents/sdk-go/v2 v2.6.1 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/daveshanley/vacuum v0.1.0 // indirect
+	github.com/daveshanley/vacuum v0.1.4 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.8.1 // indirect
 	github.com/dop251/goja v0.0.0-20230304130813-e2f543bf4b4c // indirect
@@ -77,7 +77,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pb33f/libopenapi-validator v0.0.5 // indirect
+	github.com/pb33f/libopenapi-validator v0.0.7 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -86,7 +86,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
-	github.com/santhosh-tekuri/jsonschema/v5 v5.2.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/speakeasy-api/easytemplate v0.7.0 // indirect
