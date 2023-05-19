@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Conventional Commits
@@ -49,3 +49,35 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+  docs:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout speakeasy repository
+        uses: actions/checkout@v3
+        with:
+          path: speakeasy
+      - name: Checkout speakeasy-registry repository
+        uses: actions/checkout@v3
+        with:
+          path: speakeasy-registry
+      - name: Generate speakeasy cli docs
+        working-directory: speakeasy
+        run: |
+          go run cmd/docs/main.go
+      - name: Generate speakeasy-registry doc-site docs
+        working-directory: speakeasy
+        run: |
+          go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/docsite/docs/speakeasy-cli -doc-site
+      - name: Commit and push changes to speakeasy repo
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          repository: speakeasy
+          commit_message: "docs: update speakeasy cli docs"
+      - name: Create PR against speakeasy-registry
+        uses: peter-evans/create-pull-request@v5
+        with:
+          path: speakeasy-registry
+          token: ${{ secrets.BOT_REPO_TOKEN }}
+          commit-message: "docs: update speakeasy cli docs"
+          title: "docs: update speakeasy cli docs"
