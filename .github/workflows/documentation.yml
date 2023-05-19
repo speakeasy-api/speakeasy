@@ -1,4 +1,4 @@
-name: Release
+name: Documentation
 
 on:
   push:
@@ -24,6 +24,7 @@ jobs:
       - name: Checkout speakeasy-registry repository
         uses: actions/checkout@v3
         with:
+          repo: speakeasy-api/speakeasy-registry
           path: speakeasy-registry
       - name: Configure git for private modules
         env:
