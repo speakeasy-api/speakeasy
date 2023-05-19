@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v52/github"
+	"github.com/hashicorp/go-version"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -67,7 +68,7 @@ func GetRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func checkForUpdate(version, artifactArch string) {
+func checkForUpdate(currVersion, artifactArch string) {
 	client := github.NewClient(&http.Client{
 		Timeout: 1 * time.Second,
 	})
@@ -81,16 +82,28 @@ func checkForUpdate(version, artifactArch string) {
 		return
 	}
 
+	curVer, err := version.NewVersion(currVersion)
+	if err != nil {
+		return
+	}
+
 	for _, release := range releases {
 		for _, asset := range release.Assets {
 			if strings.HasSuffix(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)+".tar.gz") {
-				versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: %s ", release.GetTagName())
+				ver, err := version.NewVersion(release.GetTagName())
+				if err != nil {
+					return
+				}
 
-				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
-				fmt.Println(utils.BackgroundYellowBoldFG(versionString))
-				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
-				fmt.Println()
-				return
+				if ver.GreaterThan(curVer) {
+					versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: %s ", release.GetTagName())
+
+					fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
+					fmt.Println(utils.BackgroundYellowBoldFG(versionString))
+					fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
+					fmt.Println()
+					return
+				}
 			}
 		}
 	}
