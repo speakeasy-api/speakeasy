@@ -10,19 +10,21 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func GenerateDocs(cmd *cobra.Command, outDir string) error {
+var docSiteRoot = "/docs/speakeasy-cli"
+
+func GenerateDocs(cmd *cobra.Command, outDir string, docSiteLinks bool) error {
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
-		if err := GenerateDocs(c, outDir); err != nil {
+		if err := GenerateDocs(c, outDir, docSiteLinks); err != nil {
 			return err
 		}
 	}
 
 	outFile := filepath.Join(outDir, getPath(cmd))
 
-	doc, err := GenerateDoc(cmd)
+	doc, err := GenerateDoc(cmd, docSiteLinks)
 	if err != nil {
 		return err
 	}
@@ -38,7 +40,7 @@ func GenerateDocs(cmd *cobra.Command, outDir string) error {
 	return nil
 }
 
-func GenerateDoc(cmd *cobra.Command) (string, error) {
+func GenerateDoc(cmd *cobra.Command, docSiteLinks bool) (string, error) {
 	cmd.InitDefaultHelpCmd()
 	cmd.InitDefaultHelpFlag()
 
@@ -70,9 +72,14 @@ func GenerateDoc(cmd *cobra.Command) (string, error) {
 		builder.WriteString("### Parent Command\n\n")
 		parent := cmd.Parent()
 
-		link := "README.md"
-		if cmd.HasAvailableSubCommands() {
-			link = "../README.md"
+		link := ""
+		if docSiteLinks {
+			link = getDocSiteLink(parent)
+		} else {
+			link = "README.md"
+			if cmd.HasAvailableSubCommands() {
+				link = "../README.md"
+			}
 		}
 
 		builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", parent.CommandPath(), link, parent.Short))
@@ -91,9 +98,15 @@ func GenerateDoc(cmd *cobra.Command) (string, error) {
 				continue
 			}
 
-			link := fmt.Sprintf("%s.md", child.Name())
-			if child.HasAvailableSubCommands() {
-				link = fmt.Sprintf("%s/README.md", child.Name())
+			link := ""
+
+			if docSiteLinks {
+				link = getDocSiteLink(child)
+			} else {
+				link = fmt.Sprintf("%s.md", child.Name())
+				if child.HasAvailableSubCommands() {
+					link = fmt.Sprintf("%s/README.md", child.Name())
+				}
 			}
 
 			builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", child.CommandPath(), link, child.Short))
@@ -120,6 +133,16 @@ func printOptions(builder *strings.Builder, cmd *cobra.Command) error {
 		builder.WriteString("```\n\n")
 	}
 	return nil
+}
+
+func getDocSiteLink(cmd *cobra.Command) string {
+	fullPath := strings.TrimPrefix(strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name()), " ")
+
+	if strings.TrimSpace(fullPath) == "" {
+		return docSiteRoot
+	}
+
+	return fmt.Sprintf("%s/%s", docSiteRoot, strings.ReplaceAll(fullPath, " ", "/"))
 }
 
 func getPath(cmd *cobra.Command) string {
