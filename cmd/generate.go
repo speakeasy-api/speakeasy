@@ -146,8 +146,8 @@ func genSDKInit() {
 	genSDKCmd.Flags().StringP("installationURL", "i", "", "the language specific installation URL for installation instructions if the SDK is not published to a package manager")
 	genSDKCmd.Flags().BoolP("published", "p", false, "whether the SDK is published to a package manager or not, determines the type of installation instructions to generate")
 
-	genSDKCmd.Flags().StringP("repo", "r", "", "the repository URL for the SDK")
-	genSDKCmd.Flags().StringP("repo-subdir", "b", "", "the subdirectory of the repository where the SDK is located in the repo")
+	genSDKCmd.Flags().StringP("repo", "r", "", "the repository URL for the SDK, if the `published` flag isn't used this will be used to generate installation instructions")
+	genSDKCmd.Flags().StringP("repo-subdir", "b", "", "the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation")
 
 	genSDKCmd.Flags().BoolP("output-tests", "t", false, "output internal tests for internal speakeasy use cases")
 	genSDKCmd.Flags().MarkHidden("output-tests")
