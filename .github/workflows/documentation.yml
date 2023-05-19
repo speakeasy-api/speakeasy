@@ -26,6 +26,7 @@ jobs:
         with:
           repository: speakeasy-api/speakeasy-registry
           path: speakeasy-registry
+          branch: main
       - name: Configure git for private modules
         env:
           GITHUB_TOKEN: ${{ secrets.DOCUMENTATION_PAT }}
