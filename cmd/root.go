@@ -50,7 +50,7 @@ func Init() {
 }
 
 func Execute(version, artifactArch string) {
-	rootCmd.Version = version
+	rootCmd.Version = version + "\n" + artifactArch
 	rootCmd.SilenceErrors = true
 
 	Init()
@@ -87,7 +87,7 @@ func checkForUpdate(version, artifactArch string) {
 				versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: %s ", release.GetTagName())
 
 				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
-				fmt.Println(utils.BackgroundYellow(versionString))
+				fmt.Println(utils.BackgroundYellowBoldFG(versionString))
 				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
 				fmt.Println()
 				return
