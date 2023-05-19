@@ -21,6 +21,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: speakeasy
+          token: ${{ secrets.DOCUMENTATION_PAT }}
       - name: Checkout speakeasy-registry repository
         uses: actions/checkout@v3
         with:
@@ -48,7 +49,6 @@ jobs:
         with:
           repository: speakeasy
           commit_message: "docs: update speakeasy cli docs"
-          token: ${{ secrets.DOCUMENTATION_PAT }}
       - name: Create PR against speakeasy-registry
         uses: peter-evans/create-pull-request@v5
         with:
