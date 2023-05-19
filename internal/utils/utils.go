@@ -16,6 +16,9 @@ var (
 	Red    = color.New(color.FgRed).SprintFunc()
 	Yellow = color.New(color.FgYellow).SprintFunc()
 	Blue   = color.New(color.FgBlue).SprintFunc()
+
+	BackgroundYellow       = color.New(color.BgHiYellow).SprintFunc()
+	BackgroundYellowBoldFG = color.New(color.BgHiYellow).Add(color.Bold).SprintFunc()
 )
 
 func PrintArray[K any](cmd *cobra.Command, arr []K, fieldNameReplacements map[string]string) {

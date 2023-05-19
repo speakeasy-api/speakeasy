@@ -1,9 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/google/go-github/v52/github"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -44,11 +49,13 @@ func Init() {
 	mergeInit()
 }
 
-func Execute(version string) {
-	rootCmd.Version = version
+func Execute(version, artifactArch string) {
+	rootCmd.Version = version + "\n" + artifactArch
 	rootCmd.SilenceErrors = true
 
 	Init()
+
+	checkForUpdate(version, artifactArch)
 
 	if err := rootCmd.Execute(); err != nil {
 		l.Error("", zap.Error(err))
@@ -58,6 +65,35 @@ func Execute(version string) {
 
 func GetRootCommand() *cobra.Command {
 	return rootCmd
+}
+
+func checkForUpdate(version, artifactArch string) {
+	client := github.NewClient(&http.Client{
+		Timeout: 1 * time.Second,
+	})
+
+	releases, _, err := client.Repositories.ListReleases(context.Background(), "speakeasy-api", "speakeasy", nil)
+	if err != nil {
+		return
+	}
+
+	if len(releases) == 0 {
+		return
+	}
+
+	for _, release := range releases {
+		for _, asset := range release.Assets {
+			if strings.HasSuffix(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)+".tar.gz") {
+				versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: %s ", release.GetTagName())
+
+				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
+				fmt.Println(utils.BackgroundYellowBoldFG(versionString))
+				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
+				fmt.Println()
+				return
+			}
+		}
+	}
 }
 
 func rootExec(cmd *cobra.Command, args []string) error {
