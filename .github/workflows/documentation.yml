@@ -26,10 +26,10 @@ jobs:
         with:
           repository: speakeasy-api/speakeasy-registry
           path: speakeasy-registry
-          branch: main
+          token: ${{ secrets.DOCUMENTATION_PAT }}
       - name: Configure git for private modules
         env:
-          GITHUB_TOKEN: ${{ secrets.DOCUMENTATION_PAT }}
+          GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
         run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
       - name: Set up Go 1.x
         uses: actions/setup-go@v3
