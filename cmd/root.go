@@ -86,7 +86,9 @@ func checkForUpdate(version, artifactArch string) {
 			if strings.HasSuffix(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)+".tar.gz") {
 				versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: %s ", release.GetTagName())
 
-				fmt.Printf(utils.BackgroundYellow("%s\n%s\n%s\n"), strings.Repeat(" ", len(versionString)), versionString, strings.Repeat(" ", len(versionString)))
+				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
+				fmt.Println(utils.BackgroundYellow(versionString))
+				fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
 				fmt.Println()
 				return
 			}
