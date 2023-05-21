@@ -81,6 +81,10 @@ func Upload(filePath string) (string, error) {
 
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusUnprocessableEntity {
+		return "", fmt.Errorf("OpenAPI document is larger than 50,000 line limit")
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}

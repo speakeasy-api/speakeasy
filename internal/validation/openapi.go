@@ -54,6 +54,9 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 				} else {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
+					if findSuggestions {
+						suggestions.FindSuggestion(err, suggestionToken)
+					}
 				}
 			}
 
