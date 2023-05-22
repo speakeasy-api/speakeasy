@@ -12,7 +12,7 @@ require (
 	github.com/pb33f/libopenapi v0.8.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.31.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.32.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -40,7 +40,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.6.1 // indirect
-	github.com/cloudflare/circl v1.1.0 // indirect
+	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/daveshanley/vacuum v0.1.4 // indirect

@@ -1,18 +1,16 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"net/http"
+	"math"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/google/go-github/v52/github"
 	"github.com/hashicorp/go-version"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/updates"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -28,8 +26,7 @@ var rootCmd = &cobra.Command{
 	- Generating OpenAPI specs from your API traffic 								(coming soon)
 	- Generating Postman collections from OpenAPI Specs 							(coming soon)
 `,
-	RunE:              rootExec,
-	PersistentPreRunE: utils.GetMissingFlagsPreRun,
+	RunE: rootExec,
 }
 
 var l = log.NewLogger("")
@@ -41,22 +38,26 @@ func init() {
 	}
 }
 
-func Init() {
+func Init(version, artifactArch string) {
 	genInit()
 	apiInit()
 	validateInit()
 	authInit()
 	usageInit()
 	mergeInit()
+	updateInit(version, artifactArch)
 }
 
 func Execute(version, artifactArch string) {
 	rootCmd.Version = version + "\n" + artifactArch
 	rootCmd.SilenceErrors = true
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		if cmd.Name() != "update" {
+			checkForUpdate(version, artifactArch)
+		}
+	}
 
-	Init()
-
-	checkForUpdate(version, artifactArch)
+	Init(version, artifactArch)
 
 	if err := rootCmd.Execute(); err != nil {
 		l.Error("", zap.Error(err))
@@ -69,16 +70,12 @@ func GetRootCommand() *cobra.Command {
 }
 
 func checkForUpdate(currVersion, artifactArch string) {
-	client := github.NewClient(&http.Client{
-		Timeout: 1 * time.Second,
-	})
-
-	releases, _, err := client.Repositories.ListReleases(context.Background(), "speakeasy-api", "speakeasy", nil)
+	latestVersion, err := updates.GetLatestVersion(artifactArch)
 	if err != nil {
 		return
 	}
 
-	if len(releases) == 0 {
+	if latestVersion == nil {
 		return
 	}
 
@@ -87,25 +84,17 @@ func checkForUpdate(currVersion, artifactArch string) {
 		return
 	}
 
-	for _, release := range releases {
-		for _, asset := range release.Assets {
-			if strings.HasSuffix(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)+".tar.gz") {
-				ver, err := version.NewVersion(release.GetTagName())
-				if err != nil {
-					return
-				}
+	if latestVersion.GreaterThan(curVer) {
+		versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: v%s ", latestVersion.String())
+		updateString := " Run `speakeasy update` to update to the latest version "
+		padLength := int(math.Max(float64(len(versionString)), float64(len(updateString))))
 
-				if ver.GreaterThan(curVer) {
-					versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: %s ", release.GetTagName())
-
-					fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
-					fmt.Println(utils.BackgroundYellowBoldFG(versionString))
-					fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", len(versionString))))
-					fmt.Println()
-					return
-				}
-			}
-		}
+		fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", padLength)))
+		fmt.Println(utils.BackgroundYellowBoldFG(padRight(versionString, padLength)))
+		fmt.Println(utils.BackgroundYellowBoldFG(padRight(updateString, padLength)))
+		fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", padLength)))
+		fmt.Println()
+		return
 	}
 }
 
@@ -119,4 +108,9 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	println(fmt.Sprintf("%s\n%s\n", welcomeString, helpString))
 
 	return utils.InteractiveExec(cmd, args, "What do you want to do?")
+}
+
+func padRight(str string, width int) string {
+	spaces := width - len(str)
+	return str + strings.Repeat(" ", spaces)
 }
