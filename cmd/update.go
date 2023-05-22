@@ -25,7 +25,9 @@ func update(version, artifactArch string) func(cmd *cobra.Command, args []string
 			return err
 		}
 
-		if newVersion != "" {
+		if newVersion == "" {
+			fmt.Println("Already up to date")
+		} else {
 			fmt.Println("Updated to version", newVersion)
 		}
 
