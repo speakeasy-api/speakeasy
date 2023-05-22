@@ -21,7 +21,7 @@ func main() {
 	docSite := flag.Bool("doc-site", false, "Whether to generate docs for the doc site")
 	flag.Parse()
 
-	cmd.Init()
+	cmd.Init("", "")
 
 	root := cmd.GetRootCommand()
 
