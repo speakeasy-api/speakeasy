@@ -38,6 +38,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
         run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
+      - name: Setup Mono
+        run: |-
+          sudo apt update
+          sudo apt install dirmngr gnupg apt-transport-https ca-certificates software-properties-common
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+          sudo apt-add-repository 'deb https://download.mono-project.com/repo/ubuntu stable-focal main'
+          sudo apt install mono-complete
+          mono --version
+      - name: Setup Chocolatey
+        run: |-
+          set -x
+          set -e
+          mkdir -p /tmp/choco
+          cd /tmp/choco
+          wget https://github.com/chocolatey/choco/archive/stable.zip
+          unzip stable.zip
+          cd choco-stable
+          chmod +x build.sh
+          chmod +x zip.sh
+          ./build.sh
+          cp build_output/chocolatey /usr/local/bin/chocolatey -r
+          echo "$(cat << EOF
+          #!/bin/bash
+          mono /usr/local/bin/chocolatey/choco.exe "\$@" --allow-unofficial
+          EOF
+          )" > /usr/local/bin/choco
+          chmod +x /usr/local/bin/choco
+          choco -h
       - name: goreleaser
         uses: goreleaser/goreleaser-action@v4
         with:
