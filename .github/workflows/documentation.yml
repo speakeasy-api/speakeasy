@@ -48,7 +48,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           repository: speakeasy
-          commit_message: "docs: update speakeasy cli docs"
+          commit_message: "docs: update speakeasy cli docs [skip ci]"
       - name: Create PR against speakeasy-registry
         uses: peter-evans/create-pull-request@v5
         with:
