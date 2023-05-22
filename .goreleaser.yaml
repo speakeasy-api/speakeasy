@@ -45,29 +45,31 @@ brews:
     license: Apache-2.0
     test: |
       system "#{bin}/speakeasy --version"
-chocolateys:
-  - name: speakeasy
-    title: Speakeasy CLI
-    authors: Speakeasy Inc
-    project_url: https://github.com/speakeasy-api/speakeasy
-    url_template: "https://github.com/speakeasy-api/speakeasy/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    copyright: 2023 Speakeasy, Inc
-    license_url: https://github.com/speakeasy-api/speakeasy/blob/main/LICENSE
-    project_source_url: https://github.com/speakeasy-api/speakeasy
-    docs_url: https://speakeasyapi.dev/docs/speakeasy-cli/getting-started
-    bug_tracker_url: https://github.com/speakeasy-api/speakeasy/issues
-    tags: openapi api codegen validation speakeasy llm client-libraries sdks
-    summary: Speakeasy CLI makes validating API specs and generating idiomatic SDKs easy!
-    description: |-
-      This CLI is a tool for interacting with the Speakeasy platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more.
 
-      Current functions of the CLI include:
+# disabled chocolatey for now due to issues running chocolatey on windows
+# chocolateys:
+#   - name: speakeasy
+#     title: Speakeasy CLI
+#     authors: Speakeasy Inc
+#     project_url: https://github.com/speakeasy-api/speakeasy
+#     url_template: "https://github.com/speakeasy-api/speakeasy/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+#     copyright: 2023 Speakeasy, Inc
+#     license_url: https://github.com/speakeasy-api/speakeasy/blob/main/LICENSE
+#     project_source_url: https://github.com/speakeasy-api/speakeasy
+#     docs_url: https://speakeasyapi.dev/docs/speakeasy-cli/getting-started
+#     bug_tracker_url: https://github.com/speakeasy-api/speakeasy/issues
+#     tags: openapi api codegen validation speakeasy llm client-libraries sdks
+#     summary: Speakeasy CLI makes validating API specs and generating idiomatic SDKs easy!
+#     description: |-
+#       This CLI is a tool for interacting with the Speakeasy platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more.
 
-      Generating idiomatic client SDKs from OpenAPI3.X specs:
-      Live: Go, Python3, Typescript(Node), Java, PHP, Ruby, Terraform
-      Coming soon: Rust, C# and more languages on upon request!
-      Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages.
-      Authenticating with the platform and managing API keys.
-    release_notes: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
-    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-    source_repo: "https://push.chocolatey.org/"
+#       Current functions of the CLI include:
+
+#       Generating idiomatic client SDKs from OpenAPI3.X specs:
+#       Live: Go, Python3, Typescript(Node), Java, PHP, Ruby, Terraform
+#       Coming soon: Rust, C# and more languages on upon request!
+#       Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages.
+#       Authenticating with the platform and managing API keys.
+#     release_notes: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
+#     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+#     source_repo: "https://push.chocolatey.org/"
