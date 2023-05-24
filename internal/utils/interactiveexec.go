@@ -33,7 +33,7 @@ func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
 
 func SelectCommand(label string, commands []*cobra.Command) *cobra.Command {
 	templates := &promptui.SelectTemplates{
-		Label:    "{{ . | cyan | bold }}",
+		Label:    "{{.}}",
 		Active:   "🐝 {{ .Name | yellow | bold }} - {{ .Short | faint }}",
 		Inactive: "   {{ .Name | white | bold }} - {{ .Short | faint }}",
 		Selected: "> {{ .Name | green | bold }}",
@@ -41,12 +41,13 @@ func SelectCommand(label string, commands []*cobra.Command) *cobra.Command {
 
 	prompt := promptui.Select{
 		HideHelp:  true,
-		Label:     label,
+		Label:     "",
 		Items:     commands,
 		Templates: templates,
 		Size:      len(commands),
 	}
 
+	fmt.Println(promptui.Styler(promptui.FGCyan, promptui.FGBold)(label))
 	index, _, err := prompt.Run()
 	if err != nil {
 		fmt.Printf("Prompt failed %v\n", err)
