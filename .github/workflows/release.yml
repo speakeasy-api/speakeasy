@@ -8,14 +8,15 @@ on:
 permissions:
   contents: write
 
-env:
-  GOPRIVATE: "github.com/speakeasy-api"
-
 jobs:
   release:
     name: Release
     runs-on: windows-latest
     steps:
+      - name: Setup environment
+        run: |-
+          chcp 65001 #set code page to utf-8
+          echo ("GOPRIVATE=github.com/speakeasy-api") >> $env:GITHUB_ENV
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
