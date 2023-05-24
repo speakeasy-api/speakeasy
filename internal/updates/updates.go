@@ -2,6 +2,7 @@ package updates
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -72,7 +73,7 @@ func Update(currentVersion, artifactArch string) (string, error) {
 		return "", err
 	}
 
-	if err := extractTarGZ(downloadedPath, extractDest); err != nil {
+	if err := extract(downloadedPath, extractDest); err != nil {
 		return "", fmt.Errorf("failed to extract artifact: %w", err)
 	}
 
@@ -118,7 +119,7 @@ func getLatestRelease(artifactArch string, timeout time.Duration) (*github.Repos
 
 	for _, release := range releases {
 		for _, asset := range release.Assets {
-			if strings.HasSuffix(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)+".tar.gz") {
+			if strings.Contains(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)) {
 				return release, asset, nil
 			}
 		}
@@ -154,11 +155,65 @@ func downloadCLI(dest, link string) (string, error) {
 	return download.Name(), nil
 }
 
+func extract(archive, dest string) error {
+	switch filepath.Ext(archive) {
+	case ".zip":
+		return extractZip(archive, dest)
+	case ".gz":
+		return extractTarGZ(archive, dest)
+	default:
+		return fmt.Errorf("unsupported archive type: %s", filepath.Ext(archive))
+	}
+}
+
+func extractZip(archive, dest string) error {
+	z, err := zip.OpenReader(archive)
+	if err != nil {
+		return err
+	}
+	defer z.Close()
+
+	for _, file := range z.File {
+		filePath := path.Join(dest, file.Name)
+
+		if file.FileInfo().IsDir() {
+			if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
+			return err
+		}
+
+		outFile, err := os.Create(filePath)
+		if err != nil {
+			return err
+		}
+
+		f, err := file.Open()
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(outFile, f)
+		f.Close()
+		outFile.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func extractTarGZ(archive, dest string) error {
 	file, err := os.OpenFile(archive, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
 	gz, err := gzip.NewReader(file)
 	if err != nil {
@@ -180,19 +235,17 @@ func extractTarGZ(archive, dest string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(dest, header.Name), 0o755); err != nil {
+			if err := os.MkdirAll(path.Join(dest, header.Name), os.ModePerm); err != nil {
 				return err
 			}
 		case tar.TypeReg:
 			outFile, err := os.Create(path.Join(dest, header.Name))
 			if err != nil {
-				fmt.Println("here1")
 				return err
 			}
 			_, err = io.Copy(outFile, t)
 			outFile.Close()
 			if err != nil {
-				fmt.Println("here2")
 				return err
 			}
 		default:
