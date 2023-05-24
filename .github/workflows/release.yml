@@ -36,9 +36,7 @@ jobs:
       # More assembly might be required: Docker logins, GPG, etc. It all depends
       # on your needs.
       - name: Configure git for private modules
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
-        run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
+        run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
       - name: Setup Choco
         uses: crazy-max/ghaction-chocolatey@v2
         with:
