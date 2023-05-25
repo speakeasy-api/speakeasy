@@ -19,7 +19,7 @@ func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
 		return cmd.Help()
 	}
 
-	selected := SelectCommand(label, cmd.Commands())
+	selected := SelectCommand(label, cmd)
 
 	selected.SetContext(cmd.Context())
 
@@ -28,10 +28,30 @@ func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
 		return err
 	}
 
-	return selected.RunE(selected, args)
+	if selected.RunE != nil {
+		return selected.RunE(selected, args)
+	} else if selected.Run != nil {
+		selected.Run(selected, args)
+	}
+
+	return nil
 }
 
-func SelectCommand(label string, commands []*cobra.Command) *cobra.Command {
+func SelectCommand(label string, cmd *cobra.Command) *cobra.Command {
+	if !cmd.HasSubCommands() {
+		return cmd
+	}
+
+	commands := cmd.Commands()
+
+	if len(commands) == 1 && isCommandRunnable(commands[0]) {
+		return SelectCommand(label, commands[0])
+	}
+
+	if isCommandRunnable(cmd) {
+		commands = append([]*cobra.Command{cmd}, commands...)
+	}
+
 	templates := &promptui.SelectTemplates{
 		Label:    "{{.}}",
 		Active:   "🐝 {{ .Name | yellow | bold }} - {{ .Short | faint }}",
@@ -54,7 +74,13 @@ func SelectCommand(label string, commands []*cobra.Command) *cobra.Command {
 		os.Exit(1)
 	}
 
-	return commands[index]
+	selected := commands[index]
+
+	if selected != cmd && selected.HasSubCommands() {
+		return SelectCommand(label, selected)
+	}
+
+	return selected
 }
 
 func InteractiveRunFn(label string) func(cmd *cobra.Command, args []string) error {
@@ -141,4 +167,18 @@ func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
 	})
 
 	return values
+}
+
+func isCommandRunnable(cmd *cobra.Command) bool {
+	onlyHasHelpFlags := cmd.Flags().HasFlags()
+
+	if cmd.Flags().HasFlags() {
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			if flag.Name != "help" && flag.Name != "version" {
+				onlyHasHelpFlags = false
+			}
+		})
+	}
+
+	return cmd.Runnable() && !onlyHasHelpFlags
 }

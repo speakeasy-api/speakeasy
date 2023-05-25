@@ -1,4 +1,5 @@
 # The Speakeasy CLI - Generate Client SDKs Like a Human Wrote Them
+
 ![181640742-31ab234a-3b39-432e-b899-21037596b360](https://user-images.githubusercontent.com/68016351/196461357-fcb8d90f-cd67-498e-850f-6146c58d0114.png)
 
 Speakeasy is the fastest way to ship developer experience for your APIs.
@@ -7,28 +8,30 @@ Speakeasy is the fastest way to ship developer experience for your APIs.
 
 ## What is Speakeasy ?
 
-[Speakeasy](https://www.speakeasyapi.dev/) gives your users the DevEx that makes API integrations easy. Don’t put the burden of integration on your users. Take your APIs to market with best in class sdks and a complete self-service experience from shipping great sdks to managing keys, logs and more.
+[Speakeasy](https://www.speakeasyapi.dev/) gives your users the DevEx that makes API integrations easy. Don't put the burden of integration on your users. Take your APIs to market with best in class sdks and a complete self-service experience from shipping great sdks to managing keys, logs and more.
 
 ## What is the Speakeasy CLI ?
 
 This CLI is a tool for interacting with the [Speakeasy](https://docs.speakeasyapi.dev/docs/speakeasy-cli/) platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more.
 
-Current functions of the CLI include: 
+Current functions of the CLI include:
 
-* Generating idiomatic client SDKs from OpenAPI3.X specs:
-  * Live: Go, Python3, Typescript(Node), Java 
-  * Coming soon: Terraform, Rust, Ruby, C# and more languages on upon request!
-* Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages. 
-* Authenticating with the platform and managing API keys. 
+* Generating idiomatic client SDKs from OpenAPI 3.X specs:
+  * Live: Go, Python3, Typescript(Node), Java, PHP, Ruby, Terraform
+  * Coming soon: Rust, C#, Swift and more languages upon request!
+* Validating the correctness of OpenAPI 3.X specs. The CLI has a built in command to validate your spec and post helpful error messages.
+* Merging OpenAPI 3.X specs. The CLI can merge multiple OpenAPI 3.X specs into a single spec.
+* Authenticating with the platform and managing API keys.
+* Using the Speakeasy API to manage your integration.
 
 ## Design Choices
 
-All the SDKs we generate are designed to be as idiomatic to the language they are generated for as possible while being similar enough to each other to allow some familiarity between them, but also to allow for an efficient generation engine that is capabale of supporting many languages. Some of the design decisions we made are listed below:
+All the SDKs we generate are designed to be as idiomatic to the language they are generated for as possible while being similar enough to each other to allow some familiarity between them, but also to allow for an efficient generation engine that is capable of supporting many languages. Some of the design decisions we made are listed below:
 
-* Each of the SDKs generally implement a base SDK class that contains the methods for each of the API endpoints defined in a spec.
-* Where possible we generate fully typed models from the OpenAPI document and seperate those models defined as components in the docs and those that are defined inline with operations.
+* Each of the SDKs generally implement a base SDK class that contains the methods for each of the API endpoints defined in the OpenAPI document.
+* Where possible we generate fully typed models from the OpenAPI document and separate those models defined as components in the docs and those that are defined inline with operations.
 * We use reflection metadata where possible to annotate types with the required metadata needed to determine how to serialize and deserialize them, based on the configuration in the OpenAPI document.
-* We generate full packages for each language that should be able to be published to a package registry with little additional work, to get them in your end-users hands as quickly as possible. If you're interested in having a managed pipeline to your package manager check out our Github action. 
+* We generate full packages for each language that should be able to be published to a package registry with little additional work, to get them in your end-users hands as quickly as possible. If you're interested in having a managed pipeline to your package manager check out our Github action.
 
 Want to learn more about our methodology? Here is a [blog post](https://www.speakeasyapi.dev/post/client-sdks-as-a-service) to learn more about our generators as compared to the OSS options. If you're interested in having managed Github repos generated for your SDKs or enterprise support reach out to us [here](https://www.speakeasyapi.dev/request-access) or [come chat with us](https://calendly.com/d/drw-t98-rpq/simon-sagar-speakeasy). We'd love to help you build out API dev ex.
 
@@ -36,11 +39,31 @@ Want to learn more about our methodology? Here is a [blog post](https://www.spea
 
 ## Installation
 
-### Homebrew
+### Homebrew (MacOS and Linux)
 
 ```bash
 brew install speakeasy-api/homebrew-tap/speakeasy
 ```
+
+### Chocolatey (Windows)
+
+```cmd
+choco install speakeasy
+```
+
+### Manual Installation
+
+Download the latest release for your platform from the [releases page](https://github.com/speakeasy-api/speakeasy/releases), extract and add the binary to your path.
+
+### Keeping up to date
+
+The CLI will warn you if you're running an out of date version. To update the CLI run:
+
+```bash
+speakeasy update
+```
+
+or install the latest version via your package manager.
 
 ## Getting Started with the Speakeasy CLI
 
@@ -52,13 +75,14 @@ speakeasy --help
 
 See the [docs](https://docs.speakeasyapi.dev/docs/speakeasy-cli/getting-started) for more information on how to get started with the Speakeasy CLI.
 
-### Authenticating Speakeasy CLI 
+### Authenticating Speakeasy CLI
 
 Speakeasy CLI depends on Speakeasy Platform APIs. Connect your Speakeasy CLI with Speakeasy Platform by running:
 
 ```bash
 speakeasy auth login
 ```
+
 You'll be redirected to a login URL to select an existing workspace or create a new workspace on the platform. If you're local network prevents 
 accessing the login page prompted by the CLI you can login manually at [app.speakeasyapi.dev](https://app.speakeasyapi.dev), retrieve an API key and populate a local environment
 variable named `SPEAKEASY_API_KEY` with the key.
@@ -68,11 +92,14 @@ variable named `SPEAKEASY_API_KEY` with the key.
 ### SDK Generation
 
 **Command**:
-```
+
+```bash
 speakeasy generate sdk [flags]
 ```
+
 **Options**:
-```
+
+```bash
   -b, --baseurl string   base URL for the api (only required if OpenAPI spec doesn't specify root server URLs
   -d, --debug            enable writing debug files with broken code
   -h, --help             help for sdk
@@ -89,26 +116,33 @@ For in depth documentation please see our [docs](https://docs.speakeasyapi.dev/d
 Note, Schema validation doesn't require logging in to the Speakeasy Platform.
 
 **Command**:
-```
+
+```bash
 speakeasy validate openapi [flags]
 ```
+
 **Options**:
-```
+
+```bash
   -h, --help            help for openapi
   -s, --schema string   path to the openapi schema
 ```
 
 ## OpenAPI Usage
+
 Note, OpenAPI usage doesn't require logging in to the Speakeasy Platform.
 
 The following command outputs usage information containing counts of OpenAPI features for a given OpenAPI schema to a CSV.
 
 **Command**:
-```
+
+```bash
 speakeasy usage [flags]
 ```
+
 **Options**:
-```
+
+```bash
   -d, --debug         enable writing debug files with broken code
   -f, --file string   Path to file to generate usage information for
   -h, --help          help for usage
@@ -117,29 +151,29 @@ speakeasy usage [flags]
 
 ## OpenAPI Support
 
-* [ ] Global and per method ServerURL configuration (include base url and templating) - https://swagger.io/docs/specification/api-host-and-base-path/
-* [ ] Global and per method Security configuration - https://swagger.io/docs/specification/authentication/
+* [ ] Global and per method ServerURL configuration (include base url and templating) - <https://swagger.io/docs/specification/api-host-and-base-path/>
+* [ ] Global and per method Security configuration - <https://swagger.io/docs/specification/authentication/>
 * [ ] Method generation
 * [ ] Request/Response Model Generation
-* [ ] Path Param Serialization - https://swagger.io/docs/specification/describing-parameters/#path-parameters
-  * [ ] Default Path Paramater Serialization `(style = simple, explode = false)` - https://swagger.io/docs/specification/serialization/#path
+* [ ] Path Param Serialization - <https://swagger.io/docs/specification/describing-parameters/#path-parameters>
+  * [ ] Default Path Paramater Serialization `(style = simple, explode = false)` - <https://swagger.io/docs/specification/serialization/#path>
   * [ ] Basic types and simple objects only currently supported
   * [ ] Other styles not currently supported
-* [ ] Query Param Serialization - https://swagger.io/docs/specification/describing-parameters/#query-parameters & https://swagger.io/docs/specification/serialization/#query
+* [ ] Query Param Serialization - <https://swagger.io/docs/specification/describing-parameters/#query-parameters> & <https://swagger.io/docs/specification/serialization/#query>
   * [ ] `json` serialization
   * [ ] `form` style serialization
     * [ ] Basic types and simple objects only currently supported
   * [ ] `deepObject` style serialization
   * [ ] Other styles not currently supported
-* [ ] Request Headers - https://swagger.io/docs/specification/serialization/#header
+* [ ] Request Headers - <https://swagger.io/docs/specification/serialization/#header>
   * [ ] Including explode handling
 * [ ] Request Body Serialization
-  * [ ] Multipart Encoding - https://swagger.io/docs/specification/describing-request-body/multipart-requests/
+  * [ ] Multipart Encoding - <https://swagger.io/docs/specification/describing-request-body/multipart-requests/>
     * [ ] Binary file support
     * [ ] Form data support
     * [ ] Encoding not supported
   * [ ] JSON Serialization
-  * [ ] x-www-form-urlencoded Serialization - https://swagger.io/docs/specification/describing-request-body
+  * [ ] x-www-form-urlencoded Serialization - <https://swagger.io/docs/specification/describing-request-body>
     * [ ] Including encoding
     * [ ] Doesn't support non-object types
   * [ ] plain text / string serialization
@@ -152,9 +186,9 @@ speakeasy usage [flags]
   * [ ] raw byte deserialization
   * [ ] Json deserialization
   * [ ] Other deserialization not currently supported
-* [ ] Media-type patterns - https://swagger.io/docs/specification/media-types/
-* [ ] Full openapi datatype support
-  * [ ] Basic types - https://swagger.io/docs/specification/data-models/data-types/
+* [ ] Media-type patterns - <https://swagger.io/docs/specification/media-types/>
+* [ ] Full OpenAPI datatype support
+  * [ ] Basic types - <https://swagger.io/docs/specification/data-models/data-types/>
   * [ ] Enums
   * [ ] Number formats ie float, double, int32, int64
   * [ ] Date-time
@@ -164,7 +198,7 @@ speakeasy usage [flags]
   * [ ] Optional
   * [ ] Maps
   * [ ] Any type
-  * [ ] OneOf/AnyOf/AllOf - https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/
+  * [ ] OneOf/AnyOf/AllOf - <https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/>
 * [ ] Auxiliary files
   * [ ] Utilities classes/functions to help with serialization/deserialization.
   * [ ] Files needed for creating a fully compilable package that can be published to the relevant package manager without further changes.
@@ -192,22 +226,23 @@ If you need support using Speakeasy CLI, please contact us via [email](info@spea
 
 ### Usage
 
-```
+```bash
 speakeasy [flags]
 ```
 
 #### Options
 
-```
+```bash
   -h, --help   help for speakeasy
 ```
 
 #### Sub Commands
 
-* [speakeasy api](docs/api/README.md)	 - Access the Speakeasy API via the CLI
-* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
-* [speakeasy generate](docs/generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
-* [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents + more (coming soon)
+* [speakeasy api](docs/api/README.md)  - Access the Speakeasy API via the CLI
+* [speakeasy auth](docs/auth/README.md)  - Authenticate the CLI
+* [speakeasy generate](docs/generate/README.md)  - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
+* [speakeasy validate](docs/validate/README.md)  - Validate OpenAPI documents + more (coming soon)
+
 ## CLI  
 `speakeasy`  
 
