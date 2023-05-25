@@ -208,15 +208,15 @@ speakeasy usage [flags]
 
 ## Advanced Generation Features
 
-* [SDK Gen Configuration](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/configuration/index.html) - Learn how to configure the SDK generator to your needs.
-* [Generated Comments](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/generated-comments/index.html) - Learn how comments are generated from your OpenAPI document and how to customize them.
-* [Configuring the SDK with Server URLs](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/server-urls/index.html) - Learn how to configure the SDK to use different server URLs for different environments.
-* [Readme Generation](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/readme-generation/index.html) - Learn how the SDK generates README.md files and how to control this.
-* [Using custom HTTPs Clients with the SDK](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/custom-http-client/index.html) - Learn how to provide a custom HTTP Client to the SDKs at runtime.
-* [Capturing Telemetry on SDK Usage](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/capturing-telemetry/index.html) - Learn how you can capture telemetry to get an understanding of how your SDKs are being used.
-* [Automated SDK Generation](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/automate-sdks/index.html) - Use our Github Action and Workflows to setup CI/CD for generating and publishing your SDKs.
-* [Override Generated Names](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/override-names/) - Speakeasy uses your OpenAPI schema to infer names for class types, methods, and parameters. However, you can override these names to tailor the generated SDK to your preferences.
-* [Add retries to your SDKs](https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/retries) - The generator supports the ability to generate SDKs that will automatically retry requests that fail due to network errors or any configured HTTP Status code.
+* [SDK Gen Configuration](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/intro/) - Learn how to configure the SDK generator to your needs.
+* [Generated Comments](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/sdk-docs/#comments) - Learn how comments are generated from your OpenAPI document and how to customize them.
+* [Configuring the SDK with Server URLs](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/servers/) - Learn how to configure the SDK to use different server URLs for different environments.
+* [Readme Generation](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/sdk-docs/) - Learn how the SDK generates README.md files and how to control this.
+* [Using custom HTTPs Clients with the SDK](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/custom-http-client/) - Learn how to provide a custom HTTP Client to the SDKs at runtime.
+* [Capturing Telemetry on SDK Usage](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/sdk-telemetry/) - Learn how you can capture telemetry to get an understanding of how your SDKs are being used.
+* [Automated SDK Generation](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/github-setup/) - Use our Github Action and Workflows to setup CI/CD for generating and publishing your SDKs.
+* [Override Generated Names](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/methods/) - Speakeasy uses your OpenAPI schema to infer names for class types, methods, and parameters. However, you can override these names to tailor the generated SDK to your preferences.
+* [Add retries to your SDKs](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/retries/) - The generator supports the ability to generate SDKs that will automatically retry requests that fail due to network errors or any configured HTTP Status code.
 
 ## Getting Support
 
