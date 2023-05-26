@@ -1,5 +1,8 @@
 .PHONY: *
-SHELL = /usr/bin/bash
+SHELL = /usr/bin/env bash
+
+upgrade:
+	./upgrade.sh
 
 docs:
 	go run cmd/docs/main.go
