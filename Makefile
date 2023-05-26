@@ -2,7 +2,7 @@
 SHELL = /usr/bin/env bash
 
 upgrade:
-	./upgrade.sh
+	./scripts/upgrade.bash
 
 docs:
 	go run cmd/docs/main.go
