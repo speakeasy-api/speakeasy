@@ -10,12 +10,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 const timeout = time.Minute * 2
 
-var baseURL = os.Getenv("SPEAKEASY_SERVER_URL")
+const ApiURL = "https://api.prod.speakeasyapi.dev"
+
+var baseURL = ApiURL
 
 type suggestionResponse struct {
 	Suggestion string `json:"suggestion"`
@@ -26,20 +29,20 @@ type suggestionRequest struct {
 	LineNumber int    `json:"line_number"`
 }
 
-func Upload(filePath string) (string, error) {
+func Upload(filePath string) (string, string, error) {
 	openAIKey, err := getOpenAIKey()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	apiKey, err := getSpeakeasyAPIKey()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	body := new(bytes.Buffer)
@@ -49,22 +52,22 @@ func Upload(filePath string) (string, error) {
 		"Content-Type":        {detectFileType(filePath)}, // Set the MIME type here
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	_, err = part.Write(fileData)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	err = writer.Close()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	req, err := http.NewRequest("POST", baseURL+"/v1/llm/openapi", body)
 	if err != nil {
-		return "", fmt.Errorf("error creating request for upload: %v", err)
+		return "", "", fmt.Errorf("error creating request for upload: %v", err)
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -76,28 +79,28 @@ func Upload(filePath string) (string, error) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error making request for upload: %v", err)
+		return "", "", fmt.Errorf("error making request for upload: %v", err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnprocessableEntity {
-		return "", fmt.Errorf("OpenAPI document is larger than 50,000 line limit")
+		return "", "", fmt.Errorf("OpenAPI document is larger than 50,000 line limit")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+		return "", "", fmt.Errorf("%v error occured: %s", resp.StatusCode, resp.Status)
 	}
 
 	token := resp.Header.Get("x-session-token")
 	if token == "" {
-		return "", fmt.Errorf("session token is empty")
+		return "", "", fmt.Errorf("session token is empty")
 	}
 
-	return token, nil
+	return token, strings.ToLower(filepath.Ext(filePath))[1:], nil
 }
 
-func Suggestion(token string, error string, lineNumber int) (string, error) {
+func Suggestion(token string, error string, lineNumber int, fileType string) (string, error) {
 	openAIKey, err := getOpenAIKey()
 	if err != nil {
 		return "", err
@@ -127,6 +130,7 @@ func Suggestion(token string, error string, lineNumber int) (string, error) {
 	req.Header.Set("x-session-token", token)
 	req.Header.Set("x-openai-key", openAIKey)
 	req.Header.Set("x-api-key", apiKey)
+	req.Header.Set("x-file-type", fileType)
 
 	client := &http.Client{
 		Timeout: timeout,
@@ -139,7 +143,7 @@ func Suggestion(token string, error string, lineNumber int) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+		return "", fmt.Errorf("%v error occured: %s", resp.StatusCode, resp.Status)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -188,9 +192,9 @@ func Clear(token string) error {
 }
 
 func getOpenAIKey() (string, error) {
-	key := os.Getenv("SPEAKEASY_API_KEY_OPENAI")
+	key := os.Getenv("OPENAI_API_KEY")
 	if key == "" {
-		return "", fmt.Errorf("SPEAKEASY_API_KEY_OPENAI must be set")
+		return "", fmt.Errorf("A OPENAI_API_KEY must be set to use LLM Suggestions")
 	}
 
 	return key, nil
@@ -203,4 +207,10 @@ func getSpeakeasyAPIKey() (string, error) {
 	}
 
 	return key, nil
+}
+
+func init() {
+	if url := os.Getenv("SPEAKEASY_SERVER_URL"); url != "" {
+		baseURL = url
+	}
 }

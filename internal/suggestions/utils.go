@@ -1,9 +1,12 @@
 package suggestions
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/manifoldco/promptui"
 	"gopkg.in/yaml.v2"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -77,42 +80,40 @@ func formatYaml(input string) (string, error) {
 	return outputStr, nil
 }
 
-func acceptSuggestion() bool {
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . | cyan | bold }}",
-		Active:   "🐝 {{ .Emoji | yellow }} {{ .Name | yellow | bold }}",
-		Inactive: "   {{ .Emoji | white }} {{ .Name | white | bold }}",
-		Selected: "> {{ .Emoji | green }} {{ .Name | green | bold }}",
+func removeTrailingComma(input string) string {
+	trimmed := strings.TrimRight(input, "\n \t\r")
+	if strings.HasSuffix(trimmed, ",") {
+		trimmed = trimmed[:len(trimmed)-1]
+	}
+	return trimmed
+}
+
+func formatJSON(input string) (string, error) {
+	// Unmarshal the YAML input into a generic interface{}
+	var data interface{}
+	jsonString := fmt.Sprintf(`{%s}`, removeTrailingComma(input))
+	if err := json.Unmarshal([]byte(jsonString), &data); err != nil {
+		return "", err
 	}
 
-	prompt := promptui.Select{
-		HideHelp: true,
-		Label:    "Would you like to accept the suggestion?",
-		Items: []map[string]interface{}{
-			{
-				"Emoji": "✅",
-				"Name":  "Yes",
-			},
-			{
-				"Emoji": "❌",
-				"Name":  "No",
-			},
-		},
-		Templates: templates,
-		Size:      2,
-	}
-
-	index, _, err := prompt.Run()
-
+	// Marshal the interface{} back to YAML with no extra spaces
+	output, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return false
+		return "", err
 	}
+	outputStr := strings.TrimSpace(string(output))
 
-	return index == 0
+	return outputStr, nil
+}
+
+func nextSuggestion() {
+	fmt.Print(promptui.Styler(promptui.FGCyan, promptui.FGBold)("🐝 Press 'Enter' to continue"))
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	fmt.Println() // extra line for spacing
 }
 
 func detectFileType(filename string) string {
-	ext := filepath.Ext(filename)
+	ext := strings.ToLower(filepath.Ext(filename))
 
 	switch ext {
 	case ".yaml", ".yml":
@@ -124,13 +125,13 @@ func detectFileType(filename string) string {
 	}
 }
 
-func FindSuggestion(err error, token string) {
+func FindSuggestion(err error, token string, fileType string) {
 	errString := err.Error()
 	lineNumber, lineNumberErr := getLineNumber(errString)
 	if lineNumberErr == nil {
 		fmt.Println() // extra line for spacing
 		fmt.Println(promptui.Styler(promptui.FGBold)("Asking for a Suggestion!"))
-		suggestion, suggestionErr := Suggestion(token, errString, lineNumber)
+		suggestion, suggestionErr := Suggestion(token, errString, lineNumber, fileType)
 		if suggestionErr == nil && suggestion != "" && !strings.Contains(suggestion, "I cannot provide an answer") {
 			fixSplit := strings.Split(suggestion, "Suggested Fix:")
 			if len(fixSplit) < 2 {
@@ -144,25 +145,32 @@ func FindSuggestion(err error, token string) {
 				return
 			}
 
-			fix, yamlErr := formatYaml(escapeString(finalSplit[0][2:]))
+			var fix string
+			var marshalErr error
+			if fileType == "json" {
+				fix, marshalErr = formatJSON(escapeString(finalSplit[0][2:]))
+			} else {
+				fix, marshalErr = formatYaml(escapeString(finalSplit[0][2:]))
+			}
+
 			explanation := strings.TrimSpace(fmt.Sprintf("%s", escapeString(finalSplit[1][2:len(finalSplit[1])-1])))
-			if yamlErr == nil {
+			if marshalErr == nil {
 				fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Suggested Fix:"))
 				fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGItalic)(fix))
 				fmt.Println() // extra line for spacing
 				fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGBold)("Explanation:"))
 				fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGItalic)(explanation))
 				fmt.Println() // extra line for spacing
-				if acceptSuggestion() {
-					// TODO: Best effort attempt to edit the OpenAPI File in place
-					fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Suggestion Accepted"))
-					fmt.Println() // extra space
-				} else {
-					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("Suggestion Declined"))
-					fmt.Println() // extra space
-				}
+				nextSuggestion()
 			}
 		} else {
+			if suggestionErr != nil {
+				if strings.Contains(suggestionErr.Error(), "401") || strings.Contains(suggestionErr.Error(), "403") {
+					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(suggestionErr.Error()))
+					return
+				}
+			}
+
 			fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
 		}
 	}

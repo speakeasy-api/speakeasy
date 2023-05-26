@@ -3,8 +3,10 @@ package validation
 import (
 	"context"
 	"fmt"
+	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/suggestions"
@@ -33,12 +35,23 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 	if len(errs) > 0 {
 		hasErrors := false
 		suggestionToken := ""
+		fileType := ""
 
 		if findSuggestions {
-			suggestionToken, err = suggestions.Upload(schemaPath)
-			if err != nil {
-				l.Error("cannot fetch llm suggestions", zap.Error(err))
-				findSuggestions = false
+			// local authentication just provided by API Key
+			if os.Getenv("SPEAKEASY_SERVER_URL") == "" || os.Getenv("SPEAKEASY_SERVER_URL") == suggestions.ApiURL {
+				if err := auth.Authenticate(false); err != nil {
+					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(err.Error()))
+					findSuggestions = false
+				}
+			}
+
+			if findSuggestions {
+				suggestionToken, fileType, err = suggestions.Upload(schemaPath)
+				if err != nil {
+					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
+					findSuggestions = false
+				}
 			}
 		}
 
@@ -49,13 +62,13 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 					hasErrors = true
 					l.Error("", zap.Error(err))
 					if findSuggestions {
-						suggestions.FindSuggestion(err, suggestionToken)
+						suggestions.FindSuggestion(err, suggestionToken, fileType)
 					}
 				} else {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
 					if findSuggestions {
-						suggestions.FindSuggestion(err, suggestionToken)
+						suggestions.FindSuggestion(err, suggestionToken, fileType)
 					}
 				}
 			}
