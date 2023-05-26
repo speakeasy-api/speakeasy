@@ -194,7 +194,7 @@ func Clear(token string) error {
 func getOpenAIKey() (string, error) {
 	key := os.Getenv("OPENAI_API_KEY")
 	if key == "" {
-		return "", fmt.Errorf("A OPENAI_API_KEY must be set to use LLM Suggestions")
+		return "", fmt.Errorf("OPENAI_API_KEY must be set to use LLM Suggestions")
 	}
 
 	return key, nil

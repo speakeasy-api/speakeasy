@@ -64,13 +64,11 @@ func escapeString(input string) string {
 }
 
 func formatYaml(input string) (string, error) {
-	// Unmarshal the YAML input into a generic interface{}
 	var data interface{}
 	if err := yaml.Unmarshal([]byte(input), &data); err != nil {
 		return "", err
 	}
 
-	// Marshal the interface{} back to YAML with no extra spaces
 	output, err := yaml.Marshal(data)
 	if err != nil {
 		return "", err
@@ -89,14 +87,12 @@ func removeTrailingComma(input string) string {
 }
 
 func formatJSON(input string) (string, error) {
-	// Unmarshal the YAML input into a generic interface{}
 	var data interface{}
 	jsonString := fmt.Sprintf(`{%s}`, removeTrailingComma(input))
 	if err := json.Unmarshal([]byte(jsonString), &data); err != nil {
 		return "", err
 	}
-
-	// Marshal the interface{} back to YAML with no extra spaces
+	
 	output, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return "", err
