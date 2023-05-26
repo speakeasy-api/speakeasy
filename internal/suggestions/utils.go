@@ -92,7 +92,7 @@ func formatJSON(input string) (string, error) {
 	if err := json.Unmarshal([]byte(jsonString), &data); err != nil {
 		return "", err
 	}
-	
+
 	output, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return "", err
@@ -158,16 +158,16 @@ func FindSuggestion(err error, token string, fileType string) {
 				fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGItalic)(explanation))
 				fmt.Println() // extra line for spacing
 				nextSuggestion()
+				return
 			}
 		} else {
 			if suggestionErr != nil {
 				if strings.Contains(suggestionErr.Error(), "401") || strings.Contains(suggestionErr.Error(), "403") {
-					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(suggestionErr.Error()))
+					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("No Suggestion Found: %s", suggestionErr.Error())))
 					return
 				}
 			}
-
-			fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
 		}
 	}
+	fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
 }

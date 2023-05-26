@@ -14,7 +14,8 @@ import (
 	"time"
 )
 
-const timeout = time.Minute * 2
+const uploadTimeout = time.Minute * 2
+const suggestionTimeout = time.Minute * 1
 
 const ApiURL = "https://api.prod.speakeasyapi.dev"
 
@@ -75,7 +76,7 @@ func Upload(filePath string) (string, string, error) {
 	req.Header.Set("x-api-key", apiKey)
 
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout: uploadTimeout,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -133,7 +134,7 @@ func Suggestion(token string, error string, lineNumber int, fileType string) (st
 	req.Header.Set("x-file-type", fileType)
 
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout: suggestionTimeout,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -175,7 +176,7 @@ func Clear(token string) error {
 	req.Header.Set("x-api-key", apiKey)
 
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout: suggestionTimeout,
 	}
 	resp, err := client.Do(req)
 	if err != nil {

@@ -38,8 +38,8 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 		fileType := ""
 
 		if findSuggestions {
-			// local authentication just set in env variable
-			if os.Getenv("SPEAKEASY_SERVER_URL") == "http://localhost:35290" {
+			// local authentication should just be set in env variable
+			if os.Getenv("SPEAKEASY_SERVER_URL") != "http://localhost:35290" {
 				if err := auth.Authenticate(false); err != nil {
 					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(err.Error()))
 					findSuggestions = false
