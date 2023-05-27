@@ -46,6 +46,7 @@ func Init(version, artifactArch string) {
 	usageInit()
 	mergeInit()
 	updateInit(version, artifactArch)
+	suggestInit()
 }
 
 func Execute(version, artifactArch string) {

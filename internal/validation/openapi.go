@@ -3,17 +3,21 @@ package validation
 import (
 	"context"
 	"fmt"
-	"os"
-
+	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
-func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
+func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions bool) error {
 	fmt.Println("Validating OpenAPI spec...")
 
 	schema, err := os.ReadFile(schemaPath)
@@ -32,6 +36,43 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 	errs := g.Validate(context.Background(), schema, schemaPath)
 	if len(errs) > 0 {
 		hasErrors := false
+		suggestionToken := ""
+		fileType := ""
+
+		if findSuggestions {
+			// local authentication should just be set in env variable
+			if os.Getenv("SPEAKEASY_SERVER_URL") != "http://localhost:35290" {
+				if err := auth.Authenticate(false); err != nil {
+					return err
+				}
+			}
+
+			if _, err := suggestions.GetOpenAIKey(); err != nil {
+				return err
+			}
+
+			if findSuggestions {
+				suggestionToken, fileType, err = suggestions.Upload(schemaPath)
+				if err != nil {
+					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
+					findSuggestions = false
+				} else {
+					// Cleanup Memory Usage in LLM
+					defer func() {
+						suggestions.Clear(suggestionToken)
+					}()
+
+					// Handle Signal Exit
+					c := make(chan os.Signal, 1)
+					signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+					go func() {
+						<-c
+						suggestions.Clear(suggestionToken)
+						os.Exit(0)
+					}()
+				}
+			}
+		}
 
 		for _, err := range errs {
 			vErr := errors.GetValidationErr(err)
@@ -39,9 +80,15 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string) error {
 				if vErr.Severity == errors.SeverityError {
 					hasErrors = true
 					l.Error("", zap.Error(err))
+					if findSuggestions {
+						suggestions.FindSuggestion(err, suggestionToken, fileType)
+					}
 				} else {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
+					if findSuggestions {
+						suggestions.FindSuggestion(err, suggestionToken, fileType)
+					}
 				}
 			}
 
