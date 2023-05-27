@@ -13,6 +13,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions bool) error {
@@ -41,9 +43,12 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 			// local authentication should just be set in env variable
 			if os.Getenv("SPEAKEASY_SERVER_URL") != "http://localhost:35290" {
 				if err := auth.Authenticate(false); err != nil {
-					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(err.Error()))
-					findSuggestions = false
+					return err
 				}
+			}
+
+			if _, err := suggestions.GetOpenAIKey(); err != nil {
+				return err
 			}
 
 			if findSuggestions {
@@ -51,6 +56,20 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 				if err != nil {
 					fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
 					findSuggestions = false
+				} else {
+					// Cleanup Memory Usage in LLM
+					defer func() {
+						suggestions.Clear(suggestionToken)
+					}()
+
+					// Handle Signal Exit
+					c := make(chan os.Signal, 1)
+					signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+					go func() {
+						<-c
+						suggestions.Clear(suggestionToken)
+						os.Exit(0)
+					}()
 				}
 			}
 		}
@@ -78,10 +97,6 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 				hasWarnings = true
 				l.Warn("", zap.Error(err))
 			}
-		}
-
-		if findSuggestions {
-			suggestions.Clear(suggestionToken)
 		}
 
 		if hasErrors {

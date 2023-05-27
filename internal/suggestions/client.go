@@ -31,7 +31,7 @@ type suggestionRequest struct {
 }
 
 func Upload(filePath string) (string, string, error) {
-	openAIKey, err := getOpenAIKey()
+	openAIKey, err := GetOpenAIKey()
 	if err != nil {
 		return "", "", err
 	}
@@ -102,7 +102,7 @@ func Upload(filePath string) (string, string, error) {
 }
 
 func Suggestion(token string, error string, lineNumber int, fileType string) (string, error) {
-	openAIKey, err := getOpenAIKey()
+	openAIKey, err := GetOpenAIKey()
 	if err != nil {
 		return "", err
 	}
@@ -192,7 +192,7 @@ func Clear(token string) error {
 	return nil
 }
 
-func getOpenAIKey() (string, error) {
+func GetOpenAIKey() (string, error) {
 	key := os.Getenv("OPENAI_API_KEY")
 	if key == "" {
 		return "", fmt.Errorf("OPENAI_API_KEY must be set to use LLM Suggestions")
@@ -204,7 +204,7 @@ func getOpenAIKey() (string, error) {
 func getSpeakeasyAPIKey() (string, error) {
 	key, _ := config.GetSpeakeasyAPIKey()
 	if key == "" {
-		return "", fmt.Errorf("no api key available, please set SPEAKEASY_API_KEY or run 'speakeasy auth' to authenticate the CLI with the Speakeasy Platform")
+		return "", fmt.Errorf("no speakeasy api key available, please set SPEAKEASY_API_KEY or run 'speakeasy auth' to authenticate the CLI with the Speakeasy Platform")
 	}
 
 	return key, nil

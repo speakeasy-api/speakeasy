@@ -127,6 +127,7 @@ func FindSuggestion(err error, token string, fileType string) {
 	if lineNumberErr == nil {
 		fmt.Println() // extra line for spacing
 		fmt.Println(promptui.Styler(promptui.FGBold)("Asking for a Suggestion!"))
+		fmt.Println() // extra line for spacing
 		suggestion, suggestionErr := Suggestion(token, errString, lineNumber, fileType)
 		if suggestionErr == nil && suggestion != "" && !strings.Contains(suggestion, "I cannot provide an answer") {
 			fixSplit := strings.Split(suggestion, "Suggested Fix:")
@@ -170,4 +171,5 @@ func FindSuggestion(err error, token string, fileType string) {
 		}
 	}
 	fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
+	fmt.Println() // extra line for spacing
 }
