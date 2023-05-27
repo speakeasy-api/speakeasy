@@ -32,6 +32,7 @@ speakeasy [flags]
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
 * [speakeasy generate](generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
+* [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
 * [speakeasy usage](usage.md)	 - Output usage information for a given OpenAPI schema to a CSV
 * [speakeasy validate](validate/README.md)	 - Validate OpenAPI documents + more (coming soon)

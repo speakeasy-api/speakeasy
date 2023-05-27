@@ -17,6 +17,7 @@ speakeasy validate openapi [flags]
 ### Options
 
 ```
+  -f, --fix             fix openapi failures with llm suggestions
   -h, --help            help for openapi
   -s, --schema string   path to the OpenAPI document
 ```
