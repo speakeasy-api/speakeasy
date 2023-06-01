@@ -17,7 +17,11 @@ import (
 	"syscall"
 )
 
-func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions bool) error {
+type SuggestionsConfig struct {
+	AutoContinue bool
+}
+
+func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *SuggestionsConfig) error {
 	fmt.Println("Validating OpenAPI spec...")
 
 	schema, err := os.ReadFile(schemaPath)
@@ -36,6 +40,10 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 	errs := g.Validate(context.Background(), schema, schemaPath)
 	if len(errs) > 0 {
 		hasErrors := false
+		findSuggestions := false
+		if suggestionsConfig != nil {
+			findSuggestions = true
+		}
 		suggestionToken := ""
 		fileType := ""
 
@@ -81,13 +89,13 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, findSuggestions boo
 					hasErrors = true
 					l.Error("", zap.Error(err))
 					if findSuggestions {
-						suggestions.FindSuggestion(err, suggestionToken, fileType)
+						suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
 					}
 				} else {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
 					if findSuggestions {
-						suggestions.FindSuggestion(err, suggestionToken, fileType)
+						suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
 					}
 				}
 			}

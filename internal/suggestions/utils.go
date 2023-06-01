@@ -121,7 +121,7 @@ func detectFileType(filename string) string {
 	}
 }
 
-func FindSuggestion(err error, token string, fileType string) {
+func FindSuggestion(err error, token string, fileType string, autoContinue bool) {
 	errString := err.Error()
 	lineNumber, lineNumberErr := getLineNumber(errString)
 	if lineNumberErr == nil {
@@ -158,7 +158,9 @@ func FindSuggestion(err error, token string, fileType string) {
 				fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGBold)("Explanation:"))
 				fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGItalic)(explanation))
 				fmt.Println() // extra line for spacing
-				nextSuggestion()
+				if !autoContinue {
+					nextSuggestion()
+				}
 				return
 			}
 		} else {
