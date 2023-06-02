@@ -19,9 +19,10 @@ speakeasy suggest [flags]
 ### Options
 
 ```
-  -a, --auto-approve    auto continue through all prompts
-  -h, --help            help for suggest
-  -s, --schema string   path to the OpenAPI document
+  -a, --auto-approve          auto continue through all prompts
+  -h, --help                  help for suggest
+  -n, --max-suggestions int   maximum number of llm suggestions to fetch, the default is no limit (default -1)
+  -s, --schema string         path to the OpenAPI document
 ```
 
 ### Parent Command
