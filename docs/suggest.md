@@ -19,6 +19,7 @@ speakeasy suggest [flags]
 ### Options
 
 ```
+  -a, --auto-approve    auto continue through all prompts
   -h, --help            help for suggest
   -s, --schema string   path to the OpenAPI document
 ```
