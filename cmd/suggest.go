@@ -18,6 +18,7 @@ you must first create an API key via https://app.speakeasyapi.dev and then set t
 
 func suggestInit() {
 	suggestCmd.Flags().StringP("schema", "s", "", "path to the OpenAPI document")
+	suggestCmd.Flags().BoolP("auto-approve", "a", false, "auto continue through all prompts")
 	_ = suggestCmd.MarkFlagRequired("schema")
 	rootCmd.AddCommand(suggestCmd)
 }
@@ -30,7 +31,14 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, true); err != nil {
+	autoApprove, err := cmd.Flags().GetBool("auto-approve")
+	if err != nil {
+		return err
+	}
+
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, &validation.SuggestionsConfig{
+		AutoContinue: autoApprove,
+	}); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err

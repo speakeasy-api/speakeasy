@@ -60,12 +60,17 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	var suggestionsConfig *validation.SuggestionsConfig
 	fix, err := cmd.Flags().GetBool("fix")
 	if err != nil {
 		return err
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, fix); err != nil {
+	if fix {
+		suggestionsConfig = &validation.SuggestionsConfig{}
+	}
+
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, suggestionsConfig); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
