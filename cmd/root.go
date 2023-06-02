@@ -47,6 +47,7 @@ func Init(version, artifactArch string) {
 	mergeInit()
 	updateInit(version, artifactArch)
 	suggestInit()
+	proxyInit()
 }
 
 func Execute(version, artifactArch string) {
