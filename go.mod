@@ -12,7 +12,7 @@ require (
 	github.com/pb33f/libopenapi v0.8.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.35.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.35.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -95,7 +95,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
-	github.com/speakeasy-api/easytemplate v0.7.2 // indirect
+	github.com/speakeasy-api/easytemplate v0.7.3 // indirect
 	github.com/speakeasy-api/sdk-gen-config v0.5.0 // indirect
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
