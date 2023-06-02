@@ -18,7 +18,8 @@ import (
 )
 
 type SuggestionsConfig struct {
-	AutoContinue bool
+	AutoContinue   bool
+	MaxSuggestions *int
 }
 
 func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *SuggestionsConfig) error {
@@ -46,6 +47,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 		}
 		suggestionToken := ""
 		fileType := ""
+		totalSuggestions := 0
 
 		if findSuggestions {
 			// local authentication should just be set in env variable
@@ -89,13 +91,19 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 					hasErrors = true
 					l.Error("", zap.Error(err))
 					if findSuggestions {
-						suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
+						if suggestionsConfig.MaxSuggestions == nil || totalSuggestions <= *suggestionsConfig.MaxSuggestions {
+							suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
+							totalSuggestions += 1
+						}
 					}
 				} else {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
 					if findSuggestions {
-						suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
+						if suggestionsConfig.MaxSuggestions == nil || totalSuggestions <= *suggestionsConfig.MaxSuggestions {
+							suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
+							totalSuggestions += 1
+						}
 					}
 				}
 			}
