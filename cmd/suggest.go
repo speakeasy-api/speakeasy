@@ -19,6 +19,7 @@ you must first create an API key via https://app.speakeasyapi.dev and then set t
 func suggestInit() {
 	suggestCmd.Flags().StringP("schema", "s", "", "path to the OpenAPI document")
 	suggestCmd.Flags().BoolP("auto-approve", "a", false, "auto continue through all prompts")
+	suggestCmd.Flags().IntP("max-suggestions", "n", -1, "maximum number of llm suggestions to fetch, the default is no limit")
 	_ = suggestCmd.MarkFlagRequired("schema")
 	rootCmd.AddCommand(suggestCmd)
 }
@@ -36,9 +37,20 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, &validation.SuggestionsConfig{
+	suggestionConfig := validation.SuggestionsConfig{
 		AutoContinue: autoApprove,
-	}); err != nil {
+	}
+
+	maxSuggestion, err := cmd.Flags().GetInt("max-num")
+	if err != nil {
+		return err
+	}
+
+	if maxSuggestion != -1 {
+		suggestionConfig.MaxSuggestions = &maxSuggestion
+	}
+
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, &suggestionConfig); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
