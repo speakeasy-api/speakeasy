@@ -41,7 +41,7 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		AutoContinue: autoApprove,
 	}
 
-	maxSuggestion, err := cmd.Flags().GetInt("max-num")
+	maxSuggestion, err := cmd.Flags().GetInt("max-suggestions")
 	if err != nil {
 		return err
 	}
