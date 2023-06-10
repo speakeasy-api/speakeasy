@@ -12,7 +12,7 @@ require (
 	github.com/pb33f/libopenapi v0.8.3
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.39.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.39.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
 	github.com/spf13/cobra v1.7.0
