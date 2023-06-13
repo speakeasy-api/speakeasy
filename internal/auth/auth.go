@@ -14,12 +14,28 @@ import (
 )
 
 const (
-	// Comment these out and uncomment the localhost ones to test locally
-	appURL = "https://app.speakeasyapi.dev"
-	apiURL = "https://api.prod.speakeasyapi.dev"
-	// appURL = "http://localhost:35291"
-	// apiURL = "http://localhost:35290"
+	// (Note: adjust comments below test locally)gi
+	//local = "http://localhost:35291"
+	//prodURL = local
+	prodURL    = "https://app.speakeasyapi.dev"
+	stagingURL = "https://staging.speakeasyapi.dev"
+	devURL     = "https://dev.speakeasyapi.dev"
 )
+
+func GetServerURL() string {
+	serverURL := prodURL
+	overriddenServerURL := os.Getenv("SPEAKEASY_SERVER_URL")
+	if len(overriddenServerURL) > 0 {
+
+		for _, v := range []string{prodURL, stagingURL, devURL} {
+			if v == overriddenServerURL {
+				return overriddenServerURL
+			}
+		}
+	}
+
+	return serverURL
+}
 
 type authResult struct {
 	config.SpeakeasyAuthInfo
@@ -59,7 +75,7 @@ func Authenticate(force bool) error {
 		return err
 	}
 
-	url := fmt.Sprintf("%s?cli_callback_url=%s&cli_host_name=%s\n", appURL, addr, hostname)
+	url := fmt.Sprintf("%s?cli_callback_url=%s&cli_host_name=%s\n", GetServerURL(), addr, hostname)
 
 	if err := browser.OpenURL(url); err != nil {
 		fmt.Println("Please open the following URL in your browser:", url)
@@ -86,7 +102,7 @@ func Authenticate(force bool) error {
 		return fmt.Errorf("failed to save API key: %w", err)
 	}
 
-	fmt.Printf("Authenticated with workspace successfully - %s/workspaces/%s\n", appURL, res.WorkspaceID)
+	fmt.Printf("Authenticated with workspace successfully - %s/workspaces/%s\n", GetServerURL(), res.WorkspaceID)
 
 	return nil
 }
@@ -103,7 +119,7 @@ func Logout() error {
 
 func testAuth(apiKey string) error {
 	// TODO eventually replace with a call from the SDK
-	u, err := url.JoinPath(apiURL, "v1/auth/validate")
+	u, err := url.JoinPath(GetServerURL(), "v1/auth/validate")
 	if err != nil {
 		return err
 	}
