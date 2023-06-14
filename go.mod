@@ -10,10 +10,10 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pb33f/libopenapi v0.8.5
-	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.40.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
+	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -102,6 +102,7 @@ require (
 	github.com/pb33f/libopenapi-validator v0.0.7 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
 	github.com/pterm/pterm v0.12.57 // indirect
@@ -113,7 +114,6 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/speakeasy-api/easytemplate v0.7.4 // indirect
 	github.com/speakeasy-api/sdk-gen-config v0.5.0 // indirect
-	github.com/speakeasy-api/speakeasy-core v0.0.0-20220906154214-c4cfc66c4bb7 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.0 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.8.2 // indirect

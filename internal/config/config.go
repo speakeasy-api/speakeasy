@@ -1,6 +1,7 @@
 package config
 
 import (
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"os"
 	"path"
 
@@ -11,12 +12,6 @@ var (
 	vCfg   = viper.New()
 	cfgDir string
 )
-
-type SpeakeasyAuthInfo struct {
-	APIKey      string `json:"apiKey"`
-	WorkspaceID string `json:"workspaceId"`
-	CustomerID  string `json:"customerId"`
-}
 
 func Load() error {
 	home, err := os.UserHomeDir()
@@ -56,7 +51,7 @@ func GetWorkspaceID() string {
 	return vCfg.GetString("speakeasy_workspace_id")
 }
 
-func SetSpeakeasyAuthInfo(info SpeakeasyAuthInfo) error {
+func SetSpeakeasyAuthInfo(info core.SpeakeasyAuthInfo) error {
 	vCfg.Set("speakeasy_api_key", info.APIKey)
 	vCfg.Set("speakeasy_workspace_id", info.WorkspaceID)
 	vCfg.Set("speakeasy_customer_id", info.CustomerID)
