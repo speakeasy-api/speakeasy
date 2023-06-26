@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/utils"
 )
@@ -63,7 +64,9 @@ func merge(inSchemas [][]byte) ([]byte, error) {
 
 // TODO better errors
 func loadOpenAPIDocument(data []byte) (*v3.Document, error) {
-	doc, err := libopenapi.NewDocument(data)
+	doc, err := libopenapi.NewDocumentWithConfiguration(data, &datamodel.DocumentConfiguration{
+		AllowFileReferences: true,
+	})
 	if err != nil {
 		return nil, err
 	}
