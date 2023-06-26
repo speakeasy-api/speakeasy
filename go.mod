@@ -9,9 +9,9 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.8.5
+	github.com/pb33f/libopenapi v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.43.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.50.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
@@ -133,7 +133,7 @@ require (
 	golang.org/x/image v0.6.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

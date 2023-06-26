@@ -430,6 +430,8 @@ github.com/onsi/gomega v1.19.0 h1:4ieX6qQjPP/BfC3mpsAtIGGlxTWPeA3Inl/7DtXw1tw=
 github.com/onsi/gomega v1.19.0/go.mod h1:LY+I3pBVzYsTBU1AnDwOSxaYi9WoWiqgwooUqq9yPro=
 github.com/pb33f/libopenapi v0.8.5 h1:9wOa/qu7mvuX8rgi/VlrKycS/Y1EaeIZaq3iILitgPI=
 github.com/pb33f/libopenapi v0.8.5/go.mod h1:lvUmCtjgHUGVj6WzN3I5/CS9wkXtyN3Ykjh6ZZP5lrI=
+github.com/pb33f/libopenapi v0.9.1 h1:baBPONdZsqEBGlUoAeuqdPP4gYXrnHAYz7UW+aBn6O0=
+github.com/pb33f/libopenapi v0.9.1/go.mod h1:lvUmCtjgHUGVj6WzN3I5/CS9wkXtyN3Ykjh6ZZP5lrI=
 github.com/pb33f/libopenapi-validator v0.0.7 h1:0ZtV2V28Fu69wIMccNeFHyusmubfoq4zy2uGqrjDHMk=
 github.com/pb33f/libopenapi-validator v0.0.7/go.mod h1:uAF035zrQxpAdaoZuZZyy7eh7+Fjw3ovv4bOAPjt97U=
 github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
@@ -502,6 +504,8 @@ github.com/speakeasy-api/openapi-generation/v2 v2.43.1 h1:Y1wuCnCWEyee9DxEHciCTY
 github.com/speakeasy-api/openapi-generation/v2 v2.43.1/go.mod h1:fjpli9yya5FJppFSaAY/my4wMBYPolYGY7vdC5au1U8=
 github.com/speakeasy-api/openapi-generation/v2 v2.43.2 h1:L7qIue6UJx0GgW3HLl0U0HzU74Nf53HeIwC+NZ84ZTo=
 github.com/speakeasy-api/openapi-generation/v2 v2.43.2/go.mod h1:fjpli9yya5FJppFSaAY/my4wMBYPolYGY7vdC5au1U8=
+github.com/speakeasy-api/openapi-generation/v2 v2.50.2 h1:iT/E6cWKFnn9WFn4ABYVXETiWm5evMdLUDIe4j+yt70=
+github.com/speakeasy-api/openapi-generation/v2 v2.50.2/go.mod h1:eVQdDrkE33AJA5CXipubI3FVcKQGnF16+xPVJdJT4bY=
 github.com/speakeasy-api/sdk-gen-config v0.5.0 h1:c7sU09H5LhJuhSHSyeA7WdiqmRlfwuTmPgTSIfn9nJo=
 github.com/speakeasy-api/sdk-gen-config v0.5.0/go.mod h1:osr44mhKoRboNtEDMPaDoyH486pLLJH8yvKvnujqnUU=
 github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0 h1:RqYjM0okHjjEyKRxumaTmZDWt68nGZo1sbIfALyqLCg=
@@ -721,6 +725,8 @@ golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.1.0 h1:wsuoTGHzEhffawBOhz5CYhcrV4IdKZbEyZjBMuTp12o=
 golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sync v0.3.0 h1:ftCYgMx6zT/asHUrPw8BLLscYtGznsLAnjq5RH9P66E=
+golang.org/x/sync v0.3.0/go.mod h1:FU7BRWz2tNW+3quACPkgCx/L+uEAv1htQ0V83Z9Rj+Y=
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20181122145206-62eef0e2fa9b/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
