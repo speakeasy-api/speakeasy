@@ -38,13 +38,14 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 	}
 
 	hasWarnings := false
+	findSuggestions := false
+	if suggestionsConfig != nil {
+		findSuggestions = true
+	}
+
 	errs := g.Validate(context.Background(), schema, schemaPath)
 	if len(errs) > 0 {
 		hasErrors := false
-		findSuggestions := false
-		if suggestionsConfig != nil {
-			findSuggestions = true
-		}
 		suggestionToken := ""
 		fileType := ""
 		totalSuggestions := 0
@@ -99,12 +100,6 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 				} else {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
-					if findSuggestions {
-						if suggestionsConfig.MaxSuggestions == nil || totalSuggestions <= *suggestionsConfig.MaxSuggestions {
-							suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
-							totalSuggestions += 1
-						}
-					}
 				}
 			}
 
@@ -119,6 +114,10 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 			status := "OpenAPI spec invalid ✖"
 			github.GenerateSummary(status, errs)
 			return fmt.Errorf(status)
+		}
+	} else {
+		if findSuggestions {
+			fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("No errors found in OpenAPI spec, skipping suggestions!"))
 		}
 	}
 

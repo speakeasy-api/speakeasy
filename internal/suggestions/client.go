@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -89,8 +90,9 @@ func Upload(filePath string) (string, string, error) {
 		return "", "", fmt.Errorf("OpenAPI document is larger than 50,000 line limit")
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("%v error occured: %s", resp.StatusCode, resp.Status)
+	err = checkResponseStatusCode(resp)
+	if err != nil {
+		return "", "", err
 	}
 
 	token := resp.Header.Get("x-session-token")
@@ -143,8 +145,9 @@ func Suggestion(token string, error string, lineNumber int, fileType string) (st
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%v error occured: %s", resp.StatusCode, resp.Status)
+	err = checkResponseStatusCode(resp)
+	if err != nil {
+		return "", err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -185,8 +188,9 @@ func Clear(token string) error {
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+	err = checkResponseStatusCode(resp)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -208,6 +212,20 @@ func getSpeakeasyAPIKey() (string, error) {
 	}
 
 	return key, nil
+}
+
+func checkResponseStatusCode(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		var errBody []byte
+		var err error
+		errBody, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed reading response error body: %v", err)
+		}
+		return fmt.Errorf("unexpected status code: %v\nresponse status: %s\nerror: %s", resp.StatusCode, resp.Status, errBody)
+	}
+
+	return nil
 }
 
 func init() {
