@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/speakeasy-api/speakeasy/internal/merge"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/pkg/merge"
 	"github.com/spf13/cobra"
 )
 
