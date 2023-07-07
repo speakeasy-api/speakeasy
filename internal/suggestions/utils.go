@@ -88,9 +88,17 @@ func removeTrailingComma(input string) string {
 
 func formatJSON(input string) (string, error) {
 	var data interface{}
-	jsonString := fmt.Sprintf(`{%s}`, removeTrailingComma(input))
+	jsonString := removeTrailingComma(input)
+	if jsonString[0] != '{' {
+		jsonString = fmt.Sprintf(`{%s}`, jsonString)
+	}
+
 	if err := json.Unmarshal([]byte(jsonString), &data); err != nil {
-		return "", err
+		// retry with one more escape, sometimes necessary for gpt4+
+		jsonString = escapeString(jsonString)
+		if err2 := json.Unmarshal([]byte(jsonString), &data); err2 != nil {
+			return "", err2
+		}
 	}
 
 	output, err := json.MarshalIndent(data, "", "  ")
