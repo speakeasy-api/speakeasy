@@ -121,14 +121,14 @@ func detectFileType(filename string) string {
 	}
 }
 
-func FindSuggestion(err error, token string, fileType string, autoContinue bool) {
+func FindSuggestion(err error, token string, fileType string, autoContinue bool, model string) {
 	errString := err.Error()
 	lineNumber, lineNumberErr := getLineNumber(errString)
 	if lineNumberErr == nil {
 		fmt.Println() // extra line for spacing
 		fmt.Println(promptui.Styler(promptui.FGBold)("Asking for a Suggestion!"))
 		fmt.Println() // extra line for spacing
-		suggestion, suggestionErr := Suggestion(token, errString, lineNumber, fileType)
+		suggestion, suggestionErr := Suggestion(token, errString, lineNumber, fileType, model)
 		if suggestionErr == nil && suggestion != "" && !strings.Contains(suggestion, "I cannot provide an answer") {
 			fixSplit := strings.Split(suggestion, "Suggested Fix:")
 			if len(fixSplit) < 2 {

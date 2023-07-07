@@ -103,7 +103,7 @@ func Upload(filePath string) (string, string, error) {
 	return token, strings.ToLower(filepath.Ext(filePath))[1:], nil
 }
 
-func Suggestion(token string, error string, lineNumber int, fileType string) (string, error) {
+func Suggestion(token string, error string, lineNumber int, fileType string, model string) (string, error) {
 	openAIKey, err := GetOpenAIKey()
 	if err != nil {
 		return "", err
@@ -134,6 +134,7 @@ func Suggestion(token string, error string, lineNumber int, fileType string) (st
 	req.Header.Set("x-openai-key", openAIKey)
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("x-file-type", fileType)
+	req.Header.Set("x-openai-model", model)
 
 	client := &http.Client{
 		Timeout: suggestionTimeout,

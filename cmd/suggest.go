@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 var suggestCmd = &cobra.Command{
@@ -20,6 +22,7 @@ func suggestInit() {
 	suggestCmd.Flags().StringP("schema", "s", "", "path to the OpenAPI document")
 	suggestCmd.Flags().BoolP("auto-approve", "a", false, "auto continue through all prompts")
 	suggestCmd.Flags().IntP("max-suggestions", "n", -1, "maximum number of llm suggestions to fetch, the default is no limit")
+	suggestCmd.Flags().StringP("model", "m", "gpt-3.5-turbo", "model to use when making llm suggestions (gpt-3.5-turbo or gpt-4 recommended)")
 	_ = suggestCmd.MarkFlagRequired("schema")
 	rootCmd.AddCommand(suggestCmd)
 }
@@ -37,8 +40,18 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	modelName, err := cmd.Flags().GetString("model")
+	if err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(modelName, "gpt-3.5") && !strings.HasPrefix(modelName, "gpt-4") {
+		return errors.New("only gpt3.5 and gpt4 based models supported")
+	}
+
 	suggestionConfig := validation.SuggestionsConfig{
 		AutoContinue: autoApprove,
+		Model:        modelName,
 	}
 
 	maxSuggestion, err := cmd.Flags().GetInt("max-suggestions")
