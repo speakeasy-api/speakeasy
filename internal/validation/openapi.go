@@ -20,6 +20,7 @@ import (
 type SuggestionsConfig struct {
 	AutoContinue   bool
 	MaxSuggestions *int
+	Model          string
 }
 
 func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *SuggestionsConfig) error {
@@ -93,7 +94,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 					l.Error("", zap.Error(err))
 					if findSuggestions {
 						if suggestionsConfig.MaxSuggestions == nil || totalSuggestions <= *suggestionsConfig.MaxSuggestions {
-							suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue)
+							suggestions.FindSuggestion(err, suggestionToken, fileType, suggestionsConfig.AutoContinue, suggestionsConfig.Model)
 							totalSuggestions += 1
 						}
 					}
