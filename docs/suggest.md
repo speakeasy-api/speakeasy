@@ -22,6 +22,7 @@ speakeasy suggest [flags]
   -a, --auto-approve          auto continue through all prompts
   -h, --help                  help for suggest
   -n, --max-suggestions int   maximum number of llm suggestions to fetch, the default is no limit (default -1)
+  -m, --model string          model to use when making llm suggestions (gpt-3.5-turbo or gpt-4 recommended) (default "gpt-3.5-turbo")
   -s, --schema string         path to the OpenAPI document
 ```
 
