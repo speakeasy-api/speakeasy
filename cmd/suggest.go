@@ -63,7 +63,7 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		suggestionConfig.MaxSuggestions = &maxSuggestion
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, &suggestionConfig); err != nil {
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, &suggestionConfig, true); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
