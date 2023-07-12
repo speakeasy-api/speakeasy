@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
@@ -61,14 +62,14 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var suggestionsConfig *validation.SuggestionsConfig
+	var suggestionsConfig *suggestions.Config
 	fix, err := cmd.Flags().GetBool("fix")
 	if err != nil {
 		return err
 	}
 
 	if fix {
-		suggestionsConfig = &validation.SuggestionsConfig{}
+		suggestionsConfig = &suggestions.Config{}
 	}
 
 	outputHints, err := cmd.Flags().GetBool("output-hints")

@@ -4,10 +4,12 @@ go 1.20
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
+	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/color v1.13.0
 	github.com/google/go-github/v52 v52.0.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
+	github.com/json-iterator/go v1.1.12
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pb33f/libopenapi v0.9.3
 	github.com/sethvargo/go-githubactions v1.1.0
@@ -82,7 +84,6 @@ require (
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.8 // indirect
 	github.com/labstack/echo/v4 v4.9.0 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect
@@ -103,6 +104,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
 	github.com/pterm/pterm v0.12.57 // indirect
