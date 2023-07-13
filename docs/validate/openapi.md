@@ -19,6 +19,7 @@ speakeasy validate openapi [flags]
 ```
   -f, --fix             fix openapi failures with llm suggestions
   -h, --help            help for openapi
+  -o, --output-hints    output validation hints in addition to warnings/errors
   -s, --schema string   path to the OpenAPI document
 ```
 
