@@ -89,6 +89,19 @@ generate:
   baseServerUrl: https://api.speakeasyapi.dev 
 ```
 
+Example gen.yaml file for C# SDK:
+
+```
+csharp:
+  version: 0.1.0
+  author: Speakeasy
+  maxMethodParams: 0
+  packageName: SpeakeasySDK
+generate:
+  # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
+  baseServerUrl: https://api.speakeasyapi.dev 
+```
+
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
 
 
