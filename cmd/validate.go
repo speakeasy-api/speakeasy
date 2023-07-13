@@ -39,6 +39,7 @@ func validateInit() {
 //nolint:errcheck
 func validateOpenAPIInit() {
 	validateOpenAPICmd.Flags().BoolP("fix", "f", false, "fix openapi failures with llm suggestions")
+	validateOpenAPICmd.Flags().BoolP("output-hints", "o", false, "output validation hints in addition to warnings/errors")
 	validateOpenAPICmd.Flags().StringP("schema", "s", "", "path to the OpenAPI document")
 	_ = validateOpenAPICmd.MarkFlagRequired("schema")
 
@@ -70,7 +71,12 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		suggestionsConfig = &validation.SuggestionsConfig{}
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, suggestionsConfig); err != nil {
+	outputHints, err := cmd.Flags().GetBool("output-hints")
+	if err != nil {
+		return err
+	}
+
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, suggestionsConfig, outputHints); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err

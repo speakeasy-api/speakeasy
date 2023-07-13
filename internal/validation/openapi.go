@@ -23,7 +23,7 @@ type SuggestionsConfig struct {
 	Model          string
 }
 
-func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *SuggestionsConfig) error {
+func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *SuggestionsConfig, outputHints bool) error {
 	fmt.Println("Validating OpenAPI spec...")
 
 	schema, err := os.ReadFile(schemaPath)
@@ -44,7 +44,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 		findSuggestions = true
 	}
 
-	errs := g.Validate(context.Background(), schema, schemaPath)
+	errs := g.Validate(context.Background(), schema, schemaPath, outputHints)
 	if len(errs) > 0 {
 		hasErrors := false
 		suggestionToken := ""
@@ -98,9 +98,11 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 							totalSuggestions += 1
 						}
 					}
-				} else {
+				} else if vErr.Severity == errors.SeverityWarn {
 					hasWarnings = true
 					l.Warn("", zap.Error(err))
+				} else if vErr.Severity == errors.SeverityHint {
+					l.Info("", zap.Error(err))
 				}
 			}
 
