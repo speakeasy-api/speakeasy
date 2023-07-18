@@ -45,6 +45,12 @@ Want to learn more about our methodology? Here is a [blog post](https://www.spea
 brew install speakeasy-api/homebrew-tap/speakeasy
 ```
 
+### Script (MacOS and Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
+```
+
 ### Chocolatey (Windows)
 
 ```cmd
