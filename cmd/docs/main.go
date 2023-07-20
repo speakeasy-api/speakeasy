@@ -54,7 +54,7 @@ func main() {
 	speakeasyDoc = strings.ReplaceAll(speakeasyDoc, "## ", "### ")
 	speakeasyDoc = strings.Replace(speakeasyDoc, "# speakeasy", "## CLI", 1)
 
-	if err := os.WriteFile("./README.md", []byte(fmt.Sprintf("%s%s", readme, speakeasyDoc)), os.ModePerm); err != nil {
+	if err := os.WriteFile("./README.md", []byte(fmt.Sprintf("%s%s", readme, speakeasyDoc)), 0644); err != nil {
 		log.Fatal(err)
 	}
 }

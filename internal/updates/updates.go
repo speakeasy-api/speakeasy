@@ -177,13 +177,13 @@ func extractZip(archive, dest string) error {
 		filePath := path.Join(dest, file.Name)
 
 		if file.FileInfo().IsDir() {
-			if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
+			if err := os.MkdirAll(filePath, 0755); err != nil {
 				return err
 			}
 			continue
 		}
 
-		if err := os.MkdirAll(path.Dir(filePath), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Dir(filePath), 0755); err != nil {
 			return err
 		}
 
@@ -235,7 +235,7 @@ func extractTarGZ(archive, dest string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(dest, header.Name), os.ModePerm); err != nil {
+			if err := os.MkdirAll(path.Join(dest, header.Name), 0755); err != nil {
 				return err
 			}
 		case tar.TypeReg:

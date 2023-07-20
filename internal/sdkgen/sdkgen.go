@@ -49,13 +49,13 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 			dir := path.Dir(filename)
 
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				err := os.MkdirAll(dir, os.ModePerm)
+				err := os.MkdirAll(dir, 0755)
 				if err != nil {
 					return err
 				}
 			}
 
-			return os.WriteFile(filename, data, os.ModePerm)
+			return os.WriteFile(filename, data, 0644)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
@@ -101,13 +101,13 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 			dir := path.Dir(filename)
 
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				err := os.MkdirAll(dir, os.ModePerm)
+				err := os.MkdirAll(dir, 0755)
 				if err != nil {
 					return err
 				}
 			}
 
-			return os.WriteFile(filename, data, os.ModePerm)
+			return os.WriteFile(filename, data, 0644)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 	}
