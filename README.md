@@ -157,60 +157,103 @@ speakeasy usage [flags]
 
 ## OpenAPI Support
 
-* [ ] Global and per method ServerURL configuration (include base url and templating) - <https://swagger.io/docs/specification/api-host-and-base-path/>
-* [ ] Global and per method Security configuration - <https://swagger.io/docs/specification/authentication/>
-* [ ] Method generation
-* [ ] Request/Response Model Generation
-* [ ] Path Param Serialization - <https://swagger.io/docs/specification/describing-parameters/#path-parameters>
-  * [ ] Default Path Paramater Serialization `(style = simple, explode = false)` - <https://swagger.io/docs/specification/serialization/#path>
-  * [ ] Basic types and simple objects only currently supported
-  * [ ] Other styles not currently supported
-* [ ] Query Param Serialization - <https://swagger.io/docs/specification/describing-parameters/#query-parameters> & <https://swagger.io/docs/specification/serialization/#query>
-  * [ ] `json` serialization
-  * [ ] `form` style serialization
-    * [ ] Basic types and simple objects only currently supported
-  * [ ] `deepObject` style serialization
-  * [ ] Other styles not currently supported
-* [ ] Request Headers - <https://swagger.io/docs/specification/serialization/#header>
-  * [ ] Including explode handling
-* [ ] Request Body Serialization
-  * [ ] Multipart Encoding - <https://swagger.io/docs/specification/describing-request-body/multipart-requests/>
-    * [ ] Binary file support
-    * [ ] Form data support
-    * [ ] Encoding not supported
-  * [ ] JSON Serialization
-  * [ ] x-www-form-urlencoded Serialization - <https://swagger.io/docs/specification/describing-request-body>
-    * [ ] Including encoding
-    * [ ] Doesn't support non-object types
-  * [ ] plain text / string serialization
-  * [ ] raw byte serialization
-  * [ ] Other serialization not currently supported
-  * [ ] Handling of `required` body
-* [ ] Response Body Serialization
-  * [ ] Return StatusCode and Content-Type
-  * [ ] plain text / string deserialization
-  * [ ] raw byte deserialization
-  * [ ] Json deserialization
-  * [ ] Other deserialization not currently supported
-* [ ] Media-type patterns - <https://swagger.io/docs/specification/media-types/>
-* [ ] Full OpenAPI datatype support
-  * [ ] Basic types - <https://swagger.io/docs/specification/data-models/data-types/>
-  * [ ] Enums
-  * [ ] Number formats ie float, double, int32, int64
-  * [ ] Date-time
-  * [ ] Binary
-  * [ ] Arrays
-  * [ ] Objects
-  * [ ] Optional
-  * [ ] Maps
-  * [ ] Any type
-  * [ ] OneOf/AnyOf/AllOf - <https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/>
-* [ ] Auxiliary files
-  * [ ] Utilities classes/functions to help with serialization/deserialization.
-  * [ ] Files needed for creating a fully compilable package that can be published to the relevant package manager without further changes.
-* [ ] Support for x-speakeasy-server-id map generation
-* [ ] Support for snippet generation
-* [ ] Support for readme generation
+The tables below give an overview of what we support from OpenAPI.
+
+### ✅ Server Configuration 
+
+| Name | Notes | Swagger Link |Support |
+|------|-------|--------------|--------|
+| ServerURL config | Global and per method (include base url and templating) | [api-host-and-base-path](https://swagger.io/docs/specification/api-host-and-base-path/) |✅ |
+| Authentication and Security | Global and per method | [authentication](https://swagger.io/docs/specification/authentication/) |✅ |
+| Method Generation |  |   |✅ |
+| Model Generation |  Request and Response |   |✅ |
+
+### ⚠️ Path Parameters Serialization ([path-parameters](https://swagger.io/docs/specification/describing-parameters/#path-parameters))
+
+| Name | Notes | Swagger Link | Support |
+|------|-------|--------------|---------|
+| Default | `(style = simple, explode = false)` | [serialiszation/#path](https://swagger.io/docs/specification/serialization/#path/) | ✅ |
+| Basic types | | | ✅ |
+| Simple objects | | | ✅ |
+| `label` | | | ❌ |
+| `matrix` | | | ❌ |
+
+### ⚠️ Query Parameters Serialization ([query-parameters](https://swagger.io/docs/specification/describing-parameters/#query-parameters) & [query](https://swagger.io/docs/specification/describing-parameters/#query))
+
+| Name | Notes | Swagger Link | Support |
+|------|-------|--------------|---------|
+| `json` | | | ✅ |
+| `form` | | | ✅ |
+| `spaceDelimited` | | | ✅ |
+| `pipeDelimited` | | | ✅ |
+| `deepObject` | | | ✅ |
+| Basic types | | | ✅ |
+| Simple objects | | | ✅ |
+
+### ✅  Request Headers ([header](https://swagger.io/docs/specification/serialization/#header))
+
+| Name | Notes | Swagger Link | Support |
+|------|-------|--------------|---------|
+| simple (explode = true)| | | ✅ |
+| simple (explode = false)| | | ✅ |
+
+### ⚠️  Request Body Serialization
+
+| Name | Notes | Swagger Link | Support |
+|------|-------|--------------|---------|
+| Multipart Encoding | | [multi-part requests](https://swagger.io/docs/specification/describing-request-body/multipart-requests/)| ✅ |
+| Binary| | | ✅ |
+| Form data | | | ✅ |
+| JSON | both `application/json` and `text/json`| | ✅ |
+| `x-www-form-urlencoded` |  Including encoding, but not non-object types | [describing-request-body](https://swagger.io/docs/specification/describing-request-body)| ⚠️ |
+| Plain text | | | ✅ |
+| Raw byte | | | ✅ |
+| Handling `required` body | | | ✅ |
+| XML | | | ❌ |
+| Other media types| | | ❌ |
+
+### ⚠️  Response Body Deserialization
+
+| Name | Notes | Swagger Link | Support |
+|------|-------|--------------|---------|
+| Return StatusCode and Content-Type | | | ✅ |
+| JSON | | | ✅ |
+| Plain text | | | ✅ |
+| Raw byte | | | ✅ |
+| JSON | | | ✅ |
+| Other media types| | | ❌ |
+
+### ✅ Media-type patterns ([media-types](https://swagger.io/docs/specification/media-types))
+
+### ✅ Datatypes
+
+| Name | Notes | Swagger Link | Support |
+|------|-------|--------------|---------|
+| Basic types | | [data-models/data-types](https://swagger.io/docs/specification/data-models/data-types/)| ✅ |
+| Enums | | | ✅ |
+| Number formats | float, double, int32, int64 | | ✅ |
+| Date-time | | | ✅ |
+| Binary | | | ✅ |
+| Arrays | | | ✅ |
+| Objects | | | ✅ |
+| Optional | | | ✅ |
+| Maps | | | ✅ |
+| Any type | | | ✅ |
+| OneOf/AnyOf/AllOf | |[oneof-anyof-allof-not](https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/)| ✅ |
+
+### ✅  Miscellaneous
+
+| Name | Notes | Swagger Link | Support |
+|------|-------|--------------|---------|
+| Auxiliary files* | | | ✅ |
+| `x-speakeasy-server-id` generation | | | ✅ |
+| Snippet generation | | | ✅ |
+| README generation | | | ✅ |
+| Documentation generation | | | ✅ |
+
+* \*Utility classes and functions to help with serialization and deserialization.
+* \*Files needed for creating a fully compilable package that can be published to the relevant package manager without further changes.
+
 
 ## Advanced Generation Features
 
