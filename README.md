@@ -168,46 +168,49 @@ The tables below give an overview of what we support from OpenAPI.
 | Method Generation |  |   |✅ |
 | Model Generation |  Request and Response |   |✅ |
 
-### ⚠️ Path Paramamters Serialization ([path-parameters](https://swagger.io/docs/specification/describing-parameters/#path-parameters))
+### ⚠️ Path Parameters Serialization ([path-parameters](https://swagger.io/docs/specification/describing-parameters/#path-parameters))
 
 | Name | Notes | Swagger Link | Support |
 |------|-------|--------------|---------|
 | Default | `(style = simple, explode = false)` | [serialiszation/#path](https://swagger.io/docs/specification/serialization/#path/) | ✅ |
 | Basic types | | | ✅ |
 | Simple objects | | | ✅ |
-| Other styles | | | ❌ |
+| `label` | | | ❌ |
+| `matrix` | | | ❌ |
 
-### ⚠️ Query Paramamters Serialization ([query-parameters](https://swagger.io/docs/specification/describing-parameters/#query-parameters) & [query](https://swagger.io/docs/specification/describing-parameters/#query))
+### ⚠️ Query Parameters Serialization ([query-parameters](https://swagger.io/docs/specification/describing-parameters/#query-parameters) & [query](https://swagger.io/docs/specification/describing-parameters/#query))
 
 | Name | Notes | Swagger Link | Support |
 |------|-------|--------------|---------|
 | `json` | | | ✅ |
 | `form` | | | ✅ |
+| `spaceDelimited` | | | ✅ |
+| `pipeDelimited` | | | ✅ |
 | `deepObject` | | | ✅ |
 | Basic types | | | ✅ |
 | Simple objects | | | ✅ |
-| Other styles | | | ❌ |
 
 ### ✅  Request Headers ([header](https://swagger.io/docs/specification/serialization/#header))
 
 | Name | Notes | Swagger Link | Support |
 |------|-------|--------------|---------|
-| Explode handling | | | ✅ |
+| simple (explode = true)| | | ✅ |
+| simple (explode = false)| | | ✅ |
 
 ### ⚠️  Request Body Serialization
 
 | Name | Notes | Swagger Link | Support |
 |------|-------|--------------|---------|
 | Multipart Encoding | | [multi-part requests](https://swagger.io/docs/specification/describing-request-body/multipart-requests/)| ✅ |
-| Binary file | | | ✅ |
+| Binary| | | ✅ |
 | Form data | | | ✅ |
-| Encoding | | | ❌ |
-| JSON | | | ✅ |
+| JSON | both `application/json` and `text/json`| | ✅ |
 | `x-www-form-urlencoded` |  Including encoding, but not non-object types | [describing-request-body](https://swagger.io/docs/specification/describing-request-body)| ⚠️ |
 | Plain text | | | ✅ |
 | Raw byte | | | ✅ |
 | Handling `required` body | | | ✅ |
-| Other serialization | | | ❌ |
+| XML | | | ❌ |
+| Other media types| | | ❌ |
 
 ### ⚠️  Response Body Deserialization
 
@@ -218,7 +221,7 @@ The tables below give an overview of what we support from OpenAPI.
 | Plain text | | | ✅ |
 | Raw byte | | | ✅ |
 | JSON | | | ✅ |
-| Other deserialization | | | ❌ |
+| Other media types| | | ❌ |
 
 ### ✅ Media-type patterns ([media-types](https://swagger.io/docs/specification/media-types))
 
@@ -246,6 +249,7 @@ The tables below give an overview of what we support from OpenAPI.
 | `x-speakeasy-server-id` generation | | | ✅ |
 | Snippet generation | | | ✅ |
 | README generation | | | ✅ |
+| Documentation generation | | | ✅ |
 
 * \*Utility classes and functions to help with serialization and deserialization.
 * \*Files needed for creating a fully compilable package that can be published to the relevant package manager without further changes.
