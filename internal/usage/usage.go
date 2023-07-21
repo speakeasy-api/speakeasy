@@ -29,7 +29,7 @@ func OutputUsage(cmd *cobra.Command, file, out string, debug bool) error {
 			if err != nil {
 				return err
 			}
-			return os.WriteFile(outFileName, data, os.ModePerm)
+			return os.WriteFile(outFileName, data, 0644)
 		}, os.ReadFile),
 		generate.WithLogger(l),
 		generate.WithRunLocation("cli"),

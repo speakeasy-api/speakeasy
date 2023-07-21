@@ -29,11 +29,11 @@ func GenerateDocs(cmd *cobra.Command, outDir string, docSiteLinks bool) error {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outFile), 0755); err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(outFile, []byte(doc), os.ModePerm); err != nil {
+	if err := os.WriteFile(outFile, []byte(doc), 0644); err != nil {
 		return err
 	}
 

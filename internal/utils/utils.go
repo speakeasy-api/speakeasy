@@ -98,7 +98,7 @@ func CreateDirectory(filename string) error {
 	dir := path.Dir(filename)
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.MkdirAll(dir, os.ModePerm)
+		err := os.MkdirAll(dir, 0755)
 		if err != nil {
 			return err
 		}

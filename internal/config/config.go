@@ -66,7 +66,7 @@ func ClearSpeakeasyAuthInfo() error {
 }
 
 func save() error {
-	if err := os.MkdirAll(cfgDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
 		return err
 	}
 
