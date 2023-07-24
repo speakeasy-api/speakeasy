@@ -55,7 +55,9 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 				}
 			}
 
-			return os.WriteFile(filename, data, 0644)
+			// TODO Using 0755 here rather than perm is temporary until an upstream change to
+			// easytemplate can be made to add better support for file permissions.
+			return os.WriteFile(filename, data, 0755)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
@@ -107,7 +109,9 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 				}
 			}
 
-			return os.WriteFile(filename, data, 0644)
+			// TODO Using 0755 here rather than perm is temporary until an upstream change to
+			// easytemplate can be made to add better support for file permissions.
+			return os.WriteFile(filename, data, 0755)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 	}
