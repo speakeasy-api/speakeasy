@@ -1,28 +1,52 @@
-# The Speakeasy CLI - Generate Client SDKs Like a Human Wrote Them
+<br /><br />
 
-![181640742-31ab234a-3b39-432e-b899-21037596b360](https://user-images.githubusercontent.com/68016351/196461357-fcb8d90f-cd67-498e-850f-6146c58d0114.png)
+<div align="center">
 
-Speakeasy is the fastest way to ship developer experience for your APIs.
+<a href="[Speakeasy](https://speakeasyapi.dev/)">
+  <img src="https://github.com/speakeasy-api/speakeasy/assets/68016351/073a618f-65ca-4292-9419-c910406c6b17" alt="Speakeasy Logo" width="100">
+<h2>Enterprise Ready Developer Experience for your REST API</h2>
+<p>Launch production quality sdks, terraform providers, docs and more in minutes :rocket:.</p>
+</a>
+<br />
+<br />
 
-![ezgif com-video-to-gif (1)](https://github.com/speakeasy-api/speakeasy/assets/90289500/ff6972c4-4e8a-4a5c-a976-75e97cc42f5a)
+   <a href="https://speakeasyapi.dev/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
+   <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
+
+  ![Group 26](https://github.com/speakeasy-api/speakeasy/assets/68016351/159f0565-0cfa-468a-8fcd-7c3590eea355)
+
+  ![ezgif com-video-to-gif (1)](https://github.com/speakeasy-api/speakeasy/assets/90289500/ff6972c4-4e8a-4a5c-a976-75e97cc42f5a)
+</div>
+<br />
 
 ## What is Speakeasy ?
 
-[Speakeasy](https://www.speakeasyapi.dev/) gives your users the DevEx that makes API integrations easy. Don't put the burden of integration on your users. Take your APIs to market with best in class sdks and a complete self-service experience from shipping great sdks to managing keys, logs and more.
+[Speakeasy](https://www.speakeasyapi.dev/) gives your users the developer experience that makes API integrations easy. Don't put the burden of integration on your users. Take your APIs to market with best in class enterprise ready sdks, terraform providers, SDK docs and more.
+
+![Group 27](https://github.com/speakeasy-api/speakeasy/assets/68016351/07335321-2ae1-41de-a1b1-3be72df38a90)
+
+### Key Features
+
+* **LLM Powered API Maintenance** - Keep your API schema up to date and following best practices with automatic maintenance powered by best in class LLMs. Try it out now in the cli with `speakeasy suggest` or embed it into your Github workflow using our [action](https://github.com/speakeasy-api/sdk-generation-action). 
+* **Production Quality SDKs** - Ergonomic, Typesafe and Fault Tolerant client libraries built for production use cases with idiomatics optimised for each language. Embed additional capabilities like auth, retries, pagination and more using spec based extensions. 
+* **Production Quality Terraform Providers** - Expose your API for infrastructure as code use cases with fully featured Terraform providers. 
+* **SDK Docs** - Markdown usage snippets for every single operation and model in your SDK. Export and host usage snippets in a branded SDK and API docs site using our docusaurus react plugin. 
+* **Distribution to Package Managers** - A complete pipeline for distributing your libraries to popular package managers like `npm`, `pypi`, `maven` and `hashicorp registry`. 
+* **Supports Open Standards** - Speakeasy works with your existing API framework by supporting OpenAPI3.X and other open standards. Plug and and play not rip and replace. 
+
+For upcoming features and bug fixes check out our [public roadmap](https://github.com/orgs/speakeasy-api/projects/6/views/1).
 
 ## What is the Speakeasy CLI ?
 
-This CLI is a tool for interacting with the [Speakeasy](https://docs.speakeasyapi.dev/docs/speakeasy-cli/) platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more.
+This CLI is a tool for interacting with the [Speakeasy](https://docs.speakeasyapi.dev/docs/speakeasy-cli/) platform. The CLI brings the functionality of Speakeasy into your local development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more. Looking to embed this into your Github CI/CD ? Check out these docs instead. 
 
-Current functions of the CLI include:
+Here are a few key functions of the CLI. For a complete list of commands check out our [reference](https://speakeasyapi.dev/docs/product-reference/speakeasy-cli/getting-started/) or just type `speakeasy` and our interactive mode will take you through the available functions. 
 
-* Generating idiomatic client SDKs from OpenAPI 3.X specs:
-  * Live: Go, Python3, Typescript(Node), Java, PHP, Ruby, Terraform
-  * Coming soon: Rust, C#, Swift and more languages upon request!
-* Validating the correctness of OpenAPI 3.X specs. The CLI has a built in command to validate your spec and post helpful error messages.
-* Merging OpenAPI 3.X specs. The CLI can merge multiple OpenAPI 3.X specs into a single spec.
-* Authenticating with the platform and managing API keys.
-* Using the Speakeasy API to manage your integration.
+* `generate` - Generating idiomatic client SDKs from your API specs:
+* `validate` - Validating the correctness of your API specs. The CLI has a built in command to validate your spec for SDK readiness and post helpful error messages.
+* `suggest` - Use an LLM to auto correct your spec validation failures. 
+* `merge` - Work with your existing documentation workflows by merging your API specs into a single spec 
+* `auth` - Authenticate with the platform and manage API keys. 
 
 ## Design Choices
 
@@ -35,7 +59,7 @@ All the SDKs we generate are designed to be as idiomatic to the language they ar
 
 Want to learn more about our methodology? Here is a [blog post](https://www.speakeasyapi.dev/post/client-sdks-as-a-service) to learn more about our generators as compared to the OSS options. If you're interested in having managed Github repos generated for your SDKs or enterprise support reach out to us [here](https://www.speakeasyapi.dev/request-access) or [come chat with us](https://calendly.com/d/drw-t98-rpq/simon-sagar-speakeasy). We'd love to help you build out API dev ex.
 
-> We may capture telemetry on usage of the CLI to better understand API (OpenAPI) features so that we can build better code generators and other tools over time
+> We may capture metadata on usage of the CLI to better understand API (OpenAPI) features so that we can build better code generators and other tools over time
 
 ## Installation
 
@@ -292,21 +316,10 @@ speakeasy [flags]
 * [speakeasy generate](docs/generate/README.md)  - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
 * [speakeasy validate](docs/validate/README.md)  - Validate OpenAPI documents + more (coming soon)
 
-## CLI  
+## CLI Reference
 `speakeasy`  
 
-
 The speakeasy cli tool provides access to the speakeasyapi.dev toolchain  
-
-### Details
-
- A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php + more coming soon)
-	- Validating OpenAPI specs
-	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic 								(coming soon)
-	- Generating Postman collections from OpenAPI Specs 							(coming soon)
-
 
 ### Usage
 
@@ -323,11 +336,11 @@ speakeasy [flags]
 #### Sub Commands
 
 * [speakeasy api](docs/api/README.md)	 - Access the Speakeasy API via the CLI
-* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
-* [speakeasy generate](docs/generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
+* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI with your workspace
+* [speakeasy generate](docs/generate/README.md)	 - Generate Client SDKs, Terraform Providers, OpenAPI specs from request logs and more
 * [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
-* [speakeasy proxy](docs/proxy.md)	 - Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities
-* [speakeasy suggest](docs/suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
+* [speakeasy proxy](docs/proxy.md)	 - Proxy provides a reverse-proxy for debugging and testing request logs
+* [speakeasy suggest](docs/suggest.md)	 - Validate your API specs and get fixes powered by a LLM.
 * [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version
-* [speakeasy usage](docs/usage.md)	 - Output usage information for a given OpenAPI schema to a CSV
-* [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents + more (coming soon)
+* [speakeasy usage](docs/usage.md)	 - Output usage information for a given OpenAPI schema to a CSV. 
+* [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents to ensure they are SDK ready.
