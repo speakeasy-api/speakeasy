@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"io"
 	"io/ioutil"
@@ -16,22 +17,26 @@ import (
 )
 
 const uploadTimeout = time.Minute * 2
-const suggestionTimeout = time.Minute * 1
+const suggestionTimeout = time.Minute * 3
 
 const ApiURL = "https://api.prod.speakeasyapi.dev"
 
 var baseURL = ApiURL
 
-type suggestionResponse struct {
-	Suggestion string `json:"suggestion"`
+type Suggestion struct {
+	SuggestedFix string `json:"suggested_fix"`
+	JSONPatch    string `json:"json_patch"`
+	Reasoning    string `json:"reasoning"`
 }
 
 type suggestionRequest struct {
-	Error      string `json:"error"`
-	LineNumber int    `json:"line_number"`
+	Error                     string          `json:"error"`
+	Severity                  errors.Severity `json:"severity"`
+	LineNumber                int             `json:"line_number"`
+	PreviousSuggestionContext *string         `json:"previous_suggestion_context,omitempty"`
 }
 
-func Upload(filePath string) (string, string, error) {
+func Upload(schema []byte, filePath string) (string, string, error) {
 	openAIKey, err := GetOpenAIKey()
 	if err != nil {
 		return "", "", err
@@ -42,22 +47,17 @@ func Upload(filePath string) (string, string, error) {
 		return "", "", err
 	}
 
-	fileData, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", "", err
-	}
-
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreatePart(map[string][]string{
 		"Content-Disposition": {"form-data; name=\"file\"; filename=\"" + filepath.Base(filePath) + "\""},
-		"Content-Type":        {detectFileType(filePath)}, // Set the MIME type here
+		"Content-Type":        {DetectFileType(filePath)}, // Set the MIME type here
 	})
 	if err != nil {
 		return "", "", err
 	}
 
-	_, err = part.Write(fileData)
+	_, err = part.Write(schema)
 	if err != nil {
 		return "", "", err
 	}
@@ -103,30 +103,40 @@ func Upload(filePath string) (string, string, error) {
 	return token, strings.ToLower(filepath.Ext(filePath))[1:], nil
 }
 
-func Suggestion(token string, error string, lineNumber int, fileType string, model string) (string, error) {
+func GetSuggestion(
+	token string,
+	error string,
+	severity errors.Severity,
+	lineNumber int,
+	fileType string,
+	model string,
+	previousSuggestionContext *string,
+) (*Suggestion, error) {
 	openAIKey, err := GetOpenAIKey()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	apiKey, err := getSpeakeasyAPIKey()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	reqBody := suggestionRequest{
-		Error:      error,
-		LineNumber: lineNumber,
+		Error:                     error,
+		Severity:                  severity,
+		LineNumber:                lineNumber,
+		PreviousSuggestionContext: previousSuggestionContext,
 	}
 
 	jsonPayload, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("error marshaling request payload: %v", err)
+		return nil, fmt.Errorf("error marshaling request payload: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", baseURL+"/v1/llm/openapi/suggestion", bytes.NewBuffer(jsonPayload))
 	if err != nil {
-		return "", fmt.Errorf("error creating request for suggest: %v", err)
+		return nil, fmt.Errorf("error creating request for suggest: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -141,27 +151,27 @@ func Suggestion(token string, error string, lineNumber int, fileType string, mod
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error making request for suggest: %v", err)
+		return nil, fmt.Errorf("error making request for suggest: %v", err)
 	}
 
 	defer resp.Body.Close()
 
 	err = checkResponseStatusCode(resp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	var response suggestionResponse
+	var response Suggestion
 	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("error unmarshaling response body: %v", err)
+		return nil, fmt.Errorf("error unmarshaling response body: %v", err)
 	}
 
-	return response.Suggestion, nil
+	return &response, nil
 }
 
 func Clear(token string) error {
