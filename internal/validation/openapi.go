@@ -177,7 +177,9 @@ func Suggest(schema []byte, schemaPath string, errs []error, config suggestions.
 		return err
 	}
 
-	for len(errs) > 0 {
+	initialErrCount := len(errs)
+
+	for len(errs) > 0 && checkSuggestionCount(initialErrCount, totalSuggestions, config.MaxSuggestions) {
 		validationErr := errs[0]
 		if suggest.ShouldSkip(validationErr) {
 			errs = errs[1:]
@@ -225,6 +227,11 @@ func Suggest(schema []byte, schemaPath string, errs []error, config suggestions.
 	}
 
 	return nil
+}
+
+func checkSuggestionCount(initialErrCount, suggestionCount int, maxSuggestions *int) bool {
+	// suggestionCount < initialErrCount meant to prevent infinite loop where applying a suggestion causes a new error
+	return maxSuggestions == nil || maxSuggestions != nil && suggestionCount < *maxSuggestions && suggestionCount < initialErrCount
 }
 
 // GetSuggestionAndRevalidate returns the updated file, a list of the new validation errors if the suggestion were to be applied
