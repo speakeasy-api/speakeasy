@@ -72,7 +72,10 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 	if len(vErrs) > 0 {
 		status := "OpenAPI spec invalid ✖"
 		github.GenerateSummary(status, vErrs)
-		return fmt.Errorf(status)
+		if suggestionsConfig == nil {
+			return fmt.Errorf(status)
+		}
+		return nil
 	} else {
 		if findSuggestions {
 			fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("No errors found in OpenAPI spec, skipping suggestions!"))
