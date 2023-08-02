@@ -136,17 +136,19 @@ func MatchOrder(m *orderedmap.OrderedMap, toMatch *orderedmap.OrderedMap) {
 }
 
 func matchOrderRecurse(v interface{}, toMatch interface{}) {
+	if v == nil || toMatch == nil {
+		return
+	}
+
 	if reflect.TypeOf(v) == reflect.TypeOf([]interface{}{}) {
 		for i, vSub := range v.([]interface{}) {
 			matchOrderRecurse(vSub, toMatch.([]interface{})[i])
 		}
 	} else {
 		vOrdered, isOrderedMap := v.(orderedmap.OrderedMap)
-		if toMatch != nil {
-			matchVOrderedMap, matchIsOrderedMap := toMatch.(orderedmap.OrderedMap)
-			if isOrderedMap && matchIsOrderedMap {
-				MatchOrder(&vOrdered, &matchVOrderedMap)
-			}
+		matchVOrderedMap, matchIsOrderedMap := toMatch.(orderedmap.OrderedMap)
+		if isOrderedMap && matchIsOrderedMap {
+			MatchOrder(&vOrdered, &matchVOrderedMap)
 		}
 	}
 }
