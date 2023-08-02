@@ -2,18 +2,18 @@ package suggestions
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch"
-	json "github.com/json-iterator/go"
+	"github.com/iancoleman/orderedmap"
 )
 
 var (
@@ -55,30 +55,6 @@ func New(token, filePath, fileType, model string, file []byte, config Config) (*
 		Config:   config,
 		lines:    lines,
 	}, nil
-}
-
-func ReformatFile(file []byte, fileType string) ([]byte, error) {
-	// If source file is yaml, convert to json
-	if strings.Contains(fileType, "yaml") {
-		yamlFile := make(map[string]interface{})
-		err := yaml.Unmarshal(file, &yamlFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal YAML: %v", err)
-		}
-
-		jsonFile, err := json.Marshal(yamlFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal JSON: %v", err)
-		}
-
-		file = jsonFile
-	}
-
-	// Ensure file format is consistent by applying a no-op patch
-	patch, _ := jsonpatch.DecodePatch([]byte("[]"))
-	file, _ = patch.ApplyIndent(file, "  ")
-
-	return file, nil
 }
 
 func getLineNumber(errStr string) (int, error) {
@@ -140,19 +116,6 @@ func (s *Suggestions) CommitSuggestion(newFile []byte) error {
 	return nil
 }
 
-func DetectFileType(filename string) string {
-	ext := strings.ToLower(filepath.Ext(filename))
-
-	switch ext {
-	case ".yaml", ".yml":
-		return "text/yaml"
-	case ".json":
-		return "application/json"
-	default:
-		return "application/octet-stream"
-	}
-}
-
 func (s *Suggestions) FindSuggestion(err error, previousSuggestionContext *string) (*Suggestion, error) {
 	errString := err.Error()
 	vErr := errors.GetValidationErr(err)
@@ -197,36 +160,43 @@ func (s *Suggestions) ApplySuggestion(suggestion Suggestion) ([]byte, error) {
 		return nil, err
 	}
 
+	original := orderedmap.New()
+	if err = json.Unmarshal(s.File, &original); err != nil {
+		return nil, fmt.Errorf("error unmarshaling file: %w", err)
+	}
+
 	updated, err := patch.ApplyIndent(s.File, "  ")
 	if err != nil {
-		fmt.Println(err.Error())
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling file: %w", err)
 	}
+
+	newOrder := orderedmap.New()
+	if err = json.Unmarshal(updated, &newOrder); err != nil {
+		return nil, fmt.Errorf("error unmarshaling file: %w", err)
+	}
+
+	// Reorder the keys in the map to match the original file
+	MatchOrder(newOrder, original)
+
+	updated, _ = json.MarshalIndent(newOrder, "", "  ")
 
 	fmt.Println("Suggestion is valid!")
 
 	return updated, nil
 }
 
-func linesToString(lines map[int]string) string {
-	var sb strings.Builder
-	for i := 1; i <= len(lines); i++ {
-		sb.WriteString(lines[i])
-		sb.WriteString("\n")
-	}
-	return sb.String()
-}
-
 func (s *Suggestions) GetFile() ([]byte, error) {
 	// Convert back to yaml from json if source file was yaml
 	if s.FileType == "yaml" {
-		var data interface{}
+		data := orderedmap.New()
 		err := json.Unmarshal(s.File, &data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
 		}
 
-		yamlFile, err := yaml.Marshal(&data)
+		yamlMapSlice := jsonToYaml(*data)
+
+		yamlFile, err := yaml.Marshal(&yamlMapSlice)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal YAML: %v", err)
 		}
