@@ -9,7 +9,7 @@ require (
 	github.com/google/go-github/v52 v52.0.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
-	github.com/json-iterator/go v1.1.12
+	github.com/iancoleman/orderedmap v0.3.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pb33f/libopenapi v0.9.3
 	github.com/sethvargo/go-githubactions v1.1.0
@@ -84,6 +84,7 @@ require (
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.8 // indirect
 	github.com/labstack/echo/v4 v4.9.0 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect

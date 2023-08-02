@@ -336,6 +336,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huandu/xstrings v1.3.3/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/huandu/xstrings v1.4.0 h1:D17IlohoQq4UcpqD7fDk80P7l+lwAmlFaBHgOipl2FU=
 github.com/huandu/xstrings v1.4.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
+github.com/iancoleman/orderedmap v0.3.0 h1:5cbR2grmZR/DiVt+VJopEhtVs9YGInGIxAoMJn+Ichc=
+github.com/iancoleman/orderedmap v0.3.0/go.mod h1:XuLcCUkdL5owUCQeF2Ue9uuw1EptkJDkXXS7VoV7XGE=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/ianlancetaylor/demangle v0.0.0-20220319035150-800ac71e25c2/go.mod h1:aYm2/VgdVmcIU8iMfdMvDMsRAQjcfZSKFby6HOFvi/w=
@@ -493,8 +495,6 @@ github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeV
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/speakeasy-api/easytemplate v0.7.4 h1:6iesUjK410/ClRYhBZtV2G1H70C3+S3PbWyYOUcnjkM=
 github.com/speakeasy-api/easytemplate v0.7.4/go.mod h1:wpCVerXH0vA5Fu34xgXK2jJC5UEL42WRa6Pk+1K32yw=
-github.com/speakeasy-api/openapi-generation/v2 v2.75.2 h1:AHLPT1I8+pMs0ilMYS3vKOnjSPU1Cs6edRNOtI7m/qk=
-github.com/speakeasy-api/openapi-generation/v2 v2.75.2/go.mod h1:fNlSqT35Jy5SP7gkil/kyfyqE0TfKg60Wy+lUN8HnJc=
 github.com/speakeasy-api/openapi-generation/v2 v2.77.1 h1:ZKm2csRBwFTdz704cxmIVzRt+cY9W/ecv3PhNBIgAnY=
 github.com/speakeasy-api/openapi-generation/v2 v2.77.1/go.mod h1:fNlSqT35Jy5SP7gkil/kyfyqE0TfKg60Wy+lUN8HnJc=
 github.com/speakeasy-api/sdk-gen-config v0.7.2 h1:IpG64YpmhVBW1tpgDFdXY/HTL3ACzWTHlwmUcLdPZXg=

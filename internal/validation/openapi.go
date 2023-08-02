@@ -7,6 +7,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -103,9 +104,14 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, suggestionsConfig *
 
 // Validate returns (validation errors, validation warnings, validation info, error)
 func Validate(schema []byte, schemaPath string, outputHints bool) ([]error, []error, []error, error) {
-	l := log.NewLogger(schemaPath)
+	// Set to error because g.Validate sometimes logs all warnings for some reason
+	l := logging.NewLogger(zap.ErrorLevel)
 
-	g, err := generate.New(generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error { return nil }, func(filename string) ([]byte, error) { return nil, nil }), generate.WithLogger(l))
+	g, err := generate.New(generate.WithFileFuncs(
+		func(filename string, data []byte, perm os.FileMode) error { return nil },
+		func(filename string) ([]byte, error) { return nil, nil },
+	), generate.WithLogger(l))
+
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -205,7 +211,7 @@ func Suggest(schema []byte, schemaPath string, errs []error, config suggestions.
 
 			if err != nil {
 				if goerr.Is(err, ErrNoSuggestionFound) {
-					println("Did not find a suggestion for error.")
+					fmt.Println("Did not find a suggestion for error.")
 					suggest.Skip(validationErr)
 					errs = errs[1:]
 					continue
@@ -249,29 +255,20 @@ func GetSuggestionAndRevalidate(s *suggestions.Suggestions, validationErr error,
 	if suggestion != nil {
 		newFile, err := s.ApplySuggestion(*suggestion)
 		if err != nil {
-			if previousSuggestionContext == nil {
-				return retryOnceWithMessage(s, validationErr, fmt.Sprintf("suggestion: %s\nerror: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
-			}
-			return nil, nil, ErrNoSuggestionFound
+			return retryOnceWithMessage(s, validationErr, fmt.Sprintf("suggestion: %s\nerror: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
 
 		vErrs, vWarns, vInfo, err := Validate(newFile, s.FilePath, true)
 
 		if err != nil {
-			if previousSuggestionContext == nil {
-				return retryOnceWithMessage(s, validationErr, fmt.Sprintf("suggestion: %s\nerror: Caused validation to fail with error: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
-			}
-			return nil, nil, ErrNoSuggestionFound
+			return retryOnceWithMessage(s, validationErr, fmt.Sprintf("suggestion: %s\nerror: Caused validation to fail with error: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
 
 		newErrs := append(append(vErrs, vWarns...), vInfo...)
 		for _, newErr := range newErrs {
 			if newErr.Error() == validationErr.Error() {
 				fmt.Println("Suggestion did not fix error.")
-				if previousSuggestionContext == nil {
-					return retryOnceWithMessage(s, validationErr, fmt.Sprintf("suggestion: %s\nerror: Did not resolve the original error", suggestion.JSONPatch), previousSuggestionContext)
-				}
-				return nil, nil, ErrNoSuggestionFound
+				return retryOnceWithMessage(s, validationErr, fmt.Sprintf("suggestion: %s\nerror: Did not resolve the original error", suggestion.JSONPatch), previousSuggestionContext)
 			}
 		}
 
