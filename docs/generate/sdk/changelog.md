@@ -18,10 +18,11 @@ speakeasy generate sdk changelog [flags]
 
 ```
   -h, --help              help for changelog
+  -l, --language string   the language to get changelogs for, if not specified the changelog for the generator itself will be returned
   -p, --previous string   the version to get changelogs between this and the target version
   -r, --raw               don't format the output for the terminal
-  -s, --specific string   the version to get changelogs for
-  -t, --target string     target version to get changelog from (default: the latest change)
+  -s, --specific string   the version to get changelogs for, not used if language is specified
+  -t, --target string     target version to get changelog from (required if language is specified otherwise defaults to latest version of the generator)
 ```
 
 ### Parent Command
