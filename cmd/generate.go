@@ -5,9 +5,11 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/slices"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
+	"github.com/speakeasy-api/openapi-generation/v2/changelogs"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -165,9 +167,10 @@ func genSDKInit() {
 	genSDKCmd.Flags().BoolP("output-tests", "t", false, "output internal tests for internal speakeasy use cases")
 	genSDKCmd.Flags().MarkHidden("output-tests")
 
-	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (default: the latest change)")
+	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (required if language is specified otherwise defaults to latest version of the generator)")
 	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version to get changelogs between this and the target version")
-	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for")
+	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for, not used if language is specified")
+	genSDKChangelogCmd.Flags().StringP("language", "l", "", "the language to get changelogs for, if not specified the changelog for the generator itself will be returned")
 	genSDKChangelogCmd.Flags().BoolP("raw", "r", false, "don't format the output for the terminal")
 
 	genSDKCmd.AddCommand(genSDKVersionCmd)
@@ -261,6 +264,11 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	lang, err := cmd.Flags().GetString("language")
+	if err != nil {
+		return err
+	}
+
 	raw, err := cmd.Flags().GetBool("raw")
 	if err != nil {
 		return err
@@ -268,19 +276,55 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 
 	opts := []changelog.Option{}
 
-	if targetVersion != "" {
-		opts = append(opts, changelog.WithTargetVersion(targetVersion))
+	var changeLog string
+
+	if lang != "" {
+		if !slices.Contains(generate.GetSupportedLanguages(), lang) {
+			return fmt.Errorf("unsupported language %s", lang)
+		}
+
+		if targetVersion == "" {
+			return fmt.Errorf("target version is required when specifying a language")
+		}
+
+		targetVersions := map[string]string{}
+
+		pairs := strings.Split(targetVersion, ",")
+		for i := 0; i < len(pairs); i += 2 {
+			targetVersions[pairs[i]] = pairs[i+1]
+		}
+
+		var previousVersions map[string]string
 
 		if previousVersion != "" {
-			opts = append(opts, changelog.WithPreviousVersion(previousVersion))
-		}
-	} else if specificVersion != "" {
-		opts = append(opts, changelog.WithSpecificVersion(specificVersion))
-	} else {
-		opts = append(opts, changelog.WithSpecificVersion(changelog.GetLatestVersion()))
-	}
+			previousVersions = map[string]string{}
 
-	changeLog := changelog.GetChangeLog(opts...)
+			pairs := strings.Split(previousVersion, ",")
+			for i := 0; i < len(pairs); i += 2 {
+				previousVersions[pairs[i]] = pairs[i+1]
+			}
+		}
+
+		changeLog, err = changelogs.GetChangeLog(lang, targetVersions, previousVersions)
+		if err != nil {
+			return fmt.Errorf("failed to get changelog for language %s: %w", lang, err)
+		}
+	} else {
+
+		if targetVersion != "" {
+			opts = append(opts, changelog.WithTargetVersion(targetVersion))
+
+			if previousVersion != "" {
+				opts = append(opts, changelog.WithPreviousVersion(previousVersion))
+			}
+		} else if specificVersion != "" {
+			opts = append(opts, changelog.WithSpecificVersion(specificVersion))
+		} else {
+			opts = append(opts, changelog.WithSpecificVersion(changelog.GetLatestVersion()))
+		}
+
+		changeLog = changelog.GetChangeLog(opts...)
+	}
 
 	if raw {
 		fmt.Println(changeLog)
