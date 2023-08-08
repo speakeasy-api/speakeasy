@@ -21,7 +21,8 @@ const (
 	suggestionTimeout = time.Minute * 15 // Very high because of parallelism (the server will go as fast as it can based on OpenAI's rate limits)
 )
 
-const ApiURL = "https://api.prod.speakeasyapi.dev"
+// const ApiURL = "https://api.prod.speakeasyapi.dev"
+const ApiURL = "http://localhost:35290"
 
 var baseURL = ApiURL
 
@@ -108,6 +109,11 @@ func GetSuggestion(
 	fileType string,
 	previousSuggestionContext *string,
 ) (*Suggestion, error) {
+	openAIKey, err := GetOpenAIKey()
+	if err != nil {
+		return nil, err
+	}
+
 	apiKey, err := getSpeakeasyAPIKey()
 	if err != nil {
 		return nil, err
@@ -132,6 +138,7 @@ func GetSuggestion(
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-session-token", token)
+	req.Header.Set("x-openai-key", openAIKey)
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("x-file-type", fileType)
 

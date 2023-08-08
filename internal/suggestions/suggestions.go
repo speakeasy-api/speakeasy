@@ -8,10 +8,11 @@ import (
 	"github.com/iancoleman/orderedmap"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
-	"log"
+	golog "log"
 	"os"
 	"strconv"
 	"strings"
@@ -36,17 +37,22 @@ type Suggestions struct {
 	Verbose  bool
 	Config   Config
 
-	toSkip []error
-	lines  map[int]string
+	suggestionCount     int
+	validationLoopCount int
+	toSkip              []error
+	lines               map[int]string
 }
 
 type Config struct {
-	AutoContinue   bool
-	MaxSuggestions *int
-	Model          string
-	OutputFile     string
-	Parallelize    bool            // Causes all suggestions to be requested in parallel
-	Level          errors.Severity // "error" will only return suggestions for errors, "warning" will return suggestions for warnings and errors, etc.
+	AutoContinue    bool
+	MaxSuggestions  *int
+	Model           string
+	OutputFile      string
+	Parallelize     bool            // Causes all suggestions (up to MaxSuggestions) to be requested in parallel
+	Level           errors.Severity // "error" will only return suggestions for errors, "warning" will return suggestions for warnings and errors, etc.
+	ValidationLoops *int
+	NumSpecs        *int
+	Summary         bool
 }
 
 func New(token, filePath, fileType string, file []byte, config Config) (*Suggestions, error) {
@@ -82,20 +88,101 @@ func getLineNumber(errStr string) (int, error) {
 	return lineNum, nil
 }
 
+func (s *Suggestions) awaitShouldApply() bool {
+	if s.Config.AutoContinue {
+		return true
+	}
+	if s.Config.OutputFile == "" {
+		fmt.Println()
+		fmt.Print(promptui.Styler(promptui.FGCyan, promptui.FGBold)("🐝 Press 'Enter' to continue"))
+		fmt.Println()
+
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		return true
+	} else {
+		fmt.Println()
+		fmt.Print(promptui.Styler(promptui.FGCyan, promptui.FGBold)("🐝 Apply suggestion? y/n"))
+		fmt.Println()
+
+		bytes, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
+		if err != nil {
+			return false
+		}
+
+		return string(bytes) == "y\n"
+	}
+}
+
+func (s *Suggestions) commitSuggestion(newFile []byte) error {
+	s.File = newFile
+
+	file, err := s.getFile()
+	if err != nil {
+		return err
+	}
+
+	// Write modified file to the path specified in config.OutputFile, if provided
+	if s.Config.OutputFile != "" {
+		err = os.WriteFile(s.Config.OutputFile, file, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to write file: %v", err)
+		}
+	}
+
+	return nil
+}
+
 type ErrorAndSuggestion struct {
 	errorNum   int
 	suggestion *Suggestion
 }
 
+func (s *Suggestions) findAndApplySuggestions(l *log.Logger, errs []error) (bool, error) {
+	res, continueSuggest, err := s.findSuggestions(errs)
+	if err != nil {
+		return false, err
+	}
+
+	for i, err := range errs {
+		suggestion := res[i]
+
+		printVErr(l, err)
+		fmt.Println() // Spacing
+		suggestion.print()
+		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("✓ Suggestion is valid and resolves the error"))
+		fmt.Println() // Spacing
+
+		if suggestion != nil && s.awaitShouldApply() {
+			newFile, err := s.applySuggestion(*suggestion)
+			if err != nil {
+				return false, err
+			}
+
+			err = s.commitSuggestion(newFile)
+			if err != nil {
+				return false, err
+			}
+		}
+	}
+
+	s.validationLoopCount++
+
+	if s.Config.ValidationLoops != nil && s.validationLoopCount >= *s.Config.ValidationLoops {
+		return false, nil
+	}
+
+	return continueSuggest, nil
+}
+
 // FindSuggestions returns one suggestion per given error, in order
-func (s *Suggestions) FindSuggestions(errs []error) ([]*Suggestion, error) {
+func (s *Suggestions) findSuggestions(errs []error) ([]*Suggestion, bool, error) {
 	suggestions := make([]*Suggestion, len(errs))
 	ch := make(chan ErrorAndSuggestion)
 	var wg sync.WaitGroup
 
 	for i, err := range errs {
 		wg.Add(1)
-		go s.FindSuggestionAsync(err, i, ch, &wg)
+		go s.findSuggestionAsync(err, i, ch, &wg)
 	}
 
 	// close the channel in the background
@@ -104,18 +191,24 @@ func (s *Suggestions) FindSuggestions(errs []error) ([]*Suggestion, error) {
 		close(ch)
 	}()
 	// read from channel as they come in until its closed
+	continueSuggest := true
 	for res := range ch {
+		if !checkSuggestionCount(len(errs), s.suggestionCount, s.Config.MaxSuggestions) {
+			continueSuggest = false
+			break
+		}
 		suggestions[res.errorNum] = res.suggestion
+		s.suggestionCount++
 	}
 
-	return suggestions, nil
+	return suggestions, continueSuggest, nil
 }
 
-func (s *Suggestions) FindSuggestionAsync(err error, errorNum int, ch chan<- ErrorAndSuggestion, wg *sync.WaitGroup) {
+func (s *Suggestions) findSuggestionAsync(err error, errorNum int, ch chan<- ErrorAndSuggestion, wg *sync.WaitGroup) {
 	defer wg.Done()
-	suggestion, _, err := s.GetSuggestionAndRevalidate(err, nil)
+	suggestion, _, err := s.getSuggestionAndRevalidate(err, nil)
 	if err != nil {
-		log.Println("Suggestion request failed:", err.Error())
+		golog.Println("Suggestion request failed:", err.Error())
 		return
 	}
 
@@ -125,12 +218,12 @@ func (s *Suggestions) FindSuggestionAsync(err error, errorNum int, ch chan<- Err
 	}
 }
 
-func (s *Suggestions) FindSuggestion(validationErr error, previousSuggestionContext *string) (*Suggestion, error) {
+func (s *Suggestions) findSuggestion(validationErr error, previousSuggestionContext *string) (*Suggestion, error) {
 	errString := validationErr.Error()
 	vErr := errors.GetValidationErr(validationErr)
 	lineNumber, lineNumberErr := getLineNumber(errString)
 	if lineNumberErr == nil {
-		s.Log(fmt.Sprintf("\n%s\n", promptui.Styler(promptui.FGBold)("Asking for a Suggestion!")))
+		s.log(fmt.Sprintf("\n%s\n", promptui.Styler(promptui.FGBold)("Asking for a Suggestion!")))
 
 		return GetSuggestion(s.Token, errString, vErr.Severity, lineNumber, s.FileType, previousSuggestionContext)
 	}
@@ -139,18 +232,18 @@ func (s *Suggestions) FindSuggestion(validationErr error, previousSuggestionCont
 }
 
 // GetSuggestionAndRevalidate returns the updated file, a list of the new validation errors if the suggestion were to be applied
-func (s *Suggestions) GetSuggestionAndRevalidate(validationErr error, previousSuggestionContext *string) (*Suggestion, []byte, error) {
-	suggestion, err := s.FindSuggestion(validationErr, previousSuggestionContext)
+func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSuggestionContext *string) (*Suggestion, []byte, error) {
+	suggestion, err := s.findSuggestion(validationErr, previousSuggestionContext)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if s.Verbose {
-		suggestion.Print()
+		suggestion.print()
 	}
 
 	if suggestion != nil {
-		newFile, err := s.ApplySuggestion(*suggestion)
+		newFile, err := s.applySuggestion(*suggestion)
 		if err != nil {
 			return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
@@ -164,7 +257,7 @@ func (s *Suggestions) GetSuggestionAndRevalidate(validationErr error, previousSu
 		newErrs := append(append(vErrs, vWarns...), vInfo...)
 		for _, newErr := range newErrs {
 			if newErr.Error() == validationErr.Error() {
-				s.Log("Suggestion did not fix error.")
+				s.log("Suggestion did not fix error.")
 				return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: Did not resolve the original error", suggestion.JSONPatch), previousSuggestionContext)
 			}
 		}
@@ -175,18 +268,46 @@ func (s *Suggestions) GetSuggestionAndRevalidate(validationErr error, previousSu
 	}
 }
 
+func (s *Suggestions) revalidate() ([]error, error) {
+	vErrs, vWarns, vInfo, err := validation.Validate(s.File, s.FilePath, true)
+	if err != nil {
+		return nil, err
+	}
+
+	errs := vErrs
+	switch s.Config.Level {
+	case "warn":
+		errs = append(errs, vWarns...)
+		break
+	case "info":
+		errs = append(append(errs, vWarns...), vInfo...)
+		break
+	}
+
+	return errs, nil
+}
+
 func (s *Suggestions) retryOnceWithMessage(validationErr error, msg string, previousSuggestion *string) (*Suggestion, []byte, error) {
 	// Retry, but only once
 	if previousSuggestion == nil {
-		s.Log("Retrying...")
-		return s.GetSuggestionAndRevalidate(validationErr, &msg)
+		s.log("Retrying...")
+		return s.getSuggestionAndRevalidate(validationErr, &msg)
 	} else {
 		return nil, nil, ErrNoSuggestionFound
 	}
 }
 
-func (s *Suggestions) ApplySuggestion(suggestion Suggestion) ([]byte, error) {
-	s.Log("Testing suggestion...")
+func printErrorSummary(totalErrorSummary allSchemasErrorSummary) error {
+	yamlBytes, err := yaml.Marshal(totalErrorSummary)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(yamlBytes))
+	return nil
+}
+
+func (s *Suggestions) applySuggestion(suggestion Suggestion) ([]byte, error) {
+	s.log("Testing suggestion...")
 
 	patch, err := jsonpatch.DecodePatch([]byte(suggestion.JSONPatch))
 	if err != nil {
@@ -214,56 +335,12 @@ func (s *Suggestions) ApplySuggestion(suggestion Suggestion) ([]byte, error) {
 
 	updated, _ = json.MarshalIndent(newOrder, "", "  ")
 
-	s.Log("Suggestion is valid!")
+	s.log("Suggestion is valid!")
 
 	return updated, nil
 }
 
-func (s *Suggestions) AwaitShouldApply() bool {
-	if s.Config.AutoContinue {
-		return true
-	}
-	if s.Config.OutputFile == "" {
-		fmt.Println()
-		fmt.Print(promptui.Styler(promptui.FGCyan, promptui.FGBold)("🐝 Press 'Enter' to continue"))
-		fmt.Println()
-
-		bufio.NewReader(os.Stdin).ReadBytes('\n')
-		return true
-	} else {
-		fmt.Println()
-		fmt.Print(promptui.Styler(promptui.FGCyan, promptui.FGBold)("🐝 Apply suggestion? y/n"))
-		fmt.Println()
-
-		bytes, err := bufio.NewReader(os.Stdin).ReadBytes('\n')
-		if err != nil {
-			return false
-		}
-
-		return string(bytes) == "y\n"
-	}
-}
-
-func (s *Suggestions) CommitSuggestion(newFile []byte) error {
-	s.File = newFile
-
-	file, err := s.GetFile()
-	if err != nil {
-		return err
-	}
-
-	// Write modified file to the path specified in config.OutputFile, if provided
-	if s.Config.OutputFile != "" {
-		err = os.WriteFile(s.Config.OutputFile, file, 0644)
-		if err != nil {
-			return fmt.Errorf("failed to write file: %v", err)
-		}
-	}
-
-	return nil
-}
-
-func (s *Suggestions) GetFile() ([]byte, error) {
+func (s *Suggestions) getFile() ([]byte, error) {
 	// Convert back to yaml from json if source file was yaml
 	if s.FileType == "yaml" {
 		data := orderedmap.New()
@@ -285,12 +362,12 @@ func (s *Suggestions) GetFile() ([]byte, error) {
 	}
 }
 
-func (s *Suggestions) Skip(err error) {
+func (s *Suggestions) skip(err error) {
 	s.toSkip = append(s.toSkip, err)
 }
 
 // ShouldSkip TODO: Make this work even when line numbers subsequently change
-func (s *Suggestions) ShouldSkip(err error) bool {
+func (s *Suggestions) shouldSkip(err error) bool {
 	for _, skipErrType := range errorTypesToSkip {
 		if strings.Contains(err.Error(), skipErrType) {
 			return true
@@ -300,13 +377,13 @@ func (s *Suggestions) ShouldSkip(err error) bool {
 	return slices.Contains(s.toSkip, err)
 }
 
-func (s *Suggestions) Log(message string) {
+func (s *Suggestions) log(message string) {
 	if s.Verbose {
 		fmt.Println(message)
 	}
 }
 
-func (s *Suggestion) Print() {
+func (s *Suggestion) print() {
 	if s != nil && !strings.Contains(s.JSONPatch, "I cannot provide an answer") {
 		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Suggestion:"))
 		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGItalic)(s.SuggestedFix))
