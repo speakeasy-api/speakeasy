@@ -45,7 +45,7 @@ type Config struct {
 	MaxSuggestions *int
 	Model          string
 	OutputFile     string
-	Parallelize    bool            // Causes all suggestions (up to MaxSuggestions) to be requested in parallel
+	Parallelize    bool            // Causes all suggestions to be requested in parallel
 	Level          errors.Severity // "error" will only return suggestions for errors, "warning" will return suggestions for warnings and errors, etc.
 }
 
