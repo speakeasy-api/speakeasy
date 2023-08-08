@@ -17,7 +17,8 @@ speakeasy generate sdk version [flags]
 ### Options
 
 ```
-  -h, --help   help for version
+  -h, --help              help for version
+  -l, --language string   if language is set to one of the supported languages it will print version numbers for that languages features and the changelog for that language
 ```
 
 ### Parent Command
