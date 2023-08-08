@@ -168,6 +168,10 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) erro
 	 * Non-parallelized suggestions
 	 */
 	for _, validationErr := range errs {
+		if !checkSuggestionCount(len(errs), totalSuggestions, config.MaxSuggestions) {
+			break
+		}
+
 		if suggest.ShouldSkip(validationErr) {
 			continue
 		}
@@ -212,6 +216,11 @@ func printVErr(l *log.Logger, sourceErr error) {
 			l.Info("", zap.Error(sourceErr))
 		}
 	}
+}
+
+func checkSuggestionCount(initialErrCount, suggestionCount int, maxSuggestions *int) bool {
+	// suggestionCount < initialErrCount meant to prevent infinite loop where applying a suggestion causes a new error
+	return maxSuggestions == nil || maxSuggestions != nil && suggestionCount < *maxSuggestions && suggestionCount < initialErrCount
 }
 
 func printValidationSummary(errs []error, warns []error, info []error) {
