@@ -124,7 +124,7 @@ var genSDKVersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of the SDK generator",
 	Long:  `Print the version number of the SDK generator including the latest changelog entry`,
-	Run:   getLatestVersionInfo,
+	RunE:  getLatestVersionInfo,
 }
 
 var genSDKChangelogCmd = &cobra.Command{
@@ -172,6 +172,8 @@ func genSDKInit() {
 	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for, not used if language is specified")
 	genSDKChangelogCmd.Flags().StringP("language", "l", "", "the language to get changelogs for, if not specified the changelog for the generator itself will be returned")
 	genSDKChangelogCmd.Flags().BoolP("raw", "r", false, "don't format the output for the terminal")
+
+	genSDKVersionCmd.Flags().StringP("language", "l", "", "if language is set to one of the supported languages it will print version numbers for that languages features and the changelog for that language")
 
 	genSDKCmd.AddCommand(genSDKVersionCmd)
 	genSDKCmd.AddCommand(genSDKChangelogCmd)
@@ -239,13 +241,48 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func getLatestVersionInfo(cmd *cobra.Command, args []string) {
+func getLatestVersionInfo(cmd *cobra.Command, args []string) error {
 	version := changelog.GetLatestVersion()
-
-	changeLog := changelog.GetChangeLog(changelog.WithSpecificVersion(version))
+	var changeLog string
 
 	fmt.Printf("Version: %s\n\n", version)
+
+	lang, err := cmd.Flags().GetString("language")
+	if err != nil {
+		lang = ""
+	}
+
+	if lang != "" {
+		if !slices.Contains(generate.GetSupportedLanguages(), lang) {
+			return fmt.Errorf("unsupported language %s", lang)
+		}
+
+		latestVersions, err := changelogs.GetLatestVersions(lang)
+		if err != nil {
+			return fmt.Errorf("failed to get latest versions for language %s: %w", lang, err)
+		}
+
+		fmt.Printf("Features:\n\n")
+
+		for feature, version := range latestVersions {
+			fmt.Printf("  %s: %s\n", feature, version)
+		}
+
+		if len(latestVersions) > 0 {
+			fmt.Printf("\n\n")
+		}
+
+		changeLog, err = changelogs.GetChangeLog(lang, latestVersions, nil)
+		if err != nil {
+			return fmt.Errorf("failed to get changelog for language %s: %w", lang, err)
+		}
+	} else {
+		changeLog = changelog.GetChangeLog(changelog.WithSpecificVersion(version))
+	}
+
 	fmt.Println(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+
+	return nil
 }
 
 func getChangelogs(cmd *cobra.Command, args []string) error {
