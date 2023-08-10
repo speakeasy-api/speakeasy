@@ -17,17 +17,11 @@ import (
 )
 
 const uploadTimeout = time.Minute * 2
-const suggestionTimeout = time.Minute * 3
+const suggestionTimeout = time.Minute * 15 // Very high because of parallelism (the server will go as fast as it can based on OpenAI's rate limits)
 
 const ApiURL = "https://api.prod.speakeasyapi.dev"
 
 var baseURL = ApiURL
-
-type Suggestion struct {
-	SuggestedFix string `json:"suggested_fix"`
-	JSONPatch    string `json:"json_patch"`
-	Reasoning    string `json:"reasoning"`
-}
 
 type suggestionRequest struct {
 	Error                     string          `json:"error"`
@@ -36,7 +30,7 @@ type suggestionRequest struct {
 	PreviousSuggestionContext *string         `json:"previous_suggestion_context,omitempty"`
 }
 
-func Upload(schema []byte, filePath string) (string, string, error) {
+func Upload(schema []byte, filePath string, model string) (string, string, error) {
 	openAIKey, err := GetOpenAIKey()
 	if err != nil {
 		return "", "", err
@@ -75,6 +69,7 @@ func Upload(schema []byte, filePath string) (string, string, error) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("x-openai-key", openAIKey)
 	req.Header.Set("x-api-key", apiKey)
+	req.Header.Set("x-openai-model", model)
 
 	client := &http.Client{
 		Timeout: uploadTimeout,
@@ -109,14 +104,8 @@ func GetSuggestion(
 	severity errors.Severity,
 	lineNumber int,
 	fileType string,
-	model string,
 	previousSuggestionContext *string,
 ) (*Suggestion, error) {
-	openAIKey, err := GetOpenAIKey()
-	if err != nil {
-		return nil, err
-	}
-
 	apiKey, err := getSpeakeasyAPIKey()
 	if err != nil {
 		return nil, err
@@ -141,10 +130,8 @@ func GetSuggestion(
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-session-token", token)
-	req.Header.Set("x-openai-key", openAIKey)
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("x-file-type", fileType)
-	req.Header.Set("x-openai-model", model)
 
 	client := &http.Client{
 		Timeout: suggestionTimeout,
