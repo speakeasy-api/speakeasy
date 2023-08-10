@@ -25,6 +25,19 @@ const ApiURL = "https://api.prod.speakeasyapi.dev"
 
 var baseURL = ApiURL
 
+type preprocessRequest struct {
+	Errors []string `json:"errors"`
+}
+
+type ErrorGroup struct {
+	ErrorNumbers []int  `json:"error_numbers"`
+	Reasoning    string `json:"reasoning"`
+}
+
+type PreprocessedErrors struct {
+	ErrorGroups []ErrorGroup `json:"error_groups"`
+}
+
 type suggestionRequest struct {
 	Error                     string          `json:"error"`
 	Severity                  errors.Severity `json:"severity"`
@@ -97,6 +110,61 @@ func Upload(schema []byte, filePath string, model string) (string, string, error
 	}
 
 	return token, strings.ToLower(filepath.Ext(filePath))[1:], nil
+}
+
+func PreprocessErrors(
+	token string,
+	errors []string,
+) (*PreprocessedErrors, error) {
+	apiKey, err := getSpeakeasyAPIKey()
+	if err != nil {
+		return nil, err
+	}
+
+	reqBody := preprocessRequest{
+		Errors: errors,
+	}
+
+	jsonPayload, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling request payload: %v", err)
+	}
+
+	req, err := http.NewRequest("POST", baseURL+"/v1/llm/openapi/preprocess", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request for suggest: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-session-token", token)
+	req.Header.Set("x-api-key", apiKey)
+
+	client := &http.Client{
+		Timeout: suggestionTimeout,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request for suggest: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	err = checkResponseStatusCode(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var response PreprocessedErrors
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("error unmarshaling response body: %v", err)
+	}
+
+	return &response, nil
 }
 
 func GetSuggestion(
