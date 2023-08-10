@@ -65,7 +65,7 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, nil, outputHints); err != nil {
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, outputHints); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
