@@ -391,9 +391,8 @@ func (s *Suggestion) print() {
 		fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGBold)("Explanation:"))
 		fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGItalic)(s.Reasoning))
 		fmt.Println() // extra line for spacing
-		return
+	} else {
+		fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
+		fmt.Println() // extra line for spacing
 	}
-
-	fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
-	fmt.Println() // extra line for spacing
 }
