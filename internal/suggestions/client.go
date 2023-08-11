@@ -21,8 +21,7 @@ const (
 	suggestionTimeout = time.Minute * 15 // Very high because of parallelism (the server will go as fast as it can based on OpenAI's rate limits)
 )
 
-// const ApiURL = "https://api.prod.speakeasyapi.dev"
-const ApiURL = "http://localhost:35290"
+const ApiURL = "https://api.prod.speakeasyapi.dev"
 
 var baseURL = ApiURL
 
