@@ -33,10 +33,7 @@ type suggestionRequest struct {
 }
 
 func Upload(schema []byte, filePath string, model string) (string, string, error) {
-	openAIKey, err := GetOpenAIKey()
-	if err != nil {
-		return "", "", err
-	}
+	openAIKey := GetOpenAIKey()
 
 	apiKey, err := getSpeakeasyAPIKey()
 	if err != nil {
@@ -69,7 +66,9 @@ func Upload(schema []byte, filePath string, model string) (string, string, error
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("x-openai-key", openAIKey)
+	if openAIKey != "" {
+		req.Header.Set("x-openai-key", openAIKey)
+	}
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("x-openai-model", model)
 
@@ -196,13 +195,8 @@ func Clear(token string) error {
 	return nil
 }
 
-func GetOpenAIKey() (string, error) {
-	key := os.Getenv("OPENAI_API_KEY")
-	if key == "" {
-		return "", fmt.Errorf("OPENAI_API_KEY must be set to use LLM Suggestions")
-	}
-
-	return key, nil
+func GetOpenAIKey() string {
+	return os.Getenv("OPENAI_API_KEY")
 }
 
 func getSpeakeasyAPIKey() (string, error) {
