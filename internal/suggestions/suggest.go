@@ -87,10 +87,6 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) erro
 		}
 	}
 
-	if _, err := GetOpenAIKey(); err != nil {
-		return err
-	}
-
 	suggestionToken, fileType, err := Upload(schema, schemaPath, config.Model)
 	if err != nil {
 		return err
