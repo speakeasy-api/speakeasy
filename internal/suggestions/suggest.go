@@ -4,16 +4,17 @@ import (
 	"context"
 	goerr "errors"
 	"fmt"
+	"math"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"go.uber.org/zap"
-	"math"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 var ErrNoSuggestionFound = goerr.New("no suggestion found")
@@ -45,10 +46,8 @@ func StartSuggest(ctx context.Context, schemaPath string, suggestionsConfig *Con
 	switch suggestionsConfig.Level {
 	case errors.SeverityWarn:
 		toSuggestFor = append(toSuggestFor, vWarns...)
-		break
 	case errors.SeverityHint:
 		toSuggestFor = append(append(toSuggestFor, vWarns...), vInfo...)
-		break
 	}
 
 	// Limit the number of errors to MaxSuggestions
@@ -176,7 +175,6 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) erro
 		printVErr(l, validationErr)
 
 		_, newFile, err := suggest.GetSuggestionAndRevalidate(validationErr, nil)
-
 		if err != nil {
 			if goerr.Is(err, ErrNoSuggestionFound) {
 				fmt.Println("Did not find a suggestion for error.")

@@ -4,20 +4,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/speakeasy/internal/config"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 )
 
-const uploadTimeout = time.Minute * 2
-const suggestionTimeout = time.Minute * 15 // Very high because of parallelism (the server will go as fast as it can based on OpenAI's rate limits)
+const (
+	uploadTimeout     = time.Minute * 2
+	suggestionTimeout = time.Minute * 15 // Very high because of parallelism (the server will go as fast as it can based on OpenAI's rate limits)
+)
 
 const ApiURL = "https://api.prod.speakeasyapi.dev"
 
@@ -148,7 +150,7 @@ func GetSuggestion(
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

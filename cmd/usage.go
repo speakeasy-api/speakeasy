@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
+
 	"github.com/speakeasy-api/speakeasy/internal/usage"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
-	"path/filepath"
-	"strings"
 )
 
 const (
