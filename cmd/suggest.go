@@ -14,7 +14,7 @@ var suggestCmd = &cobra.Command{
 	Use:   "suggest",
 	Short: "Validate an OpenAPI document and get fixes suggested by ChatGPT",
 	Long: `The "suggest" command validates an OpenAPI spec and uses OpenAI's ChatGPT to suggest fixes to your spec.
-You can use the Speakeasy OpenAI key within our platform limits, or you can set your OpenAI API key in a OPENAI_API_KEY environment variable. You will also need to authenticate with the Speakeasy API,
+You can use the Speakeasy OpenAI key within our platform limits, or you may set your own using the OPENAI_API_KEY environment variable. You will also need to authenticate with the Speakeasy API,
 you must first create an API key via https://app.speakeasyapi.dev and then set the SPEAKEASY_API_KEY environment variable to the value of the API key.`,
 	RunE: suggestFixesOpenAPI,
 }
