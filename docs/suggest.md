@@ -1,8 +1,8 @@
-# suggest
-`speakeasy suggest`
+# suggest  
+`speakeasy suggest`  
 
 
-Validate an OpenAPI document and get fixes suggested by ChatGPT
+Validate an OpenAPI document and get fixes suggested by ChatGPT  
 
 ## Details
 
