@@ -107,10 +107,7 @@ func GetSuggestion(
 	fileType string,
 	previousSuggestionContext *string,
 ) (*Suggestion, error) {
-	openAIKey, err := GetOpenAIKey()
-	if err != nil {
-		return nil, err
-	}
+	openAIKey := GetOpenAIKey()
 
 	apiKey, err := getSpeakeasyAPIKey()
 	if err != nil {
@@ -136,7 +133,10 @@ func GetSuggestion(
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-session-token", token)
-	req.Header.Set("x-openai-key", openAIKey)
+	if openAIKey != "" {
+		req.Header.Set("x-openai-key", openAIKey)
+	}
+
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("x-file-type", fileType)
 
