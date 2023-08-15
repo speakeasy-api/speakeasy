@@ -4,7 +4,6 @@ import (
 	"context"
 	goerr "errors"
 	"fmt"
-	"math"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,29 +14,99 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"go.uber.org/zap"
+	"path/filepath"
+	"strings"
 )
 
 var ErrNoSuggestionFound = goerr.New("no suggestion found")
 
-const suggestionBatchSize = 5
+const suggestionBatchSize = 3
 
-func StartSuggest(ctx context.Context, schemaPath string, suggestionsConfig *Config, outputHints bool) error {
+type allSchemasErrorSummary map[string]*SchemaErrorSummary
+
+type SchemaErrorSummary struct {
+	Error CountAndErrors `yaml:"error"`
+	Warn  CountAndErrors `yaml:"warn"`
+	Hint  CountAndErrors `yaml:"hint"`
+}
+
+type CountAndErrors struct {
+	Count  int
+	Errors []string
+}
+
+func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestionsConfig *Config) error {
+	totalErrorSummary := allSchemasErrorSummary{}
+
+	if isDir {
+		filePaths := []string{}
+
+		walkFn := func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				ext := strings.ToLower(filepath.Ext(path))
+				if ext == ".json" || ext == ".yaml" || ext == ".yml" {
+					filePaths = append(filePaths, path)
+				}
+			}
+			return nil
+		}
+
+		err := filepath.Walk(schemaPath, walkFn)
+		if err != nil {
+			return err
+		}
+
+		if suggestionsConfig.NumSpecs != nil && *suggestionsConfig.NumSpecs < len(filePaths) {
+			filePaths = filePaths[:*suggestionsConfig.NumSpecs]
+		}
+
+		for _, filePath := range filePaths {
+			errorSummary, err := startSuggestSchemaFile(ctx, filePath, suggestionsConfig, true)
+			if err != nil {
+				return err
+			}
+
+			totalErrorSummary[filePath] = errorSummary
+		}
+	} else {
+		errorSummary, err := startSuggestSchemaFile(ctx, schemaPath, suggestionsConfig, true)
+		if err != nil {
+			return err
+		}
+
+		totalErrorSummary[schemaPath] = errorSummary
+	}
+
+	if suggestionsConfig.Summary {
+		err := printErrorSummary(totalErrorSummary)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsConfig *Config, outputHints bool) (*SchemaErrorSummary, error) {
 	fmt.Println("Validating OpenAPI spec...")
 	fmt.Println()
 
 	schema, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+		return nil, fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
 	}
 
 	schema, err = ReformatFile(schema, DetectFileType(schemaPath))
 	if err != nil {
-		return fmt.Errorf("failed to reformat schema file %s: %w", schemaPath, err)
+		return nil, fmt.Errorf("failed to reformat schema file %s: %w", schemaPath, err)
 	}
 
 	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, outputHints)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	printValidationSummary(vErrs, vWarns, vInfo)
@@ -50,16 +119,12 @@ func StartSuggest(ctx context.Context, schemaPath string, suggestionsConfig *Con
 		toSuggestFor = append(append(toSuggestFor, vWarns...), vInfo...)
 	}
 
-	// Limit the number of errors to MaxSuggestions
-	if suggestionsConfig.MaxSuggestions != nil && *suggestionsConfig.MaxSuggestions < len(toSuggestFor) {
-		toSuggestFor = toSuggestFor[:*suggestionsConfig.MaxSuggestions]
-	}
-
+	var errorSummary *SchemaErrorSummary
 	if len(toSuggestFor) > 0 {
-		err = Suggest(schema, schemaPath, toSuggestFor, *suggestionsConfig)
+		errorSummary, err = Suggest(schema, schemaPath, toSuggestFor, *suggestionsConfig)
 		if err != nil {
 			fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
-			return err
+			return nil, err
 		}
 
 		if suggestionsConfig.OutputFile != "" && suggestionsConfig.AutoContinue {
@@ -70,26 +135,25 @@ func StartSuggest(ctx context.Context, schemaPath string, suggestionsConfig *Con
 		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Congrats! 🎊 Your spec had no issues we could detect."))
 	}
 
-	return nil
+	return errorSummary, nil
 }
 
-func Suggest(schema []byte, schemaPath string, errs []error, config Config) error {
+func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*SchemaErrorSummary, error) {
 	suggestionToken := ""
 	fileType := ""
-	totalSuggestions := 0
 
 	l := log.NewLogger(schemaPath)
 
 	// local authentication should just be set in env variable
 	if os.Getenv("SPEAKEASY_SERVER_URL") != "http://localhost:35290" {
 		if err := auth.Authenticate(false); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	suggestionToken, fileType, err := Upload(schema, schemaPath, config.Model)
 	if err != nil {
-		return err
+		return nil, err
 	} else {
 		// Cleanup Memory Usage in LLM
 		defer func() {
@@ -108,7 +172,7 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) erro
 
 	suggest, err := New(suggestionToken, schemaPath, fileType, schema, config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	/**
@@ -119,81 +183,94 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) erro
 		fmt.Println()
 
 		suggest.Verbose = false
+		continueSuggest := true
+		var err error
 
 		// Request suggestions in parallel, in batches of suggestionBatchSize
-		suggestions := make([]*Suggestion, len(errs))
-		for i := 0; i < len(errs); i += suggestionBatchSize {
-			end := int(math.Min(float64(i+suggestionBatchSize), float64(len(errs))))
-			res, err := suggest.FindSuggestions(errs[i:end])
+		for continueSuggest {
+			continueSuggest, err = suggest.findAndApplySuggestions(l, errs[:suggestionBatchSize])
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			suggestions = append(suggestions, res...)
-		}
-
-		for i, err := range errs {
-			suggestion := suggestions[i]
-
-			printVErr(l, err)
-			fmt.Println() // Spacing
-			suggestion.Print()
-
-			if suggestion != nil {
-				fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("✓ Suggestion is valid and resolves the error"))
-				fmt.Println() // Spacing
-
-				if suggest.AwaitShouldApply() {
-					newFile, err := suggest.ApplySuggestion(*suggestion)
-					if err != nil {
-						return err
-					}
-
-					err = suggest.CommitSuggestion(newFile)
-					if err != nil {
-						return err
-					}
-				}
+			errs, err = suggest.revalidate()
+			if err != nil {
+				return nil, err
 			}
 		}
 
-		return nil
+		errorSummary := getSchemaErrorSummary(errs)
+
+		return errorSummary, nil
 	}
 
 	/**
 	 * Non-parallelized suggestions
 	 */
 	for _, validationErr := range errs {
-		if suggest.ShouldSkip(validationErr) {
+		if !checkSuggestionCount(len(errs), suggest.suggestionCount, config.MaxSuggestions) {
+			break
+		}
+
+		if suggest.shouldSkip(validationErr) {
 			continue
 		}
 
 		printVErr(l, validationErr)
 
-		_, newFile, err := suggest.GetSuggestionAndRevalidate(validationErr, nil)
+		_, newFile, err := suggest.getSuggestionAndRevalidate(validationErr, nil)
+
 		if err != nil {
 			if goerr.Is(err, ErrNoSuggestionFound) {
 				fmt.Println("Did not find a suggestion for error.")
-				suggest.Skip(validationErr)
+				suggest.skip(validationErr)
 				continue
 			} else {
-				return err
+				return nil, err
 			}
 		}
 
-		if suggest.AwaitShouldApply() {
-			err := suggest.CommitSuggestion(newFile)
+		if suggest.awaitShouldApply() {
+			err := suggest.commitSuggestion(newFile)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		} else {
-			suggest.Skip(validationErr)
+			suggest.skip(validationErr)
 		}
 
-		totalSuggestions++
+		suggest.suggestionCount++
+
+		errs, err = suggest.revalidate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return nil
+	errorSummary := getSchemaErrorSummary(errs)
+
+	return errorSummary, nil
+}
+
+func getSchemaErrorSummary(errs []error) *SchemaErrorSummary {
+	errorSummary := &SchemaErrorSummary{}
+	for _, err := range errs {
+		vErr := errors.GetValidationErr(err)
+		if vErr != nil {
+			if vErr.Severity == errors.SeverityError {
+				errorSummary.Error.Errors = append(errorSummary.Error.Errors, vErr.Error())
+				errorSummary.Error.Count++
+			} else if vErr.Severity == errors.SeverityWarn {
+				errorSummary.Warn.Errors = append(errorSummary.Warn.Errors, vErr.Error())
+				errorSummary.Warn.Count++
+			} else if vErr.Severity == errors.SeverityHint {
+				errorSummary.Hint.Errors = append(errorSummary.Hint.Errors, vErr.Error())
+				errorSummary.Hint.Count++
+			}
+		}
+	}
+
+	return errorSummary
 }
 
 func printVErr(l *log.Logger, sourceErr error) {
@@ -208,6 +285,11 @@ func printVErr(l *log.Logger, sourceErr error) {
 			l.Info("", zap.Error(sourceErr))
 		}
 	}
+}
+
+func checkSuggestionCount(errCount, suggestionCount int, maxSuggestions *int) bool {
+	// suggestionCount < errCount meant to prevent infinite loop where applying a suggestion causes a new error
+	return maxSuggestions == nil || maxSuggestions != nil && suggestionCount < *maxSuggestions && suggestionCount < errCount
 }
 
 func printValidationSummary(errs []error, warns []error, info []error) {
