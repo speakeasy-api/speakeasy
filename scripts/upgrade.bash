@@ -7,13 +7,13 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   cd "${SCRIPT_DIR}/.."
   export GOPRIVATE=github.com/speakeasy-api/*
   read -r CURRENT_VERSION <<<$(git describe --tags | awk '{print substr($1,2); }')
-#  echo "  => CURRENT_VERSION=${CURRENT_VERSION}"
+  # echo "  => CURRENT_VERSION=${CURRENT_VERSION}"
 
   read -r CURRENT_OPENAPI_GENERATION_VERSION <<<$(cat go.mod | grep github.com/speakeasy-api/openapi-generation/v2 | awk '{ print $2 }' | awk '{print substr($1,2); }')
-#  echo "  => CURRENT_OPENAPI_GENERATION_VERSION=${CURRENT_OPENAPI_GENERATION_VERSION}"
+  # echo "  => CURRENT_OPENAPI_GENERATION_VERSION=${CURRENT_OPENAPI_GENERATION_VERSION}"
 
-  read -r ALL_OPENAPI_GENERATION_VERSION <<<$(go list -m -versions -json github.com/speakeasy-api/openapi-generation/v2 | jq -r '.Versions | .[]' | awk '{print substr($1,2); }')
-#  echo "  => ALL_OPENAPI_GENERATION_VERSION=${ALL_OPENAPI_GENERATION_VERSION}"
+  read -r ALL_OPENAPI_GENERATION_VERSION <<<$(go list -m -versions -json github.com/speakeasy-api/openapi-generation/v2 | jq -r '.Versions | .[]' | awk '{print substr($1,2); }' | tr '\n' ' ')
+  # echo "  => ALL_OPENAPI_GENERATION_VERSION=${ALL_OPENAPI_GENERATION_VERSION}"
   LAST=
   START_DATE=
   for VERSION in $ALL_OPENAPI_GENERATION_VERSION; do
