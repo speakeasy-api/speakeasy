@@ -60,7 +60,7 @@ func recurseYamlToJson(v interface{}) interface{} {
 	case reflect.TypeOf(yaml.MapSlice{}):
 		return yamlToJson(v.(yaml.MapSlice))
 	case reflect.TypeOf([]interface{}{}):
-		var vals []interface{}
+		vals := make([]interface{}, 0)
 		for _, v := range v.([]interface{}) {
 			vals = append(vals, recurseYamlToJson(v))
 		}
@@ -89,7 +89,7 @@ func recurseJsonToYaml(v interface{}) interface{} {
 	case reflect.TypeOf(orderedmap.OrderedMap{}):
 		return jsonToYaml(v.(orderedmap.OrderedMap))
 	case reflect.TypeOf([]interface{}{}):
-		var vals []interface{}
+		vals := make([]interface{}, 0)
 		for _, v := range v.([]interface{}) {
 			vals = append(vals, recurseJsonToYaml(v))
 		}
