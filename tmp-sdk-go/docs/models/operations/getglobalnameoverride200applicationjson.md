@@ -1,0 +1,10 @@
+# GetGlobalNameOverride200ApplicationJSON
+
+A successful response that contains the simpleObject sent in the request body
+
+
+## Fields
+
+| Field                                                                                                                                                             | Type                                                                                                                                                              | Required                                                                                                                                                          | Description                                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JSON`                                                                                                                                                            | [*shared.SimpleObject](../../models/shared/simpleobject.md)                                                                                                       | :heavy_minus_sign:                                                                                                                                                | A simple object that uses all our supported primitive types and enums and has optional properties.<br/><br/>[A link to the external docs.](https://docs.speakeasyapi.dev) |

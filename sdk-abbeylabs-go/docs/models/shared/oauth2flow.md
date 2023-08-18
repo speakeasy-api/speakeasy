@@ -1,0 +1,13 @@
+# Oauth2Flow
+
+
+## Fields
+
+| Field                                                                     | Type                                                                      | Required                                                                  | Description                                                               |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `CallbackQueryParams`                                                     | []*string*                                                                | :heavy_minus_sign:                                                        | N/A                                                                       |
+| `ConnectionAuthTypeEnum`                                                  | [*ConnectionAuthTypeEnum](../../models/shared/connectionauthtypeenum.md)  | :heavy_minus_sign:                                                        | N/A                                                                       |
+| `Exchange`                                                                | [*Oauth2FlowExchange](../../models/shared/oauth2flowexchange.md)          | :heavy_minus_sign:                                                        | Describes how the client should conduct the authorization code exchange.<br/> |
+| `Pkce`                                                                    | [*Oauth2FlowPkce](../../models/shared/oauth2flowpkce.md)                  | :heavy_minus_sign:                                                        | N/A                                                                       |
+| `QueryParams`                                                             | [][KeyValuePair](../../models/shared/keyvaluepair.md)                     | :heavy_minus_sign:                                                        | N/A                                                                       |
+| `URL`                                                                     | *string*                                                                  | :heavy_check_mark:                                                        | N/A                                                                       |

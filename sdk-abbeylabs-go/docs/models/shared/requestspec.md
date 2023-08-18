@@ -1,0 +1,11 @@
+# RequestSpec
+
+
+## Fields
+
+| Field                                                                                        | Type                                                                                         | Required                                                                                     | Description                                                                                  |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `Body`                                                                                       | *interface{}*                                                                                | :heavy_minus_sign:                                                                           | A value conforming to the official JSON Schema core/validation dialect 2020-12 meta-schema.<br/> |
+| `ContentType`                                                                                | [*RequestContentType](../../models/shared/requestcontenttype.md)                             | :heavy_minus_sign:                                                                           | N/A                                                                                          |
+| `Method`                                                                                     | [HTTPMethod](../../models/shared/httpmethod.md)                                              | :heavy_check_mark:                                                                           | N/A                                                                                          |
+| `URL`                                                                                        | *string*                                                                                     | :heavy_check_mark:                                                                           | N/A                                                                                          |
