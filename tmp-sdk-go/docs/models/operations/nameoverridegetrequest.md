@@ -1,9 +1,0 @@
-# NameOverrideGetRequest
-
-
-## Fields
-
-| Field                                                                                         | Type                                                                                          | Required                                                                                      | Description                                                                                   | Example                                                                                       |
-| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `TestEnumQueryParam`                                                                          | [NameOverrideGetEnumNameOverride](../../models/operations/nameoverridegetenumnameoverride.md) | :heavy_check_mark:                                                                            | An enum type                                                                                  | value3                                                                                        |
-| `TestQueryParam`                                                                              | *string*                                                                                      | :heavy_check_mark:                                                                            | N/A                                                                                           | example                                                                                       |

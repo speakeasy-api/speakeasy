@@ -1,9 +1,0 @@
-# DeepObjectQueryParamsObjectRequest
-
-
-## Fields
-
-| Field                                                                                                        | Type                                                                                                         | Required                                                                                                     | Description                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `ObjArrParam`                                                                                                | [*DeepObjectQueryParamsObjectObjArrParam](../../models/operations/deepobjectqueryparamsobjectobjarrparam.md) | :heavy_minus_sign:                                                                                           | N/A                                                                                                          |
-| `ObjParam`                                                                                                   | [shared.SimpleObject](../../models/shared/simpleobject.md)                                                   | :heavy_check_mark:                                                                                           | A simple object that uses all our supported primitive types and enums and has optional properties.           |
