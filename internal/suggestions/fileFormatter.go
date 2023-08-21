@@ -142,7 +142,9 @@ func matchOrderRecurse(v interface{}, toMatch interface{}) {
 
 	if reflect.TypeOf(v) == reflect.TypeOf([]interface{}{}) {
 		for i, vSub := range v.([]interface{}) {
-			matchOrderRecurse(vSub, toMatch.([]interface{})[i])
+			if i < len(toMatch.([]interface{})) {
+				matchOrderRecurse(vSub, toMatch.([]interface{})[i])
+			}
 		}
 	} else {
 		vOrdered, isOrderedMap := v.(orderedmap.OrderedMap)
