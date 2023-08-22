@@ -148,9 +148,11 @@ func (s *Suggestions) findAndApplySuggestions(l *log.Logger, errs []error) (bool
 
 		printVErr(l, err)
 		fmt.Println() // Spacing
-		suggestion.print()
-		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("✓ Suggestion is valid and resolves the error"))
-		fmt.Println() // Spacing
+		suggestionFound := suggestion.print()
+		if suggestionFound {
+			fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("✓ Suggestion is valid and resolves the error"))
+			fmt.Println() // Spacing
+		}
 
 		if suggestion != nil && s.awaitShouldApply() {
 			newFile, err := s.applySuggestion(*suggestion)
@@ -383,7 +385,7 @@ func (s *Suggestions) log(message string) {
 	}
 }
 
-func (s *Suggestion) print() {
+func (s *Suggestion) print() bool {
 	if s != nil && !strings.Contains(s.JSONPatch, "I cannot provide an answer") {
 		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Suggestion:"))
 		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGItalic)(s.SuggestedFix))
@@ -391,9 +393,10 @@ func (s *Suggestion) print() {
 		fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGBold)("Explanation:"))
 		fmt.Println(promptui.Styler(promptui.FGYellow, promptui.FGItalic)(s.Reasoning))
 		fmt.Println() // extra line for spacing
-		return
+	} else {
+		fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
+		fmt.Println() // extra line for spacing
+		return false
 	}
-
-	fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)("No Suggestion Found"))
-	fmt.Println() // extra line for spacing
+	return true
 }
