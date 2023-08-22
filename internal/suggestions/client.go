@@ -154,7 +154,7 @@ func PreprocessErrors(
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
