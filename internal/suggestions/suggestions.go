@@ -237,7 +237,7 @@ func (s *Suggestions) findSuggestion(validationErr error, previousSuggestionCont
 func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSuggestionContext *string) (*Suggestion, []byte, error) {
 	suggestion, err := s.findSuggestion(validationErr, previousSuggestionContext)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: %v", ErrNoSuggestionFound, err)
 	}
 
 	if s.Verbose {
