@@ -184,11 +184,11 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*Sc
 
 		suggest.Verbose = false
 		continueSuggest := true
-		numSuggestions := min(suggestionBatchSize, len(errs))
 		var err error
 
 		// Request suggestions in parallel, in batches of at most suggestionBatchSize
 		for continueSuggest {
+			numSuggestions := min(suggestionBatchSize, len(errs))
 			continueSuggest, err = suggest.findAndApplySuggestions(l, errs[:numSuggestions])
 			if err != nil {
 				return nil, err
@@ -238,6 +238,7 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*Sc
 			}
 		} else {
 			suggest.skip(validationErr)
+			continue
 		}
 
 		suggest.suggestionCount++
