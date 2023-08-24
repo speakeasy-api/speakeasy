@@ -11,9 +11,9 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/orderedmap v0.3.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.9.8
+	github.com/pb33f/libopenapi v0.9.9
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.86.10
+	github.com/speakeasy-api/openapi-generation/v2 v2.87.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
@@ -22,7 +22,7 @@ require (
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.24.0
-	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
+	golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb
 	golang.org/x/term v0.7.0
 	gopkg.in/yaml.v2 v2.4.0
 )
