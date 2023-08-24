@@ -53,35 +53,47 @@ func GenerateSummary(status string, errs []error) {
 }
 
 func SortErrors(errs []error) {
-	slices.SortStableFunc(errs, func(i, j error) bool {
+	slices.SortStableFunc(errs, func(i, j error) int {
 		iVErr := errors.GetValidationErr(i)
 		jVErr := errors.GetValidationErr(j)
 
 		if iVErr != nil && jVErr != nil {
-			if iVErr.Severity == errors.SeverityError && jVErr.Severity == errors.SeverityWarn {
-				return true
+			if iVErr.Severity == errors.SeverityError && jVErr.Severity != errors.SeverityError {
+				return -1
 			} else if iVErr.Severity == errors.SeverityWarn && jVErr.Severity == errors.SeverityError {
-				return false
+				return 1
+			} else if iVErr.Severity == errors.SeverityHint && jVErr.Severity != errors.SeverityHint {
+				return 1
 			}
 
-			return iVErr.LineNumber < jVErr.LineNumber
+			if iVErr.LineNumber < jVErr.LineNumber {
+				return -1
+			} else if iVErr.LineNumber > jVErr.LineNumber {
+				return 1
+			}
+			return 0
 		} else if iVErr != nil {
-			return true
+			return -1
 		} else if jVErr != nil {
-			return false
+			return 1
 		}
 
 		iUErr := errors.GetUnsupportedErr(i)
 		jUErr := errors.GetUnsupportedErr(j)
 
 		if iUErr != nil && jUErr != nil {
-			return iUErr.LineNumber < jUErr.LineNumber
+			if iUErr.LineNumber < jUErr.LineNumber {
+				return -1
+			} else if iUErr.LineNumber > jUErr.LineNumber {
+				return 1
+			}
+			return 0
 		} else if iUErr != nil {
-			return true
+			return -1
 		} else if jUErr != nil {
-			return false
+			return 1
 		}
 
-		return false
+		return 1
 	})
 }
