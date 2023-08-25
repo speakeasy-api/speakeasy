@@ -1,6 +1,7 @@
 package docs
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,8 +90,8 @@ func GenerateDoc(cmd *cobra.Command, docSiteLinks bool) (string, error) {
 
 	if len(children) > 0 {
 		builder.WriteString("### Sub Commands\n\n")
-		slices.SortStableFunc(children, func(i, j *cobra.Command) bool {
-			return i.Name() < j.Name()
+		slices.SortStableFunc(children, func(i, j *cobra.Command) int {
+			return cmp.Compare(i.Name(), j.Name())
 		})
 
 		for _, child := range children {
