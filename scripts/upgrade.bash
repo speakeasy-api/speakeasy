@@ -53,8 +53,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
   go get -v "github.com/speakeasy-api/openapi-generation/v2@v${NEXT_OPENAPI_GENERATION_VERSION}"
 
-  echo "$ git add -A"
-  git add -A
+  echo "$ git add go.mod go.sum
+  git add go.mod go.sum
   echo "$ git commit -m\"$SUMMARY\""
   git commit -m"$SUMMARY"
   echo "===== When you are ready, execute the following command to upgrade ====="
