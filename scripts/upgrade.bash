@@ -20,7 +20,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
     read -r IS_BIGGER <<<$("${SCRIPT_DIR}/semver.bash" compare "${VERSION}" "${CURRENT_OPENAPI_GENERATION_VERSION}")
     if [[ $IS_BIGGER == "1" && -z $START_DATE ]]; then
       START_DATE=$(gh search commits "v$LAST" --repo speakeasy-api/openapi-generation --json "commit" | jq -r '.[] | .commit.committer.date')
-#      echo "  => START_DATE=${START_DATE}"
+      # echo "  => START_DATE=${START_DATE}"
       LAST=$VERSION
     fi
     LAST=$VERSION
@@ -53,7 +53,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
   go get -v "github.com/speakeasy-api/openapi-generation/v2@v${NEXT_OPENAPI_GENERATION_VERSION}"
 
-  echo "$ git add go.mod go.sum
+  echo "$ git add go.mod go.sum"
   git add go.mod go.sum
   echo "$ git commit -m\"$SUMMARY\""
   git commit -m"$SUMMARY"
