@@ -3,7 +3,7 @@
 <div align="center">
 
 <a href="[Speakeasy](https://speakeasyapi.dev/)">
-  <img src="https://github.com/speakeasy-api/speakeasy/assets/68016351/073a618f-65ca-4292-9419-c910406c6b17" alt="Speakeasy Logo" width="100">
+  <img src="https://github.com/speakeasy-api/speakeasy/assets/68016351/e959f81a-b250-4003-8c5c-a45b9463fc95" alt="Speakeasy Logo" width="700">
 <h2>Enterprise-Ready Developer Experience for your REST API</h2>
 <p>Launch production-quality SDKs, Terraform providers, docs, and more in minutes :rocket:</p>
 </a>
