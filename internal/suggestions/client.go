@@ -57,7 +57,7 @@ func Upload(schema []byte, filePath string, model string) (string, string, error
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreatePart(map[string][]string{
 		"Content-Disposition": {"form-data; name=\"file\"; filename=\"" + filepath.Base(filePath) + "\""},
-		"Content-Type":        {DetectFileType(filePath)}, // Set the MIME type here
+		"Content-Type":        {detectFileType(filePath)}, // Set the MIME type here
 	})
 	if err != nil {
 		return "", "", err

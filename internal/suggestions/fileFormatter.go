@@ -11,7 +11,24 @@ import (
 	"strings"
 )
 
-func DetectFileType(filename string) string {
+func convertJsonToYaml(file []byte) ([]byte, error) {
+	data := orderedmap.New()
+	err := json.Unmarshal(file, &data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
+	}
+
+	yamlMapSlice := jsonToYaml(*data)
+
+	yamlFile, err := yaml.Marshal(&yamlMapSlice)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal YAML: %v", err)
+	}
+
+	return yamlFile, nil
+}
+
+func detectFileType(filename string) string {
 	ext := strings.ToLower(filepath.Ext(filename))
 
 	switch ext {
@@ -24,26 +41,21 @@ func DetectFileType(filename string) string {
 	}
 }
 
-func ReformatFile(file []byte, fileType string) ([]byte, error) {
-	// If source file is yaml, convert to json
-	if strings.Contains(fileType, "yaml") {
-		yamlFile := yaml.MapSlice{}
-		err := yaml.Unmarshal(file, &yamlFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal YAML: %v", err)
-		}
-
-		jsonOrderedMap := yamlToJson(yamlFile)
-
-		jsonFile, err := json.MarshalIndent(jsonOrderedMap, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal JSON: %v", err)
-		}
-
-		file = jsonFile
+func convertYamlToJson(file []byte) ([]byte, error) {
+	yamlFile := yaml.MapSlice{}
+	err := yaml.Unmarshal(file, &yamlFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal YAML: %v", err)
 	}
 
-	return file, nil
+	jsonOrderedMap := yamlToJson(yamlFile)
+
+	jsonFile, err := json.MarshalIndent(jsonOrderedMap, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON: %v", err)
+	}
+
+	return jsonFile, nil
 }
 
 func yamlToJson(yamlFile yaml.MapSlice) *orderedmap.OrderedMap {
@@ -100,9 +112,9 @@ func recurseJsonToYaml(v interface{}) interface{} {
 	}
 }
 
-// MatchOrder attempts to match the order of the keys in map 'm' to the order of the keys in 'toMatch'
+// matchOrder attempts to match the order of the keys in map 'm' to the order of the keys in 'toMatch'
 // Keys that are not in 'toMatch' are appended to the end of the map
-func MatchOrder(m *orderedmap.OrderedMap, toMatch *orderedmap.OrderedMap) {
+func matchOrder(m *orderedmap.OrderedMap, toMatch *orderedmap.OrderedMap) {
 	f := func(keys []string) {
 		newKeys := make([]string, len(keys))
 
@@ -150,7 +162,7 @@ func matchOrderRecurse(v interface{}, toMatch interface{}) {
 		vOrdered, isOrderedMap := v.(orderedmap.OrderedMap)
 		matchVOrderedMap, matchIsOrderedMap := toMatch.(orderedmap.OrderedMap)
 		if isOrderedMap && matchIsOrderedMap {
-			MatchOrder(&vOrdered, &matchVOrderedMap)
+			matchOrder(&vOrdered, &matchVOrderedMap)
 		}
 	}
 }

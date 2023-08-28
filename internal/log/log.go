@@ -40,7 +40,9 @@ func NewLogger(associatedFile string) *Logger {
 func (l *Logger) Info(msg string, fields ...zapcore.Field) {
 	fields = append(l.fields, fields...)
 
-	fmt.Printf("%s%s%s\n", l.getPrefix(levelInfo, nil), msg, fieldsToJSON(fields))
+	msg, err, fields := getMessage(msg, fields)
+
+	fmt.Fprintf(os.Stderr, utils.Red("%s%s%s\n"), l.getPrefix(levelInfo, err), msg, fieldsToJSON(fields))
 }
 
 func (l *Logger) Warn(msg string, fields ...zapcore.Field) {
