@@ -55,6 +55,11 @@ type Config struct {
 	Summary         bool
 }
 
+type errorAndCommentLineNumber struct {
+	error      error
+	lineNumber int
+}
+
 func New(token, filePath, fileType string, file []byte, config Config) (*Suggestions, error) {
 	lineSplit := strings.Split(string(file), "\n")
 	lines := make(map[int]string)
@@ -137,13 +142,18 @@ type ErrorAndSuggestion struct {
 	suggestion *Suggestion
 }
 
-func (s *Suggestions) findAndApplySuggestions(l *log.Logger, errs []error) (bool, error) {
+func (s *Suggestions) findAndApplySuggestions(l *log.Logger, errsWithLineNums []errorAndCommentLineNumber) (bool, error) {
+	errs := make([]error, len(errsWithLineNums))
+	for i, errWithLineNum := range errsWithLineNums {
+		errs[i] = errWithLineNum.error
+	}
+
 	res, continueSuggest, err := s.findSuggestions(errs)
 	if err != nil {
 		return false, err
 	}
 
-	for i, err := range errs {
+	for i, err := range errsWithLineNums {
 		suggestion := res[i]
 
 		printVErr(l, err)
@@ -233,7 +243,7 @@ func (s *Suggestions) findSuggestion(validationErr error, previousSuggestionCont
 	return nil, nil
 }
 
-// GetSuggestionAndRevalidate returns the updated file, a list of the new validation errors if the suggestion were to be applied
+// GetSuggestionAndRevalidate returns the Suggestion and updated file
 func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSuggestionContext *string) (*Suggestion, []byte, error) {
 	suggestion, err := s.findSuggestion(validationErr, previousSuggestionContext)
 	if err != nil {
@@ -250,13 +260,11 @@ func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSu
 			return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
 
-		vErrs, vWarns, vInfo, err := validation.Validate(newFile, s.FilePath, true)
-
+		newErrs, err := validate(newFile, s.FilePath, s.Config.Level, false)
 		if err != nil {
 			return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: Caused validation to fail with error: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
 
-		newErrs := append(append(vErrs, vWarns...), vInfo...)
 		for _, newErr := range newErrs {
 			if newErr.Error() == validationErr.Error() {
 				s.log("Suggestion did not fix error.")
@@ -270,23 +278,93 @@ func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSu
 	}
 }
 
-func (s *Suggestions) revalidate() ([]error, error) {
-	vErrs, vWarns, vInfo, err := validation.Validate(s.File, s.FilePath, true)
+func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber, error) {
+	errs, err := validate(s.File, s.FilePath, s.Config.Level, printSummary)
 	if err != nil {
 		return nil, err
 	}
 
+	var errsWithLineNums []errorAndCommentLineNumber
+	if s.FileType == "yaml" {
+		errsWithLineNums, err = s.updateErrsWithYamlLineNums(errs)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		for _, err := range errs {
+			vErr := errors.GetValidationErr(err)
+			if vErr != nil {
+				errsWithLineNums = append(errsWithLineNums, errorAndCommentLineNumber{
+					error:      err,
+					lineNumber: vErr.LineNumber,
+				})
+			}
+		}
+	}
+
+	return errsWithLineNums, nil
+}
+
+func validate(schema []byte, schemaPath string, level errors.Severity, printSummary bool) ([]error, error) {
+	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate YAML: %v", err)
+	}
+
+	if printSummary {
+		printValidationSummary(vErrs, vWarns, vInfo)
+	}
+
 	errs := vErrs
-	switch s.Config.Level {
-	case "warn":
+	switch level {
+	case errors.SeverityWarn:
 		errs = append(errs, vWarns...)
-		break
-	case "info":
+	case errors.SeverityHint:
 		errs = append(append(errs, vWarns...), vInfo...)
-		break
 	}
 
 	return errs, nil
+}
+
+func (s *Suggestions) updateErrsWithYamlLineNums(errs []error) ([]errorAndCommentLineNumber, error) {
+	yamlFile, err := convertJsonToYaml(s.File)
+	if err != nil {
+		return nil, err
+	}
+
+	yamlErrs, err := validate(yamlFile, s.FilePath, s.Config.Level, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return each error in the JSON document along with the line number of the corresponding error in the YAML document
+	var newErrs []errorAndCommentLineNumber
+	for _, jsonErr := range errs {
+		vjErr := errors.GetValidationErr(jsonErr)
+		if vjErr == nil {
+			continue
+		}
+
+		for _, yamlErr := range yamlErrs {
+			vyErr := errors.GetValidationErr(yamlErr)
+			if vyErr == nil {
+				continue
+			}
+
+			if validationErrsEqualExceptLineNumber(*vyErr, *vjErr) {
+				newErrs = append(newErrs, errorAndCommentLineNumber{
+					error:      vjErr,
+					lineNumber: vyErr.LineNumber,
+				})
+			}
+		}
+	}
+
+	return newErrs, nil
+}
+
+func validationErrsEqualExceptLineNumber(err1, err2 errors.ValidationError) bool {
+	return err1.Severity == err2.Severity && err1.Message == err2.Message && err1.Rule == err2.Rule && err1.Path == err2.Path
 }
 
 func (s *Suggestions) retryOnceWithMessage(validationErr error, msg string, previousSuggestion *string) (*Suggestion, []byte, error) {
@@ -333,7 +411,7 @@ func (s *Suggestions) applySuggestion(suggestion Suggestion) ([]byte, error) {
 	}
 
 	// Reorder the keys in the map to match the original file
-	MatchOrder(newOrder, original)
+	matchOrder(newOrder, original)
 
 	updated, _ = json.MarshalIndent(newOrder, "", "  ")
 
@@ -345,19 +423,10 @@ func (s *Suggestions) applySuggestion(suggestion Suggestion) ([]byte, error) {
 func (s *Suggestions) getFile() ([]byte, error) {
 	// Convert back to yaml from json if source file was yaml
 	if s.FileType == "yaml" {
-		data := orderedmap.New()
-		err := json.Unmarshal(s.File, &data)
+		yamlFile, err := convertJsonToYaml(s.File)
 		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
+			return nil, err
 		}
-
-		yamlMapSlice := jsonToYaml(*data)
-
-		yamlFile, err := yaml.Marshal(&yamlMapSlice)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal YAML: %v", err)
-		}
-
 		return yamlFile, nil
 	} else {
 		return s.File, nil

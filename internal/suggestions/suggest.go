@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/validation"
-	"go.uber.org/zap"
 	"path/filepath"
 	"strings"
 )
@@ -64,7 +63,7 @@ func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestion
 		}
 
 		for _, filePath := range filePaths {
-			errorSummary, err := startSuggestSchemaFile(ctx, filePath, suggestionsConfig, true)
+			errorSummary, err := startSuggestSchemaFile(ctx, filePath, suggestionsConfig)
 			if err != nil {
 				return err
 			}
@@ -72,7 +71,7 @@ func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestion
 			totalErrorSummary[filePath] = errorSummary
 		}
 	} else {
-		errorSummary, err := startSuggestSchemaFile(ctx, schemaPath, suggestionsConfig, true)
+		errorSummary, err := startSuggestSchemaFile(ctx, schemaPath, suggestionsConfig)
 		if err != nil {
 			return err
 		}
@@ -90,7 +89,7 @@ func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestion
 	return nil
 }
 
-func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsConfig *Config, outputHints bool) (*SchemaErrorSummary, error) {
+func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsConfig *Config) (*SchemaErrorSummary, error) {
 	fmt.Println("Validating OpenAPI spec...")
 	fmt.Println()
 
@@ -99,49 +98,32 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsC
 		return nil, fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
 	}
 
-	schema, err = ReformatFile(schema, DetectFileType(schemaPath))
-	if err != nil {
-		return nil, fmt.Errorf("failed to reformat schema file %s: %w", schemaPath, err)
+	if strings.Contains(detectFileType(schemaPath), "yaml") {
+		schema, err = convertYamlToJson(schema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert schema file from YAML to JSON %s: %w", schemaPath, err)
+		}
 	}
 
-	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, outputHints)
+	errorSummary, err := suggest(schema, schemaPath, *suggestionsConfig)
 	if err != nil {
+		fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
 		return nil, err
 	}
 
-	printValidationSummary(vErrs, vWarns, vInfo)
-
-	toSuggestFor := vErrs
-	switch suggestionsConfig.Level {
-	case errors.SeverityWarn:
-		toSuggestFor = append(toSuggestFor, vWarns...)
-	case errors.SeverityHint:
-		toSuggestFor = append(append(toSuggestFor, vWarns...), vInfo...)
+	if errorSummary == nil {
+		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Congrats! 🎊 Your spec had no issues we could detect."))
 	}
 
-	var errorSummary *SchemaErrorSummary
-	if len(toSuggestFor) > 0 {
-		errorSummary, err = Suggest(schema, schemaPath, toSuggestFor, *suggestionsConfig)
-		if err != nil {
-			fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
-			return nil, err
-		}
-
-		if suggestionsConfig.OutputFile != "" && suggestionsConfig.AutoContinue {
-			fmt.Println(promptui.Styler(promptui.FGWhite)("Suggestions applied and written to " + suggestionsConfig.OutputFile))
-			fmt.Println()
-		}
-	} else {
-		fmt.Println(promptui.Styler(promptui.FGGreen, promptui.FGBold)("Congrats! 🎊 Your spec had no issues we could detect."))
+	if suggestionsConfig.OutputFile != "" && suggestionsConfig.AutoContinue {
+		fmt.Println(promptui.Styler(promptui.FGWhite)("Suggestions applied and written to " + suggestionsConfig.OutputFile))
+		fmt.Println()
 	}
 
 	return errorSummary, nil
 }
 
-func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*SchemaErrorSummary, error) {
-	suggestionToken := ""
-	fileType := ""
-
+func suggest(schema []byte, schemaPath string, config Config) (*SchemaErrorSummary, error) {
 	l := log.NewLogger(schemaPath)
 
 	// local authentication should just be set in env variable
@@ -175,6 +157,15 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*Sc
 		return nil, err
 	}
 
+	errsWithLineNums, err := suggest.revalidate(true)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(errsWithLineNums) == 0 {
+		return nil, nil
+	}
+
 	/**
 	 * Parallelized suggestions
 	 */
@@ -188,19 +179,19 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*Sc
 
 		// Request suggestions in parallel, in batches of at most suggestionBatchSize
 		for continueSuggest {
-			numSuggestions := min(suggestionBatchSize, len(errs))
-			continueSuggest, err = suggest.findAndApplySuggestions(l, errs[:numSuggestions])
+			numSuggestions := min(suggestionBatchSize, len(errsWithLineNums))
+			continueSuggest, err = suggest.findAndApplySuggestions(l, errsWithLineNums[:numSuggestions])
 			if err != nil {
 				return nil, err
 			}
 
-			errs, err = suggest.revalidate()
+			errsWithLineNums, err = suggest.revalidate(false)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		errorSummary := getSchemaErrorSummary(errs)
+		errorSummary := getSchemaErrorSummary(errsWithLineNums)
 
 		return errorSummary, nil
 	}
@@ -208,8 +199,9 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*Sc
 	/**
 	 * Non-parallelized suggestions
 	 */
-	for _, validationErr := range errs {
-		if !checkSuggestionCount(len(errs), suggest.suggestionCount, config.MaxSuggestions) {
+	for _, validationErrWithLineNum := range errsWithLineNums {
+		validationErr := validationErrWithLineNum.error
+		if !checkSuggestionCount(len(errsWithLineNums), suggest.suggestionCount, config.MaxSuggestions) {
 			break
 		}
 
@@ -217,7 +209,7 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*Sc
 			continue
 		}
 
-		printVErr(l, validationErr)
+		printVErr(l, validationErrWithLineNum)
 
 		_, newFile, err := suggest.getSuggestionAndRevalidate(validationErr, nil)
 
@@ -243,21 +235,21 @@ func Suggest(schema []byte, schemaPath string, errs []error, config Config) (*Sc
 
 		suggest.suggestionCount++
 
-		errs, err = suggest.revalidate()
+		errsWithLineNums, err = suggest.revalidate(false)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	errorSummary := getSchemaErrorSummary(errs)
+	errorSummary := getSchemaErrorSummary(errsWithLineNums)
 
 	return errorSummary, nil
 }
 
-func getSchemaErrorSummary(errs []error) *SchemaErrorSummary {
+func getSchemaErrorSummary(errs []errorAndCommentLineNumber) *SchemaErrorSummary {
 	errorSummary := &SchemaErrorSummary{}
 	for _, err := range errs {
-		vErr := errors.GetValidationErr(err)
+		vErr := errors.GetValidationErr(err.error)
 		if vErr != nil {
 			if vErr.Severity == errors.SeverityError {
 				errorSummary.Error.Errors = append(errorSummary.Error.Errors, vErr.Error())
@@ -275,18 +267,26 @@ func getSchemaErrorSummary(errs []error) *SchemaErrorSummary {
 	return errorSummary
 }
 
-func printVErr(l *log.Logger, sourceErr error) {
+func printVErr(l *log.Logger, sourceErrWithLineNum errorAndCommentLineNumber) {
+	sourceErr := sourceErrWithLineNum.error
 	vErr := errors.GetValidationErr(sourceErr)
+
+	msg := replaceLineNumber(sourceErr.Error(), sourceErrWithLineNum.lineNumber)
 
 	if vErr != nil {
 		if vErr.Severity == errors.SeverityError {
-			l.Error("", zap.Error(sourceErr))
+			l.Error(msg)
 		} else if vErr.Severity == errors.SeverityWarn {
-			l.Warn("", zap.Error(sourceErr))
+			l.Warn(msg)
 		} else if vErr.Severity == errors.SeverityHint {
-			l.Info("", zap.Error(sourceErr))
+			l.Info(msg)
 		}
 	}
+}
+
+func replaceLineNumber(msg string, lineNumber int) string {
+	toReplace, _ := getLineNumber(msg)
+	return strings.Replace(msg, strconv.Itoa(toReplace), strconv.Itoa(lineNumber), 1)
 }
 
 func checkSuggestionCount(errCount, suggestionCount int, maxSuggestions *int) bool {
