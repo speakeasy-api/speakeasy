@@ -42,7 +42,7 @@ func (l *Logger) Info(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	fmt.Fprintf(os.Stderr, utils.Red("%s%s%s\n"), l.getPrefix(levelInfo, err), msg, fieldsToJSON(fields))
+	fmt.Fprintf(os.Stderr, utils.Blue("%s%s%s\n"), l.getPrefix(levelInfo, err), msg, fieldsToJSON(fields))
 }
 
 func (l *Logger) Warn(msg string, fields ...zapcore.Field) {
@@ -50,7 +50,7 @@ func (l *Logger) Warn(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	fmt.Printf("%s%s%s\n", l.getPrefix(levelWarn, err), msg, fieldsToJSON(fields))
+	fmt.Fprintf(os.Stderr, utils.Yellow("%s%s%s\n"), l.getPrefix(levelWarn, err), msg, fieldsToJSON(fields))
 }
 
 func (l *Logger) Error(msg string, fields ...zapcore.Field) {
