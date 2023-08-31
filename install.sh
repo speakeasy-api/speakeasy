@@ -148,7 +148,8 @@ do_install_binary() {
   (cd $tmp_dir && unzip -q "$asset_name")
 
   # Install binary
-  sudo -p "sudo password required for installing to $INSTALL_DIR: " mv "$tmp_dir/$BINARY_NAME" $INSTALL_DIR
+  sudo_cmd='mv '"$tmp_dir/$BINARY_NAME"' '"$INSTALL_DIR"' && chmod a+x '"$INSTALL_DIR/$BINARY_NAME"
+  sudo -p "sudo password required for installing to $INSTALL_DIR: " -- sh -c "$sudo_cmd"
   echo "Installed speakeasy to $INSTALL_DIR"
 
   # Cleanup
