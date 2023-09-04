@@ -17,7 +17,8 @@ speakeasy update [flags]
 ### Options
 
 ```
-  -h, --help   help for update
+  -h, --help          help for update
+  -t, --timeout int   timeout in seconds for the update to complete (default 30)
 ```
 
 ### Parent Command
