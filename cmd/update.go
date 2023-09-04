@@ -15,12 +15,19 @@ func updateInit(version, artifactArch string) {
 		RunE:  update(version, artifactArch),
 	}
 
+	updateCmd.Flags().IntP("timeout", "t", 30, "timeout in seconds for the update to complete")
+
 	rootCmd.AddCommand(updateCmd)
 }
 
 func update(version, artifactArch string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		newVersion, err := updates.Update(version, artifactArch)
+		timeout, err := cmd.Flags().GetInt("timeout")
+		if err != nil {
+			return err
+		}
+
+		newVersion, err := updates.Update(version, artifactArch, timeout)
 		if err != nil {
 			return err
 		}

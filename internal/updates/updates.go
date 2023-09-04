@@ -35,7 +35,7 @@ func GetLatestVersion(artifactArch string) (*version.Version, error) {
 	return ver, nil
 }
 
-func Update(currentVersion, artifactArch string) (string, error) {
+func Update(currentVersion, artifactArch string, timeout int) (string, error) {
 	release, asset, err := getLatestRelease(artifactArch, 30*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("failed to find latest release: %w", err)
@@ -63,7 +63,7 @@ func Update(currentVersion, artifactArch string) (string, error) {
 		return "", err
 	}
 
-	downloadedPath, err := downloadCLI(dirName, asset.GetBrowserDownloadURL())
+	downloadedPath, err := downloadCLI(dirName, asset.GetBrowserDownloadURL(), timeout)
 	if err != nil {
 		return "", fmt.Errorf("failed to download artifact: %w", err)
 	}
@@ -128,7 +128,7 @@ func getLatestRelease(artifactArch string, timeout time.Duration) (*github.Repos
 	return nil, nil, nil
 }
 
-func downloadCLI(dest, link string) (string, error) {
+func downloadCLI(dest, link string, timeout int) (string, error) {
 	download, err := os.Create(filepath.Join(dest, path.Base(link)))
 	if err != nil {
 		return "", err
@@ -136,7 +136,7 @@ func downloadCLI(dest, link string) (string, error) {
 	defer download.Close()
 
 	c := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: time.Duration(timeout) * time.Second,
 	}
 	resp, err := c.Get(link)
 	if err != nil {
@@ -177,13 +177,13 @@ func extractZip(archive, dest string) error {
 		filePath := path.Join(dest, file.Name)
 
 		if file.FileInfo().IsDir() {
-			if err := os.MkdirAll(filePath, 0755); err != nil {
+			if err := os.MkdirAll(filePath, 0o755); err != nil {
 				return err
 			}
 			continue
 		}
 
-		if err := os.MkdirAll(path.Dir(filePath), 0755); err != nil {
+		if err := os.MkdirAll(path.Dir(filePath), 0o755); err != nil {
 			return err
 		}
 
@@ -235,7 +235,7 @@ func extractTarGZ(archive, dest string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(dest, header.Name), 0755); err != nil {
+			if err := os.MkdirAll(path.Join(dest, header.Name), 0o755); err != nil {
 				return err
 			}
 		case tar.TypeReg:
