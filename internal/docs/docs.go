@@ -14,34 +14,71 @@ import (
 var docSiteRoot = "/docs/speakeasy-cli"
 
 func GenerateDocs(cmd *cobra.Command, outDir string, docSiteLinks bool) error {
+	docosaurusPositioning := map[string]int{}
+
+	if docSiteLinks {
+		docosaurusPositioning = map[string]int{
+			filepath.Join(outDir, "README.md"):  2,
+			filepath.Join(outDir, "auth"):       3,
+			filepath.Join(outDir, "validate"):   4,
+			filepath.Join(outDir, "suggest.md"): 5,
+			filepath.Join(outDir, "generate"):   6,
+			filepath.Join(outDir, "merge.md"):   7,
+			filepath.Join(outDir, "api"):        8,
+			filepath.Join(outDir, "proxy.md"):   9,
+			filepath.Join(outDir, "update.md"):  10,
+			filepath.Join(outDir, "usage.md"):   11,
+		}
+	}
+
+	return genDocs(cmd, outDir, docSiteLinks, docosaurusPositioning)
+}
+
+func genDocs(cmd *cobra.Command, outDir string, docSiteLinks bool, docosaurusPositioning map[string]int) error {
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
-		if err := GenerateDocs(c, outDir, docSiteLinks); err != nil {
+		if err := genDocs(c, outDir, docSiteLinks, docosaurusPositioning); err != nil {
 			return err
 		}
 	}
 
 	outFile := filepath.Join(outDir, getPath(cmd))
 
-	doc, err := GenerateDoc(cmd, docSiteLinks)
+	doc, err := genDoc(cmd, docSiteLinks)
 	if err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outFile), 0755); err != nil {
+	dir := filepath.Dir(outFile)
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(outFile, []byte(doc), 0644); err != nil {
+	if pos, ok := docosaurusPositioning[dir]; ok {
+		if err := os.WriteFile(filepath.Join(dir, "_category.json_"), []byte(fmt.Sprintf(`{"position": %02d}`, pos)), 0o644); err != nil {
+			return err
+		}
+	}
+
+	if pos, ok := docosaurusPositioning[outFile]; ok {
+		doc = fmt.Sprintf(`---
+sidebar_position: %d
+---
+
+`, pos) + doc
+	}
+
+	if err := os.WriteFile(outFile, []byte(doc), 0o644); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func GenerateDoc(cmd *cobra.Command, docSiteLinks bool) (string, error) {
+func genDoc(cmd *cobra.Command, docSiteLinks bool) (string, error) {
 	cmd.InitDefaultHelpCmd()
 	cmd.InitDefaultHelpFlag()
 
