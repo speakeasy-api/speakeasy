@@ -56,7 +56,7 @@ chocolateys:
     copyright: 2023 Speakeasy, Inc
     license_url: https://github.com/speakeasy-api/speakeasy/blob/main/LICENSE
     project_source_url: https://github.com/speakeasy-api/speakeasy
-    docs_url: https://speakeasyapi.dev/docs/speakeasy-cli/getting-started
+    docs_url: https://speakeasyapi.dev/docs/speakeasy-cli
     bug_tracker_url: https://github.com/speakeasy-api/speakeasy/issues
     tags: openapi api codegen validation speakeasy llm client-libraries sdks
     summary: Speakeasy CLI makes validating API specs and generating idiomatic SDKs easy!
