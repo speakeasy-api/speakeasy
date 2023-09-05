@@ -58,7 +58,7 @@ func genDocs(cmd *cobra.Command, outDir string, docSiteLinks bool, docosaurusPos
 	}
 
 	if pos, ok := docosaurusPositioning[dir]; ok {
-		if err := os.WriteFile(filepath.Join(dir, "_category.json_"), []byte(fmt.Sprintf(`{"position": %d}`, pos)), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "_category_.json"), []byte(fmt.Sprintf(`{"position": %d}`, pos)), 0o644); err != nil {
 			return err
 		}
 	}
