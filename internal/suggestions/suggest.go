@@ -98,14 +98,40 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsC
 		return nil, fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
 	}
 
+	errs, err := validate(schema, schemaPath, suggestionsConfig.Level, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var errsWithLineNums []errorAndCommentLineNumber
 	if strings.Contains(detectFileType(schemaPath), "yaml") {
 		schema, err = convertYamlToJson(schema)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert schema file from YAML to JSON %s: %w", schemaPath, err)
 		}
+
+		jsonErrs, err := validate(schema, schemaPath, suggestionsConfig.Level, false)
+		if err != nil {
+			return nil, err
+		}
+		errsWithLineNums = updateErrsWithLineNums(jsonErrs, errs)
 	}
 
-	errorSummary, err := suggest(schema, schemaPath, *suggestionsConfig)
+	if len(errsWithLineNums) == 0 {
+		for _, err := range errs {
+			vErr := errors.GetValidationErr(err)
+			if vErr == nil {
+				continue
+			}
+
+			errsWithLineNums = append(errsWithLineNums, errorAndCommentLineNumber{
+				error:      vErr,
+				lineNumber: vErr.LineNumber,
+			})
+		}
+	}
+
+	errorSummary, err := suggest(schema, schemaPath, errsWithLineNums, *suggestionsConfig)
 	if err != nil {
 		fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
 		return nil, err
@@ -123,7 +149,13 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsC
 	return errorSummary, nil
 }
 
-func suggest(schema []byte, schemaPath string, config Config) (*SchemaErrorSummary, error) {
+func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommentLineNumber, config Config) (*SchemaErrorSummary, error) {
+	if len(errsWithLineNums) == 0 {
+		return nil, nil
+	}
+
+	initialErrCount := len(errsWithLineNums)
+
 	l := log.NewLogger(schemaPath)
 
 	// local authentication should just be set in env variable
@@ -157,15 +189,6 @@ func suggest(schema []byte, schemaPath string, config Config) (*SchemaErrorSumma
 		return nil, err
 	}
 
-	errsWithLineNums, err := suggest.revalidate(true)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(errsWithLineNums) == 0 {
-		return nil, nil
-	}
-
 	/**
 	 * Parallelized suggestions
 	 */
@@ -175,7 +198,6 @@ func suggest(schema []byte, schemaPath string, config Config) (*SchemaErrorSumma
 
 		suggest.Verbose = false
 		continueSuggest := true
-		var err error
 
 		// Request suggestions in parallel, in batches of at most suggestionBatchSize
 		for continueSuggest {
@@ -201,7 +223,7 @@ func suggest(schema []byte, schemaPath string, config Config) (*SchemaErrorSumma
 	 */
 	for _, validationErrWithLineNum := range errsWithLineNums {
 		validationErr := validationErrWithLineNum.error
-		if !checkSuggestionCount(len(errsWithLineNums), suggest.suggestionCount, config.MaxSuggestions) {
+		if !checkSuggestionCount(initialErrCount, suggest.suggestionCount, config.MaxSuggestions) {
 			break
 		}
 
@@ -224,7 +246,7 @@ func suggest(schema []byte, schemaPath string, config Config) (*SchemaErrorSumma
 		}
 
 		if suggest.awaitShouldApply() {
-			err := suggest.commitSuggestion(newFile)
+			err = suggest.commitSuggestion(newFile)
 			if err != nil {
 				return nil, err
 			}
@@ -235,10 +257,18 @@ func suggest(schema []byte, schemaPath string, config Config) (*SchemaErrorSumma
 
 		suggest.suggestionCount++
 
-		errsWithLineNums, err = suggest.revalidate(false)
+		newErrs, err := validate(suggest.File, suggest.FilePath, suggest.Config.Level, false)
 		if err != nil {
 			return nil, err
 		}
+
+		var oldErrs []error
+		for _, oldErr := range errsWithLineNums {
+			oldErrs = append(oldErrs, oldErr.error)
+		}
+
+		// flip order of newErrs and oldErrs because we want the old line numbers
+		errsWithLineNums = updateErrsWithLineNums(newErrs, oldErrs)
 	}
 
 	errorSummary := getSchemaErrorSummary(errsWithLineNums)

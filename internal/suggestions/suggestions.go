@@ -286,10 +286,17 @@ func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber
 
 	var errsWithLineNums []errorAndCommentLineNumber
 	if s.FileType == "yaml" {
-		errsWithLineNums, err = s.updateErrsWithYamlLineNums(errs)
+		yamlFile, err := convertJsonToYaml(s.File)
 		if err != nil {
 			return nil, err
 		}
+
+		yamlErrs, err := validate(yamlFile, s.FilePath, s.Config.Level, false)
+		if err != nil {
+			return nil, err
+		}
+
+		errsWithLineNums = updateErrsWithLineNums(errs, yamlErrs)
 	} else {
 		for _, err := range errs {
 			vErr := errors.GetValidationErr(err)
@@ -326,41 +333,35 @@ func validate(schema []byte, schemaPath string, level errors.Severity, printSumm
 	return errs, nil
 }
 
-func (s *Suggestions) updateErrsWithYamlLineNums(errs []error) ([]errorAndCommentLineNumber, error) {
-	yamlFile, err := convertJsonToYaml(s.File)
-	if err != nil {
-		return nil, err
-	}
-
-	yamlErrs, err := validate(yamlFile, s.FilePath, s.Config.Level, false)
-	if err != nil {
-		return nil, err
-	}
-
+/*
+updateErrsWithYamlLineNums returns the old errors with the line numbers of the new errors, provided the errors are
+equivalent except for the line numbers.
+*/
+func updateErrsWithLineNums(oldErrs []error, newErrs []error) []errorAndCommentLineNumber {
 	// Return each error in the JSON document along with the line number of the corresponding error in the YAML document
-	var newErrs []errorAndCommentLineNumber
-	for _, jsonErr := range errs {
-		vjErr := errors.GetValidationErr(jsonErr)
-		if vjErr == nil {
+	var retErrs []errorAndCommentLineNumber
+	for _, oldErr := range oldErrs {
+		voErr := errors.GetValidationErr(oldErr)
+		if voErr == nil {
 			continue
 		}
 
-		for _, yamlErr := range yamlErrs {
-			vyErr := errors.GetValidationErr(yamlErr)
-			if vyErr == nil {
+		for _, newErr := range newErrs {
+			vnErr := errors.GetValidationErr(newErr)
+			if vnErr == nil {
 				continue
 			}
 
-			if validationErrsEqualExceptLineNumber(*vyErr, *vjErr) {
-				newErrs = append(newErrs, errorAndCommentLineNumber{
-					error:      vjErr,
-					lineNumber: vyErr.LineNumber,
+			if validationErrsEqualExceptLineNumber(*voErr, *vnErr) {
+				retErrs = append(retErrs, errorAndCommentLineNumber{
+					error:      voErr,
+					lineNumber: vnErr.LineNumber,
 				})
 			}
 		}
 	}
 
-	return newErrs, nil
+	return retErrs
 }
 
 func validationErrsEqualExceptLineNumber(err1, err2 errors.ValidationError) bool {
