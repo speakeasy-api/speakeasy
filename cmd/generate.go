@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/exp/slices"
 
@@ -120,6 +121,22 @@ For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-spe
 	RunE: genSDKs,
 }
 
+var genUsageSnippetCmd = &cobra.Command{
+	Use:   "usage",
+	Short: fmt.Sprintf("Generate standalone usage snippets for SDKs in (%s)", strings.Join(usagegen.SupportedLanguagesUsageSnippets, ", ")),
+	Long: fmt.Sprintf(`Using the "speakeasy generate usage" command you can generate usage snippets for various SDKs.
+
+The following languages are currently supported:
+	- %s
+	- more coming soon
+
+You can generate usage snippets by OperationID or by Namespace. By default this command will write to stdout.
+
+You can also select to write to a file or write to a formatted output directory.
+`, strings.Join(usagegen.SupportedLanguagesUsageSnippets, "\n	- ")),
+	RunE: genUsageSnippets,
+}
+
 var genSDKVersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of the SDK generator",
@@ -147,7 +164,6 @@ func genInit() {
 //nolint:errcheck
 func genSDKInit() {
 	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(generate.GetSupportedLanguages(), ", ")))
-
 	genSDKCmd.Flags().StringP("schema", "s", "./openapi.yaml", "path to the openapi schema")
 	genSDKCmd.MarkFlagRequired("schema")
 
@@ -175,9 +191,18 @@ func genSDKInit() {
 
 	genSDKVersionCmd.Flags().StringP("language", "l", "", "if language is set to one of the supported languages it will print version numbers for that languages features and the changelog for that language")
 
+	genUsageSnippetCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(generate.GetSupportedLanguages(), ", ")))
+	genUsageSnippetCmd.Flags().StringP("schema", "s", "./openapi.yaml", "path to the openapi schema")
+	genUsageSnippetCmd.MarkFlagRequired("schema")
+	genUsageSnippetCmd.Flags().StringP("operation-id", "i", "", "The OperationID to generate usage snippet for")
+	genUsageSnippetCmd.Flags().StringP("namespace", "n", "", "The namespace to generate multiple usage snippets for. This could correspond to a tag or a x-speakeasy-group-name in your OpenAPI spec.")
+	genUsageSnippetCmd.Flags().StringP("out", "o", "", `By default this command will write to stdout. If a filepath is provided results will be written into that file.
+	If the path to an existing directory is provided, all results will be formatted into that directory with each operation getting its own sub folder.`)
+
 	genSDKCmd.AddCommand(genSDKVersionCmd)
 	genSDKCmd.AddCommand(genSDKChangelogCmd)
 	generateCmd.AddCommand(genSDKCmd)
+	generateCmd.AddCommand(genUsageSnippetCmd)
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {
@@ -233,6 +258,27 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir); err != nil {
+		rootCmd.SilenceUsage = true
+
+		return err
+	}
+
+	return nil
+}
+
+func genUsageSnippets(cmd *cobra.Command, args []string) error {
+	lang, _ := cmd.Flags().GetString("lang")
+
+	schemaPath, err := cmd.Flags().GetString("schema")
+	if err != nil {
+		return err
+	}
+
+	out, _ := cmd.Flags().GetString("out")
+	operation, _ := cmd.Flags().GetString("operation-id")
+	namespace, _ := cmd.Flags().GetString("namespace")
+
+	if err := usagegen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, out, operation, namespace); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
