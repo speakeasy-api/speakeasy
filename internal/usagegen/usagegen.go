@@ -22,6 +22,8 @@ var SupportedLanguagesUsageSnippets = []string{
 	"php",
 	"swift",
 	"ruby",
+	"csharp",
+	"unity",
 }
 
 func Generate(ctx context.Context, customerID, lang, schemaPath, out, operation, namespace string) error {
@@ -54,12 +56,11 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, out, operation,
 	}
 
 	if operation == "" && namespace == "" {
-		// TODO: Eventually we will just allow this to default to return the root usage snippets
-		return fmt.Errorf("must supply a operation or namespace")
+		opts = append(opts, generate.WithUsageSnippetArgsByRootExample())
 	} else if operation != "" {
 		opts = append(opts, generate.WithUsageSnippetArgsByOperationID(operation))
 	} else {
-		opts = append(opts, generate.WithUsageSnippetArgsByGroupName(namespace))
+		opts = append(opts, generate.WithUsageSnippetArgsByNamespace(namespace))
 	}
 
 	g, err := generate.New(opts...)
