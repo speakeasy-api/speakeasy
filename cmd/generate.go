@@ -164,6 +164,7 @@ func genInit() {
 //nolint:errcheck
 func genSDKInit() {
 	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(generate.GetSupportedLanguages(), ", ")))
+
 	genSDKCmd.Flags().StringP("schema", "s", "./openapi.yaml", "path to the openapi schema")
 	genSDKCmd.MarkFlagRequired("schema")
 
