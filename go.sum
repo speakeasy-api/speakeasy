@@ -525,10 +525,10 @@ github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeV
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/speakeasy-api/easytemplate v0.7.4 h1:6iesUjK410/ClRYhBZtV2G1H70C3+S3PbWyYOUcnjkM=
 github.com/speakeasy-api/easytemplate v0.7.4/go.mod h1:wpCVerXH0vA5Fu34xgXK2jJC5UEL42WRa6Pk+1K32yw=
-github.com/speakeasy-api/openapi-generation/v2 v2.108.3 h1:ytGhSK0m2ZSMt84W49nK6iyF7PbHThoi1ukMHi758Zw=
-github.com/speakeasy-api/openapi-generation/v2 v2.108.3/go.mod h1:dE5XOSpLWHKjrGxgbuWl28cQQRKmsGVxPJSi+B3vvC4=
-github.com/speakeasy-api/sdk-gen-config v0.8.1 h1:2DQibuWJuWGpCixaDJMiHkQUODKEJOWiklWoBDmqtZA=
-github.com/speakeasy-api/sdk-gen-config v0.8.1/go.mod h1:osr44mhKoRboNtEDMPaDoyH486pLLJH8yvKvnujqnUU=
+github.com/speakeasy-api/openapi-generation/v2 v2.109.1 h1:tMOuPPHW5YU2/pKV4X1rps2fnzc5+EHfnSL05ocy9os=
+github.com/speakeasy-api/openapi-generation/v2 v2.109.1/go.mod h1:FrZu2joLkRAJv5zh2zuMc297EcJBsmT4D4ZUL7HIr50=
+github.com/speakeasy-api/sdk-gen-config v0.8.3 h1:+7aH98feuy6ol47j9XIo8m5LNuWoQHfhV5EhrPd2K/I=
+github.com/speakeasy-api/sdk-gen-config v0.8.3/go.mod h1:osr44mhKoRboNtEDMPaDoyH486pLLJH8yvKvnujqnUU=
 github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0 h1:RqYjM0okHjjEyKRxumaTmZDWt68nGZo1sbIfALyqLCg=
 github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0/go.mod h1:xsmMkmsZjL9uh97GY6VbihZ6jScY90xoq2Dc7ukwB98=
 github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4 h1:Bng5QJOkoz4ECa7gKEiaTM5WOwN6MfkPuw3h84ZXuZ4=
