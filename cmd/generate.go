@@ -18,6 +18,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func SDKSupportedLanguageTargets() []string {
+	languages := make([]string, 0)
+	for _, lang := range generate.GetSupportedLanguages() {
+		if lang == "docs" {
+			continue
+		}
+
+		languages = append(languages, lang)
+	}
+
+	return languages
+}
+
 var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more",
@@ -27,7 +40,7 @@ var generateCmd = &cobra.Command{
 
 var genSDKCmd = &cobra.Command{
 	Use:   "sdk",
-	Short: fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s + more coming soon)", strings.Join(generate.GetSupportedLanguages(), ", ")),
+	Short: fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s + more coming soon)", strings.Join(SDKSupportedLanguageTargets(), ", ")),
 	Long: fmt.Sprintf(`Using the "speakeasy generate sdk" command you can generate client SDK packages for various languages
 that are ready to use and publish to your favorite package registry.
 
@@ -117,7 +130,7 @@ generate:
 `+"```"+`
 
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
-`, strings.Join(generate.GetSupportedLanguages(), "\n	- ")),
+`, strings.Join(SDKSupportedLanguageTargets(), "\n	- ")),
 	RunE: genSDKs,
 }
 
@@ -163,7 +176,7 @@ func genInit() {
 
 //nolint:errcheck
 func genSDKInit() {
-	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(generate.GetSupportedLanguages(), ", ")))
+	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")))
 
 	genSDKCmd.Flags().StringP("schema", "s", "./openapi.yaml", "path to the openapi schema")
 	genSDKCmd.MarkFlagRequired("schema")
@@ -192,7 +205,7 @@ func genSDKInit() {
 
 	genSDKVersionCmd.Flags().StringP("language", "l", "", "if language is set to one of the supported languages it will print version numbers for that languages features and the changelog for that language")
 
-	genUsageSnippetCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(generate.GetSupportedLanguages(), ", ")))
+	genUsageSnippetCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")))
 	genUsageSnippetCmd.Flags().StringP("schema", "s", "./openapi.yaml", "path to the openapi schema")
 	genUsageSnippetCmd.MarkFlagRequired("schema")
 	genUsageSnippetCmd.Flags().StringP("operation-id", "i", "", "The OperationID to generate usage snippet for")
