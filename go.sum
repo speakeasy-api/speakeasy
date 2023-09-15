@@ -533,6 +533,8 @@ github.com/speakeasy-api/openapi-generation/v2 v2.114.0 h1:LW4Gym0XD68mbSft5TvYD
 github.com/speakeasy-api/openapi-generation/v2 v2.114.0/go.mod h1:FrZu2joLkRAJv5zh2zuMc297EcJBsmT4D4ZUL7HIr50=
 github.com/speakeasy-api/openapi-generation/v2 v2.115.2 h1:7DVyzGGRlcyjgwh0a3B3xAp6lTFL+wipZtwkoHk1vxI=
 github.com/speakeasy-api/openapi-generation/v2 v2.115.2/go.mod h1:FrZu2joLkRAJv5zh2zuMc297EcJBsmT4D4ZUL7HIr50=
+github.com/speakeasy-api/openapi-generation/v2 v2.116.0 h1:3sRqdAev8gte963MjcJaR3uXkXIq13pUNZkL2b9ncrc=
+github.com/speakeasy-api/openapi-generation/v2 v2.116.0/go.mod h1:FrZu2joLkRAJv5zh2zuMc297EcJBsmT4D4ZUL7HIr50=
 github.com/speakeasy-api/sdk-gen-config v0.8.3 h1:+7aH98feuy6ol47j9XIo8m5LNuWoQHfhV5EhrPd2K/I=
 github.com/speakeasy-api/sdk-gen-config v0.8.3/go.mod h1:osr44mhKoRboNtEDMPaDoyH486pLLJH8yvKvnujqnUU=
 github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0 h1:RqYjM0okHjjEyKRxumaTmZDWt68nGZo1sbIfALyqLCg=
