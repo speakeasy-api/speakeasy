@@ -24,7 +24,9 @@ you must first create an API key via https://app.speakeasyapi.dev and then set t
 var severities = fmt.Sprintf("%s, %s, or %s", errors.SeverityError, errors.SeverityWarn, errors.SeverityHint)
 
 func suggestInit() {
-	suggestCmd.Flags().StringP("schema", "s", "", "path to a directory containing OpenAPI document(s) or a single OpenAPI document itself")
+	suggestCmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
+	suggestCmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
+	suggestCmd.Flags().StringP("schema", "s", "./openapi.yaml", "local path to a directory containing OpenAPI schema(s), or a single OpenAPI schema, or a remote URL to an OpenAPI schema")
 	suggestCmd.Flags().BoolP("auto-approve", "a", false, "auto continue through all prompts")
 	suggestCmd.Flags().StringP("output-file", "o", "", "output the modified file with suggested fixes applied to the specified path")
 	suggestCmd.Flags().IntP("max-suggestions", "n", -1, "maximum number of llm suggestions to fetch, the default is no limit")
@@ -46,10 +48,17 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	schemaPathFileInfo, err := os.Stat(schemaPath)
+	header, err := cmd.Flags().GetString("header")
 	if err != nil {
 		return err
 	}
+
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		return err
+	}
+
+	schemaPathFileInfo, _ := os.Stat(schemaPath)
 
 	autoApprove, err := cmd.Flags().GetBool("auto-approve")
 	if err != nil {
@@ -71,7 +80,7 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if schemaPathFileInfo.IsDir() && outputFile != "" {
+	if schemaPathFileInfo != nil && schemaPathFileInfo.IsDir() && outputFile != "" {
 		return goerr.New("cannot specify an output file when running suggest on a directory of specs")
 	}
 
@@ -135,7 +144,8 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		suggestionConfig.ValidationLoops = &validationLoops
 	}
 
-	err = suggestions.StartSuggest(cmd.Context(), schemaPath, schemaPathFileInfo.IsDir(), &suggestionConfig)
+	isDir := schemaPathFileInfo != nil && schemaPathFileInfo.IsDir()
+	err = suggestions.StartSuggest(cmd.Context(), schemaPath, header, token, isDir, &suggestionConfig)
 	if err != nil {
 		rootCmd.SilenceUsage = true
 		return err

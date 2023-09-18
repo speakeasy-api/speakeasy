@@ -4,6 +4,7 @@ import (
 	"context"
 	goerr "errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"os"
 	"os/signal"
 	"strconv"
@@ -34,7 +35,7 @@ type CountAndErrors struct {
 	Errors []string
 }
 
-func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestionsConfig *Config) error {
+func StartSuggest(ctx context.Context, schemaPath, header, token string, isDir bool, suggestionsConfig *Config) error {
 	totalErrorSummary := allSchemasErrorSummary{}
 
 	if isDir {
@@ -63,7 +64,7 @@ func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestion
 		}
 
 		for _, filePath := range filePaths {
-			errorSummary, err := startSuggestSchemaFile(ctx, filePath, suggestionsConfig)
+			errorSummary, err := startSuggestSchemaFile(ctx, filePath, header, token, suggestionsConfig)
 			if err != nil {
 				return err
 			}
@@ -71,7 +72,7 @@ func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestion
 			totalErrorSummary[filePath] = errorSummary
 		}
 	} else {
-		errorSummary, err := startSuggestSchemaFile(ctx, schemaPath, suggestionsConfig)
+		errorSummary, err := startSuggestSchemaFile(ctx, schemaPath, header, token, suggestionsConfig)
 		if err != nil {
 			return err
 		}
@@ -89,16 +90,16 @@ func StartSuggest(ctx context.Context, schemaPath string, isDir bool, suggestion
 	return nil
 }
 
-func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsConfig *Config) (*SchemaErrorSummary, error) {
+func startSuggestSchemaFile(ctx context.Context, schemaPath, header, token string, suggestionsConfig *Config) (*SchemaErrorSummary, error) {
 	fmt.Println("Validating OpenAPI spec...")
 	fmt.Println()
 
-	schema, err := os.ReadFile(schemaPath)
+	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+		return nil, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	errs, err := validate(schema, schemaPath, suggestionsConfig.Level, true)
+	errs, err := validate(schema, schemaPath, suggestionsConfig.Level, isRemote, true)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsC
 			return nil, fmt.Errorf("failed to convert schema file from YAML to JSON %s: %w", schemaPath, err)
 		}
 
-		jsonErrs, err := validate(schema, schemaPath, suggestionsConfig.Level, false)
+		jsonErrs, err := validate(schema, schemaPath, suggestionsConfig.Level, isRemote, false)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +132,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsC
 		}
 	}
 
-	errorSummary, err := suggest(schema, schemaPath, errsWithLineNums, *suggestionsConfig)
+	errorSummary, err := suggest(schema, schemaPath, errsWithLineNums, *suggestionsConfig, isRemote)
 	if err != nil {
 		fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
 		return nil, err
@@ -149,7 +150,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath string, suggestionsC
 	return errorSummary, nil
 }
 
-func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommentLineNumber, config Config) (*SchemaErrorSummary, error) {
+func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommentLineNumber, config Config, isRemote bool) (*SchemaErrorSummary, error) {
 	if len(errsWithLineNums) == 0 {
 		return nil, nil
 	}
@@ -184,7 +185,7 @@ func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommen
 		}()
 	}
 
-	suggest, err := New(suggestionToken, schemaPath, fileType, schema, config)
+	suggest, err := New(suggestionToken, schemaPath, fileType, schema, isRemote, config)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +258,7 @@ func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommen
 
 		suggest.suggestionCount++
 
-		newErrs, err := validate(suggest.File, suggest.FilePath, suggest.Config.Level, false)
+		newErrs, err := validate(suggest.File, suggest.FilePath, suggest.Config.Level, isRemote, false)
 		if err != nil {
 			return nil, err
 		}

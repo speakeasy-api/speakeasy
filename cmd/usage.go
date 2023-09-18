@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,8 +12,8 @@ import (
 )
 
 const (
-	fileFlag = "file"
-	outFlag  = "out"
+	defaultOutFile = "openapi.csv"
+	outFlag        = "out"
 )
 
 func usageInit() {
@@ -22,8 +23,12 @@ func usageInit() {
 		Long:  `Output usage information containing counts of OpenAPI features for a given OpenAPI schema to a CSV`,
 		RunE:  genUsage,
 	}
-	usageCmd.Flags().StringP("file", "f", "", "Path to file to generate usage information for")
-	usageCmd.MarkFlagRequired("file")
+	usageCmd.Flags().StringP("schema", "s", "./openapi.yaml", "local filepath or URL for the OpenAPI schema")
+	usageCmd.MarkFlagRequired("schema")
+
+	usageCmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
+	usageCmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
+
 	usageCmd.Flags().StringP("out", "o", "", "Path to output file")
 	usageCmd.Flags().BoolP("debug", "d", false, "enable writing debug files with broken code")
 
@@ -31,15 +36,28 @@ func usageInit() {
 }
 
 func genUsage(cmd *cobra.Command, args []string) error {
-	file, err := cmd.Flags().GetString(fileFlag)
+	schemaPath, err := cmd.Flags().GetString("schema")
 	if err != nil {
 		return err
 	}
-	if file == "" {
-		return fmt.Errorf("%s not set", fileFlag)
+
+	header, err := cmd.Flags().GetString("header")
+	if err != nil {
+		return err
 	}
 
-	out := filepath.Join(strings.TrimSuffix(file, filepath.Ext(file)) + ".csv")
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		return err
+	}
+
+	var out string
+	if _, err := os.Stat(schemaPath); err == nil {
+		out = filepath.Join(strings.TrimSuffix(schemaPath, filepath.Ext(schemaPath)) + ".csv")
+	} else {
+		out = defaultOutFile
+	}
+
 	if cmd.Flags().Lookup(outFlag).Changed {
 		out, err = cmd.Flags().GetString(outFlag)
 		if err != nil {
@@ -52,7 +70,7 @@ func genUsage(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err = usage.OutputUsage(cmd, file, out, debug); err != nil {
+	if err = usage.OutputUsage(cmd, schemaPath, header, token, out, debug); err != nil {
 		rootCmd.SilenceUsage = true
 		return fmt.Errorf(utils.Red("%w"), err)
 	}

@@ -3,6 +3,7 @@ package sdkgen
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"os"
 	"path"
 	"strings"
@@ -15,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string) error {
 	if !generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -31,9 +32,9 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 		outDir = wd
 	}
 
-	schema, err := os.ReadFile(schemaPath)
+	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
 	if err := filetracking.CleanDir(outDir, autoYes); err != nil {
@@ -81,7 +82,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, outDir, genVers
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, schemaPath, lang, outDir); len(errs) > 0 {
+	if errs := g.Generate(context.Background(), schema, schemaPath, lang, outDir, isRemote); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error("", zap.Error(err))
 		}

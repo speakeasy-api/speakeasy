@@ -37,6 +37,7 @@ type Suggestions struct {
 	Verbose  bool
 	Config   Config
 
+	isRemote            bool
 	suggestionCount     int
 	validationLoopCount int
 	toSkip              []error
@@ -60,7 +61,7 @@ type errorAndCommentLineNumber struct {
 	lineNumber int
 }
 
-func New(token, filePath, fileType string, file []byte, config Config) (*Suggestions, error) {
+func New(token, filePath, fileType string, file []byte, isRemote bool, config Config) (*Suggestions, error) {
 	lineSplit := strings.Split(string(file), "\n")
 	lines := make(map[int]string)
 	for i, line := range lineSplit {
@@ -75,6 +76,7 @@ func New(token, filePath, fileType string, file []byte, config Config) (*Suggest
 		Config:   config,
 		Verbose:  true,
 		lines:    lines,
+		isRemote: isRemote,
 	}, nil
 }
 
@@ -260,7 +262,7 @@ func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSu
 			return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
 
-		newErrs, err := validate(newFile, s.FilePath, s.Config.Level, false)
+		newErrs, err := validate(newFile, s.FilePath, s.Config.Level, s.isRemote, false)
 		if err != nil {
 			return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: Caused validation to fail with error: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
@@ -279,7 +281,7 @@ func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSu
 }
 
 func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber, error) {
-	errs, err := validate(s.File, s.FilePath, s.Config.Level, printSummary)
+	errs, err := validate(s.File, s.FilePath, s.Config.Level, s.isRemote, printSummary)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +293,7 @@ func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber
 			return nil, err
 		}
 
-		yamlErrs, err := validate(yamlFile, s.FilePath, s.Config.Level, false)
+		yamlErrs, err := validate(yamlFile, s.FilePath, s.Config.Level, s.isRemote, false)
 		if err != nil {
 			return nil, err
 		}
@@ -312,8 +314,8 @@ func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber
 	return errsWithLineNums, nil
 }
 
-func validate(schema []byte, schemaPath string, level errors.Severity, printSummary bool) ([]error, error) {
-	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, true)
+func validate(schema []byte, schemaPath string, level errors.Severity, isRemote, printSummary bool) ([]error, error) {
+	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, isRemote, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate YAML: %v", err)
 	}

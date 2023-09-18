@@ -8,25 +8,26 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
 	"os"
 )
 
-func ValidateOpenAPI(ctx context.Context, schemaPath string, outputHints bool) error {
+func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, outputHints bool) error {
 	fmt.Println("Validating OpenAPI spec...")
 	fmt.Println()
 
-	schema, err := os.ReadFile(schemaPath)
+	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
 	l := log.NewLogger(schemaPath)
 
 	hasWarnings := false
 
-	vErrs, vWarns, vInfo, err := Validate(schema, schemaPath, outputHints)
+	vErrs, vWarns, vInfo, err := Validate(schema, schemaPath, outputHints, isRemote)
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath string, outputHints bool) e
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(schema []byte, schemaPath string, outputHints bool) ([]error, []error, []error, error) {
+func Validate(schema []byte, schemaPath string, outputHints, isRemote bool) ([]error, []error, []error, error) {
 	// Set to error because g.Validate sometimes logs all warnings for some reason
 	l := logging.NewLogger(zap.ErrorLevel)
 
@@ -81,7 +82,7 @@ func Validate(schema []byte, schemaPath string, outputHints bool) ([]error, []er
 		return nil, nil, nil, err
 	}
 
-	errs := g.Validate(context.Background(), schema, schemaPath, outputHints)
+	errs := g.Validate(context.Background(), schema, schemaPath, outputHints, isRemote)
 	var vErrs []error
 	var vWarns []error
 	var vInfo []error

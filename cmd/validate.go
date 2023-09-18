@@ -39,8 +39,11 @@ func validateInit() {
 //nolint:errcheck
 func validateOpenAPIInit() {
 	validateOpenAPICmd.Flags().BoolP("output-hints", "o", false, "output validation hints in addition to warnings/errors")
-	validateOpenAPICmd.Flags().StringP("schema", "s", "", "path to the OpenAPI document")
+	validateOpenAPICmd.Flags().StringP("schema", "s", "", "local filepath or URL for the OpenAPI schema")
 	_ = validateOpenAPICmd.MarkFlagRequired("schema")
+
+	validateOpenAPICmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
+	validateOpenAPICmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
 
 	validateCmd.AddCommand(validateOpenAPICmd)
 }
@@ -60,12 +63,22 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	header, err := cmd.Flags().GetString("header")
+	if err != nil {
+		return err
+	}
+
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		return err
+	}
+
 	outputHints, err := cmd.Flags().GetBool("output-hints")
 	if err != nil {
 		return err
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, outputHints); err != nil {
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, header, token, outputHints); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
