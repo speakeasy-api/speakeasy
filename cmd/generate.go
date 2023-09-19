@@ -178,8 +178,11 @@ func genInit() {
 func genSDKInit() {
 	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")))
 
-	genSDKCmd.Flags().StringP("schema", "s", "./openapi.yaml", "path to the openapi schema")
+	genSDKCmd.Flags().StringP("schema", "s", "./openapi.yaml", "local filepath or URL for the OpenAPI schema")
 	genSDKCmd.MarkFlagRequired("schema")
+
+	genSDKCmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
+	genSDKCmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
 
 	genSDKCmd.Flags().StringP("out", "o", "", "path to the output directory")
 	genSDKCmd.MarkFlagRequired("out")
@@ -208,6 +211,8 @@ func genSDKInit() {
 	genUsageSnippetCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")))
 	genUsageSnippetCmd.Flags().StringP("schema", "s", "./openapi.yaml", "path to the openapi schema")
 	genUsageSnippetCmd.MarkFlagRequired("schema")
+	genUsageSnippetCmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
+	genUsageSnippetCmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
 	genUsageSnippetCmd.Flags().StringP("operation-id", "i", "", "The OperationID to generate usage snippet for")
 	genUsageSnippetCmd.Flags().StringP("namespace", "n", "", "The namespace to generate multiple usage snippets for. This could correspond to a tag or a x-speakeasy-group-name in your OpenAPI spec.")
 	genUsageSnippetCmd.Flags().StringP("out", "o", "", `By default this command will write to stdout. If a filepath is provided results will be written into that file.
@@ -227,6 +232,16 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 	lang, _ := cmd.Flags().GetString("lang")
 
 	schemaPath, err := cmd.Flags().GetString("schema")
+	if err != nil {
+		return err
+	}
+
+	header, err := cmd.Flags().GetString("header")
+	if err != nil {
+		return err
+	}
+
+	token, err := cmd.Flags().GetString("token")
 	if err != nil {
 		return err
 	}
@@ -271,7 +286,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir); err != nil {
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, header, token, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
@@ -288,11 +303,21 @@ func genUsageSnippets(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	header, err := cmd.Flags().GetString("header")
+	if err != nil {
+		return err
+	}
+
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		return err
+	}
+
 	out, _ := cmd.Flags().GetString("out")
 	operation, _ := cmd.Flags().GetString("operation-id")
 	namespace, _ := cmd.Flags().GetString("namespace")
 
-	if err := usagegen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, out, operation, namespace); err != nil {
+	if err := usagegen.Generate(cmd.Context(), config.GetCustomerID(), lang, schemaPath, header, token, out, operation, namespace); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"os"
 	"strings"
 
@@ -26,7 +27,7 @@ var SupportedLanguagesUsageSnippets = []string{
 	"unity",
 }
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, out, operation, namespace string) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace string) error {
 	matchedLanguage := false
 	for _, language := range SupportedLanguagesUsageSnippets {
 		if language == lang {
@@ -38,9 +39,9 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, out, operation,
 		return fmt.Errorf("language not supported: %s", lang)
 	}
 
-	schema, err := os.ReadFile(schemaPath)
+	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
+		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
 	l := log.NewLogger(schemaPath)
@@ -68,7 +69,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, out, operation,
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, schemaPath, lang, ""); len(errs) > 0 {
+	if errs := g.Generate(context.Background(), schema, schemaPath, lang, "", isRemote); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error("", zap.Error(err))
 		}
