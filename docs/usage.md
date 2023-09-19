@@ -17,10 +17,12 @@ speakeasy usage [flags]
 ### Options
 
 ```
-  -d, --debug         enable writing debug files with broken code
-  -f, --file string   Path to file to generate usage information for
-  -h, --help          help for usage
-  -o, --out string    Path to output file
+  -d, --debug           enable writing debug files with broken code
+  -H, --header string   header key to use if authentication is required for downloading schema from remote URL
+  -h, --help            help for usage
+  -o, --out string      Path to output file
+  -s, --schema string   local filepath or URL for the OpenAPI schema (default "./openapi.yaml")
+      --token string    token value to use if authentication is required for downloading schema from remote URL
 ```
 
 ### Parent Command

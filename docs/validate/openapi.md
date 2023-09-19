@@ -17,9 +17,11 @@ speakeasy validate openapi [flags]
 ### Options
 
 ```
+  -H, --header string   header key to use if authentication is required for downloading schema from remote URL
   -h, --help            help for openapi
   -o, --output-hints    output validation hints in addition to warnings/errors
-  -s, --schema string   path to the OpenAPI document
+  -s, --schema string   local filepath or URL for the OpenAPI schema
+      --token string    token value to use if authentication is required for downloading schema from remote URL
 ```
 
 ### Parent Command
