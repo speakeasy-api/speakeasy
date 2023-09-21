@@ -272,7 +272,7 @@ The tables below give an overview of what we support from OpenAPI.
 | Optional | | | ✅ |
 | Maps | | | ✅ |
 | Any type | | | ✅ |
-| OneOf/AnyOf/AllOf | |[oneof-anyof-allof-not](https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/)| ✅ |
+| OneOf/AnyOf/AllOf | anyOf treated as oneOf |[oneof-anyof-allof-not](https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/)| ✅ |
 
 ### ✅  Miscellaneous
 
