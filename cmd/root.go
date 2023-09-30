@@ -43,7 +43,6 @@ func Init(version, artifactArch string) {
 	apiInit()
 	validateInit()
 	authInit()
-	usageInit()
 	mergeInit()
 	updateInit(version, artifactArch)
 	suggestInit()
