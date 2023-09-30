@@ -35,5 +35,4 @@ speakeasy [flags]
 * [speakeasy proxy](proxy.md)	 - Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities
 * [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
-* [speakeasy usage](usage.md)	 - Output usage information for a given OpenAPI schema to a CSV
 * [speakeasy validate](validate/README.md)	 - Validate OpenAPI documents + more (coming soon)
