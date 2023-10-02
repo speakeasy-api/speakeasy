@@ -1,0 +1,35 @@
+```typescript showLineNumbers copy filename="Multiple Options With Mixed Schemes Auth usage example"
+import { SDK } from "openapi";
+import {
+  MultipleOptionsWithMixedSchemesAuthResponse,
+  MultipleOptionsWithMixedSchemesAuthSecurity,
+} from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+const operationSecurity: MultipleOptionsWithMixedSchemesAuthSecurity = {
+  option1: {
+    apiKeyAuthNew: "Token <YOUR_API_KEY>",
+    oauth2: "Bearer YOUR_OAUTH2_TOKEN",
+  },
+};
+
+sdk.authNew.multipleOptionsWithMixedSchemesAuth({
+  basicAuth: {
+    password: "cinHFat8XtbXe_P",
+    username: "Kacie64",
+  },
+  headerAuth: [
+    {
+      expectedValue: "Balboa Intersex",
+      headerName: "repurpose Response",
+    },
+  ],
+}, operationSecurity).then((res: MultipleOptionsWithMixedSchemesAuthResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

@@ -1,0 +1,36 @@
+```go showLineNumbers copy filename="Response Body Additional Properties Complex Numbers Post usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"math/big"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.ResponseBodies.ResponseBodyAdditionalPropertiesComplexNumbersPost(ctx, shared.ObjWithComplexNumbersAdditionlProperties{
+        AdditionalProperties: map[string]*big.Int{
+            "libero": big.NewInt(72350),
+        },
+        NormalField: "visionary",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.ResponseBodyAdditionalPropertiesComplexNumbersPost200ApplicationJSONObject != nil {
+        // handle response
+    }
+}
+```

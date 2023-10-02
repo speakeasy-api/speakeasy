@@ -1,0 +1,18 @@
+```typescript showLineNumbers copy filename="Api Key Auth usage example"
+import { SDK } from "openapi";
+import { ApiKeyAuthResponse, ApiKeyAuthSecurity } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+const operationSecurity: ApiKeyAuthSecurity = {
+  apiKeyAuth: "Token YOUR_API_KEY",
+};
+
+sdk.auth.apiKeyAuth(operationSecurity).then((res: ApiKeyAuthResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

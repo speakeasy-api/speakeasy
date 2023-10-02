@@ -1,0 +1,71 @@
+import Enum from "/content/models/shared/enum/typescript.mdx"
+import SimpleObjectCamelCaseInt32EnumVal from "/content/models/shared/simple_object_camel_case_int32_enum_val/typescript.mdx"
+import SimpleObjectCamelCaseIntEnumVal from "/content/models/shared/simple_object_camel_case_int_enum_val/typescript.mdx"
+import Collapsible from "/components/collapsible";
+
+##### **anyVal** any
+An any property.
+
+##### **bigintStrVal?** string
+
+##### **bigintVal?** number
+
+##### **boolOptVal?** boolean
+An optional boolean property.
+
+##### **boolVal** boolean
+A boolean property.
+
+##### **dateTimeVal** [Date](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date)
+A date-time property.
+
+##### **dateVal** RFCDate
+A date property.
+
+##### **decimalVal?** number
+
+<Collapsible>
+    ##### **enumVal** Enum
+    A string based enum
+    <Collapsible.Break/>
+    <Enum/>
+</Collapsible>
+
+##### **float32Val** number
+A float32 property.
+
+<Collapsible>
+    ##### **int32EnumVal** SimpleObjectCamelCaseInt32EnumVal
+    An int32 enum property.
+    <Collapsible.Break/>
+    <SimpleObjectCamelCaseInt32EnumVal/>
+</Collapsible>
+
+##### **int32Val** number
+An int32 property.
+
+<Collapsible>
+    ##### **intEnumVal** SimpleObjectCamelCaseIntEnumVal
+    An integer enum property.
+    <Collapsible.Break/>
+    <SimpleObjectCamelCaseIntEnumVal/>
+</Collapsible>
+
+##### **intOptNullVal?** number
+An optional integer property will be null for tests.
+
+##### **intVal** number
+An integer property.
+
+##### **numOptNullVal?** number
+An optional number property will be null for tests.
+
+##### **numVal** number
+A number property.
+
+##### **strOptVal?** string
+An optional string property.
+
+##### **strVal** string
+A string property.
+

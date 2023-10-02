@@ -1,0 +1,55 @@
+```go showLineNumbers copy filename="Path Parameter Json usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"openapi/pkg/models/operations"
+	"math/big"
+	"openapi/pkg/types"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.Parameters.PathParameterJSON(ctx, operations.PathParameterJSONRequest{
+        JSONObj: shared.SimpleObject{
+            Any: "drat",
+            Bigint: big.NewInt(592081),
+            BigintStr: big.NewInt(337477),
+            Bool: true,
+            BoolOpt: openapi.Bool(true),
+            Date: types.MustDateFromString("2020-01-01"),
+            DateTime: types.MustTimeFromString("2020-01-01T00:00:00.000Z"),
+            Decimal: types.MustNewDecimalFromString("4317.85"),
+            Enum: shared.EnumTwo,
+            Float32: 2.2222222,
+            Int: 999999,
+            Int32: 1,
+            Int32Enum: shared.SimpleObjectInt32EnumOneHundredAndEightyOne,
+            IntEnum: shared.SimpleObjectIntEnumSecond,
+            IntOptNull: openapi.Int64(999999),
+            Num: 1.1,
+            NumOptNull: openapi.Float64(1.1),
+            Str: "example",
+            StrOpt: openapi.String("optional example"),
+        },
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Res != nil {
+        // handle response
+    }
+}
+```

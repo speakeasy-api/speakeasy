@@ -1,0 +1,29 @@
+```typescript showLineNumbers copy filename="Open Id Connect Auth New usage example"
+import { SDK } from "openapi";
+import { OpenIdConnectAuthNewResponse, OpenIdConnectAuthNewSecurity } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+const operationSecurity: OpenIdConnectAuthNewSecurity = {
+  openIdConnect: "Bearer YOUR_OPENID_TOKEN",
+};
+
+sdk.authNew.openIdConnectAuthNew({
+  basicAuth: {
+    password: "D2TrgaNLaSZvdM5",
+    username: "Jacky.Ondricka13",
+  },
+  headerAuth: [
+    {
+      expectedValue: "Oriental",
+      headerName: "functionalities moderator World",
+    },
+  ],
+}, operationSecurity).then((res: OpenIdConnectAuthNewResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

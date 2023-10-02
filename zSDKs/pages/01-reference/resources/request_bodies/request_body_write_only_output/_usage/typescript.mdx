@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Request Body Write Only Output usage example"
+import { SDK } from "openapi";
+import { RequestBodyWriteOnlyOutputResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyWriteOnlyOutput({
+  bool: false,
+  num: 2404.9,
+  string: "Fantastic male",
+}).then((res: RequestBodyWriteOnlyOutputResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

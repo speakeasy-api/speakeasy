@@ -1,0 +1,29 @@
+```typescript showLineNumbers copy filename="Multiple Simple Options Auth usage example"
+import { SDK } from "openapi";
+import { MultipleSimpleOptionsAuthResponse, MultipleSimpleOptionsAuthSecurity } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+const operationSecurity: MultipleSimpleOptionsAuthSecurity = {
+  apiKeyAuthNew: "Token <YOUR_API_KEY>",
+};
+
+sdk.authNew.multipleSimpleOptionsAuth({
+  basicAuth: {
+    password: "0Q0kqsmHWGcDLHe",
+    username: "Ambrose_Streich",
+  },
+  headerAuth: [
+    {
+      expectedValue: "Coupe",
+      headerName: "Bicycle",
+    },
+  ],
+}, operationSecurity).then((res: MultipleSimpleOptionsAuthResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

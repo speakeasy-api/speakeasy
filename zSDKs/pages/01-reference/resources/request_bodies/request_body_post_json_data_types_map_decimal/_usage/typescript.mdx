@@ -1,0 +1,20 @@
+```typescript showLineNumbers copy filename="Request Body Post Json Data Types Map Decimal usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostJsonDataTypesMapDecimalResponse1 } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostJsonDataTypesMapDecimal({
+  "illum": 6707.62,
+}).then((res: RequestBodyPostJsonDataTypesMapDecimalResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

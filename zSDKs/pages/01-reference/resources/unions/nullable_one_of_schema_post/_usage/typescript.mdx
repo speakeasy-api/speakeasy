@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Nullable One Of Schema Post usage example"
+import { SDK } from "openapi";
+import { NullableOneOfSchemaPostResponse1 } from "openapi/dist/sdk/models/operations";
+import { TypedObject1Type, TypedObject2Type } from "openapi/dist/sdk/models/shared";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.unions.nullableOneOfSchemaPost({
+  type: TypedObject1Type.Obj1,
+  value: "Interface South",
+}).then((res: NullableOneOfSchemaPostResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

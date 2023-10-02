@@ -1,0 +1,56 @@
+```go showLineNumbers copy filename="Request Body Post Application Json Map Of Map Camel Case usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"math/big"
+	"openapi/pkg/types"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.RequestBodies.RequestBodyPostApplicationJSONMapOfMapCamelCase(ctx, map[string]map[string]shared.SimpleObjectCamelCase{
+        "delectus": map[string]shared.SimpleObjectCamelCase{
+            "minima": shared.SimpleObjectCamelCase{
+                AnyVal: "synthesizing",
+                BigintStrVal: big.NewInt(300403),
+                BigintVal: big.NewInt(836364),
+                BoolOptVal: openapi.Bool(true),
+                BoolVal: true,
+                DateTimeVal: types.MustTimeFromString("2020-01-01T00:00:00Z"),
+                DateVal: types.MustDateFromString("2020-01-01"),
+                DecimalVal: types.MustNewDecimalFromString("5495.01"),
+                EnumVal: shared.EnumTwo,
+                Float32Val: 2.2222222,
+                Int32EnumVal: shared.SimpleObjectCamelCaseInt32EnumValSixtyNine,
+                Int32Val: 1,
+                IntEnumVal: shared.SimpleObjectCamelCaseIntEnumValThird,
+                IntOptNullVal: openapi.Int64(999999),
+                IntVal: 999999,
+                NumOptNullVal: openapi.Float64(1.1),
+                NumVal: 1.1,
+                StrOptVal: openapi.String("optional example"),
+                StrVal: "example",
+            },
+        },
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Res != nil {
+        // handle response
+    }
+}
+```

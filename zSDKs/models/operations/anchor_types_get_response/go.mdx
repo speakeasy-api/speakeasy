@@ -1,0 +1,19 @@
+import TypeFromAnchor from "/content/models/operations/type_from_anchor/go.mdx"
+import Collapsible from "/components/collapsible";
+
+##### **ContentType** string
+HTTP response content type for this operation
+
+##### **StatusCode** int
+HTTP response status code for this operation
+
+##### **RawResponse** [*http.Response](https://pkg.go.dev/net/http#Response)
+Raw HTTP response; suitable for custom response parsing
+
+<Collapsible>
+    ##### **TypeFromAnchor** *TypeFromAnchor
+    A successful response that contains the simpleObject sent in the request body
+    <Collapsible.Break/>
+    <TypeFromAnchor/>
+</Collapsible>
+

@@ -1,0 +1,38 @@
+```go showLineNumbers copy filename="Request Body Post Multiple Content Types Split Param Json usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"openapi/pkg/models/operations"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.RequestBodies.RequestBodyPostMultipleContentTypesSplitParamJSON(ctx, operations.RequestBodyPostMultipleContentTypesSplitParamJSONRequest{
+        RequestBody: operations.RequestBodyPostMultipleContentTypesSplitParamApplicationJSON{
+            Bool: false,
+            Num: 8890.6,
+            Str: "Lawrencium North Developer",
+        },
+        ParamStr: "Orange fuchsia haptic",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Res != nil {
+        // handle response
+    }
+}
+```

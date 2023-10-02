@@ -1,0 +1,25 @@
+```typescript showLineNumbers copy filename="Pagination Limit Offset Offset Params usage example"
+import { SDK } from "openapi";
+import { PaginationLimitOffsetOffsetParamsResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.pagination.paginationLimitOffsetOffsetParams({
+  limit: 289776,
+  offset: 695270,
+}).then((res: PaginationLimitOffsetOffsetParamsResponse) => {
+  if (res.statusCode == 200) {
+    do {
+      // handle items
+
+      res = res.next();
+    } while (res);
+  }
+});
+```

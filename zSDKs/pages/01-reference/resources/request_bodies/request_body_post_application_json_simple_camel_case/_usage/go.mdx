@@ -1,0 +1,52 @@
+```go showLineNumbers copy filename="Request Body Post Application Json Simple Camel Case usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"math/big"
+	"openapi/pkg/types"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.RequestBodies.RequestBodyPostApplicationJSONSimpleCamelCase(ctx, shared.SimpleObjectCamelCase{
+        AnyVal: "interfaces",
+        BigintStrVal: big.NewInt(880679),
+        BigintVal: big.NewInt(774684),
+        BoolOptVal: openapi.Bool(true),
+        BoolVal: true,
+        DateTimeVal: types.MustTimeFromString("2020-01-01T00:00:00Z"),
+        DateVal: types.MustDateFromString("2020-01-01"),
+        DecimalVal: types.MustNewDecimalFromString("9450.27"),
+        EnumVal: shared.EnumTwo,
+        Float32Val: 2.2222222,
+        Int32EnumVal: shared.SimpleObjectCamelCaseInt32EnumValOneHundredAndEightyOne,
+        Int32Val: 1,
+        IntEnumVal: shared.SimpleObjectCamelCaseIntEnumValThird,
+        IntOptNullVal: openapi.Int64(999999),
+        IntVal: 999999,
+        NumOptNullVal: openapi.Float64(1.1),
+        NumVal: 1.1,
+        StrOptVal: openapi.String("optional example"),
+        StrVal: "example",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Res != nil {
+        // handle response
+    }
+}
+```

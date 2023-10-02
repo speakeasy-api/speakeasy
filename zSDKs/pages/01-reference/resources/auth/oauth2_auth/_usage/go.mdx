@@ -1,0 +1,30 @@
+```go showLineNumbers copy filename="Oauth2 Auth usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/operations"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+    operationSecurity := operations.Oauth2AuthSecurity{
+            Oauth2: "Bearer YOUR_OAUTH2_TOKEN",
+        }
+
+    ctx := context.Background()
+    res, err := s.Auth.Oauth2Auth(ctx, operationSecurity)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Token != nil {
+        // handle response
+    }
+}
+```

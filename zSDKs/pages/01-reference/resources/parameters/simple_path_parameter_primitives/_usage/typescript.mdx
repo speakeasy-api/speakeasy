@@ -1,0 +1,23 @@
+```typescript showLineNumbers copy filename="Simple Path Parameter Primitives usage example"
+import { SDK } from "openapi";
+import { SimplePathParameterPrimitivesResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.parameters.simplePathParameterPrimitives({
+  boolParam: false,
+  intParam: 1,
+  numParam: 1000.14,
+  strParam: "Rustic",
+}).then((res: SimplePathParameterPrimitivesResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

@@ -1,0 +1,57 @@
+```typescript showLineNumbers copy filename="Create Resource usage example"
+import { SDK } from "openapi";
+import { CreateResourceResponse1 } from "openapi/dist/sdk/models/operations";
+import {
+  ExampleBoatType,
+  ExampleCarType,
+  ExampleResourceEnumNumber,
+  ExampleResourceEnumStr,
+} from "openapi/dist/sdk/models/shared";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.resource.createResource({
+  arrayOfNumber: [
+    603.35,
+  ],
+  arrayOfString: [
+    "henry",
+  ],
+  chocolates: [
+    {
+      description: "Decentralized bandwidth-monitored hardware",
+    },
+  ],
+  createdAt: new Date("2022-10-15T03:56:17.171Z"),
+  enumNumber: ExampleResourceEnumNumber.Three,
+  enumStr: ExampleResourceEnumStr.Two,
+  id: "<ID>",
+  mapOfInteger: {
+    "architecto": 33771,
+  },
+  mapOfString: {
+    "perferendis": "Northeast",
+  },
+  name: "Uruguayo Concrete Oval",
+  updatedAt: new Date("2023-12-14T07:40:42.843Z"),
+  vehicle: {
+    createdAt: new Date("2023-02-03T13:50:20.088Z"),
+    make: "matrix Awesome Astatine",
+    model: "Silverado",
+    name: "olive likewise Bicycle",
+    type: ExampleCarType.Car,
+    updatedAt: new Date("2022-02-07T09:15:05.372Z"),
+    year: 8487.22,
+  },
+}).then((res: CreateResourceResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

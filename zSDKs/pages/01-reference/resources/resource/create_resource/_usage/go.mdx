@@ -1,0 +1,56 @@
+```go showLineNumbers copy filename="Create Resource usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"openapi/pkg/types"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.Resource.CreateResource(ctx, shared.ExampleResource{
+        ArrayOfNumber: []float64{
+            8152,
+        },
+        ArrayOfString: []string{
+            "female",
+        },
+        Chocolates: []shared.ExampleResourceChocolates{
+            shared.ExampleResourceChocolates{
+                Description: "Fully-configurable zero administration utilisation",
+            },
+        },
+        CreatedAt: types.MustTimeFromString("2021-06-27T18:46:00.394Z"),
+        EnumNumber: shared.ExampleResourceEnumNumberThree.ToPointer(),
+        EnumStr: shared.ExampleResourceEnumStrOne.ToPointer(),
+        ID: "<ID>",
+        MapOfInteger: map[string]int64{
+            "rerum": 179795,
+        },
+        MapOfString: map[string]string{
+            "reprehenderit": "Diverse",
+        },
+        Name: "Mobility mortally",
+        UpdatedAt: types.MustTimeFromString("2021-08-30T00:19:46.153Z"),
+        Vehicle: shared.ExampleVehicle{},
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.ExampleResource != nil {
+        // handle response
+    }
+}
+```

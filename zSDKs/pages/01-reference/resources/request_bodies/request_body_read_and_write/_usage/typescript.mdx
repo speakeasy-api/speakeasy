@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Request Body Read And Write usage example"
+import { SDK } from "openapi";
+import { RequestBodyReadAndWriteResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyReadAndWrite({
+  num1: 330440,
+  num2: 893773,
+  num3: 638390,
+}).then((res: RequestBodyReadAndWriteResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

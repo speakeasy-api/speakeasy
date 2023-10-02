@@ -1,0 +1,56 @@
+```go showLineNumbers copy filename="Request Body Post Application Json Array Of Map usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"math/big"
+	"openapi/pkg/types"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.RequestBodies.RequestBodyPostApplicationJSONArrayOfMap(ctx, []map[string]shared.SimpleObject{
+        map[string]shared.SimpleObject{
+            "id": shared.SimpleObject{
+                Any: "Borders",
+                Bigint: big.NewInt(822407),
+                BigintStr: big.NewInt(913992),
+                Bool: true,
+                BoolOpt: openapi.Bool(true),
+                Date: types.MustDateFromString("2020-01-01"),
+                DateTime: types.MustTimeFromString("2020-01-01T00:00:00.000Z"),
+                Decimal: types.MustNewDecimalFromString("6534.21"),
+                Enum: shared.EnumTwo,
+                Float32: 2.2222222,
+                Int: 999999,
+                Int32: 1,
+                Int32Enum: shared.SimpleObjectInt32EnumOneHundredAndEightyOne,
+                IntEnum: shared.SimpleObjectIntEnumThird,
+                IntOptNull: openapi.Int64(999999),
+                Num: 1.1,
+                NumOptNull: openapi.Float64(1.1),
+                Str: "example",
+                StrOpt: openapi.String("optional example"),
+            },
+        },
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Maps != nil {
+        // handle response
+    }
+}
+```

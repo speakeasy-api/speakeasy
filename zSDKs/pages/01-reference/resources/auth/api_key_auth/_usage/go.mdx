@@ -1,0 +1,30 @@
+```go showLineNumbers copy filename="Api Key Auth usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/operations"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+    operationSecurity := operations.APIKeyAuthSecurity{
+            APIKeyAuth: "Token YOUR_API_KEY",
+        }
+
+    ctx := context.Background()
+    res, err := s.Auth.APIKeyAuth(ctx, operationSecurity)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Token != nil {
+        // handle response
+    }
+}
+```

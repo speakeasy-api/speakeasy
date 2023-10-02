@@ -1,0 +1,41 @@
+```go showLineNumbers copy filename="Pagination Limit Offset Page Params usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"openapi/pkg/models/operations"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.Pagination.PaginationLimitOffsetPageParams(ctx, operations.PaginationLimitOffsetPageParamsRequest{
+        Page: 348476,
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Res != nil {
+         for {
+            // handle items
+
+            res = res.Next()
+            if res == nil {
+                break
+            }
+        }
+
+    }
+}
+```

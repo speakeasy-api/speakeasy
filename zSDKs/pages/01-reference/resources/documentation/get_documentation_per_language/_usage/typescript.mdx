@@ -1,0 +1,20 @@
+```typescript showLineNumbers copy filename="Get Documentation Per Language usage example"
+import { SDK } from "openapi";
+import { GetDocumentationPerLanguageResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.documentation.getDocumentationPerLanguage({
+  language: "quantifying West morph",
+}).then((res: GetDocumentationPerLanguageResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

@@ -1,0 +1,37 @@
+```go showLineNumbers copy filename="Nullable One Of Ref In Object Post usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.Unions.NullableOneOfRefInObjectPost(ctx, shared.NullableOneOfRefInObject{
+        NullableOneOfOne: &shared.TypedObject1{
+            Type: shared.TypedObject1TypeObj1,
+            Value: "Danish North paradigms",
+        },
+        NullableOneOfTwo: &shared.NullableOneOfRefInObjectNullableOneOfTwo{},
+        OneOfOne: shared.NullableOneOfRefInObjectOneOfOne{},
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.Res != nil {
+        // handle response
+    }
+}
+```

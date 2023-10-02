@@ -1,0 +1,16 @@
+import BackoffStrategy from "/content/models/shared/backoff_strategy/typescript.mdx"
+import Collapsible from "/components/collapsible";
+
+##### **strategy** string
+The retry strategy to use.
+
+<Collapsible>
+    ##### **backoff?** BackoffStrategy
+    Configuration for the backoff strategy.
+    <Collapsible.Break/>
+    <BackoffStrategy/>
+</Collapsible>
+
+##### **retryConnectionErrors?** boolean
+Whether to retry on connection errors.
+

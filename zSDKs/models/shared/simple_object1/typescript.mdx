@@ -1,0 +1,71 @@
+import Enum from "/content/models/shared/enum/typescript.mdx"
+import SimpleObjectInt32Enum from "/content/models/shared/simple_object_int32_enum/typescript.mdx"
+import SimpleObjectIntEnum from "/content/models/shared/simple_object_int_enum/typescript.mdx"
+import Collapsible from "/components/collapsible";
+
+##### **any** any
+An any property.
+
+##### **bigint?** number
+
+##### **bigintStr?** string
+
+##### **bool** boolean
+A boolean property.
+
+##### **boolOpt?** boolean
+An optional boolean property.
+
+##### **date** RFCDate
+A date property.
+
+##### **dateTime** [Date](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date)
+A date-time property.
+
+##### **decimal?** number
+
+<Collapsible>
+    ##### **enum** Enum
+    A string based enum
+    <Collapsible.Break/>
+    <Enum/>
+</Collapsible>
+
+##### **float32** number
+A float32 property.
+
+##### **int** number
+An integer property.
+
+##### **int32** number
+An int32 property.
+
+<Collapsible>
+    ##### **int32Enum** SimpleObjectInt32Enum
+    An int32 enum property.
+    <Collapsible.Break/>
+    <SimpleObjectInt32Enum/>
+</Collapsible>
+
+<Collapsible>
+    ##### **intEnum** SimpleObjectIntEnum
+    An integer enum property.
+    <Collapsible.Break/>
+    <SimpleObjectIntEnum/>
+</Collapsible>
+
+##### **intOptNull?** number
+An optional integer property will be null for tests.
+
+##### **num** number
+A number property.
+
+##### **numOptNull?** number
+An optional number property will be null for tests.
+
+##### **str** string
+A string property.
+
+##### **strOpt?** string
+An optional string property.
+

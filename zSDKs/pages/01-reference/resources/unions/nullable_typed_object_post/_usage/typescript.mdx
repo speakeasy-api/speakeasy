@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Nullable Typed Object Post usage example"
+import { SDK } from "openapi";
+import { NullableTypedObjectPostResponse } from "openapi/dist/sdk/models/operations";
+import { TypedObject1Type } from "openapi/dist/sdk/models/shared";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.unions.nullableTypedObjectPost({
+  type: TypedObject1Type.Obj1,
+  value: "Tuna Cisgender",
+}).then((res: NullableTypedObjectPostResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

@@ -1,0 +1,23 @@
+```typescript showLineNumbers copy filename="Create File usage example"
+import { SDK } from "openapi";
+import { CreateFileResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.resource.createFile({
+  file: {
+    content: "9?kwyj>|ms" as bytes <<<>>>,
+    file: "South",
+  },
+}).then((res: CreateFileResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

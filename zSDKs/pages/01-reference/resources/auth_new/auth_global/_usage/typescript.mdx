@@ -1,0 +1,29 @@
+```typescript showLineNumbers copy filename="Auth Global usage example"
+import { SDK } from "openapi";
+import { AuthGlobalResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.authNew.authGlobal({
+  basicAuth: {
+    password: "5W6EzvaKCJvc_14",
+    username: "Florian.Champlin60",
+  },
+  headerAuth: [
+    {
+      expectedValue: "interfaces Kalamazoo",
+      headerName: "vanish Southeast",
+    },
+  ],
+}).then((res: AuthGlobalResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

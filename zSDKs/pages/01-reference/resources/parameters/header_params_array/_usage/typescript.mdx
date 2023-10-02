@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Header Params Array usage example"
+import { SDK } from "openapi";
+import { HeaderParamsArrayResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.parameters.headerParamsArray({
+  xHeaderArray: [
+    "iterate",
+  ],
+}).then((res: HeaderParamsArrayResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

@@ -1,0 +1,63 @@
+```go showLineNumbers copy filename="Request Body Post Defaults And Consts usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"math/big"
+	"openapi/pkg/types"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.RequestBodies.RequestBodyPostDefaultsAndConsts(ctx, shared.DefaultsAndConsts{
+        ConstBigInt: big.NewInt(773035),
+        ConstBigIntStr: big.NewInt(166047),
+        ConstBool: false,
+        ConstDate: types.MustDateFromString("2023-03-29"),
+        ConstDateTime: types.MustTimeFromString("2023-10-08T10:02:37.225Z"),
+        ConstDecimal: types.MustNewDecimalFromString("7214.3"),
+        ConstDecimalStr: types.MustNewDecimalFromString("2940.76"),
+        ConstEnumInt: shared.DefaultsAndConstsConstEnumIntTwo,
+        ConstEnumStr: shared.DefaultsAndConstsConstEnumStrTwo,
+        ConstInt: 194023,
+        ConstNum: 4939.58,
+        ConstStr: "Bicycle",
+        ConstStrNull: "Wisconsin Franc",
+        DefaultBigInt: big.NewInt(78969),
+        DefaultBigIntStr: big.NewInt(818034),
+        DefaultBool: openapi.Bool(false),
+        DefaultDate: types.MustDateFromString("2023-03-07"),
+        DefaultDateTime: types.MustTimeFromString("2021-04-23T03:26:00.392Z"),
+        DefaultDecimal: types.MustNewDecimalFromString("9754.25"),
+        DefaultDecimalStr: types.MustNewDecimalFromString("1563.83"),
+        DefaultEnumInt: shared.DefaultsAndConstsDefaultEnumIntThree.ToPointer(),
+        DefaultEnumStr: shared.DefaultsAndConstsDefaultEnumStrOne.ToPointer(),
+        DefaultInt: openapi.Int64(247045),
+        DefaultNum: openapi.Float64(753.59),
+        DefaultStr: openapi.String("Kenyan"),
+        DefaultStrNullable: openapi.String("eum Concrete Non"),
+        DefaultStrOptional: openapi.String("notwithstanding yuck system"),
+        NormalField: "Wooden auxiliary Alexandria",
+        SingleEnumConstBool: false,
+        SingleEnumConstStr: shared.DefaultsAndConstsSingleEnumConstStrOne,
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.RequestBodyPostDefaultsAndConsts200ApplicationJSONObject != nil {
+        // handle response
+    }
+}
+```

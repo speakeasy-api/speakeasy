@@ -1,0 +1,30 @@
+```go showLineNumbers copy filename="Anchor Types Get usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.Generation.AnchorTypesGet(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.TypeFromAnchor != nil {
+        // handle response
+    }
+}
+```

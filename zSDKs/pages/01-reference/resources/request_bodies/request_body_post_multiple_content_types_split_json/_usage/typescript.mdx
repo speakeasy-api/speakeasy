@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Request Body Post Multiple Content Types Split Json usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostMultipleContentTypesSplitJsonResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostMultipleContentTypesSplitJson({
+  bool: false,
+  num: 9116.57,
+  str: "Account Jaguar",
+}).then((res: RequestBodyPostMultipleContentTypesSplitJsonResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

@@ -1,0 +1,20 @@
+```typescript showLineNumbers copy filename="Request Body Post Json Data Types Array Decimal Str usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostJsonDataTypesArrayDecimalStrResponse1 } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostJsonDataTypesArrayDecimalStr([
+  "sky Des West",
+]).then((res: RequestBodyPostJsonDataTypesArrayDecimalStrResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

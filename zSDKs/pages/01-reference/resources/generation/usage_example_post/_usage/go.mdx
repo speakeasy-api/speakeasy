@@ -1,0 +1,153 @@
+```go showLineNumbers copy filename="Usage Example Post usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/operations"
+	"openapi/pkg/models/shared"
+	"math/big"
+	"openapi/pkg/types"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+    operationSecurity := operations.UsageExamplePostSecurity{
+            Password: "YOUR_PASSWORD",
+            Username: "YOUR_USERNAME",
+        }
+
+    ctx := context.Background()
+    res, err := s.Generation.UsageExamplePost(ctx, operations.UsageExamplePostRequest{
+        RequestBody: &operations.UsageExamplePostRequestBody{
+            FakerFormattedStrings: &shared.FakerFormattedStrings{
+                AddressFormat: openapi.String("497 Kuhic Path"),
+                DirectoryFormat: openapi.String("/usr/bin"),
+                DomainFormat: openapi.String("trustworthy-landscape.biz"),
+                EmailFormat: openapi.String("Rosina_Dickinson@hotmail.com"),
+                FilenameFormat: openapi.String("but.mpeg"),
+                FilepathFormat: openapi.String("/usr/libexec/jostle_volt_south.ggb"),
+                ImageFormat: openapi.String("https://loremflickr.com/640/480"),
+                Ipv4Format: openapi.String("94.105.35.109"),
+                Ipv6Format: openapi.String("d436:813f:16d9:f5fc:e6c5:5614:6c3e:250f"),
+                JSONFormat: openapi.String("{reamer: 1394, advancement: null, mainland: \"Block Data\"}"),
+                MacFormat: openapi.String("6c:8d:d6:b1:44:29"),
+                PasswordFormat: openapi.String("NO9LLRaJcrJEo2Q"),
+                PhoneFormat: openapi.String("206-727-8762 x13050"),
+                TimezoneFormat: openapi.String("Africa/Casablanca"),
+                UnknownFormat: openapi.String("Jewelery invoice Portugal"),
+                URLFormat: openapi.String("https://linear-behalf.info"),
+                UUIDFormat: openapi.String("8e4796f2-a70c-4688-a82a-a482562f222e"),
+                ZipcodeFormat: openapi.String("50498-0487"),
+            },
+            FakerStrings: &shared.FakerStrings{
+                City: openapi.String("Hillsboro"),
+                Iban: openapi.String("BA974457707002003245"),
+                ID: openapi.String("<ID>"),
+                IPv4: openapi.String("151.244.219.142"),
+                IPv6: openapi.String("71f9:9dd2:efd1:21aa:6f1e:674b:db04:f157"),
+                Account: openapi.String("33051845"),
+                Address: openapi.String("606 Boyle Trace"),
+                Amount: openapi.String("92.02"),
+                Avatar: openapi.String("https://loremflickr.com/640/480"),
+                Color: openapi.String("turquoise"),
+                Comment: openapi.String("Ergonomic executive chair upholstered in bonded black leather and PVC padded seat and back for all-day comfort and support"),
+                Company: openapi.String("Bogan Inc"),
+                Country: openapi.String("Djibouti"),
+                CountryCode: openapi.String("MU"),
+                Currency: openapi.String("US Dollar"),
+                Datatype: openapi.String("int"),
+                Default: openapi.String("South Zloty"),
+                Description: openapi.String("Business-focused intermediate database"),
+                Directory: openapi.String("/bin"),
+                DomainName: openapi.String("easy-going-mountain.biz"),
+                EmailAddr: openapi.String("Brenda49@hotmail.com"),
+                Extension: openapi.String("m3a"),
+                Filename: openapi.String("frozen_zero.png"),
+                Filepath: openapi.String("/mnt/mazda.dds"),
+                Filetype: openapi.String("image"),
+                FirstName: openapi.String("Lucienne"),
+                FullName: openapi.String("Vernon Bergnaum"),
+                Gender: openapi.String("Trans"),
+                Job: openapi.String("Product Brand Engineer"),
+                JSON: openapi.String("{poultry: 66250, gender: null, default: \"Branding psst\"}"),
+                Key: openapi.String("<key>"),
+                LastName: openapi.String("Stehr"),
+                Latitude: openapi.String("-13.6640"),
+                Locale: openapi.String("ge"),
+                Longitude: openapi.String("19.6876"),
+                Mac: openapi.String("64:db:b6:75:fd:5e"),
+                Manufacturer: openapi.String("Honda"),
+                Material: openapi.String("Steel"),
+                MiddleName: openapi.String("Quinn"),
+                Model: openapi.String("Camaro"),
+                Password: openapi.String("KBzn9Ecvv786Ou7"),
+                Phone: openapi.String("(730) 971-8621 x333"),
+                Pin: openapi.String("3762"),
+                PostalCode: openapi.String("15423-8832"),
+                Price: openapi.String("739.00"),
+                Product: openapi.String("Sleek Granite Sausages"),
+                Sex: openapi.String("female"),
+                Street: openapi.String("Lowe Trace"),
+                Timezone: openapi.String("Europe/Athens"),
+                Unit: openapi.String("lux"),
+                URL: openapi.String("http://sick-ambassador.net"),
+                Username: openapi.String("Calista99"),
+                UUID: openapi.String("b7b194a2-76b2-4691-afe1-f08f4294e369"),
+            },
+            SimpleObject: &shared.SimpleObject{
+                Any: "parse",
+                Bigint: big.NewInt(271653),
+                BigintStr: big.NewInt(273009),
+                Bool: true,
+                BoolOpt: openapi.Bool(true),
+                Date: types.MustDateFromString("2020-01-01"),
+                DateTime: types.MustTimeFromString("2020-01-01T00:00:00.000Z"),
+                Decimal: types.MustNewDecimalFromString("4554.44"),
+                Enum: shared.EnumTwo,
+                Float32: 2.2222222,
+                Int: 999999,
+                Int32: 1,
+                Int32Enum: shared.SimpleObjectInt32EnumOneHundredAndEightyOne,
+                IntEnum: shared.SimpleObjectIntEnumSecond,
+                IntOptNull: openapi.Int64(999999),
+                Num: 1.1,
+                NumOptNull: openapi.Float64(1.1),
+                Str: "example",
+                StrOpt: openapi.String("optional example"),
+            },
+        },
+        BigintParameter: big.NewInt(25497),
+        BigintParameterOptional: big.NewInt(248413),
+        BigintStrParameter: big.NewInt(888044),
+        BigintStrParameterOptional: big.NewInt(505866),
+        BoolParameter: false,
+        DateParameter: types.MustDateFromString("2023-02-15"),
+        DateTimeParameter: types.MustTimeFromString("2021-12-06T20:48:29.143Z"),
+        DecimalParameter: types.MustNewDecimalFromString("2777.73"),
+        DecimalParameterOptional: types.MustNewDecimalFromString("3730.35"),
+        DecimalStrParameter: types.MustNewDecimalFromString("8948.64"),
+        DecimalStrParameterOptional: types.MustNewDecimalFromString("5249.7"),
+        DoubleParameter: 265.22,
+        EnumParameter: operations.UsageExamplePostEnumParameterValue3,
+        FalseyNumberParameter: 0,
+        Float32Parameter: 6256.37,
+        FloatParameter: 3335.07,
+        Int64Parameter: 329543,
+        IntParameter: 924159,
+        OptEnumParameter: operations.UsageExamplePostOptEnumParameterValue3.ToPointer(),
+        StrParameter: "example 3",
+    }, operationSecurity)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.UsageExamplePost200ApplicationJSONObject != nil {
+        // handle response
+    }
+}
+```

@@ -1,0 +1,20 @@
+```typescript showLineNumbers copy filename="Request Body Post Json Data Types Array Date usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostJsonDataTypesArrayDateResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostJsonDataTypesArrayDate([
+  new RFCDate("2022-09-21"),
+]).then((res: RequestBodyPostJsonDataTypesArrayDateResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

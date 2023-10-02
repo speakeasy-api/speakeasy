@@ -1,0 +1,30 @@
+```typescript showLineNumbers copy filename="Multiple Simple Scheme Auth usage example"
+import { SDK } from "openapi";
+import { MultipleSimpleSchemeAuthResponse, MultipleSimpleSchemeAuthSecurity } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+const operationSecurity: MultipleSimpleSchemeAuthSecurity = {
+  apiKeyAuthNew: "Token <YOUR_API_KEY>",
+  oauth2: "Bearer YOUR_OAUTH2_TOKEN",
+};
+
+sdk.authNew.multipleSimpleSchemeAuth({
+  basicAuth: {
+    password: "fh1AROA321lM6tA",
+    username: "Tyreek_Walter",
+  },
+  headerAuth: [
+    {
+      expectedValue: "San generating",
+      headerName: "rerum",
+    },
+  ],
+}, operationSecurity).then((res: MultipleSimpleSchemeAuthResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

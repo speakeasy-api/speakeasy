@@ -1,0 +1,18 @@
+```typescript showLineNumbers copy filename="Nested First Get usage example"
+import { SDK } from "openapi";
+import { NestedFirstGetResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.nested.first.get().then((res: NestedFirstGetResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

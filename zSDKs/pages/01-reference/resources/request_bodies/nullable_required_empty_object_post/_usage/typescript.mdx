@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Nullable Required Empty Object Post usage example"
+import { SDK } from "openapi";
+import { NullableRequiredEmptyObjectPostResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.nullableRequiredEmptyObjectPost({
+  nullableOptionalObj: {},
+  nullableRequiredObj: {},
+  requiredObj: {},
+}).then((res: NullableRequiredEmptyObjectPostResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

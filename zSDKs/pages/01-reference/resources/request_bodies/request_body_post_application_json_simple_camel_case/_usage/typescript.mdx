@@ -1,0 +1,40 @@
+```typescript showLineNumbers copy filename="Request Body Post Application Json Simple Camel Case usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostApplicationJsonSimpleCamelCaseResponse1 } from "openapi/dist/sdk/models/operations";
+import { Enum, SimpleObjectCamelCaseInt32EnumVal, SimpleObjectCamelCaseIntEnumVal } from "openapi/dist/sdk/models/shared";
+import { RFCDate } from "openapi/dist/sdk/types";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostApplicationJsonSimpleCamelCase({
+  anyVal: "Account",
+  bigintStrVal: "Ball Micronesia diligent",
+  bigintVal: 918547,
+  boolOptVal: true,
+  boolVal: true,
+  dateTimeVal: new Date("2020-01-01T00:00:00Z"),
+  dateVal: new RFCDate("2020-01-01"),
+  decimalVal: 7412.32,
+  enumVal: Enum.Two,
+  float32Val: 2.2222222,
+  int32EnumVal: SimpleObjectCamelCaseInt32EnumVal.FiftyFive,
+  int32Val: 1,
+  intEnumVal: SimpleObjectCamelCaseIntEnumVal.Third,
+  intOptNullVal: 999999,
+  intVal: 999999,
+  numOptNullVal: 1.1,
+  numVal: 1.1,
+  strOptVal: "optional example",
+  strVal: "example",
+}).then((res: RequestBodyPostApplicationJsonSimpleCamelCaseResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

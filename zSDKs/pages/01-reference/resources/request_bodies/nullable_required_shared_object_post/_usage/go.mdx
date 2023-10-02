@@ -1,0 +1,40 @@
+```go showLineNumbers copy filename="Nullable Required Shared Object Post usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/shared"
+	"openapi/pkg/models/operations"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithSecurity(shared.Security{
+            APIKeyAuth: openapi.String("Token YOUR_API_KEY"),
+        }),
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+
+    ctx := context.Background()
+    res, err := s.RequestBodies.NullableRequiredSharedObjectPost(ctx, operations.NullableRequiredSharedObjectPostRequestBody{
+        NullableOptionalObj: &shared.NullableObject{
+            Optional: openapi.String("eek"),
+            Required: 983427,
+        },
+        NullableRequiredObj: &shared.NullableObject{
+            Optional: openapi.String("productivity concept Divide"),
+            Required: 898760,
+        },
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.NullableRequiredSharedObjectPost200ApplicationJSONString != nil {
+        // handle response
+    }
+}
+```

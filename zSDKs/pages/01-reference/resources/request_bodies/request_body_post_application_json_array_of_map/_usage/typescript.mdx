@@ -1,0 +1,44 @@
+```typescript showLineNumbers copy filename="Request Body Post Application Json Array Of Map usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostApplicationJsonArrayOfMapResponse1 } from "openapi/dist/sdk/models/operations";
+import { Enum, SimpleObjectInt32Enum, SimpleObjectIntEnum } from "openapi/dist/sdk/models/shared";
+import { RFCDate } from "openapi/dist/sdk/types";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostApplicationJsonArrayOfMap([
+  {
+    "maiores": {
+      any: "incubate",
+      bigint: 858778,
+      bigintStr: "withdrawal payment",
+      bool: true,
+      boolOpt: true,
+      date: new RFCDate("2020-01-01"),
+      dateTime: new Date("2020-01-01T00:00:00.000Z"),
+      decimal: 3361.02,
+      enum: Enum.Two,
+      float32: 2.2222222,
+      int: 999999,
+      int32: 1,
+      int32Enum: SimpleObjectInt32Enum.SixtyNine,
+      intEnum: SimpleObjectIntEnum.Third,
+      intOptNull: 999999,
+      num: 1.1,
+      numOptNull: 1.1,
+      str: "example",
+      strOpt: "optional example",
+    },
+  },
+]).then((res: RequestBodyPostApplicationJsonArrayOfMapResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

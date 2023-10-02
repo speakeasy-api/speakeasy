@@ -1,0 +1,22 @@
+```typescript showLineNumbers copy filename="Typed Object One Of Post usage example"
+import { SDK } from "openapi";
+import { TypedObjectOneOfPostResponse1 } from "openapi/dist/sdk/models/operations";
+import { TypedObject1Type, TypedObject2Type, TypedObject3Type } from "openapi/dist/sdk/models/shared";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.unions.typedObjectOneOfPost({
+  type: TypedObject3Type.Obj3,
+  value: "payment repellat piece",
+}).then((res: TypedObjectOneOfPostResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

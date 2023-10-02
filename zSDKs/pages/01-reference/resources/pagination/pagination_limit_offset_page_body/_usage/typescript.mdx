@@ -1,0 +1,26 @@
+```typescript showLineNumbers copy filename="Pagination Limit Offset Page Body usage example"
+import { SDK } from "openapi";
+import { PaginationLimitOffsetPageBodyResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.pagination.paginationLimitOffsetPageBody({
+  limit: 539074,
+  offset: 671957,
+  page: 724148,
+}).then((res: PaginationLimitOffsetPageBodyResponse) => {
+  if (res.statusCode == 200) {
+    do {
+      // handle items
+
+      res = res.next();
+    } while (res);
+  }
+});
+```

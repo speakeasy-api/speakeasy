@@ -1,0 +1,19 @@
+import ExampleResource from "/content/models/shared/example_resource/go.mdx"
+import Collapsible from "/components/collapsible";
+
+##### **ContentType** string
+HTTP response content type for this operation
+
+<Collapsible>
+    ##### **ExampleResource** *shared.ExampleResource
+    OK
+    <Collapsible.Break/>
+    <ExampleResource/>
+</Collapsible>
+
+##### **StatusCode** int
+HTTP response status code for this operation
+
+##### **RawResponse** [*http.Response](https://pkg.go.dev/net/http#Response)
+Raw HTTP response; suitable for custom response parsing
+

@@ -1,0 +1,51 @@
+```typescript showLineNumbers copy filename="Pipe Delimited Query Params Array usage example"
+import { SDK } from "openapi";
+import { PipeDelimitedQueryParamsArrayResponse } from "openapi/dist/sdk/models/operations";
+import { Enum, SimpleObjectInt32Enum, SimpleObjectIntEnum } from "openapi/dist/sdk/models/shared";
+import { RFCDate } from "openapi/dist/sdk/types";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.parameters.pipeDelimitedQueryParamsArray({
+  arrParam: [
+    "granular",
+  ],
+  arrParamExploded: [
+    713927,
+  ],
+  mapParam: {
+    "voluptatem": "cum",
+  },
+  objParam: {
+    any: "array",
+    bigint: 530860,
+    bigintStr: "Northwest Representative",
+    bool: true,
+    boolOpt: true,
+    date: new RFCDate("2020-01-01"),
+    dateTime: new Date("2020-01-01T00:00:00.000Z"),
+    decimal: 1032.98,
+    enum: Enum.Two,
+    float32: 2.2222222,
+    int: 999999,
+    int32: 1,
+    int32Enum: SimpleObjectInt32Enum.OneHundredAndEightyOne,
+    intEnum: SimpleObjectIntEnum.Third,
+    intOptNull: 999999,
+    num: 1.1,
+    numOptNull: 1.1,
+    str: "example",
+    strOpt: "optional example",
+  },
+}).then((res: PipeDelimitedQueryParamsArrayResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

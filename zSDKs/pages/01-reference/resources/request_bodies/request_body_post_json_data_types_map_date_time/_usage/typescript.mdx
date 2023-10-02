@@ -1,0 +1,20 @@
+```typescript showLineNumbers copy filename="Request Body Post Json Data Types Map Date Time usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostJsonDataTypesMapDateTimeResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostJsonDataTypesMapDateTime({
+  "quo": new Date("2023-10-17T12:41:34.047Z"),
+}).then((res: RequestBodyPostJsonDataTypesMapDateTimeResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

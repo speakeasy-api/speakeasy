@@ -1,0 +1,24 @@
+```typescript showLineNumbers copy filename="Request Body Write Only Union usage example"
+import { SDK } from "openapi";
+import { RequestBodyWriteOnlyUnionResponse1 } from "openapi/dist/sdk/models/operations";
+import { Enum, SimpleObjectInt32Enum, SimpleObjectIntEnum } from "openapi/dist/sdk/models/shared";
+import { RFCDate } from "openapi/dist/sdk/types";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyWriteOnlyUnion({
+  bool: false,
+  num: 245.77,
+  string: "Marketing Generic",
+}).then((res: RequestBodyWriteOnlyUnionResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

@@ -1,0 +1,18 @@
+```typescript showLineNumbers copy filename="Put Anything Ignored Generation usage example"
+import { SDK } from "openapi";
+import { PutAnythingIgnoredGenerationResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.sdk.putAnythingIgnoredGeneration("quantify").then((res: PutAnythingIgnoredGenerationResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

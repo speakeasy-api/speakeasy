@@ -1,0 +1,43 @@
+```typescript showLineNumbers copy filename="Component Body And Param No Conflict usage example"
+import { SDK } from "openapi";
+import { ComponentBodyAndParamNoConflictResponse1 } from "openapi/dist/sdk/models/operations";
+import { Enum, SimpleObjectInt32Enum, SimpleObjectIntEnum } from "openapi/dist/sdk/models/shared";
+import { RFCDate } from "openapi/dist/sdk/types";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.flattening.componentBodyAndParamNoConflict({
+  paramStr: "indexing Keyboard Leone",
+  simpleObject1: {
+    any: "multimedia",
+    bigint: 463575,
+    bigintStr: "Bacon",
+    bool: true,
+    boolOpt: true,
+    date: new RFCDate("2020-01-01"),
+    dateTime: new Date("2020-01-01T00:00:00.000Z"),
+    decimal: 7470.8,
+    enum: Enum.Two,
+    float32: 2.2222222,
+    int: 999999,
+    int32: 1,
+    int32Enum: SimpleObjectInt32Enum.FiftyFive,
+    intEnum: SimpleObjectIntEnum.Third,
+    intOptNull: 999999,
+    num: 1.1,
+    numOptNull: 1.1,
+    str: "example",
+    strOpt: "optional example",
+  },
+}).then((res: ComponentBodyAndParamNoConflictResponse1) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

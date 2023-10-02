@@ -1,0 +1,23 @@
+```typescript showLineNumbers copy filename="Form Query Params Primitive usage example"
+import { SDK } from "openapi";
+import { FormQueryParamsPrimitiveResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.parameters.formQueryParamsPrimitive({
+  boolParam: false,
+  intParam: 680697,
+  numParam: 8298.98,
+  strParam: "above",
+}).then((res: FormQueryParamsPrimitiveResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```

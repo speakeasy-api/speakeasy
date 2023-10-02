@@ -1,0 +1,45 @@
+```go showLineNumbers copy filename="Multiple Options With Mixed Schemes Auth usage example"
+package main
+
+import(
+	"context"
+	"log"
+	"openapi"
+	"openapi/pkg/models/operations"
+	"openapi/pkg/models/shared"
+)
+
+func main() {
+    s := openapi.New(
+        openapi.WithGlobalPathParam(100),
+        openapi.WithGlobalQueryParam("some example global query param"),
+    )
+    operationSecurity := operations.MultipleOptionsWithMixedSchemesAuthSecurity{
+            Option1: &operations.MultipleOptionsWithMixedSchemesAuthSecurityOption1{
+                APIKeyAuthNew: "Token <YOUR_API_KEY>",
+                Oauth2: "Bearer YOUR_OAUTH2_TOKEN",
+            },
+        }
+
+    ctx := context.Background()
+    res, err := s.AuthNew.MultipleOptionsWithMixedSchemesAuth(ctx, shared.AuthServiceRequestBody{
+        BasicAuth: &shared.AuthServiceRequestBodyBasicAuth{
+            Password: "cinHFat8XtbXe_P",
+            Username: "Kacie64",
+        },
+        HeaderAuth: []shared.AuthServiceRequestBodyHeaderAuth{
+            shared.AuthServiceRequestBodyHeaderAuth{
+                ExpectedValue: "Balboa Intersex",
+                HeaderName: "repurpose Response",
+            },
+        },
+    }, operationSecurity)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if res.StatusCode == http.StatusOK {
+        // handle response
+    }
+}
+```

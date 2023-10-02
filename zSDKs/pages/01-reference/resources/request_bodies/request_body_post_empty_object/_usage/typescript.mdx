@@ -1,0 +1,21 @@
+```typescript showLineNumbers copy filename="Request Body Post Empty Object usage example"
+import { SDK } from "openapi";
+import { RequestBodyPostEmptyObjectResponse } from "openapi/dist/sdk/models/operations";
+
+const sdk = new SDK({
+  security: {
+    apiKeyAuth: "Token YOUR_API_KEY",
+  },
+  globalPathParam: 100,
+  globalQueryParam: "some example global query param",
+});
+
+sdk.requestBodies.requestBodyPostEmptyObject({
+  empty: {},
+  emptyWithEmptyProperties: {},
+}).then((res: RequestBodyPostEmptyObjectResponse) => {
+  if (res.statusCode == 200) {
+    // handle response
+  }
+});
+```
