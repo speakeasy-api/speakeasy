@@ -40,7 +40,7 @@ For upcoming features and bug fixes, check out our [public roadmap](https://gith
 
 ## What is the Speakeasy CLI?
 
-The [Speakeasy CLI](https://docs.speakeasyapi.dev/docs/speakeasy-cli/) is a tool for interacting with the Speakeasy platform that brings the functionality of Speakeasy into your development workflow. 
+The [Speakeasy CLI](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) is a tool for interacting with the Speakeasy platform that brings the functionality of Speakeasy into your development workflow. 
 
 You can run the Speakeasy CLI locally or in your CI/CD pipeline to validate your API specs, generate SDKs, and more. Looking to embed this into your GitHub CI/CD? Check out [these docs](https://speakeasyapi.dev/docs/create-client-sdks/github-setup/) instead. 
 
@@ -52,7 +52,7 @@ Here are a few key functions of the CLI:
 * `merge` - Work with your existing documentation workflows by merging your API specs into a single spec. 
 * `auth` - Authenticate with the platform and manage API keys. 
 
-For a complete list of commands check out our [reference](https://speakeasyapi.dev/docs/product-reference/speakeasy-cli/getting-started/) or type `speakeasy` and our interactive mode will take you through the available functions. 
+For a complete list of commands check out our [reference](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) or type `speakeasy` and our interactive mode will take you through the available functions. 
 
 ## Design Choices
 
@@ -115,7 +115,7 @@ Once you have installed the Speakeasy CLI, you can verify it's working by runnin
 speakeasy --help
 ```
 
-See the Speakeasy docs for [how to get started with the Speakeasy CLI](https://docs.speakeasyapi.dev/docs/speakeasy-cli/getting-started).
+See the Speakeasy docs for [how to get started with the Speakeasy CLI](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started).
 
 ### Authenticating the Speakeasy CLI
 
@@ -148,7 +148,7 @@ speakeasy generate sdk [flags]
   -y, --auto-yes string  auto answer yes to all prompts
 ```
 
-Take a look at the Speakeasy [getting started](https://docs.speakeasyapi.dev/docs/speakeasy-cli/getting-started) page for in-depth information.
+Take a look at the Speakeasy [getting started](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) page for in-depth information.
 
 ## Schema Validation
 
