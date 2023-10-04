@@ -30,6 +30,7 @@ speakeasy [flags]
 
 * [speakeasy api](api/README.md)	 - Access the Speakeasy API via the CLI
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
+* [speakeasy docs](docs/README.md)	 - Use this command to generate content, compile, and publish SDK docs.
 * [speakeasy generate](generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy proxy](proxy.md)	 - Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities
