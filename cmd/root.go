@@ -47,6 +47,7 @@ func Init(version, artifactArch string) {
 	updateInit(version, artifactArch)
 	suggestInit()
 	proxyInit()
+	docsInit()
 }
 
 func Execute(version, artifactArch string) {
