@@ -17,7 +17,7 @@ var docsCmd = &cobra.Command{
 }
 
 var genDocsContentCmd = &cobra.Command{
-	Use:   "content",
+	Use:   "generate",
 	Short: "Use this command to generate content for the SDK docs directory.",
 	Long:  "Use this command to generate content for the SDK docs directory.",
 	RunE:  genSDKDocsContent,
@@ -30,7 +30,7 @@ func docsInit() {
 	genDocsContentCmd.MarkFlagRequired("out")
 	genDocsContentCmd.Flags().StringP("schema", "s", "./openapi.yaml", "local filepath or URL for the OpenAPI schema")
 	genDocsContentCmd.MarkFlagRequired("schema")
-	genDocsContentCmd.Flags().StringP("langs", "l", "", "a list of languages to include in SDK Doc generation")
+	genDocsContentCmd.Flags().StringP("langs", "l", "", "a list of languages to include in SDK Doc generation. Example usage -l go,python,typescript")
 	genDocsContentCmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
 	genDocsContentCmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
 	genDocsContentCmd.Flags().BoolP("debug", "d", false, "enable writing debug files with broken code")
