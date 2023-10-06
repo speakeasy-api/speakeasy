@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/fatih/color"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/filetracking"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -90,7 +91,12 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		return fmt.Errorf("failed to generate SDKs for %s ✖", lang)
 	}
 
-	fmt.Printf("Generating SDK for %s... %s\n", lang, utils.Green("done ✓"))
+	docs := color.New(color.FgGreen, color.Underline)
+
+	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"
+
+	fmt.Printf("Generating SDK for %s... %s.\n", lang, utils.Green("done ✓"))
+	docs.Printf("For more docs on customising the SDK check out: %s\n", sdkDocsLink)
 
 	return nil
 }
