@@ -45,6 +45,9 @@ func validateOpenAPIInit() {
 	validateOpenAPICmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
 	validateOpenAPICmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
 
+	validateOpenAPICmd.Flags().Int("max-validation-warnings", 0, "limit the number of warnings to output (default 0 = no limit)")
+	validateOpenAPICmd.Flags().Int("max-validation-errors", 0, "limit the number of errors to output (default 0 = no limit)")
+
 	validateCmd.AddCommand(validateOpenAPICmd)
 }
 
@@ -78,7 +81,23 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, header, token, outputHints); err != nil {
+	maxWarns, err := cmd.Flags().GetInt("max-validation-warnings")
+	if err != nil {
+		return err
+	}
+
+	maxErrs, err := cmd.Flags().GetInt("max-validation-errors")
+	if err != nil {
+		return err
+	}
+
+	limits := &validation.OutputLimits{
+		MaxErrors:   maxErrs,
+		MaxWarns:    maxWarns,
+		OutputHints: outputHints,
+	}
+
+	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, header, token, limits); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
