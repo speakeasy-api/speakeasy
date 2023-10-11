@@ -14,7 +14,19 @@ import (
 	"os"
 )
 
-func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, outputHints bool) error {
+// OutputLimits defines the limits for validation output.
+type OutputLimits struct {
+	// MaxErrors prevents errors after this limit from being displayed.
+	MaxErrors int
+
+	// MaxWarns prevents warnings after this limit from being displayed.
+	MaxWarns int
+
+	// OutputHints enables hints to be displayed.
+	OutputHints bool
+}
+
+func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits) error {
 	fmt.Println("Validating OpenAPI spec...")
 	fmt.Println()
 
@@ -27,7 +39,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, outp
 
 	hasWarnings := false
 
-	vErrs, vWarns, vInfo, err := Validate(schema, schemaPath, outputHints, isRemote)
+	vErrs, vWarns, vInfo, err := Validate(schema, schemaPath, limits, isRemote)
 	if err != nil {
 		return err
 	}
@@ -69,7 +81,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, outp
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(schema []byte, schemaPath string, outputHints, isRemote bool) ([]error, []error, []error, error) {
+func Validate(schema []byte, schemaPath string, limits *OutputLimits, isRemote bool) ([]error, []error, []error, error) {
 	// Set to error because g.Validate sometimes logs all warnings for some reason
 	l := logging.NewLogger(zap.ErrorLevel)
 
@@ -82,7 +94,7 @@ func Validate(schema []byte, schemaPath string, outputHints, isRemote bool) ([]e
 		return nil, nil, nil, err
 	}
 
-	errs := g.Validate(context.Background(), schema, schemaPath, outputHints, isRemote)
+	errs := g.Validate(context.Background(), schema, schemaPath, limits.OutputHints, isRemote)
 	var vErrs []error
 	var vWarns []error
 	var vInfo []error
@@ -106,6 +118,16 @@ func Validate(schema []byte, schemaPath string, outputHints, isRemote bool) ([]e
 	}
 
 	vWarns = append(vWarns, g.GetWarnings()...)
+
+	if limits.MaxWarns > 0 && len(vWarns) > limits.MaxWarns {
+		vWarns = append(vWarns, fmt.Errorf("and %d more warnings", len(vWarns)-limits.MaxWarns+1))
+		vWarns = vWarns[:limits.MaxWarns-1]
+	}
+
+	if limits.MaxErrors > 0 && len(vErrs) > limits.MaxErrors {
+		vErrs = append(vErrs, fmt.Errorf("and %d more errors", len(vWarns)-limits.MaxErrors+1))
+		vErrs = vErrs[:limits.MaxErrors]
+	}
 
 	return vErrs, vWarns, vInfo, nil
 }
