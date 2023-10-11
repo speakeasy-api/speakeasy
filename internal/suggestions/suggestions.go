@@ -315,7 +315,10 @@ func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber
 }
 
 func validate(schema []byte, schemaPath string, level errors.Severity, isRemote, printSummary bool) ([]error, error) {
-	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, isRemote, true)
+	limits := &validation.OutputLimits{
+		OutputHints: isRemote,
+	}
+	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, limits, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate YAML: %v", err)
 	}
