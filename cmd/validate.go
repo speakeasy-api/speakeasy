@@ -45,8 +45,8 @@ func validateOpenAPIInit() {
 	validateOpenAPICmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
 	validateOpenAPICmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
 
-	validateOpenAPICmd.Flags().Int("max-validation-warnings", 0, "limit the number of warnings to output (default 0 = no limit)")
-	validateOpenAPICmd.Flags().Int("max-validation-errors", 0, "limit the number of errors to output (default 0 = no limit)")
+	validateOpenAPICmd.Flags().Int("max-validation-warnings", 1000, "limit the number of warnings to output (default 1000, 0 = no limit)")
+	validateOpenAPICmd.Flags().Int("max-validation-errors", 1000, "limit the number of errors to output (default 1000, 0 = no limit)")
 
 	validateCmd.AddCommand(validateOpenAPICmd)
 }
