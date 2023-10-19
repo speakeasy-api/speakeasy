@@ -1,6 +1,6 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.21
+go 1.21.0
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -15,6 +15,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.161.0
+	github.com/speakeasy-api/openapi-specedit v0.0.0-20231017210013-972d0894a3bd
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
@@ -24,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb
-	golang.org/x/term v0.8.0
+	golang.org/x/term v0.10.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -139,13 +140,13 @@ require (
 	github.com/zclconf/go-cty v1.13.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/image v0.6.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/net v0.13.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac // indirect
 	google.golang.org/grpc v1.48.0 // indirect
