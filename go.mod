@@ -1,6 +1,6 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.21
+go 1.21.0
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -14,7 +14,7 @@ require (
 	github.com/pb33f/libopenapi v0.12.0
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.166.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.168.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
@@ -122,6 +122,7 @@ require (
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/speakeasy-api/easytemplate v0.7.6 // indirect
+	github.com/speakeasy-api/sdk-docs-wrapper v0.0.4 // indirect
 	github.com/speakeasy-api/sdk-gen-config v0.8.4 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.0 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
