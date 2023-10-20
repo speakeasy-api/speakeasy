@@ -2,8 +2,10 @@ package auth
 
 import (
 	"fmt"
+
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
 func Authenticate(force bool) error {
@@ -16,7 +18,9 @@ func Authenticate(force bool) error {
 		return fmt.Errorf("failed to save API key: %w", err)
 	}
 
-	fmt.Printf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), res.WorkspaceID)
+	if utils.IsInteractive() {
+		fmt.Printf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), res.WorkspaceID)
+	}
 
 	return nil
 }

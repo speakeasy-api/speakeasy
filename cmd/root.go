@@ -72,6 +72,11 @@ func GetRootCommand() *cobra.Command {
 }
 
 func checkForUpdate(currVersion, artifactArch string) {
+	// Don't display if piping to a file for example
+	if !utils.IsInteractive() {
+		return
+	}
+
 	latestVersion, err := updates.GetLatestVersion(artifactArch)
 	if err != nil {
 		return
