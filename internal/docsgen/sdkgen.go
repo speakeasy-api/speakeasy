@@ -21,6 +21,8 @@ var supportSDKDocsLanguages map[string]bool = map[string]bool{
 	"go":         true,
 	"python":     true,
 	"typescript": true,
+	"csharp":     true,
+	"unity":      true,
 }
 
 func GenerateContent(ctx context.Context, langs []string, customerID, schemaPath, header, token, outDir, repo, repoSubDir string, debug, autoYes, compile bool) error {
