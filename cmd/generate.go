@@ -200,8 +200,8 @@ func genSDKInit() {
 	genSDKCmd.Flags().BoolP("output-tests", "t", false, "output internal tests for internal speakeasy use cases")
 	genSDKCmd.Flags().MarkHidden("output-tests")
 
-	genSDKChangelogCmd.Flags().StringP("target", "t", "", "target version to get changelog from (required if language is specified otherwise defaults to latest version of the generator)")
-	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version to get changelogs between this and the target version")
+	genSDKChangelogCmd.Flags().StringP("target", "t", "", "the version(s) to get changelogs from, if not specified the latest version(s) will be used")
+	genSDKChangelogCmd.Flags().StringP("previous", "p", "", "the version(s) to get changelogs between this and the target version(s)")
 	genSDKChangelogCmd.Flags().StringP("specific", "s", "", "the version to get changelogs for, not used if language is specified")
 	genSDKChangelogCmd.Flags().StringP("language", "l", "", "the language to get changelogs for, if not specified the changelog for the generator itself will be returned")
 	genSDKChangelogCmd.Flags().BoolP("raw", "r", false, "don't format the output for the terminal")
@@ -395,6 +395,7 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	raw = raw || !utils.IsInteractive()
 
 	opts := []changelog.Option{}
 
@@ -405,15 +406,18 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("unsupported language %s", lang)
 		}
 
-		if targetVersion == "" {
-			return fmt.Errorf("target version is required when specifying a language")
-		}
-
 		targetVersions := map[string]string{}
 
-		pairs := strings.Split(targetVersion, ",")
-		for i := 0; i < len(pairs); i += 2 {
-			targetVersions[pairs[i]] = pairs[i+1]
+		if targetVersion == "" {
+			targetVersions, err = changelogs.GetLatestVersions(lang)
+			if err != nil {
+				return err
+			}
+		} else {
+			pairs := strings.Split(targetVersion, ",")
+			for i := 0; i < len(pairs); i += 2 {
+				targetVersions[pairs[i]] = pairs[i+1]
+			}
 		}
 
 		var previousVersions map[string]string
@@ -432,7 +436,6 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to get changelog for language %s: %w", lang, err)
 		}
 	} else {
-
 		if targetVersion != "" {
 			opts = append(opts, changelog.WithTargetVersion(targetVersion))
 

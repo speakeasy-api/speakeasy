@@ -21,12 +21,22 @@ var supportSDKDocsLanguages map[string]bool = map[string]bool{
 	"go":         true,
 	"python":     true,
 	"typescript": true,
+	"csharp":     true,
+	"unity":      true,
 }
 
-func GenerateContent(ctx context.Context, langs []string, customerID, schemaPath, header, token, outDir, repo, repoSubDir string, debug, autoYes bool) error {
-	for _, lang := range langs {
-		if _, ok := supportSDKDocsLanguages[lang]; !ok {
-			return fmt.Errorf("language %s is not supported in SDK docs", lang)
+func GenerateContent(ctx context.Context, inputLangs []string, customerID, schemaPath, header, token, outDir, repo, repoSubDir string, debug, autoYes, compile bool) error {
+	var langs []string
+	hasCurl := false
+	for _, lang := range inputLangs {
+		if lang == "curl" {
+			hasCurl = true
+		} else {
+			if _, ok := supportSDKDocsLanguages[lang]; !ok {
+				return fmt.Errorf("language %s is not supported in SDK docs", lang)
+			}
+
+			langs = append(langs, lang)
 		}
 	}
 
@@ -74,7 +84,11 @@ func GenerateContent(ctx context.Context, langs []string, customerID, schemaPath
 		generate.WithRepoDetails(repo, repoSubDir),
 		generate.WithAllowRemoteReferences(),
 		// We will add optional curl support when it is complete.
-		generate.WithSDKDocLanguages(false, langs...),
+		generate.WithSDKDocLanguages(hasCurl, langs...),
+	}
+
+	if compile {
+		opts = append(opts, generate.WithSinglePageWrapping())
 	}
 
 	if debug {
