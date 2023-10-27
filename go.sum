@@ -177,8 +177,6 @@ github.com/dlclark/regexp2 v1.8.1 h1:6Lcdwya6GjPUNsBct8Lg/yRPwMhABj269AAzdGSiR+0
 github.com/dlclark/regexp2 v1.8.1/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/dop251/goja v0.0.0-20211022113120-dc8c55024d06/go.mod h1:R9ET47fwRVRPZnOGvHxxhuZcbrMCuiqOz3Rlrh4KSnk=
 github.com/dop251/goja v0.0.0-20221118162653-d4bf6fde1b86/go.mod h1:yRkwfj0CBpOGre+TwBsqPV0IH0Pk73e4PXJOeNDboGs=
-github.com/dop251/goja v0.0.0-20230919151941-fc55792775de h1:lA38Xtzr1Wo+iQdkN2E11ziKXJYRxLlzK/e2/fdxoEI=
-github.com/dop251/goja v0.0.0-20230919151941-fc55792775de/go.mod h1:QMWlm50DNe14hD7t24KEqZuUdC9sOTy8W6XbCU1mlw4=
 github.com/dop251/goja v0.0.0-20231024180952-594410467bc6 h1:U9bRrSlYCu0P8hMulhIdYpr5HUao66tKPdNgD88Zi5M=
 github.com/dop251/goja v0.0.0-20231024180952-594410467bc6/go.mod h1:QMWlm50DNe14hD7t24KEqZuUdC9sOTy8W6XbCU1mlw4=
 github.com/dop251/goja_nodejs v0.0.0-20210225215109-d91c329300e7/go.mod h1:hn7BA7c8pLvoGndExHudxTDKZ84Pyvv+90pbBjbTz0Y=
@@ -375,8 +373,6 @@ github.com/imdario/mergo v0.3.15/go.mod h1:WBLT9ZmE3lPoWsEzCh9LPo3TiwVN+ZKEjmz+h
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
-github.com/jinzhu/copier v0.4.0 h1:w3ciUoD19shMCRargcpm0cm91ytaBhDvuRpz1ODO/U8=
-github.com/jinzhu/copier v0.4.0/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/json-iterator/go v1.1.10/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
@@ -532,16 +528,10 @@ github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5g
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
-github.com/speakeasy-api/easytemplate v0.7.6 h1:9kC7b60r9INSzwW5WE07/x27NXQwPCA6Q89rHAJkBo0=
-github.com/speakeasy-api/easytemplate v0.7.6/go.mod h1:c7SxM8vAO8WufI2bZYHBbRnFSPocjY/nCC2s6gDfJvs=
 github.com/speakeasy-api/easytemplate v0.7.8 h1:ZpFmcM9/ERuajFT8IPl2ZGhWmwi+n3aKsGSqm8FD2zk=
 github.com/speakeasy-api/easytemplate v0.7.8/go.mod h1:qjImK5Yiv/vAp4YBe7m/E7fXRFOabOvUet7emGj1pxk=
-github.com/speakeasy-api/openapi-generation/v2 v2.172.0 h1:XaKDZGAejJKZaUdPTvItTAg5SaOhHnpKYqRIvYpo2WU=
-github.com/speakeasy-api/openapi-generation/v2 v2.172.0/go.mod h1:hWFk2fFyaIxJziVFCvsBA7hAuqFzuVgYl78inQtPpOo=
-github.com/speakeasy-api/openapi-generation/v2 v2.172.4 h1:Ax+XL/bsjOlPYQcAqpzYP5rpAJMxz1Y1zd977AclCC8=
-github.com/speakeasy-api/openapi-generation/v2 v2.172.4/go.mod h1:VZJ3p2s0w6HobIQbRl/q9gWKUUh9XIBNSKLlrO5ogIY=
-github.com/speakeasy-api/openapi-generation/v2 v2.172.9 h1:lP4+84CIcYS9mn06EoRqVkm5+PISs4LWUK+Gj7ny2zQ=
-github.com/speakeasy-api/openapi-generation/v2 v2.172.9/go.mod h1:VZJ3p2s0w6HobIQbRl/q9gWKUUh9XIBNSKLlrO5ogIY=
+github.com/speakeasy-api/openapi-generation/v2 v2.172.11 h1:aDKTV9WILfodIlL6UfTOOl2dsQcN5AzXHikRVycHx14=
+github.com/speakeasy-api/openapi-generation/v2 v2.172.11/go.mod h1:VZJ3p2s0w6HobIQbRl/q9gWKUUh9XIBNSKLlrO5ogIY=
 github.com/speakeasy-api/openapi-specedit v0.0.0-20231017210013-972d0894a3bd h1:QGa5EbcE+xTX7cBERoiU62P/ZOzV8R94BlDvmevmbHs=
 github.com/speakeasy-api/openapi-specedit v0.0.0-20231017210013-972d0894a3bd/go.mod h1:SPwFVyiJ7mNBRoPnsjdHtlZjzUpmloCG+KzkFXeA2jU=
 github.com/speakeasy-api/sdk-gen-config v0.8.4 h1:82RSHOvdZ5WoCV20Kkno+BYjOAoyX+Aw8Xy6eea5UlM=
