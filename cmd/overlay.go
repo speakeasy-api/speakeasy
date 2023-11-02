@@ -127,6 +127,11 @@ func RunApply(c *cobra.Command, args []string) error {
 		return err
 	}
 
+	err = o.Validate()
+	if err != nil {
+		return err
+	}
+
 	ys, specFile, err := loader.LoadEitherSpecification(schema, o)
 	if err != nil {
 		return err
