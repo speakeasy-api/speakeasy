@@ -33,6 +33,7 @@ speakeasy [flags]
 * [speakeasy docs](docs/README.md)	 - Use this command to generate content, compile, and publish SDK docs.
 * [speakeasy generate](generate/README.md)	 - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
+* [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy proxy](proxy.md)	 - Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities
 * [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version

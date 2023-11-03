@@ -18,6 +18,7 @@ speakeasy docs generate [flags]
 
 ```
   -y, --auto-yes             auto answer yes to all prompts
+  -c, --compile              automatically compile SDK docs content for a single page doc site
   -d, --debug                enable writing debug files with broken code
   -H, --header string        header key to use if authentication is required for downloading schema from remote URL
   -h, --help                 help for generate

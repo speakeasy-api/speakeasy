@@ -19,8 +19,8 @@ speakeasy validate openapi [flags]
 ```
   -H, --header string                 header key to use if authentication is required for downloading schema from remote URL
   -h, --help                          help for openapi
-      --max-validation-errors int     limit the number of errors to output (default 0 = no limit)
-      --max-validation-warnings int   limit the number of warnings to output (default 0 = no limit)
+      --max-validation-errors int     limit the number of errors to output (default 1000, 0 = no limit) (default 1000)
+      --max-validation-warnings int   limit the number of warnings to output (default 1000, 0 = no limit) (default 1000)
   -o, --output-hints                  output validation hints in addition to warnings/errors
   -s, --schema string                 local filepath or URL for the OpenAPI schema
       --token string                  token value to use if authentication is required for downloading schema from remote URL

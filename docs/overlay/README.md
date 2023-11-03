@@ -1,0 +1,20 @@
+# overlay  
+`speakeasy overlay`  
+
+
+Work with OpenAPI Overlays  
+
+### Options
+
+```
+  -h, --help   help for overlay
+```
+
+### Parent Command
+
+* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+### Sub Commands
+
+* [speakeasy overlay apply](apply.md)	 - Given an overlay, it will apply it to the spec. If omitted, spec will be loaded via extends (only from local file system).
+* [speakeasy overlay compare](compare.md)	 - Given two specs, it will output an overlay that describes the differences between them
+* [speakeasy overlay validate](validate.md)	 - Given an overlay, it will state whether it appears to be valid according to the OpenAPI Overlay specification
