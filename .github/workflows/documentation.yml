@@ -43,7 +43,7 @@ jobs:
       - name: Generate speakeasy-registry doc-site docs
         working-directory: speakeasy
         run: |
-          go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/docsite/docs/10-speakeasy-cli -doc-site
+          go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/marketing-site/src/pages/docs/speakeasy-cli -doc-site
       - name: Commit and push changes to speakeasy repo
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
