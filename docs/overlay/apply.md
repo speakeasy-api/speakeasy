@@ -2,7 +2,7 @@
 `speakeasy overlay apply`  
 
 
-Given an overlay, it will apply it to the spec. If omitted, spec will be loaded via extends (only from local file system).  
+Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.  
 
 ## Usage
 
@@ -15,7 +15,7 @@ speakeasy overlay apply [flags]
 ```
   -h, --help             help for apply
   -o, --overlay string   overlay file to apply
-  -s, --schema string    schema to apply overlay to
+  -s, --schema string    schema to extend (optional)
 ```
 
 ### Parent Command
