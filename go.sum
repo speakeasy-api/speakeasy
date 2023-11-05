@@ -468,6 +468,8 @@ github.com/onsi/gomega v1.27.6 h1:ENqfyGeS5AX/rlXDd/ETokDz93u0YufY1Pgxuy/PvWE=
 github.com/onsi/gomega v1.27.6/go.mod h1:PIQNjfQwkP3aQAH7lf7j87O/5FiNr+ZR8+ipb+qQlhg=
 github.com/pb33f/libopenapi v0.12.0 h1:7Ba7MC3uQC/Hkpq+UKcRSG0SQN+yZEh4nDb2g4qU7k0=
 github.com/pb33f/libopenapi v0.12.0/go.mod h1:s8uj6S0DjWrwZVj20ianJBz+MMjHAbeeRYNyo9ird74=
+github.com/pb33f/libopenapi v0.12.1 h1:DRhgbg1t32OSYoHT/Bk3stVruqquAkKj+S+OqOQIbBc=
+github.com/pb33f/libopenapi v0.12.1/go.mod h1:s8uj6S0DjWrwZVj20ianJBz+MMjHAbeeRYNyo9ird74=
 github.com/pb33f/libopenapi-validator v0.0.20 h1:ZUrVH/zlam+wWgR2HKuZc0uOuGXvcL3cB8jutPtiI9A=
 github.com/pb33f/libopenapi-validator v0.0.20/go.mod h1:i7j2T/x7W8nJedxXWj7tFdxwp6e6MC2pBIFuJ1AEihg=
 github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
@@ -534,6 +536,8 @@ github.com/speakeasy-api/openapi-generation/v2 v2.173.1 h1:r3N/Uy5TGD+iHilF8U+Gh
 github.com/speakeasy-api/openapi-generation/v2 v2.173.1/go.mod h1:VZJ3p2s0w6HobIQbRl/q9gWKUUh9XIBNSKLlrO5ogIY=
 github.com/speakeasy-api/openapi-specedit v0.0.1 h1:HhqzNjQkvhXZreaLnjXUtkUBVIW/o3d1GNwU9vAKeU0=
 github.com/speakeasy-api/openapi-specedit v0.0.1/go.mod h1:SPwFVyiJ7mNBRoPnsjdHtlZjzUpmloCG+KzkFXeA2jU=
+github.com/speakeasy-api/openapi-specedit v0.1.0 h1:P/dnWAc3YKeiSxhNC2j6GGeBZeXnyCZ2sS2SEh8k8E4=
+github.com/speakeasy-api/openapi-specedit v0.1.0/go.mod h1:dyRxKl4yTF7KDaE5rLuMfevIQmuobM489n4cJfvVwSw=
 github.com/speakeasy-api/sdk-gen-config v0.8.4 h1:82RSHOvdZ5WoCV20Kkno+BYjOAoyX+Aw8Xy6eea5UlM=
 github.com/speakeasy-api/sdk-gen-config v0.8.4/go.mod h1:osr44mhKoRboNtEDMPaDoyH486pLLJH8yvKvnujqnUU=
 github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0 h1:RqYjM0okHjjEyKRxumaTmZDWt68nGZo1sbIfALyqLCg=
