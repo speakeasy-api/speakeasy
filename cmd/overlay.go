@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/openapi-specedit/pkg/overlay"
+	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"gopkg.in/yaml.v3"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/speakeasy-api/openapi-specedit/pkg/loader"
+	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 )
 
 var overlayCmd = &cobra.Command{
@@ -32,7 +32,7 @@ var overlayCompareCmd = &cobra.Command{
 
 var overlayApplyCmd = &cobra.Command{
 	Use:   "apply",
-	Short: "Given an overlay, it will apply it to the spec. If omitted, spec will be loaded via extends (only from local file system).",
+	Short: "Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.",
 	Args:  cobra.NoArgs,
 	RunE:  RunApply,
 }
@@ -50,8 +50,7 @@ func overlayInit() {
 
 	overlayApplyCmd.Flags().StringP("overlay", "o", "", "overlay file to apply")
 	overlayApplyCmd.MarkFlagRequired("overlay")
-	overlayApplyCmd.Flags().StringP("schema", "s", "", "schema to apply overlay to")
-	overlayApplyCmd.MarkFlagRequired("schema")
+	overlayApplyCmd.Flags().StringP("schema", "s", "", "schema to extend (optional)")
 
 	rootCmd.AddCommand(overlayCmd)
 }
