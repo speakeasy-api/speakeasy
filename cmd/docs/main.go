@@ -28,8 +28,8 @@ func main() {
 	root.DisableAutoGenTag = true
 
 	exclusionList := []string{
-		filepath.Join(*outDir, "01-getting-started.md"),
-		filepath.Join(*outDir, "_category_.json"),
+		filepath.Join(*outDir, "getting-started.mdx"),
+		filepath.Join(*outDir, "_meta.json"),
 	}
 
 	if _, err := removeDocs(*outDir, exclusionList); err != nil {
