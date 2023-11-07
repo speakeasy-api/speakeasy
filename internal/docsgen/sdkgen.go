@@ -62,6 +62,10 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 
 	l := log.NewLogger(schemaPath)
 
+	if hasCurl {
+		langs = append(langs, "curl")
+	}
+
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
 		generate.WithCustomerID(customerID),
@@ -83,8 +87,7 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithRepoDetails(repo, repoSubDir),
 		generate.WithAllowRemoteReferences(),
-		// We will add optional curl support when it is complete.
-		generate.WithSDKDocLanguages(hasCurl, langs...),
+		generate.WithSDKDocLanguages(langs...),
 	}
 
 	if compile {
