@@ -3,10 +3,11 @@ package sdkgen
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	"github.com/fatih/color"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
@@ -51,15 +52,13 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 			dir := path.Dir(filename)
 
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				err := os.MkdirAll(dir, 0755)
+				err := os.MkdirAll(dir, 0o755)
 				if err != nil {
 					return err
 				}
 			}
 
-			// TODO Using 0755 here rather than perm is temporary until an upstream change to
-			// easytemplate can be made to add better support for file permissions.
-			return os.WriteFile(filename, data, 0755)
+			return os.WriteFile(filename, data, perm)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
@@ -110,7 +109,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 			dir := path.Dir(filename)
 
 			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				err := os.MkdirAll(dir, 0755)
+				err := os.MkdirAll(dir, 0o755)
 				if err != nil {
 					return err
 				}
@@ -118,7 +117,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 
 			// TODO Using 0755 here rather than perm is temporary until an upstream change to
 			// easytemplate can be made to add better support for file permissions.
-			return os.WriteFile(filename, data, 0755)
+			return os.WriteFile(filename, data, 0o755)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 	}
