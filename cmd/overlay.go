@@ -97,7 +97,7 @@ func RunCompare(c *cobra.Command, args []string) error {
 
 	title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])
 
-	o, err := overlay.Compare(title, schemas[0], y1, y2)
+	o, err := overlay.Compare(title, schemas[0], y1, *y2)
 	if err != nil {
 		return fmt.Errorf("failed to compare spec files %q and %q: %w", schemas[0], schemas[1], err)
 	}
