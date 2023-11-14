@@ -65,7 +65,9 @@ func merge(inSchemas [][]byte) ([]byte, error) {
 // TODO better errors
 func loadOpenAPIDocument(data []byte) (*v3.Document, error) {
 	doc, err := libopenapi.NewDocumentWithConfiguration(data, &datamodel.DocumentConfiguration{
-		AllowFileReferences: true,
+		AllowFileReferences:                 true,
+		IgnorePolymorphicCircularReferences: true,
+		IgnoreArrayCircularReferences:       true,
 	})
 	if err != nil {
 		return nil, err
