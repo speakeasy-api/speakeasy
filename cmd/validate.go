@@ -2,11 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/manifoldco/promptui"
+	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var validateCmd = &cobra.Command{
@@ -97,16 +102,39 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		OutputHints: outputHints,
 	}
 
+	logProxyFields := collectValidationLoggingFields(schemaPath)
+	log.NewLogger("").InfoProxy("Attempted Spec Validation", logProxyFields...)
+
 	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, header, token, limits); err != nil {
 		rootCmd.SilenceUsage = true
-
+		logProxyFields = append(logProxyFields, zap.Error(err))
+		// TODO: Move Upstream work in validation summary.
+		log.NewLogger("").ErrorProxy("Failed Spec Validation", logProxyFields...)
 		return err
 	}
+
+	log.NewLogger("").InfoProxy("Successful Spec Validation", logProxyFields...)
 
 	uploadCommand := promptui.Styler(promptui.FGCyan, promptui.FGBold)("speakeasy api register-schema --schema=" + schemaPath)
 	fmt.Printf("\nYou can upload your schema to Speakeasy using the following command:\n%s\n", uploadCommand)
 
 	return nil
+}
+
+func collectValidationLoggingFields(schemaPath string) []zap.Field {
+	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
+	if runLocation == "" {
+		runLocation = "cli"
+	}
+	// TODO: find some way for the cli to detect version in use.
+	logProxyFields := []zap.Field{
+		zap.String("run_location", runLocation),
+		zap.String("schema_path", schemaPath),
+		zap.String("customer_id", config.GetCustomerID()),
+		zap.String("command", "validate_openapi"),
+	}
+
+	return logProxyFields
 }
 
 func validateConfig(cmd *cobra.Command, args []string) error {

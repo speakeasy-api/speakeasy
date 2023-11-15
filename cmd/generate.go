@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
@@ -286,11 +289,18 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	logProxyFields := collectSDKGenLoggingFields(lang, schemaPath, repo, repoSubdir)
+
+	log.NewLogger("").InfoProxy("Attempted SDK Generation", logProxyFields...)
+
 	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), config.GetWorkspaceID(), lang, schemaPath, header, token, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir); err != nil {
 		rootCmd.SilenceUsage = true
-
+		logProxyFields = append(logProxyFields, zap.Error(err))
+		log.NewLogger("").ErrorProxy("Failed SDK Generation", logProxyFields...)
 		return err
 	}
+
+	log.NewLogger("").InfoProxy("Successful SDK Generation", logProxyFields...)
 
 	return nil
 }
@@ -324,6 +334,31 @@ func genUsageSnippets(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func collectSDKGenLoggingFields(lang, schemaPath, repo, repoSubDir string) []zap.Field {
+	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
+	if runLocation == "" {
+		runLocation = "cli"
+	}
+	// TODO: find some way for the cli to detect version in use.
+	logProxyFields := []zap.Field{
+		zap.String("run_location", runLocation),
+		zap.String("language", lang),
+		zap.String("schema_path", schemaPath),
+		zap.String("target", "sdk"),
+		zap.String("customer_id", config.GetCustomerID()),
+		zap.String("command", "generate_sdk"),
+	}
+
+	if repo != "" {
+		logProxyFields = append(logProxyFields, zap.String("gh_repo", repo))
+	}
+	if repoSubDir != "" {
+		logProxyFields = append(logProxyFields, zap.String("gh_directory", repoSubDir))
+	}
+
+	return logProxyFields
 }
 
 func getLatestVersionInfo(cmd *cobra.Command, args []string) error {

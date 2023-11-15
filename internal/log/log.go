@@ -37,6 +37,20 @@ func NewLogger(associatedFile string) *Logger {
 	}
 }
 
+func (l *Logger) InfoProxy(msg string, fields ...zapcore.Field) {
+	fields = append(l.fields, fields...)
+	if err := flushLog(msg, logProxyLevelInfo, fields); err != nil {
+		fmt.Fprintf(os.Stderr, utils.Blue("error flushing info logs"))
+	}
+}
+
+func (l *Logger) ErrorProxy(msg string, fields ...zapcore.Field) {
+	fields = append(l.fields, fields...)
+	if err := flushLog(msg, logProxyLevelError, fields); err != nil {
+		fmt.Fprintf(os.Stderr, utils.Blue("error flushing error logs"))
+	}
+}
+
 func (l *Logger) Info(msg string, fields ...zapcore.Field) {
 	fields = append(l.fields, fields...)
 
