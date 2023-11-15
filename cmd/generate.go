@@ -341,7 +341,6 @@ func collectSDKGenLoggingFields(lang, schemaPath, repo, repoSubDir string) []zap
 	if runLocation == "" {
 		runLocation = "cli"
 	}
-	// TODO: find some way for the cli to detect version in use.
 	logProxyFields := []zap.Field{
 		zap.String("run_location", runLocation),
 		zap.String("language", lang),
@@ -349,6 +348,7 @@ func collectSDKGenLoggingFields(lang, schemaPath, repo, repoSubDir string) []zap
 		zap.String("target", "sdk"),
 		zap.String("customer_id", config.GetCustomerID()),
 		zap.String("command", "generate_sdk"),
+		zap.String("speakeasy_version", genVersion),
 	}
 
 	if repo != "" {
