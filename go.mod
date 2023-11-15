@@ -14,7 +14,7 @@ require (
 	github.com/pb33f/libopenapi v0.13.7
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.189.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.191.3
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
@@ -62,7 +62,7 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
-	github.com/evanw/esbuild v0.17.14 // indirect
+	github.com/evanw/esbuild v0.19.5 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -124,8 +124,7 @@ require (
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.7.8 // indirect
-	github.com/speakeasy-api/libopenapi v0.0.0-20231106110850-997f0fa6d0c5 // indirect
+	github.com/speakeasy-api/easytemplate v0.8.0 // indirect
 	github.com/speakeasy-api/sdk-gen-config v1.2.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.0 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect

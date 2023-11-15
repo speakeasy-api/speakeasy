@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string) error {
+func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string) error {
 	if !generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -45,9 +45,15 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 
 	l := log.NewLogger(schemaPath)
 
+	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
+	if runLocation == "" {
+		runLocation = "cli"
+	}
+
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
 		generate.WithCustomerID(customerID),
+		generate.WithWorkspaceID(workspaceID),
 		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
 			dir := path.Dir(filename)
 
@@ -60,7 +66,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 
 			return os.WriteFile(filename, data, perm)
 		}, os.ReadFile),
-		generate.WithRunLocation("cli"),
+		generate.WithRunLocation(runLocation),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithInstallationURL(installationURL),
 		generate.WithPublished(published),
