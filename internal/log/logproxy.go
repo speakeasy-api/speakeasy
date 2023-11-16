@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"go.uber.org/zap"
 )
 
-const ApiURL = "https://api.prod.speakeasyapi.dev"
+const defaultAPIURL = "https://api.prod.speakeasyapi.dev"
 
 type logProxyLevel string
 
@@ -51,7 +52,12 @@ func flushLog(message string, level logProxyLevel, fields []zap.Field) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", ApiURL+"/v1/log/proxy", bytes.NewBuffer(body))
+	baseURL := os.Getenv("SPEAKEASY_SERVER_URL")
+	if baseURL == "" {
+		baseURL = defaultAPIURL
+	}
+
+	req, err := http.NewRequest("POST", baseURL+"/v1/log/proxy", bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
