@@ -127,7 +127,7 @@ func collectValidationLoggingFields(schemaPath string) []zap.Field {
 		runLocation = "cli"
 	}
 	logProxyFields := []zap.Field{
-		zap.String("run_location", runLocation),
+		zap.String("run_origin", runLocation),
 		zap.String("schema_path", schemaPath),
 		zap.String("customer_id", config.GetCustomerID()),
 		zap.String("command", "validate_openapi"),

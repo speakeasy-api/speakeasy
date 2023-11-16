@@ -342,7 +342,7 @@ func collectSDKGenLoggingFields(lang, schemaPath, repo, repoSubDir string) []zap
 		runLocation = "cli"
 	}
 	logProxyFields := []zap.Field{
-		zap.String("run_location", runLocation),
+		zap.String("run_origin", runLocation),
 		zap.String("language", lang),
 		zap.String("schema_path", schemaPath),
 		zap.String("target", "sdk"),
@@ -353,6 +353,8 @@ func collectSDKGenLoggingFields(lang, schemaPath, repo, repoSubDir string) []zap
 
 	if repo != "" {
 		logProxyFields = append(logProxyFields, zap.String("gh_repo", repo))
+		parts := strings.Split(repo, "/")
+		logProxyFields = append(logProxyFields, zap.String("gh_organization", parts[0]))
 	}
 	if repoSubDir != "" {
 		logProxyFields = append(logProxyFields, zap.String("gh_directory", repoSubDir))
