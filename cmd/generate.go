@@ -352,7 +352,7 @@ func collectSDKGenLoggingFields(lang, schemaPath, repo, repoSubDir string) []zap
 	}
 
 	if repo != "" {
-		logProxyFields = append(logProxyFields, zap.String("gh_repo", repo))
+		logProxyFields = append(logProxyFields, zap.String("gh_repository", fmt.Sprintf("https://github.com/%s", repo)))
 		parts := strings.Split(repo, "/")
 		logProxyFields = append(logProxyFields, zap.String("gh_organization", parts[0]))
 	}
