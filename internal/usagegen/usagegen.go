@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"os"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	"github.com/pkg/errors"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
@@ -27,7 +28,7 @@ var SupportedLanguagesUsageSnippets = []string{
 	"unity",
 }
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace string) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string) error {
 	matchedLanguage := false
 	for _, language := range SupportedLanguagesUsageSnippets {
 		if language == lang {
@@ -69,7 +70,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, schemaPath, lang, "", isRemote); len(errs) > 0 {
+	if errs := g.Generate(context.Background(), schema, schemaPath, lang, configPath, isRemote); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error("", zap.Error(err))
 		}
