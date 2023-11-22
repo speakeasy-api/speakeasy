@@ -216,7 +216,6 @@ func genSDKInit() {
 	genUsageSnippetCmd.Flags().StringP("operation-id", "i", "", "The OperationID to generate usage snippet for")
 	genUsageSnippetCmd.Flags().StringP("namespace", "n", "", "The namespace to generate multiple usage snippets for. This could correspond to a tag or a x-speakeasy-group-name in your OpenAPI spec.")
 	genUsageSnippetCmd.Flags().StringP("out", "o", "", `By default this command will write to stdout. If a filepath is provided results will be written into that file.
-
 	If the path to an existing directory is provided, all results will be formatted into that directory with each operation getting its own sub folder.`)
 	genUsageSnippetCmd.Flags().StringP("config-path", "c", "./", "An optional argument to pass in the path to a gen.yaml configuration file.")
 
