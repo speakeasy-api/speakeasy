@@ -34,6 +34,7 @@ speakeasy generate usage [flags]
 ### Options
 
 ```
+  -c, --config-path string    An optional argument to pass in the path to a directory that holds the gen.yaml configuration file. (default ".")
   -H, --header string         header key to use if authentication is required for downloading schema from remote URL
   -h, --help                  help for usage
   -l, --lang string           language to generate sdk for (available options: [csharp, go, java, php, python, ruby, swift, terraform, typescript, unity]) (default "go")
