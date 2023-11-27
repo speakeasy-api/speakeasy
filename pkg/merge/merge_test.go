@@ -1,10 +1,55 @@
 package merge
 
 import (
+	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi/datamodel"
+	"github.com/stretchr/testify/require"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func Test_merge_determinism(t *testing.T) {
+	// test data not included
+	t.Skip()
+	absSchemas := [][]byte{}
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	files, err := os.ReadDir(filepath.Join(wd, "testdata"))
+	require.NoError(t, err)
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), ".") {
+			continue
+		}
+		content, err := os.ReadFile(filepath.Join("testdata", f.Name()))
+		require.NoError(t, err)
+		absSchemas = append(absSchemas, content)
+	}
+
+	// Run merge twice and ensure the output is the same.
+	got1, err := merge(absSchemas)
+	got2, err := merge(absSchemas)
+	doc1, err := libopenapi.NewDocumentWithConfiguration(got1, &datamodel.DocumentConfiguration{
+		AllowFileReferences:                 true,
+		IgnorePolymorphicCircularReferences: true,
+		IgnoreArrayCircularReferences:       true,
+	})
+	require.NoError(t, err)
+	doc2, err := libopenapi.NewDocumentWithConfiguration(got2, &datamodel.DocumentConfiguration{
+		AllowFileReferences:                 true,
+		IgnorePolymorphicCircularReferences: true,
+		IgnoreArrayCircularReferences:       true,
+	})
+	require.NoError(t, err)
+	documentChanges, errs := libopenapi.CompareDocuments(doc1, doc2)
+	require.Len(t, errs, 0)
+	// When no changes, CompareDocuments returns nil
+	require.Nil(t, documentChanges)
+	require.Equal(t, string(got1), string(got2))
+}
 
 func Test_merge_Success(t *testing.T) {
 	type args struct {
@@ -269,7 +314,6 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
-    x-test: test
     /test:
         x-test: test
         get:
@@ -279,6 +323,7 @@ paths:
                 "200":
                     x-test: test
                     description: OK
+    x-test: test
 `,
 		},
 		{
@@ -356,7 +401,6 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
-    x-test: test
     /test:
         x-test: test
         get:
@@ -365,6 +409,11 @@ paths:
                 x-test: test
                 "200":
                     x-test: test
+                    description: OK
+    /test1:
+        get:
+            responses:
+                "200":
                     description: OK
     /test3:
         parameters:
@@ -398,11 +447,7 @@ paths:
             responses:
                 "201":
                     description: Created
-    /test1:
-        get:
-            responses:
-                "200":
-                    description: OK
+    x-test: test
 `,
 		},
 		{
@@ -421,11 +466,11 @@ components:
 			},
 			want: `openapi: "3.1"
 components:
-    x-test: test
     schemas:
         test:
-            x-test: test
             type: object
+            x-test: test
+    x-test: test
 `,
 		},
 		{
@@ -527,40 +572,25 @@ components:
 			},
 			want: `openapi: "3.1"
 components:
-    schemas:
+    callbacks:
         test:
-            type: object
+            test:
+                get:
+                    responses:
+                        "200":
+                            description: OK
         test2:
-            type: object
-        test3:
+            test:
+                get:
+                    responses:
+                        "200":
+                            description: OK
+                    x-test: test
             x-test: test
-            type: object
-    responses:
-        test:
-            description: test
+    examples:
         test2:
-            description: test
+            summary: test
             x-test: test
-    parameters:
-        test:
-            name: test
-            in: query
-        test2:
-            name: test
-            in: query
-            x-test: test
-    requestBodies:
-        test:
-            content:
-                application/json:
-                    schema:
-                        type: object
-        test2:
-            x-test: test
-            content:
-                application/json:
-                    schema:
-                        type: object
     headers:
         test:
             description: test
@@ -570,38 +600,53 @@ components:
             description: test
             schema:
                 type: string
-    securitySchemes:
-        test:
-            type: http
-            scheme: bearer
-        test2:
-            x-test: test
-            type: http
-            scheme: bearer
-    callbacks:
-        test:
-            test:
-                get:
-                    responses:
-                        "200":
-                            description: OK
-        test2:
-            x-test: test
-            test:
-                get:
-                    x-test: test
-                    responses:
-                        "200":
-                            description: OK
-    x-test: test
-    examples:
-        test2:
-            x-test: test
-            summary: test
     links:
         test2:
-            x-test: test
             description: test
+            x-test: test
+    parameters:
+        test:
+            in: query
+            name: test
+        test2:
+            in: query
+            name: test
+            x-test: test
+    requestBodies:
+        test:
+            content:
+                application/json:
+                    schema:
+                        type: object
+        test2:
+            content:
+                application/json:
+                    schema:
+                        type: object
+            x-test: test
+    responses:
+        test:
+            description: test
+        test2:
+            description: test
+            x-test: test
+    schemas:
+        test:
+            type: object
+        test2:
+            type: object
+        test3:
+            type: object
+            x-test: test
+    securitySchemes:
+        test:
+            scheme: bearer
+            type: http
+        test2:
+            scheme: bearer
+            type: http
+            x-test: test
+    x-test: test
 `,
 		},
 		{
@@ -716,8 +761,7 @@ externalDocs:
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := merge(tt.args.inSchemas)
-			assert.NoError(t, err)
+			got, _ := merge(tt.args.inSchemas)
 
 			assert.Equal(t, tt.want, string(got))
 		})
