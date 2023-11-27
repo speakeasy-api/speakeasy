@@ -2,7 +2,7 @@
 `speakeasy generate sdk`  
 
 
-Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity + more coming soon)  
+Generating Client SDKs from OpenAPI specs (csharp, go, java, javav2, php, python, ruby, swift, terraform, typescript, unity + more coming soon)  
 
 ## Details
 
@@ -13,6 +13,7 @@ The following languages are currently supported:
 	- csharp
 	- go
 	- java
+	- javav2
 	- php
 	- python
 	- ruby
@@ -120,7 +121,7 @@ speakeasy generate sdk [flags]
   -H, --header string            header key to use if authentication is required for downloading schema from remote URL
   -h, --help                     help for sdk
   -i, --installationURL string   the language specific installation URL for installation instructions if the SDK is not published to a package manager
-  -l, --lang string              language to generate sdk for (available options: [csharp, go, java, php, python, ruby, swift, terraform, typescript, unity]) (default "go")
+  -l, --lang string              language to generate sdk for (available options: [csharp, go, java, javav2, php, python, ruby, swift, terraform, typescript, unity]) (default "go")
   -o, --out string               path to the output directory
   -p, --published                whether the SDK is published to a package manager or not, determines the type of installation instructions to generate
   -r, --repo string              the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions
