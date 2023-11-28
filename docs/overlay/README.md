@@ -12,7 +12,7 @@ Work with OpenAPI Overlays
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The speakeasy CLI tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
 * [speakeasy overlay apply](apply.md)	 - Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.

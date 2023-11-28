@@ -23,4 +23,4 @@ speakeasy update [flags]
 
 ### Parent Command
 
-* [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](README.md)	 - The speakeasy CLI tool provides access to the speakeasyapi.dev toolchain

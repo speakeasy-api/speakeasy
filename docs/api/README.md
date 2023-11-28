@@ -24,7 +24,7 @@ speakeasy api [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The speakeasy CLI tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
 * [speakeasy api download-latest-schema](download-latest-schema.md)	 - Download latest schema
