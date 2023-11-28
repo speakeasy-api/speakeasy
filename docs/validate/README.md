@@ -22,7 +22,7 @@ speakeasy validate [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The speakeasy CLI tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
 * [speakeasy validate config](config.md)	 - Validates a Speakeasy configuration file for SDK generation

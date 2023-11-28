@@ -40,13 +40,12 @@ var generateCmd = &cobra.Command{
 
 var genSDKCmd = &cobra.Command{
 	Use:   "sdk",
-	Short: fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s + more coming soon)", strings.Join(SDKSupportedLanguageTargets(), ", ")),
+	Short: fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s)", strings.Join(SDKSupportedLanguageTargets(), ", ")),
 	Long: fmt.Sprintf(`Using the "speakeasy generate sdk" command you can generate client SDK packages for various languages
 that are ready to use and publish to your favorite package registry.
 
 The following languages are currently supported:
 	- %s
-	- more coming soon
 
 By default the command will generate a Go SDK, but you can specify a different language using the --lang flag.
 It will also use generic defaults for things such as package name (openapi), etc.
@@ -177,6 +176,7 @@ func genInit() {
 //nolint:errcheck
 func genSDKInit() {
 	genSDKCmd.Flags().StringP("lang", "l", "go", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")))
+	genSDKCmd.MarkFlagRequired("lang")
 
 	genSDKCmd.Flags().StringP("schema", "s", "./openapi.yaml", "local filepath or URL for the OpenAPI schema")
 	genSDKCmd.MarkFlagRequired("schema")
