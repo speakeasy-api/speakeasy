@@ -164,6 +164,13 @@ var genSDKChangelogCmd = &cobra.Command{
 	RunE:  getChangelogs,
 }
 
+var genSDKDocsCmd = &cobra.Command{
+	Use:   "docs",
+	Short: "Use this command to generate content for the SDK docs directory.",
+	Long:  "Use this command to generate content for the SDK docs directory.",
+	RunE:  genSDKDocsContent,
+}
+
 var genVersion string
 
 func genInit() {
@@ -219,10 +226,24 @@ func genSDKInit() {
 	If the path to an existing directory is provided, all results will be formatted into that directory with each operation getting its own sub folder.`)
 	genUsageSnippetCmd.Flags().StringP("config-path", "c", ".", "An optional argument to pass in the path to a directory that holds the gen.yaml configuration file.")
 
+	genSDKDocsCmd.Flags().StringP("out", "o", "", "path to the output directory")
+	genSDKDocsCmd.MarkFlagRequired("out")
+	genSDKDocsCmd.Flags().StringP("schema", "s", "./openapi.yaml", "local filepath or URL for the OpenAPI schema")
+	genSDKDocsCmd.MarkFlagRequired("schema")
+	genSDKDocsCmd.Flags().StringP("langs", "l", "", "a list of languages to include in SDK Doc generation. Example usage -l go,python,typescript")
+	genSDKDocsCmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
+	genSDKDocsCmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
+	genSDKDocsCmd.Flags().BoolP("debug", "d", false, "enable writing debug files with broken code")
+	genSDKDocsCmd.Flags().BoolP("auto-yes", "y", false, "auto answer yes to all prompts")
+	genSDKDocsCmd.Flags().BoolP("compile", "c", false, "automatically compile SDK docs content for a single page doc site")
+	genSDKDocsCmd.Flags().StringP("repo", "r", "", "the repository URL for the SDK Docs repo")
+	genSDKDocsCmd.Flags().StringP("repo-subdir", "b", "", "the subdirectory of the repository where the SDK Docs are located in the repo, helps with documentation generation")
+
 	genSDKCmd.AddCommand(genSDKVersionCmd)
 	genSDKCmd.AddCommand(genSDKChangelogCmd)
 	generateCmd.AddCommand(genSDKCmd)
 	generateCmd.AddCommand(genUsageSnippetCmd)
+	generateCmd.AddCommand(genSDKDocsCmd)
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {
