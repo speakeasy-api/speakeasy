@@ -12,22 +12,22 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/orderedmap v0.3.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.13.7
+	github.com/pb33f/libopenapi v0.13.21
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.210.6
+	github.com/speakeasy-api/openapi-generation/v2 v2.213.3
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	go.uber.org/zap v1.26.0
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
-	golang.org/x/term v0.13.0
+	golang.org/x/exp v0.0.0-20231127185646-65229373498e
+	golang.org/x/term v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -60,7 +60,7 @@ require (
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d // indirect
-	github.com/dop251/goja_nodejs v0.0.0-20231022114343-5c1f9037c9ab // indirect
+	github.com/dop251/goja_nodejs v0.0.0-20231122114759-e84d9a924c5c // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
@@ -113,12 +113,12 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pb33f/libopenapi-validator v0.0.26 // indirect
+	github.com/pb33f/libopenapi-validator v0.0.32 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
-	github.com/pterm/pterm v0.12.69 // indirect
+	github.com/pterm/pterm v0.12.71 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
@@ -128,7 +128,7 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.8.0 // indirect
-	github.com/speakeasy-api/sdk-gen-config v1.2.0 // indirect
+	github.com/speakeasy-api/sdk-gen-config v1.3.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.0 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
@@ -147,11 +147,20 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230920204549-e6e6cdab5c13 // indirect
 	google.golang.org/grpc v1.58.2 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+// replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi ordered-libopenapi
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20231207113436-fac9a4b3b100
+
+// replace github.com/pb33f/libopenapi-validator => github.com/speakeasy-api/libopenapi-validator upgrade-to-orderedmap
+replace github.com/pb33f/libopenapi-validator => github.com/speakeasy-api/libopenapi-validator v0.0.0-20231206083630-ec398fa3baec
+
+// replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum upgrade-to-orderedmap
+replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20231206083703-9be37d07f8e9

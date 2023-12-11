@@ -1,13 +1,14 @@
 package merge
 
 import (
-	"github.com/pb33f/libopenapi"
-	"github.com/pb33f/libopenapi/datamodel"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi/datamodel"
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -96,8 +97,8 @@ info:
 x-foo: bar`),
 				},
 			},
-			want: `openapi: "3.1"
-x-foo: bar
+			want: `x-foo: bar
+openapi: "3.1"
 `,
 		},
 		{
@@ -314,6 +315,7 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
+    x-test: test
     /test:
         x-test: test
         get:
@@ -323,7 +325,6 @@ paths:
                 "200":
                     x-test: test
                     description: OK
-    x-test: test
 `,
 		},
 		{
@@ -401,6 +402,7 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
+    x-test: test
     /test:
         x-test: test
         get:
@@ -409,11 +411,6 @@ paths:
                 x-test: test
                 "200":
                     x-test: test
-                    description: OK
-    /test1:
-        get:
-            responses:
-                "200":
                     description: OK
     /test3:
         parameters:
@@ -447,7 +444,11 @@ paths:
             responses:
                 "201":
                     description: Created
-    x-test: test
+    /test1:
+        get:
+            responses:
+                "200":
+                    description: OK
 `,
 		},
 		{
@@ -466,11 +467,11 @@ components:
 			},
 			want: `openapi: "3.1"
 components:
+    x-test: test
     schemas:
         test:
-            type: object
             x-test: test
-    x-test: test
+            type: object
 `,
 		},
 		{
@@ -572,45 +573,28 @@ components:
 			},
 			want: `openapi: "3.1"
 components:
-    callbacks:
+    x-test: test
+    schemas:
         test:
-            test:
-                get:
-                    responses:
-                        "200":
-                            description: OK
+            type: object
         test2:
-            test:
-                get:
-                    responses:
-                        "200":
-                            description: OK
-                    x-test: test
+            type: object
+        test3:
             x-test: test
-    examples:
-        test2:
-            summary: test
-            x-test: test
-    headers:
+            type: object
+    responses:
         test:
             description: test
-            schema:
-                type: string
-        test2:
-            description: test
-            schema:
-                type: string
-    links:
         test2:
             description: test
             x-test: test
     parameters:
         test:
-            in: query
             name: test
+            in: query
         test2:
-            in: query
             name: test
+            in: query
             x-test: test
     requestBodies:
         test:
@@ -619,34 +603,52 @@ components:
                     schema:
                         type: object
         test2:
+            x-test: test
             content:
                 application/json:
                     schema:
                         type: object
-            x-test: test
-    responses:
+    headers:
         test:
             description: test
+            schema:
+                type: string
         test2:
+            x-test: test
             description: test
-            x-test: test
-    schemas:
-        test:
-            type: object
-        test2:
-            type: object
-        test3:
-            type: object
-            x-test: test
+            schema:
+                type: string
     securitySchemes:
         test:
-            scheme: bearer
             type: http
+            scheme: bearer
         test2:
-            scheme: bearer
-            type: http
             x-test: test
-    x-test: test
+            type: http
+            scheme: bearer
+    callbacks:
+        test:
+            test:
+                get:
+                    responses:
+                        "200":
+                            description: OK
+        test2:
+            x-test: test
+            test:
+                get:
+                    x-test: test
+                    responses:
+                        "200":
+                            description: OK
+    examples:
+        test2:
+            x-test: test
+            summary: test
+    links:
+        test2:
+            x-test: test
+            description: test
 `,
 		},
 		{
@@ -722,6 +724,7 @@ webhooks:
                 "200":
                     description: OK
     test2:
+        x-test: test
         get:
             x-test: test
             responses:
@@ -729,7 +732,6 @@ webhooks:
                 "200":
                     x-test: test
                     description: OK
-        x-test: test
     test3:
         get:
             responses:

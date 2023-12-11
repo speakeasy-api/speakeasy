@@ -4,16 +4,18 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
+	"reflect"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-version"
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"gopkg.in/yaml.v3"
-	"os"
-	"reflect"
 )
 
 func MergeOpenAPIDocuments(inFiles []string, outFile string) error {
@@ -70,15 +72,11 @@ func merge(inSchemas [][]byte) ([]byte, error) {
 		return nil, err
 	}
 
-	sorted, err := openapiSorter(rendered)
-	if err != nil {
-		return nil, err
-	}
 	if len(warnings) > 0 {
-		return sorted, multierror.Append(nil, warnings...)
+		return rendered, multierror.Append(nil, warnings...)
 	}
 
-	return sorted, nil
+	return rendered, nil
 }
 
 // TODO better errors
@@ -168,16 +166,14 @@ func mergeDocuments(mergedDoc, doc *v3.Document) (*v3.Document, []error) {
 			mergedDoc.Paths.Extensions, extensionErr = mergeExtensions(mergedDoc.Paths.Extensions, doc.Paths.Extensions)
 			errs = append(errs, extensionErr...)
 
-			pathItems := MapToOrderedMap(doc.Paths.PathItems)
-
-			for pair := pathItems.Oldest(); pair != nil; pair = pair.Next() {
-				path := pair.Key
-				pathItem := pair.Value
-				if mergedPathItem, ok := mergedDoc.Paths.PathItems[path]; !ok {
-					mergedDoc.Paths.PathItems[path] = pathItem
+			for pair := orderedmap.First(doc.Paths.PathItems); pair != nil; pair = pair.Next() {
+				path := pair.Key()
+				pathItem := pair.Value()
+				if mergedPathItem, ok := mergedDoc.Paths.PathItems.Get(path); !ok {
+					mergedDoc.Paths.PathItems.Set(path, pathItem)
 				} else {
-					var pathItemErrs []error
-					mergedDoc.Paths.PathItems[path], pathItemErrs = mergePathItems(mergedPathItem, pathItem)
+					pi, pathItemErrs := mergePathItems(mergedPathItem, pathItem)
+					mergedDoc.Paths.PathItems.Set(path, pi)
 					errs = append(errs, pathItemErrs...)
 				}
 			}
@@ -198,16 +194,14 @@ func mergeDocuments(mergedDoc, doc *v3.Document) (*v3.Document, []error) {
 		if mergedDoc.Webhooks == nil {
 			mergedDoc.Webhooks = doc.Webhooks
 		} else {
-			webhooks := MapToOrderedMap(doc.Webhooks)
-
-			for pair := webhooks.Oldest(); pair != nil; pair = pair.Next() {
-				path := pair.Key
-				webhook := pair.Value
-				if _, ok := mergedDoc.Webhooks[path]; !ok {
-					mergedDoc.Webhooks[path] = webhook
+			for pair := orderedmap.First(doc.Webhooks); pair != nil; pair = pair.Next() {
+				path := pair.Key()
+				webhook := pair.Value()
+				if _, ok := mergedDoc.Webhooks.Get(path); !ok {
+					mergedDoc.Webhooks.Set(path, webhook)
 				} else {
-					var pathItemErrs []error
-					mergedDoc.Webhooks[path], pathItemErrs = mergePathItems(mergedDoc.Webhooks[path], webhook)
+					pi, pathItemErrs := mergePathItems(mergedDoc.Webhooks.GetOrZero(path), webhook)
+					mergedDoc.Webhooks.Set(path, pi)
 					errs = append(errs, pathItemErrs...)
 				}
 			}
@@ -351,16 +345,15 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.Schemas == nil {
 			mergedComponents.Schemas = components.Schemas
 		} else {
-			om := MapToOrderedMap(components.Schemas)
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				schema := pair.Value
-				if err := isEquivalent(mergedComponents.Schemas[name], schema); err != nil {
+			for pair := orderedmap.First(components.Schemas); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				schema := pair.Value()
+				if err := isEquivalent(mergedComponents.Schemas.GetOrZero(name), schema); err != nil {
 					errs = append(errs, err)
 				}
 
-				mergedComponents.Schemas[name] = schema
-				mergedComponents.Schemas[name].GoLow().GetKeyNode().Line = schema.GoLow().GetKeyNode().Line
+				mergedComponents.Schemas.Set(name, schema)
+				mergedComponents.Schemas.GetOrZero(name).GoLow().GetKeyNode().Line = schema.GoLow().GetKeyNode().Line
 			}
 		}
 	}
@@ -369,15 +362,13 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.Responses == nil {
 			mergedComponents.Responses = components.Responses
 		} else {
-			om := MapToOrderedMap(components.Responses)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				response := pair.Value
-				if err := isEquivalent(mergedComponents.Responses[name], response); err != nil {
+			for pair := orderedmap.First(components.Responses); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				response := pair.Value()
+				if err := isEquivalent(mergedComponents.Responses.GetOrZero(name), response); err != nil {
 					errs = append(errs, err)
 				}
-				mergedComponents.Responses[name] = response
+				mergedComponents.Responses.Set(name, response)
 			}
 		}
 	}
@@ -386,16 +377,14 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.Parameters == nil {
 			mergedComponents.Parameters = components.Parameters
 		} else {
-			om := MapToOrderedMap(components.Parameters)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				parameter := pair.Value
-				if err := isEquivalent(mergedComponents.Parameters[name], parameter); err != nil {
+			for pair := orderedmap.First(components.Parameters); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				parameter := pair.Value()
+				if err := isEquivalent(mergedComponents.Parameters.GetOrZero(name), parameter); err != nil {
 					errs = append(errs, err)
 				}
 
-				mergedComponents.Parameters[name] = parameter
+				mergedComponents.Parameters.Set(name, parameter)
 			}
 		}
 	}
@@ -404,16 +393,14 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.Examples == nil {
 			mergedComponents.Examples = components.Examples
 		} else {
-			om := MapToOrderedMap(components.Examples)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				example := pair.Value
-				if err := isEquivalent(mergedComponents.Examples[name], example); err != nil {
+			for pair := orderedmap.First(components.Examples); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				example := pair.Value()
+				if err := isEquivalent(mergedComponents.Examples.GetOrZero(name), example); err != nil {
 					errs = append(errs, err)
 				}
 
-				mergedComponents.Examples[name] = example
+				mergedComponents.Examples.Set(name, example)
 			}
 		}
 	}
@@ -422,15 +409,13 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.RequestBodies == nil {
 			mergedComponents.RequestBodies = components.RequestBodies
 		} else {
-			om := MapToOrderedMap(components.RequestBodies)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				requestBody := pair.Value
-				if err := isEquivalent(mergedComponents.RequestBodies[name], requestBody); err != nil {
+			for pair := orderedmap.First(components.RequestBodies); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				requestBody := pair.Value()
+				if err := isEquivalent(mergedComponents.RequestBodies.GetOrZero(name), requestBody); err != nil {
 					errs = append(errs, err)
 				}
-				mergedComponents.RequestBodies[name] = requestBody
+				mergedComponents.RequestBodies.Set(name, requestBody)
 			}
 		}
 	}
@@ -439,15 +424,13 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.Headers == nil {
 			mergedComponents.Headers = components.Headers
 		} else {
-			om := MapToOrderedMap(components.Headers)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				header := pair.Value
-				if err := isEquivalent(mergedComponents.Headers[name], header); err != nil {
+			for pair := orderedmap.First(components.Headers); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				header := pair.Value()
+				if err := isEquivalent(mergedComponents.Headers.GetOrZero(name), header); err != nil {
 					errs = append(errs, err)
 				}
-				mergedComponents.Headers[name] = header
+				mergedComponents.Headers.Set(name, header)
 			}
 		}
 	}
@@ -456,16 +439,14 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.SecuritySchemes == nil {
 			mergedComponents.SecuritySchemes = components.SecuritySchemes
 		} else {
-			om := MapToOrderedMap(components.SecuritySchemes)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				securityScheme := pair.Value
-				if err := isEquivalent(mergedComponents.SecuritySchemes[name], securityScheme); err != nil {
+			for pair := orderedmap.First(components.SecuritySchemes); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				securityScheme := pair.Value()
+				if err := isEquivalent(mergedComponents.SecuritySchemes.GetOrZero(name), securityScheme); err != nil {
 					errs = append(errs, err)
 				}
 
-				mergedComponents.SecuritySchemes[name] = securityScheme
+				mergedComponents.SecuritySchemes.Set(name, securityScheme)
 			}
 		}
 	}
@@ -474,16 +455,14 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.Links == nil {
 			mergedComponents.Links = components.Links
 		} else {
-			om := MapToOrderedMap(components.Links)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				link := pair.Value
-				if err := isEquivalent(mergedComponents.Links[name], link); err != nil {
+			for pair := orderedmap.First(components.Links); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				link := pair.Value()
+				if err := isEquivalent(mergedComponents.Links.GetOrZero(name), link); err != nil {
 					errs = append(errs, err)
 				}
 
-				mergedComponents.Links[name] = link
+				mergedComponents.Links.Set(name, link)
 			}
 		}
 	}
@@ -492,16 +471,14 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 		if mergedComponents.Callbacks == nil {
 			mergedComponents.Callbacks = components.Callbacks
 		} else {
-			om := MapToOrderedMap(components.Callbacks)
-
-			for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-				name := pair.Key
-				callback := pair.Value
-				if err := isEquivalent(mergedComponents.Callbacks[name], callback); err != nil {
+			for pair := orderedmap.First(components.Callbacks); pair != nil; pair = pair.Next() {
+				name := pair.Key()
+				callback := pair.Value()
+				if err := isEquivalent(mergedComponents.Callbacks.GetOrZero(name), callback); err != nil {
 					errs = append(errs, err)
 				}
 
-				mergedComponents.Callbacks[name] = callback
+				mergedComponents.Callbacks.Set(name, callback)
 			}
 		}
 	}
@@ -567,22 +544,33 @@ func isEquivalent(a YAMLComparable, b YAMLComparable) error {
 	return nil
 }
 
-func mergeExtensions(mergedExtensions, extensions map[string]interface{}) (map[string]interface{}, []error) {
+func mergeExtensions(mergedExtensions, extensions *orderedmap.Map[string, *yaml.Node]) (*orderedmap.Map[string, *yaml.Node], []error) {
 	if mergedExtensions == nil {
 		return extensions, nil
 	}
 	errs := make([]error, 0)
 
-	om := MapToOrderedMap(extensions)
+	for pair := orderedmap.First(extensions); pair != nil; pair = pair.Next() {
+		name := pair.Key()
+		extYamlNode := pair.Value()
 
-	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-		name := pair.Key
-		extension := pair.Value
-		if ext2, ok := mergedExtensions[name]; ok && extension != ext2 {
-			errs = append(errs, fmt.Errorf("conflicting extension %#v %#v", extension, ext2))
+		var ext any
+		if extYamlNode != nil {
+			_ = extYamlNode.Decode(&ext)
 		}
 
-		mergedExtensions[name] = extension
+		if ext2YamlNode, ok := mergedExtensions.Get(name); ok {
+			var ext2 any
+			if ext2YamlNode != nil {
+				_ = ext2YamlNode.Decode(&ext2)
+			}
+
+			if ext2 != ext {
+				errs = append(errs, fmt.Errorf("conflicting extension %#v %#v", ext, ext2))
+			}
+		}
+
+		mergedExtensions.Set(name, extYamlNode)
 	}
 
 	return mergedExtensions, errs
@@ -593,14 +581,12 @@ func setOperationServers(doc *v3.Document, opServers []*v3.Server) {
 		return
 	}
 
-	om := MapToOrderedMap(doc.Paths.PathItems)
+	for pair := orderedmap.First(doc.Paths.PathItems); pair != nil; pair = pair.Next() {
+		pathItem := pair.Value()
+		ops := pathItem.GetOperations()
 
-	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
-		pathItem := pair.Value
-		ops := MapToOrderedMap(pathItem.GetOperations())
-
-		for pair := ops.Oldest(); pair != nil; pair = pair.Next() {
-			op := pair.Value
+		for pair := orderedmap.First(ops); pair != nil; pair = pair.Next() {
+			op := pair.Value()
 
 			op.Servers, _ = mergeServers(op.Servers, opServers, false)
 		}
