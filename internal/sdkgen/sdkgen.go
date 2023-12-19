@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/schema"
@@ -55,13 +54,8 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		generate.WithCustomerID(customerID),
 		generate.WithWorkspaceID(workspaceID),
 		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
-			dir := path.Dir(filename)
-
-			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				err := os.MkdirAll(dir, 0o755)
-				if err != nil {
-					return err
-				}
+			if err := utils.CreateDirectory(filename); err != nil {
+				return err
 			}
 
 			return os.WriteFile(filename, data, perm)
@@ -112,18 +106,11 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
 		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
-			dir := path.Dir(filename)
-
-			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				err := os.MkdirAll(dir, 0o755)
-				if err != nil {
-					return err
-				}
+			if err := utils.CreateDirectory(filename); err != nil {
+				return err
 			}
 
-			// TODO Using 0755 here rather than perm is temporary until an upstream change to
-			// easytemplate can be made to add better support for file permissions.
-			return os.WriteFile(filename, data, 0o755)
+			return os.WriteFile(filename, data, perm)
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 	}

@@ -2,11 +2,12 @@ package schema
 
 import (
 	"fmt"
-	"github.com/manifoldco/promptui"
-	"github.com/speakeasy-api/speakeasy/internal/download"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
+
+	"github.com/manifoldco/promptui"
+	"github.com/speakeasy-api/speakeasy/internal/download"
 )
 
 var outputFilePath = "openapi"
@@ -24,7 +25,7 @@ func GetSchemaContents(schemaPath string, header, token string) (bool, []byte, e
 			return false, nil, fmt.Errorf("failed to parse schema url: %w", err)
 		}
 
-		if extension := path.Ext(u.Path); extension != "" {
+		if extension := filepath.Ext(u.Path); extension != "" {
 			outputFilePath = outputFilePath + extension
 		}
 

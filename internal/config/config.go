@@ -1,9 +1,10 @@
 package config
 
 import (
-	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"os"
-	"path"
+	"path/filepath"
+
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 
 	"github.com/spf13/viper"
 )
@@ -19,7 +20,7 @@ func Load() error {
 		return err
 	}
 
-	cfgDir = path.Join(home, ".speakeasy")
+	cfgDir = filepath.Join(home, ".speakeasy")
 
 	vCfg.SetConfigName("config")
 	vCfg.SetConfigType("yaml")
@@ -66,7 +67,7 @@ func ClearSpeakeasyAuthInfo() error {
 }
 
 func save() error {
-	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		return err
 	}
 

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 )
@@ -51,11 +52,11 @@ func genDocs(cmd *cobra.Command, outDir string, docSiteLinks bool, docosaurusPos
 		return err
 	}
 
-	dir := filepath.Dir(outFile)
-
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := utils.CreateDirectory(outFile); err != nil {
 		return err
 	}
+
+	dir := filepath.Dir(outFile)
 
 	if pos, ok := docosaurusPositioning[dir]; ok {
 		if err := os.WriteFile(filepath.Join(dir, "_category_.json"), []byte(fmt.Sprintf(`{"position": %d}`, pos)), 0o644); err != nil {

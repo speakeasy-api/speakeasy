@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -92,7 +91,7 @@ func Update(currentVersion, artifactArch string, timeout int) (string, error) {
 		return "", err
 	}
 
-	if err := os.Rename(path.Join(extractDest, binaryName), exPath); err != nil {
+	if err := os.Rename(filepath.Join(extractDest, binaryName), exPath); err != nil {
 		return "", fmt.Errorf("failed to replace binary: %w", err)
 	}
 
@@ -129,7 +128,7 @@ func getLatestRelease(artifactArch string, timeout time.Duration) (*github.Repos
 }
 
 func downloadCLI(dest, link string, timeout int) (string, error) {
-	download, err := os.Create(filepath.Join(dest, path.Base(link)))
+	download, err := os.Create(filepath.Join(dest, filepath.Base(link)))
 	if err != nil {
 		return "", err
 	}
@@ -174,7 +173,7 @@ func extractZip(archive, dest string) error {
 	defer z.Close()
 
 	for _, file := range z.File {
-		filePath := path.Join(dest, file.Name)
+		filePath := filepath.Join(dest, file.Name)
 
 		if file.FileInfo().IsDir() {
 			if err := os.MkdirAll(filePath, 0o755); err != nil {
@@ -183,7 +182,7 @@ func extractZip(archive, dest string) error {
 			continue
 		}
 
-		if err := os.MkdirAll(path.Dir(filePath), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
 			return err
 		}
 
@@ -235,11 +234,11 @@ func extractTarGZ(archive, dest string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(dest, header.Name), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Join(dest, header.Name), 0o755); err != nil {
 				return err
 			}
 		case tar.TypeReg:
-			outFile, err := os.Create(path.Join(dest, header.Name))
+			outFile, err := os.Create(filepath.Join(dest, header.Name))
 			if err != nil {
 				return err
 			}

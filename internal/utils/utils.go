@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"reflect"
 
 	"github.com/fatih/color"
@@ -95,10 +95,10 @@ func PrettyPrint(value interface{}, fieldNameReplacements map[string]string) {
 }
 
 func CreateDirectory(filename string) error {
-	dir := path.Dir(filename)
+	dir := filepath.Dir(filename)
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.MkdirAll(dir, 0755)
+		err := os.MkdirAll(dir, 0o755)
 		if err != nil {
 			return err
 		}

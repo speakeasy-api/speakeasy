@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/pkg/errors"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
@@ -178,7 +179,7 @@ func writeExampleCode(lang, path, code string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if err := utils.CreateDirectory(path); err != nil {
 		return err
 	}
 
