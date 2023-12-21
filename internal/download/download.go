@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	maxRetries = 3
-	baseDelay  = 1 * time.Second
+	maxAttempts = 3
+	baseDelay   = 1 * time.Second
 )
 
 func DownloadFile(url, outPath, header, token string) error {
@@ -28,14 +28,14 @@ func DownloadFile(url, outPath, header, token string) error {
 	}
 
 	var res *http.Response
-	for i := 0; i < maxRetries; i++ {
+	for i := 0; i < maxAttempts; i++ {
 		res, err = http.DefaultClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to download file: %w", err)
 		}
 
 		// retry for any 5xx status code
-		if res.StatusCode < 500 || res.StatusCode > 599 || i >= maxRetries-1 {
+		if res.StatusCode < 500 || res.StatusCode > 599 || i >= maxAttempts-1 {
 			break
 		}
 
