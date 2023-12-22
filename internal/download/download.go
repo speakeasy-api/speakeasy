@@ -3,8 +3,15 @@ package download
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
+	"time"
+)
+
+const (
+	maxAttempts = 3
+	baseDelay   = 1 * time.Second
 )
 
 func DownloadFile(url, outPath, header, token string) error {
@@ -20,10 +27,23 @@ func DownloadFile(url, outPath, header, token string) error {
 		req.Header.Add(header, token)
 	}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to download file: %w", err)
+	var res *http.Response
+	for i := 0; i < maxAttempts; i++ {
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to download file: %w", err)
+		}
+
+		// retry for any 5xx status code
+		if res.StatusCode < 500 || res.StatusCode > 599 || i >= maxAttempts-1 {
+			break
+		}
+
+		res.Body.Close()
+		jitter := time.Duration(rand.Intn(1000)) * time.Millisecond
+		time.Sleep(baseDelay*time.Duration(i+1) + jitter)
 	}
+
 	defer res.Body.Close()
 
 	switch res.StatusCode {
