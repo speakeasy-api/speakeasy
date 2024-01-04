@@ -15,7 +15,7 @@ require (
 	github.com/pb33f/libopenapi v0.14.1
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.223.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.225.0
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
@@ -83,7 +83,7 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98 // indirect
-	github.com/google/uuid v1.4.0 // indirect
+	github.com/google/uuid v1.5.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -127,7 +127,7 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.8.0 // indirect
-	github.com/speakeasy-api/sdk-gen-config v1.4.1 // indirect
+	github.com/speakeasy-api/sdk-gen-config v1.5.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.0 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect

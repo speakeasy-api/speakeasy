@@ -10,7 +10,6 @@ import (
 
 	"github.com/fatih/color"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/filetracking"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -37,11 +36,6 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	if err != nil {
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
-
-	if err := filetracking.CleanDir(outDir, autoYes); err != nil {
-		return fmt.Errorf("failed to clean out dir %s: %w", outDir, err)
-	}
-
 	l := log.NewLogger(schemaPath)
 
 	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
@@ -66,6 +60,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		generate.WithPublished(published),
 		generate.WithRepoDetails(repo, repoSubDir),
 		generate.WithAllowRemoteReferences(),
+		generate.WithCleanDir(),
 	}
 
 	if debug {
