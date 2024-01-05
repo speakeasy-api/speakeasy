@@ -142,7 +142,7 @@ speakeasy generate sdk [flags]
   -b, --baseurl string   base URL for the API (only required if OpenAPI spec doesn't specify root server URLs)
   -d, --debug            enable writing debug files with broken code
   -h, --help             help for SDK
-  -l, --lang string      language to generate SDK for (available options: Go, Python, TypeScript, Java; default: Go)
+  -l, --lang string      language to generate SDK for, defaults to go (available options: go, python, typescript, java)
   -o, --out string       path to the output directory
   -s, --schema string    path to the OpenAPI schema
   -y, --auto-yes string  auto answer yes to all prompts
