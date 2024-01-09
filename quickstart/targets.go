@@ -21,6 +21,7 @@ func targetBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 					}
 					return nil
 				}).
+				Prompt("").
 				Value(&targetName),
 			huh.NewSelect[string]().
 				Title("What target would you like to generate?").
@@ -32,6 +33,7 @@ func targetBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 				Value(&sourceName),
 			huh.NewInput().
 				Title("Provide an output location for your generation target (OPTIONAL).").
+				Prompt("").
 				Value(&outputLocation),
 		)).WithTheme(theme).
 		Run(); err != nil {
