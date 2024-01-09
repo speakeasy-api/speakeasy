@@ -47,7 +47,7 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 	return &nextState, nil
 }
 
-// TODO: Export this from openapi generation
+// TODO: Export this from openapi-generation?
 func getLanguageConfigDefaults(lang string, newSDK bool) (*config.LanguageConfig, error) {
 	configFields, err := generate.GetLanguageConfigFields(lang, newSDK)
 	if err != nil {
