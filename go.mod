@@ -4,6 +4,10 @@ go 1.21.0
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
+	github.com/charmbracelet/bubbles v0.17.1
+	github.com/charmbracelet/bubbletea v0.25.0
+	github.com/charmbracelet/huh v0.2.3
+	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/color v1.14.1
 	github.com/google/go-github/v52 v52.0.0
@@ -54,11 +58,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
-	github.com/charmbracelet/bubbles v0.17.1 // indirect
-	github.com/charmbracelet/bubbletea v0.25.0 // indirect
 	github.com/charmbracelet/glamour v0.6.0 // indirect
-	github.com/charmbracelet/huh v0.2.3 // indirect
-	github.com/charmbracelet/lipgloss v0.9.1 // indirect
 	github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.6.1 // indirect
