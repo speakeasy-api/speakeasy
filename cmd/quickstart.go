@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/charm"
 	"github.com/speakeasy-api/speakeasy/quickstart"
@@ -15,8 +16,8 @@ import (
 
 var quickstartCmd = &cobra.Command{
 	Use:   "quickstart",
-	Short: "Guided setup for speakeasy workflow files to start generating SDK targets on day 1.",
-	Long:  `Guided setup for speakeasy workflow files to start generating SDK targets on day 1.`,
+	Short: "Guided setup to help you create a new SDK in minutes.",
+	Long:  `Guided setup to help you create a new SDK in minutes.`,
 	RunE:  quickstartExec,
 }
 
@@ -34,32 +35,37 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot run quickstart when a speakeasy workflow already exists")
 	}
 
-	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy Quickstart",
+	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
 		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
 			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
 
-	workflowFile := workflow.Workflow{
-		Version: workflow.WorkflowVersion,
-		Sources: make(map[string]workflow.Source),
-		Targets: make(map[string]workflow.Target),
+	quickstartObj := quickstart.Quickstart{
+		WorkflowFile: &workflow.Workflow{
+			Version: workflow.WorkflowVersion,
+			Sources: make(map[string]workflow.Source),
+			Targets: make(map[string]workflow.Target),
+		},
+		LanguageConfigs: make(map[string]*config.Configuration),
 	}
 
 	nextState := quickstart.SourceBase
 	for nextState != quickstart.Complete {
 		stateFunc := quickstart.StateMapping[nextState]
-		state, err := stateFunc(&workflowFile)
+		state, err := stateFunc(&quickstartObj)
 		if err != nil {
 			return err
 		}
 		nextState = *state
 	}
 
-	if err := workflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
+	if err := quickstartObj.WorkflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	// TODO: Replace this with write file from sdk-gen-config
-	yamlData, err := yaml.Marshal(&workflowFile)
+	// quickstartObj.WorkflowFile.Sources = make(map[string]workflow.Source)
+
+	// TODO: Replace with workflow.Save once some pending PRs are merged
+	yamlData, err := yaml.Marshal(quickstartObj.WorkflowFile)
 	if err != nil {
 		return err
 	}
@@ -72,6 +78,19 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	err = os.WriteFile(".speakeasy/workflow.yaml", yamlData, 0o644)
 	if err != nil {
 		return err
+	}
+
+	// TODO: How should we store configs for multiple targets
+	for key, outConfig := range quickstartObj.LanguageConfigs {
+		outDir := workingDir
+		if quickstartObj.WorkflowFile.Targets[key].Output != nil {
+			outDir = *quickstartObj.WorkflowFile.Targets[key].Output
+		}
+
+		if err := config.SaveConfig(outDir, outConfig); err != nil {
+			return errors.Wrapf(err, "failed to save config file for target %s", key)
+		}
+
 	}
 
 	return nil

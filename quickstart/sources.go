@@ -11,18 +11,20 @@ import (
 	"github.com/speakeasy-api/speakeasy/charm"
 )
 
-func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
+func sourceBaseForm(quickstart *Quickstart) (*State, error) {
 	source := &workflow.Source{}
 	var sourceName string
+	if len(quickstart.WorkflowFile.Sources) == 0 {
+		sourceName = "my-first-source"
+	}
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
 				Title("A name for this source:").
-				Placeholder("unique name across this workflow").
 				Prompt(" ").
 				Inline(true).
 				Validate(func(s string) error {
-					if _, ok := inputWorkflow.Sources[s]; ok {
+					if _, ok := quickstart.WorkflowFile.Sources[s]; ok {
 						return fmt.Errorf("a source with the name %s already exists", s)
 					}
 					return nil
@@ -38,14 +40,14 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 	promptForDocuments := true
 	for promptForDocuments {
 		var err error
-		sourceDocument, err := promptForDocument("input")
+		sourceDocument, err := promptForDocument("OpenAPI")
 		if err != nil {
 			return nil, err
 		}
 
 		source.Inputs = append(source.Inputs, *sourceDocument)
 
-		promptForDocuments, err = charm.NewBranchCondition("Would you like to add another input document?")
+		promptForDocuments, err = charm.NewBranchCondition("Would you like to add another openapi document?")
 		if err != nil {
 			return nil, err
 		}
@@ -56,18 +58,13 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 		return nil, err
 	}
 
-	for promptForOverlays {
+	if promptForOverlays {
 		var err error
 		sourceDocument, err := promptForDocument("overlay")
 		if err != nil {
 			return nil, err
 		}
 		source.Overlays = append(source.Overlays, *sourceDocument)
-
-		promptForOverlays, err = charm.NewBranchCondition("Would you like to add another overlay document?")
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	totalDocuments := len(source.Inputs) + len(source.Overlays)
@@ -76,7 +73,8 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().
-					Title("Provide an output location for your generation target (OPTIONAL):").
+					Title("Optionally provide an output location for your build source file:").
+					Placeholder("output.yaml").
 					Prompt(" ").
 					Inline(true).
 					Value(&outputLocation),
@@ -96,7 +94,7 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 		return nil, errors.Wrap(err, "failed to validate source")
 	}
 
-	inputWorkflow.Sources[sourceName] = *source
+	quickstart.WorkflowFile.Sources[sourceName] = *source
 
 	addAnotherSource, err := charm.NewBranchCondition("Would you like to add another source to your workflow file?")
 	if err != nil {
@@ -157,6 +155,7 @@ func promptForDocument(title string) (*workflow.Document, error) {
 	document := &workflow.Document{
 		Location: fileLocation,
 	}
+
 	if authHeader != "" && authSecret != "" {
 		document.Auth = &workflow.Auth{
 			Header: authHeader,
