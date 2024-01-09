@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy/charm"
 	"github.com/speakeasy-api/speakeasy/quickstart"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -32,6 +33,11 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
 		return fmt.Errorf("cannot run quickstart when a speakeasy workflow already exists")
 	}
+
+	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy Quickstart",
+		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
+			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
+
 	workflowFile := workflow.Workflow{
 		Version: workflow.WorkflowVersion,
 		Sources: make(map[string]workflow.Source),
@@ -57,7 +63,6 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	// Create the directory if it doesn't exist
 	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
 		err = os.MkdirAll(".speakeasy", 0o755)
 		if err != nil {
@@ -68,18 +73,6 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	//if _, err := os.Stat(".git"); err == nil {
-	//	githubAddOn := false
-	//	huh.NewConfirm().
-	//		Title("Looks like you are in a github repo. Would you like to continue with setting up target generation in Github?").
-	//		Affirmative("Yes.").
-	//		Negative("No.").
-	//		Value(&githubAddOn).Run()
-	//	if githubAddOn {
-	//		// TODO: Execute the speakeasy configure github logic.
-	//	}
-	//}
 
 	return nil
 }

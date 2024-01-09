@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"net/url"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy/charm"
 )
 
 func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 	source := &workflow.Source{}
-	var sourceName, outputLocation string
-	if err := huh.NewForm(
+	var sourceName string
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 		huh.NewGroup(
-			// TODO: Wrap forms into a custom model and restyle the overall title so it's not a note
-			huh.NewNote().
-				Title("Setup a source for your workflow."),
 			huh.NewInput().
-				Title("What is a good name for this source:").
+				Title("A name for this source:").
+				Placeholder("unique name across this workflow").
 				Prompt(" ").
 				Inline(true).
 				Validate(func(s string) error {
@@ -28,12 +28,9 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 					return nil
 				}).
 				Value(&sourceName),
-			huh.NewInput().
-				Title("Provide an output location for your built source file (OPTIONAL):").
-				Prompt(" ").
-				Inline(true).
-				Value(&outputLocation),
-		)).WithTheme(theme).
+		)),
+		"Let's setup a new source for your workflow.",
+		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
 		Run(); err != nil {
 		return nil, err
 	}
@@ -48,13 +45,13 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 
 		source.Inputs = append(source.Inputs, *sourceDocument)
 
-		promptForDocuments, err = newBranchCondition("Would you like to add another input document?")
+		promptForDocuments, err = charm.NewBranchCondition("Would you like to add another input document?")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	promptForOverlays, err := newBranchCondition("Would you like to add an overlay document?")
+	promptForOverlays, err := charm.NewBranchCondition("Would you like to add an overlay document?")
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +64,25 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 		}
 		source.Overlays = append(source.Overlays, *sourceDocument)
 
-		promptForOverlays, err = newBranchCondition("Would you like to add another overlay document?")
+		promptForOverlays, err = charm.NewBranchCondition("Would you like to add another overlay document?")
 		if err != nil {
+			return nil, err
+		}
+	}
+
+	totalDocuments := len(source.Inputs) + len(source.Overlays)
+	var outputLocation string
+	if totalDocuments > 1 {
+		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Provide an output location for your generation target (OPTIONAL):").
+					Prompt(" ").
+					Inline(true).
+					Value(&outputLocation),
+			)),
+			"You can provide an output location for this built source file.")).
+			Run(); err != nil {
 			return nil, err
 		}
 	}
@@ -77,14 +91,14 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 		source.Output = &outputLocation
 	}
 
-	// TODO: Should we also attempt to build this source here?
+	// TODO: Attempt to build the source here
 	if err := source.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to validate source")
 	}
 
 	inputWorkflow.Sources[sourceName] = *source
 
-	addAnotherSource, err := newBranchCondition("Would you like to add another source to your workflow file?")
+	addAnotherSource, err := charm.NewBranchCondition("Would you like to add another source to your workflow file?")
 	if err != nil {
 		return nil, err
 	}
@@ -100,12 +114,11 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 func promptForDocument(title string) (*workflow.Document, error) {
 	var requiresAuthentication bool
 	var fileLocation, authHeader, authSecret string
-	if err := huh.NewForm(
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 		huh.NewGroup(
-			huh.NewNote().
-				Title(fmt.Sprintf("Add a new %s document to this source.", title)),
 			huh.NewInput().
-				Title(fmt.Sprintf("What is the location of your %s document This can be a local path or remote file reference.", title)).
+				Title(fmt.Sprintf("What is the location of your %s document:", title)).
+				Placeholder("local file path or remote file reference.").
 				Prompt(" ").
 				Inline(true).
 				Value(&fileLocation),
@@ -136,7 +149,7 @@ func promptForDocument(title string) (*workflow.Document, error) {
 		).WithHideFunc(func() bool {
 			return !requiresAuthentication
 		}),
-	).WithTheme(theme).
+	), fmt.Sprintf("Let's add a new %s document to this source.", title))).
 		Run(); err != nil {
 		return nil, err
 	}
