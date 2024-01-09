@@ -18,8 +18,9 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 			huh.NewNote().
 				Title("Setup a source for your workflow."),
 			huh.NewInput().
-				Title("What is a good name for this source?").
-				Prompt("").
+				Title("What is a good name for this source:").
+				Prompt(" ").
+				Inline(true).
 				Validate(func(s string) error {
 					if _, ok := inputWorkflow.Sources[s]; ok {
 						return fmt.Errorf("a source with the name %s already exists", s)
@@ -28,8 +29,9 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 				}).
 				Value(&sourceName),
 			huh.NewInput().
-				Title("Provide an output location for your built source file (OPTIONAL).").
-				Prompt("").
+				Title("Provide an output location for your built source file (OPTIONAL):").
+				Prompt(" ").
+				Inline(true).
 				Value(&outputLocation),
 		)).WithTheme(theme).
 		Run(); err != nil {
@@ -104,12 +106,13 @@ func promptForDocument(title string) (*workflow.Document, error) {
 				Title(fmt.Sprintf("Add a new %s document to this source.", title)),
 			huh.NewInput().
 				Title(fmt.Sprintf("What is the location of your %s document This can be a local path or remote file reference.", title)).
-				Prompt("").
+				Prompt(" ").
+				Inline(true).
 				Value(&fileLocation),
 		),
 		huh.NewGroup(
 			huh.NewConfirm().
-				Title("Does this remote file require authentication?").
+				Title("Does this remote file require authentication:").
 				Affirmative("Yes.").
 				Negative("No.").
 				Value(&requiresAuthentication),
@@ -119,14 +122,16 @@ func promptForDocument(title string) (*workflow.Document, error) {
 		}),
 		huh.NewGroup(
 			huh.NewInput().
-				Title("What is the name of your authentication Header?").
+				Title("What is the name of your authentication Header:").
 				Placeholder("x-auth-token").
-				Prompt("").
+				Prompt(" ").
+				Inline(true).
 				Value(&authHeader),
 			huh.NewInput().
-				Title("What is the reference to your auth secret?").
+				Title("What is the reference to your auth secret:").
 				Placeholder("$AUTH_TOKEN").
-				Prompt("").
+				Prompt(" ").
+				Inline(true).
 				Value(&authSecret),
 		).WithHideFunc(func() bool {
 			return !requiresAuthentication

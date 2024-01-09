@@ -14,26 +14,28 @@ func targetBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 	if err := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("What is a good name for this target?").
+				Title("What is a good name for this target:").
 				Validate(func(s string) error {
 					if _, ok := inputWorkflow.Targets[s]; ok {
 						return fmt.Errorf("a source with the name %s already exists", s)
 					}
 					return nil
 				}).
-				Prompt("").
+				Inline(true).
+				Prompt(" ").
 				Value(&targetName),
 			huh.NewSelect[string]().
-				Title("What target would you like to generate?").
+				Title("What target would you like to generate:").
 				Options(huh.NewOptions(getSupportedTargets()...)...).
 				Value(&targetType),
 			huh.NewSelect[string]().
-				Title("What source would you like to use when generating this target?").
+				Title("What source would you like to use when generating this target:").
 				Options(huh.NewOptions(getSourcesFromWorkflow(inputWorkflow)...)...).
 				Value(&sourceName),
 			huh.NewInput().
-				Title("Provide an output location for your generation target (OPTIONAL).").
-				Prompt("").
+				Title("Provide an output location for your generation target (OPTIONAL):").
+				Inline(true).
+				Prompt(" ").
 				Value(&outputLocation),
 		)).WithTheme(theme).
 		Run(); err != nil {
