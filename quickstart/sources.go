@@ -19,6 +19,7 @@ func sourceBaseForm(inputWorkflow *workflow.Workflow) (*State, error) {
 				Title("Setup a source for your workflow."),
 			huh.NewInput().
 				Title("What is a good name for this source?").
+				Description("my description").
 				Validate(func(s string) error {
 					if _, ok := inputWorkflow.Sources[s]; ok {
 						return fmt.Errorf("a source with the name %s already exists", s)
