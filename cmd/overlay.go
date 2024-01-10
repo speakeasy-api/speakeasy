@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 	"os"
 
@@ -17,24 +18,27 @@ var overlayCmd = &cobra.Command{
 }
 
 var overlayValidateCmd = &cobra.Command{
-	Use:   "validate",
-	Short: "Given an overlay, it will state whether it appears to be valid according to the OpenAPI Overlay specification",
-	Args:  cobra.NoArgs,
-	RunE:  RunValidateOverlay,
+	Use:     "validate",
+	Short:   "Given an overlay, it will state whether it appears to be valid according to the OpenAPI Overlay specification",
+	Args:    cobra.NoArgs,
+	PreRunE: utils.GetMissingFlagsPreRun,
+	RunE:    RunValidateOverlay,
 }
 
 var overlayCompareCmd = &cobra.Command{
-	Use:   "compare",
-	Short: "Given two specs, it will output an overlay that describes the differences between them",
-	Args:  cobra.NoArgs,
-	RunE:  RunCompare,
+	Use:     "compare",
+	Short:   "Given two specs, it will output an overlay that describes the differences between them",
+	Args:    cobra.NoArgs,
+	PreRunE: utils.GetMissingFlagsPreRun,
+	RunE:    RunCompare,
 }
 
 var overlayApplyCmd = &cobra.Command{
-	Use:   "apply",
-	Short: "Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.",
-	Args:  cobra.NoArgs,
-	RunE:  RunApply,
+	Use:     "apply",
+	Short:   "Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.",
+	Args:    cobra.NoArgs,
+	PreRunE: utils.GetMissingFlagsPreRun,
+	RunE:    RunApply,
 }
 
 func overlayInit() {
