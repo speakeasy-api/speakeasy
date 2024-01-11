@@ -192,7 +192,7 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 
 	if cmd.Flags().HasFlags() {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if flag.Name != "help" && flag.Name != "version" {
+			if flag.Name != "help" && flag.Name != "version" && flag.Name != "logLevel" {
 				onlyHasHelpFlags = false
 			}
 		})

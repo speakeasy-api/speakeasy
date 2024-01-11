@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
@@ -33,7 +34,7 @@ func SDKSupportedLanguageTargets() []string {
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more",
+	Short: "Generate client SDKs, docsites, and more",
 	Long:  `The "generate" command provides a set of commands for generating client SDKs, OpenAPI specs (coming soon) and more (coming soon).`,
 	RunE:  utils.InteractiveRunFn("What do you want to generate?"),
 }
@@ -245,7 +246,7 @@ func genSDKInit() {
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {
-	if err := auth.Authenticate(false); err != nil {
+	if err := auth.Authenticate(cmd.Context(), false); err != nil {
 		return err
 	}
 
@@ -351,7 +352,9 @@ func getLatestVersionInfo(cmd *cobra.Command, args []string) error {
 	version := changelog.GetLatestVersion()
 	var changeLog string
 
-	fmt.Printf("Version: %s\n\n", version)
+	logger := log.From(cmd.Context())
+
+	logger.Printf("Version: %s", version)
 
 	lang, err := cmd.Flags().GetString("language")
 	if err != nil {
@@ -368,14 +371,14 @@ func getLatestVersionInfo(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to get latest versions for language %s: %w", lang, err)
 		}
 
-		fmt.Printf("Features:\n\n")
+		logger.Printf("Features:")
 
 		for feature, version := range latestVersions {
-			fmt.Printf("  %s: %s\n", feature, version)
+			logger.Printf("  %s: %s", feature, version)
 		}
 
 		if len(latestVersions) > 0 {
-			fmt.Printf("\n\n")
+			logger.Printf("\n")
 		}
 
 		changeLog, err = changelogs.GetChangeLog(lang, latestVersions, nil)
@@ -386,7 +389,7 @@ func getLatestVersionInfo(cmd *cobra.Command, args []string) error {
 		changeLog = changelog.GetChangeLog(changelog.WithSpecificVersion(version))
 	}
 
-	fmt.Println(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	logger.Printf(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
 
 	return nil
 }
@@ -472,11 +475,13 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 		changeLog = changelog.GetChangeLog(opts...)
 	}
 
+	logger := log.From(cmd.Context())
+
 	if raw {
-		fmt.Println(changeLog)
+		logger.Printf(changeLog)
 		return nil
 	}
 
-	fmt.Println(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	logger.Printf(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
 	return nil
 }

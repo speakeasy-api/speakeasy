@@ -3,12 +3,12 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"os"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ func getPlugins(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Plugins, map[string]string{
+	log.PrintArray(cmd, res.Plugins, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -76,7 +76,7 @@ func upsertPlugin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.Plugin, map[string]string{})
+	log.PrintValue(cmd, res.Plugin, map[string]string{})
 
 	return nil
 }
@@ -116,7 +116,7 @@ func runPlugin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.BoundedRequests, map[string]string{
+	log.PrintArray(cmd, res.BoundedRequests, map[string]string{
 		"APIID": "ApiID",
 	})
 

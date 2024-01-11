@@ -3,6 +3,7 @@ package docsgen
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 	"strings"
 
@@ -39,7 +40,9 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		}
 	}
 
-	fmt.Printf("Generating SDK Docs for langs %s...\n", strings.Join(langs, ", "))
+	logger := log.From(ctx)
+
+	logger.WithStyle(styles.Info).Printf("Generating SDK Docs for langs %s...\n", strings.Join(langs, ", "))
 
 	if strings.TrimSpace(outDir) == "." {
 		wd, err := os.Getwd()
@@ -50,19 +53,19 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		outDir = wd
 	}
 
-	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
+	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	l := log.NewLogger(schemaPath)
+	logger = logger.WithAssociatedFile(schemaPath)
 
 	if hasCurl {
 		langs = append(langs, "curl")
 	}
 
 	opts := []generate.GeneratorOptions{
-		generate.WithLogger(l),
+		generate.WithLogger(logger),
 		generate.WithCustomerID(customerID),
 		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
 			if err := utils.CreateDirectory(filename); err != nil {
@@ -94,13 +97,13 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 
 	if errs := g.Generate(context.Background(), schema, schemaPath, "docs", outDir, isRemote, false); len(errs) > 0 {
 		for _, err := range errs {
-			l.Error("", zap.Error(err))
+			logger.Error("", zap.Error(err))
 		}
 
 		return fmt.Errorf("failed to generate SDKs Docs for %s ✖", strings.Join(langs, ", "))
 	}
 
-	fmt.Printf("Generated SDK for %s... %s\n", strings.Join(langs, ", "), utils.Green("done ✓"))
+	logger.WithStyle(styles.Success).Printf("Generated SDK(s) for %s... ✓", strings.Join(langs, ", "))
 
 	return nil
 }

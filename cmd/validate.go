@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/manifoldco/promptui"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
@@ -104,8 +105,9 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	uploadCommand := promptui.Styler(promptui.FGCyan, promptui.FGBold)("speakeasy api register-schema --schema=" + schemaPath)
-	fmt.Printf("\nYou can upload your schema to Speakeasy using the following command:\n%s\n", uploadCommand)
+	uploadCommand := "speakeasy api register-schema --schema=" + schemaPath
+	msg := fmt.Sprintf("\nYou can upload your schema to Speakeasy using the following command:\n%s", uploadCommand)
+	log.From(cmd.Context()).WithStyle(styles.Info).Println(msg)
 
 	return nil
 }
@@ -121,10 +123,10 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 	if err := sdkgen.ValidateConfig(cmd.Context(), dir); err != nil {
 		rootCmd.SilenceUsage = true
 
-		return fmt.Errorf(utils.Red("%s"), err)
+		return fmt.Errorf("%s", err)
 	}
 
-	fmt.Printf("%s\n", utils.Green("Config valid ✓"))
+	log.From(cmd.Context()).WithStyle(styles.Success).Println("Config valid ✓")
 
 	return nil
 }

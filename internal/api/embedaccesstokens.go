@@ -2,9 +2,9 @@ package api
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ func getValidEmbedAccessTokens(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.EmbedTokens, nil)
+	log.PrintArray(cmd, res.EmbedTokens, nil)
 
 	return nil
 }

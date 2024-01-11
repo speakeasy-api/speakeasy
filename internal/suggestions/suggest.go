@@ -94,7 +94,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath, header, token strin
 	fmt.Println("Validating OpenAPI spec...")
 	fmt.Println()
 
-	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
+	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schema contents: %w", err)
 	}
@@ -132,7 +132,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath, header, token strin
 		}
 	}
 
-	errorSummary, err := suggest(schema, schemaPath, errsWithLineNums, *suggestionsConfig, isRemote)
+	errorSummary, err := suggest(ctx, schema, schemaPath, errsWithLineNums, *suggestionsConfig, isRemote)
 	if err != nil {
 		fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("cannot fetch llm suggestions: %s", err.Error())))
 		return nil, err
@@ -150,18 +150,18 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath, header, token strin
 	return errorSummary, nil
 }
 
-func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommentLineNumber, config Config, isRemote bool) (*SchemaErrorSummary, error) {
+func suggest(ctx context.Context, schema []byte, schemaPath string, errsWithLineNums []errorAndCommentLineNumber, config Config, isRemote bool) (*SchemaErrorSummary, error) {
 	if len(errsWithLineNums) == 0 {
 		return nil, nil
 	}
 
 	initialErrCount := len(errsWithLineNums)
 
-	l := log.NewLogger(schemaPath)
+	l := log.From(ctx).WithAssociatedFile(schemaPath)
 
 	// local authentication should just be set in env variable
 	if os.Getenv("SPEAKEASY_SERVER_URL") != "http://localhost:35290" {
-		if err := auth.Authenticate(false); err != nil {
+		if err := auth.Authenticate(ctx, false); err != nil {
 			return nil, err
 		}
 	}
@@ -203,7 +203,7 @@ func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommen
 		// Request suggestions in parallel, in batches of at most suggestionBatchSize
 		for continueSuggest {
 			numSuggestions := min(suggestionBatchSize, len(errsWithLineNums))
-			continueSuggest, err = suggest.findAndApplySuggestions(l, errsWithLineNums[:numSuggestions])
+			continueSuggest, err = suggest.findAndApplySuggestions(&l, errsWithLineNums[:numSuggestions])
 			if err != nil {
 				return nil, err
 			}
@@ -232,7 +232,7 @@ func suggest(schema []byte, schemaPath string, errsWithLineNums []errorAndCommen
 			continue
 		}
 
-		printVErr(l, validationErrWithLineNum)
+		printVErr(&l, validationErrWithLineNum)
 
 		_, newFile, err := suggest.getSuggestionAndRevalidate(validationErr, nil)
 

@@ -2,13 +2,13 @@ package api
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ func getApis(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Apis, map[string]string{
+	log.PrintArray(cmd, res.Apis, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -60,7 +60,7 @@ func getApiVersions(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Apis, map[string]string{
+	log.PrintArray(cmd, res.Apis, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -69,6 +69,7 @@ func getApiVersions(cmd *cobra.Command, args []string) error {
 
 func generateOpenAPISpec(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	logger := log.From(ctx)
 
 	apiID, err := getStringFlag(cmd, "api-id")
 	if err != nil {
@@ -103,9 +104,9 @@ func generateOpenAPISpec(cmd *cobra.Command, args []string) error {
 
 	if diff && specDiff.CurrentSchema != "" {
 		edits := myers.ComputeEdits(span.URIFromPath("openapi"), specDiff.CurrentSchema, specDiff.NewSchema)
-		fmt.Println(gotextdiff.ToUnified("openapi", "openapi", specDiff.CurrentSchema, edits))
+		logger.PrintlnUnstyled(gotextdiff.ToUnified("openapi", "openapi", specDiff.CurrentSchema, edits))
 	} else {
-		fmt.Println(res.GenerateOpenAPISpecDiff.NewSchema)
+		logger.PrintlnUnstyled(res.GenerateOpenAPISpecDiff.NewSchema)
 	}
 
 	return nil
@@ -141,7 +142,7 @@ func generatePostmanCollection(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println(string(res.PostmanCollection))
+	log.From(ctx).Println(string(res.PostmanCollection))
 
 	return nil
 }

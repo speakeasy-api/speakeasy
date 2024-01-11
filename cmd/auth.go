@@ -34,9 +34,9 @@ func authInit() {
 }
 
 func loginExec(cmd *cobra.Command, args []string) error {
-	return auth.Authenticate(true)
+	return auth.Authenticate(cmd.Context(), true)
 }
 
 func logoutExec(cmd *cobra.Command, args []string) error {
-	return auth.Logout()
+	return auth.Logout(cmd.Context())
 }

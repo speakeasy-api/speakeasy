@@ -1,16 +1,16 @@
 package utils
 
 import (
-	"fmt"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/spf13/cobra"
 	"os"
 )
 
 var (
-	docStyle  = DocStyle.Copy()
+	docStyle  = styles.Margins.Copy()
 	maxHeight = 24
 )
 
@@ -72,11 +72,11 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 	itemDelegate.Styles.NormalTitle.Bold(true)
 	itemDelegate.Styles.SelectedTitle.
 		Bold(true).
-		Foreground(FocusedStyle.GetForeground()).
-		BorderForeground(FocusedStyle.GetForeground())
+		Foreground(styles.Focused.GetForeground()).
+		BorderForeground(styles.Focused.GetForeground())
 	itemDelegate.Styles.SelectedDesc.
-		Foreground(FocusedStyleDimmed.GetForeground()).
-		BorderForeground(FocusedStyle.GetForeground())
+		Foreground(styles.FocusedDimmed.GetForeground()).
+		BorderForeground(styles.Focused.GetForeground())
 
 	listHeight := len(items) * (itemDelegate.Height() + itemDelegate.Spacing())
 	if listHeight > maxHeight {
@@ -87,7 +87,7 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 
 	l := list.New(items, itemDelegate, 0, listHeight)
 	l.Title = label
-	l.Styles.Title = TitleStyle
+	l.Styles.Title = styles.HeavilyEmphasized
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.AdditionalShortHelpKeys = func() []key.Binding {
@@ -100,7 +100,6 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 
 	mResult, err := p.Run()
 	if err != nil {
-		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
 

@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 	"strings"
 
@@ -12,17 +13,17 @@ import (
 )
 
 var (
-	titleStyle       = TitleStyle.Copy().MarginLeft(2)
-	descriptionStyle = BlurredStyle.Copy().MarginLeft(2).Foreground(Colors.BrightGrey)
+	titleStyle       = styles.HeavilyEmphasized.Copy().MarginLeft(2)
+	descriptionStyle = styles.Dimmed.Copy().MarginLeft(2).Foreground(styles.Colors.BrightGrey)
 
-	inputBoxStyle = DocStyle.Copy().
+	inputBoxStyle = styles.Margins.Copy().
 			PaddingLeft(2).
 			Border(lipgloss.NormalBorder(), false, false, false, true).
-			BorderForeground(Colors.DimYellow)
+			BorderForeground(styles.Colors.DimYellow)
 
-	focusedPromptStyle = FocusedStyle.Copy().Bold(true)
-	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(Colors.White)
-	placeholderStyle   = BlurredStyle.Copy()
+	focusedPromptStyle = styles.Focused.Copy().Bold(true)
+	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(styles.Colors.White)
+	placeholderStyle   = styles.Dimmed.Copy()
 )
 
 type MultiInput struct {
@@ -62,7 +63,7 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 		t.Placeholder = input.Placeholder
 		t.SetValue(input.Value)
 
-		t.Cursor.Style = CursorStyle
+		t.Cursor.Style = styles.Cursor
 
 		m.inputModels[i] = t
 	}
@@ -131,14 +132,14 @@ func (m MultiInput) Focus(index int) tea.Cmd {
 		if i == index {
 			cmd = m.inputModels[i].Focus()
 			m.inputModels[i].PromptStyle = focusedPromptStyle
-			m.inputModels[i].TextStyle = FocusedStyle
+			m.inputModels[i].TextStyle = styles.Focused
 			continue
 		}
 
 		m.inputModels[i].Blur()
 		m.inputModels[i].PromptStyle = blurredPromptStyle
 		m.inputModels[i].PlaceholderStyle = placeholderStyle
-		m.inputModels[i].TextStyle = NoStyle
+		m.inputModels[i].TextStyle = styles.None
 
 	}
 
@@ -173,7 +174,7 @@ func (m MultiInput) Validate() bool {
 func (m MultiInput) View() string {
 	if m.done {
 		successMessage := fmt.Sprintf("Values for %d fields have been supplied ✔\n", len(m.getFilledValues()))
-		return SuccessStyle.Copy().
+		return styles.Success.Copy().
 			Margin(0, 2, 1, 2).
 			Render(successMessage)
 	}
@@ -235,7 +236,6 @@ func (m MultiInput) Run() map[string]string {
 	newM, err := tea.NewProgram(m).Run()
 
 	if err != nil {
-		fmt.Printf("could not start program: %s\n", err)
 		os.Exit(1)
 	}
 

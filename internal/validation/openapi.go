@@ -9,7 +9,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"go.uber.org/zap"
 	"os"
 )
@@ -27,15 +27,15 @@ type OutputLimits struct {
 }
 
 func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits) error {
-	fmt.Println("Validating OpenAPI spec...")
-	fmt.Println()
+	logger := log.From(ctx)
+	logger.WithStyle(styles.Info).Println("Validating OpenAPI spec...\n")
 
-	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
+	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	l := log.NewLogger(schemaPath)
+	l := log.From(ctx).WithAssociatedFile(schemaPath)
 
 	hasWarnings := false
 
@@ -56,7 +56,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 	}
 
 	if len(vErrs) > 0 {
-		status := "OpenAPI spec invalid ✖"
+		status := "\nOpenAPI spec invalid ✖"
 		github.GenerateSummary(status, vErrs)
 		return fmt.Errorf(status)
 	}
@@ -70,12 +70,12 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 		}
 
 		github.GenerateSummary("OpenAPI spec valid with warnings ⚠", vErrs)
-		fmt.Printf("OpenAPI spec %s\n", utils.Yellow("valid with warnings ⚠"))
+		logger.WithStyle(styles.Warning).Println("OpenAPI spec valid with warnings ⚠")
 		return nil
 	}
 
 	github.GenerateSummary("OpenAPI spec valid ✓", nil)
-	fmt.Printf("OpenAPI spec %s\n", utils.Green("valid ✓"))
+	logger.WithStyle(styles.Success).Println("OpenAPI spec valid ✓")
 
 	return nil
 }

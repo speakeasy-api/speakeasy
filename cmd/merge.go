@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
@@ -41,7 +42,7 @@ func mergeExec(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(utils.Green(fmt.Sprintf("Successfully merged %d schemas into %s", len(inSchemas), outFile)))
+	log.From(cmd.Context()).WithStyle(styles.Success).Printf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
 
 	return nil
 }
