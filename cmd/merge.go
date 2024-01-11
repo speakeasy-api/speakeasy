@@ -13,7 +13,8 @@ var mergeCmd = &cobra.Command{
 	Short: "Merge multiple OpenAPI documents into a single document",
 	Long: `Merge multiple OpenAPI documents into a single document, useful for merging multiple OpenAPI documents into a single document for generating a client SDK.
 Note: That any duplicate operations, components, etc. will be overwritten by the next document in the list.`,
-	RunE: mergeExec,
+	PreRunE: utils.GetMissingFlagsPreRun,
+	RunE:    mergeExec,
 }
 
 func mergeInit() {

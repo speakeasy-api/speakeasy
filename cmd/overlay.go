@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
+  "github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
 var overlayCmd = &cobra.Command{
@@ -18,6 +19,7 @@ var overlayValidateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Given an overlay, it will state whether it appears to be valid according to the OpenAPI Overlay specification",
 	Args:  cobra.NoArgs,
+  PreRunE: utils.GetMissingFlagsPreRun,
 	RunE:  runValidateOverlay,
 }
 
@@ -25,6 +27,7 @@ var overlayCompareCmd = &cobra.Command{
 	Use:   "compare",
 	Short: "Given two specs, it will output an overlay that describes the differences between them",
 	Args:  cobra.NoArgs,
+  PreRunE: utils.GetMissingFlagsPreRun,
 	RunE:  runCompare,
 }
 
@@ -32,6 +35,7 @@ var overlayApplyCmd = &cobra.Command{
 	Use:   "apply",
 	Short: "Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.",
 	Args:  cobra.NoArgs,
+  PreRunE: utils.GetMissingFlagsPreRun,
 	RunE:  runApply,
 }
 

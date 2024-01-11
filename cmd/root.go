@@ -116,7 +116,7 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	helpString := promptui.Styler(promptui.FGFaint, promptui.FGItalic)("This is interactive mode. For usage, run speakeasy -h instead")
 	println(fmt.Sprintf("%s\n%s\n", welcomeString, helpString))
 
-	return utils.InteractiveExec(cmd, args, "What do you want to do?")
+	return utils.InteractiveExec(cmd, args, "Select a command to run")
 }
 
 func padRight(str string, width int) string {
