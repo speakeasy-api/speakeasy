@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string) error {
+func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile bool) error {
 	if !generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
@@ -77,7 +77,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, schemaPath, lang, outDir, isRemote); len(errs) > 0 {
+	if errs := g.Generate(context.Background(), schema, schemaPath, lang, outDir, isRemote, compile); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error("", zap.Error(err))
 		}

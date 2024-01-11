@@ -308,7 +308,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), config.GetWorkspaceID(), lang, schemaPath, header, token, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir); err != nil {
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), config.GetWorkspaceID(), lang, schemaPath, header, token, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir, false); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
