@@ -2,12 +2,11 @@ package utils
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/term"
+	"os"
 )
 
 func IsInteractive() bool {
@@ -20,6 +19,9 @@ func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
 	}
 
 	selected := SelectCommand(label, cmd)
+	if selected == nil {
+		return nil // Not an error, just exit
+	}
 
 	selected.SetContext(cmd.Context())
 
@@ -42,48 +44,30 @@ func SelectCommand(label string, cmd *cobra.Command) *cobra.Command {
 		return cmd
 	}
 
-	commands := cmd.Commands()
+	subcommands := cmd.Commands()
 
-	if len(commands) == 1 && isCommandRunnable(commands[0]) {
-		return SelectCommand(label, commands[0])
+	if len(subcommands) == 1 && isCommandRunnable(subcommands[0]) {
+		return SelectCommand(label, subcommands[0])
 	}
 
+	// TODO figure out a better way to do this
 	if isCommandRunnable(cmd) {
-		commands = append([]*cobra.Command{cmd}, commands...)
+		label = fmt.Sprintf("Continue with %s, or select a subcommand.", cmd.Name())
+		subcommands = append([]*cobra.Command{cmd}, subcommands...)
 	}
 
-	templates := &promptui.SelectTemplates{
-		Label:    "{{.}}",
-		Active:   "🐝 {{ .Name | yellow | bold }} - {{ .Short | faint }}",
-		Inactive: "   {{ .Name | white | bold }} - {{ .Short | faint }}",
-		Selected: "> {{ .Name | green | bold }}",
-	}
+	selected := getSelectionFromList(label, subcommands)
 
-	prompt := promptui.Select{
-		HideHelp:  true,
-		Label:     "",
-		Items:     commands,
-		Templates: templates,
-		Size:      len(commands),
-	}
-
-	fmt.Println(promptui.Styler(promptui.FGCyan, promptui.FGBold)(label))
-	index, _, err := prompt.Run()
-	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		os.Exit(1)
-	}
-
-	selected := commands[index]
-
-	if selected != cmd && selected.HasSubCommands() {
+	if selected != nil && selected != cmd && selected.HasSubCommands() {
 		return SelectCommand(label, selected)
 	}
 
 	return selected
 }
 
-func InteractiveRunFn(label string) func(cmd *cobra.Command, args []string) error {
+type RunE = func(cmd *cobra.Command, args []string) error
+
+func InteractiveRunFn(label string) RunE {
 	return func(cmd *cobra.Command, args []string) error {
 		return InteractiveExec(cmd, args, label)
 	}
@@ -95,7 +79,7 @@ func GetMissingFlagsPreRun(cmd *cobra.Command, args []string) error {
 
 func GetMissingFlags(cmd *cobra.Command) error {
 	if cmd.Flags().HasAvailableFlags() {
-		modifiedFlags, err := RequestFlagValues(cmd.Flags())
+		modifiedFlags, err := RequestFlagValues(cmd.CommandPath(), cmd.Flags())
 		if err != nil {
 			return err
 		}
@@ -116,45 +100,79 @@ func GetMissingFlags(cmd *cobra.Command) error {
 	return nil
 }
 
-func RequestFlagValues(flags *pflag.FlagSet) ([]*pflag.Flag, error) {
+// RequestFlagValues returns the flags that were modified
+func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag, error) {
 	values := make([]*pflag.Flag, 0)
 	var err error
 
+	var missingRequiredFlags []*pflag.Flag
+	var missingOptionalFlags []*pflag.Flag
+
 	requestValue := func(flag *pflag.Flag) {
-		// If the flag isn't required, skip it
-		if a, ok := flag.Annotations[cobra.BashCompOneRequiredFlag]; !ok || a[0] != "true" {
-			return
-		}
-
 		// If the flag already has a value, skip it
-		if flag.Changed {
+		if flag.Changed || flag.Hidden || flag.Name == "help" || flag.Name == "version" {
 			return
 		}
 
-		templates := &promptui.PromptTemplates{
-			Prompt:  "--{{ .Name | yellow | bold }} ({{ .Usage | faint }}): ",
-			Valid:   "--{{ .Name | yellow | bold }} ({{ .Usage | faint }}): ",
-			Invalid: "--{{ .Name | red | bold }} ({{ .Usage | faint }}): ",
-			Success: "--{{ .Name | green | bold }}=",
+		// Checks flag optionality
+		if a, ok := flag.Annotations[cobra.BashCompOneRequiredFlag]; !ok || a[0] != "true" {
+			missingOptionalFlags = append(missingOptionalFlags, flag)
+		} else {
+			missingRequiredFlags = append(missingRequiredFlags, flag)
 		}
-
-		prompt := promptui.Prompt{
-			Label:     flag,
-			Templates: templates,
-			Validate:  flag.Value.Set,
-		}
-
-		_, runErr := prompt.Run()
-		err = runErr
-
-		flag.Changed = true
-
-		values = append(values, flag)
 	}
 
 	flags.VisitAll(requestValue)
 
+	// If all required flags were already provided, don't ask for any more values
+	if len(missingRequiredFlags) == 0 {
+		return nil, nil
+	}
+
+	requiredValues := requestFlagValues(commandName, true, missingRequiredFlags)
+	if len(requiredValues) != len(missingRequiredFlags) {
+		return nil, nil // User exited
+	}
+
+	optionalValues := requestFlagValues(commandName, false, missingOptionalFlags)
+
+	setValue := func(flag *pflag.Flag) {
+		var v string
+		if _, ok := requiredValues[flag.Name]; ok {
+			v = requiredValues[flag.Name]
+		} else if _, ok := optionalValues[flag.Name]; ok {
+			v = optionalValues[flag.Name]
+		}
+
+		if v != "" {
+			if err := flag.Value.Set(v); err != nil {
+				return
+			}
+			flag.Changed = true
+		}
+	}
+
+	flags.VisitAll(setValue)
+
+	values = append(values, missingRequiredFlags...)
+	values = append(values, missingOptionalFlags...)
+
 	return values, err
+}
+
+func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[string]string {
+	description := "Optionally supply values for the following"
+	if required {
+		description = "Please supply values for the required fields"
+	}
+
+	inputs := make([]InputField, len(flags))
+	for i, flag := range flags {
+		inputs[i] = InputField{Name: flag.Name, Placeholder: flag.Usage}
+	}
+
+	multiInputPrompt := NewMultiInput(title, description, required, inputs...)
+	return multiInputPrompt.Run()
 }
 
 func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {

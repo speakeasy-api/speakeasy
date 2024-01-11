@@ -9,9 +9,10 @@ import (
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/charm"
+	"github.com/speakeasy-api/speakeasy/internal/auth"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/quickstart"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var quickstartCmd = &cobra.Command{
@@ -22,10 +23,20 @@ var quickstartCmd = &cobra.Command{
 }
 
 func quickstartInit() {
+	quickstartCmd.Flags().BoolP("compile", "c", true, "run SDK validation and generation after quickstart")
 	rootCmd.AddCommand(quickstartCmd)
 }
 
 func quickstartExec(cmd *cobra.Command, args []string) error {
+	if err := auth.Authenticate(false); err != nil {
+		return err
+	}
+
+	shouldCompile, err := cmd.Flags().GetBool("compile")
+	if err != nil {
+		return err
+	}
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -62,22 +73,15 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	// quickstartObj.WorkflowFile.Sources = make(map[string]workflow.Source)
-
-	// TODO: Replace with workflow.Save once some pending PRs are merged
-	yamlData, err := yaml.Marshal(quickstartObj.WorkflowFile)
-	if err != nil {
-		return err
-	}
 	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
 		err = os.MkdirAll(".speakeasy", 0o755)
 		if err != nil {
 			return err
 		}
 	}
-	err = os.WriteFile(".speakeasy/workflow.yaml", yamlData, 0o644)
-	if err != nil {
-		return err
+
+	if err := workflow.Save(workingDir, quickstartObj.WorkflowFile); err != nil {
+		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
 	for key, outConfig := range quickstartObj.LanguageConfigs {
@@ -90,6 +94,18 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
 		}
 
+	}
+
+	var initialTarget string
+	for key := range quickstartObj.WorkflowFile.Targets {
+		initialTarget = key
+		break
+	}
+
+	if shouldCompile {
+		if err := run.Run(cmd.Context(), initialTarget, "", genVersion, "", "", "", false); err != nil {
+			return errors.Wrapf(err, "failed to run speakeasy generate")
+		}
 	}
 
 	return nil

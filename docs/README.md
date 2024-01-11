@@ -35,6 +35,7 @@ speakeasy [flags]
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy proxy](proxy.md)	 - Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities
+* [speakeasy run](run.md)	 - run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.
 * [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
 * [speakeasy validate](validate/README.md)	 - Validate OpenAPI documents + more (coming soon)
