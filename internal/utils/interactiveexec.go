@@ -100,6 +100,7 @@ func GetMissingFlags(cmd *cobra.Command) error {
 	return nil
 }
 
+// RequestFlagValues returns the flags that were modified
 func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag, error) {
 	values := make([]*pflag.Flag, 0)
 	var err error
@@ -122,6 +123,11 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	}
 
 	flags.VisitAll(requestValue)
+
+	// If all required flags were already provided, don't ask for any more values
+	if len(missingRequiredFlags) == 0 {
+		return nil, nil
+	}
 
 	requiredValues := requestFlagValues(commandName, true, missingRequiredFlags)
 	if len(requiredValues) != len(missingRequiredFlags) {
@@ -147,6 +153,9 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	}
 
 	flags.VisitAll(setValue)
+
+	values = append(values, missingRequiredFlags...)
+	values = append(values, missingOptionalFlags...)
 
 	return values, err
 }
