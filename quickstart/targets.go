@@ -69,15 +69,7 @@ func targetBaseForm(quickstart *Quickstart) (*State, error) {
 
 	quickstart.WorkflowFile.Targets[targetName] = target
 
-	addAnotherTarget, err := charm.NewBranchCondition("Would you like to add another target to your workflow file?")
-	if err != nil {
-		return nil, err
-	}
-
-	var nextState State = ConfigBase
-	if addAnotherTarget {
-		nextState = TargetBase
-	}
+	nextState := ConfigBase
 
 	return &nextState, nil
 }

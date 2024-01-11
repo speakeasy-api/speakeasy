@@ -13,7 +13,8 @@ import (
 
 func sourceBaseForm(quickstart *Quickstart) (*State, error) {
 	source := &workflow.Source{}
-	var sourceName string
+	var sourceName, fileLocation, authHeader, authSecret string
+	var requiresAuthentication bool
 	if len(quickstart.WorkflowFile.Sources) == 0 {
 		sourceName = "my-first-source"
 	}
@@ -30,92 +31,10 @@ func sourceBaseForm(quickstart *Quickstart) (*State, error) {
 					return nil
 				}).
 				Value(&sourceName),
-		)),
-		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
-		Run(); err != nil {
-		return nil, err
-	}
-
-	promptForDocuments := true
-	for promptForDocuments {
-		var err error
-		sourceDocument, err := promptForDocument("OpenAPI")
-		if err != nil {
-			return nil, err
-		}
-
-		source.Inputs = append(source.Inputs, *sourceDocument)
-
-		promptForDocuments, err = charm.NewBranchCondition("Would you like to add another openapi document?")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	promptForOverlays, err := charm.NewBranchCondition("Would you like to add an overlay document?")
-	if err != nil {
-		return nil, err
-	}
-
-	if promptForOverlays {
-		var err error
-		sourceDocument, err := promptForDocument("overlay")
-		if err != nil {
-			return nil, err
-		}
-		source.Overlays = append(source.Overlays, *sourceDocument)
-	}
-
-	totalDocuments := len(source.Inputs) + len(source.Overlays)
-	var outputLocation string
-	if totalDocuments > 1 {
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
-			huh.NewGroup(
-				huh.NewInput().
-					Title("Optionally provide an output location for your build source file:").
-					Placeholder("output.yaml").
-					Prompt(" ").
-					Inline(true).
-					Value(&outputLocation),
-			)),
-			"You can provide an output location for this built source file.")).
-			Run(); err != nil {
-			return nil, err
-		}
-	}
-
-	if outputLocation != "" {
-		source.Output = &outputLocation
-	}
-
-	// TODO: Attempt to build the source here
-	if err := source.Validate(); err != nil {
-		return nil, errors.Wrap(err, "failed to validate source")
-	}
-
-	quickstart.WorkflowFile.Sources[sourceName] = *source
-
-	addAnotherSource, err := charm.NewBranchCondition("Would you like to add another source to your workflow file?")
-	if err != nil {
-		return nil, err
-	}
-
-	var nextState State = TargetBase
-	if addAnotherSource {
-		nextState = SourceBase
-	}
-
-	return &nextState, nil
-}
-
-func promptForDocument(title string) (*workflow.Document, error) {
-	var requiresAuthentication bool
-	var fileLocation, authHeader, authSecret string
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+		),
 		huh.NewGroup(
 			huh.NewInput().
-				Title(fmt.Sprintf("What is the location of your %s document:", title)).
+				Title("What is the location of your OpenAPI document:").
 				Placeholder("local file path or remote file reference.").
 				Prompt(" ").
 				Inline(true).
@@ -146,8 +65,9 @@ func promptForDocument(title string) (*workflow.Document, error) {
 				Value(&authSecret),
 		).WithHideFunc(func() bool {
 			return !requiresAuthentication
-		}),
-	), fmt.Sprintf("Let's add a new %s document to this source.", title))).
+		})),
+		"Let's setup a new source for your workflow.",
+		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
 		Run(); err != nil {
 		return nil, err
 	}
@@ -163,9 +83,15 @@ func promptForDocument(title string) (*workflow.Document, error) {
 		}
 	}
 
-	if err := document.Validate(); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to validate the provided %s document", title))
+	source.Inputs = append(source.Inputs, *document)
+
+	if err := source.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate source")
 	}
 
-	return document, nil
+	quickstart.WorkflowFile.Sources[sourceName] = *source
+
+	nextState := TargetBase
+
+	return &nextState, nil
 }
