@@ -186,8 +186,8 @@ func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName st
 	validationRegex := ""
 	if packageNameConfig.ValidationRegex != nil {
 		validationRegex = *packageNameConfig.ValidationRegex
-		// TODO: Complete fixing regex mapping
 		validationRegex = strings.Replace(validationRegex, `\u002f`, `/`, -1)
+		fmt.Println(validationRegex)
 	}
 
 	validationMessage := ""
@@ -211,7 +211,7 @@ func addPromptForField(key, question, defaultValue, validateRegex, validateMessa
 					if err != nil {
 						return err
 					}
-					if r.MatchString(s) {
+					if !r.MatchString(s) {
 						return errors.New(validateMessage)
 					}
 				}
