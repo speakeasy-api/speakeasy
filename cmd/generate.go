@@ -131,7 +131,8 @@ generate:
 
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
 `, strings.Join(SDKSupportedLanguageTargets(), "\n	- ")),
-	RunE: genSDKs,
+	PreRunE: utils.GetMissingFlagsPreRun,
+	RunE:    genSDKs,
 }
 
 var genUsageSnippetCmd = &cobra.Command{
@@ -239,11 +240,8 @@ func genSDKInit() {
 	genSDKDocsCmd.Flags().StringP("repo", "r", "", "the repository URL for the SDK Docs repo")
 	genSDKDocsCmd.Flags().StringP("repo-subdir", "b", "", "the subdirectory of the repository where the SDK Docs are located in the repo, helps with documentation generation")
 
-	genSDKCmd.AddCommand(genSDKVersionCmd)
-	genSDKCmd.AddCommand(genSDKChangelogCmd)
-	generateCmd.AddCommand(genSDKCmd)
-	generateCmd.AddCommand(genUsageSnippetCmd)
-	generateCmd.AddCommand(genSDKDocsCmd)
+	genSDKCmd.AddCommand(genSDKVersionCmd, genSDKChangelogCmd)
+	generateCmd.AddCommand(genSDKCmd, genUsageSnippetCmd, genSDKDocsCmd)
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {
@@ -308,7 +306,7 @@ func genSDKs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), config.GetWorkspaceID(), lang, schemaPath, header, token, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir); err != nil {
+	if err := sdkgen.Generate(cmd.Context(), config.GetCustomerID(), config.GetWorkspaceID(), lang, schemaPath, header, token, outDir, genVersion, installationURL, debug, autoYes, published, outputTests, repo, repoSubdir, false); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err

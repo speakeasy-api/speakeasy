@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/go-version"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -50,6 +49,7 @@ func Init(version, artifactArch string) {
 	docsInit()
 	overlayInit()
 	quickstartInit()
+	runInit()
 }
 
 func Execute(version, artifactArch string) {
@@ -116,7 +116,7 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	helpString := promptui.Styler(promptui.FGFaint, promptui.FGItalic)("This is interactive mode. For usage, run speakeasy -h instead")
 	println(fmt.Sprintf("%s\n%s\n", welcomeString, helpString))
 
-	return utils.InteractiveExec(cmd, args, "What do you want to do?")
+	return utils.InteractiveExec(cmd, args, "Select a command to run")
 }
 
 func padRight(str string, width int) string {

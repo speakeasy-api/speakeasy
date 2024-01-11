@@ -17,10 +17,11 @@ var validateCmd = &cobra.Command{
 }
 
 var validateOpenAPICmd = &cobra.Command{
-	Use:   "openapi",
-	Short: "Validate an OpenAPI document",
-	Long:  `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
-	RunE:  validateOpenAPI,
+	Use:     "openapi",
+	Short:   "Validate an OpenAPI document",
+	Long:    `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
+	PreRunE: utils.GetMissingFlagsPreRun,
+	RunE:    validateOpenAPI,
 }
 
 var validateConfigCmd = &cobra.Command{

@@ -6,7 +6,6 @@ require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.17.1
 	github.com/charmbracelet/bubbletea v0.25.0
-	github.com/charmbracelet/huh v0.2.3
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/color v1.14.1
@@ -19,9 +18,9 @@ require (
 	github.com/pb33f/libopenapi v0.14.1
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.230.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.231.0
 	github.com/speakeasy-api/openapi-overlay v0.3.0
-	github.com/speakeasy-api/sdk-gen-config v1.5.1
+	github.com/speakeasy-api/sdk-gen-config v1.6.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
@@ -140,6 +139,7 @@ require (
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/sahilm/fuzzy v0.1.1-0.20230530133925-c48e322e2a8f // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
@@ -174,5 +174,3 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
-
-replace github.com/speakeasy-api/sdk-gen-config => github.com/speakeasy-api/sdk-gen-config v1.5.2-0.20240108152901-8795929d4585

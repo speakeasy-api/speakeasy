@@ -92,7 +92,7 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, schemaPath, "docs", outDir, isRemote); len(errs) > 0 {
+	if errs := g.Generate(context.Background(), schema, schemaPath, "docs", outDir, isRemote, false); len(errs) > 0 {
 		for _, err := range errs {
 			l.Error("", zap.Error(err))
 		}
