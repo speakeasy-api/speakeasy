@@ -28,7 +28,7 @@ func githubWorkflowBaseForm(quickstart *Quickstart) (*State, error) {
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Title("How should changes be integrated into your main branch?").
-				Description("`pr` mode is recommended. This will keep a PR up to date with generation target changes that you can merge then merge into main. \n"+
+				Description("`pr` mode is recommended. This will auto-update a PR with generation target changes. \n"+
 					"`direct` mode will automatically merge any generation target changes into main for you.").
 				Options(huh.NewOptions([]string{"pr", "direct"}...)...).
 				Value(&workflowMode),
