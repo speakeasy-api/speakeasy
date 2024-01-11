@@ -106,8 +106,8 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		return errors.Wrapf(err, "failed to encode workflow file")
 	}
 
-	if _, err := os.Stat(".github/workflows/"); os.IsNotExist(err) {
-		err = os.MkdirAll("github/workflows/", 0o755)
+	if _, err := os.Stat(".github/workflows"); os.IsNotExist(err) {
+		err = os.MkdirAll(".github/workflows", 0o755)
 		if err != nil {
 			return err
 		}

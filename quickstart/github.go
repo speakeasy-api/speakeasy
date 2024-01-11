@@ -33,7 +33,7 @@ func githubWorkflowBaseForm(quickstart *Quickstart) (*State, error) {
 				Options(huh.NewOptions([]string{"pr", "direct"}...)...).
 				Value(&workflowMode),
 		)),
-		fmt.Sprintf("Let's setup a github workflow file for generation your %s target (%s)", targetType, targetName),
+		fmt.Sprintf("Let's setup a github workflow file for generating your %s target (%s)", targetType, targetName),
 		"Generating your target through Github Actions is a very useful way to ensure that your SDK stays up to date.")).
 		Run(); err != nil {
 		return nil, err
