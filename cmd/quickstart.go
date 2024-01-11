@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/quickstart"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var quickstartCmd = &cobra.Command{
@@ -94,6 +96,25 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
 		}
 
+	}
+
+	// Write a github workflow file.
+	var genWorkflowBuf bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(quickstartObj.GithubWorkflow); err != nil {
+		return errors.Wrapf(err, "failed to encode workflow file")
+	}
+
+	if _, err := os.Stat(".github/workflows/"); os.IsNotExist(err) {
+		err = os.MkdirAll("github/workflows/", 0o755)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = os.WriteFile(".github/workflows/speakeasy_sdk_generation.yaml", genWorkflowBuf.Bytes(), 0o644); err != nil {
+		return errors.Wrapf(err, "failed to write github workflow file")
 	}
 
 	var initialTarget string

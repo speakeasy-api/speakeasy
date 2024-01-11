@@ -54,7 +54,7 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 		quickstart.LanguageConfigs[key] = output
 	}
 
-	var nextState State = Complete
+	var nextState State = GithubWorkflowBase
 	return &nextState, nil
 }
 
@@ -187,7 +187,6 @@ func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName st
 	if packageNameConfig.ValidationRegex != nil {
 		validationRegex = *packageNameConfig.ValidationRegex
 		validationRegex = strings.Replace(validationRegex, `\u002f`, `/`, -1)
-		fmt.Println(validationRegex)
 	}
 
 	validationMessage := ""
