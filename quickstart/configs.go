@@ -24,7 +24,7 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 		configFields := []huh.Field{
 			huh.NewInput().
 				Title("Choose an sdkClassName for your target:").
-				Placeholder("idiomatic name for your SDK object").
+				Placeholder("Your SDK object: _if you choose \"sdk\", your users will access methods like \"sdk.doThing()").
 				Inline(true).
 				Prompt(" ").
 				Value(&sdkClassName),
@@ -40,8 +40,8 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 				configFields...,
 			))
 		if _, err := tea.NewProgram(charm.NewForm(form,
-			fmt.Sprintf("Let's setup a gen.yaml config for your target %s of type %s", key, target.Target),
-			"A gen.yaml config defines parameters for how your SDK is generated. \n"+
+			fmt.Sprintf("Let's configure your %s target (%s)", target.Target, key),
+			"This will create a gen.yaml config file that defines parameters for how your SDK is generated. \n"+
 				"We will go through a few basic configurations here, but you can always modify this file directly in the future.")).
 			Run(); err != nil {
 			return nil, err
