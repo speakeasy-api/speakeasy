@@ -80,7 +80,6 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// TODO: How should we store configs for multiple targets
 	for key, outConfig := range quickstartObj.LanguageConfigs {
 		outDir := workingDir
 		if quickstartObj.WorkflowFile.Targets[key].Output != nil {
