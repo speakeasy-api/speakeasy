@@ -2,7 +2,8 @@ package utils
 
 import (
 	"fmt"
-	"github.com/manifoldco/promptui"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/term"
@@ -91,9 +92,9 @@ func GetMissingFlags(cmd *cobra.Command) error {
 				flagString += fmt.Sprintf(" --%s=%s", flag.Name, flag.Value)
 			}
 
-			runningString := promptui.Styler(promptui.FGFaint, promptui.FGItalic)("Running command:")
-			commandString := promptui.Styler(promptui.FGCyan, promptui.FGBold)(fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString))
-			println(fmt.Sprintf("\n%s %s\n", runningString, commandString))
+			running := styles.DimmedItalic.Render("Running command")
+			command := styles.Info.Render(fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString))
+			log.From(cmd.Context()).Printf("\n%s %s\n", running, command)
 		}
 	}
 
