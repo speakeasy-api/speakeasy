@@ -18,7 +18,7 @@ Note: That any duplicate operations, components, etc. will be overwritten by the
 }
 
 func mergeInit() {
-	mergeCmd.Flags().StringArrayP("schemas", "s", []string{}, "paths to the openapi schemas to merge")
+	mergeCmd.Flags().StringArrayP("schemas", "s", []string{}, "a list of paths to OpenAPI documents to merge, specify -s `path/to/schema1.json` -s `path/to/schema2.json` etc")
 	mergeCmd.MarkFlagRequired("schemas")
 	mergeCmd.Flags().StringP("out", "o", "", "path to the output file")
 	mergeCmd.MarkFlagRequired("out")
