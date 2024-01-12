@@ -14,7 +14,7 @@ import (
 func targetBaseForm(quickstart *Quickstart) (*State, error) {
 	var targetName, targetType, outputLocation string
 	if len(quickstart.WorkflowFile.Targets) == 0 {
-		targetName = "my-first-target"
+		targetName = "first-target"
 	}
 	sourceName := getSourcesFromWorkflow(quickstart.WorkflowFile)[0]
 	targetFields := []huh.Field{
