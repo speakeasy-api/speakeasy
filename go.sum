@@ -129,6 +129,7 @@ github.com/charmbracelet/bubbles v0.17.1 h1:0SIyjOnkrsfDo88YvPgAWvZMwXe26TP6drRv
 github.com/charmbracelet/bubbles v0.17.1/go.mod h1:9HxZWlkCqz2PRwsCbYl7a3KXvGzFaDHpYbSYMJ+nE3o=
 github.com/charmbracelet/bubbletea v0.25.0 h1:bAfwk7jRz7FKFl9RzlIULPkStffg5k6pNt5dywy4TcM=
 github.com/charmbracelet/bubbletea v0.25.0/go.mod h1:EN3QDR1T5ZdWmdfDzYcqOCAps45+QIJbLOBxmVNWNNg=
+github.com/charmbracelet/huh v0.2.3/go.mod h1:XmADLRnJs/Jqw7zIbi9BTss5gXbOkR6feyVoNAp19rA=
 github.com/charmbracelet/lipgloss v0.9.1 h1:PNyd3jvaJbg4jRHKWXnCj1akQm4rh8dbEzN1p/u1KWg=
 github.com/charmbracelet/lipgloss v0.9.1/go.mod h1:1mPmG4cxScwUQALAAnacHaigiiHB9Pmr+v1VEawJl6I=
 github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89 h1:aPflPkRFkVwbW6dmcVqfgwp1i+UWGFH6VgR1Jim5Ygc=

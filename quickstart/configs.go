@@ -2,6 +2,8 @@ package quickstart
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -22,23 +24,32 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 		configFields := []huh.Field{
 			huh.NewInput().
 				Title("Choose an sdkClassName for your target:").
+				Placeholder("Your SDK object: _if you choose \"sdk\", your users will access methods like \"sdk.doThing()").
 				Inline(true).
 				Prompt(" ").
 				Value(&sdkClassName),
 		}
-		configFields = append(configFields, languageSpecificForms(target.Target)...)
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+		languageForms, err := languageSpecificForms(target.Target)
+		if err != nil {
+			return nil, err
+		}
+
+		configFields = append(configFields, languageForms...)
+		form := huh.NewForm(
 			huh.NewGroup(
 				configFields...,
-			)),
-			fmt.Sprintf("Let's setup a gen.yaml config for your target %s of type %s", key, target.Target),
-			"A gen.yaml config defines parameters for how your SDK is generated. \n"+
+			))
+		if _, err := tea.NewProgram(charm.NewForm(form,
+			fmt.Sprintf("Let's configure your %s target (%s)", target.Target, key),
+			"This will create a gen.yaml config file that defines parameters for how your SDK is generated. \n"+
 				"We will go through a few basic configurations here, but you can always modify this file directly in the future.")).
 			Run(); err != nil {
 			return nil, err
 		}
 
 		output.Generation.SDKClassName = sdkClassName
+
+		saveLanguageConfigValues(target.Target, form, output)
 
 		quickstart.LanguageConfigs[key] = output
 	}
@@ -73,12 +84,147 @@ func getLanguageConfigDefaults(lang string, newSDK bool) (*config.LanguageConfig
 	}, nil
 }
 
-// TODO: This is how we can add language specific forms for gen.yaml configs
-func languageSpecificForms(language string) []huh.Field {
-	switch language {
-	case "typescript":
-		return []huh.Field{}
-	default:
-		return []huh.Field{}
+type configPrompt struct {
+	Key    string
+	Prompt string
+}
+
+var languageSpecificPrompts = map[string][]configPrompt{
+	"go": {
+		{
+			Key:    "packageName",
+			Prompt: "Choose a go module package name:",
+		},
+	},
+	"typescript": {
+		{
+			Key:    "packageName",
+			Prompt: "Choose a npm package name:",
+		},
+		{
+			Key:    "author",
+			Prompt: "Choose an author of the published package:",
+		},
+	},
+	"python": {
+		{
+			Key:    "packageName",
+			Prompt: "Choose a PyPI package name:",
+		},
+		{
+			Key:    "author",
+			Prompt: "Choose an author of the published package:",
+		},
+	},
+	"java": {
+		{
+			Key:    "projectName",
+			Prompt: "Choose a Gradle rootProject.name, which gives a name to the Gradle build:",
+		},
+		{
+			Key:    "groupID",
+			Prompt: "Choose a groupID to use for namespacing the package. This is usually the reversed domain name of your organization:",
+		},
+		{
+			Key:    "artifactID",
+			Prompt: "Choose a artifactID to use for namespacing the package. This is usually the name of your project:",
+		},
+	},
+	"terraform": {
+		{
+			Key:    "packageName",
+			Prompt: "Choose a terraform provider package name:",
+		},
+		{
+			Key:    "author",
+			Prompt: "Choose an author of the published provider:",
+		},
+	},
+	"docs": {
+		{
+			Key:    "defaultLanguage",
+			Prompt: "Choose a default language for your doc site:",
+		},
+	},
+}
+
+func languageSpecificForms(language string) ([]huh.Field, error) {
+	configFields, err := generate.GetLanguageConfigFields(language, true)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := []huh.Field{}
+	if prompts, ok := languageSpecificPrompts[language]; ok {
+		for _, prompt := range prompts {
+			if exists, defaultValue, validateRegex, validateMessage := getValuesForFieldName(configFields, prompt.Key); exists {
+				fields = append(fields, addPromptForField(prompt.Key, prompt.Prompt, defaultValue, validateRegex, validateMessage)...)
+			}
+		}
+	}
+
+	return fields, nil
+}
+
+func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName string) (bool, string, string, string) {
+	var packageNameConfig *config.SDKGenConfigField
+	for _, field := range configFields {
+		if field.Name == fieldName {
+			packageNameConfig = &field
+			break
+		}
+	}
+	if packageNameConfig == nil {
+		return false, "", "", ""
+	}
+
+	defaultValue := ""
+	if packageNameConfig.DefaultValue != nil {
+		defaultValue, _ = (*packageNameConfig.DefaultValue).(string)
+	}
+
+	validationRegex := ""
+	if packageNameConfig.ValidationRegex != nil {
+		validationRegex = *packageNameConfig.ValidationRegex
+		validationRegex = strings.Replace(validationRegex, `\u002f`, `/`, -1)
+		fmt.Println(validationRegex)
+	}
+
+	validationMessage := ""
+	if packageNameConfig.ValidationRegex != nil {
+		validationMessage = *packageNameConfig.ValidationMessage
+	}
+
+	return true, defaultValue, validationRegex, validationMessage
+}
+
+func addPromptForField(key, question, defaultValue, validateRegex, validateMessage string) []huh.Field {
+	return []huh.Field{
+		huh.NewInput().
+			Key(key).
+			Title(question).
+			Placeholder(defaultValue).
+			Inline(true).
+			Validate(func(s string) error {
+				if validateRegex != "" {
+					r, err := regexp.Compile(validateRegex)
+					if err != nil {
+						return err
+					}
+					if !r.MatchString(s) {
+						return errors.New(validateMessage)
+					}
+				}
+				return nil
+			}).
+			Prompt(" "),
+	}
+}
+
+func saveLanguageConfigValues(language string, form *huh.Form, configuration *config.Configuration) {
+	if prompts, ok := languageSpecificPrompts[language]; ok {
+		for _, prompt := range prompts {
+			configuration.Languages[language].Cfg[prompt.Key] = form.GetString(prompt.Key)
+		}
 	}
 }
