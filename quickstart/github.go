@@ -3,10 +3,7 @@ package quickstart
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
 	config "github.com/speakeasy-api/sdk-gen-config"
-	"github.com/speakeasy-api/speakeasy/charm"
 )
 
 const (
@@ -15,28 +12,11 @@ const (
 )
 
 func githubWorkflowBaseForm(quickstart *Quickstart) (*State, error) {
-	var targetType, targetName, specName string
-	for key, target := range quickstart.WorkflowFile.Targets {
-		targetName = key
+	var targetType, specName string
+	for _, target := range quickstart.WorkflowFile.Targets {
 		targetType = target.Target
 		specName = target.Source
 		break
-	}
-
-	var workflowMode string
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("How should changes be integrated into your main branch?").
-				Description("`pr` mode is recommended. This will auto-update a PR with generation target changes. \n"+
-					"`direct` mode will automatically merge any generation target changes into main for you.").
-				Options(huh.NewOptions([]string{"pr", "direct"}...)...).
-				Value(&workflowMode),
-		)),
-		fmt.Sprintf("Let's setup a github workflow file for generating your %s target (%s)", targetType, targetName),
-		"Generating your target through Github Actions is a very useful way to ensure that your SDK stays up to date.")).
-		Run(); err != nil {
-		return nil, err
 	}
 
 	secrets := make(map[string]string)
@@ -68,7 +48,7 @@ func githubWorkflowBaseForm(quickstart *Quickstart) (*State, error) {
 					"speakeasy_version": "latest",
 					"force":             "${{ github.event.inputs.force }}",
 					config.OpenAPIDocs:  fmt.Sprintf("- %s\n", quickstart.WorkflowFile.Sources[specName].Inputs[0].Location),
-					config.Mode:         workflowMode,
+					config.Mode:         "pr",
 					config.Languages:    fmt.Sprintf("- %s\n", targetType),
 				},
 				Secrets: secrets,
