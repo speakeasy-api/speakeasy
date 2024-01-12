@@ -1,10 +1,7 @@
 package cmd
 
 import (
-<<<<<<< HEAD
 	"bytes"
-=======
->>>>>>> 30ab4b495a070a3062017df1ec3b4e5f68be993e
 	"fmt"
 	"os"
 
@@ -17,10 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/quickstart"
 	"github.com/spf13/cobra"
-<<<<<<< HEAD
 	"gopkg.in/yaml.v3"
-=======
->>>>>>> 30ab4b495a070a3062017df1ec3b4e5f68be993e
 )
 
 var quickstartCmd = &cobra.Command{
@@ -36,7 +30,7 @@ func quickstartInit() {
 }
 
 func quickstartExec(cmd *cobra.Command, args []string) error {
-	if err := auth.Authenticate(false); err != nil {
+	if err := auth.Authenticate(cmd.Context(), false); err != nil {
 		return err
 	}
 
@@ -104,7 +98,6 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 
 	}
 
-<<<<<<< HEAD
 	// Write a github workflow file.
 	var genWorkflowBuf bytes.Buffer
 	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
@@ -124,8 +117,6 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		return errors.Wrapf(err, "failed to write github workflow file")
 	}
 
-=======
->>>>>>> 30ab4b495a070a3062017df1ec3b4e5f68be993e
 	var initialTarget string
 	for key := range quickstartObj.WorkflowFile.Targets {
 		initialTarget = key
