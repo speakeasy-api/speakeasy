@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
@@ -107,7 +106,7 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 
 	uploadCommand := "speakeasy api register-schema --schema=" + schemaPath
 	msg := fmt.Sprintf("\nYou can upload your schema to Speakeasy using the following command:\n%s", uploadCommand)
-	log.From(cmd.Context()).WithStyle(styles.Info).Println(msg)
+	log.From(cmd.Context()).Info(msg)
 
 	return nil
 }
@@ -126,7 +125,7 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s", err)
 	}
 
-	log.From(cmd.Context()).WithStyle(styles.Success).Println("Config valid ✓")
+	log.From(cmd.Context()).Success("Config valid ✓")
 
 	return nil
 }

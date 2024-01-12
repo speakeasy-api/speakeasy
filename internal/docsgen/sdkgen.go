@@ -3,7 +3,6 @@ package docsgen
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 	"strings"
 
@@ -42,7 +41,7 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 
 	logger := log.From(ctx)
 
-	logger.WithStyle(styles.Info).Printf("Generating SDK Docs for langs %s...\n", strings.Join(langs, ", "))
+	logger.Infof("Generating SDK Docs for langs %s...\n", strings.Join(langs, ", "))
 
 	if strings.TrimSpace(outDir) == "." {
 		wd, err := os.Getwd()
@@ -103,7 +102,7 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		return fmt.Errorf("failed to generate SDKs Docs for %s ✖", strings.Join(langs, ", "))
 	}
 
-	logger.WithStyle(styles.Success).Printf("Generated SDK(s) for %s... ✓", strings.Join(langs, ", "))
+	logger.Successf("Generated SDK(s) for %s... ✓", strings.Join(langs, ", "))
 
 	return nil
 }

@@ -2,6 +2,7 @@ package suggestions
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	jsonpatch "github.com/evanphx/json-patch"
@@ -144,13 +145,13 @@ type ErrorAndSuggestion struct {
 	suggestion *Suggestion
 }
 
-func (s *Suggestions) findAndApplySuggestions(l *log.Logger, errsWithLineNums []errorAndCommentLineNumber) (bool, error) {
+func (s *Suggestions) findAndApplySuggestions(ctx context.Context, l *log.Logger, errsWithLineNums []errorAndCommentLineNumber) (bool, error) {
 	errs := make([]error, len(errsWithLineNums))
 	for i, errWithLineNum := range errsWithLineNums {
 		errs[i] = errWithLineNum.error
 	}
 
-	res, continueSuggest, err := s.findSuggestions(errs)
+	res, continueSuggest, err := s.findSuggestions(ctx, errs)
 	if err != nil {
 		return false, err
 	}
@@ -189,14 +190,14 @@ func (s *Suggestions) findAndApplySuggestions(l *log.Logger, errsWithLineNums []
 }
 
 // FindSuggestions returns one suggestion per given error, in order
-func (s *Suggestions) findSuggestions(errs []error) ([]*Suggestion, bool, error) {
+func (s *Suggestions) findSuggestions(ctx context.Context, errs []error) ([]*Suggestion, bool, error) {
 	suggestions := make([]*Suggestion, len(errs))
 	ch := make(chan ErrorAndSuggestion)
 	var wg sync.WaitGroup
 
 	for i, err := range errs {
 		wg.Add(1)
-		go s.findSuggestionAsync(err, i, ch, &wg)
+		go s.findSuggestionAsync(ctx, err, i, ch, &wg)
 	}
 
 	// close the channel in the background
@@ -218,9 +219,9 @@ func (s *Suggestions) findSuggestions(errs []error) ([]*Suggestion, bool, error)
 	return suggestions, continueSuggest, nil
 }
 
-func (s *Suggestions) findSuggestionAsync(err error, errorNum int, ch chan<- ErrorAndSuggestion, wg *sync.WaitGroup) {
+func (s *Suggestions) findSuggestionAsync(ctx context.Context, err error, errorNum int, ch chan<- ErrorAndSuggestion, wg *sync.WaitGroup) {
 	defer wg.Done()
-	suggestion, _, err := s.getSuggestionAndRevalidate(err, nil)
+	suggestion, _, err := s.getSuggestionAndRevalidate(ctx, err, nil)
 	if err != nil {
 		golog.Println("Suggestion request failed:", err.Error())
 		return
@@ -246,7 +247,7 @@ func (s *Suggestions) findSuggestion(validationErr error, previousSuggestionCont
 }
 
 // GetSuggestionAndRevalidate returns the Suggestion and updated file
-func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSuggestionContext *string) (*Suggestion, []byte, error) {
+func (s *Suggestions) getSuggestionAndRevalidate(ctx context.Context, validationErr error, previousSuggestionContext *string) (*Suggestion, []byte, error) {
 	suggestion, err := s.findSuggestion(validationErr, previousSuggestionContext)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: %v", ErrNoSuggestionFound, err)
@@ -259,18 +260,18 @@ func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSu
 	if suggestion != nil {
 		newFile, err := s.applySuggestion(*suggestion)
 		if err != nil {
-			return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
+			return s.retryOnceWithMessage(ctx, validationErr, fmt.Sprintf("suggestion: %s\nerror: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
 
-		newErrs, err := validate(newFile, s.FilePath, s.Config.Level, s.isRemote, false)
+		newErrs, err := validate(ctx, newFile, s.FilePath, s.Config.Level, s.isRemote, false)
 		if err != nil {
-			return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: Caused validation to fail with error: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
+			return s.retryOnceWithMessage(ctx, validationErr, fmt.Sprintf("suggestion: %s\nerror: Caused validation to fail with error: %s", suggestion.JSONPatch, err.Error()), previousSuggestionContext)
 		}
 
 		for _, newErr := range newErrs {
 			if newErr.Error() == validationErr.Error() {
 				s.log("Suggestion did not fix error.")
-				return s.retryOnceWithMessage(validationErr, fmt.Sprintf("suggestion: %s\nerror: Did not resolve the original error", suggestion.JSONPatch), previousSuggestionContext)
+				return s.retryOnceWithMessage(ctx, validationErr, fmt.Sprintf("suggestion: %s\nerror: Did not resolve the original error", suggestion.JSONPatch), previousSuggestionContext)
 			}
 		}
 
@@ -280,8 +281,8 @@ func (s *Suggestions) getSuggestionAndRevalidate(validationErr error, previousSu
 	}
 }
 
-func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber, error) {
-	errs, err := validate(s.File, s.FilePath, s.Config.Level, s.isRemote, printSummary)
+func (s *Suggestions) revalidate(ctx context.Context, printSummary bool) ([]errorAndCommentLineNumber, error) {
+	errs, err := validate(ctx, s.File, s.FilePath, s.Config.Level, s.isRemote, printSummary)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +294,7 @@ func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber
 			return nil, err
 		}
 
-		yamlErrs, err := validate(yamlFile, s.FilePath, s.Config.Level, s.isRemote, false)
+		yamlErrs, err := validate(ctx, yamlFile, s.FilePath, s.Config.Level, s.isRemote, false)
 		if err != nil {
 			return nil, err
 		}
@@ -314,11 +315,11 @@ func (s *Suggestions) revalidate(printSummary bool) ([]errorAndCommentLineNumber
 	return errsWithLineNums, nil
 }
 
-func validate(schema []byte, schemaPath string, level errors.Severity, isRemote, printSummary bool) ([]error, error) {
+func validate(ctx context.Context, schema []byte, schemaPath string, level errors.Severity, isRemote, printSummary bool) ([]error, error) {
 	limits := &validation.OutputLimits{
 		OutputHints: isRemote,
 	}
-	vErrs, vWarns, vInfo, err := validation.Validate(schema, schemaPath, limits, true)
+	vErrs, vWarns, vInfo, err := validation.Validate(ctx, schema, schemaPath, limits, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate YAML: %v", err)
 	}
@@ -373,11 +374,11 @@ func validationErrsEqualExceptLineNumber(err1, err2 errors.ValidationError) bool
 	return err1.Severity == err2.Severity && err1.Message == err2.Message && err1.Rule == err2.Rule && err1.Path == err2.Path
 }
 
-func (s *Suggestions) retryOnceWithMessage(validationErr error, msg string, previousSuggestion *string) (*Suggestion, []byte, error) {
+func (s *Suggestions) retryOnceWithMessage(ctx context.Context, validationErr error, msg string, previousSuggestion *string) (*Suggestion, []byte, error) {
 	// Retry, but only once
 	if previousSuggestion == nil {
 		s.log("Retrying...")
-		return s.getSuggestionAndRevalidate(validationErr, &msg)
+		return s.getSuggestionAndRevalidate(ctx, validationErr, &msg)
 	} else {
 		return nil, nil, ErrNoSuggestionFound
 	}

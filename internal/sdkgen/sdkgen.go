@@ -23,7 +23,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	logger := log.From(ctx).WithAssociatedFile(schemaPath)
 
-	logger.WithStyle(styles.Info).Printf("Generating SDK for %s...\n", lang)
+	logger.Infof("Generating SDK for %s...\n", lang)
 
 	if strings.TrimSpace(outDir) == "." {
 		wd, err := os.Getwd()
@@ -45,7 +45,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	}
 
 	opts := []generate.GeneratorOptions{
-		generate.WithLogger(logger),
+		generate.WithLogger(logger.WithFormatter(log.PrefixedFormatter)),
 		generate.WithCustomerID(customerID),
 		generate.WithWorkspaceID(workspaceID),
 		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
@@ -88,7 +88,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"
 
-	logger.WithStyle(styles.Success).Printf("SDK for %s generated successfully ✓", lang)
+	logger.Successf("\nSDK for %s generated successfully ✓", lang)
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	return nil

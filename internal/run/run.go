@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 	"path/filepath"
 	"slices"
@@ -126,7 +125,7 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, installationURL, repo, repoSubDir string, debug bool) error {
 	t := wf.Targets[target]
 
-	log.From(ctx).WithStyle(styles.Info).Printf("Running target %s (%s)...\n", target, t.Target)
+	log.From(ctx).Infof("Running target %s (%s)...\n", target, t.Target)
 
 	source, sourcePath, err := wf.GetTargetSource(target)
 	if err != nil {
@@ -165,7 +164,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 
 func runSource(ctx context.Context, id string, source *workflow.Source) (string, error) {
 	logger := log.From(ctx)
-	logger.WithStyle(styles.Info).Printf("Running source %s...", id)
+	logger.Infof("Running source %s...", id)
 
 	outputLocation, err := source.GetOutputLocation()
 	if err != nil {
@@ -194,7 +193,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 			mergeLocation = outputLocation
 		}
 
-		logger.WithStyle(styles.Info).Printf("Merging %d schemas into %s...", len(source.Inputs), mergeLocation)
+		logger.Infof("Merging %d schemas into %s...", len(source.Inputs), mergeLocation)
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
@@ -220,7 +219,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 	if len(source.Overlays) > 0 {
 		overlayLocation := outputLocation
 
-		logger.WithStyle(styles.Info).Printf("Applying %d overlays into %s...", len(source.Overlays), overlayLocation)
+		logger.Infof("Applying %d overlays into %s...", len(source.Overlays), overlayLocation)
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
@@ -249,7 +248,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
-	log.From(ctx).WithStyle(styles.Info).Printf("Downloading %s... to %s\n", d.Location, outPath)
+	log.From(ctx).Infof("Downloading %s... to %s\n", d.Location, outPath)
 
 	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
 		return "", err
@@ -302,7 +301,7 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 		currentBase = outFile
 	}
 
-	log.From(ctx).WithStyle(styles.Success).Printf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
+	log.From(ctx).Successf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
 
 	return nil
 }

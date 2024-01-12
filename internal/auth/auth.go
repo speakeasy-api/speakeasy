@@ -3,11 +3,9 @@ package auth
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
-
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
 func Authenticate(ctx context.Context, force bool) error {
@@ -22,8 +20,7 @@ func Authenticate(ctx context.Context, force bool) error {
 
 	log.From(ctx).
 		WithInteractiveOnly().
-		WithStyle(styles.Success).
-		Printf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), res.WorkspaceID)
+		Successf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), res.WorkspaceID)
 
 	return nil
 }
@@ -35,8 +32,7 @@ func Logout(ctx context.Context) error {
 
 	log.From(ctx).
 		WithInteractiveOnly().
-		WithStyle(styles.Success).
-		Println("Logout successful!")
+		Success("Logout successful!")
 
 	return nil
 }

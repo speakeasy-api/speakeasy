@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -24,6 +24,7 @@ const (
 	LevelInfo        Level = "info"
 	LevelWarn        Level = "warn"
 	LevelErr         Level = "error"
+	LevelSuccess     Level = "success"
 	loggerContextKey       = "cli-logger-context"
 )
 
@@ -35,6 +36,7 @@ type Logger struct {
 	fields          []zapcore.Field
 	interactiveOnly bool
 	style           *lipgloss.Style
+	formatter       func(l Logger, level Level, msg string, err error) string
 }
 
 var _ logging.Logger = (*Logger)(nil)
@@ -49,8 +51,19 @@ func From(ctx context.Context) Logger {
 	if l, ok := ctx.Value(loggerContextKey).(Logger); ok {
 		return l
 	}
+	return New()
+}
+
+func New() Logger {
+	formatter := BasicFormatter
+
+	if env.IsGithubAction() {
+		formatter = GithubFormatter
+	}
+
 	return Logger{
-		level: LevelInfo,
+		level:     LevelInfo,
+		formatter: formatter,
 	}
 }
 
@@ -59,46 +72,52 @@ func From(ctx context.Context) Logger {
  */
 
 func (l Logger) WithLevel(level Level) Logger {
-	return Logger{
-		level:          level,
-		associatedFile: l.associatedFile,
-		fields:         l.fields,
-	}
+	l2 := l.Copy()
+	l2.level = level
+	return l2
 }
 
 func (l Logger) WithAssociatedFile(associatedFile string) Logger {
 	// If this is running via our action it will have a /repo/ prefix that needs to be removed to associate the file correctly
 	associatedFile = strings.TrimPrefix(associatedFile, "/repo/")
 
-	return Logger{
-		level:          l.level,
-		associatedFile: associatedFile,
-		fields:         l.fields,
-	}
+	l2 := l.Copy()
+	l2.associatedFile = associatedFile
+	return l2
 }
 
 func (l Logger) WithInteractiveOnly() Logger {
+	l2 := l.Copy()
+	l2.interactiveOnly = true
+	return l2
+}
+
+func (l Logger) WithStyle(style lipgloss.Style) Logger {
+	l2 := l.Copy()
+	l2.style = &style
+	return l2
+}
+
+func (l Logger) With(fields ...zapcore.Field) logging.Logger {
+	l2 := l.Copy()
+	l2.fields = append(l.fields, fields...)
+	return l2
+}
+
+func (l Logger) WithFormatter(formatter func(l Logger, level Level, msg string, err error) string) Logger {
+	l2 := l.Copy()
+	l2.formatter = formatter
+	return l2
+}
+
+func (l Logger) Copy() Logger {
 	return Logger{
 		level:           l.level,
 		associatedFile:  l.associatedFile,
 		fields:          l.fields,
-		interactiveOnly: true,
-	}
-}
-
-func (l Logger) WithStyle(style lipgloss.Style) Logger {
-	return Logger{
-		level:          l.level,
-		associatedFile: l.associatedFile,
-		fields:         l.fields,
-		style:          &style,
-	}
-}
-
-func (l Logger) With(fields ...zapcore.Field) logging.Logger {
-	return &Logger{
-		associatedFile: l.associatedFile,
-		fields:         append(l.fields, fields...),
+		interactiveOnly: l.interactiveOnly,
+		style:           l.style,
+		formatter:       l.formatter,
 	}
 }
 
@@ -115,8 +134,12 @@ func (l Logger) Info(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	msg = fmt.Sprintf("%s%s%s\n", l.getPrefix(LevelInfo, err), msg, fieldsToJSON(fields))
-	fmt.Fprintf(os.Stderr, msg)
+	msg = l.format(LevelInfo, msg, err) + fieldsToJSON(fields)
+	l.Println(msg)
+}
+
+func (l Logger) Infof(format string, a ...any) {
+	l.Info(fmt.Sprintf(format, a...))
 }
 
 func (l Logger) Warn(msg string, fields ...zapcore.Field) {
@@ -128,8 +151,11 @@ func (l Logger) Warn(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	msg = fmt.Sprintf("%s%s%s\n", l.getPrefix(LevelWarn, err), msg, fieldsToJSON(fields))
-	fmt.Fprintf(os.Stderr, msg)
+	msg = l.format(LevelWarn, msg, err) + fieldsToJSON(fields)
+	l.Println(msg)
+}
+func (l Logger) Warnf(format string, a ...any) {
+	l.Warn(fmt.Sprintf(format, a...))
 }
 
 func (l Logger) Error(msg string, fields ...zapcore.Field) {
@@ -137,8 +163,23 @@ func (l Logger) Error(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	msg = fmt.Sprintf("%s%s%s\n", l.getPrefix(LevelErr, err), msg, fieldsToJSON(fields))
-	fmt.Fprintf(os.Stderr, msg)
+	msg = l.format(LevelErr, msg, err) + fieldsToJSON(fields)
+	l.Println(msg)
+}
+func (l Logger) Errorf(format string, a ...any) {
+	l.Error(fmt.Sprintf(format, a...))
+}
+
+func (l Logger) Success(msg string, fields ...zapcore.Field) {
+	fields = append(l.fields, fields...)
+
+	msg, err, fields := getMessage(msg, fields)
+
+	msg = l.format(LevelSuccess, msg, err) + fieldsToJSON(fields)
+	l.Println(msg)
+}
+func (l Logger) Successf(format string, a ...any) {
+	l.Success(fmt.Sprintf(format, a...))
 }
 
 func (l Logger) Printf(format string, a ...any) {
@@ -162,32 +203,60 @@ func (l Logger) PrintlnUnstyled(a any) {
 	fmt.Fprintln(os.Stderr, a)
 }
 
+func (l Logger) format(level Level, msg string, err error) string {
+	return l.formatter(l, level, msg, err)
+}
+
 /**
- * Utilities
+ * Formatters
  */
 
-func (l Logger) getPrefix(level Level, err error) string {
+func BasicFormatter(l Logger, level Level, msg string, err error) string {
 	switch level {
 	case LevelInfo:
-		return styles.Info.Render("INFO\t")
+		return styles.Info.Render(msg)
 	case LevelWarn:
-		if env.IsGithubAction() {
-			attributes := getGithubAnnotationAttributes(l.associatedFile, err)
-			return fmt.Sprintf("::warning%s::", attributes)
-		} else {
-			return styles.Warning.Render("WARN\t")
-		}
+		return styles.Warning.Render(msg)
 	case LevelErr:
-		if env.IsGithubAction() {
-			attributes := getGithubAnnotationAttributes(l.associatedFile, err)
-			return fmt.Sprintf("::error%s::", attributes)
-		} else {
-			return styles.Error.Render("ERROR\t")
-		}
+		return styles.Error.Render(msg)
+	case LevelSuccess:
+		return styles.Success.Render(msg)
 	}
 
 	return ""
 }
+
+func PrefixedFormatter(l Logger, level Level, msg string, err error) string {
+	prefix := ""
+
+	switch level {
+	case LevelInfo, LevelSuccess:
+		prefix = styles.Info.Render("INFO\t")
+	case LevelWarn:
+		prefix = styles.Warning.Render("WARN\t")
+	case LevelErr:
+		prefix = styles.Error.Render("ERROR\t")
+	}
+
+	return prefix + msg
+}
+
+func GithubFormatter(l Logger, level Level, msg string, err error) string {
+	switch level {
+	case LevelWarn:
+		attributes := getGithubAnnotationAttributes(l.associatedFile, err)
+		return fmt.Sprintf("::warning%s::", attributes)
+	case LevelErr:
+		attributes := getGithubAnnotationAttributes(l.associatedFile, err)
+		return fmt.Sprintf("::error%s::", attributes)
+	}
+
+	return ""
+}
+
+/**
+ * Utilities
+ */
 
 func getGithubAnnotationAttributes(associatedFile string, err error) string {
 	if err == nil {

@@ -29,7 +29,7 @@ var rootCmd = &cobra.Command{
 	RunE: rootExec,
 }
 
-var l = log.Logger{}.WithLevel(log.LevelInfo)
+var l = log.New().WithLevel(log.LevelInfo)
 
 func init() {
 	if err := config.Load(); err != nil {

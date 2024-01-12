@@ -99,7 +99,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath, header, token strin
 		return nil, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	errs, err := validate(schema, schemaPath, suggestionsConfig.Level, isRemote, true)
+	errs, err := validate(ctx, schema, schemaPath, suggestionsConfig.Level, isRemote, true)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath, header, token strin
 			return nil, fmt.Errorf("failed to convert schema file from YAML to JSON %s: %w", schemaPath, err)
 		}
 
-		jsonErrs, err := validate(schema, schemaPath, suggestionsConfig.Level, isRemote, false)
+		jsonErrs, err := validate(ctx, schema, schemaPath, suggestionsConfig.Level, isRemote, false)
 		if err != nil {
 			return nil, err
 		}
@@ -203,12 +203,12 @@ func suggest(ctx context.Context, schema []byte, schemaPath string, errsWithLine
 		// Request suggestions in parallel, in batches of at most suggestionBatchSize
 		for continueSuggest {
 			numSuggestions := min(suggestionBatchSize, len(errsWithLineNums))
-			continueSuggest, err = suggest.findAndApplySuggestions(&l, errsWithLineNums[:numSuggestions])
+			continueSuggest, err = suggest.findAndApplySuggestions(ctx, &l, errsWithLineNums[:numSuggestions])
 			if err != nil {
 				return nil, err
 			}
 
-			errsWithLineNums, err = suggest.revalidate(false)
+			errsWithLineNums, err = suggest.revalidate(ctx, false)
 			if err != nil {
 				return nil, err
 			}
@@ -234,7 +234,7 @@ func suggest(ctx context.Context, schema []byte, schemaPath string, errsWithLine
 
 		printVErr(&l, validationErrWithLineNum)
 
-		_, newFile, err := suggest.getSuggestionAndRevalidate(validationErr, nil)
+		_, newFile, err := suggest.getSuggestionAndRevalidate(ctx, validationErr, nil)
 
 		if err != nil {
 			if goerr.Is(err, ErrNoSuggestionFound) {
@@ -258,7 +258,7 @@ func suggest(ctx context.Context, schema []byte, schemaPath string, errsWithLine
 
 		suggest.suggestionCount++
 
-		newErrs, err := validate(suggest.File, suggest.FilePath, suggest.Config.Level, isRemote, false)
+		newErrs, err := validate(ctx, suggest.File, suggest.FilePath, suggest.Config.Level, isRemote, false)
 		if err != nil {
 			return nil, err
 		}

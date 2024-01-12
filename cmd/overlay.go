@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -68,7 +67,7 @@ func runValidateOverlay(c *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.From(c.Context()).WithStyle(styles.Success).Printf("Overlay file %q is valid.", overlayFile)
+	log.From(c.Context()).Successf("Overlay file %q is valid.", overlayFile)
 	return nil
 }
 
