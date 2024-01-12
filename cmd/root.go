@@ -3,15 +3,16 @@ package cmd
 import (
 	"fmt"
 	"github.com/hashicorp/go-version"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -137,5 +138,5 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	l.WithStyle(styles.HeavilyEmphasized).Println("Welcome to the Speakeasy CLI!")
 	l.WithStyle(styles.DimmedItalic).Println("This is interactive mode. For usage, run speakeasy -h instead.")
 
-	return utils.InteractiveExec(cmd, args, "Select a command to run")
+	return interactivity.InteractiveExec(cmd, args, "Select a command to run")
 }

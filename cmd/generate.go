@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/exp/slices"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
@@ -36,7 +37,7 @@ var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate client SDKs, docsites, and more",
 	Long:  `The "generate" command provides a set of commands for generating client SDKs, OpenAPI specs (coming soon) and more (coming soon).`,
-	RunE:  utils.InteractiveRunFn("What do you want to generate?"),
+	RunE:  interactivity.InteractiveRunFn("What do you want to generate?"),
 }
 
 var genSDKCmd = &cobra.Command{
@@ -132,7 +133,7 @@ generate:
 
 For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
 `, strings.Join(SDKSupportedLanguageTargets(), "\n	- ")),
-	PreRunE: utils.GetMissingFlagsPreRun,
+	PreRunE: interactivity.GetMissingFlagsPreRun,
 	RunE:    genSDKs,
 }
 

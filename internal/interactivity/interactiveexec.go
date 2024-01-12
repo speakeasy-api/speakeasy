@@ -1,21 +1,16 @@
-package utils
+package interactivity
 
 import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"golang.org/x/term"
-	"os"
 )
 
-func IsInteractive() bool {
-	return term.IsTerminal(int(os.Stdout.Fd()))
-}
-
 func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
-	if !IsInteractive() {
+	if !utils.IsInteractive() {
 		return cmd.Help()
 	}
 

@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +12,7 @@ var mergeCmd = &cobra.Command{
 	Short: "Merge multiple OpenAPI documents into a single document",
 	Long: `Merge multiple OpenAPI documents into a single document, useful for merging multiple OpenAPI documents into a single document for generating a client SDK.
 Note: That any duplicate operations, components, etc. will be overwritten by the next document in the list.`,
-	PreRunE: utils.GetMissingFlagsPreRun,
+	PreRunE: interactivity.GetMissingFlagsPreRun,
 	RunE:    mergeExec,
 }
 

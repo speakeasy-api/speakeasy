@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"golang.org/x/term"
 	"os"
 	"path/filepath"
 )
@@ -15,4 +16,8 @@ func CreateDirectory(filename string) error {
 		}
 	}
 	return nil
+}
+
+func IsInteractive() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
 }

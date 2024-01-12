@@ -1,4 +1,4 @@
-package utils
+package interactivity
 
 import (
 	"github.com/charmbracelet/bubbles/key"

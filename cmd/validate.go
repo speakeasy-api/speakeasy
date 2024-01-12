@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
 )
@@ -13,14 +13,14 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate OpenAPI documents + more (coming soon)",
 	Long:  `The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).`,
-	RunE:  utils.InteractiveRunFn("What do you want to validate?"),
+	RunE:  interactivity.InteractiveRunFn("What do you want to validate?"),
 }
 
 var validateOpenAPICmd = &cobra.Command{
 	Use:     "openapi",
 	Short:   "Validate an OpenAPI document",
 	Long:    `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
-	PreRunE: utils.GetMissingFlagsPreRun,
+	PreRunE: interactivity.GetMissingFlagsPreRun,
 	RunE:    validateOpenAPI,
 }
 

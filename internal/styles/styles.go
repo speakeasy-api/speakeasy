@@ -39,9 +39,9 @@ var (
 		DimRed:     lipgloss.AdaptiveColor{Dark: "#54121B", Light: "#D93337"},
 		Green:      lipgloss.AdaptiveColor{Dark: "#63AC67", Light: "#293D2A"},
 		DimGreen:   lipgloss.AdaptiveColor{Dark: "#293D2A", Light: "#63AC67"},
-		BrightGrey: lipgloss.AdaptiveColor{Dark: "#9E9E9E", Light: "#292821"},
-		Grey:       lipgloss.AdaptiveColor{Dark: "#605E53", Light: "#605E53"},
-		DimGrey:    lipgloss.AdaptiveColor{Dark: "#292821", Light: "#9E9E9E"},
+		BrightGrey: lipgloss.AdaptiveColor{Dark: "#B4B2A6", Light: "#4B4A3F"},
+		Grey:       lipgloss.AdaptiveColor{Dark: "#8A887D", Light: "#BAB8AA"},
+		DimGrey:    lipgloss.AdaptiveColor{Dark: "#4B4A3F", Light: "#B4B2A6"},
 		Blue:       lipgloss.AdaptiveColor{Dark: "#679FE1", Light: "#1D2A3A"},
 		DimBlue:    lipgloss.AdaptiveColor{Dark: "#1D2A3A", Light: "#679FE1"},
 	}
