@@ -13,6 +13,7 @@ type (
 type Quickstart struct {
 	WorkflowFile    *workflow.Workflow
 	LanguageConfigs map[string]*config.Configuration
+	GithubWorkflow  *config.GenerateWorkflow
 }
 
 // Define constants using iota
@@ -21,11 +22,13 @@ const (
 	SourceBase
 	TargetBase
 	ConfigBase
+	GithubWorkflowBase
 )
 
 // TODO: Add Github Configuration Next
 var StateMapping map[State]formFunction = map[State]formFunction{
-	SourceBase: sourceBaseForm,
-	TargetBase: targetBaseForm,
-	ConfigBase: configBaseForm,
+	SourceBase:         sourceBaseForm,
+	TargetBase:         targetBaseForm,
+	ConfigBase:         configBaseForm,
+	GithubWorkflowBase: githubWorkflowBaseForm,
 }
