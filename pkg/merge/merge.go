@@ -565,7 +565,7 @@ func mergeExtensions(mergedExtensions, extensions *orderedmap.Map[string, *yaml.
 				_ = ext2YamlNode.Decode(&ext2)
 			}
 
-			if ext2 != ext {
+			if !reflect.DeepEqual(ext, ext2) {
 				errs = append(errs, fmt.Errorf("conflicting extension %#v %#v", ext, ext2))
 			}
 		}
