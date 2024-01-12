@@ -34,6 +34,12 @@ speakeasy suggest [flags]
   -v, --validation-loops int   number of times to run the validation loop, the default is no limit (only used in parallelized implementation) (default -1)
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain

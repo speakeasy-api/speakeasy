@@ -21,6 +21,12 @@ speakeasy validate config [flags]
   -h, --help         help for config
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy validate](README.md)	 - Validate OpenAPI documents + more (coming soon)

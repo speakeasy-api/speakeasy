@@ -2,7 +2,7 @@
 `speakeasy generate`  
 
 
-Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more  
+Generate client SDKs, docsites, and more  
 
 ## Details
 
@@ -18,6 +18,12 @@ speakeasy generate [flags]
 
 ```
   -h, --help   help for generate
+```
+
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command

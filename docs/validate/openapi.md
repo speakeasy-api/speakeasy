@@ -26,6 +26,12 @@ speakeasy validate openapi [flags]
       --token string                  token value to use if authentication is required for downloading schema from remote URL
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy validate](README.md)	 - Validate OpenAPI documents + more (coming soon)

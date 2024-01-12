@@ -22,6 +22,12 @@ speakeasy api generate-postman-collection [flags]
       --version-id string   Version ID
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy api](README.md)	 - Access the Speakeasy API via the CLI

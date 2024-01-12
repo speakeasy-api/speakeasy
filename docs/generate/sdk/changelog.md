@@ -25,6 +25,12 @@ speakeasy generate sdk changelog [flags]
   -t, --target string     the version(s) to get changelogs from, if not specified the latest version(s) will be used
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy generate sdk](README.md)	 - Generating Client SDKs from OpenAPI specs (csharp, go, java, javav2, php, python, ruby, swift, terraform, typescript, unity + more coming soon)

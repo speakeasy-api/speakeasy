@@ -23,6 +23,12 @@ speakeasy merge [flags]
   -s, --schemas path/to/schema1.json   a list of paths to OpenAPI documents to merge, specify -s path/to/schema1.json -s `path/to/schema2.json` etc
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain

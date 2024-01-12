@@ -18,6 +18,12 @@ speakeasy overlay apply [flags]
   -s, --schema string    schema to extend (optional)
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy overlay](README.md)	 - Work with OpenAPI Overlays

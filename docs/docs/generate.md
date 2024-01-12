@@ -30,6 +30,12 @@ speakeasy docs generate [flags]
       --token string         token value to use if authentication is required for downloading schema from remote URL
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy docs](README.md)	 - Use this command to generate content, compile, and publish SDK docs.

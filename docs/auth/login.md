@@ -20,6 +20,12 @@ speakeasy auth login [flags]
   -h, --help   help for login
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy auth](README.md)	 - Authenticate the CLI

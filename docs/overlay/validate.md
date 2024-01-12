@@ -17,6 +17,12 @@ speakeasy overlay validate [flags]
   -o, --overlay string   overlay file to validate
 ```
 
+### Options inherited from parent commands
+
+```
+      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+```
+
 ### Parent Command
 
 * [speakeasy overlay](README.md)	 - Work with OpenAPI Overlays
