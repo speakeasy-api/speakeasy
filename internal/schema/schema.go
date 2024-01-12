@@ -1,18 +1,20 @@
 package schema
 
 import (
+	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"go.uber.org/zap"
 	"net/url"
 	"os"
 	"path/filepath"
 
-	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/download"
 )
 
 var outputFilePath = "openapi"
 
-func GetSchemaContents(schemaPath string, header, token string) (bool, []byte, error) {
+func GetSchemaContents(ctx context.Context, schemaPath string, header, token string) (bool, []byte, error) {
 	if _, err := os.Stat(schemaPath); err == nil {
 		schema, err := os.ReadFile(schemaPath)
 		if err != nil {
@@ -31,7 +33,7 @@ func GetSchemaContents(schemaPath string, header, token string) (bool, []byte, e
 
 		defer func() {
 			if err := os.Remove(outputFilePath); err != nil {
-				fmt.Println(promptui.Styler(promptui.FGRed, promptui.FGBold)(fmt.Sprintf("failed to delete downloaded schema file: %s", err.Error())))
+				log.From(ctx).Error("failed to delete downloaded schema file", zap.Error(err))
 			}
 		}()
 

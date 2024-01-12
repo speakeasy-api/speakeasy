@@ -3,12 +3,12 @@ package sdkgen
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
-	"github.com/fatih/color"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -21,7 +21,9 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return fmt.Errorf("language not supported: %s", lang)
 	}
 
-	fmt.Printf("Generating SDK for %s...\n", lang)
+	logger := log.From(ctx).WithAssociatedFile(schemaPath)
+
+	logger.Infof("Generating SDK for %s...\n", lang)
 
 	if strings.TrimSpace(outDir) == "." {
 		wd, err := os.Getwd()
@@ -32,11 +34,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		outDir = wd
 	}
 
-	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
+	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
-	l := log.NewLogger(schemaPath)
 
 	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
 	if runLocation == "" {
@@ -44,7 +45,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	}
 
 	opts := []generate.GeneratorOptions{
-		generate.WithLogger(l),
+		generate.WithLogger(logger.WithFormatter(log.PrefixedFormatter)),
 		generate.WithCustomerID(customerID),
 		generate.WithWorkspaceID(workspaceID),
 		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
@@ -79,24 +80,22 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	if errs := g.Generate(context.Background(), schema, schemaPath, lang, outDir, isRemote, compile); len(errs) > 0 {
 		for _, err := range errs {
-			l.Error("", zap.Error(err))
+			logger.Error("", zap.Error(err))
 		}
 
 		return fmt.Errorf("failed to generate SDKs for %s ✖", lang)
 	}
 
-	docs := color.New(color.FgGreen, color.Underline)
-
 	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"
 
-	fmt.Printf("Generating SDK for %s... %s.\n", lang, utils.Green("done ✓"))
-	docs.Printf("For more docs on customising the SDK check out: %s\n", sdkDocsLink)
+	logger.Successf("\nSDK for %s generated successfully ✓", lang)
+	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	return nil
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {
-	l := log.NewLogger("gen.yaml") // TODO if we want to associate annotations with this file we need to get the actual path
+	l := log.From(ctx).WithAssociatedFile("gen.yaml") // TODO if we want to associate annotations with this file we need to get the actual path
 
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),

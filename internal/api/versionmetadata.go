@@ -2,10 +2,10 @@ package api
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ func getVersionMetadata(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.VersionMetadata, map[string]string{
+	log.PrintArray(cmd, res.VersionMetadata, map[string]string{
 		"APIID":     "ApiID",
 		"MetaKey":   "Key",
 		"MetaValue": "Value",

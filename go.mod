@@ -9,7 +9,6 @@ require (
 	github.com/charmbracelet/huh v0.2.3
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/evanphx/json-patch v0.5.2
-	github.com/fatih/color v1.14.1
 	github.com/google/go-github/v52 v52.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
@@ -53,12 +52,9 @@ require (
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
-	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
-	github.com/charmbracelet/glamour v0.6.0 // indirect
 	github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cloudevents/sdk-go/v2 v2.6.1 // indirect
@@ -74,6 +70,7 @@ require (
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/evanw/esbuild v0.19.5 // indirect
+	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -95,7 +92,6 @@ require (
 	github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
-	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -118,7 +114,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.25 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -129,7 +124,6 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pb33f/libopenapi-validator v0.0.36 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
@@ -158,8 +152,6 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
-	github.com/yuin/goldmark v1.6.0 // indirect
-	github.com/yuin/goldmark-emoji v1.0.2 // indirect
 	github.com/zclconf/go-cty v1.13.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
@@ -175,3 +167,5 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation/

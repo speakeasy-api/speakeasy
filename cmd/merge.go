@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 	"github.com/spf13/cobra"
 )
@@ -13,12 +12,12 @@ var mergeCmd = &cobra.Command{
 	Short: "Merge multiple OpenAPI documents into a single document",
 	Long: `Merge multiple OpenAPI documents into a single document, useful for merging multiple OpenAPI documents into a single document for generating a client SDK.
 Note: That any duplicate operations, components, etc. will be overwritten by the next document in the list.`,
-	PreRunE: utils.GetMissingFlagsPreRun,
+	PreRunE: interactivity.GetMissingFlagsPreRun,
 	RunE:    mergeExec,
 }
 
 func mergeInit() {
-	mergeCmd.Flags().StringArrayP("schemas", "s", []string{}, "paths to the openapi schemas to merge")
+	mergeCmd.Flags().StringArrayP("schemas", "s", []string{}, "a list of paths to OpenAPI documents to merge, specify -s `path/to/schema1.json` -s `path/to/schema2.json` etc")
 	mergeCmd.MarkFlagRequired("schemas")
 	mergeCmd.Flags().StringP("out", "o", "", "path to the output file")
 	mergeCmd.MarkFlagRequired("out")
@@ -41,7 +40,7 @@ func mergeExec(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(utils.Green(fmt.Sprintf("Successfully merged %d schemas into %s", len(inSchemas), outFile)))
+	log.From(cmd.Context()).Successf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
 
 	return nil
 }

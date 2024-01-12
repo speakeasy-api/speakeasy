@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/manifoldco/promptui"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
 )
@@ -13,14 +13,14 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate OpenAPI documents + more (coming soon)",
 	Long:  `The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).`,
-	RunE:  utils.InteractiveRunFn("What do you want to validate?"),
+	RunE:  interactivity.InteractiveRunFn("What do you want to validate?"),
 }
 
 var validateOpenAPICmd = &cobra.Command{
 	Use:     "openapi",
 	Short:   "Validate an OpenAPI document",
 	Long:    `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
-	PreRunE: utils.GetMissingFlagsPreRun,
+	PreRunE: interactivity.GetMissingFlagsPreRun,
 	RunE:    validateOpenAPI,
 }
 
@@ -104,8 +104,9 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	uploadCommand := promptui.Styler(promptui.FGCyan, promptui.FGBold)("speakeasy api register-schema --schema=" + schemaPath)
-	fmt.Printf("\nYou can upload your schema to Speakeasy using the following command:\n%s\n", uploadCommand)
+	uploadCommand := "speakeasy api register-schema --schema=" + schemaPath
+	msg := fmt.Sprintf("\nYou can upload your schema to Speakeasy using the following command:\n%s", uploadCommand)
+	log.From(cmd.Context()).Info(msg)
 
 	return nil
 }
@@ -121,10 +122,10 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 	if err := sdkgen.ValidateConfig(cmd.Context(), dir); err != nil {
 		rootCmd.SilenceUsage = true
 
-		return fmt.Errorf(utils.Red("%s"), err)
+		return fmt.Errorf("%s", err)
 	}
 
-	fmt.Printf("%s\n", utils.Green("Config valid ✓"))
+	log.From(cmd.Context()).Success("Config valid ✓")
 
 	return nil
 }
