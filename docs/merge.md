@@ -18,9 +18,9 @@ speakeasy merge [flags]
 ### Options
 
 ```
-  -h, --help                  help for merge
-  -o, --out string            path to the output file
-  -s, --schemas stringArray   paths to the openapi schemas to merge
+  -h, --help                           help for merge
+  -o, --out string                     path to the output file
+  -s, --schemas path/to/schema1.json   a list of paths to OpenAPI documents to merge, specify -s path/to/schema1.json -s `path/to/schema2.json` etc
 ```
 
 ### Parent Command
