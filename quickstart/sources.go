@@ -16,7 +16,7 @@ func sourceBaseForm(quickstart *Quickstart) (*State, error) {
 	var sourceName, fileLocation, authHeader, authSecret string
 	var requiresAuthentication bool
 	if len(quickstart.WorkflowFile.Sources) == 0 {
-		sourceName = "my-first-source"
+		sourceName = "openapi"
 	}
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 		huh.NewGroup(
@@ -31,8 +31,6 @@ func sourceBaseForm(quickstart *Quickstart) (*State, error) {
 					return nil
 				}).
 				Value(&sourceName),
-		),
-		huh.NewGroup(
 			huh.NewInput().
 				Title("What is the location of your OpenAPI document:").
 				Placeholder("local file path or remote file reference.").
