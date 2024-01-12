@@ -9,7 +9,6 @@ require (
 	github.com/charmbracelet/huh v0.2.3
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/evanphx/json-patch v0.5.2
-	github.com/fatih/color v1.14.1
 	github.com/google/go-github/v52 v52.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
@@ -74,6 +73,7 @@ require (
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/evanw/esbuild v0.19.5 // indirect
+	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
