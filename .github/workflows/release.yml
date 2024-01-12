@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: windows-latest
+    steps:
+      - name: Setup environment
+        run: |-
+          chcp 65001 #set code page to utf-8
+          echo ("GOPRIVATE=github.com/speakeasy-api") >> $env:GITHUB_ENV
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Conventional Commits
+        uses: TriPSs/conventional-changelog-action@v3
+        with:
+          github-token: ${{ secrets.github_token }}
+          skip-commit: "true"
+          output-file: "false"
+          skip-on-empty: "false"
+          preset: conventionalcommits
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ">=1.21.0"
+          cache: true
+      # More assembly might be required: Docker logins, GPG, etc. It all depends
+      # on your needs.
+      - name: Configure git for private modules
+        run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
+      - name: Setup Choco
+        uses: crazy-max/ghaction-chocolatey@v2
+        with:
+          args: --version
+      - name: goreleaser
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
