@@ -1,20 +1,16 @@
-package utils
+package interactivity
 
 import (
 	"fmt"
-	"github.com/manifoldco/promptui"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"golang.org/x/term"
-	"os"
 )
 
-func IsInteractive() bool {
-	return term.IsTerminal(int(os.Stdout.Fd()))
-}
-
 func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
-	if !IsInteractive() {
+	if !utils.IsInteractive() {
 		return cmd.Help()
 	}
 
@@ -91,9 +87,9 @@ func GetMissingFlags(cmd *cobra.Command) error {
 				flagString += fmt.Sprintf(" --%s=%s", flag.Name, flag.Value)
 			}
 
-			runningString := promptui.Styler(promptui.FGFaint, promptui.FGItalic)("Running command:")
-			commandString := promptui.Styler(promptui.FGCyan, promptui.FGBold)(fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString))
-			println(fmt.Sprintf("\n%s %s\n", runningString, commandString))
+			running := styles.DimmedItalic.Render("Running command")
+			command := styles.Info.Render(fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString))
+			log.From(cmd.Context()).Printf("\n%s %s\n", running, command)
 		}
 	}
 
@@ -192,7 +188,7 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 
 	if cmd.Flags().HasFlags() {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if flag.Name != "help" && flag.Name != "version" {
+			if flag.Name != "help" && flag.Name != "version" && flag.Name != "logLevel" {
 				onlyHasHelpFlags = false
 			}
 		})

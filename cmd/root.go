@@ -2,16 +2,17 @@ package cmd
 
 import (
 	"fmt"
-	"math"
-	"os"
-	"strings"
-
 	"github.com/hashicorp/go-version"
-	"github.com/manifoldco/promptui"
-	"github.com/speakeasy-api/speakeasy/internal/config"
-	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"os"
+	"slices"
+	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -29,7 +30,7 @@ var rootCmd = &cobra.Command{
 	RunE: rootExec,
 }
 
-var l = log.NewLogger("")
+var l = log.New().WithLevel(log.LevelInfo)
 
 func init() {
 	if err := config.Load(); err != nil {
@@ -39,6 +40,8 @@ func init() {
 }
 
 func Init(version, artifactArch string) {
+	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
+
 	genInit()
 	apiInit()
 	validateInit()
@@ -57,7 +60,11 @@ func Execute(version, artifactArch string) {
 	rootCmd.SilenceErrors = true
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if cmd.Name() != "update" {
-			checkForUpdate(version, artifactArch)
+			checkForUpdate(cmd, version, artifactArch)
+		}
+
+		if err := setLogLevel(cmd); err != nil {
+			return
 		}
 	}
 
@@ -73,7 +80,7 @@ func GetRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func checkForUpdate(currVersion, artifactArch string) {
+func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
 	// Don't display if piping to a file for example
 	if !utils.IsInteractive() {
 		return
@@ -88,23 +95,38 @@ func checkForUpdate(currVersion, artifactArch string) {
 		return
 	}
 
-	curVer, err := version.NewVersion(currVersion)
+	curVer, err := version.NewVersion(currentVersion)
 	if err != nil {
 		return
 	}
 
 	if latestVersion.GreaterThan(curVer) {
-		versionString := fmt.Sprintf(" A new version of the Speakeasy CLI is available: v%s ", latestVersion.String())
-		updateString := " Run `speakeasy update` to update to the latest version "
-		padLength := int(math.Max(float64(len(versionString)), float64(len(updateString))))
+		versionString := fmt.Sprintf("A new version of the Speakeasy CLI is available: v%s", latestVersion.String())
+		updateString := "Run `speakeasy update` to update to the latest version"
 
-		fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", padLength)))
-		fmt.Println(utils.BackgroundYellowBoldFG(padRight(versionString, padLength)))
-		fmt.Println(utils.BackgroundYellowBoldFG(padRight(updateString, padLength)))
-		fmt.Println(utils.BackgroundYellow(strings.Repeat(" ", padLength)))
-		fmt.Println()
+		l := log.From(cmd.Context())
+		style := styles.Emphasized.Copy().Background(styles.Colors.DimYellow).Foreground(styles.Colors.Brown).Padding(1, 2)
+		l.WithStyle(style).Printf("%s\n%s", versionString, updateString)
+		l.Printf("\n")
+
 		return
 	}
+}
+
+func setLogLevel(cmd *cobra.Command) error {
+	logLevel, err := cmd.Flags().GetString("logLevel")
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(log.Levels, logLevel) {
+		return fmt.Errorf("log level must be one of: %s", strings.Join(log.Levels, ", "))
+	}
+
+	l = l.WithLevel(log.Level(logLevel))
+	ctx := log.With(cmd.Context(), l)
+	cmd.SetContext(ctx)
+
+	return nil
 }
 
 func rootExec(cmd *cobra.Command, args []string) error {
@@ -112,14 +134,9 @@ func rootExec(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	}
 
-	welcomeString := promptui.Styler(promptui.FGYellow, promptui.FGBold)("Welcome to the Speakeasy CLI!")
-	helpString := promptui.Styler(promptui.FGFaint, promptui.FGItalic)("This is interactive mode. For usage, run speakeasy -h instead")
-	println(fmt.Sprintf("%s\n%s\n", welcomeString, helpString))
+	l := log.From(cmd.Context()).WithInteractiveOnly()
+	l.WithStyle(styles.HeavilyEmphasized).Println("Welcome to the Speakeasy CLI!")
+	l.WithStyle(styles.DimmedItalic).Println("This is interactive mode. For usage, run speakeasy -h instead.")
 
-	return utils.InteractiveExec(cmd, args, "Select a command to run")
-}
-
-func padRight(str string, width int) string {
-	spaces := width - len(str)
-	return str + strings.Repeat(" ", spaces)
+	return interactivity.InteractiveExec(cmd, args, "Select a command to run")
 }

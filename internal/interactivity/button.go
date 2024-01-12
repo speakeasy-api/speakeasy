@@ -1,16 +1,17 @@
-package utils
+package interactivity
 
 import (
 	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 )
 
 var (
 	baseStyle    = lipgloss.NewStyle().Padding(0, 1).Bold(true)
-	blurredStyle = baseStyle.Copy().Foreground(Colors.DimGrey).Background(Colors.Grey)
-	validStyle   = baseStyle.Copy().Foreground(Colors.DimGreen).Background(Colors.Green)
-	invalidStyle = baseStyle.Copy().Foreground(Colors.DimRed).Background(Colors.Red)
+	blurredStyle = baseStyle.Copy().Foreground(styles.Colors.DimGrey).Background(styles.Colors.Grey)
+	validStyle   = baseStyle.Copy().Foreground(styles.Colors.DimGreen).Background(styles.Colors.Green)
+	invalidStyle = baseStyle.Copy().Foreground(styles.Colors.DimRed).Background(styles.Colors.Red)
 
-	helperTextStyle = HelpStyle.Copy().MarginLeft(1)
+	helperTextStyle = styles.Help.Copy().MarginLeft(1)
 )
 
 type Button struct {
@@ -51,9 +52,9 @@ func (b ButtonWithHelperText) View() string {
 		helperText = b.HelperText
 
 		if b.Disabled {
-			style.Foreground(Colors.Red)
+			style.Foreground(styles.Colors.Red)
 		} else {
-			style.Foreground(Colors.Green)
+			style.Foreground(styles.Colors.Green)
 		}
 	}
 

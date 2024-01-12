@@ -34,7 +34,7 @@ func runInit() {
 }
 
 func runFunc(cmd *cobra.Command, args []string) error {
-	if err := auth.Authenticate(false); err != nil {
+	if err := auth.Authenticate(cmd.Context(), false); err != nil {
 		return err
 	}
 
