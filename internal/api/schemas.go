@@ -2,12 +2,12 @@ package api
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"os"
 	"path/filepath"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +57,7 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Printf("schema successfully registered for: %s - %s %s\n", apiID, versionID, utils.Green("✓"))
+	log.From(ctx).Successf("Schema successfully registered for: %s - %s %s ✓", apiID, versionID)
 
 	return nil
 }
@@ -92,7 +92,7 @@ func getSchemas(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.Schemata, map[string]string{
+	log.PrintArray(cmd, res.Schemata, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -135,7 +135,7 @@ func getSchemaRevision(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.Schema, map[string]string{
+	log.PrintValue(cmd, res.Schema, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -184,7 +184,7 @@ func getSchemaDiff(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.SchemaDiff, nil)
+	log.PrintValue(cmd, res.SchemaDiff, nil)
 
 	return nil
 }
@@ -219,7 +219,7 @@ func downloadLatestSchema(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println(string(res.Schema))
+	log.From(ctx).Println(string(res.Schema))
 
 	return nil
 }
@@ -260,7 +260,7 @@ func downloadSchemaRevision(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	fmt.Println(string(res.Schema))
+	log.From(ctx).Println(string(res.Schema))
 
 	return nil
 }

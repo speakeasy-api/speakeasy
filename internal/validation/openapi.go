@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
 	"os"
 )
@@ -27,36 +25,36 @@ type OutputLimits struct {
 }
 
 func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits) error {
-	fmt.Println("Validating OpenAPI spec...")
-	fmt.Println()
+	logger := log.From(ctx)
+	logger.Info("Validating OpenAPI spec...\n")
 
-	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
+	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	l := log.NewLogger(schemaPath)
+	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
 	hasWarnings := false
 
-	vErrs, vWarns, vInfo, err := Validate(schema, schemaPath, limits, isRemote)
+	vErrs, vWarns, vInfo, err := Validate(ctx, schema, schemaPath, limits, isRemote)
 	if err != nil {
 		return err
 	}
 
 	for _, hint := range vInfo {
-		l.Info("", zap.Error(hint))
+		prefixedLogger.Info("", zap.Error(hint))
 	}
 	for _, warn := range vWarns {
 		hasWarnings = true
-		l.Warn("", zap.Error(warn))
+		prefixedLogger.Warn("", zap.Error(warn))
 	}
 	for _, err := range vErrs {
-		l.Error("", zap.Error(err))
+		prefixedLogger.Error("", zap.Error(err))
 	}
 
 	if len(vErrs) > 0 {
-		status := "OpenAPI spec invalid ✖"
+		status := "\nOpenAPI spec invalid ✖"
 		github.GenerateSummary(status, vErrs)
 		return fmt.Errorf(status)
 	}
@@ -70,20 +68,20 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 		}
 
 		github.GenerateSummary("OpenAPI spec valid with warnings ⚠", vErrs)
-		fmt.Printf("OpenAPI spec %s\n", utils.Yellow("valid with warnings ⚠"))
+		logger.Warn("OpenAPI spec valid with warnings ⚠")
 		return nil
 	}
 
 	github.GenerateSummary("OpenAPI spec valid ✓", nil)
-	fmt.Printf("OpenAPI spec %s\n", utils.Green("valid ✓"))
+	logger.Success("OpenAPI spec valid ✓")
 
 	return nil
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(schema []byte, schemaPath string, limits *OutputLimits, isRemote bool) ([]error, []error, []error, error) {
-	// Set to error because g.Validate sometimes logs all warnings for some reason
-	l := logging.NewLogger(zap.ErrorLevel)
+func Validate(ctx context.Context, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool) ([]error, []error, []error, error) {
+	// TODO: is this still true: Set to error because g.Validate sometimes logs all warnings for some reason
+	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
 	g, err := generate.New(generate.WithFileFuncs(
 		func(filename string, data []byte, perm os.FileMode) error { return nil },

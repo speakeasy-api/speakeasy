@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/docsgen"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +13,7 @@ var docsCmd = &cobra.Command{
 	Use:   "docs",
 	Short: "Use this command to generate content, compile, and publish SDK docs.",
 	Long:  "Use this command to generate content, compile, and publish SDK docs. This feature is currently in closed beta, please reach out to speakeasy for more information.",
-	RunE:  utils.InteractiveRunFn("Provide a docs sub command"),
+	RunE:  interactivity.InteractiveRunFn("Provide a docs sub command"),
 }
 
 var genDocsContentCmd = &cobra.Command{

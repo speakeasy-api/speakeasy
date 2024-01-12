@@ -41,12 +41,12 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		return fmt.Errorf("language not supported: %s", lang)
 	}
 
-	isRemote, schema, err := schema.GetSchemaContents(schemaPath, header, token)
+	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	l := log.NewLogger(schemaPath)
+	l := log.From(ctx).WithAssociatedFile(schemaPath)
 
 	outputBuffer := &bytes.Buffer{}
 	opts := []generate.GeneratorOptions{

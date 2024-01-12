@@ -3,11 +3,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +40,7 @@ func queryEventLog(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintArray(cmd, res.BoundedRequests, map[string]string{
+	log.PrintArray(cmd, res.BoundedRequests, map[string]string{
 		"APIID":         "ApiID",
 		"APIEndpointID": "ApiEndpointID",
 	})
@@ -72,7 +72,7 @@ func getRequestFromEventLog(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	utils.PrintValue(cmd, res.UnboundedRequest, map[string]string{
+	log.PrintValue(cmd, res.UnboundedRequest, map[string]string{
 		"APIID":         "ApiID",
 		"APIEndpointID": "ApiEndpointID",
 	})
