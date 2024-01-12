@@ -52,6 +52,7 @@ func Init(version, artifactArch string) {
 	proxyInit()
 	docsInit()
 	overlayInit()
+	quickstartInit()
 	runInit()
 }
 
