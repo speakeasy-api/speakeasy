@@ -15,7 +15,7 @@ import (
 
 func configBaseForm(quickstart *Quickstart) (*State, error) {
 	for key, target := range quickstart.WorkflowFile.Targets {
-		output, err := config.GetDefaultConfig(true, getLanguageConfigDefaults, map[string]bool{target.Target: true})
+		output, err := config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
 		if err != nil {
 			return nil, errors.Wrapf(err, "error generating config for target %s of type %s", key, target.Target)
 		}
@@ -56,32 +56,6 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 
 	var nextState State = GithubWorkflowBase
 	return &nextState, nil
-}
-
-// TODO: Export this from openapi-generation?
-func getLanguageConfigDefaults(lang string, newSDK bool) (*config.LanguageConfig, error) {
-	configFields, err := generate.GetLanguageConfigFields(lang, newSDK)
-	if err != nil {
-		return nil, err
-	}
-
-	var versionDefault string
-	cfg := make(map[string]any, 0)
-
-	for _, field := range configFields {
-		if field.Name == "version" && field.DefaultValue != nil {
-			versionDefault = (*field.DefaultValue).(string)
-		} else {
-			if field.DefaultValue != nil {
-				cfg[field.Name] = *field.DefaultValue
-			}
-		}
-	}
-
-	return &config.LanguageConfig{
-		Version: versionDefault,
-		Cfg:     cfg,
-	}, nil
 }
 
 type configPrompt struct {
@@ -149,7 +123,12 @@ var languageSpecificPrompts = map[string][]configPrompt{
 }
 
 func languageSpecificForms(language string) ([]huh.Field, error) {
-	configFields, err := generate.GetLanguageConfigFields(language, true)
+	t, err := generate.GetTargetFromTargetString(language)
+	if err != nil {
+		return nil, err
+	}
+
+	configFields, err := generate.GetLanguageConfigFields(t, true)
 	if err != nil {
 		return nil, err
 	}

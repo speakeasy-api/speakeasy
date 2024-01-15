@@ -3,9 +3,10 @@ package sdkgen
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/styles"
 
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
