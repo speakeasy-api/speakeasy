@@ -1,0 +1,18 @@
+workflowVersion: 1.0.0
+sources:
+  lending:
+    inputs:
+      - location: ../openapi.yaml
+  lending2:
+    inputs:
+      - location: ../openapi.yaml
+targets:
+  go-lending:
+    target: go
+    source: lending
+    output: ../test-sdk
+  typescript-lending:
+    target: typescript
+    source: lending2
+    output: ../test-sdk
+
