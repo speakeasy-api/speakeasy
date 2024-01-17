@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"slices"
+	"strings"
+
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"os"
-	"slices"
-	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -54,6 +55,7 @@ func Init(version, artifactArch string) {
 	overlayInit()
 	quickstartInit()
 	runInit()
+	configureInit()
 }
 
 func Execute(version, artifactArch string) {

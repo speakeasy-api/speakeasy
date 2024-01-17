@@ -1,4 +1,4 @@
-package quickstart
+package prompts
 
 import (
 	config "github.com/speakeasy-api/sdk-gen-config"

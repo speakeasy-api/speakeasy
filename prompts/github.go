@@ -1,4 +1,4 @@
-package quickstart
+package prompts
 
 import (
 	"fmt"
