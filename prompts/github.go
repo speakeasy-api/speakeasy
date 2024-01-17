@@ -11,7 +11,7 @@ const (
 	defaultSpeakeasyAPIKeySecretName = "SPEAKEASY_API_KEY"
 )
 
-func githubWorkflowBaseForm(quickstart *Quickstart) (*State, error) {
+func githubWorkflowBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	var targetType, specName string
 	for _, target := range quickstart.WorkflowFile.Targets {
 		targetType = target.Target

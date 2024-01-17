@@ -91,7 +91,7 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, auth
 	return groups
 }
 
-func sourceBaseForm(quickstart *Quickstart) (*State, error) {
+func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	source := &workflow.Source{}
 	var sourceName, fileLocation, authHeader, authSecret string
 	if len(quickstart.WorkflowFile.Sources) == 0 {
@@ -210,7 +210,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			Value(&outputLocation),
 	).WithHideFunc(
 		func() bool {
-			return len(currentWorkflow.Sources) < 2
+			return len(currentWorkflow.Sources) == 0
 		}))
 
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(

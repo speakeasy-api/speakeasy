@@ -6,8 +6,8 @@ import (
 )
 
 type (
-	formFunction func(quickstart *Quickstart) (*State, error)
-	State        int
+	formFunction    func(quickstart *Quickstart) (*QuickstartState, error)
+	QuickstartState int
 )
 
 type Quickstart struct {
@@ -18,7 +18,7 @@ type Quickstart struct {
 
 // Define constants using iota
 const (
-	Complete State = iota
+	Complete QuickstartState = iota
 	SourceBase
 	TargetBase
 	ConfigBase
@@ -26,7 +26,7 @@ const (
 )
 
 // TODO: Add Github Configuration Next
-var StateMapping map[State]formFunction = map[State]formFunction{
+var StateMapping map[QuickstartState]formFunction = map[QuickstartState]formFunction{
 	SourceBase:         sourceBaseForm,
 	TargetBase:         targetBaseForm,
 	ConfigBase:         configBaseForm,

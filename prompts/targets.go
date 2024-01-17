@@ -11,7 +11,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/charm"
 )
 
-func targetBaseForm(quickstart *Quickstart) (*State, error) {
+func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	var targetName, targetType, outputLocation string
 	if len(quickstart.WorkflowFile.Targets) == 0 {
 		targetName = "first-target"

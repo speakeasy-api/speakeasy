@@ -13,7 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/charm"
 )
 
-func configBaseForm(quickstart *Quickstart) (*State, error) {
+func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	for key, target := range quickstart.WorkflowFile.Targets {
 		output, err := config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
 		if err != nil {
@@ -54,7 +54,7 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 		quickstart.LanguageConfigs[key] = output
 	}
 
-	var nextState State = GithubWorkflowBase
+	var nextState QuickstartState = GithubWorkflowBase
 	return &nextState, nil
 }
 
