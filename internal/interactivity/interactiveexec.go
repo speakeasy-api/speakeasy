@@ -7,6 +7,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"golang.org/x/exp/slices"
+	"strings"
 )
 
 func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
@@ -104,9 +106,11 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	var missingRequiredFlags []*pflag.Flag
 	var missingOptionalFlags []*pflag.Flag
 
+	var flagsToIgnore = []string{"help", "version", "logLevel"}
+
 	requestValue := func(flag *pflag.Flag) {
 		// If the flag already has a value, skip it
-		if flag.Changed || flag.Hidden || flag.Name == "help" || flag.Name == "version" {
+		if flag.Changed || flag.Hidden || slices.Contains(flagsToIgnore, flag.Name) {
 			return
 		}
 
@@ -141,8 +145,16 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 		}
 
 		if v != "" {
-			if err := flag.Value.Set(v); err != nil {
-				return
+			// Check if the flag takes an array value
+			if sliceVal, ok := flag.Value.(pflag.SliceValue); ok {
+				vals := strings.Split(v, ",")
+				if err := sliceVal.Replace(vals); err != nil {
+					return
+				}
+			} else {
+				if err := flag.Value.Set(v); err != nil {
+					return
+				}
 			}
 			flag.Changed = true
 		}
@@ -157,6 +169,10 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 }
 
 func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[string]string {
+	if len(flags) == 0 {
+		return nil
+	}
+
 	description := "Optionally supply values for the following"
 	if required {
 		description = "Please supply values for the required fields"
