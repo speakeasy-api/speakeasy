@@ -11,7 +11,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/charm"
 )
 
-func getBaseFormPrompts(currentWorkflow *workflow.Workflow, sourceName, fileLocation, authHeader, authSecret *string) []*huh.Group {
+func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLocation, authHeader, authSecret *string) []*huh.Group {
 	groups := []*huh.Group{
 		huh.NewGroup(
 			huh.NewInput().
@@ -98,7 +98,7 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		sourceName = "openapi"
 	}
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
-		getBaseFormPrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
+		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
 		"Let's setup a new source for your workflow.",
 		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
 		Run(); err != nil {
@@ -197,7 +197,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 	var sourceName, fileLocation, authHeader, authSecret string
 	var overlayFileLocation, overlayAuthHeader, overlayAuthSecret, outputLocation string
 
-	groups := getBaseFormPrompts(currentWorkflow, &sourceName, &fileLocation, &authHeader, &authSecret)
+	groups := getBaseSourcePrompts(currentWorkflow, &sourceName, &fileLocation, &authHeader, &authSecret)
 	var promptForOverlay bool
 	groups = append(groups, charm.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
 	groups = append(groups, getOverlayPrompts(&promptForOverlay, &overlayFileLocation, &overlayAuthHeader, &overlayAuthSecret)...)
