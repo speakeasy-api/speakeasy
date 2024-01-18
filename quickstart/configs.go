@@ -23,8 +23,8 @@ func configBaseForm(quickstart *Quickstart) (*State, error) {
 		var sdkClassName string
 		configFields := []huh.Field{
 			huh.NewInput().
-				Title("Choose an sdkClassName for your target:").
-				Placeholder("Your SDK object: _if you choose \"sdk\", your users will access methods like \"sdk.doThing()").
+				Title("Name your SDK object:").
+				Placeholder("your users will access SDK methods with <sdk_name>.doThing()").
 				Inline(true).
 				Prompt(" ").
 				Value(&sdkClassName),

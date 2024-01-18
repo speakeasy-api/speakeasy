@@ -6,7 +6,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
-	"os"
 	"strings"
 )
 
@@ -171,14 +170,12 @@ type cliVisualizer struct {
 	rootStep *WorkflowStep
 	runFn    func() error
 	spinner  spinner.Model
+	err      error
 }
 
 func (m cliVisualizer) Init() tea.Cmd {
 	run := func() tea.Msg {
-		err := m.runFn()
-		if err != nil {
-			println("GOt error")
-		}
+		m.err = m.runFn()
 		return tea.Quit
 	}
 
@@ -229,10 +226,7 @@ func (m cliVisualizer) View() string {
 		summary = fmt.Sprintf("%s\n%s", summary, m.spinner.View())
 	}
 
-	style := lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, false, true). // Left border only
-		BorderForeground(statusStyle.GetForeground()).
-		PaddingLeft(1).
+	style := styles.LeftBorder(statusStyle.GetForeground()).
 		MarginBottom(2)
 
 	return style.Render(summary)
@@ -245,17 +239,20 @@ func initSpinner() spinner.Model {
 	return s
 }
 
-func (w *WorkflowStep) RunWithVisualization(runFn func() error, updatesChannel chan UpdateMsg) {
-	p := tea.NewProgram(cliVisualizer{
+func (w *WorkflowStep) RunWithVisualization(runFn func() error, updatesChannel chan UpdateMsg) error {
+	v := cliVisualizer{
 		updates:  updatesChannel,
 		rootStep: w,
 		runFn:    runFn,
 		spinner:  initSpinner(),
 		status:   StatusRunning,
-	})
-
-	if _, err := p.Run(); err != nil {
-		fmt.Println("could not start program:", err)
-		os.Exit(1)
 	}
+	p := tea.NewProgram(v)
+
+	model, err := p.Run()
+	if err != nil {
+		return err
+	}
+
+	return model.(cliVisualizer).err
 }

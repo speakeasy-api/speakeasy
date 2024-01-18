@@ -124,8 +124,7 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	}
 
 	if shouldCompile {
-		step := run.NewWorkflowStep("ignored", nil)
-		if err := run.Run(cmd.Context(), initialTarget, "", genVersion, "", "", "", false, step); err != nil {
+		if err = run.RunWithVisualization(cmd.Context(), initialTarget, "", genVersion, "", "", "", false); err != nil {
 			return errors.Wrapf(err, "failed to run speakeasy generate")
 		}
 	}

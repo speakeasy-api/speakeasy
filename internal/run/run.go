@@ -1,9 +1,12 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"slices"
@@ -62,6 +65,49 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 	slices.Sort(sources)
 
 	return sources, targets, nil
+}
+
+func RunWithVisualization(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool) error {
+	updatesChannel := make(chan UpdateMsg)
+	workflow := NewWorkflowStep("Workflow", updatesChannel)
+
+	var logs bytes.Buffer
+	var err, runErr error
+	logger := log.From(ctx)
+
+	runFnCli := func() error {
+		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
+		ctx := context.Background()
+		ctx = log.With(ctx, l)
+		err = Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
+
+		if err != nil {
+			workflow.FailWorkflow()
+			updatesChannel <- MsgFailed
+
+			runErr = err
+			return err
+		}
+
+		workflow.SucceedWorkflow()
+		updatesChannel <- MsgSucceeded
+		return nil
+	}
+
+	err = workflow.RunWithVisualization(runFnCli, updatesChannel)
+	if err != nil {
+		logger.Errorf("Workflow failed with error: %s", err)
+	}
+	if runErr != nil {
+		logger.Errorf("Workflow failed with error: %s\n", runErr)
+
+		termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
+		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(termWidth - 8) // -8 because of padding
+		logsHeading := styles.Dimmed.Render("Workflow run logs")
+		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
+	}
+
+	return err
 }
 
 func Run(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
@@ -151,7 +197,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
 
 	rootStep.NextSubstep("Generating SDK")
-
+	
 	if err := sdkgen.Generate(ctx, config.GetCustomerID(), config.GetWorkspaceID(), t.Target, sourcePath, "", "", outDir, genVersion, installationURL, debug, true, published, false, repo, repoSubDir, true); err != nil {
 		return err
 	}
@@ -181,7 +227,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 
 	if len(source.Inputs) == 1 {
 		if source.Inputs[0].IsRemote() {
-			rootStep.NextSubstep(fmt.Sprintf("Download document from %s", source.Inputs[0].Location))
+			rootStep.NextSubstep("Downloading document")
 
 			downloadLocation := outputLocation
 			if len(source.Overlays) > 0 {

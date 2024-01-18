@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
-	"io"
 	"strings"
 )
 
@@ -138,30 +136,9 @@ func runFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	updatesChannel := make(chan run.UpdateMsg)
-	workflow := run.NewWorkflowStep("Workflow", updatesChannel)
-
-	runFnCli := func() error {
-		l := log.From(cmd.Context()).WithWriter(io.Discard) // Swallow logs other than the workflow display
-		ctx := log.With(cmd.Context(), l)
-		err = run.Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
-
-		if err != nil {
-			workflow.FailWorkflow()
-			updatesChannel <- run.MsgFailed
-
-			return err
-		}
-
-		workflow.SucceedWorkflow()
-		updatesChannel <- run.MsgSucceeded
-		return nil
+	if err = run.RunWithVisualization(cmd.Context(), target, source, genVersion, installationURL, repo, repoSubDir, debug); err != nil {
+		return err
 	}
-
-	workflow.RunWithVisualization(runFnCli, updatesChannel)
-
-	// Non-interactive example:
-	// err = run.Run(cmd.Context(), target, source, genVersion, installationURL, repo, repoSubDir, debug, run.NewWorkflowStep("ignored", nil))
 
 	return nil
 }
