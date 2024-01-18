@@ -1,22 +1,16 @@
 package charm
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 )
 
-func NewBranchCondition(title string) (bool, error) {
-	var value bool
-	if _, err := tea.NewProgram(NewForm(huh.NewForm(huh.NewGroup(huh.NewConfirm().
+func NewBranchPrompt(title string, output *bool) *huh.Group {
+	return huh.NewGroup(huh.NewConfirm().
 		Title(title).
 		Affirmative("Yes.").
 		Negative("No.").
-		Value(&value))).WithTheme(theme))).Run(); err != nil {
-		return false, err
-	}
-
-	return value, nil
+		Value(output))
 }
 
 func FormatCommandTitle(title string, description string) string {
