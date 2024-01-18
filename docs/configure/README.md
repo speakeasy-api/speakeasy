@@ -32,3 +32,4 @@ speakeasy configure [flags]
 ### Sub Commands
 
 * [speakeasy configure sources](sources.md)	 - Configure new or existing sources.
+* [speakeasy configure targets](targets.md)	 - Configure new target.
