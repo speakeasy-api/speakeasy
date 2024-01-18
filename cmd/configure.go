@@ -22,7 +22,7 @@ var configureCmd = &cobra.Command{
 
 var configureSourcesCmd = &cobra.Command{
 	Use:     "sources",
-	Short:   "Guided prompts to configure a new or existing source in your speakeasy workflow.",
+	Short:   "Configure new or existing sources.",
 	Long:    "Guided prompts to configure a new or existing source in your speakeasy workflow.",
 	PreRunE: interactivity.GetMissingFlagsPreRun,
 	RunE:    configureSources,
