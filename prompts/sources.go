@@ -15,7 +15,7 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 	groups := []*huh.Group{
 		huh.NewGroup(
 			huh.NewInput().
-				Title("What is a name for this source?").
+				Title("What is a good name for this source?").
 				Prompt(" ").
 				Inline(true).
 				Validate(func(s string) error {
