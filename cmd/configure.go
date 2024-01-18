@@ -30,7 +30,7 @@ var configureSourcesCmd = &cobra.Command{
 
 var configureTargetCmd = &cobra.Command{
 	Use:     "targets",
-	Short:   "Guided prompts to configure a new target in your speakeasy workflow.",
+	Short:   "Configure new target.",
 	Long:    "Guided prompts to configure a new target in your speakeasy workflow.",
 	PreRunE: interactivity.GetMissingFlagsPreRun,
 	RunE:    configureTarget,

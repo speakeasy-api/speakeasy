@@ -3,11 +3,12 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -272,7 +273,7 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) err
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(inSchemas, outFile); err != nil {
+	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile); err != nil {
 		return err
 	}
 

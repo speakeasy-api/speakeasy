@@ -2,6 +2,7 @@ package merge
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -15,15 +16,23 @@ import (
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/validation"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
-func MergeOpenAPIDocuments(inFiles []string, outFile string) error {
+func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string) error {
 	inSchemas := make([][]byte, len(inFiles))
 
+	// TODO at some point we prob want to support remote schemas
 	for i, inFile := range inFiles {
 		data, err := os.ReadFile(inFile)
 		if err != nil {
+			return err
+		}
+
+		if err := validate(ctx, inFile, data); err != nil {
 			return err
 		}
 
@@ -40,6 +49,39 @@ func MergeOpenAPIDocuments(inFiles []string, outFile string) error {
 	if err := os.WriteFile(outFile, mergedSchema, 0o644); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func validate(ctx context.Context, schemaPath string, schema []byte) error {
+	logger := log.From(ctx)
+	logger.Info(fmt.Sprintf("Validating OpenAPI spec %s...\n", schemaPath))
+
+	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
+
+	limits := &validation.OutputLimits{
+		OutputHints: false,
+		MaxWarns:    10,
+	}
+
+	vErrs, vWarns, _, err := validation.Validate(ctx, schema, schemaPath, limits, false)
+	if err != nil {
+		return err
+	}
+
+	for _, warn := range vWarns {
+		prefixedLogger.Warn("", zap.Error(warn))
+	}
+	for _, err := range vErrs {
+		prefixedLogger.Error("", zap.Error(err))
+	}
+
+	if len(vErrs) > 0 {
+		status := "\nOpenAPI spec invalid ✖"
+		return fmt.Errorf(status)
+	}
+
+	log.From(ctx).Success(fmt.Sprintf("Successfully validated %s", schemaPath))
 
 	return nil
 }

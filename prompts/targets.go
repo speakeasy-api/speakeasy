@@ -19,7 +19,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 			Options(huh.NewOptions(getSupportedTargets()...)...).
 			Value(targetType),
 		huh.NewInput().
-			Title("What is a name for this target?").
+			Title("What is a good name for this target?").
 			Validate(func(s string) error {
 				if _, ok := currentWorkflow.Targets[s]; ok {
 					return fmt.Errorf("a source with the name %s already exists", s)
