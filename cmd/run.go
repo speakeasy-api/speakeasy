@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	"strings"
@@ -136,8 +138,10 @@ func runFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err = run.RunWithVisualization(cmd.Context(), target, source, genVersion, installationURL, repo, repoSubDir, debug); err != nil {
-		return err
+	if !utils.IsInteractive() || env.IsGithubAction() {
+		return run.Run(cmd.Context(), target, source, genVersion, installationURL, repo, repoSubDir, debug, nil)
+	} else {
+		return run.RunWithVisualization(cmd.Context(), target, source, genVersion, installationURL, repo, repoSubDir, debug)
 	}
 
 	return nil

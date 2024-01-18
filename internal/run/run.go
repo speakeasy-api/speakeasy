@@ -111,6 +111,10 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 }
 
 func Run(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
+	if rootStep == nil {
+		rootStep = NewWorkflowStep("ignored", nil)
+	}
+
 	wf, projectDir, err := GetWorkflowAndDir()
 	if err != nil {
 		return err
@@ -197,7 +201,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
 
 	rootStep.NextSubstep("Generating SDK")
-	
+
 	if err := sdkgen.Generate(ctx, config.GetCustomerID(), config.GetWorkspaceID(), t.Target, sourcePath, "", "", outDir, genVersion, installationURL, debug, true, published, false, repo, repoSubDir, true); err != nil {
 		return err
 	}
