@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -110,7 +110,7 @@ func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
 		updateString := "Run `speakeasy update` to update to the latest version"
 
 		l := log.From(cmd.Context())
-		style := styles.Emphasized.Copy().Background(styles.Colors.DimYellow).Foreground(styles.Colors.Brown).Padding(1, 2)
+		style := charm.Emphasized.Copy().Background(charm.Colors.DimYellow).Foreground(charm.Colors.Brown).Padding(1, 2)
 		l.WithStyle(style).Printf("%s\n%s", versionString, updateString)
 		l.Printf("\n")
 
@@ -140,8 +140,8 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	}
 
 	l := log.From(cmd.Context()).WithInteractiveOnly()
-	l.WithStyle(styles.HeavilyEmphasized).Println("Welcome to the Speakeasy CLI!")
-	l.WithStyle(styles.DimmedItalic).Println("This is interactive mode. For usage, run speakeasy -h instead.")
+	l.WithStyle(charm.HeavilyEmphasized).Println("Welcome to the Speakeasy CLI!")
+	l.WithStyle(charm.DimmedItalic).Println("This is interactive mode. For usage, run speakeasy -h instead.")
 
 	return interactivity.InteractiveExec(cmd, args, "Select a command to run")
 }

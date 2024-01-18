@@ -1,4 +1,4 @@
-package styles
+package charm
 
 import (
 	"github.com/charmbracelet/bubbles/help"
@@ -102,8 +102,4 @@ func copyBaseTheme(original *huh.Theme) huh.Theme {
 			FullSeparator:  original.Help.FullSeparator.Copy(),
 		},
 	}
-}
-
-func GetFormTheme() *huh.Theme {
-	return formTheme
 }

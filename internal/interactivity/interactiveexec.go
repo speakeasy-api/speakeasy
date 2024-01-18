@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
@@ -97,8 +97,8 @@ func GetMissingFlags(cmd *cobra.Command) error {
 				flagString += fmt.Sprintf(" --%s=%s", flag.Name, flag.Value)
 			}
 
-			running := styles.DimmedItalic.Render("Running command")
-			command := styles.Info.Render(fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString))
+			running := charm.DimmedItalic.Render("Running command")
+			command := charm.Info.Render(fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString))
 			log.From(cmd.Context()).Printf("\n%s %s\n", running, command)
 		}
 	}
