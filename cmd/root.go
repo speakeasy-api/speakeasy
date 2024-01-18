@@ -34,6 +34,8 @@ var rootCmd = &cobra.Command{
 var l = log.New().WithLevel(log.LevelInfo)
 
 func init() {
+	// We want our commands to be sorted in defined order, not alphabetically
+	cobra.EnableCommandSorting = false
 	if err := config.Load(); err != nil {
 		l.Error("", zap.Error(err))
 		os.Exit(1)
@@ -43,19 +45,19 @@ func init() {
 func Init(version, artifactArch string) {
 	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
 
-	genInit()
-	apiInit()
-	validateInit()
-	authInit()
-	mergeInit()
-	updateInit(version, artifactArch)
-	suggestInit()
-	proxyInit()
-	docsInit()
-	overlayInit()
 	quickstartInit()
 	runInit()
 	configureInit()
+	genInit()
+	validateInit()
+	authInit()
+	mergeInit()
+	overlayInit()
+	suggestInit()
+	updateInit(version, artifactArch)
+	proxyInit()
+	docsInit()
+	apiInit()
 }
 
 func Execute(version, artifactArch string) {
