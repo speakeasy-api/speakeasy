@@ -1,41 +1,40 @@
-package charm
+package styles
 
 import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/huh"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
-var theme *huh.Theme
+var formTheme *huh.Theme
 
 func init() {
 	t := copyBaseTheme(huh.ThemeBase())
 
 	f := &t.Focused
-	f.Base = f.Base.BorderForeground(styles.Focused.GetForeground())
-	f.Title.Foreground(styles.Focused.GetForeground()).Bold(true)
-	f.Description.Foreground(styles.Dimmed.GetForeground()).Italic(true).Inline(false)
-	f.ErrorIndicator.Foreground(styles.Colors.Red)
-	f.ErrorMessage.Foreground(styles.Colors.Red)
-	f.SelectSelector.Foreground(styles.Focused.GetForeground())
-	f.MultiSelectSelector.Foreground(styles.Focused.GetForeground())
-	f.SelectedOption.Foreground(styles.Focused.GetForeground())
-	f.FocusedButton.Background(styles.Colors.Green)
-	f.BlurredButton.Background(styles.Dimmed.GetForeground())
+	f.Base = f.Base.BorderForeground(Focused.GetForeground())
+	f.Title.Foreground(Focused.GetForeground()).Bold(true)
+	f.Description.Foreground(Dimmed.GetForeground()).Italic(true).Inline(false)
+	f.ErrorIndicator.Foreground(Colors.Red)
+	f.ErrorMessage.Foreground(Colors.Red)
+	f.SelectSelector.Foreground(Focused.GetForeground())
+	f.MultiSelectSelector.Foreground(Focused.GetForeground())
+	f.SelectedOption.Foreground(Focused.GetForeground())
+	f.FocusedButton.Background(Colors.Green)
+	f.BlurredButton.Background(Dimmed.GetForeground())
 	f.Next = f.FocusedButton.Copy()
 
-	f.TextInput.Cursor.Foreground(styles.Focused.GetForeground())
-	f.TextInput.Placeholder.Foreground(styles.Dimmed.GetForeground()).Italic(true)
-	f.TextInput.Prompt.Foreground(styles.Focused.GetForeground())
-	f.TextInput.Text.Foreground(styles.Focused.GetForeground())
+	f.TextInput.Cursor.Foreground(Focused.GetForeground())
+	f.TextInput.Placeholder.Foreground(Dimmed.GetForeground()).Italic(true)
+	f.TextInput.Prompt.Foreground(Focused.GetForeground())
+	f.TextInput.Text.Foreground(Focused.GetForeground())
 
 	b := &t.Blurred
 	b.Description.Italic(true)
 	b.TextInput.Placeholder.Italic(true)
-	b.SelectedOption.Foreground(styles.FocusedDimmed.GetForeground())
-	b.SelectSelector.Foreground(styles.FocusedDimmed.GetForeground())
+	b.SelectedOption.Foreground(FocusedDimmed.GetForeground())
+	b.SelectSelector.Foreground(FocusedDimmed.GetForeground())
 
-	theme = &t
+	formTheme = &t
 }
 
 // What I've implemented is a direct duplicate of huh copy()
@@ -103,4 +102,8 @@ func copyBaseTheme(original *huh.Theme) huh.Theme {
 			FullSeparator:  original.Help.FullSeparator.Copy(),
 		},
 	}
+}
+
+func GetFormTheme() *huh.Theme {
+	return formTheme
 }

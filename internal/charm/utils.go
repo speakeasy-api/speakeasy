@@ -15,8 +15,8 @@ func NewBranchPrompt(title string, output *bool) *huh.Group {
 }
 
 func FormatCommandTitle(title string, description string) string {
-	titleStyle := lipgloss.NewStyle().Foreground(styles.FocusedDimmed.GetForeground()).Bold(true)
-	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true).Bold(true)
+	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
+	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
 	header := titleStyle.Render(title)
 	header += "\n" + descriptionStyle.Render(description)
 	return header
