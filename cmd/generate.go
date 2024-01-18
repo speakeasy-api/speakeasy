@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"golang.org/x/exp/slices"
@@ -243,7 +244,7 @@ func genSDKInit() {
 	genSDKDocsCmd.Flags().StringP("repo-subdir", "b", "", "the subdirectory of the repository where the SDK Docs are located in the repo, helps with documentation generation")
 
 	genSDKCmd.AddCommand(genSDKVersionCmd, genSDKChangelogCmd)
-	generateCmd.AddCommand(genSDKCmd, genUsageSnippetCmd, genSDKDocsCmd)
+	generateCmd.AddCommand(genSDKCmd, genSDKDocsCmd, genUsageSnippetCmd)
 }
 
 func genSDKs(cmd *cobra.Command, args []string) error {
