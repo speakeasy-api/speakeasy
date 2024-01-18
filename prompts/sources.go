@@ -15,7 +15,7 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 	groups := []*huh.Group{
 		huh.NewGroup(
 			huh.NewInput().
-				Title("A name for this source:").
+				Title("What is a name for this source?").
 				Prompt(" ").
 				Inline(true).
 				Validate(func(s string) error {
@@ -26,7 +26,7 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 				}).
 				Value(sourceName),
 			huh.NewInput().
-				Title("What is the location of your OpenAPI document:").
+				Title("What is the location of your OpenAPI document?").
 				Placeholder("local file path or remote file reference.").
 				Prompt(" ").
 				Inline(true).
@@ -43,7 +43,7 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader, authSecret *string
 	return []*huh.Group{
 		huh.NewGroup(
 			huh.NewConfirm().
-				Title("Does this remote file require authentication:").
+				Title("Does this remote file require authentication?").
 				Affirmative("Yes.").
 				Negative("No.").
 				Value(&requiresAuthentication),
@@ -56,13 +56,13 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader, authSecret *string
 		}),
 		huh.NewGroup(
 			huh.NewInput().
-				Title("What is the name of your authentication Header:").
+				Title("What is the name of your authentication Header?").
 				Placeholder("x-auth-token").
 				Prompt(" ").
 				Inline(true).
 				Value(authHeader),
 			huh.NewInput().
-				Title("What is the reference to your auth secret:").
+				Title("What is the reference to your auth secret?").
 				Placeholder("$AUTH_TOKEN").
 				Prompt(" ").
 				Inline(true).
@@ -77,7 +77,7 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, auth
 	groups := []*huh.Group{
 		huh.NewGroup(
 			huh.NewInput().
-				Title("What is the location of your Overlay file:").
+				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
 				Prompt(" ").
 				Inline(true).
@@ -138,7 +138,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups := []*huh.Group{
 			huh.NewGroup(
 				huh.NewInput().
-					Title("What is the location of your OpenAPI document:").
+					Title("What is the location of your OpenAPI document?").
 					Placeholder("local file path or remote file reference.").
 					Prompt(" ").
 					Inline(true).
