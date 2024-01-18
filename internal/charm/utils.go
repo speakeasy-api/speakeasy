@@ -21,3 +21,7 @@ func FormatCommandTitle(title string, description string) string {
 	header += "\n" + descriptionStyle.Render(description)
 	return header
 }
+
+func NewInput() *huh.Input {
+	return huh.NewInput().Prompt(" ").Inline(true)
+}

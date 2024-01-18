@@ -22,11 +22,9 @@ func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.
 
 	var sdkClassName string
 	configFields := []huh.Field{
-		huh.NewInput().
+		charm.NewInput().
 			Title("Choose an sdkClassName for your target:").
 			Placeholder("Your SDK object: _if you choose \"sdk\", your users will access methods like \"sdk.doThing()").
-			Inline(true).
-			Prompt(" ").
 			Value(&sdkClassName),
 	}
 	languageForms, err := languageSpecificForms(target.Target)
@@ -188,11 +186,10 @@ func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName st
 
 func addPromptForField(key, question, defaultValue, validateRegex, validateMessage string) []huh.Field {
 	return []huh.Field{
-		huh.NewInput().
+		charm.NewInput().
 			Key(key).
 			Title(question).
 			Placeholder(defaultValue).
-			Inline(true).
 			Validate(func(s string) error {
 				if validateRegex != "" {
 					r, err := regexp.Compile(validateRegex)
@@ -204,8 +201,7 @@ func addPromptForField(key, question, defaultValue, validateRegex, validateMessa
 					}
 				}
 				return nil
-			}).
-			Prompt(" "),
+			}),
 	}
 }
 
