@@ -30,6 +30,7 @@ speakeasy [flags]
 ### Sub Commands
 
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
+* [speakeasy configure](configure/README.md)	 - Configure your Speakeasy SDK Setup.
 * [speakeasy generate](generate/README.md)	 - Generate client SDKs, docsites, and more
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
