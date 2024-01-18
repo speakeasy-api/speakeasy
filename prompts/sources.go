@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/charm"
+	charm2 "github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
 func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLocation, authHeader, authSecret *string) []*huh.Group {
@@ -97,7 +97,7 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	if len(quickstart.WorkflowFile.Sources) == 0 {
 		sourceName = "openapi"
 	}
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+	if _, err := tea.NewProgram(charm2.NewForm(huh.NewForm(
 		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
 		"Let's setup a new source for your workflow.",
 		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
@@ -125,8 +125,8 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source, error) {
 	addOpenAPIFile := false
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
-		charm.NewBranchPrompt("Would you like to add an openapi file to this source?", &addOpenAPIFile)),
+	if _, err := tea.NewProgram(charm2.NewForm(huh.NewForm(
+		charm2.NewBranchPrompt("Would you like to add an openapi file to this source?", &addOpenAPIFile)),
 		fmt.Sprintf("Let's add to the source %s", name))).
 		Run(); err != nil {
 		return nil, err
@@ -146,8 +146,8 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 			),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader, &authSecret)...)
-		groups = append(groups, charm.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+		groups = append(groups, charm2.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
+		if _, err := tea.NewProgram(charm2.NewForm(huh.NewForm(
 			groups...),
 			fmt.Sprintf("Let's add to the source %s", name))).
 			Run(); err != nil {
@@ -162,8 +162,8 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	}
 
 	addOverlayFile := false
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
-		charm.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
+	if _, err := tea.NewProgram(charm2.NewForm(huh.NewForm(
+		charm2.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
 		fmt.Sprintf("Let's add to the source %s", name))).
 		Run(); err != nil {
 		return nil, err
@@ -174,8 +174,8 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		var fileLocation, authHeader, authSecret string
 		trueVal := true
 		groups := getOverlayPrompts(&trueVal, &fileLocation, &authHeader, &authSecret)
-		groups = append(groups, charm.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+		groups = append(groups, charm2.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
+		if _, err := tea.NewProgram(charm2.NewForm(huh.NewForm(
 			groups...),
 			fmt.Sprintf("Let's add to the source %s", name))).
 			Run(); err != nil {
@@ -199,7 +199,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	groups := getBaseSourcePrompts(currentWorkflow, &sourceName, &fileLocation, &authHeader, &authSecret)
 	var promptForOverlay bool
-	groups = append(groups, charm.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
+	groups = append(groups, charm2.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
 	groups = append(groups, getOverlayPrompts(&promptForOverlay, &overlayFileLocation, &overlayAuthHeader, &overlayAuthSecret)...)
 	groups = append(groups, huh.NewGroup(
 		huh.NewInput().
@@ -213,7 +213,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			return len(currentWorkflow.Sources) == 0
 		}))
 
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+	if _, err := tea.NewProgram(charm2.NewForm(huh.NewForm(
 		groups...),
 		"Let's setup a new source for your workflow.",
 		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).

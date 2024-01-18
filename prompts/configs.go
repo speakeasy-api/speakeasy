@@ -11,7 +11,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
 func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.Configuration, error) {

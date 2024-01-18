@@ -2,10 +2,11 @@ package interactivity
 
 import (
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"os"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -234,7 +235,6 @@ func (m MultiInput) getFilledValues() map[string]string {
 // Run returns a map from input name to the input value
 func (m MultiInput) Run() map[string]string {
 	newM, err := tea.NewProgram(m).Run()
-
 	if err != nil {
 		os.Exit(1)
 	}

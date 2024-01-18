@@ -2,7 +2,7 @@ package interactivity
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 var (

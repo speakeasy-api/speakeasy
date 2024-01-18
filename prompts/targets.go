@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
 func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outputLocation *string) *huh.Group {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

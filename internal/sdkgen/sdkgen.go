@@ -6,8 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/styles"
-
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"

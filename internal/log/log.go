@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
@@ -154,6 +155,7 @@ func (l Logger) Warn(msg string, fields ...zapcore.Field) {
 	msg = l.format(LevelWarn, msg, err) + fieldsToJSON(fields)
 	l.Println(msg)
 }
+
 func (l Logger) Warnf(format string, a ...any) {
 	l.Warn(fmt.Sprintf(format, a...))
 }
@@ -166,6 +168,7 @@ func (l Logger) Error(msg string, fields ...zapcore.Field) {
 	msg = l.format(LevelErr, msg, err) + fieldsToJSON(fields)
 	l.Println(msg)
 }
+
 func (l Logger) Errorf(format string, a ...any) {
 	l.Error(fmt.Sprintf(format, a...))
 }
@@ -178,6 +181,7 @@ func (l Logger) Success(msg string, fields ...zapcore.Field) {
 	msg = l.format(LevelSuccess, msg, err) + fieldsToJSON(fields)
 	l.Println(msg)
 }
+
 func (l Logger) Successf(format string, a ...any) {
 	l.Success(fmt.Sprintf(format, a...))
 }
