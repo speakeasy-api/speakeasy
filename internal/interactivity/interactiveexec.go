@@ -2,13 +2,14 @@ package interactivity
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/exp/slices"
-	"strings"
 )
 
 func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
@@ -42,10 +43,17 @@ func SelectCommand(label string, cmd *cobra.Command) *cobra.Command {
 		return cmd
 	}
 
-	subcommands := cmd.Commands()
+	rawSubCommands := cmd.Commands()
 
-	if len(subcommands) == 1 && isCommandRunnable(subcommands[0]) {
-		return SelectCommand(label, subcommands[0])
+	if len(rawSubCommands) == 1 && isCommandRunnable(rawSubCommands[0]) && !isHidden(rawSubCommands[0]) {
+		return SelectCommand(label, rawSubCommands[0])
+	}
+
+	var subcommands []*cobra.Command
+	for _, command := range rawSubCommands {
+		if !isHidden(command) {
+			subcommands = append(subcommands, command)
+		}
 	}
 
 	// TODO figure out a better way to do this
@@ -106,7 +114,7 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	var missingRequiredFlags []*pflag.Flag
 	var missingOptionalFlags []*pflag.Flag
 
-	var flagsToIgnore = []string{"help", "version", "logLevel"}
+	flagsToIgnore := []string{"help", "version", "logLevel"}
 
 	requestValue := func(flag *pflag.Flag) {
 		// If the flag already has a value, skip it
@@ -211,4 +219,8 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 	}
 
 	return cmd.Runnable() && !onlyHasHelpFlags
+}
+
+func isHidden(cmd *cobra.Command) bool {
+	return cmd.Hidden || cmd.Name() == "completion"
 }
