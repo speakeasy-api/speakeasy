@@ -12,7 +12,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/charm"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/run"
-	"github.com/speakeasy-api/speakeasy/quickstart"
+	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -52,7 +52,7 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
 			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
 
-	quickstartObj := quickstart.Quickstart{
+	quickstartObj := prompts.Quickstart{
 		WorkflowFile: &workflow.Workflow{
 			Version: workflow.WorkflowVersion,
 			Sources: make(map[string]workflow.Source),
@@ -61,9 +61,9 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		LanguageConfigs: make(map[string]*config.Configuration),
 	}
 
-	nextState := quickstart.SourceBase
-	for nextState != quickstart.Complete {
-		stateFunc := quickstart.StateMapping[nextState]
+	nextState := prompts.SourceBase
+	for nextState != prompts.Complete {
+		stateFunc := prompts.StateMapping[nextState]
 		state, err := stateFunc(&quickstartObj)
 		if err != nil {
 			return err

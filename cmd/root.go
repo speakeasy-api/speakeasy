@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"slices"
+	"strings"
+
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"os"
-	"slices"
-	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -33,6 +34,8 @@ var rootCmd = &cobra.Command{
 var l = log.New().WithLevel(log.LevelInfo)
 
 func init() {
+	// We want our commands to be sorted in defined order, not alphabetically
+	cobra.EnableCommandSorting = false
 	if err := config.Load(); err != nil {
 		l.Error("", zap.Error(err))
 		os.Exit(1)
@@ -42,18 +45,19 @@ func init() {
 func Init(version, artifactArch string) {
 	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
 
+	quickstartInit()
+	runInit()
+	configureInit()
 	genInit()
-	apiInit()
 	validateInit()
 	authInit()
 	mergeInit()
-	updateInit(version, artifactArch)
+	overlayInit()
 	suggestInit()
+	updateInit(version, artifactArch)
 	proxyInit()
 	docsInit()
-	overlayInit()
-	quickstartInit()
-	runInit()
+	apiInit()
 }
 
 func Execute(version, artifactArch string) {

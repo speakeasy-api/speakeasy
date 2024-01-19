@@ -1,4 +1,4 @@
-package quickstart
+package prompts
 
 import (
 	"fmt"
@@ -10,51 +10,61 @@ import (
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/charm"
 )
 
-func configBaseForm(quickstart *Quickstart) (*State, error) {
+func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.Configuration, error) {
+	output, err := config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
+	if err != nil {
+		return nil, errors.Wrapf(err, "error generating config for target %s of type %s", targetName, target.Target)
+	}
+
+	var sdkClassName string
+	configFields := []huh.Field{
+		huh.NewInput().
+			Title("Name your SDK object:").
+			Placeholder("your users will access SDK methods with <sdk_name>.doThing()").
+			Inline(true).
+			Prompt(" ").
+			Value(&sdkClassName),
+	}
+	languageForms, err := languageSpecificForms(target.Target)
+	if err != nil {
+		return nil, err
+	}
+
+	configFields = append(configFields, languageForms...)
+	form := huh.NewForm(
+		huh.NewGroup(
+			configFields...,
+		))
+	if _, err := tea.NewProgram(charm.NewForm(form,
+		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
+		"This will create a gen.yaml config file that defines parameters for how your SDK is generated. \n"+
+			"We will go through a few basic configurations here, but you can always modify this file directly in the future.")).
+		Run(); err != nil {
+		return nil, err
+	}
+
+	output.Generation.SDKClassName = sdkClassName
+
+	saveLanguageConfigValues(target.Target, form, output)
+
+	return output, nil
+}
+
+func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	for key, target := range quickstart.WorkflowFile.Targets {
-		output, err := config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
-		if err != nil {
-			return nil, errors.Wrapf(err, "error generating config for target %s of type %s", key, target.Target)
-		}
-
-		var sdkClassName string
-		configFields := []huh.Field{
-			huh.NewInput().
-				Title("Name your SDK object:").
-				Placeholder("your users will access SDK methods with <sdk_name>.doThing()").
-				Inline(true).
-				Prompt(" ").
-				Value(&sdkClassName),
-		}
-		languageForms, err := languageSpecificForms(target.Target)
+		output, err := PromptForTargetConfig(key, &target)
 		if err != nil {
 			return nil, err
 		}
-
-		configFields = append(configFields, languageForms...)
-		form := huh.NewForm(
-			huh.NewGroup(
-				configFields...,
-			))
-		if _, err := tea.NewProgram(charm.NewForm(form,
-			fmt.Sprintf("Let's configure your %s target (%s)", target.Target, key),
-			"This will create a gen.yaml config file that defines parameters for how your SDK is generated. \n"+
-				"We will go through a few basic configurations here, but you can always modify this file directly in the future.")).
-			Run(); err != nil {
-			return nil, err
-		}
-
-		output.Generation.SDKClassName = sdkClassName
-
-		saveLanguageConfigValues(target.Target, form, output)
 
 		quickstart.LanguageConfigs[key] = output
 	}
 
-	var nextState State = GithubWorkflowBase
+	var nextState QuickstartState = GithubWorkflowBase
 	return &nextState, nil
 }
 

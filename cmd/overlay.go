@@ -1,9 +1,10 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -40,9 +41,9 @@ var overlayApplyCmd = &cobra.Command{
 }
 
 func overlayInit() {
+	overlayCmd.AddCommand(overlayApplyCmd)
 	overlayCmd.AddCommand(overlayValidateCmd)
 	overlayCmd.AddCommand(overlayCompareCmd)
-	overlayCmd.AddCommand(overlayApplyCmd)
 
 	overlayValidateCmd.Flags().StringP("overlay", "o", "", "overlay file to validate")
 	overlayValidateCmd.MarkFlagRequired("overlay")

@@ -2,11 +2,14 @@ package interactivity
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"golang.org/x/exp/slices"
 )
 
 func InteractiveExec(cmd *cobra.Command, args []string, label string) error {
@@ -40,10 +43,17 @@ func SelectCommand(label string, cmd *cobra.Command) *cobra.Command {
 		return cmd
 	}
 
-	subcommands := cmd.Commands()
+	rawSubCommands := cmd.Commands()
 
-	if len(subcommands) == 1 && isCommandRunnable(subcommands[0]) {
-		return SelectCommand(label, subcommands[0])
+	if len(rawSubCommands) == 1 && isCommandRunnable(rawSubCommands[0]) && !isHidden(rawSubCommands[0]) {
+		return SelectCommand(label, rawSubCommands[0])
+	}
+
+	var subcommands []*cobra.Command
+	for _, command := range rawSubCommands {
+		if !isHidden(command) {
+			subcommands = append(subcommands, command)
+		}
 	}
 
 	// TODO figure out a better way to do this
@@ -104,9 +114,11 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	var missingRequiredFlags []*pflag.Flag
 	var missingOptionalFlags []*pflag.Flag
 
+	flagsToIgnore := []string{"help", "version", "logLevel"}
+
 	requestValue := func(flag *pflag.Flag) {
 		// If the flag already has a value, skip it
-		if flag.Changed || flag.Hidden || flag.Name == "help" || flag.Name == "version" {
+		if flag.Changed || flag.Hidden || slices.Contains(flagsToIgnore, flag.Name) {
 			return
 		}
 
@@ -141,8 +153,16 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 		}
 
 		if v != "" {
-			if err := flag.Value.Set(v); err != nil {
-				return
+			// Check if the flag takes an array value
+			if sliceVal, ok := flag.Value.(pflag.SliceValue); ok {
+				vals := strings.Split(v, ",")
+				if err := sliceVal.Replace(vals); err != nil {
+					return
+				}
+			} else {
+				if err := flag.Value.Set(v); err != nil {
+					return
+				}
 			}
 			flag.Changed = true
 		}
@@ -157,6 +177,10 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 }
 
 func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[string]string {
+	if len(flags) == 0 {
+		return nil
+	}
+
 	description := "Optionally supply values for the following"
 	if required {
 		description = "Please supply values for the required fields"
@@ -195,4 +219,8 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 	}
 
 	return cmd.Runnable() && !onlyHasHelpFlags
+}
+
+func isHidden(cmd *cobra.Command) bool {
+	return cmd.Hidden || cmd.Name() == "completion"
 }

@@ -29,13 +29,11 @@ speakeasy [flags]
 
 ### Sub Commands
 
-* [speakeasy api](api/README.md)	 - Access the Speakeasy API via the CLI
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
-* [speakeasy docs](docs/README.md)	 - Use this command to generate content, compile, and publish SDK docs.
+* [speakeasy configure](configure/README.md)	 - Configure your Speakeasy SDK Setup.
 * [speakeasy generate](generate/README.md)	 - Generate client SDKs, docsites, and more
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
-* [speakeasy proxy](proxy.md)	 - Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities
 * [speakeasy quickstart](quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
 * [speakeasy run](run.md)	 - run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.
 * [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
