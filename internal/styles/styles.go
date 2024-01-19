@@ -46,3 +46,10 @@ var (
 		DimBlue:    lipgloss.AdaptiveColor{Dark: "#1D2A3A", Light: "#679FE1"},
 	}
 )
+
+func LeftBorder(color lipgloss.TerminalColor) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true). // Left border only
+		BorderForeground(color).
+		PaddingLeft(1)
+}

@@ -1,16 +1,17 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/log"
-
-	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -21,25 +22,34 @@ import (
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
-func Run(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool) error {
+func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	wf, workflowFileLocation, err := workflow.Load(wd)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	// Get the project directory which is the parent of the .speakeasy folder the workflow file is in
 	projectDir := filepath.Dir(filepath.Dir(workflowFileLocation))
 	if err := os.Chdir(projectDir); err != nil {
-		return err
+		return nil, "", err
+	}
+
+	return wf, projectDir, nil
+}
+
+func ParseSourcesAndTargets() ([]string, []string, error) {
+	wf, _, err := GetWorkflowAndDir()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if err := wf.Validate(generate.GetSupportedLanguages()); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	targets := []string{}
@@ -54,35 +64,58 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 	}
 	slices.Sort(sources)
 
-	if target == "" && source == "" {
-		if len(wf.Targets) == 1 {
-			target = targets[0]
-		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
-			source = sources[0]
-		} else {
-			// TODO update to use our proper interactive code
-			prompt := promptui.Prompt{
-				Label: fmt.Sprintf("Select a target (%s or 'all')", strings.Join(targets, ", ")),
-				Validate: func(input string) error {
-					if input == "" {
-						return fmt.Errorf("target cannot be empty")
-					}
+	return sources, targets, nil
+}
 
-					if input != "all" && !slices.Contains(targets, input) {
-						return fmt.Errorf("invalid target")
-					}
+func RunWithVisualization(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool) error {
+	updatesChannel := make(chan UpdateMsg)
+	workflow := NewWorkflowStep("Workflow", updatesChannel)
 
-					return nil
-				},
-			}
+	var logs bytes.Buffer
+	var err, runErr error
+	logger := log.From(ctx)
 
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
+	runFnCli := func() error {
+		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
+		ctx := context.Background()
+		ctx = log.With(ctx, l)
+		err = Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
 
-			target = result
+		if err != nil {
+			workflow.Finalize(false)
+
+			runErr = err
+			return err
 		}
+
+		workflow.Finalize(true)
+		return nil
+	}
+
+	err = workflow.RunWithVisualization(runFnCli, updatesChannel)
+	if err != nil {
+		logger.Errorf("Workflow failed with error: %s", err)
+	}
+	if runErr != nil {
+		logger.Errorf("Workflow failed with error: %s\n", runErr)
+
+		termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
+		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(termWidth - 8) // -8 because of padding
+		logsHeading := styles.Dimmed.Render("Workflow run logs")
+		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
+	}
+	
+	return err
+}
+
+func Run(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
+	if rootStep == nil {
+		rootStep = NewWorkflowStep("ignored", nil)
+	}
+
+	wf, projectDir, err := GetWorkflowAndDir()
+	if err != nil {
+		return err
 	}
 
 	if source != "" && target != "" {
@@ -91,13 +124,17 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 
 	if target == "all" {
 		for t := range wf.Targets {
-			if err := runTarget(ctx, t, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug); err != nil {
+			err := runTarget(ctx, t, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug, rootStep)
+
+			if err != nil {
 				return err
 			}
 		}
 	} else if source == "all" {
 		for id, s := range wf.Sources {
-			if _, err := runSource(ctx, id, &s); err != nil {
+			_, err := runSource(ctx, id, &s, rootStep)
+
+			if err != nil {
 				return err
 			}
 		}
@@ -106,7 +143,9 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 			return fmt.Errorf("target %s not found", target)
 		}
 
-		if err := runTarget(ctx, target, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug); err != nil {
+		err := runTarget(ctx, target, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug, rootStep)
+
+		if err != nil {
 			return err
 		}
 	} else if source != "" {
@@ -115,7 +154,9 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 			return fmt.Errorf("source %s not found", source)
 		}
 
-		if _, err := runSource(ctx, source, &s); err != nil {
+		_, err := runSource(ctx, source, &s, rootStep)
+
+		if err != nil {
 			return err
 		}
 	}
@@ -123,7 +164,9 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 	return nil
 }
 
-func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, installationURL, repo, repoSubDir string, debug bool) error {
+func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
+	rootStep = rootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
+
 	t := wf.Targets[target]
 
 	log.From(ctx).Infof("Running target %s (%s)...\n", target, t.Target)
@@ -134,11 +177,13 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 	}
 
 	if source != nil {
-		sourcePath, err = runSource(ctx, t.Source, source)
+		sourcePath, err = runSource(ctx, t.Source, source, rootStep)
+
 		if err != nil {
 			return err
 		}
 	} else {
+		rootStep.NewSubstep("Validating document")
 		if err := validateDocument(ctx, sourcePath); err != nil {
 			return err
 		}
@@ -153,17 +198,25 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
 
+	rootStep.NewSubstep("Generating SDK")
+
 	if err := sdkgen.Generate(ctx, config.GetCustomerID(), config.GetWorkspaceID(), t.Target, sourcePath, "", "", outDir, genVersion, installationURL, debug, true, published, false, repo, repoSubDir, true); err != nil {
 		return err
 	}
 
+	rootStep.NewSubstep("Cleaning up")
+
 	// Clean up temp files on success
 	os.RemoveAll(workflow.GetTempDir())
+
+	rootStep.SucceedWorkflow()
 
 	return nil
 }
 
-func runSource(ctx context.Context, id string, source *workflow.Source) (string, error) {
+func runSource(ctx context.Context, id string, source *workflow.Source, rootStep *WorkflowStep) (string, error) {
+	rootStep = rootStep.NewSubstep(fmt.Sprintf("Source: %s", id))
+
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
 
@@ -176,6 +229,8 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 
 	if len(source.Inputs) == 1 {
 		if source.Inputs[0].IsRemote() {
+			rootStep.NewSubstep("Downloading document")
+
 			downloadLocation := outputLocation
 			if len(source.Overlays) > 0 {
 				downloadLocation = source.Inputs[0].GetTempDownloadPath(workflow.GetTempDir())
@@ -189,6 +244,8 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 			currentDocument = source.Inputs[0].Location
 		}
 	} else {
+		mergeStep := rootStep.NewSubstep("Merge documents")
+
 		mergeLocation := source.GetTempMergeLocation()
 		if len(source.Overlays) == 0 {
 			mergeLocation = outputLocation
@@ -199,6 +256,8 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
 			if input.IsRemote() {
+				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
+
 				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
 				if err != nil {
 					return "", err
@@ -210,6 +269,8 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 			}
 		}
 
+		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
+
 		if err := mergeDocuments(ctx, inSchemas, mergeLocation); err != nil {
 			return "", err
 		}
@@ -218,6 +279,8 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 	}
 
 	if len(source.Overlays) > 0 {
+		overlayStep := rootStep.NewSubstep("Applying overlays")
+
 		overlayLocation := outputLocation
 
 		logger.Infof("Applying %d overlays into %s...", len(source.Overlays), overlayLocation)
@@ -225,6 +288,8 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
 			if overlay.IsRemote() {
+				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
+
 				downloadedPath, err := resolveRemoteDocument(ctx, overlay, workflow.GetTempDir())
 				if err != nil {
 					return "", err
@@ -236,14 +301,20 @@ func runSource(ctx context.Context, id string, source *workflow.Source) (string,
 			}
 		}
 
+		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
+
 		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
 			return "", err
 		}
 	}
 
+	rootStep.NewSubstep("Validating document")
+
 	if err := validateDocument(ctx, outputLocation); err != nil {
 		return "", err
 	}
+
+	rootStep.SucceedWorkflow()
 
 	return outputLocation, nil
 }

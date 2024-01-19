@@ -111,8 +111,8 @@ func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
 
 		l := log.From(cmd.Context())
 		style := styles.Emphasized.Copy().Background(styles.Colors.DimYellow).Foreground(styles.Colors.Brown).Padding(1, 2)
-		l.WithStyle(style).Printf("%s\n%s", versionString, updateString)
-		l.Printf("\n")
+		l.PrintfStyled(style, "%s\n%s", versionString, updateString)
+		l.Println("\n")
 
 		return
 	}
