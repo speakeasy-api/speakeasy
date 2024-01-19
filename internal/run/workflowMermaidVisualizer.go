@@ -6,9 +6,9 @@ import (
 )
 
 const classDefs = `
-classDef error stroke:#CE262A
-classDef success stroke:#63AC67
-classDef running stroke:#293D53`
+classDef error stroke:#CE262A,color:#CE262A
+classDef success stroke:#63AC67,color:#63AC67
+classDef running stroke:#293D53,color:#293D53`
 
 func (w *WorkflowStep) ToMermaidDiagram() string {
 	builder := strings.Builder{}
