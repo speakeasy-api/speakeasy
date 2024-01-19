@@ -65,10 +65,5 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int) string {
 		builder.WriteString(fmt.Sprintf("class %d %s\n", selfNodeNum, class)) // Subgraph class assignment needs to happen after the subgraph is defined
 	}
 
-	if w.nextStep != nil {
-		writeConnection(selfNodeNum, *nodeNum) // Connect from the "selfNode", which might be several numbers ago if we had substeps
-		writeChildNode(w.nextStep)
-	}
-
 	return builder.String()
 }

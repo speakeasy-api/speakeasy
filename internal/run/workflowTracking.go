@@ -18,7 +18,6 @@ type WorkflowStep struct {
 	name     string
 	status   Status
 	substeps []*WorkflowStep
-	nextStep *WorkflowStep
 	updates  chan<- UpdateMsg
 }
 
@@ -29,21 +28,6 @@ func NewWorkflowStep(name string, sub chan<- UpdateMsg) *WorkflowStep {
 		substeps: []*WorkflowStep{},
 		updates:  sub,
 	}
-}
-
-func (w *WorkflowStep) SetNextStep(next *WorkflowStep) {
-	w.status = StatusSucceeded // If we go to the next step, we're successful
-	w.nextStep = next
-
-	w.Notify()
-}
-
-func (w *WorkflowStep) NewNextStep(name string) *WorkflowStep {
-	next := NewWorkflowStep(name, w.updates)
-
-	w.SetNextStep(next)
-
-	return next
 }
 
 func (w *WorkflowStep) NewSubstep(name string) *WorkflowStep {
@@ -70,9 +54,6 @@ func (w *WorkflowStep) SucceedWorkflow() {
 	for _, substep := range w.substeps {
 		substep.SucceedWorkflow()
 	}
-	if w.nextStep != nil {
-		w.nextStep.SucceedWorkflow()
-	}
 
 	w.Notify()
 }
@@ -83,9 +64,6 @@ func (w *WorkflowStep) FailWorkflow() {
 	}
 	for _, substep := range w.substeps {
 		substep.FailWorkflow()
-	}
-	if w.nextStep != nil {
-		w.nextStep.FailWorkflow()
 	}
 
 	w.Notify()
@@ -150,11 +128,6 @@ func (w *WorkflowStep) toString(parentIndent, indent int) string {
 	for _, child := range w.substeps {
 		builder.WriteString("\n")
 		builder.WriteString(child.toString(indent, indent+1))
-	}
-
-	if w.nextStep != nil {
-		builder.WriteString("\n")
-		builder.WriteString(w.nextStep.toString(indent, indent))
 	}
 
 	return builder.String()
