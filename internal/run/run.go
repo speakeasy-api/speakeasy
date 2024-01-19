@@ -104,7 +104,7 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		logsHeading := styles.Dimmed.Render("Workflow run logs")
 		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
 	}
-
+	
 	return err
 }
 
