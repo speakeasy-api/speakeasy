@@ -38,7 +38,7 @@ func (w *WorkflowStep) SetNextStep(next *WorkflowStep) {
 	w.Notify()
 }
 
-func (w *WorkflowStep) NextStep(name string) *WorkflowStep {
+func (w *WorkflowStep) NewNextStep(name string) *WorkflowStep {
 	next := NewWorkflowStep(name, w.updates)
 
 	w.status = StatusSucceeded // If we go to the next step, we're successful
@@ -49,7 +49,7 @@ func (w *WorkflowStep) NextStep(name string) *WorkflowStep {
 	return next
 }
 
-func (w *WorkflowStep) NextSubstep(name string) *WorkflowStep {
+func (w *WorkflowStep) NewSubstep(name string) *WorkflowStep {
 	substep := NewWorkflowStep(name, w.updates)
 
 	w.AddSubstep(substep)
@@ -92,6 +92,23 @@ func (w *WorkflowStep) FailWorkflow() {
 	}
 
 	w.Notify()
+}
+
+func (w *WorkflowStep) Finalize(succeeded bool) {
+	var msg UpdateMsg
+	if succeeded {
+		w.SucceedWorkflow()
+		msg = MsgSucceeded
+	} else {
+		w.FailWorkflow()
+		msg = MsgFailed
+	}
+
+	// We send the final messages here rather than in succeed/fail because those can be called on substeps.
+	// Also they are recursive, and we only want to send the finalize messages once
+	if w.updates != nil {
+		w.updates <- msg
+	}
 }
 
 func (w *WorkflowStep) Notify() {

@@ -82,15 +82,13 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		err = Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
 
 		if err != nil {
-			workflow.FailWorkflow()
-			updatesChannel <- MsgFailed
+			workflow.Finalize(false)
 
 			runErr = err
 			return err
 		}
 
-		workflow.SucceedWorkflow()
-		updatesChannel <- MsgSucceeded
+		workflow.Finalize(true)
 		return nil
 	}
 
@@ -167,7 +165,7 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 }
 
 func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
-	rootStep = rootStep.NextSubstep(fmt.Sprintf("Target: %s", target))
+	rootStep = rootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := wf.Targets[target]
 
@@ -185,7 +183,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 			return err
 		}
 	} else {
-		rootStep.NextSubstep("Validating document")
+		rootStep.NewSubstep("Validating document")
 		if err := validateDocument(ctx, sourcePath); err != nil {
 			return err
 		}
@@ -200,13 +198,13 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
 
-	rootStep.NextSubstep("Generating SDK")
+	rootStep.NewSubstep("Generating SDK")
 
 	if err := sdkgen.Generate(ctx, config.GetCustomerID(), config.GetWorkspaceID(), t.Target, sourcePath, "", "", outDir, genVersion, installationURL, debug, true, published, false, repo, repoSubDir, true); err != nil {
 		return err
 	}
 
-	rootStep.NextSubstep("Cleaning up")
+	rootStep.NewSubstep("Cleaning up")
 
 	// Clean up temp files on success
 	os.RemoveAll(workflow.GetTempDir())
@@ -217,7 +215,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 }
 
 func runSource(ctx context.Context, id string, source *workflow.Source, rootStep *WorkflowStep) (string, error) {
-	rootStep = rootStep.NextSubstep(fmt.Sprintf("Source: %s", id))
+	rootStep = rootStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
@@ -231,7 +229,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 
 	if len(source.Inputs) == 1 {
 		if source.Inputs[0].IsRemote() {
-			rootStep.NextSubstep("Downloading document")
+			rootStep.NewSubstep("Downloading document")
 
 			downloadLocation := outputLocation
 			if len(source.Overlays) > 0 {
@@ -246,7 +244,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 			currentDocument = source.Inputs[0].Location
 		}
 	} else {
-		mergeStep := rootStep.NextSubstep("Merge documents")
+		mergeStep := rootStep.NewSubstep("Merge documents")
 
 		mergeLocation := source.GetTempMergeLocation()
 		if len(source.Overlays) == 0 {
@@ -258,7 +256,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
 			if input.IsRemote() {
-				mergeStep.NextSubstep(fmt.Sprintf("Download document from %s", input.Location))
+				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
 
 				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
 				if err != nil {
@@ -271,7 +269,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 			}
 		}
 
-		mergeStep.NextSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
+		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
 
 		if err := mergeDocuments(ctx, inSchemas, mergeLocation); err != nil {
 			return "", err
@@ -281,7 +279,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 	}
 
 	if len(source.Overlays) > 0 {
-		overlayStep := rootStep.NextSubstep("Applying overlays")
+		overlayStep := rootStep.NewSubstep("Applying overlays")
 
 		overlayLocation := outputLocation
 
@@ -290,7 +288,7 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
 			if overlay.IsRemote() {
-				overlayStep.NextSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
+				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
 
 				downloadedPath, err := resolveRemoteDocument(ctx, overlay, workflow.GetTempDir())
 				if err != nil {
@@ -303,14 +301,14 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 			}
 		}
 
-		overlayStep.NextSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
+		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
 
 		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
 			return "", err
 		}
 	}
 
-	rootStep.NextSubstep("Validating document")
+	rootStep.NewSubstep("Validating document")
 
 	if err := validateDocument(ctx, outputLocation); err != nil {
 		return "", err
