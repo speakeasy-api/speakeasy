@@ -41,10 +41,7 @@ func (w *WorkflowStep) SetNextStep(next *WorkflowStep) {
 func (w *WorkflowStep) NewNextStep(name string) *WorkflowStep {
 	next := NewWorkflowStep(name, w.updates)
 
-	w.status = StatusSucceeded // If we go to the next step, we're successful
-	w.nextStep = next
-
-	w.Notify()
+	w.SetNextStep(next)
 
 	return next
 }
