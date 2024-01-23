@@ -124,7 +124,7 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	}
 
 	if shouldCompile {
-		if err := run.Run(cmd.Context(), initialTarget, "", genVersion, "", "", "", false); err != nil {
+		if err = run.RunWithVisualization(cmd.Context(), initialTarget, "", genVersion, "", "", "", false); err != nil {
 			return errors.Wrapf(err, "failed to run speakeasy generate")
 		}
 	}

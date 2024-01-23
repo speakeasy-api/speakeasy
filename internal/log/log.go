@@ -4,9 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -38,6 +43,7 @@ type Logger struct {
 	interactiveOnly bool
 	style           *lipgloss.Style
 	formatter       func(l Logger, level Level, msg string, err error) string
+	writer          io.Writer
 }
 
 var _ logging.Logger = (*Logger)(nil)
@@ -65,6 +71,7 @@ func New() Logger {
 	return Logger{
 		level:     LevelInfo,
 		formatter: formatter,
+		writer:    os.Stderr,
 	}
 }
 
@@ -111,6 +118,12 @@ func (l Logger) WithFormatter(formatter func(l Logger, level Level, msg string, 
 	return l2
 }
 
+func (l Logger) WithWriter(w io.Writer) Logger {
+	l2 := l.Copy()
+	l2.writer = w
+	return l2
+}
+
 func (l Logger) Copy() Logger {
 	return Logger{
 		level:           l.level,
@@ -119,6 +132,7 @@ func (l Logger) Copy() Logger {
 		interactiveOnly: l.interactiveOnly,
 		style:           l.style,
 		formatter:       l.formatter,
+		writer:          l.writer,
 	}
 }
 
@@ -190,21 +204,29 @@ func (l Logger) Printf(format string, a ...any) {
 	l.Println(fmt.Sprintf(format, a...))
 }
 
+func (l Logger) PrintfStyled(style lipgloss.Style, format string, a ...any) {
+	l.PrintlnUnstyled(style.Render(fmt.Sprintf(format, a...)))
+}
+
 func (l Logger) Println(s string) {
+	l.Print(s + "\n")
+}
+
+func (l Logger) Print(s string) {
 	if l.interactiveOnly && !utils.IsInteractive() {
 		return
 	}
 	if l.style != nil {
 		s = l.style.Render(s)
 	}
-	fmt.Fprintln(os.Stderr, s)
+	fmt.Fprint(l.writer, s)
 }
 
 func (l Logger) PrintlnUnstyled(a any) {
 	if l.interactiveOnly && !utils.IsInteractive() {
 		return
 	}
-	fmt.Fprintln(os.Stderr, a)
+	fmt.Fprintln(l.writer, a)
 }
 
 func (l Logger) format(level Level, msg string, err error) string {
