@@ -129,7 +129,7 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 		return errors.New("you must have a source to configure a target try speakeasy quickstart")
 	}
 
-	targetName, target, err := prompts.PromptForNewTarget(workflowFile, "")
+	targetName, target, err := prompts.PromptForNewTarget(workflowFile, "", "")
 	if err != nil {
 		return err
 	}

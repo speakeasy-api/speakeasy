@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -26,6 +27,8 @@ var quickstartCmd = &cobra.Command{
 
 func quickstartInit() {
 	quickstartCmd.Flags().BoolP("compile", "c", true, "run SDK validation and generation after quickstart")
+	quickstartCmd.Flags().StringP("schema", "s", "", "local filepath or URL for the OpenAPI schema")
+	quickstartCmd.Flags().StringP("target", "t", "", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")))
 	rootCmd.AddCommand(quickstartCmd)
 }
 
@@ -35,6 +38,16 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	}
 
 	shouldCompile, err := cmd.Flags().GetBool("compile")
+	if err != nil {
+		return err
+	}
+
+	schemaPath, err := cmd.Flags().GetString("schema")
+	if err != nil {
+		return err
+	}
+
+	targetType, err := cmd.Flags().GetString("target")
 	if err != nil {
 		return err
 	}
@@ -59,6 +72,14 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 			Targets: make(map[string]workflow.Target),
 		},
 		LanguageConfigs: make(map[string]*config.Configuration),
+	}
+
+	if schemaPath != "" {
+		quickstartObj.Defaults.SchemaPath = &schemaPath
+	}
+
+	if targetType != "" {
+		quickstartObj.Defaults.TargetType = &targetType
 	}
 
 	nextState := prompts.SourceBase
