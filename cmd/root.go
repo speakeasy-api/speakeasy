@@ -110,7 +110,7 @@ func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
 		updateString := "Run `speakeasy update` to update to the latest version"
 
 		l := log.From(cmd.Context())
-		style := styles.Emphasized.Copy().Background(charm.Colors.DimYellow).Foreground(charm.Colors.Brown).Padding(1, 2)
+		style := charm.Emphasized.Copy().Background(charm.Colors.DimYellow).Foreground(charm.Colors.Brown).Padding(1, 2)
 		l.PrintfStyled(style, "%s\n%s", versionString, updateString)
 		l.Println("\n")
 

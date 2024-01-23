@@ -2,10 +2,11 @@ package run
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
 type UpdateMsg string
@@ -71,12 +72,12 @@ func (m cliVisualizer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m cliVisualizer) View() string {
-	statusStyle := styles.Info
+	statusStyle := charm.Info
 	switch m.status {
 	case StatusFailed:
-		statusStyle = styles.Error
+		statusStyle = charm.Error
 	case StatusSucceeded:
-		statusStyle = styles.Success
+		statusStyle = charm.Success
 	}
 
 	summary := m.rootStep.PrettyString()
@@ -85,7 +86,7 @@ func (m cliVisualizer) View() string {
 		summary = fmt.Sprintf("%s\n%s", summary, m.spinner.View())
 	}
 
-	style := styles.LeftBorder(statusStyle.GetForeground()).
+	style := charm.LeftBorder(statusStyle.GetForeground()).
 		MarginBottom(2)
 
 	return style.Render(summary)
@@ -94,7 +95,7 @@ func (m cliVisualizer) View() string {
 func initSpinner() spinner.Model {
 	s := spinner.New()
 	s.Spinner = spinner.Meter
-	s.Style = lipgloss.NewStyle().Foreground(styles.Colors.Yellow)
+	s.Style = lipgloss.NewStyle().Foreground(charm.Colors.Yellow)
 	return s
 }
 
