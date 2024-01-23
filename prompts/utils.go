@@ -15,7 +15,7 @@ func getSourcesFromWorkflow(inputWorkflow *workflow.Workflow) []string {
 	return sources
 }
 
-func getSupportedTargets() []string {
+func GetSupportedTargets() []string {
 	targets := generate.GetSupportedLanguages()
 	filteredTargets := []string{}
 

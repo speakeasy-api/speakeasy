@@ -16,17 +16,21 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 		huh.NewSelect[string]().
 			Title("What kind target would you like to generate?").
 			Description("Choose from this list of supported generation targets. \n").
-			Options(huh.NewOptions(getSupportedTargets()...)...).
+			Options(huh.NewOptions(GetSupportedTargets()...)...).
 			Value(targetType),
-		charm.NewInput().
-			Title("What is a good name for this target?").
-			Validate(func(s string) error {
-				if _, ok := currentWorkflow.Targets[s]; ok {
-					return fmt.Errorf("a source with the name %s already exists", s)
-				}
-				return nil
-			}).
-			Value(targetName),
+	}
+	if targetName == nil || *targetName == "" {
+		targetFields = append(targetFields,
+			charm.NewInput().
+				Title("What is a good name for this target?").
+				Validate(func(s string) error {
+					if _, ok := currentWorkflow.Targets[s]; ok {
+						return fmt.Errorf("a source with the name %s already exists", s)
+					}
+					return nil
+				}).
+				Value(targetName),
+		)
 	}
 	targetFields = append(targetFields, rendersSelectSource(currentWorkflow, sourceName)...)
 	targetFields = append(targetFields,
@@ -45,7 +49,12 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		targetName = "first-target"
 	}
 
-	targetName, target, err := PromptForNewTarget(quickstart.WorkflowFile, targetName)
+	var targetType string
+	if quickstart.Defaults.TargetType != nil {
+		targetType = *quickstart.Defaults.TargetType
+	}
+
+	targetName, target, err := PromptForNewTarget(quickstart.WorkflowFile, targetName, targetType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create new target")
 	}
@@ -61,8 +70,8 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	return &nextState, nil
 }
 
-func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName string) (string, *workflow.Target, error) {
-	var targetType, outputLocation string
+func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetType string) (string, *workflow.Target, error) {
+	var outputLocation string
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outputLocation)
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
