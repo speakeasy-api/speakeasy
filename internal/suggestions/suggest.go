@@ -4,23 +4,26 @@ import (
 	"context"
 	goerr "errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
+
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"path/filepath"
-	"strings"
 )
 
 var ErrNoSuggestionFound = goerr.New("no suggestion found")
 
-const suggestionBatchSize = 3
+const suggestionBatchSize = 10
+
+const SeverityTypeAugment = "augment"
 
 type allSchemasErrorSummary map[string]*SchemaErrorSummary
 
@@ -99,7 +102,7 @@ func startSuggestSchemaFile(ctx context.Context, schemaPath, header, token strin
 		return nil, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	errs, err := validate(ctx, schema, schemaPath, suggestionsConfig.Level, isRemote, true)
+	errs, err := validate(ctx, schema, schemaPath, suggestionsConfig.Level, isRemote, false)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +238,6 @@ func suggest(ctx context.Context, schema []byte, schemaPath string, errsWithLine
 		printVErr(&l, validationErrWithLineNum)
 
 		_, newFile, err := suggest.getSuggestionAndRevalidate(ctx, validationErr, nil)
-
 		if err != nil {
 			if goerr.Is(err, ErrNoSuggestionFound) {
 				fmt.Println("Did not find a suggestion for error.")

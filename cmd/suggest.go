@@ -3,13 +3,14 @@ package cmd
 import (
 	goerr "errors"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/suggestions"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
-	"os"
-	"strings"
 )
 
 var suggestCmd = &cobra.Command{
@@ -21,7 +22,7 @@ you must first create an API key via https://app.speakeasyapi.dev and then set t
 	RunE: suggestFixesOpenAPI,
 }
 
-var severities = fmt.Sprintf("%s, %s, or %s", errors.SeverityError, errors.SeverityWarn, errors.SeverityHint)
+var severities = fmt.Sprintf("%s, %s, %s, or %s", errors.SeverityError, errors.SeverityWarn, errors.SeverityHint, suggestions.SeverityTypeAugment)
 
 func suggestInit() {
 	suggestCmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
@@ -30,9 +31,9 @@ func suggestInit() {
 	suggestCmd.Flags().BoolP("auto-approve", "a", false, "auto continue through all prompts")
 	suggestCmd.Flags().StringP("output-file", "o", "", "output the modified file with suggested fixes applied to the specified path")
 	suggestCmd.Flags().IntP("max-suggestions", "n", -1, "maximum number of llm suggestions to fetch, the default is no limit")
-	suggestCmd.Flags().StringP("level", "l", "warn", fmt.Sprintf("%s. The minimum level of severity to request suggestions for", severities))
+	suggestCmd.Flags().StringP("level", "l", "augment", fmt.Sprintf("%s. The minimum level of severity to request suggestions for", severities))
 	suggestCmd.Flags().BoolP("serial", "", false, "do not parallelize requesting suggestions")
-	suggestCmd.Flags().StringP("model", "m", "gpt-4-0613", "model to use when making llm suggestions (gpt-4-0613 recommended)")
+	suggestCmd.Flags().StringP("model", "m", "gpt-4-1106-preview", "model to use when making llm suggestions (gpt-4-0613 recommended)")
 	suggestCmd.Flags().BoolP("summary", "y", false, "show a summary of the remaining validation errors and their counts")
 	suggestCmd.Flags().IntP("validation-loops", "v", -1, "number of times to run the validation loop, the default is no limit (only used in parallelized implementation)")
 	suggestCmd.Flags().IntP("num-specs", "c", -1, "number of specs to run suggest on, the default is no limit")
@@ -71,7 +72,7 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 	}
 
 	severity := errors.Severity(level)
-	if !slices.Contains([]errors.Severity{errors.SeverityError, errors.SeverityWarn, errors.SeverityHint}, severity) {
+	if !slices.Contains([]errors.Severity{errors.SeverityError, errors.SeverityWarn, errors.SeverityHint, suggestions.SeverityTypeAugment}, severity) {
 		return fmt.Errorf("level must be one of %s", severities)
 	}
 

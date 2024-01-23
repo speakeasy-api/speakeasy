@@ -5,6 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	golog "log"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/iancoleman/orderedmap"
 	"github.com/manifoldco/promptui"
@@ -13,16 +20,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v2"
-	golog "log"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
 )
 
-var (
-	errorTypesToSkip = []string{"validate-json-schema"}
-)
+var errorTypesToSkip = []string{"validate-json-schema"}
 
 type Suggestion struct {
 	SuggestedFix string `json:"suggested_fix"`
@@ -131,7 +131,7 @@ func (s *Suggestions) commitSuggestion(newFile []byte) error {
 
 	// Write modified file to the path specified in config.OutputFile, if provided
 	if s.Config.OutputFile != "" {
-		err = os.WriteFile(s.Config.OutputFile, file, 0644)
+		err = os.WriteFile(s.Config.OutputFile, file, 0o644)
 		if err != nil {
 			return fmt.Errorf("failed to write file: %v", err)
 		}
@@ -319,7 +319,8 @@ func validate(ctx context.Context, schema []byte, schemaPath string, level error
 	limits := &validation.OutputLimits{
 		OutputHints: isRemote,
 	}
-	vErrs, vWarns, vInfo, err := validation.Validate(ctx, schema, schemaPath, limits, true)
+	logger := log.From(ctx).WithWriter(io.Discard)
+	vErrs, vWarns, vInfo, err := validation.Validate(log.With(ctx, logger), schema, schemaPath, limits, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate YAML: %v", err)
 	}
@@ -331,11 +332,22 @@ func validate(ctx context.Context, schema []byte, schemaPath string, level error
 	errs := vErrs
 	switch level {
 	case errors.SeverityWarn:
-		errs = append(errs, vWarns...)
+		errs = vWarns
 	case errors.SeverityHint:
-		errs = append(append(errs, vWarns...), vInfo...)
+		errs = nil
+		if strings.Contains(err.Error(), "validation hint") {
+			errs = append(errs, err)
+		}
+	case SeverityTypeAugment:
+		errs = nil
+		for _, err := range vWarns {
+			if strings.Contains(err.Error(), "missing-examples") {
+				errs = append(errs, err)
+			}
+		}
 	}
 
+	fmt.Println(errs)
 	return errs, nil
 }
 
