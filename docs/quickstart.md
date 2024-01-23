@@ -17,8 +17,10 @@ speakeasy quickstart [flags]
 ### Options
 
 ```
-  -c, --compile   run SDK validation and generation after quickstart (default true)
-  -h, --help      help for quickstart
+  -c, --compile         run SDK validation and generation after quickstart (default true)
+  -h, --help            help for quickstart
+  -s, --schema string   local filepath or URL for the OpenAPI schema
+  -t, --target string   language to generate sdk for (available options: [csharp, docs, go, java, php, python, ruby, swift, terraform, typescript, unity])
 ```
 
 ### Options inherited from parent commands
