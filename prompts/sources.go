@@ -2,6 +2,7 @@ package prompts
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,8 +13,10 @@ import (
 )
 
 func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLocation, authHeader, authSecret *string) []*huh.Group {
-	groups := []*huh.Group{
-		huh.NewGroup(
+	var initialGroup []huh.Field
+
+	if sourceName == nil || *sourceName == "" {
+		initialGroup = append(initialGroup,
 			charm_internal.NewInput().
 				Title("What is a good name for this source?").
 				Validate(func(s string) error {
@@ -23,11 +26,22 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 					return nil
 				}).
 				Value(sourceName),
+		)
+	}
+
+	if fileLocation == nil || *fileLocation == "" {
+		initialGroup = append(initialGroup,
 			charm_internal.NewInput().
 				Title("What is the location of your OpenAPI document?").
 				Placeholder("local file path or remote file reference.").
 				Value(fileLocation),
-		),
+		)
+	}
+
+	var groups []*huh.Group
+
+	if len(initialGroup) > 0 {
+		groups = append(groups, huh.NewGroup(initialGroup...))
 	}
 
 	groups = append(groups, getRemoteAuthenticationPrompts(fileLocation, authHeader, authSecret)...)
@@ -45,8 +59,18 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader, authSecret *string
 				Value(&requiresAuthentication),
 		).WithHideFunc(func() bool {
 			if fileLocation != nil && *fileLocation != "" {
-				_, err := url.ParseRequestURI(*fileLocation)
-				return err != nil
+				if parsedUrl, err := url.ParseRequestURI(*fileLocation); err == nil {
+					resp, err := http.Get(parsedUrl.String())
+					if err != nil {
+						return false
+					} else {
+						defer resp.Body.Close()
+
+						if resp.StatusCode < 200 || resp.StatusCode > 299 {
+							return false
+						}
+					}
+				}
 			}
 			return true
 		}),
@@ -87,6 +111,11 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	if len(quickstart.WorkflowFile.Sources) == 0 {
 		sourceName = "openapi"
 	}
+
+	if quickstart.Defaults.SchemaPath != nil {
+		fileLocation = *quickstart.Defaults.SchemaPath
+	}
+
 	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
 		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
 		"Let's setup a new source for your workflow.",
