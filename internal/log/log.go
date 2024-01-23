@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
@@ -236,13 +236,13 @@ func (l Logger) format(level Level, msg string, err error) string {
 func BasicFormatter(l Logger, level Level, msg string, err error) string {
 	switch level {
 	case LevelInfo:
-		return charm.Info.Render(msg)
+		return styles.Info.Render(msg)
 	case LevelWarn:
-		return charm.Warning.Render(msg)
+		return styles.Warning.Render(msg)
 	case LevelErr:
-		return charm.Error.Render(msg)
+		return styles.Error.Render(msg)
 	case LevelSuccess:
-		return charm.Success.Render(msg)
+		return styles.Success.Render(msg)
 	}
 
 	return ""
@@ -253,11 +253,11 @@ func PrefixedFormatter(l Logger, level Level, msg string, err error) string {
 
 	switch level {
 	case LevelInfo, LevelSuccess:
-		prefix = charm.Info.Render("INFO\t")
+		prefix = styles.Info.Render("INFO\t")
 	case LevelWarn:
-		prefix = charm.Warning.Render("WARN\t")
+		prefix = styles.Warning.Render("WARN\t")
 	case LevelErr:
-		prefix = charm.Error.Render("ERROR\t")
+		prefix = styles.Error.Render("ERROR\t")
 	}
 
 	return prefix + msg

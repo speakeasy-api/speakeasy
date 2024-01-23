@@ -6,12 +6,12 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/spf13/cobra"
 )
 
 var (
-	docStyle  = charm.Margins.Copy()
+	docStyle  = styles.Margins.Copy()
 	maxHeight = 24
 )
 
@@ -73,11 +73,11 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 	itemDelegate.Styles.NormalTitle.Bold(true)
 	itemDelegate.Styles.SelectedTitle.
 		Bold(true).
-		Foreground(charm.Focused.GetForeground()).
-		BorderForeground(charm.Focused.GetForeground())
+		Foreground(styles.Focused.GetForeground()).
+		BorderForeground(styles.Focused.GetForeground())
 	itemDelegate.Styles.SelectedDesc.
-		Foreground(charm.FocusedDimmed.GetForeground()).
-		BorderForeground(charm.Focused.GetForeground())
+		Foreground(styles.FocusedDimmed.GetForeground()).
+		BorderForeground(styles.Focused.GetForeground())
 
 	listHeight := len(items) * (itemDelegate.Height() + itemDelegate.Spacing())
 	if listHeight > maxHeight {
@@ -88,7 +88,7 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 
 	l := list.New(items, itemDelegate, 0, listHeight)
 	l.Title = label
-	l.Styles.Title = charm.HeavilyEmphasized
+	l.Styles.Title = styles.HeavilyEmphasized
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.AdditionalShortHelpKeys = func() []key.Binding {

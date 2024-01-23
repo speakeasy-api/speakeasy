@@ -9,21 +9,21 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 var (
-	titleStyle       = charm.HeavilyEmphasized.Copy().MarginLeft(2)
-	descriptionStyle = charm.Dimmed.Copy().MarginLeft(2).Foreground(charm.Colors.BrightGrey)
+	titleStyle       = styles.HeavilyEmphasized.Copy().MarginLeft(2)
+	descriptionStyle = styles.Dimmed.Copy().MarginLeft(2).Foreground(styles.Colors.BrightGrey)
 
-	inputBoxStyle = charm.Margins.Copy().
+	inputBoxStyle = styles.Margins.Copy().
 			PaddingLeft(2).
 			Border(lipgloss.NormalBorder(), false, false, false, true).
-			BorderForeground(charm.Colors.DimYellow)
+			BorderForeground(styles.Colors.DimYellow)
 
-	focusedPromptStyle = charm.Focused.Copy().Bold(true)
-	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(charm.Colors.White)
-	placeholderStyle   = charm.Dimmed.Copy()
+	focusedPromptStyle = styles.Focused.Copy().Bold(true)
+	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(styles.Colors.White)
+	placeholderStyle   = styles.Dimmed.Copy()
 )
 
 type MultiInput struct {
@@ -63,7 +63,7 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 		t.Placeholder = input.Placeholder
 		t.SetValue(input.Value)
 
-		t.Cursor.Style = charm.Cursor
+		t.Cursor.Style = styles.Cursor
 
 		m.inputModels[i] = t
 	}
@@ -132,14 +132,14 @@ func (m MultiInput) Focus(index int) tea.Cmd {
 		if i == index {
 			cmd = m.inputModels[i].Focus()
 			m.inputModels[i].PromptStyle = focusedPromptStyle
-			m.inputModels[i].TextStyle = charm.Focused
+			m.inputModels[i].TextStyle = styles.Focused
 			continue
 		}
 
 		m.inputModels[i].Blur()
 		m.inputModels[i].PromptStyle = blurredPromptStyle
 		m.inputModels[i].PlaceholderStyle = placeholderStyle
-		m.inputModels[i].TextStyle = charm.None
+		m.inputModels[i].TextStyle = styles.None
 
 	}
 
@@ -174,7 +174,7 @@ func (m MultiInput) Validate() bool {
 func (m MultiInput) View() string {
 	if m.done {
 		successMessage := fmt.Sprintf("Values for %d fields have been supplied ✔\n", len(m.getFilledValues()))
-		return charm.Success.Copy().
+		return styles.Success.Copy().
 			Margin(0, 2, 1, 2).
 			Render(successMessage)
 	}

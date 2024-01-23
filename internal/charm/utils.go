@@ -3,6 +3,7 @@ package charm
 import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 func NewBranchPrompt(title string, output *bool) *huh.Group {
@@ -14,8 +15,8 @@ func NewBranchPrompt(title string, output *bool) *huh.Group {
 }
 
 func FormatCommandTitle(title string, description string) string {
-	titleStyle := lipgloss.NewStyle().Foreground(Focused.GetForeground()).Bold(true)
-	descriptionStyle := lipgloss.NewStyle().Foreground(Dimmed.GetForeground()).Italic(true)
+	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
+	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
 	header := titleStyle.Render(title)
 	header += "\n" + descriptionStyle.Render(description)
 	return header

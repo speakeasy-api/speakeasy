@@ -2,16 +2,16 @@ package interactivity
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 var (
 	baseStyle    = lipgloss.NewStyle().Padding(0, 1).Bold(true)
-	blurredStyle = baseStyle.Copy().Foreground(charm.Colors.DimGrey).Background(charm.Colors.Grey)
-	validStyle   = baseStyle.Copy().Foreground(charm.Colors.DimGreen).Background(charm.Colors.Green)
-	invalidStyle = baseStyle.Copy().Foreground(charm.Colors.DimRed).Background(charm.Colors.Red)
+	blurredStyle = baseStyle.Copy().Foreground(styles.Colors.DimGrey).Background(styles.Colors.Grey)
+	validStyle   = baseStyle.Copy().Foreground(styles.Colors.DimGreen).Background(styles.Colors.Green)
+	invalidStyle = baseStyle.Copy().Foreground(styles.Colors.DimRed).Background(styles.Colors.Red)
 
-	helperTextStyle = charm.Help.Copy().MarginLeft(1)
+	helperTextStyle = styles.Help.Copy().MarginLeft(1)
 )
 
 type Button struct {
@@ -52,9 +52,9 @@ func (b ButtonWithHelperText) View() string {
 		helperText = b.HelperText
 
 		if b.Disabled {
-			style.Foreground(charm.Colors.Red)
+			style.Foreground(styles.Colors.Red)
 		} else {
-			style.Foreground(charm.Colors.Green)
+			style.Foreground(styles.Colors.Green)
 		}
 	}
 

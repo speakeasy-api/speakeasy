@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
@@ -89,7 +89,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"
 
 	logger.Successf("\nSDK for %s generated successfully ✓", lang)
-	logger.WithStyle(charm.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
+	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	return nil
 }

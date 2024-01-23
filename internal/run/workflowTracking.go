@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 type Status string
@@ -111,14 +111,14 @@ func (w *WorkflowStep) toString(parentIndent, indent int) string {
 
 	s := fmt.Sprintf("%s%s", indentString, w.name)
 
-	style := charm.Info
+	style := styles.Info
 	switch w.status {
 	case StatusFailed:
-		style = charm.Error
+		style = styles.Error
 	case StatusRunning:
-		style = charm.Info
+		style = styles.Info
 	case StatusSucceeded:
-		style = charm.Success
+		style = styles.Success
 	}
 
 	statusStyle := style.Copy().Bold(false).Italic(true)

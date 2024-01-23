@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"golang.org/x/term"
 
@@ -101,8 +101,8 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
 		termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		style := charm.LeftBorder(charm.Dimmed.GetForeground()).Width(termWidth - 8) // -8 because of padding
-		logsHeading := charm.Dimmed.Render("Workflow run logs")
+		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(termWidth - 8) // -8 because of padding
+		logsHeading := styles.Dimmed.Render("Workflow run logs")
 		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
 	}
 
