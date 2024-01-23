@@ -2,8 +2,9 @@ package run
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 type Status string

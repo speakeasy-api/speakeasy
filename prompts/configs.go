@@ -11,7 +11,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
 func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.Configuration, error) {
@@ -188,11 +188,10 @@ func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName st
 
 func addPromptForField(key, question, defaultValue, validateRegex, validateMessage string) []huh.Field {
 	return []huh.Field{
-		huh.NewInput().
+		charm.NewInput().
 			Key(key).
 			Title(question).
 			Placeholder(defaultValue).
-			Inline(true).
 			Validate(func(s string) error {
 				if validateRegex != "" {
 					r, err := regexp.Compile(validateRegex)
@@ -204,8 +203,7 @@ func addPromptForField(key, question, defaultValue, validateRegex, validateMessa
 					}
 				}
 				return nil
-			}).
-			Prompt(" "),
+			}),
 	}
 }
 

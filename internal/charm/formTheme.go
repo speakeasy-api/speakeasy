@@ -3,47 +3,39 @@ package charm
 import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
-var theme *huh.Theme
-
-// TODO: Merge parts of this file with what we are doing for interactive mode
-var (
-	grey   = lipgloss.Color("#605E53")
-	yellow = lipgloss.Color("#FBE331")
-	green  = lipgloss.Color("#63AC67")
-	red    = lipgloss.Color("#ED567A")
-)
+var formTheme *huh.Theme
 
 func init() {
 	t := copyBaseTheme(huh.ThemeBase())
 
 	f := &t.Focused
-	f.Base = f.Base.BorderForeground(yellow)
-	f.Title.Foreground(yellow).Bold(true)
-	f.Description.Foreground(grey).Italic(true).Inline(false)
-	f.ErrorIndicator.Foreground(red)
-	f.ErrorMessage.Foreground(red)
-	f.SelectSelector.Foreground(yellow)
-	f.MultiSelectSelector.Foreground(yellow)
-	f.SelectedOption.Foreground(yellow)
-	f.FocusedButton.Background(green)
-	f.BlurredButton.Background(grey)
+	f.Base = f.Base.BorderForeground(styles.Focused.GetForeground())
+	f.Title.Foreground(styles.Focused.GetForeground()).Bold(true)
+	f.Description.Foreground(styles.Dimmed.GetForeground()).Italic(true).Inline(false)
+	f.ErrorIndicator.Foreground(styles.Colors.Red)
+	f.ErrorMessage.Foreground(styles.Colors.Red)
+	f.SelectSelector.Foreground(styles.Focused.GetForeground())
+	f.MultiSelectSelector.Foreground(styles.Focused.GetForeground())
+	f.SelectedOption.Foreground(styles.Focused.GetForeground())
+	f.FocusedButton.Background(styles.Colors.Green)
+	f.BlurredButton.Background(styles.Dimmed.GetForeground())
 	f.Next = f.FocusedButton.Copy()
 
-	f.TextInput.Cursor.Foreground(yellow)
-	f.TextInput.Placeholder.Foreground(grey).Italic(true)
-	f.TextInput.Prompt.Foreground(yellow)
-	f.TextInput.Text.Foreground(yellow)
+	f.TextInput.Cursor.Foreground(styles.Focused.GetForeground())
+	f.TextInput.Placeholder.Foreground(styles.Dimmed.GetForeground()).Italic(true)
+	f.TextInput.Prompt.Foreground(styles.Focused.GetForeground())
+	f.TextInput.Text.Foreground(styles.Focused.GetForeground())
 
 	b := &t.Blurred
 	b.Description.Italic(true)
 	b.TextInput.Placeholder.Italic(true)
-	b.SelectedOption.Foreground(yellow)
-	b.SelectSelector.Foreground(yellow)
+	b.SelectedOption.Foreground(styles.FocusedDimmed.GetForeground())
+	b.SelectSelector.Foreground(styles.FocusedDimmed.GetForeground())
 
-	theme = &t
+	formTheme = &t
 }
 
 // What I've implemented is a direct duplicate of huh copy()

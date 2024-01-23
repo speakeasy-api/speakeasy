@@ -1,12 +1,13 @@
 package interactivity
 
 import (
+	"os"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var (

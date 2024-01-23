@@ -2,10 +2,11 @@ package run
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 type UpdateMsg string

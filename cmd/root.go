@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 

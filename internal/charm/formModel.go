@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 type Model struct {
@@ -14,7 +15,7 @@ type Model struct {
 
 func NewForm(form *huh.Form, args ...string) Model {
 	model := Model{
-		form: form.WithTheme(theme),
+		form: form.WithTheme(formTheme),
 	}
 
 	if len(args) > 0 {
@@ -61,8 +62,8 @@ func (m Model) View() string {
 	if m.form.State == huh.StateCompleted {
 		return ""
 	}
-	titleStyle := lipgloss.NewStyle().Foreground(yellow).Bold(true)
-	descriptionStyle := lipgloss.NewStyle().Foreground(grey).Italic(true).Bold(true)
+	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
+	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
 	if m.title != "" {
 		header := titleStyle.Render(m.title)
 		if m.description != "" {

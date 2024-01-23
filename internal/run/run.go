@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/styles"
-	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"golang.org/x/term"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -104,7 +105,7 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		logsHeading := styles.Dimmed.Render("Workflow run logs")
 		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
 	}
-	
+
 	return err
 }
 
@@ -125,7 +126,6 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 	if target == "all" {
 		for t := range wf.Targets {
 			err := runTarget(ctx, t, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug, rootStep)
-
 			if err != nil {
 				return err
 			}
@@ -133,7 +133,6 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 	} else if source == "all" {
 		for id, s := range wf.Sources {
 			_, err := runSource(ctx, id, &s, rootStep)
-
 			if err != nil {
 				return err
 			}
@@ -144,7 +143,6 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 		}
 
 		err := runTarget(ctx, target, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug, rootStep)
-
 		if err != nil {
 			return err
 		}
@@ -155,7 +153,6 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 		}
 
 		_, err := runSource(ctx, source, &s, rootStep)
-
 		if err != nil {
 			return err
 		}

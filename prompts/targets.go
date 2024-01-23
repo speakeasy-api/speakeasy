@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
 func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outputLocation *string) *huh.Group {
@@ -18,7 +18,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 			Description("Choose from this list of supported generation targets. \n").
 			Options(huh.NewOptions(getSupportedTargets()...)...).
 			Value(targetType),
-		huh.NewInput().
+		charm.NewInput().
 			Title("What is a good name for this target?").
 			Validate(func(s string) error {
 				if _, ok := currentWorkflow.Targets[s]; ok {
@@ -26,17 +26,13 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 				}
 				return nil
 			}).
-			Inline(true).
-			Prompt(" ").
 			Value(targetName),
 	}
 	targetFields = append(targetFields, rendersSelectSource(currentWorkflow, sourceName)...)
 	targetFields = append(targetFields,
-		huh.NewInput().
+		charm.NewInput().
 			Title("Optionally provide an output location for your generation target:").
 			Placeholder("defaults to current directory").
-			Inline(true).
-			Prompt(" ").
 			Value(outputLocation),
 	)
 

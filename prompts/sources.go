@@ -8,16 +8,14 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/charm"
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
 func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLocation, authHeader, authSecret *string) []*huh.Group {
 	groups := []*huh.Group{
 		huh.NewGroup(
-			huh.NewInput().
+			charm_internal.NewInput().
 				Title("What is a good name for this source?").
-				Prompt(" ").
-				Inline(true).
 				Validate(func(s string) error {
 					if _, ok := currentWorkflow.Sources[s]; ok {
 						return fmt.Errorf("a source with the name %s already exists", s)
@@ -25,11 +23,9 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 					return nil
 				}).
 				Value(sourceName),
-			huh.NewInput().
+			charm_internal.NewInput().
 				Title("What is the location of your OpenAPI document?").
 				Placeholder("local file path or remote file reference.").
-				Prompt(" ").
-				Inline(true).
 				Value(fileLocation),
 		),
 	}
@@ -55,17 +51,13 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader, authSecret *string
 			return true
 		}),
 		huh.NewGroup(
-			huh.NewInput().
+			charm_internal.NewInput().
 				Title("What is the name of your authentication Header?").
 				Placeholder("x-auth-token").
-				Prompt(" ").
-				Inline(true).
 				Value(authHeader),
-			huh.NewInput().
+			charm_internal.NewInput().
 				Title("What is the reference to your auth secret?").
 				Placeholder("$AUTH_TOKEN").
-				Prompt(" ").
-				Inline(true).
 				Value(authSecret),
 		).WithHideFunc(func() bool {
 			return !requiresAuthentication
@@ -76,11 +68,9 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader, authSecret *string
 func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, authSecret *string) []*huh.Group {
 	groups := []*huh.Group{
 		huh.NewGroup(
-			huh.NewInput().
+			charm_internal.NewInput().
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
-				Prompt(" ").
-				Inline(true).
 				Value(overlayLocation),
 		).WithHideFunc(func() bool {
 			return !*promptForOverlay
@@ -97,7 +87,7 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	if len(quickstart.WorkflowFile.Sources) == 0 {
 		sourceName = "openapi"
 	}
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
 		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
 		"Let's setup a new source for your workflow.",
 		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
@@ -125,8 +115,8 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source, error) {
 	addOpenAPIFile := false
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
-		charm.NewBranchPrompt("Would you like to add an openapi file to this source?", &addOpenAPIFile)),
+	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+		charm_internal.NewBranchPrompt("Would you like to add an openapi file to this source?", &addOpenAPIFile)),
 		fmt.Sprintf("Let's add to the source %s", name))).
 		Run(); err != nil {
 		return nil, err
@@ -137,17 +127,15 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		var fileLocation, authHeader, authSecret string
 		groups := []*huh.Group{
 			huh.NewGroup(
-				huh.NewInput().
+				charm_internal.NewInput().
 					Title("What is the location of your OpenAPI document?").
 					Placeholder("local file path or remote file reference.").
-					Prompt(" ").
-					Inline(true).
 					Value(&fileLocation),
 			),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader, &authSecret)...)
-		groups = append(groups, charm.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
+		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
 			groups...),
 			fmt.Sprintf("Let's add to the source %s", name))).
 			Run(); err != nil {
@@ -162,8 +150,8 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	}
 
 	addOverlayFile := false
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
-		charm.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
+	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+		charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
 		fmt.Sprintf("Let's add to the source %s", name))).
 		Run(); err != nil {
 		return nil, err
@@ -174,8 +162,8 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		var fileLocation, authHeader, authSecret string
 		trueVal := true
 		groups := getOverlayPrompts(&trueVal, &fileLocation, &authHeader, &authSecret)
-		groups = append(groups, charm.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
+		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
 			groups...),
 			fmt.Sprintf("Let's add to the source %s", name))).
 			Run(); err != nil {
@@ -199,21 +187,19 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	groups := getBaseSourcePrompts(currentWorkflow, &sourceName, &fileLocation, &authHeader, &authSecret)
 	var promptForOverlay bool
-	groups = append(groups, charm.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
+	groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
 	groups = append(groups, getOverlayPrompts(&promptForOverlay, &overlayFileLocation, &overlayAuthHeader, &overlayAuthSecret)...)
 	groups = append(groups, huh.NewGroup(
-		huh.NewInput().
+		charm_internal.NewInput().
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
-			Prompt(" ").
-			Inline(true).
 			Value(&outputLocation),
 	).WithHideFunc(
 		func() bool {
 			return len(currentWorkflow.Sources) == 0
 		}))
 
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
 		groups...),
 		"Let's setup a new source for your workflow.",
 		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
