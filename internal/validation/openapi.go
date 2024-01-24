@@ -170,12 +170,12 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	sb.WriteString(styles.Emphasized.Render("Surrounding Lines:"))
 	sb.WriteString("\n")
 
-	startLine := err.LineNumber - 5
+	startLine := err.LineNumber - 4
 	if startLine < 0 {
 		startLine = 0
 	}
 
-	endLine := err.LineNumber + 2
+	endLine := err.LineNumber + 3
 	if endLine > len(lines) {
 		endLine = len(lines)
 	}
@@ -190,7 +190,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	}
 
 	for i, line := range lines[startLine:endLine] {
-		lineNumber := startLine + i + 2
+		lineNumber := startLine + i + 1
 		lineNumString := styles.Dimmed.Render(fmt.Sprintf("%d", lineNumber))
 		if lineNumber == err.LineNumber {
 			lineNumString = styles.Error.Render(fmt.Sprintf("%d", lineNumber))
