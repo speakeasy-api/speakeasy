@@ -101,7 +101,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 		prefixedLogger.Error("", zap.Error(err))
 	}
 
-	logger.Infof("OpenAPI spec validation complete. %d errors, %d warnings, %d hints\n", len(vErrs), len(vWarns), len(vInfo))
+	logger.Infof("\nOpenAPI spec validation complete. %d errors, %d warnings, %d hints\n", len(vErrs), len(vWarns), len(vInfo))
 
 	if len(vErrs) > 0 {
 		status := "\nOpenAPI spec invalid ✖"
