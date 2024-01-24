@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -101,7 +102,12 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		outDir = workingDir + "/" + formatOutDir(target.Target)
 	}
 
-	speakeasyFolderPath := outDir + ".speakeasy"
+	var resolvedSchema string
+	for _, source := range quickstartObj.WorkflowFile.Sources {
+		resolvedSchema = source.Inputs[0].Location
+	}
+
+	speakeasyFolderPath := outDir + "/" + ".speakeasy"
 	if _, err := os.Stat(speakeasyFolderPath); os.IsNotExist(err) {
 		err = os.MkdirAll(speakeasyFolderPath, 0o755)
 		if err != nil {
@@ -116,6 +122,13 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	for key, outConfig := range quickstartObj.LanguageConfigs {
 		if err := config.SaveConfig(speakeasyFolderPath, outConfig); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
+		}
+	}
+
+	// If we are referencing a local schema, copy it to the output directory
+	if _, err := os.Stat(resolvedSchema); err == nil {
+		if err := utils.CopyFile(resolvedSchema, outDir+"/"+resolvedSchema); err != nil {
+			return errors.Wrapf(err, "failed to copy schema file")
 		}
 	}
 
