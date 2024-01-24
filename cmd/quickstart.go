@@ -29,6 +29,7 @@ var quickstartCmd = &cobra.Command{
 func quickstartInit() {
 	quickstartCmd.Flags().BoolP("compile", "c", true, "run SDK validation and generation after quickstart")
 	quickstartCmd.Flags().StringP("schema", "s", "", "local filepath or URL for the OpenAPI schema")
+	quickstartCmd.Flags().StringP("out-dir", "o", "", "output directory for the quickstart command")
 	quickstartCmd.Flags().StringP("target", "t", "", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")))
 	rootCmd.AddCommand(quickstartCmd)
 }
@@ -49,6 +50,11 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	}
 
 	targetType, err := cmd.Flags().GetString("target")
+	if err != nil {
+		return err
+	}
+
+	outDir, err := cmd.Flags().GetString("out-dir")
 	if err != nil {
 		return err
 	}
@@ -97,9 +103,11 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	var outDir string
 	for _, target := range quickstartObj.WorkflowFile.Targets {
-		outDir = workingDir + "/" + formatOutDir(target.Target)
+		if outDir == "" {
+			outDir = workingDir + "/" + defaultOutDir(target.Target)
+			break
+		}
 	}
 
 	var resolvedSchema string
@@ -171,7 +179,7 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func formatOutDir(target string) string {
+func defaultOutDir(target string) string {
 	switch target {
 	case "terraform":
 		return "terraform-provider-speakeasy"

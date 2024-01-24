@@ -7,10 +7,20 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 )
 
-var priorityTargets = map[string]any{
-	"typescript": nil,
-	"python":     nil,
-	"go":         nil,
+var priorityTargets = []string{
+	"typescript",
+	"python",
+	"go",
+}
+
+func inPriorityTargets(target string) bool {
+	for _, priorityTarget := range priorityTargets {
+		if target == priorityTarget {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getSourcesFromWorkflow(inputWorkflow *workflow.Workflow) []string {
@@ -26,14 +36,15 @@ func GetSupportedTargets() []string {
 	filteredTargets := []string{}
 
 	// priority ordering
-	for key := range priorityTargets {
-		filteredTargets = append(filteredTargets, key)
+	for _, target := range priorityTargets {
+		filteredTargets = append(filteredTargets, target)
 	}
 
 	for _, language := range targets {
-		if _, ok := priorityTargets[language]; !ok && !strings.HasSuffix(language, "v2") {
-			filteredTargets = append(filteredTargets, language)
+		if strings.HasSuffix(language, "v2") || inPriorityTargets(language) {
+			continue
 		}
+		filteredTargets = append(filteredTargets, language)
 	}
 
 	return filteredTargets
