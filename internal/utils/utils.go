@@ -1,9 +1,11 @@
 package utils
 
 import (
-	"golang.org/x/term"
+	"io"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/term"
 )
 
 func CreateDirectory(filename string) error {
@@ -20,4 +22,25 @@ func CreateDirectory(filename string) error {
 
 func IsInteractive() bool {
 	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
+func CopyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
