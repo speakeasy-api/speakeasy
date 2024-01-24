@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"os"
+	"strings"
 )
 
 // OutputLimits defines the limits for validation output.
@@ -46,21 +47,21 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 	var tabs []interactivity.Tab
 	tabs = append(tabs, interactivity.Tab{
 		Title:       fmt.Sprintf("Errors (%d)", len(vErrs)),
-		Content:     errorsToStrings(vErrs),
+		Content:     errorsToTabContents(schema, vErrs),
 		TitleColor:  styles.Colors.Red,
 		BorderColor: styles.Colors.Red,
 		Default:     len(vErrs) > 0,
 	})
 	tabs = append(tabs, interactivity.Tab{
 		Title:       fmt.Sprintf("Warnings (%d)", len(vWarns)),
-		Content:     errorsToStrings(vWarns),
+		Content:     errorsToTabContents(schema, vWarns),
 		TitleColor:  styles.Colors.Yellow,
 		BorderColor: styles.Colors.Yellow,
 		Default:     len(vErrs) == 0 && len(vWarns) > 0,
 	})
 	tabs = append(tabs, interactivity.Tab{
 		Title:       fmt.Sprintf("Hints (%d)", len(vInfo)),
-		Content:     errorsToStrings(vInfo),
+		Content:     errorsToTabContents(schema, vInfo),
 		TitleColor:  styles.Colors.Blue,
 		BorderColor: styles.Colors.Blue,
 		Default:     len(vErrs) == 0 && len(vWarns) == 0 && len(vInfo) > 0,
@@ -127,30 +128,80 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 	return nil
 }
 
-func errorsToStrings(errs []error) []string {
-	var strings []string
+func errorsToTabContents(schema []byte, errs []error) []interactivity.InspectableContent {
+	var contents []interactivity.InspectableContent
+
+	lines := strings.Split(string(schema), "\n")
+
 	for _, err := range errs {
 		vErr := errors.GetValidationErr(err)
 
-		style := styles.Info
-		switch vErr.Severity {
-		case errors.SeverityError:
-			style = styles.Error
-		case errors.SeverityWarn:
-			style = styles.Warning
-		case errors.SeverityHint:
-			style = styles.Info
-		}
-
-		lineNumber := style.Render(fmt.Sprintf("Line %d:", vErr.LineNumber))
+		lineNumber := styles.SeverityToStyle(vErr.Severity).Render(fmt.Sprintf("Line %d:", vErr.LineNumber))
 		errType := styles.Dimmed.Render(vErr.Rule)
 		s := fmt.Sprintf("%s %s - %s", lineNumber, errType, vErr.Message)
-		strings = append(strings, s)
+
+		content := interactivity.InspectableContent{
+			Summary:      s,
+			DetailedView: getDetailedView(lines, *vErr),
+		}
+
+		contents = append(contents, content)
 	}
+
 	if len(errs) == 0 {
-		strings = append(strings, styles.Success.Render("Congrats, there are no issues!"))
+		s := styles.Emphasized.Render("Congrats, there are no issues!")
+		content := interactivity.InspectableContent{
+			Summary:      s,
+			DetailedView: s,
+		}
+		contents = append(contents, content)
 	}
-	return strings
+
+	return contents
+}
+
+func getDetailedView(lines []string, err errors.ValidationError) string {
+	var sb strings.Builder
+
+	errAndLine := styles.SeverityToStyle(err.Severity).Render(fmt.Sprintf("%s on line %d", err.Severity, err.LineNumber))
+	sb.WriteString(fmt.Sprintf("%s %s\n", errAndLine, styles.Dimmed.Render(err.Rule)))
+	sb.WriteString(err.Message)
+	sb.WriteString("\n\n")
+	sb.WriteString(styles.Emphasized.Render("Surrounding Lines:"))
+	sb.WriteString("\n")
+
+	startLine := err.LineNumber - 5
+	if startLine < 0 {
+		startLine = 0
+	}
+
+	endLine := err.LineNumber + 2
+	if endLine > len(lines) {
+		endLine = len(lines)
+	}
+
+	shortestWhitespacePrefix := ""
+	for i, line := range lines[startLine:endLine] {
+		trimmed := strings.TrimLeft(line, " ")
+		prefixLen := len(line) - len(trimmed)
+		if i == 0 || prefixLen < len(shortestWhitespacePrefix) {
+			shortestWhitespacePrefix = strings.Repeat(" ", prefixLen)
+		}
+	}
+
+	for i, line := range lines[startLine:endLine] {
+		lineNumber := startLine + i + 2
+		lineNumString := styles.Dimmed.Render(fmt.Sprintf("%d", lineNumber))
+		if lineNumber == err.LineNumber {
+			lineNumString = styles.Error.Render(fmt.Sprintf("%d", lineNumber))
+		}
+
+		trimmedContent := strings.TrimPrefix(line, shortestWhitespacePrefix)
+
+		sb.WriteString(fmt.Sprintf("%s %s\n", lineNumString, trimmedContent))
+	}
+
+	return sb.String()
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)

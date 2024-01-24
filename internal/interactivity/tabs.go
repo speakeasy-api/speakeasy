@@ -18,17 +18,24 @@ type tabsModel struct {
 
 type Tab struct {
 	Title       string
-	Content     []string
+	Content     []InspectableContent
 	BorderColor lipgloss.AdaptiveColor
 	TitleColor  lipgloss.AdaptiveColor
 	Default     bool
 	activeItem  int
 	paginator   paginator.Model
+	inspecting  bool
+}
+
+type InspectableContent struct {
+	Summary      string
+	DetailedView string
 }
 
 func (m tabsModel) Init() tea.Cmd {
 	for i, tab := range m.Tabs {
 		tab.activeItem = 0
+		tab.inspecting = false
 
 		p := paginator.New()
 		p.Type = paginator.Dots
@@ -68,6 +75,12 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up":
 			m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
 			return m, nil
+		case "enter":
+			m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
+			return m, nil
+		case "esc":
+			m.Tabs[m.activeTab].inspecting = false
+			return m, nil
 		}
 
 	case tea.WindowSizeMsg:
@@ -92,7 +105,7 @@ var (
 	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
 	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
 	activeTabStyle    = inactiveTabStyle.Copy().Border(activeTabBorder, true)
-	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 1, 0, 1).Border(lipgloss.NormalBorder()).UnsetBorderTop()
+	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(1, 1, 0, 1).Border(lipgloss.NormalBorder()).UnsetBorderTop()
 	margins           = docStyle.Copy().Margin(1, 0)
 )
 
@@ -134,7 +147,7 @@ func (m tabsModel) View() string {
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	sizeDiff := m.width - lipgloss.Width(row)
 	if sizeDiff > 0 {
-		topBorder := strings.Repeat("─", sizeDiff+1)
+		topBorder := strings.Repeat("─", sizeDiff+1) // +3 to make it align given interior padding
 		topBorder += "╮"
 		row += lipgloss.NewStyle().Foreground(activeBorderColor).Render(topBorder)
 	}
@@ -142,7 +155,13 @@ func (m tabsModel) View() string {
 	doc.WriteString(row)
 	doc.WriteString("\n")
 	doc.WriteString(windowStyle.Render(m.ActiveContents()))
-	doc.WriteString(styles.Dimmed.Render("\n←/→ switch tabs, ↑/↓ navigate, ↵ inspect, q quit"))
+
+	inspectInstructions := "↵ inspect"
+	if activeTab.inspecting {
+		inspectInstructions = "esc/↵ back"
+	}
+	doc.WriteString(styles.Dimmed.Render(fmt.Sprintf("\n  ←/→ switch tabs, ↑/↓ navigate, %s, q quit", inspectInstructions)))
+
 	return margins.Render(doc.String())
 }
 
@@ -152,16 +171,22 @@ func (m tabsModel) ActiveContents() string {
 
 	activeTab.paginator.Page = activeTab.activeItem / activeTab.paginator.PerPage
 
+	width := m.width - windowStyle.GetHorizontalPadding()
+
+	if activeTab.inspecting {
+		return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(activeTab.Content[activeTab.activeItem].DetailedView)
+	}
+
 	start, end := activeTab.paginator.GetSliceBounds(len(activeTab.Content))
 
-	for i, line := range activeTab.Content[start:end] {
-		line = lipgloss.NewStyle().Width(m.width - windowStyle.GetHorizontalPadding() - 2).Render(line) // 2 padding left
+	for i, content := range activeTab.Content[start:end] {
+		summary := lipgloss.NewStyle().Width(width - 2).Render(content.Summary) // -2 because padding?
 		if start+i == activeTab.activeItem {
-			line = styles.LeftBorder(activeTab.BorderColor).Render(line)
+			summary = styles.LeftBorder(activeTab.BorderColor).Render(summary)
 		} else {
-			line = lipgloss.NewStyle().PaddingLeft(2).Render(line)
+			summary = lipgloss.NewStyle().PaddingLeft(2).Render(summary)
 		}
-		contents += line + "\n\n"
+		contents += summary + "\n\n"
 	}
 
 	if activeTab.paginator.TotalPages > 1 {
