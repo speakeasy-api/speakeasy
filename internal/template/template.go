@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func execute(templateLocation string, templateFile string, values interface{}) (string, error) {
+func execute(templateLocation string, values interface{}) (string, error) {
 	funcMap := map[string]any{
 		"fromYaml": func(str string) map[string]interface{} {
 			m := map[string]interface{}{}
@@ -33,20 +33,16 @@ func execute(templateLocation string, templateFile string, values interface{}) (
 		funcMap[k] = v
 	}
 	e := easytemplate.New(
-		easytemplate.WithSearchLocations([]string{templateLocation}),
+		easytemplate.WithSearchLocations([]string{filepath.Dir(templateLocation)}),
 		easytemplate.WithTemplateFuncs(funcMap),
 		easytemplate.WithWriteFunc(func(outFile string, data []byte) error {
 			return fmt.Errorf("write function not available")
 		}),
 	)
 
-	created, err := e.RunTemplateString(templateFile, map[string]any{"Values": values})
+	created, err := e.RunTemplateString(templateLocation, values)
 	if err != nil {
 		return "", fmt.Errorf("Failed to execute template: %w", err)
-	}
-	// validate created is valid yaml
-	if err := yaml.Unmarshal([]byte(created), &values); err != nil {
-		return "", fmt.Errorf("Template was invalid YAML: %w", err)
 	}
 	return created, nil
 }
@@ -60,16 +56,12 @@ func Execute(templateFileLocation string, valuesFileLocation string, outputFileL
 	if err != nil {
 		return fmt.Errorf("Failed to get absolute path of template file: %w", err)
 	}
-	templateString, err := os.ReadFile(templateFileAbsPath)
-	if err != nil {
-		return fmt.Errorf("Failed to read template file: %w", err)
-	}
 	values := make(map[string]interface{})
 	if err = yaml.Unmarshal(valuesString, &values); err != nil {
 		return fmt.Errorf("Failed to unmarshal values file: %w", err)
 	}
 
-	templated, err := execute(templateFileAbsPath, string(templateString), values)
+	templated, err := execute(templateFileAbsPath, values)
 	if err != nil {
 		return fmt.Errorf("Failed to execute template: %w", err)
 	}
