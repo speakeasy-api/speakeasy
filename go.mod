@@ -18,6 +18,7 @@ require (
 	github.com/pb33f/libopenapi v0.14.1
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
+	github.com/speakeasy-api/easytemplate v0.8.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.239.1
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/sdk-gen-config v1.6.1
@@ -145,7 +146,6 @@ require (
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.8.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.0 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
