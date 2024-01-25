@@ -58,6 +58,7 @@ func Init(version, artifactArch string) {
 	proxyInit()
 	docsInit()
 	apiInit()
+	templateInit()
 }
 
 func Execute(version, artifactArch string) {
