@@ -11,30 +11,28 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
-func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outputLocation *string) *huh.Group {
+func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType *string) *huh.Group {
 	targetFields := []huh.Field{
 		huh.NewSelect[string]().
-			Title("What kind target would you like to generate?").
+			Title("Which target would you like to generate?").
 			Description("Choose from this list of supported generation targets. \n").
-			Options(huh.NewOptions(getSupportedTargets()...)...).
+			Options(huh.NewOptions(GetSupportedTargets()...)...).
 			Value(targetType),
-		charm.NewInput().
-			Title("What is a good name for this target?").
-			Validate(func(s string) error {
-				if _, ok := currentWorkflow.Targets[s]; ok {
-					return fmt.Errorf("a source with the name %s already exists", s)
-				}
-				return nil
-			}).
-			Value(targetName),
+	}
+	if targetName == nil || *targetName == "" {
+		targetFields = append(targetFields,
+			charm.NewInput().
+				Title("What is a good name for this target?").
+				Validate(func(s string) error {
+					if _, ok := currentWorkflow.Targets[s]; ok {
+						return fmt.Errorf("a source with the name %s already exists", s)
+					}
+					return nil
+				}).
+				Value(targetName),
+		)
 	}
 	targetFields = append(targetFields, rendersSelectSource(currentWorkflow, sourceName)...)
-	targetFields = append(targetFields,
-		charm.NewInput().
-			Title("Optionally provide an output location for your generation target:").
-			Placeholder("defaults to current directory").
-			Value(outputLocation),
-	)
 
 	return huh.NewGroup(targetFields...)
 }
@@ -45,7 +43,12 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		targetName = "first-target"
 	}
 
-	targetName, target, err := PromptForNewTarget(quickstart.WorkflowFile, targetName)
+	var targetType string
+	if quickstart.Defaults.TargetType != nil {
+		targetType = *quickstart.Defaults.TargetType
+	}
+
+	targetName, target, err := PromptForNewTarget(quickstart.WorkflowFile, targetName, targetType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create new target")
 	}
@@ -61,10 +64,9 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	return &nextState, nil
 }
 
-func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName string) (string, *workflow.Target, error) {
-	var targetType, outputLocation string
+func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetType string) (string, *workflow.Target, error) {
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
-	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outputLocation)
+	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType)
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
 		"Let's setup a new target for your workflow.",
 		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).
@@ -75,10 +77,6 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName string) (
 	target := workflow.Target{
 		Target: targetType,
 		Source: sourceName,
-	}
-
-	if outputLocation != "" {
-		target.Output = &outputLocation
 	}
 
 	if err := target.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
