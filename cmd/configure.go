@@ -3,11 +3,14 @@ package cmd
 import (
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/spf13/cobra"
@@ -49,6 +52,8 @@ func configureSourcesInit() {
 }
 
 func configureTargetInit() {
+	configureTargetCmd.Flags().StringP("id", "i", "", "the name of an existing target to configure")
+	configureTargetCmd.Flags().BoolP("new", "n", false, "configure a new target")
 	configureCmd.AddCommand(configureTargetCmd)
 }
 
@@ -119,6 +124,16 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	id, err := cmd.Flags().GetString("id")
+	if err != nil {
+		return err
+	}
+
+	newTarget, err := cmd.Flags().GetBool("new")
+	if err != nil {
+		return err
+	}
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -129,11 +144,44 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 		return errors.New("you must have a source to configure a target try speakeasy quickstart")
 	}
 
-	targetName, target, err := prompts.PromptForNewTarget(workflowFile, "", "")
-	if err != nil {
-		return err
+	existingTarget := ""
+	if _, ok := workflowFile.Targets[id]; ok {
+		existingTarget = id
 	}
-	workflowFile.Targets[targetName] = *target
+
+	var existingTargets []string
+	for targetName := range workflowFile.Targets {
+		existingTargets = append(existingTargets, targetName)
+	}
+	targetOptions := append(existingTargets, "new")
+
+	if !newTarget && existingTarget == "" {
+		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
+		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
+			"Let's configure a target for your workflow.")).
+			Run(); err != nil {
+			return err
+		}
+		if existingTarget == "new" {
+			existingTarget = ""
+		}
+	}
+
+	var targetName string
+	var target *workflow.Target
+	if existingTarget == "" {
+		// If we add multiple targets to one workflow file the out dir of a target cannot be the root dir
+		if err := prompts.MoveOutDir(workflowFile, existingTargets); err != nil {
+			return err
+		}
+
+		targetName, target, err = prompts.PromptForNewTarget(workflowFile, "", "", "")
+		if err != nil {
+			return err
+		}
+
+		workflowFile.Targets[targetName] = *target
+	}
 
 	targetConfig, err := prompts.PromptForTargetConfig(targetName, target)
 	if err != nil {
