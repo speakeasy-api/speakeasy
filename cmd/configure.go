@@ -3,11 +3,14 @@ package cmd
 import (
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/spf13/cobra"
@@ -43,7 +46,8 @@ func configureInit() {
 }
 
 func configureSourcesInit() {
-	configureSourcesCmd.Flags().StringP("name", "n", "", "the name of the source to configure")
+	configureSourcesCmd.Flags().StringP("id", "i", "", "the name of an existing target to configure")
+	configureSourcesCmd.Flags().BoolP("new", "n", false, "configure a new target")
 
 	configureCmd.AddCommand(configureSourcesCmd)
 }
@@ -57,7 +61,12 @@ func configureSources(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	name, err := cmd.Flags().GetString("name")
+	id, err := cmd.Flags().GetString("id")
+	if err != nil {
+		return err
+	}
+
+	newSource, err := cmd.Flags().GetBool("new")
 	if err != nil {
 		return err
 	}
@@ -76,17 +85,41 @@ func configureSources(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	var existingSourceName string
 	var existingSource *workflow.Source
-	if source, ok := workflowFile.Sources[name]; ok {
+	if source, ok := workflowFile.Sources[id]; ok {
+		existingSourceName = id
 		existingSource = &source
 	}
 
-	if existingSource != nil {
-		source, err := prompts.AddToSource(name, existingSource)
-		if err != nil {
-			return errors.Wrapf(err, "failed to add to source %s", name)
+	var sourceOptions []string
+	for sourceName := range workflowFile.Sources {
+		sourceOptions = append(sourceOptions, sourceName)
+	}
+	sourceOptions = append(sourceOptions, "new")
+
+	if !newSource && existingSource == nil {
+		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
+		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
+			"Let's configure a source for your workflow.")).
+			Run(); err != nil {
+			return err
 		}
-		workflowFile.Sources[name] = *source
+		if existingSourceName == "new" {
+			existingSourceName = ""
+		} else {
+			if source, ok := workflowFile.Sources[existingSourceName]; ok {
+				existingSource = &source
+			}
+		}
+	}
+
+	if existingSource != nil {
+		source, err := prompts.AddToSource(existingSourceName, existingSource)
+		if err != nil {
+			return errors.Wrapf(err, "failed to add to source %s", existingSourceName)
+		}
+		workflowFile.Sources[existingSourceName] = *source
 	} else {
 		newName, source, err := prompts.PromptForNewSource(workflowFile)
 		if err != nil {

@@ -14,6 +14,14 @@ func NewBranchPrompt(title string, output *bool) *huh.Group {
 		Value(output))
 }
 
+func NewSelectPrompt(title string, description string, options []string, output *string) *huh.Group {
+	return huh.NewGroup(huh.NewSelect[string]().
+		Title(title).
+		Description(description + "\n").
+		Options(huh.NewOptions(options...)...).
+		Value(output))
+}
+
 func FormatCommandTitle(title string, description string) string {
 	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
 	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
