@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/spf13/cobra"
 )
@@ -98,10 +100,16 @@ func validateOpenAPI(cmd *cobra.Command, args []string) error {
 		OutputHints: outputHints,
 	}
 
-	if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, header, token, limits); err != nil {
-		rootCmd.SilenceUsage = true
+	if !utils.IsInteractive() || env.IsGithubAction() {
+		if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, header, token, limits); err != nil {
+			rootCmd.SilenceUsage = true
 
-		return err
+			return err
+		}
+	} else {
+		if err := validation.ValidateWithInteractivity(cmd.Context(), schemaPath, header, token, limits); err != nil {
+			return err
+		}
 	}
 
 	uploadCommand := "speakeasy api register-schema --schema=" + schemaPath

@@ -1,6 +1,9 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+)
 
 var (
 	Margins = lipgloss.NewStyle().Margin(1, 2)
@@ -52,4 +55,17 @@ func LeftBorder(color lipgloss.TerminalColor) lipgloss.Style {
 		Border(lipgloss.NormalBorder(), false, false, false, true). // Left border only
 		BorderForeground(color).
 		PaddingLeft(1)
+}
+
+func SeverityToStyle(severity errors.Severity) lipgloss.Style {
+	switch severity {
+	case errors.SeverityError:
+		return Error
+	case errors.SeverityWarn:
+		return Warning
+	case errors.SeverityHint:
+		return Info
+	default:
+		return Info
+	}
 }
