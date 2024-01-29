@@ -167,6 +167,12 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	sb.WriteString(fmt.Sprintf("%s %s\n", errAndLine, styles.Dimmed.Render(err.Rule)))
 	sb.WriteString(err.Message)
 	sb.WriteString("\n\n")
+
+	if err.LineNumber == -1 {
+		sb.WriteString(styles.Dimmed.Render("This error does not apply to any specific line."))
+		return sb.String()
+	}
+
 	sb.WriteString(styles.Emphasized.Render("Surrounding Lines:"))
 	sb.WriteString("\n")
 
