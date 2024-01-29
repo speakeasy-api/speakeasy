@@ -13,6 +13,9 @@ func updateInit(version, artifactArch string) {
 		Short: "Update the Speakeasy CLI to the latest version",
 		Long:  `Updates the Speakeasy CLI in-place to the latest version available by downloading from Github and replacing the current binary`,
 		RunE:  update(version, artifactArch),
+		Annotations: map[string]string{
+			"hide": "true",
+		},
 	}
 
 	updateCmd.Flags().IntP("timeout", "t", 30, "timeout in seconds for the update to complete")

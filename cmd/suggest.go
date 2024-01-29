@@ -3,13 +3,14 @@ package cmd
 import (
 	goerr "errors"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/suggestions"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
-	"os"
-	"strings"
 )
 
 var suggestCmd = &cobra.Command{
@@ -19,6 +20,9 @@ var suggestCmd = &cobra.Command{
 You can use the Speakeasy OpenAI key within our platform limits, or you may set your own using the OPENAI_API_KEY environment variable. You will also need to authenticate with the Speakeasy API,
 you must first create an API key via https://app.speakeasyapi.dev and then set the SPEAKEASY_API_KEY environment variable to the value of the API key.`,
 	RunE: suggestFixesOpenAPI,
+	Annotations: map[string]string{
+		"hide": "true",
+	},
 }
 
 var severities = fmt.Sprintf("%s, %s, or %s", errors.SeverityError, errors.SeverityWarn, errors.SeverityHint)

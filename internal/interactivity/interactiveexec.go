@@ -222,5 +222,6 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 }
 
 func isHidden(cmd *cobra.Command) bool {
-	return cmd.Hidden || cmd.Name() == "completion"
+	_, hasHiddenAnnotation := cmd.Annotations["hide"]
+	return cmd.Hidden || hasHiddenAnnotation || cmd.Name() == "completion" || cmd.Name() == "help"
 }

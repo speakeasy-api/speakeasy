@@ -10,11 +10,13 @@ import (
 )
 
 var proxyCmd = &cobra.Command{
-	Use:    "proxy",
-	Short:  "Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities",
-	Long:   `Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities`,
-	RunE:   proxyExec,
-	Hidden: true,
+	Use:   "proxy",
+	Short: "Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities",
+	Long:  `Proxy provides a reverse-proxy for debugging and testing Speakeasy's Traffic Capture capabilities`,
+	RunE:  proxyExec,
+	Annotations: map[string]string{
+		"hide": "true",
+	},
 }
 
 func proxyInit() {
