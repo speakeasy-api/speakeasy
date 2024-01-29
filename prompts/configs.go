@@ -23,7 +23,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.
 	var sdkClassName string
 	configFields := []huh.Field{
 		huh.NewInput().
-			Title("Name your SDK object:").
+			Title("Name your SDK:").
 			Placeholder("your users will access SDK methods with <sdk_name>.doThing()").
 			Inline(true).
 			Prompt(" ").
@@ -85,26 +85,14 @@ var languageSpecificPrompts = map[string][]configPrompt{
 			Key:    "packageName",
 			Prompt: "Choose a npm package name:",
 		},
-		{
-			Key:    "author",
-			Prompt: "Choose an author of the published package:",
-		},
 	},
 	"python": {
 		{
 			Key:    "packageName",
 			Prompt: "Choose a PyPI package name:",
 		},
-		{
-			Key:    "author",
-			Prompt: "Choose an author of the published package:",
-		},
 	},
 	"java": {
-		{
-			Key:    "projectName",
-			Prompt: "Choose a Gradle rootProject.name, which gives a name to the Gradle build:",
-		},
 		{
 			Key:    "groupID",
 			Prompt: "Choose a groupID to use for namespacing the package. This is usually the reversed domain name of your organization:",
@@ -114,16 +102,7 @@ var languageSpecificPrompts = map[string][]configPrompt{
 			Prompt: "Choose a artifactID to use for namespacing the package. This is usually the name of your project:",
 		},
 	},
-	"terraform": {
-		{
-			Key:    "packageName",
-			Prompt: "Choose a terraform provider package name:",
-		},
-		{
-			Key:    "author",
-			Prompt: "Choose an author of the published provider:",
-		},
-	},
+	"terraform": {},
 	"docs": {
 		{
 			Key:    "defaultLanguage",

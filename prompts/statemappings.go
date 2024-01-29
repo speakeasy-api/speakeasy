@@ -14,6 +14,12 @@ type Quickstart struct {
 	WorkflowFile    *workflow.Workflow
 	LanguageConfigs map[string]*config.Configuration
 	GithubWorkflow  *config.GenerateWorkflow
+	Defaults        Defaults
+}
+
+type Defaults struct {
+	SchemaPath *string
+	TargetType *string
 }
 
 // Define constants using iota
