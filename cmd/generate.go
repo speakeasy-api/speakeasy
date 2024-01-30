@@ -138,6 +138,7 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 			Hidden:      true,
 		},
 	},
+	NonInteractiveSubcommands: []model.Command{genSDKVersionCmd, genSDKChangelogCmd},
 }
 
 type GenerateUsageSnippetFlags struct {

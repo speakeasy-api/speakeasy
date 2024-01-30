@@ -52,6 +52,9 @@ type ExecutableCommand[F interface{}] struct {
 	Run                  func(ctx context.Context, flags F) error
 	RunInteractive       func(ctx context.Context, flags F) error
 	Hidden, RequiresAuth bool
+
+	// Deprecated: try to avoid using this
+	NonInteractiveSubcommands []Command
 }
 
 func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
@@ -94,6 +97,14 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		PreRunE: interactivity.GetMissingFlagsPreRun,
 		RunE:    run,
 		Hidden:  c.Hidden,
+	}
+
+	for _, subcommand := range c.NonInteractiveSubcommands {
+		subcmd, err := subcommand.Init()
+		if err != nil {
+			return nil, err
+		}
+		cmd.AddCommand(subcmd)
 	}
 
 	for _, flag := range c.Flags {
