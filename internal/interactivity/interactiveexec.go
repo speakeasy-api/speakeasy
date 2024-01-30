@@ -208,7 +208,7 @@ func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
 }
 
 func isCommandRunnable(cmd *cobra.Command) bool {
-	onlyHasHelpFlags := cmd.Flags().HasFlags()
+	onlyHasHelpFlags := true
 
 	if cmd.Flags().HasFlags() {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
