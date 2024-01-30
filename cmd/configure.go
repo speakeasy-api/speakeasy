@@ -98,7 +98,7 @@ func configureSources(cmd *cobra.Command, args []string) error {
 	for sourceName := range workflowFile.Sources {
 		sourceOptions = append(sourceOptions, sourceName)
 	}
-	sourceOptions = append(sourceOptions, "new")
+	sourceOptions = append(sourceOptions, "new source")
 
 	if !newSource && existingSource == nil {
 		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
@@ -107,7 +107,7 @@ func configureSources(cmd *cobra.Command, args []string) error {
 			Run(); err != nil {
 			return err
 		}
-		if existingSourceName == "new" {
+		if existingSourceName == "new source" {
 			existingSourceName = ""
 		} else {
 			if source, ok := workflowFile.Sources[existingSourceName]; ok {
@@ -183,7 +183,7 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 	for targetName := range workflowFile.Targets {
 		existingTargets = append(existingTargets, targetName)
 	}
-	targetOptions := append(existingTargets, "new")
+	targetOptions := append(existingTargets, "new target")
 
 	if !newTarget && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
@@ -192,7 +192,7 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 			Run(); err != nil {
 			return err
 		}
-		if existingTarget == "new" {
+		if existingTarget == "new target" {
 			existingTarget = ""
 		}
 	}
