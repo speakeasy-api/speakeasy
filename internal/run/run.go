@@ -8,9 +8,12 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/term"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -93,7 +96,9 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		return nil
 	}
 
+	startTime := time.Now()
 	err = workflow.RunWithVisualization(runFnCli, updatesChannel)
+	endDuration := time.Since(startTime)
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
@@ -103,7 +108,12 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
 		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(termWidth - 8) // -8 because of padding
 		logsHeading := styles.Dimmed.Render("Workflow run logs")
-		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
+		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, "Hello")
+	}
+
+	if err == nil && runErr == nil {
+		timerStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).BorderForeground(styles.Colors.Green).Padding(0, 1).Foreground(styles.Colors.Green).Bold(true)
+		logger.PrintfStyled(timerStyle, "SDK Generated in %.1f Seconds 🎉", endDuration.Seconds())
 	}
 
 	return err
@@ -195,7 +205,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
 
-	rootStep.NewSubstep("Generating SDK")
+	rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 
 	if err := sdkgen.Generate(ctx, config.GetCustomerID(), config.GetWorkspaceID(), t.Target, sourcePath, "", "", outDir, genVersion, installationURL, debug, true, published, false, repo, repoSubDir, true); err != nil {
 		return err
