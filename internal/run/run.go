@@ -112,8 +112,22 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 	}
 
 	if err == nil && runErr == nil {
-		timerStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder(), true).BorderForeground(styles.Colors.Green).Padding(0, 1).Foreground(styles.Colors.Green).Bold(true)
-		logger.PrintfStyled(timerStyle, "SDK Generated in %.1f Seconds 🎉", endDuration.Seconds())
+		boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
+
+		t, err := getTarget(target)
+		if err != nil {
+			return err
+		}
+		tOut := ""
+		if t.Output != nil {
+			tOut = *t.Output
+		}
+
+		header := styles.Success.Render(utils.CapitalizeFirst(t.Target) + " SDK Generated Successfully 🎉")
+		output := styles.Dimmed.Render("✎ Output written to " + tOut)
+		dur := styles.DimmedItalic.Render(fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()))
+
+		logger.PrintfStyled(boxStyle, "%s\n%s\n%s", header, output, dur)
 	}
 
 	return err
@@ -169,6 +183,15 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 	}
 
 	return nil
+}
+
+func getTarget(target string) (*workflow.Target, error) {
+	wf, _, err := GetWorkflowAndDir()
+	if err != nil {
+		return nil, err
+	}
+	t := wf.Targets[target]
+	return &t, nil
 }
 
 func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
