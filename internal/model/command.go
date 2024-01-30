@@ -53,7 +53,7 @@ type ExecutableCommand[F interface{}] struct {
 	RunInteractive       func(ctx context.Context, flags F) error
 	Hidden, RequiresAuth bool
 
-	// Deprecated: try to avoid using this
+	// Deprecated: try to avoid using this. It is only present for backwards compatibility with the old CLI
 	NonInteractiveSubcommands []Command
 }
 
