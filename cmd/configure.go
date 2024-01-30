@@ -199,9 +199,10 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 
 	var targetName string
 	var target *workflow.Target
+	var targetConfig *config.Configuration
 	if existingTarget == "" {
 		// If we add multiple targets to one workflow file the out dir of a target cannot be the root dir
-		if err := prompts.MoveOutDir(workflowFile, existingTargets); err != nil {
+		if err := prompts.PromptForOutDirMigration(workflowFile, existingTargets); err != nil {
 			return err
 		}
 
@@ -211,11 +212,37 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 		}
 
 		workflowFile.Targets[targetName] = *target
-	}
 
-	targetConfig, err := prompts.PromptForTargetConfig(targetName, target)
-	if err != nil {
-		return err
+		targetConfig, err = prompts.PromptForTargetConfig(targetName, target, nil, false)
+		if err != nil {
+			return err
+		}
+	} else {
+		targetName, target, err = prompts.PromptForExistingTarget(workflowFile, existingTarget)
+		if err != nil {
+			return err
+		}
+
+		if targetName != existingTarget {
+			delete(workflowFile.Targets, existingTarget)
+		}
+
+		workflowFile.Targets[targetName] = *target
+
+		configDir := ""
+		if target.Output != nil {
+			configDir = *target.Output
+		}
+
+		var existingConfig *config.Configuration
+		if cfg, err := config.Load(configDir); err == nil {
+			existingConfig = cfg.Config
+		}
+
+		targetConfig, err = prompts.PromptForTargetConfig(targetName, target, existingConfig, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	outDir := workingDir

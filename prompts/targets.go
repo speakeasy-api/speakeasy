@@ -13,20 +13,27 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
-func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outDir *string) *huh.Group {
-	targetFields := []huh.Field{
-		huh.NewSelect[string]().
+func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outDir *string, newTarget bool) *huh.Group {
+	targetFields := []huh.Field{}
+	if newTarget {
+		targetFields = append(targetFields, huh.NewSelect[string]().
 			Title("Which target would you like to generate?").
 			Description("Choose from this list of supported generation targets. \n").
 			Options(huh.NewOptions(GetSupportedTargets()...)...).
-			Value(targetType),
+			Value(targetType))
 	}
-	if targetName == nil || *targetName == "" {
+
+	if !newTarget || targetName == nil || *targetName == "" {
+		originalTargetName := ""
+		if targetName != nil {
+			originalTargetName = *targetName
+		}
+
 		targetFields = append(targetFields,
 			charm.NewInput().
 				Title("What is a good name for this target?").
 				Validate(func(s string) error {
-					if _, ok := currentWorkflow.Targets[s]; ok {
+					if _, ok := currentWorkflow.Targets[s]; ok && s != originalTargetName {
 						return fmt.Errorf("a source with the name %s already exists", s)
 					}
 					return nil
@@ -83,7 +90,7 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetType, outDir string) (string, *workflow.Target, error) {
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
-	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir)
+	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
 		"Let's setup a new target for your workflow.",
 		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).
@@ -106,12 +113,46 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 	return targetName, &target, nil
 }
 
-func MoveOutDir(currentWorkflow *workflow.Workflow, existingTargets []string) error {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return err
+func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName string) (string, *workflow.Target, error) {
+	target, _ := currentWorkflow.Targets[targetName]
+	sourceName := target.Source
+	targetType := target.Target
+	outDir := ""
+	if target.Output != nil {
+		outDir = *target.Output
+	}
+	originalOutDir := outDir
+
+	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
+		"Let's setup a new target for your workflow.",
+		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).
+		Run(); err != nil {
+		return "", nil, err
 	}
 
+	newTarget := workflow.Target{
+		Target: targetType,
+		Source: sourceName,
+	}
+	if outDir != "" {
+		newTarget.Output = &outDir
+	}
+
+	if err := newTarget.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
+		return "", nil, errors.Wrap(err, "failed to validate source")
+	}
+
+	if originalOutDir != outDir {
+		if err := moveOutDir(outDir); err != nil {
+			return "", nil, errors.Wrap(err, "failed to move out dir")
+		}
+	}
+
+	return targetName, &newTarget, nil
+}
+
+func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTargets []string) error {
 	for _, targetName := range existingTargets {
 		if target, ok := currentWorkflow.Targets[targetName]; ok && (target.Output == nil || currentDir(*target.Output)) {
 			outDir := ""
@@ -138,26 +179,39 @@ func MoveOutDir(currentWorkflow *workflow.Workflow, existingTargets []string) er
 			target.Output = &outDir
 			currentWorkflow.Targets[targetName] = target
 
-			newSpeakeasyFolderPath := workingDir + "/" + outDir + "/" + ".speakeasy"
-			existingSpeakeasyFolderPath := workingDir + "/" + ".speakeasy"
-			if _, err := os.Stat(newSpeakeasyFolderPath); os.IsNotExist(err) {
-				err = os.MkdirAll(newSpeakeasyFolderPath, 0o755)
-				if err != nil {
-					return err
-				}
+			if err := moveOutDir(outDir); err != nil {
+				return errors.Wrap(err, "failed to move out dir")
 			}
+		}
+	}
 
-			if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.yaml"); err == nil {
-				if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.yaml", newSpeakeasyFolderPath+"/"+"gen.yaml"); err != nil {
-					return errors.Wrapf(err, "failed to copy config file")
-				}
-			}
+	return nil
+}
 
-			if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.lock"); err == nil {
-				if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.lock", newSpeakeasyFolderPath+"/"+"gen.yaml"); err != nil {
-					return errors.Wrapf(err, "failed to copy config file")
-				}
-			}
+func moveOutDir(outDir string) error {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	newSpeakeasyFolderPath := workingDir + "/" + outDir + "/" + ".speakeasy"
+	existingSpeakeasyFolderPath := workingDir + "/" + ".speakeasy"
+	if _, err := os.Stat(newSpeakeasyFolderPath); os.IsNotExist(err) {
+		err = os.MkdirAll(newSpeakeasyFolderPath, 0o755)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.yaml"); err == nil {
+		if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.yaml", newSpeakeasyFolderPath+"/"+"gen.yaml"); err != nil {
+			return errors.Wrapf(err, "failed to copy config file")
+		}
+	}
+
+	if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.lock"); err == nil {
+		if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.lock", newSpeakeasyFolderPath+"/"+"gen.yaml"); err != nil {
+			return errors.Wrapf(err, "failed to copy config file")
 		}
 	}
 

@@ -14,13 +14,22 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
-func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.Configuration, error) {
-	output, err := config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
-	if err != nil {
-		return nil, errors.Wrapf(err, "error generating config for target %s of type %s", targetName, target.Target)
+func PromptForTargetConfig(targetName string, target *workflow.Target, existingConfig *config.Configuration, isQuickstart bool) (*config.Configuration, error) {
+	var output *config.Configuration
+	if existingConfig != nil {
+		output = existingConfig
+	} else {
+		var err error
+		output, err = config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
+		if err != nil {
+			return nil, errors.Wrapf(err, "error generating config for target %s of type %s", targetName, target.Target)
+		}
 	}
 
 	var sdkClassName string
+	if !isQuickstart && output.Generation.SDKClassName != "" {
+		sdkClassName = output.Generation.SDKClassName
+	}
 	configFields := []huh.Field{
 		huh.NewInput().
 			Title("Name your SDK:").
@@ -29,7 +38,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.
 			Prompt(" ").
 			Value(&sdkClassName),
 	}
-	languageForms, err := languageSpecificForms(target.Target)
+	languageForms, err := languageSpecificForms(target.Target, output, isQuickstart)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +65,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target) (*config.
 
 func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	for key, target := range quickstart.WorkflowFile.Targets {
-		output, err := PromptForTargetConfig(key, &target)
+		output, err := PromptForTargetConfig(key, &target, nil, true)
 		if err != nil {
 			return nil, err
 		}
@@ -111,10 +120,17 @@ var languageSpecificPrompts = map[string][]configPrompt{
 	},
 }
 
-func languageSpecificForms(language string) ([]huh.Field, error) {
+func languageSpecificForms(language string, existingConfig *config.Configuration, isQuickstart bool) ([]huh.Field, error) {
 	t, err := generate.GetTargetFromTargetString(language)
 	if err != nil {
 		return nil, err
+	}
+
+	langConfig := config.LanguageConfig{}
+	if existingConfig != nil {
+		if conf, ok := existingConfig.Languages[language]; ok {
+			langConfig = conf
+		}
 	}
 
 	configFields, err := generate.GetLanguageConfigFields(t, true)
@@ -125,8 +141,8 @@ func languageSpecificForms(language string) ([]huh.Field, error) {
 	fields := []huh.Field{}
 	if prompts, ok := languageSpecificPrompts[language]; ok {
 		for _, prompt := range prompts {
-			if exists, defaultValue, validateRegex, validateMessage := getValuesForFieldName(configFields, prompt.Key); exists {
-				fields = append(fields, addPromptForField(prompt.Key, prompt.Prompt, defaultValue, validateRegex, validateMessage)...)
+			if exists, defaultValue, validateRegex, validateMessage := getValuesForFieldName(configFields, langConfig, prompt.Key); exists {
+				fields = append(fields, addPromptForField(prompt.Key, prompt.Prompt, defaultValue, validateRegex, validateMessage, isQuickstart)...)
 			}
 		}
 	}
@@ -134,7 +150,7 @@ func languageSpecificForms(language string) ([]huh.Field, error) {
 	return fields, nil
 }
 
-func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName string) (bool, string, string, string) {
+func getValuesForFieldName(configFields []config.SDKGenConfigField, langConfig config.LanguageConfig, fieldName string) (bool, string, string, string) {
 	var packageNameConfig *config.SDKGenConfigField
 	for _, field := range configFields {
 		if field.Name == fieldName {
@@ -151,6 +167,10 @@ func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName st
 		defaultValue, _ = (*packageNameConfig.DefaultValue).(string)
 	}
 
+	if value, ok := langConfig.Cfg[fieldName]; ok {
+		defaultValue, _ = (value).(string)
+	}
+
 	validationRegex := ""
 	if packageNameConfig.ValidationRegex != nil {
 		validationRegex = *packageNameConfig.ValidationRegex
@@ -165,24 +185,30 @@ func getValuesForFieldName(configFields []config.SDKGenConfigField, fieldName st
 	return true, defaultValue, validationRegex, validationMessage
 }
 
-func addPromptForField(key, question, defaultValue, validateRegex, validateMessage string) []huh.Field {
-	return []huh.Field{
-		charm.NewInput().
-			Key(key).
-			Title(question).
-			Placeholder(defaultValue).
-			Validate(func(s string) error {
-				if validateRegex != "" {
-					r, err := regexp.Compile(validateRegex)
-					if err != nil {
-						return err
-					}
-					if !r.MatchString(s) {
-						return errors.New(validateMessage)
-					}
+func addPromptForField(key, question, defaultValue, validateRegex, validateMessage string, isQuickstart bool) []huh.Field {
+	input := charm.NewInput().
+		Key(key).
+		Title(question).
+		Placeholder(defaultValue).
+		Validate(func(s string) error {
+			if validateRegex != "" {
+				r, err := regexp.Compile(validateRegex)
+				if err != nil {
+					return err
 				}
-				return nil
-			}),
+				if !r.MatchString(s) {
+					return errors.New(validateMessage)
+				}
+			}
+			return nil
+		})
+
+	if !isQuickstart && defaultValue != "" {
+		input.Value(&defaultValue)
+	}
+
+	return []huh.Field{
+		input,
 	}
 }
 
