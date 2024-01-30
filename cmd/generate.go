@@ -54,6 +54,7 @@ var (
 		Name:        "out",
 		Shorthand:   "o",
 		Description: "path to the output directory",
+		Required:    true,
 	}
 	debugFlag = model.BooleanFlag{
 		Name:        "debug",
