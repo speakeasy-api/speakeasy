@@ -17,7 +17,9 @@ speakeasy configure targets [flags]
 ### Options
 
 ```
-  -h, --help   help for targets
+  -h, --help        help for targets
+  -i, --id string   the name of an existing target to configure
+  -n, --new         configure a new target
 ```
 
 ### Options inherited from parent commands
