@@ -109,9 +109,10 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	RequiresAuth: true,
 	Flags: []model.Flag{
 		model.StringFlag{
-			Name:        "lang",
-			Shorthand:   "l",
-			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
+			Name:         "lang",
+			Shorthand:    "l",
+			DefaultValue: "go",
+			Description:  fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
 		},
 		schemaFlag,
 		outFlag,
