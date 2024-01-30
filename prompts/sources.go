@@ -203,7 +203,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 			return nil, err
 		}
 
-		currentSource.Overlays = append(currentSource.Inputs, *document)
+		currentSource.Overlays = append(currentSource.Overlays, *document)
 	}
 
 	return currentSource, nil
