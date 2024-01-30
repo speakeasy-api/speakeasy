@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/docsgen"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -485,5 +486,68 @@ func getChangelogs(cmd *cobra.Command, args []string) error {
 	}
 
 	logger.Printf(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	return nil
+}
+
+func genSDKDocsContent(cmd *cobra.Command, args []string) error {
+	languages := make([]string, 0)
+	langInput, _ := cmd.Flags().GetString("langs")
+	if langInput != "" {
+		for _, lang := range strings.Split(langInput, ",") {
+			languages = append(languages, strings.TrimSpace(lang))
+		}
+	}
+
+	schemaPath, err := cmd.Flags().GetString("schema")
+	if err != nil {
+		return err
+	}
+
+	header, err := cmd.Flags().GetString("header")
+	if err != nil {
+		return err
+	}
+
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		return err
+	}
+
+	outDir, err := cmd.Flags().GetString("out")
+	if err != nil {
+		return err
+	}
+
+	debug, err := cmd.Flags().GetBool("debug")
+	if err != nil {
+		return err
+	}
+
+	autoYes, err := cmd.Flags().GetBool("auto-yes")
+	if err != nil {
+		return err
+	}
+
+	compile, err := cmd.Flags().GetBool("compile")
+	if err != nil {
+		return err
+	}
+
+	repo, err := cmd.Flags().GetString("repo")
+	if err != nil {
+		return err
+	}
+
+	repoSubdir, err := cmd.Flags().GetString("repo-subdir")
+	if err != nil {
+		return err
+	}
+
+	if err := docsgen.GenerateContent(cmd.Context(), languages, config.GetCustomerID(), schemaPath, header, token, outDir, repo, repoSubdir, debug, autoYes, compile); err != nil {
+		rootCmd.SilenceUsage = true
+
+		return err
+	}
+
 	return nil
 }
