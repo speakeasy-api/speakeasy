@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -112,22 +111,21 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 	}
 
 	if err == nil && runErr == nil {
-		boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
-
 		t, err := getTarget(target)
 		if err != nil {
 			return err
 		}
-		tOut := ""
-		if t.Output != nil {
+		tOut := "the current directory"
+		if t.Output != nil && *t.Output != "" && *t.Output != "." {
 			tOut = *t.Output
 		}
 
-		header := styles.Success.Render(utils.CapitalizeFirst(t.Target) + " SDK Generated Successfully 🎉")
-		output := styles.Dimmed.Render("✎ Output written to " + tOut)
-		dur := styles.DimmedItalic.Render(fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()))
-
-		logger.PrintfStyled(boxStyle, "%s\n%s\n%s", header, output, dur)
+		msg := styles.RenderSuccessMessage(
+			t.Target+" SDK Generated Successfully",
+			"✎ Output written to "+tOut,
+			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+		)
+		logger.Println(msg)
 	}
 
 	return err

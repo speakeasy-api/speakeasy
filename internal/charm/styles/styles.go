@@ -3,6 +3,7 @@ package styles
 import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
 var (
@@ -68,4 +69,19 @@ func SeverityToStyle(severity errors.Severity) lipgloss.Style {
 	default:
 		return Info
 	}
+}
+
+func RenderSuccessMessage(heading string, additionalLines ...string) string {
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(Colors.Green).
+		Padding(0, 1).
+		AlignHorizontal(lipgloss.Center)
+
+	s := Success.Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + Dimmed.Render(line)
+	}
+
+	return boxStyle.Render(s)
 }
