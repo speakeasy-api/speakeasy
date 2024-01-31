@@ -2,17 +2,21 @@ package cmd
 
 import (
 	"context"
-	"github.com/speakeasy-api/speakeasy/internal/model"
+	"fmt"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/prompts"
 )
 
@@ -135,6 +139,7 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		}
 
 		workflowFile.Sources[newName] = *source
+		existingSourceName = newName
 	}
 
 	if err := workflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
@@ -151,6 +156,11 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 	if err := workflow.Save(workingDir, workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
+
+	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
+	success := styles.Success.Render(fmt.Sprintf("Successfully Configured the Source %s 🎉", existingSourceName))
+	logger := log.From(ctx)
+	logger.PrintfStyled(boxStyle, "%s", success)
 
 	return nil
 }
@@ -197,7 +207,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	var target *workflow.Target
 	var targetConfig *config.Configuration
 	if existingTarget == "" {
-		// If we add multiple targets to one workflow file the out dir of a target cannot be the root dir
+		// If a second target is added to an existing workflow file you must change the outdir of either target cannot be the root dir.
 		if err := prompts.PromptForOutDirMigration(workflowFile, existingTargets); err != nil {
 			return err
 		}
@@ -264,6 +274,11 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	if err := workflow.Save(workingDir, workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
+
+	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
+	success := styles.Success.Render(fmt.Sprintf("Successfully Configured the Target %s 🎉", targetName))
+	logger := log.From(ctx)
+	logger.PrintfStyled(boxStyle, "%s", success)
 
 	return nil
 }
