@@ -30,7 +30,7 @@ func init() {
 	f.TextInput.Text.Foreground(styles.Focused.GetForeground())
 
 	b := &t.Blurred
-	b.Description.Italic(true)
+	b.Description.Foreground(styles.Dimmed.GetForeground()).Italic(true).Inline(false)
 	b.TextInput.Placeholder.Italic(true)
 	b.SelectedOption.Foreground(styles.FocusedDimmed.GetForeground())
 	b.SelectSelector.Foreground(styles.FocusedDimmed.GetForeground())
