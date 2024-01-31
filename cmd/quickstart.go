@@ -128,7 +128,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	for key, outConfig := range quickstartObj.LanguageConfigs {
-		if err := config.SaveConfig(speakeasyFolderPath, outConfig); err != nil {
+		if err := config.SaveConfig(outDir, outConfig); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
 		}
 	}
