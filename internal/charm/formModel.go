@@ -1,6 +1,7 @@
 package charm
 
 import (
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
@@ -14,8 +15,10 @@ type Model struct {
 }
 
 func NewForm(form *huh.Form, args ...string) Model {
+	keyMap := huh.NewDefaultKeyMap()
+	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "complete"))
 	model := Model{
-		form: form.WithTheme(formTheme),
+		form: form.WithTheme(formTheme).WithKeyMap(keyMap),
 	}
 
 	if len(args) > 0 {
