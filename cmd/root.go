@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
 	"slices"
 	"strings"
@@ -45,11 +46,13 @@ func init() {
 func Init(version, artifactArch string) {
 	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
 
-	quickstartInit()
-	runInit()
-	configureInit()
-	genInit()
-	validateInit()
+	//TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
+	addCommand(rootCmd, quickstartCmd)
+	addCommand(rootCmd, runCmd)
+	addCommand(rootCmd, configureCmd)
+	addCommand(rootCmd, generateCmd)
+	addCommand(rootCmd, validateCmd)
+
 	authInit()
 	mergeInit()
 	overlayInit()
@@ -57,6 +60,15 @@ func Init(version, artifactArch string) {
 	updateInit(version, artifactArch)
 	proxyInit()
 	apiInit()
+}
+
+func addCommand(cmd *cobra.Command, command model.Command) {
+	c, err := command.Init()
+	if err != nil {
+		l.Error("", zap.Error(err))
+		os.Exit(1)
+	}
+	cmd.AddCommand(c)
 }
 
 func Execute(version, artifactArch string) {
