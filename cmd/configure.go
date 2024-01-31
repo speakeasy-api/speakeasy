@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,65 +13,69 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
-	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/prompts"
-	"github.com/spf13/cobra"
 )
 
-var configureCmd = &cobra.Command{
-	Use:   "configure",
-	Short: "Configure your Speakeasy SDK Setup.",
-	Long:  `Configure your Speakeasy SDK Setup.`,
-	RunE:  interactivity.InteractiveRunFn("What do you want to configure?"),
+var configureCmd = &model.CommandGroup{
+	Usage:          "configure",
+	Short:          "Configure your Speakeasy SDK Setup.",
+	Long:           `Configure your Speakeasy SDK Setup.`,
+	InteractiveMsg: "What do you want to configure?",
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd},
 }
 
-var configureSourcesCmd = &cobra.Command{
-	Use:     "sources",
-	Short:   "Configure new or existing sources.",
-	Long:    "Guided prompts to configure a new or existing source in your speakeasy workflow.",
-	PreRunE: interactivity.GetMissingFlagsPreRun,
-	RunE:    configureSources,
+type ConfigureSourcesFlags struct {
+	ID  string `json:"id"`
+	New bool   `json:"new"`
 }
 
-var configureTargetCmd = &cobra.Command{
-	Use:     "targets",
-	Short:   "Configure new target.",
-	Long:    "Guided prompts to configure a new target in your speakeasy workflow.",
-	PreRunE: interactivity.GetMissingFlagsPreRun,
-	RunE:    configureTarget,
+var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
+	Usage:        "sources",
+	Short:        "Configure new or existing sources.",
+	Long:         "Guided prompts to configure a new or existing source in your speakeasy workflow.",
+	Run:          configureSources,
+	RequiresAuth: true,
+	Flags: []model.Flag{
+		model.StringFlag{
+			Name:        "id",
+			Shorthand:   "i",
+			Description: "the name of an existing source to configure",
+		},
+		model.BooleanFlag{
+			Name:        "new",
+			Shorthand:   "n",
+			Description: "configure a new source",
+		},
+	},
 }
 
-func configureInit() {
-	rootCmd.AddCommand(configureCmd)
-	configureSourcesInit()
-	configureTargetInit()
+type ConfigureTargetFlags struct {
+	ID  string `json:"id"`
+	New bool   `json:"new"`
 }
 
-func configureSourcesInit() {
-	configureSourcesCmd.Flags().StringP("id", "i", "", "the name of an existing target to configure")
-	configureSourcesCmd.Flags().BoolP("new", "n", false, "configure a new target")
-
-	configureCmd.AddCommand(configureSourcesCmd)
+var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
+	Usage:        "targets",
+	Short:        "Configure new target.",
+	Long:         "Guided prompts to configure a new target in your speakeasy workflow.",
+	Run:          configureTarget,
+	RequiresAuth: true,
+	Flags: []model.Flag{
+		model.StringFlag{
+			Name:        "id",
+			Shorthand:   "i",
+			Description: "the name of an existing target to configure",
+		},
+		model.BooleanFlag{
+			Name:        "new",
+			Shorthand:   "n",
+			Description: "configure a new target",
+		},
+	},
 }
 
-func configureTargetInit() {
-	configureTargetCmd.Flags().StringP("id", "i", "", "the name of an existing target to configure")
-	configureTargetCmd.Flags().BoolP("new", "n", false, "configure a new target")
-	configureCmd.AddCommand(configureTargetCmd)
-}
-
-func configureSources(cmd *cobra.Command, args []string) error {
-	if err := auth.Authenticate(cmd.Context(), false); err != nil {
-		return err
-	}
-
-	id, err := cmd.Flags().GetString("id")
-	if err != nil {
-		return err
-	}
-
-	newSource, err := cmd.Flags().GetBool("new")
-	if err != nil {
+func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
+	if err := auth.Authenticate(ctx, false); err != nil {
 		return err
 	}
 
@@ -89,8 +95,8 @@ func configureSources(cmd *cobra.Command, args []string) error {
 
 	var existingSourceName string
 	var existingSource *workflow.Source
-	if source, ok := workflowFile.Sources[id]; ok {
-		existingSourceName = id
+	if source, ok := workflowFile.Sources[flags.ID]; ok {
+		existingSourceName = flags.ID
 		existingSource = &source
 	}
 
@@ -100,7 +106,7 @@ func configureSources(cmd *cobra.Command, args []string) error {
 	}
 	sourceOptions = append(sourceOptions, "new source")
 
-	if !newSource && existingSource == nil {
+	if !flags.New && existingSource == nil {
 		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
 		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
 			"Let's configure a source for your workflow.")).
@@ -149,18 +155,8 @@ func configureSources(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func configureTarget(cmd *cobra.Command, args []string) error {
-	if err := auth.Authenticate(cmd.Context(), false); err != nil {
-		return err
-	}
-
-	id, err := cmd.Flags().GetString("id")
-	if err != nil {
-		return err
-	}
-
-	newTarget, err := cmd.Flags().GetBool("new")
-	if err != nil {
+func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
+	if err := auth.Authenticate(ctx, false); err != nil {
 		return err
 	}
 
@@ -175,8 +171,8 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 	}
 
 	existingTarget := ""
-	if _, ok := workflowFile.Targets[id]; ok {
-		existingTarget = id
+	if _, ok := workflowFile.Targets[flags.ID]; ok {
+		existingTarget = flags.ID
 	}
 
 	var existingTargets []string
@@ -185,7 +181,7 @@ func configureTarget(cmd *cobra.Command, args []string) error {
 	}
 	targetOptions := append(existingTargets, "new target")
 
-	if !newTarget && existingTarget == "" {
+	if !flags.New && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
 		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
 			"Let's configure a target for your workflow.")).

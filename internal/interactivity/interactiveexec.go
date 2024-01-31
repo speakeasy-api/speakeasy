@@ -56,10 +56,9 @@ func SelectCommand(label string, cmd *cobra.Command) *cobra.Command {
 		}
 	}
 
-	// TODO figure out a better way to do this
+	// Don't ask for subcommands if the command itself is runnable
 	if isCommandRunnable(cmd) {
-		label = fmt.Sprintf("Continue with %s, or select a subcommand.", cmd.Name())
-		subcommands = append([]*cobra.Command{cmd}, subcommands...)
+		return cmd
 	}
 
 	selected := getSelectionFromList(label, subcommands)
@@ -208,7 +207,7 @@ func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
 }
 
 func isCommandRunnable(cmd *cobra.Command) bool {
-	onlyHasHelpFlags := cmd.Flags().HasFlags()
+	onlyHasHelpFlags := true
 
 	if cmd.Flags().HasFlags() {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
