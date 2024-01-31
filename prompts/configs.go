@@ -79,6 +79,23 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			Value(&baseServerURL))
 	}
 
+	var docsLanguages []string
+	if target.Target == "docs" {
+		if existingConfig != nil {
+			if docsCfg, ok := existingConfig.Languages["docs"]; ok {
+				docsLanguages = docsCfg.Cfg["docsLanguages"].([]string)
+			}
+		}
+
+		configFields = append(configFields, // Let the user select multiple toppings.
+			huh.NewMultiSelect[string]().
+				Title("Select your SDK Docs Languages:").
+				Description("These languages will appear as options in your generated SDK Docs site.").
+				// TODO: Replace with a reference to openapi-generation when accompanying PR is merged
+				Options(huh.NewOptions("go", "typescript", "python", "java", "unity", "csharp", "curl")...).
+				Value(&docsLanguages))
+	}
+
 	t, err := generate.GetTargetFromTargetString(target.Target)
 	if err != nil {
 		return nil, err
@@ -109,6 +126,9 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 
 	output.Generation.SDKClassName = sdkClassName
 	output.Generation.BaseServerURL = baseServerURL
+	if target.Target == "docs" {
+		output.Languages["docs"].Cfg["docsLanguages"] = docsLanguages
+	}
 
 	saveLanguageConfigValues(target.Target, form, output, appliedKeys, defaultConfigs)
 
