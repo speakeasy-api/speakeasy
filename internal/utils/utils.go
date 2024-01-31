@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"unicode"
 
 	"golang.org/x/term"
 )
@@ -65,4 +66,13 @@ func MoveFile(src, dst string) error {
 
 	err = os.Remove(src)
 	return err
+}
+
+func CapitalizeFirst(s string) string {
+	if s == "" {
+		return ""
+	}
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
 }
