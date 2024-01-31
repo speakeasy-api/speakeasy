@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/manifoldco/promptui"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -11,6 +9,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
+	"strings"
 )
 
 var runCmd = &cobra.Command{
