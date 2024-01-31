@@ -15,13 +15,14 @@ import (
 	"go.uber.org/zap"
 )
 
-var supportSDKDocsLanguages map[string]bool = map[string]bool{
+var SupportSDKDocsLanguages map[string]bool = map[string]bool{
 	"go":         true,
 	"python":     true,
 	"typescript": true,
 	"csharp":     true,
 	"unity":      true,
 	"java":       true,
+	"curl":       true,
 }
 
 func GenerateContent(ctx context.Context, inputLangs []string, customerID, schemaPath, header, token, outDir, repo, repoSubDir string, debug, autoYes, compile bool) error {
@@ -31,7 +32,7 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		if lang == "curl" {
 			hasCurl = true
 		} else {
-			if _, ok := supportSDKDocsLanguages[lang]; !ok {
+			if _, ok := SupportSDKDocsLanguages[lang]; !ok {
 				return fmt.Errorf("language %s is not supported in SDK docs", lang)
 			}
 

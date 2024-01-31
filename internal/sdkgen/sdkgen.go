@@ -6,7 +6,9 @@ import (
 	"os"
 	"strings"
 
+	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/docsgen"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
@@ -64,6 +66,12 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		generate.WithCleanDir(),
 	}
 
+	if lang == "docs" {
+		if opt := processDocsCfg(outDir); opt != nil {
+			opts = append(opts, opt)
+		}
+	}
+
 	if debug {
 		opts = append(opts, generate.WithDebuggingEnabled())
 	}
@@ -90,6 +98,30 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	logger.Successf("\nSDK for %s generated successfully ✓", lang)
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
+
+	return nil
+}
+
+func processDocsCfg(outDir string) generate.GeneratorOptions {
+	var configLanguages []string
+	if cfg, err := config.Load(outDir); err == nil {
+		if docsCfg, ok := cfg.Config.Languages["docs"]; ok {
+			if langs, ok := docsCfg.Cfg["docsLanguages"]; ok {
+				configLanguages = langs.([]string)
+			}
+		}
+	}
+
+	var docsLanguages []string
+	for _, lang := range configLanguages {
+		if _, ok := docsgen.SupportSDKDocsLanguages[lang]; ok {
+			docsLanguages = append(docsLanguages, lang)
+		}
+	}
+
+	if len(docsLanguages) != 0 {
+		return generate.WithSDKDocLanguages(docsLanguages...)
+	}
 
 	return nil
 }
