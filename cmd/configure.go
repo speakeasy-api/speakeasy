@@ -170,8 +170,6 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return err
 	}
 
-	os.Chdir("go")
-
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
