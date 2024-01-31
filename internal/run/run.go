@@ -107,7 +107,7 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
 		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(termWidth - 8) // -8 because of padding
 		logsHeading := styles.Dimmed.Render("Workflow run logs")
-		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, "Hello")
+		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
 	}
 
 	if err == nil && runErr == nil {
