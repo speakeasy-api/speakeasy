@@ -83,7 +83,11 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	if target.Target == "docs" {
 		if existingConfig != nil {
 			if docsCfg, ok := existingConfig.Languages["docs"]; ok {
-				docsLanguages = docsCfg.Cfg["docsLanguages"].([]string)
+				if langs, ok := docsCfg.Cfg["docsLanguages"]; ok {
+					for _, lang := range langs.([]interface{}) {
+						docsLanguages = append(docsLanguages, lang.(string))
+					}
+				}
 			}
 		}
 
