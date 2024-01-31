@@ -121,7 +121,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 	if target.Output != nil {
 		outDir = *target.Output
 	}
-	originalOutDir := outDir
+	originalDir := outDir
 
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
@@ -143,8 +143,8 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 		return "", nil, errors.Wrap(err, "failed to validate source")
 	}
 
-	if originalOutDir != outDir {
-		if err := moveOutDir(outDir); err != nil {
+	if originalDir != outDir {
+		if err := moveOutDir(outDir, originalDir); err != nil {
 			return "", nil, errors.Wrap(err, "failed to move out dir")
 		}
 	}
@@ -159,6 +159,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 			if target.Output != nil {
 				outDir = *target.Output
 			}
+			originalDir := outDir
 
 			if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
@@ -179,7 +180,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 			target.Output = &outDir
 			currentWorkflow.Targets[targetName] = target
 
-			if err := moveOutDir(outDir); err != nil {
+			if err := moveOutDir(outDir, originalDir); err != nil {
 				return errors.Wrap(err, "failed to move out dir")
 			}
 		}
@@ -188,14 +189,14 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 	return nil
 }
 
-func moveOutDir(outDir string) error {
+func moveOutDir(outDir string, previousDir string) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
 	newSpeakeasyFolderPath := workingDir + "/" + outDir + "/" + ".speakeasy"
-	existingSpeakeasyFolderPath := workingDir + "/" + ".speakeasy"
+	existingSpeakeasyFolderPath := workingDir + "/" + previousDir + "/" + ".speakeasy"
 	if _, err := os.Stat(newSpeakeasyFolderPath); os.IsNotExist(err) {
 		err = os.MkdirAll(newSpeakeasyFolderPath, 0o755)
 		if err != nil {
@@ -210,7 +211,7 @@ func moveOutDir(outDir string) error {
 	}
 
 	if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.lock"); err == nil {
-		if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.lock", newSpeakeasyFolderPath+"/"+"gen.yaml"); err != nil {
+		if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.lock", newSpeakeasyFolderPath+"/"+"gen.lock"); err != nil {
 			return errors.Wrapf(err, "failed to copy config file")
 		}
 	}
