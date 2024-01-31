@@ -44,6 +44,16 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 		return err
 	}
 
+	if len(vErrs) == 0 && len(vWarns) == 0 && len(vInfo) == 0 {
+		msg := styles.RenderSuccessMessage(
+			"OpenAPI Document Valid",
+			"0 errors, 0 warnings, 0 hints",
+			fmt.Sprintf("Try %s %s", styles.HeavilyEmphasized.Render("speakeasy quickstart"), styles.Dimmed.Render("to generate an SDK")),
+		)
+		logger.Println(msg)
+		return nil
+	}
+
 	var tabs []interactivity.Tab
 	tabs = append(tabs, interactivity.Tab{
 		Title:       fmt.Sprintf("Errors (%d)", len(vErrs)),
