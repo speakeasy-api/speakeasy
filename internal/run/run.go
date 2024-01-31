@@ -115,7 +115,7 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		if err != nil {
 			return err
 		}
-		tOut := "current directory"
+		tOut := "the current directory"
 		if t.Output != nil && *t.Output != "" && *t.Output != "." {
 			tOut = *t.Output
 		}
