@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
 	"strings"
 
@@ -10,55 +12,52 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/prompts"
-	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
-var quickstartCmd = &cobra.Command{
-	Use:   "quickstart",
-	Short: "Guided setup to help you create a new SDK in minutes.",
-	Long:  `Guided setup to help you create a new SDK in minutes.`,
-	RunE:  quickstartExec,
+type QuickstartFlags struct {
+	ShouldCompile bool   `json:"compile"`
+	Schema        string `json:"schema"`
+	OutDir        string `json:"out-dir"`
+	TargetType    string `json:"target"`
 }
 
-func quickstartInit() {
-	quickstartCmd.Flags().BoolP("compile", "c", true, "run SDK validation and generation after quickstart")
-	quickstartCmd.Flags().StringP("schema", "s", "", "local filepath or URL for the OpenAPI schema")
-	quickstartCmd.Flags().StringP("out-dir", "o", "", "output directory for the quickstart command")
-	quickstartCmd.Flags().StringP("target", "t", "", fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")))
-	rootCmd.AddCommand(quickstartCmd)
+var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
+	Usage:        "quickstart",
+	Short:        "Guided setup to help you create a new SDK in minutes.",
+	Long:         `Guided setup to help you create a new SDK in minutes.`,
+	Run:          quickstartExec,
+	RequiresAuth: true,
+	Flags: []model.Flag{
+		model.BooleanFlag{
+			Name:         "compile",
+			Shorthand:    "c",
+			Description:  "run SDK validation and generation after quickstart",
+			DefaultValue: true,
+		},
+		model.StringFlag{
+			Name:        "schema",
+			Shorthand:   "s",
+			Description: "local filepath or URL for the OpenAPI schema",
+		},
+		model.StringFlag{
+			Name:        "out-dir",
+			Shorthand:   "o",
+			Description: "output directory for the quickstart command",
+		},
+		model.StringFlag{
+			Name:        "target",
+			Shorthand:   "t",
+			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")),
+		},
+	},
 }
 
-func quickstartExec(cmd *cobra.Command, args []string) error {
-	if err := auth.Authenticate(cmd.Context(), false); err != nil {
-		return err
-	}
-
-	shouldCompile, err := cmd.Flags().GetBool("compile")
-	if err != nil {
-		return err
-	}
-
-	schemaPath, err := cmd.Flags().GetString("schema")
-	if err != nil {
-		return err
-	}
-
-	targetType, err := cmd.Flags().GetString("target")
-	if err != nil {
-		return err
-	}
-
-	outDir, err := cmd.Flags().GetString("out-dir")
-	if err != nil {
-		return err
-	}
-
+func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -81,12 +80,12 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		LanguageConfigs: make(map[string]*config.Configuration),
 	}
 
-	if schemaPath != "" {
-		quickstartObj.Defaults.SchemaPath = &schemaPath
+	if flags.Schema != "" {
+		quickstartObj.Defaults.SchemaPath = &flags.Schema
 	}
 
-	if targetType != "" {
-		quickstartObj.Defaults.TargetType = &targetType
+	if flags.TargetType != "" {
+		quickstartObj.Defaults.TargetType = &flags.TargetType
 	}
 
 	nextState := prompts.SourceBase
@@ -103,6 +102,7 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
+	outDir := flags.OutDir
 	for _, target := range quickstartObj.WorkflowFile.Targets {
 		if outDir == "" {
 			outDir = workingDir + "/" + defaultOutDir(target.Target)
@@ -165,13 +165,13 @@ func quickstartExec(cmd *cobra.Command, args []string) error {
 		break
 	}
 
-	if shouldCompile {
+	if flags.ShouldCompile {
 		// Change working directory to our output directory
 		if err := os.Chdir(outDir); err != nil {
 			return errors.Wrapf(err, "failed to run speakeasy generate")
 		}
 
-		if err = run.RunWithVisualization(cmd.Context(), initialTarget, "", genVersion, "", "", "", false); err != nil {
+		if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false); err != nil {
 			return errors.Wrapf(err, "failed to run speakeasy generate")
 		}
 	}

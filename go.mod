@@ -74,6 +74,7 @@ require (
 	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/evanw/esbuild v0.19.5 // indirect
 	github.com/fatih/color v1.14.1 // indirect
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
