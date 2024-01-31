@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -34,7 +36,8 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 			charm_internal.NewInput().
 				Title("What is the location of your OpenAPI document?").
 				Placeholder("local file path or remote file reference.").
-				Value(fileLocation),
+				Value(fileLocation).
+				Suggestions(schemaFilesInCurrentDir()),
 		)
 	}
 
@@ -95,7 +98,8 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, auth
 			charm_internal.NewInput().
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
-				Value(overlayLocation),
+				Value(overlayLocation).
+				Suggestions(schemaFilesInCurrentDir()),
 		).WithHideFunc(func() bool {
 			return !*promptForOverlay
 		}),
@@ -222,7 +226,8 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 		charm_internal.NewInput().
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
-			Value(&outputLocation),
+			Value(&outputLocation).
+			Suggestions(schemaFilesInCurrentDir()),
 	).WithHideFunc(
 		func() bool {
 			return len(currentWorkflow.Sources) == 0
@@ -282,4 +287,26 @@ func formatDocument(fileLocation, authHeader, authSecret string, validate bool) 
 	}
 
 	return document, nil
+}
+
+// Populates tab complete for schema files in the current directory
+func schemaFilesInCurrentDir() []string {
+	var validFiles []string
+	dir, err := os.Getwd()
+	if err != nil {
+		return validFiles
+	}
+
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return validFiles
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && (strings.HasSuffix(file.Name(), ".yaml") || strings.HasSuffix(file.Name(), ".yml") || strings.HasSuffix(file.Name(), ".json")) {
+			validFiles = append(validFiles, file.Name())
+		}
+	}
+
+	return validFiles
 }
