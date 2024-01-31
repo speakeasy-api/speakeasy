@@ -12,7 +12,6 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -79,10 +78,6 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 }
 
 func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
-	if err := auth.Authenticate(ctx, false); err != nil {
-		return err
-	}
-
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -166,10 +161,6 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 }
 
 func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
-	if err := auth.Authenticate(ctx, false); err != nil {
-		return err
-	}
-
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
