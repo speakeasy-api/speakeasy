@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
 	"slices"
 	"strings"
@@ -80,6 +82,8 @@ func Execute(version, artifactArch string) {
 		if cmd.Name() != "update" {
 			checkForUpdate(cmd, version, artifactArch)
 		}
+
+		cmd.SetContext(events.SetSpeakeasyVersionInContext(cmd.Context(), version))
 
 		if err := setLogLevel(cmd); err != nil {
 			return

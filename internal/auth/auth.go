@@ -8,18 +8,17 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
-// Authenticate returns the workspace ID
-func Authenticate(force bool) (string, error) {
-	existingKey, preferExisting := config.GetSpeakeasyAPIKey()
-	res, err := core.Authenticate(existingKey, preferExisting, force)
+func Authenticate(ctx context.Context, force bool) (context.Context, error) {
+	existingKey := config.GetSpeakeasyAPIKey()
+	authCtx, res, err := core.Authenticate(ctx, existingKey, force)
 	if err != nil {
-		return "", err
+		return authCtx, err
 	}
 	if err := config.SetSpeakeasyAuthInfo(res); err != nil {
-		return "", fmt.Errorf("failed to save API key: %w", err)
+		return authCtx, fmt.Errorf("failed to save API key: %w", err)
 	}
 
-	return res.WorkspaceID, nil
+	return authCtx, nil
 }
 
 func Logout(ctx context.Context) error {
