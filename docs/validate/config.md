@@ -2,7 +2,7 @@
 `speakeasy validate config`  
 
 
-Validates a Speakeasy configuration file for SDK generation  
+Validate a Speakeasy configuration file  
 
 ## Details
 

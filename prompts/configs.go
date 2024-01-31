@@ -3,6 +3,7 @@ package prompts
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -16,28 +17,28 @@ import (
 )
 
 // During quickstart we ask for a limited subset of configs per language
-var quickstartScopedKeys = map[string]map[string]bool{
+var quickstartScopedKeys = map[string][]string{
 	"go": {
-		"packageName": true,
+		"packageName",
 	},
 	"typescript": {
-		"packageName": true,
+		"packageName",
 	},
 	"python": {
-		"packageName": true,
+		"packageName",
 	},
 	"java": {
-		"groupID":    true,
-		"artifactID": true,
+		"groupID",
+		"artifactID",
 	},
 	"terraform": {},
 	"docs": {
-		"defaultLanguage": true,
+		"defaultLanguage",
 	},
 }
 
-var ignoredKeys = map[string]bool{
-	"version": true,
+var ignoredKeys = []string{
+	"version",
 }
 
 func PromptForTargetConfig(targetName string, target *workflow.Target, existingConfig *config.Configuration, isQuickstart bool) (*config.Configuration, error) {
@@ -77,7 +78,18 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			Prompt(" ").
 			Value(&baseServerURL))
 	}
-	languageForms, appliedKeys, err := languageSpecificForms(target.Target, output, isQuickstart)
+
+	t, err := generate.GetTargetFromTargetString(target.Target)
+	if err != nil {
+		return nil, err
+	}
+
+	defaultConfigs, err := generate.GetLanguageConfigFields(t, true)
+	if err != nil {
+		return nil, err
+	}
+
+	languageForms, appliedKeys, err := languageSpecificForms(target.Target, output, defaultConfigs, isQuickstart)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +110,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	output.Generation.SDKClassName = sdkClassName
 	output.Generation.BaseServerURL = baseServerURL
 
-	saveLanguageConfigValues(target.Target, form, output, appliedKeys)
+	saveLanguageConfigValues(target.Target, form, output, appliedKeys, defaultConfigs)
 
 	return output, nil
 }
@@ -117,12 +129,7 @@ func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	return &nextState, nil
 }
 
-func languageSpecificForms(language string, existingConfig *config.Configuration, isQuickstart bool) ([]huh.Field, []string, error) {
-	t, err := generate.GetTargetFromTargetString(language)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func languageSpecificForms(language string, existingConfig *config.Configuration, configFields []config.SDKGenConfigField, isQuickstart bool) ([]huh.Field, []string, error) {
 	langConfig := config.LanguageConfig{}
 	if existingConfig != nil {
 		if conf, ok := existingConfig.Languages[language]; ok {
@@ -130,15 +137,10 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		}
 	}
 
-	configFields, err := generate.GetLanguageConfigFields(t, true)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	fields := []huh.Field{}
 	var appliedKeys []string
 	for _, field := range configFields {
-		if ignoredKeys[field.Name] {
+		if slices.Contains(ignoredKeys, field.Name) {
 			continue
 		}
 
@@ -146,11 +148,9 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 			if !isQuickstart {
 				appliedKeys = append(appliedKeys, field.Name)
 				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
-			} else if lang, ok := quickstartScopedKeys[language]; ok {
-				if _, ok := lang[field.Name]; ok {
-					appliedKeys = append(appliedKeys, field.Name)
-					fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
-				}
+			} else if lang, ok := quickstartScopedKeys[language]; ok && slices.Contains(lang, field.Name) {
+				appliedKeys = append(appliedKeys, field.Name)
+				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
 			}
 		}
 	}
@@ -232,9 +232,33 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 	}
 }
 
-func saveLanguageConfigValues(language string, form *huh.Form, configuration *config.Configuration, appliedKeys []string) {
-	// TODO: Must map fields back into native type, they cannot be written as strings
+func saveLanguageConfigValues(language string, form *huh.Form, configuration *config.Configuration, appliedKeys []string, configFields []config.SDKGenConfigField) {
 	for _, key := range appliedKeys {
-		configuration.Languages[language].Cfg[key] = form.Get(key)
+		var field *config.SDKGenConfigField
+		for _, f := range configFields {
+			if f.Name == key {
+				field = &f
+				break
+			}
+		}
+		if field != nil {
+			// We need to map values back to their native type since the form only can produce a string
+			if field.DefaultValue != nil {
+				switch (*field.DefaultValue).(type) {
+				case int:
+					if transform, err := strconv.Atoi(form.GetString(key)); err == nil {
+						configuration.Languages[language].Cfg[key] = transform
+					}
+				case bool:
+					if transform, err := strconv.ParseBool(form.GetString(key)); err == nil {
+						configuration.Languages[language].Cfg[key] = transform
+					}
+				case string:
+					configuration.Languages[language].Cfg[key] = form.GetString(key)
+				}
+			} else {
+				configuration.Languages[language].Cfg[key] = form.GetString(key)
+			}
+		}
 	}
 }

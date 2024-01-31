@@ -1,139 +1,137 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
-	"github.com/spf13/cobra"
 )
 
-var validateCmd = &cobra.Command{
-	Use:   "validate",
-	Short: "Validate OpenAPI documents + more (coming soon)",
-	Long:  `The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).`,
-	RunE:  interactivity.InteractiveRunFn("What do you want to validate?"),
+var validateCmd = &model.CommandGroup{
+	Usage:          "validate",
+	Short:          "Validate OpenAPI documents + more (coming soon)",
+	Long:           `The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).`,
+	InteractiveMsg: "What do you want to validate?",
+	Commands:       []model.Command{validateOpenapiCmd, validateConfigCmd},
 }
 
-var validateOpenAPICmd = &cobra.Command{
-	Use:     "openapi",
-	Short:   "Validate an OpenAPI document",
-	Long:    `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
-	PreRunE: interactivity.GetMissingFlagsPreRun,
-	RunE:    validateOpenAPI,
+type ValidateOpenapiFlags struct {
+	SchemaPath            string `json:"schema"`
+	Header                string `json:"header"`
+	Token                 string `json:"token"`
+	OutputHints           bool   `json:"output-hints"`
+	MaxValidationErrors   int    `json:"max-validation-errors"`
+	MaxValidationWarnings int    `json:"max-validation-warnings"`
 }
 
-var validateConfigCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Validates a Speakeasy configuration file for SDK generation",
+var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
+	Usage:          "openapi",
+	Short:          "Validate an OpenAPI document",
+	Long:           `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
+	Run:            validateOpenapi,
+	RunInteractive: validateOpenapiInteractive,
+	Flags: []model.Flag{
+		model.StringFlag{
+			Name:        "schema",
+			Shorthand:   "s",
+			Description: "local filepath or URL for the OpenAPI schema",
+			Required:    true,
+		},
+		model.BooleanFlag{
+			Name:         "output-hints",
+			Shorthand:    "o",
+			Description:  "output validation hints in addition to warnings/errors",
+			DefaultValue: false,
+		},
+		model.StringFlag{
+			Name:        "header",
+			Shorthand:   "H",
+			Description: "header key to use if authentication is required for downloading schema from remote URL",
+		},
+		model.StringFlag{
+			Name:        "token",
+			Description: "token value to use if authentication is required for downloading schema from remote URL",
+		},
+		model.IntFlag{
+			Name:         "max-validation-errors",
+			Description:  "limit the number of errors to output (default 1000, 0 = no limit)",
+			DefaultValue: 1000,
+		},
+		model.IntFlag{
+			Name:         "max-validation-warnings",
+			Description:  "limit the number of warnings to output (default 1000, 0 = no limit)",
+			DefaultValue: 1000,
+		},
+	},
+}
+
+type validateConfigFlags struct {
+	Dir string `json:"dir"`
+}
+
+var validateConfigCmd = &model.ExecutableCommand[validateConfigFlags]{
+	Usage: "config",
+	Short: "Validate a Speakeasy configuration file",
 	Long:  `Validates a Speakeasy configuration file for SDK generation.`,
-	RunE:  validateConfig,
+	Run:   validateConfig,
+	Flags: []model.Flag{
+		model.StringFlag{
+			Name:        "dir",
+			Shorthand:   "d",
+			Description: "path to the directory containing the Speakeasy configuration file",
+			Required:    true,
+		},
+	},
 }
 
-func validateInit() {
-	rootCmd.AddCommand(validateCmd)
-	validateOpenAPIInit()
-	validateConfigInit()
-}
-
-//nolint:errcheck
-func validateOpenAPIInit() {
-	validateOpenAPICmd.Flags().BoolP("output-hints", "o", false, "output validation hints in addition to warnings/errors")
-	validateOpenAPICmd.Flags().StringP("schema", "s", "", "local filepath or URL for the OpenAPI schema")
-	_ = validateOpenAPICmd.MarkFlagRequired("schema")
-
-	validateOpenAPICmd.Flags().StringP("header", "H", "", "header key to use if authentication is required for downloading schema from remote URL")
-	validateOpenAPICmd.Flags().String("token", "", "token value to use if authentication is required for downloading schema from remote URL")
-
-	validateOpenAPICmd.Flags().Int("max-validation-warnings", 1000, "limit the number of warnings to output (default 1000, 0 = no limit)")
-	validateOpenAPICmd.Flags().Int("max-validation-errors", 1000, "limit the number of errors to output (default 1000, 0 = no limit)")
-
-	validateCmd.AddCommand(validateOpenAPICmd)
-}
-
-func validateConfigInit() {
-	validateConfigCmd.Flags().StringP("dir", "d", "", "path to the directory containing the Speakeasy configuration file")
-	_ = validateConfigCmd.MarkFlagRequired("dir")
-
-	validateCmd.AddCommand(validateConfigCmd)
-}
-
-func validateOpenAPI(cmd *cobra.Command, args []string) error {
+func validateOpenapi(ctx context.Context, flags ValidateOpenapiFlags) error {
 	// no authentication required for validating specs
 
-	schemaPath, err := cmd.Flags().GetString("schema")
-	if err != nil {
+	limits := validation.OutputLimits{
+		OutputHints: flags.OutputHints,
+		MaxWarns:    flags.MaxValidationWarnings,
+		MaxErrors:   flags.MaxValidationErrors,
+	}
+
+	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
+		rootCmd.SilenceUsage = true
+
 		return err
 	}
 
-	header, err := cmd.Flags().GetString("header")
-	if err != nil {
-		return err
-	}
-
-	token, err := cmd.Flags().GetString("token")
-	if err != nil {
-		return err
-	}
-
-	outputHints, err := cmd.Flags().GetBool("output-hints")
-	if err != nil {
-		return err
-	}
-
-	maxWarns, err := cmd.Flags().GetInt("max-validation-warnings")
-	if err != nil {
-		return err
-	}
-
-	maxErrs, err := cmd.Flags().GetInt("max-validation-errors")
-	if err != nil {
-		return err
-	}
-
-	limits := &validation.OutputLimits{
-		MaxErrors:   maxErrs,
-		MaxWarns:    maxWarns,
-		OutputHints: outputHints,
-	}
-
-	if !utils.IsInteractive() || env.IsGithubAction() {
-		if err := validation.ValidateOpenAPI(cmd.Context(), schemaPath, header, token, limits); err != nil {
-			rootCmd.SilenceUsage = true
-
-			return err
-		}
-	} else {
-		if err := validation.ValidateWithInteractivity(cmd.Context(), schemaPath, header, token, limits); err != nil {
-			return err
-		}
-	}
-
-	uploadCommand := "speakeasy api register-schema --schema=" + schemaPath
+	uploadCommand := "speakeasy api register-schema --schema=" + flags.SchemaPath
 	msg := fmt.Sprintf("\nYou can upload your schema to Speakeasy using the following command:\n%s", uploadCommand)
-	log.From(cmd.Context()).Info(msg)
+	log.From(ctx).Info(msg)
 
 	return nil
 }
 
-func validateConfig(cmd *cobra.Command, args []string) error {
-	// no authentication required for validating configs
+func validateOpenapiInteractive(ctx context.Context, flags ValidateOpenapiFlags) error {
+	limits := validation.OutputLimits{
+		OutputHints: flags.OutputHints,
+		MaxWarns:    flags.MaxValidationWarnings,
+		MaxErrors:   flags.MaxValidationErrors,
+	}
 
-	dir, err := cmd.Flags().GetString("dir")
-	if err != nil {
+	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
 		return err
 	}
 
-	if err := sdkgen.ValidateConfig(cmd.Context(), dir); err != nil {
+	return nil
+}
+
+func validateConfig(ctx context.Context, flags validateConfigFlags) error {
+	// no authentication required for validating configs
+
+	if err := sdkgen.ValidateConfig(ctx, flags.Dir); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return fmt.Errorf("%s", err)
 	}
 
-	log.From(cmd.Context()).Success("Config valid ✓")
+	log.From(ctx).Success("Config valid ✓")
 
 	return nil
 }

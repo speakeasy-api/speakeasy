@@ -18,8 +18,8 @@ speakeasy configure sources [flags]
 
 ```
   -h, --help        help for sources
-  -i, --id string   the name of an existing target to configure
-  -n, --new         configure a new target
+  -i, --id string   the name of an existing source to configure
+  -n, --new         configure a new source
 ```
 
 ### Options inherited from parent commands
