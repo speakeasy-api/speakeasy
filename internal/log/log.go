@@ -217,7 +217,7 @@ func (l Logger) Println(s string) {
 }
 
 func (l Logger) Print(s string) {
-	if l.interactiveOnly && !utils.IsInteractive() {
+	if l.interactiveOnly && (!utils.IsInteractive() || env.IsGithubAction()) {
 		return
 	}
 	if l.style != nil {
@@ -282,16 +282,20 @@ func PrefixedFormatter(l Logger, level Level, msg string, err error) string {
 }
 
 func GithubFormatter(l Logger, level Level, msg string, err error) string {
+	prefix := ""
+
 	switch level {
+	case LevelInfo:
+		prefix = styles.Info.Render("INFO\t")
 	case LevelWarn:
 		attributes := getGithubAnnotationAttributes(l.associatedFile, err)
-		return fmt.Sprintf("::warning%s::", attributes)
+		prefix = fmt.Sprintf("::warning%s::", attributes)
 	case LevelErr:
 		attributes := getGithubAnnotationAttributes(l.associatedFile, err)
-		return fmt.Sprintf("::error%s::", attributes)
+		prefix = fmt.Sprintf("::error%s::", attributes)
 	}
 
-	return ""
+	return prefix + msg
 }
 
 /**

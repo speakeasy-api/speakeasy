@@ -88,8 +88,8 @@ func Execute(version, artifactArch string) {
 	Init(version, artifactArch)
 
 	if err := rootCmd.Execute(); err != nil {
-		l.Errorf("%v", err)
-		l.Errorf("Run '%v --help' for usage.\n", rootCmd.CommandPath())
+		l.Error("", zap.Error(err))
+		l.WithInteractiveOnly().Errorf("Run '%s --help' for usage.\n", rootCmd.CommandPath())
 		os.Exit(1)
 	}
 }
