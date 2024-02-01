@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +36,16 @@ func authInit() {
 }
 
 func loginExec(cmd *cobra.Command, args []string) error {
-	return auth.Authenticate(cmd.Context(), true)
+	workspaceID, err := auth.Authenticate(true)
+	if err != nil {
+		return err
+	}
+
+	log.From(cmd.Context()).
+		WithInteractiveOnly().
+		Successf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), workspaceID)
+
+	return nil
 }
 
 func logoutExec(cmd *cobra.Command, args []string) error {

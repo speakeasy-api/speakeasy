@@ -31,7 +31,7 @@ func proxyInit() {
 }
 
 func proxyExec(cmd *cobra.Command, args []string) error {
-	if err := auth.Authenticate(cmd.Context(), false); err != nil {
+	if _, err := auth.Authenticate(false); err != nil {
 		return err
 	}
 

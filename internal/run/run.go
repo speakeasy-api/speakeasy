@@ -86,14 +86,16 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		ctx = log.With(ctx, l)
 		err = Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
 
-		if err != nil {
-			workflow.Finalize(false)
+		workflow.Finalize(err == nil)
+		if env.IsGithubAction() {
+			githubactions.AddStepSummary(workflow.ToMermaidDiagram())
+		}
 
+		if err != nil {
 			runErr = err
 			return err
 		}
 
-		workflow.Finalize(true)
 		return nil
 	}
 
