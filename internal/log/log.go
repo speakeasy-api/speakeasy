@@ -40,12 +40,13 @@ type Logger struct {
 	style           *lipgloss.Style
 	formatter       func(l Logger, level Level, msg string, err error) string
 	writer          io.Writer
+	listener        chan Msg
 }
 
 var _ logging.Logger = (*Logger)(nil)
 
 // With returns a new context with the given logger added to the context.
-func With(ctx context.Context, l Logger) context.Context {
+func With(ctx context.Context, l logging.Logger) context.Context {
 	return context.WithValue(ctx, loggerContextKey, l)
 }
 
@@ -120,6 +121,12 @@ func (l Logger) WithWriter(w io.Writer) Logger {
 	return l2
 }
 
+func (l Logger) WithListener(listener chan Msg) Logger {
+	l2 := l.Copy()
+	l2.listener = listener
+	return l2
+}
+
 func (l Logger) Copy() Logger {
 	return Logger{
 		level:           l.level,
@@ -129,6 +136,7 @@ func (l Logger) Copy() Logger {
 		style:           l.style,
 		formatter:       l.formatter,
 		writer:          l.writer,
+		listener:        l.listener,
 	}
 }
 
@@ -227,6 +235,16 @@ func (l Logger) PrintlnUnstyled(a any) {
 
 func (l Logger) format(level Level, msg string, err error) string {
 	return l.formatter(l, level, msg, err)
+}
+
+func (l Logger) Github(msg string) {
+	if l.listener != nil {
+		l.listener <- Msg{Type: MsgGithub, Msg: msg}
+	}
+
+	if env.IsGithubAction() {
+		l.Print(msg)
+	}
 }
 
 /**
