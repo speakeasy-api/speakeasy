@@ -21,7 +21,7 @@ func init() {
 	f.SelectSelector.Foreground(styles.Focused.GetForeground())
 	f.MultiSelectSelector.Foreground(styles.Focused.GetForeground())
 	f.SelectedOption.Foreground(styles.Focused.GetForeground())
-	f.SelectedPrefix = lipgloss.NewStyle().Foreground(styles.Colors.Green).SetString("✓ ")
+	f.SelectedPrefix = lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).SetString("✓ ")
 	f.UnselectedPrefix = lipgloss.NewStyle().SetString("")
 	f.FocusedButton.Background(styles.Colors.Green)
 	f.BlurredButton.Background(styles.Dimmed.GetForeground())
@@ -37,7 +37,7 @@ func init() {
 	b.TextInput.Placeholder.Italic(true)
 	b.SelectedOption.Foreground(styles.FocusedDimmed.GetForeground())
 	b.SelectSelector.Foreground(styles.FocusedDimmed.GetForeground())
-	b.SelectedPrefix = lipgloss.NewStyle().Foreground(styles.Colors.Green).SetString("✓ ")
+	b.SelectedPrefix = lipgloss.NewStyle().Foreground(styles.FocusedDimmed.GetForeground()).SetString("✓ ")
 	b.UnselectedPrefix = lipgloss.NewStyle().SetString("")
 
 	formTheme = &t
