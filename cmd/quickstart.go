@@ -107,6 +107,9 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	outDir := workingDir
+	if flags.OutDir != "" {
+		outDir = flags.OutDir
+	}
 	var targetType string
 	for _, target := range quickstartObj.WorkflowFile.Targets {
 		targetType = target.Target

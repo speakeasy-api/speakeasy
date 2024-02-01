@@ -247,7 +247,7 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 	if !isQuickstart && defaultValue != "" {
 		input = input.Value(&defaultValue)
 	} else {
-		input = input.Placeholder(defaultValue)
+		input = input.Placeholder(defaultValue).Suggestions([]string{defaultValue})
 	}
 
 	return []huh.Field{
