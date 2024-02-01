@@ -27,7 +27,7 @@ jobs:
     name: Compile Project
     runs-on: ubuntu-latest
     env:
-      GOPRIVATE: github.com/speakeasy-api
+      GOPRIVATE: github.com/speakeasy-api/*
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v2
