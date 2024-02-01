@@ -91,7 +91,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			}
 		}
 
-		configFields = append(configFields, // Let the user select multiple toppings.
+		configFields = append(configFields,
 			huh.NewMultiSelect[string]().
 				Title("Select your SDK Docs Languages:").
 				Description("These languages will appear as options in your generated SDK Docs site.").
