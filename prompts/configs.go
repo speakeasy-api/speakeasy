@@ -95,8 +95,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			huh.NewMultiSelect[string]().
 				Title("Select your SDK Docs Languages:").
 				Description("These languages will appear as options in your generated SDK Docs site.").
-				// TODO: Replace with a reference to openapi-generation when accompanying PR is merged
-				Options(huh.NewOptions("go", "typescript", "python", "java", "unity", "csharp", "curl")...).
+				Options(huh.NewOptions(generate.SupportedSDKDocsLanguages...)...).
 				Value(&docsLanguages))
 	}
 
