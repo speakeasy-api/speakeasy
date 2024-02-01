@@ -12,6 +12,7 @@ classDef running stroke:#293D53,color:#293D53`
 
 func (w *WorkflowStep) ToMermaidDiagram() string {
 	builder := strings.Builder{}
+	builder.WriteString("```mermaid\n")
 	builder.WriteString("flowchart TB\n")
 
 	i := 0
@@ -22,6 +23,7 @@ func (w *WorkflowStep) ToMermaidDiagram() string {
 	}
 
 	builder.WriteString(classDefs)
+	builder.WriteString("```\n")
 
 	return builder.String()
 }
