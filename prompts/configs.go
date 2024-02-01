@@ -79,6 +79,26 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			Value(&baseServerURL))
 	}
 
+	var docsLanguages []string
+	if target.Target == "docs" {
+		if existingConfig != nil {
+			if docsCfg, ok := existingConfig.Languages["docs"]; ok {
+				if langs, ok := docsCfg.Cfg["docsLanguages"]; ok {
+					for _, lang := range langs.([]interface{}) {
+						docsLanguages = append(docsLanguages, lang.(string))
+					}
+				}
+			}
+		}
+
+		configFields = append(configFields,
+			huh.NewMultiSelect[string]().
+				Title("Select your SDK Docs Languages:").
+				Description("These languages will appear as options in your generated SDK Docs site.").
+				Options(huh.NewOptions(generate.SupportedSDKDocsLanguages...)...).
+				Value(&docsLanguages))
+	}
+
 	t, err := generate.GetTargetFromTargetString(target.Target)
 	if err != nil {
 		return nil, err
@@ -109,6 +129,9 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 
 	output.Generation.SDKClassName = sdkClassName
 	output.Generation.BaseServerURL = baseServerURL
+	if target.Target == "docs" {
+		output.Languages["docs"].Cfg["docsLanguages"] = docsLanguages
+	}
 
 	saveLanguageConfigValues(target.Target, form, output, appliedKeys, defaultConfigs)
 

@@ -3,6 +3,7 @@ package charm
 import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
@@ -20,6 +21,8 @@ func init() {
 	f.SelectSelector.Foreground(styles.Focused.GetForeground())
 	f.MultiSelectSelector.Foreground(styles.Focused.GetForeground())
 	f.SelectedOption.Foreground(styles.Focused.GetForeground())
+	f.SelectedPrefix = lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).SetString("✓ ")
+	f.UnselectedPrefix = lipgloss.NewStyle().SetString("")
 	f.FocusedButton.Background(styles.Colors.Green)
 	f.BlurredButton.Background(styles.Dimmed.GetForeground())
 	f.Next = f.FocusedButton.Copy()
@@ -30,10 +33,12 @@ func init() {
 	f.TextInput.Text.Foreground(styles.Focused.GetForeground())
 
 	b := &t.Blurred
-	b.Description.Foreground(styles.Dimmed.GetForeground()).Italic(true).Inline(false)
+	b.Description = f.Description.Copy()
 	b.TextInput.Placeholder.Italic(true)
 	b.SelectedOption.Foreground(styles.FocusedDimmed.GetForeground())
 	b.SelectSelector.Foreground(styles.FocusedDimmed.GetForeground())
+	b.SelectedPrefix = lipgloss.NewStyle().Foreground(styles.FocusedDimmed.GetForeground()).SetString("✓ ")
+	b.UnselectedPrefix = lipgloss.NewStyle().SetString("")
 
 	formTheme = &t
 }
