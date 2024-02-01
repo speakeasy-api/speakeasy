@@ -17,6 +17,7 @@ type RunFlags struct {
 	Debug           bool   `json:"debug"`
 	Repo            string `json:"repo"`
 	RepoSubdir      string `json:"repo-subdir"`
+	Published       bool   `json:"published"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -66,6 +67,11 @@ A full workflow is capable of running the following steps:
 			Name:        "repo-subdir",
 			Shorthand:   "b",
 			Description: "the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
+		},
+		model.BooleanFlag{
+			Name:        "published",
+			Shorthand:   "p",
+			Description: "whether the SDK is published to a package manager or not, determines the type of installation instructions to generate",
 		},
 	},
 }

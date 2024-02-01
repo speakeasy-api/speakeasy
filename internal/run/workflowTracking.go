@@ -2,6 +2,7 @@ package run
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -95,6 +96,16 @@ func (w *WorkflowStep) Notify() {
 
 func (w *WorkflowStep) PrettyString() string {
 	return w.toString(0, 0)
+}
+
+func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
+	msg := <-c
+	if msg.Type == log.MsgGithub && strings.HasPrefix(msg.Msg, "::group::") {
+		stepName := strings.TrimPrefix(msg.Msg, "::group::")
+		stepName = strings.TrimSpace(stepName)
+		w.NewSubstep(stepName)
+	}
+	w.ListenForSubsteps(c)
 }
 
 func (w *WorkflowStep) toString(parentIndent, indent int) string {

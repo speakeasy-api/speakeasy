@@ -161,7 +161,7 @@ func suggest(ctx context.Context, schema []byte, schemaPath string, errsWithLine
 
 	// local authentication should just be set in env variable
 	if os.Getenv("SPEAKEASY_SERVER_URL") != "http://localhost:35290" {
-		if err := auth.Authenticate(ctx, false); err != nil {
+		if _, err := auth.Authenticate(false); err != nil {
 			return nil, err
 		}
 	}
