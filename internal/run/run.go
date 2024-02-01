@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/sethvargo/go-githubactions"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"os"
 	"path/filepath"
 	"slices"
@@ -84,14 +86,16 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		ctx = log.With(ctx, l)
 		err = Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
 
-		if err != nil {
-			workflow.Finalize(false)
+		workflow.Finalize(err == nil)
+		if env.IsGithubAction() {
+			githubactions.AddStepSummary(workflow.ToMermaidDiagram())
+		}
 
+		if err != nil {
 			runErr = err
 			return err
 		}
 
-		workflow.Finalize(true)
 		return nil
 	}
 
@@ -226,9 +230,32 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
 
-	rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
+	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 
-	if err := sdkgen.Generate(ctx, config.GetCustomerID(), config.GetWorkspaceID(), t.Target, sourcePath, "", "", outDir, genVersion, installationURL, debug, true, published, false, repo, repoSubDir, true); err != nil {
+	logListener := make(chan log.Msg)
+	logger := log.From(ctx).WithListener(logListener)
+	ctx = log.With(ctx, logger)
+	go genStep.ListenForSubsteps(logListener)
+
+	if err := sdkgen.Generate(
+		ctx,
+		config.GetCustomerID(),
+		config.GetWorkspaceID(),
+		t.Target,
+		sourcePath,
+		"",
+		"",
+		outDir,
+		genVersion,
+		installationURL,
+		debug,
+		true,
+		published,
+		false,
+		repo,
+		repoSubDir,
+		true,
+	); err != nil {
 		return err
 	}
 
