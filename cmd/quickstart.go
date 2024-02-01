@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
+	"path/filepath"
 	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -102,12 +106,36 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	outDir := flags.OutDir
+	var targetType string
+	chosenDir := flags.OutDir
 	for _, target := range quickstartObj.WorkflowFile.Targets {
-		if outDir == "" {
-			outDir = workingDir + "/" + defaultOutDir(target.Target)
+		if chosenDir == "" {
+			chosenDir = defaultOutDir(target.Target)
+			targetType = target.Target
 			break
 		}
+	}
+
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		Title("What directory should quickstart files be written too?").
+		Description("A sensible default has been provided for you. An empty entry will map to the current root directory.\n").
+		Validate(func(s string) error {
+			if targetType == "terraform" {
+				if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(workingDir), "terraform-provider") {
+					return errors.New("a terraform provider directory must start with 'terraform-provider'")
+				}
+			}
+			return nil
+		}).
+		Inline(false).Prompt("").Value(&chosenDir))),
+		"Let's pick an output directory for your newly created files.")).
+		Run(); err != nil {
+		return err
+	}
+
+	outDir := workingDir
+	if chosenDir != "" {
+		outDir = filepath.Join(workingDir, chosenDir)
 	}
 
 	var resolvedSchema string
