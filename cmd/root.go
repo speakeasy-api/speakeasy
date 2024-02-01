@@ -74,6 +74,7 @@ func addCommand(cmd *cobra.Command, command model.Command) {
 func Execute(version, artifactArch string) {
 	rootCmd.Version = version + "\n" + artifactArch
 	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if cmd.Name() != "update" {
 			checkForUpdate(cmd, version, artifactArch)
@@ -87,7 +88,8 @@ func Execute(version, artifactArch string) {
 	Init(version, artifactArch)
 
 	if err := rootCmd.Execute(); err != nil {
-		l.Error("", zap.Error(err))
+		l.Errorf("%v", err)
+		l.Errorf("Run '%v --help' for usage.\n", rootCmd.CommandPath())
 		os.Exit(1)
 	}
 }

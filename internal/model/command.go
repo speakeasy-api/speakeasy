@@ -61,6 +61,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	run := func(cmd *cobra.Command, args []string) error {
 		if c.RequiresAuth {
 			if err := auth.Authenticate(cmd.Context(), false); err != nil {
+				cmd.SilenceUsage = true
 				return err
 			}
 		}

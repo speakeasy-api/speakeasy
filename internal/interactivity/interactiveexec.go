@@ -135,6 +135,14 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	if len(missingRequiredFlags) == 0 {
 		return nil, nil
 	}
+	if !utils.IsInteractive() {
+		msg := ""
+		for _, flag := range missingRequiredFlags {
+			msg += fmt.Sprintf("  --%s (-%s) - %s\n", flag.Name, flag.Shorthand, flag.Usage)
+		}
+
+		return nil, fmt.Errorf("missing required flags: \n%s", msg)
+	}
 
 	requiredValues := requestFlagValues(commandName, true, missingRequiredFlags)
 	if len(requiredValues) != len(missingRequiredFlags) {
