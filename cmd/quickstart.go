@@ -106,36 +106,32 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	var targetType string
-	chosenDir := flags.OutDir
-	for _, target := range quickstartObj.WorkflowFile.Targets {
-		if chosenDir == "" {
-			chosenDir = defaultOutDir(target.Target)
-			targetType = target.Target
-			break
-		}
-	}
-
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
-		Title("What directory should quickstart files be written too?").
-		Description("A sensible default has been provided for you. An empty entry will map to the current root directory.\n").
-		Validate(func(s string) error {
-			if targetType == "terraform" {
-				if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(workingDir), "terraform-provider") {
-					return errors.New("a terraform provider directory must start with 'terraform-provider'")
-				}
-			}
-			return nil
-		}).
-		Inline(false).Prompt("").Value(&chosenDir))),
-		"Let's pick an output directory for your newly created files.")).
-		Run(); err != nil {
-		return err
-	}
-
 	outDir := workingDir
-	if chosenDir != "" {
-		outDir = filepath.Join(workingDir, chosenDir)
+	var targetType string
+	for _, target := range quickstartObj.WorkflowFile.Targets {
+		targetType = target.Target
+		break
+	}
+
+	if targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider") {
+		var terraformProviderDir string
+		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+			Title("What directory should quickstart files be written too?").
+			Description("Terraform providers must be placed in a directory structured in the following format terraform-provider-*.\n").
+			Validate(func(s string) error {
+				if targetType == "terraform" {
+					if !strings.HasPrefix(s, "terraform-provider") {
+						return errors.New("a terraform provider directory must start with 'terraform-provider'")
+					}
+				}
+				return nil
+			}).
+			Inline(false).Prompt("").Value(&terraformProviderDir))),
+			"Let's pick an output directory for your newly created files.")).
+			Run(); err != nil {
+			return err
+		}
+		outDir = filepath.Join(workingDir, terraformProviderDir)
 	}
 
 	var resolvedSchema string
@@ -205,14 +201,4 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	return nil
-}
-
-func defaultOutDir(target string) string {
-	switch target {
-	case "terraform":
-		return "terraform-provider-speakeasy"
-	default:
-	}
-
-	return target
 }
