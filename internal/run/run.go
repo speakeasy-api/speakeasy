@@ -184,10 +184,6 @@ func Run(ctx context.Context, target, source, genVersion, installationURL, repo,
 		}
 	}
 
-	if env.IsGithubAction() {
-		githubactions.AddStepSummary(rootStep.ToMermaidDiagram())
-	}
-
 	return nil
 }
 
