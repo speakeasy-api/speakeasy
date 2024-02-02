@@ -101,7 +101,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 		))
 	descriptionMessage := "We will go through a few basic configurations here, but you can always modify further in the future."
 	if !isQuickstart {
-		descriptionMessage = "If you do not want to modify any of the default values of your SDK config file please click through the form."
+		descriptionMessage = "Default config values have been provided. You only need to edit values that you want to modify."
 	}
 	if _, err := tea.NewProgram(charm.NewForm(form,
 		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
