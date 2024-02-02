@@ -226,9 +226,9 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 
 		workflowFile.Targets[targetName] = *target
 
-		configDir := ""
+		configDir := workingDir
 		if target.Output != nil {
-			configDir = *target.Output
+			configDir += "/" + *target.Output
 		}
 
 		var existingConfig *config.Configuration
