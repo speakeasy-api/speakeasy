@@ -131,7 +131,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if outDir != workingDir {
 			promptedDir = outDir
 		}
-		description := "The option provided defaults to the current root directory."
+		description := "The default option we have provided maps to the current root directory."
 		if targetType == "terraform" {
 			description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
 		}
