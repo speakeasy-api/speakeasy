@@ -126,7 +126,7 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow := run.NewWorkflowStep("Workflow", nil)
 
-	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, nil)
+	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, workflow)
 
 	workflow.Finalize(err == nil)
 
