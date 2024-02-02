@@ -131,7 +131,8 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow.Finalize(err == nil)
 
 	if env.IsGithubAction() {
-		githubactions.AddStepSummary(workflow.ToMermaidDiagram())
+		md := fmt.Sprintf("# Generation Workflow Summary\n_This is a breakdown of the 'Generate Target' step above_\n%s", workflow.ToMermaidDiagram())
+		githubactions.AddStepSummary(md)
 	}
 
 	return err
