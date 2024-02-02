@@ -116,25 +116,43 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	if targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider") {
-		var terraformProviderDir string
+	var isUncleanDir bool
+	if entry, err := os.ReadDir(workingDir); err == nil {
+		for _, e := range entry {
+			if !strings.HasPrefix(e.Name(), ".") {
+				isUncleanDir = true
+				break
+			}
+		}
+	}
+
+	if (isUncleanDir && outDir == workingDir) || (targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider")) {
+		promptedDir := "."
+		if outDir != workingDir {
+			promptedDir = outDir
+		}
+		description := "The option provided defaults to the current root directory."
+		if targetType == "terraform" {
+			description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
+		}
+
 		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
 			Title("What directory should quickstart files be written too?").
-			Description("Terraform providers must be placed in a directory structured in the following format terraform-provider-*.\n").
+			Description(description+"\n").
 			Validate(func(s string) error {
 				if targetType == "terraform" {
-					if !strings.HasPrefix(s, "terraform-provider") {
+					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
 						return errors.New("a terraform provider directory must start with 'terraform-provider'")
 					}
 				}
 				return nil
 			}).
-			Inline(false).Prompt("").Value(&terraformProviderDir))),
+			Inline(false).Prompt("").Value(&promptedDir))),
 			"Let's pick an output directory for your newly created files.")).
 			Run(); err != nil {
 			return err
 		}
-		outDir = filepath.Join(workingDir, terraformProviderDir)
+		outDir = filepath.Join(workingDir, promptedDir)
 	}
 
 	var resolvedSchema string
