@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/sethvargo/go-githubactions"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"os"
 	"path/filepath"
 	"slices"
@@ -87,9 +85,6 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		err = Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
 
 		workflow.Finalize(err == nil)
-		if env.IsGithubAction() {
-			githubactions.AddStepSummary(workflow.ToMermaidDiagram())
-		}
 
 		if err != nil {
 			runErr = err

@@ -23,12 +23,12 @@ type WorkflowStep struct {
 	updates  chan<- UpdateMsg
 }
 
-func NewWorkflowStep(name string, sub chan<- UpdateMsg) *WorkflowStep {
+func NewWorkflowStep(name string, updatesListener chan<- UpdateMsg) *WorkflowStep {
 	return &WorkflowStep{
 		name:     name,
 		status:   StatusRunning,
 		substeps: []*WorkflowStep{},
-		updates:  sub,
+		updates:  updatesListener,
 	}
 }
 
