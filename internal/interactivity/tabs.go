@@ -29,7 +29,7 @@ type Tab struct {
 
 type InspectableContent struct {
 	Summary      string
-	DetailedView string
+	DetailedView *string
 }
 
 func (m tabsModel) Init() tea.Cmd {
@@ -168,13 +168,14 @@ func (m tabsModel) View() string {
 func (m tabsModel) ActiveContents() string {
 	contents := ""
 	activeTab := m.Tabs[m.activeTab]
+	activeContent := activeTab.Content[activeTab.activeItem]
 
 	activeTab.paginator.Page = activeTab.activeItem / activeTab.paginator.PerPage
 
 	width := m.width - windowStyle.GetHorizontalPadding()
 
-	if activeTab.inspecting {
-		return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(activeTab.Content[activeTab.activeItem].DetailedView)
+	if activeTab.inspecting && activeContent.DetailedView != nil {
+		return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(*activeContent.DetailedView)
 	}
 
 	start, end := activeTab.paginator.GetSliceBounds(len(activeTab.Content))
