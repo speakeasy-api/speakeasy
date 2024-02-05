@@ -119,7 +119,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	var isUncleanDir bool
 	if entry, err := os.ReadDir(workingDir); err == nil {
 		for _, e := range entry {
-			if !strings.HasPrefix(e.Name(), ".") {
+			if !strings.HasPrefix(e.Name(), ".") && !strings.HasSuffix(e.Name(), ".yaml") && !strings.HasSuffix(e.Name(), ".yml") && !strings.HasSuffix(e.Name(), ".json") {
 				isUncleanDir = true
 				break
 			}
@@ -178,8 +178,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
+	absoluteOurDir, err := filepath.Abs(outDir)
+
 	// If we are referencing a local schema, copy it to the output directory
-	if _, err := os.Stat(resolvedSchema); err == nil {
+	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
 		if err := utils.CopyFile(resolvedSchema, outDir+"/"+resolvedSchema); err != nil {
 			return errors.Wrapf(err, "failed to copy schema file")
 		}
