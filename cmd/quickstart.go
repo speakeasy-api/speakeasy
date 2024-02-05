@@ -179,6 +179,9 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	absoluteOurDir, err := filepath.Abs(outDir)
+	if err != nil {
+		return err
+	}
 
 	// If we are referencing a local schema, copy it to the output directory
 	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
