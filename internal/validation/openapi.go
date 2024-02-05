@@ -3,6 +3,10 @@ package validation
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -11,9 +15,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"go.uber.org/zap"
-	"io"
-	"os"
-	"strings"
 )
 
 // OutputLimits defines the limits for validation output.
@@ -229,7 +230,6 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 		func(filename string, data []byte, perm os.FileMode) error { return nil },
 		func(filename string) ([]byte, error) { return nil, nil },
 	), generate.WithLogger(l))
-
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -241,7 +241,10 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 
 	for _, err := range errs {
 		vErr := errors.GetValidationErr(err)
-		if vErr != nil {
+		uErr := errors.GetUnsupportedErr(err)
+
+		switch {
+		case vErr != nil:
 			if vErr.Severity == errors.SeverityError {
 				vErrs = append(vErrs, vErr)
 			} else if vErr.Severity == errors.SeverityWarn {
@@ -249,11 +252,10 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 			} else if vErr.Severity == errors.SeverityHint {
 				vInfo = append(vInfo, vErr)
 			}
-		}
-
-		uErr := errors.GetUnsupportedErr(err)
-		if uErr != nil {
+		case uErr != nil:
 			vWarns = append(vWarns, uErr)
+		default:
+			vErrs = append(vErrs, err)
 		}
 	}
 
