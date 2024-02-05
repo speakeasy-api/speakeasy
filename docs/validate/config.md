@@ -29,4 +29,4 @@ speakeasy validate config [flags]
 
 ### Parent Command
 
-* [speakeasy validate](README.md)	 - Validate OpenAPI documents + more (coming soon)
+* [speakeasy validate](README.md)	 - Validate OpenAPI documents

@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -23,11 +24,11 @@ var rootCmd = &cobra.Command{
 	Use:   "speakeasy",
 	Short: "The speakeasy cli tool provides access to the speakeasyapi.dev toolchain",
 	Long: ` A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php + more coming soon)
+	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, c#, swift, ruby, terraform)
 	- Validating OpenAPI specs
 	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic 								(coming soon)
-	- Generating Postman collections from OpenAPI Specs 							(coming soon)
+	- Generating OpenAPI specs from your API traffic
+	- Generating Postman collections from OpenAPI Specs
 `,
 	RunE: rootExec,
 }

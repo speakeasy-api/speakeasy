@@ -2,11 +2,11 @@
 `speakeasy validate`  
 
 
-Validate OpenAPI documents + more (coming soon)  
+Validate OpenAPI documents
 
 ## Details
 
-The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).
+The "validate" command provides a set of commands for validating OpenAPI docs and more.
 
 ## Usage
 
