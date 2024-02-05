@@ -16,7 +16,7 @@ type Model struct {
 
 func NewForm(form *huh.Form, args ...string) Model {
 	keyMap := huh.NewDefaultKeyMap()
-	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "complete"))
+	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab", "right"), key.WithHelp("tab", "complete"), key.WithHelp("right", "complete"))
 	model := Model{
 		form: form.WithTheme(formTheme).WithKeyMap(keyMap),
 	}
