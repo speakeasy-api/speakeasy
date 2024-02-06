@@ -24,10 +24,10 @@ import (
 )
 
 type QuickstartFlags struct {
-	ShouldCompile bool   `json:"compile"`
-	Schema        string `json:"schema"`
-	OutDir        string `json:"out-dir"`
-	TargetType    string `json:"target"`
+	SkipCompile bool   `json:"skip-compile"`
+	Schema      string `json:"schema"`
+	OutDir      string `json:"out-dir"`
+	TargetType  string `json:"target"`
 }
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
@@ -38,10 +38,8 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	RequiresAuth: true,
 	Flags: []model.Flag{
 		model.BooleanFlag{
-			Name:         "compile",
-			Shorthand:    "c",
-			Description:  "run SDK validation and generation after quickstart",
-			DefaultValue: true,
+			Name:        "skip-compile",
+			Description: "skip compilation during generation after setup",
 		},
 		model.StringFlag{
 			Name:        "schema",
@@ -223,15 +221,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	if flags.ShouldCompile {
-		// Change working directory to our output directory
-		if err := os.Chdir(outDir); err != nil {
-			return errors.Wrapf(err, "failed to run speakeasy generate")
-		}
+	// Change working directory to our output directory
+	if err := os.Chdir(outDir); err != nil {
+		return errors.Wrapf(err, "failed to run speakeasy generate")
+	}
 
-		if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false); err != nil {
-			return errors.Wrapf(err, "failed to run speakeasy generate")
-		}
+	if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false, !flags.SkipCompile); err != nil {
+		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
 	return nil
