@@ -118,6 +118,9 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		if t.Output != nil && *t.Output != "" && *t.Output != "." {
 			tOut = *t.Output
 		}
+		if target == "all" {
+			tOut = "the paths specified in workflow.yaml"
+		}
 
 		msg := styles.RenderSuccessMessage(
 			t.Target+" SDK Generated Successfully",
