@@ -37,7 +37,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "ctrl+c":
+		case "ctrl+c", "esc":
+			os.Exit(0)
 			return m, tea.Quit
 		case "enter":
 			selected, ok := m.list.SelectedItem().(item)
@@ -60,7 +61,21 @@ func (m model) View() string {
 	if m.selected != nil {
 		return ""
 	}
-	return docStyle.Render(m.list.View())
+
+	inputs := []string{"↑/↓"}
+	descriptions := []string{"navigate"}
+
+	if m.list.Paginator.TotalPages > 1 {
+		inputs = append(inputs, "←/→")
+		descriptions = append(descriptions, "change pages")
+	}
+
+	inputs = append(inputs, "↵", "esc")
+	descriptions = append(descriptions, "select", "quit")
+
+	inputLegend := styles.KeymapLegend(inputs, descriptions)
+
+	return docStyle.Render(m.list.View() + "\n\n" + inputLegend)
 }
 
 func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command {
@@ -91,10 +106,15 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 	l.Styles.Title = styles.HeavilyEmphasized
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{key.NewBinding(key.WithKeys("↵"), key.WithHelp("↵", "select"))}
+	l.SetShowHelp(false)
+
+	l.KeyMap = list.KeyMap{
+		CursorUp:   key.NewBinding(key.WithKeys("up")),
+		CursorDown: key.NewBinding(key.WithKeys("down")),
+		NextPage:   key.NewBinding(key.WithKeys("right")),
+		PrevPage:   key.NewBinding(key.WithKeys("left")),
+		Quit:       key.NewBinding(key.WithKeys("esc")),
 	}
-	l.AdditionalFullHelpKeys = l.AdditionalShortHelpKeys
 
 	m := model{list: l}
 	p := tea.NewProgram(m)

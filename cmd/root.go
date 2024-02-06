@@ -153,8 +153,8 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	}
 
 	l := log.From(cmd.Context()).WithInteractiveOnly()
-	l.WithStyle(styles.HeavilyEmphasized).Println("Welcome to the Speakeasy CLI!")
-	l.WithStyle(styles.DimmedItalic).Println("This is interactive mode. For usage, run speakeasy -h instead.")
+	l.PrintfStyled(styles.HeavilyEmphasized, "Welcome to the Speakeasy CLI!\n")
+	l.PrintfStyled(styles.DimmedItalic, "This is interactive mode. For usage, run speakeasy -h instead.\n")
 
 	return interactivity.InteractiveExec(cmd, args, "Select a command to run")
 }

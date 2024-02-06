@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"os"
 )
 
 type Model struct {
@@ -39,7 +40,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc", "ctrl+c", "q":
+		case "esc", "ctrl+c":
+			os.Exit(0)
 			return m, tea.Quit
 		}
 	}

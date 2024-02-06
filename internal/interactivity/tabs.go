@@ -61,7 +61,8 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "ctrl+c", "q":
+		case "ctrl+c", "esc":
+			os.Exit(0)
 			return m, tea.Quit
 		case "right", "l", "n", "tab":
 			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
@@ -77,9 +78,6 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
-			return m, nil
-		case "esc":
-			m.Tabs[m.activeTab].inspecting = false
 			return m, nil
 		}
 
@@ -156,11 +154,12 @@ func (m tabsModel) View() string {
 	doc.WriteString("\n")
 	doc.WriteString(windowStyle.Render(m.ActiveContents()))
 
-	inspectInstructions := "↵ inspect"
+	inspectInstructions := "inspect"
 	if activeTab.inspecting {
-		inspectInstructions = "esc/↵ back"
+		inspectInstructions = "back"
 	}
-	doc.WriteString(styles.Dimmed.Render(fmt.Sprintf("\n  ←/→ switch tabs, ↑/↓ navigate, %s, q quit", inspectInstructions)))
+	doc.WriteString("\n\n")
+	doc.WriteString(styles.KeymapLegend([]string{"←/→", "↑/↓", "↵", "esc"}, []string{"switch tabs", "navigate", inspectInstructions, "quit"}))
 
 	return margins.Render(doc.String())
 }
