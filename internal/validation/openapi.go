@@ -3,6 +3,10 @@ package validation
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -11,9 +15,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"go.uber.org/zap"
-	"io"
-	"os"
-	"strings"
 )
 
 // OutputLimits defines the limits for validation output.
@@ -143,16 +144,33 @@ func errorsToTabContents(schema []byte, errs []error) []interactivity.Inspectabl
 
 	lines := strings.Split(string(schema), "\n")
 
+	// Truncate very long lines (common for single-line json specs)
+	for i, line := range lines {
+		if len(line) > 1000 {
+			lines[i] = line[:1000] + "..."
+		}
+	}
+
 	for _, err := range errs {
 		vErr := errors.GetValidationErr(err)
 
-		lineNumber := styles.SeverityToStyle(vErr.Severity).Render(fmt.Sprintf("Line %d:", vErr.LineNumber))
-		errType := styles.Dimmed.Render(vErr.Rule)
-		s := fmt.Sprintf("%s %s - %s", lineNumber, errType, vErr.Message)
+		s := ""
+		var details *string
+
+		// Need to account for non-validation errors
+		if vErr == nil {
+			s = fmt.Sprintf("%v", err)
+		} else {
+			lineNumber := styles.SeverityToStyle(vErr.Severity).Render(fmt.Sprintf("Line %d:", vErr.LineNumber))
+			errType := styles.Dimmed.Render(vErr.Rule)
+			s = fmt.Sprintf("%s %s - %s", lineNumber, errType, vErr.Message)
+			d := getDetailedView(lines, *vErr)
+			details = &d
+		}
 
 		content := interactivity.InspectableContent{
 			Summary:      s,
-			DetailedView: getDetailedView(lines, *vErr),
+			DetailedView: details,
 		}
 
 		contents = append(contents, content)
@@ -162,7 +180,7 @@ func errorsToTabContents(schema []byte, errs []error) []interactivity.Inspectabl
 		s := styles.Emphasized.Render("Congrats, there are no issues!")
 		content := interactivity.InspectableContent{
 			Summary:      s,
-			DetailedView: s,
+			DetailedView: nil,
 		}
 		contents = append(contents, content)
 	}
@@ -229,7 +247,6 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 		func(filename string, data []byte, perm os.FileMode) error { return nil },
 		func(filename string) ([]byte, error) { return nil, nil },
 	), generate.WithLogger(l))
-
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -241,7 +258,10 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 
 	for _, err := range errs {
 		vErr := errors.GetValidationErr(err)
-		if vErr != nil {
+		uErr := errors.GetUnsupportedErr(err)
+
+		switch {
+		case vErr != nil:
 			if vErr.Severity == errors.SeverityError {
 				vErrs = append(vErrs, vErr)
 			} else if vErr.Severity == errors.SeverityWarn {
@@ -249,11 +269,10 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 			} else if vErr.Severity == errors.SeverityHint {
 				vInfo = append(vInfo, vErr)
 			}
-		}
-
-		uErr := errors.GetUnsupportedErr(err)
-		if uErr != nil {
+		case uErr != nil:
 			vWarns = append(vWarns, uErr)
+		default:
+			vErrs = append(vErrs, err)
 		}
 	}
 

@@ -49,7 +49,7 @@ func (m cliVisualizer) Init() tea.Cmd {
 func (m cliVisualizer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
+		if msg.String() == "ctrl+c" || msg.String() == "esc" {
 			m.status = StatusFailed
 			return m, tea.Quit
 		}

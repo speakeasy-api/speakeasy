@@ -85,3 +85,11 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 
 	return boxStyle.Render(s)
 }
+
+func KeymapLegend(keys []string, descriptions []string) string {
+	var s string
+	for i, key := range keys {
+		s += key + " " + Dimmed.Render(descriptions[i]) + "  "
+	}
+	return s
+}

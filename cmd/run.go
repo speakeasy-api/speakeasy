@@ -19,7 +19,7 @@ type RunFlags struct {
 	Debug           bool   `json:"debug"`
 	Repo            string `json:"repo"`
 	RepoSubdir      string `json:"repo-subdir"`
-	Published       bool   `json:"published"`
+	SkipCompile     bool   `json:"skip-compile"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -71,9 +71,8 @@ A full workflow is capable of running the following steps:
 			Description: "the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
 		},
 		model.BooleanFlag{
-			Name:        "published",
-			Shorthand:   "p",
-			Description: "whether the SDK is published to a package manager or not, determines the type of installation instructions to generate",
+			Name:        "skip-compile",
+			Description: "skip compilation when generating the SDK",
 		},
 	},
 }
@@ -126,12 +125,12 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow := run.NewWorkflowStep("Workflow", nil)
 
-	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, workflow)
+	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, !flags.SkipCompile, workflow)
 
 	workflow.Finalize(err == nil)
 
 	if env.IsGithubAction() {
-		md := fmt.Sprintf("# Generation Workflow Summary\n_This is a breakdown of the 'Generate Target' step above_\n%s", workflow.ToMermaidDiagram())
+		md := fmt.Sprintf("# Target: `%s` -- Generation Workflow Summary\n_This is a breakdown of the 'Generate Target' step above_\n%s", flags.Target, workflow.ToMermaidDiagram())
 		githubactions.AddStepSummary(md)
 	}
 
@@ -139,5 +138,5 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug)
+	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, !flags.SkipCompile)
 }

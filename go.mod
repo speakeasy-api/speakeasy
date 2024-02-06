@@ -1,6 +1,6 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.21.0
+go 1.21.5
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -16,22 +16,22 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/orderedmap v0.3.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.14.1
+	github.com/pb33f/libopenapi v0.15.5
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.248.6
+	github.com/speakeasy-api/openapi-generation/v2 v2.250.12
 	github.com/speakeasy-api/openapi-overlay v0.3.0
-	github.com/speakeasy-api/sdk-gen-config v1.6.3
+	github.com/speakeasy-api/sdk-gen-config v1.6.4
 	github.com/speakeasy-api/speakeasy-client-sdk-go v1.14.0
 	github.com/speakeasy-api/speakeasy-core v0.0.0-20230614153131-6b4b81e1c6a4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.18.1
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
-	golang.org/x/exp v0.0.0-20231127185646-65229373498e
-	golang.org/x/term v0.15.0
+	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a
+	golang.org/x/term v0.16.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -63,7 +63,7 @@ require (
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/daveshanley/vacuum v0.6.1 // indirect
+	github.com/daveshanley/vacuum v0.8.7 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d // indirect
@@ -126,12 +126,13 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/pb33f/libopenapi-validator v0.0.36 // indirect
+	github.com/pb33f/doctor v0.0.4 // indirect
+	github.com/pb33f/libopenapi-validator v0.0.42 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
-	github.com/pterm/pterm v0.12.71 // indirect
+	github.com/pterm/pterm v0.12.77 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
@@ -160,8 +161,8 @@ require (
 	golang.org/x/image v0.6.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect

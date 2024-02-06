@@ -24,10 +24,10 @@ import (
 )
 
 type QuickstartFlags struct {
-	ShouldCompile bool   `json:"compile"`
-	Schema        string `json:"schema"`
-	OutDir        string `json:"out-dir"`
-	TargetType    string `json:"target"`
+	SkipCompile bool   `json:"skip-compile"`
+	Schema      string `json:"schema"`
+	OutDir      string `json:"out-dir"`
+	TargetType  string `json:"target"`
 }
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
@@ -38,10 +38,8 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	RequiresAuth: true,
 	Flags: []model.Flag{
 		model.BooleanFlag{
-			Name:         "compile",
-			Shorthand:    "c",
-			Description:  "run SDK validation and generation after quickstart",
-			DefaultValue: true,
+			Name:        "skip-compile",
+			Description: "skip compilation during generation after setup",
 		},
 		model.StringFlag{
 			Name:        "schema",
@@ -69,6 +67,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
 		return fmt.Errorf("you cannot run quickstart when a speakeasy workflow already exists, try speakeasy configure instead")
+	}
+
+	if _, err := os.Stat(workingDir + "/gen.yaml"); err == nil {
+		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
+	}
+
+	if _, err := os.Stat(workingDir + "/.speakeasy/gen.yaml"); err == nil {
+		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
 	}
 
 	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
@@ -119,7 +125,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	var isUncleanDir bool
 	if entry, err := os.ReadDir(workingDir); err == nil {
 		for _, e := range entry {
-			if !strings.HasPrefix(e.Name(), ".") {
+			if !strings.HasPrefix(e.Name(), ".") && !strings.HasSuffix(e.Name(), ".yaml") && !strings.HasSuffix(e.Name(), ".yml") && !strings.HasSuffix(e.Name(), ".json") {
 				isUncleanDir = true
 				break
 			}
@@ -178,8 +184,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
+	absoluteOurDir, err := filepath.Abs(outDir)
+	if err != nil {
+		return err
+	}
+
 	// If we are referencing a local schema, copy it to the output directory
-	if _, err := os.Stat(resolvedSchema); err == nil {
+	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
 		if err := utils.CopyFile(resolvedSchema, outDir+"/"+resolvedSchema); err != nil {
 			return errors.Wrapf(err, "failed to copy schema file")
 		}
@@ -210,15 +221,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	if flags.ShouldCompile {
-		// Change working directory to our output directory
-		if err := os.Chdir(outDir); err != nil {
-			return errors.Wrapf(err, "failed to run speakeasy generate")
-		}
+	// Change working directory to our output directory
+	if err := os.Chdir(outDir); err != nil {
+		return errors.Wrapf(err, "failed to run speakeasy generate")
+	}
 
-		if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false); err != nil {
-			return errors.Wrapf(err, "failed to run speakeasy generate")
-		}
+	if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false, !flags.SkipCompile); err != nil {
+		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
 	return nil
