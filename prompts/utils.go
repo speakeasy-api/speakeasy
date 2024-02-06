@@ -49,3 +49,13 @@ func GetSupportedTargets() []string {
 
 	return filteredTargets
 }
+
+func getCurrentSources(currentSource *workflow.Source) []string {
+	var sources []string
+	if currentSource != nil {
+		for _, input := range currentSource.Inputs {
+			sources = append(sources, input.Location)
+		}
+	}
+	return sources
+}
