@@ -2,7 +2,7 @@
 `speakeasy generate sdk`  
 
 
-Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity + more coming soon)  
+Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)
 
 ## Details
 

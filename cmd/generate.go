@@ -3,11 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/speakeasy-api/speakeasy/internal/docsgen"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"golang.org/x/exp/slices"
@@ -81,7 +82,7 @@ var (
 var generateCmd = &model.CommandGroup{
 	Usage:          "generate",
 	Short:          "Generate client SDKs, docsites, and more",
-	Long:           `The "generate" command provides a set of commands for generating client SDKs, OpenAPI specs (coming soon) and more (coming soon).`,
+	Long:           `The "generate" command provides a set of commands for generating client SDKs and Terraform providers`,
 	InteractiveMsg: "What do you want to generate?",
 	Commands:       []model.Command{genSDKCmd, genSDKDocsCmd, genUsageSnippetCmd, genSDKVersionCmd, genSDKChangelogCmd},
 }
@@ -103,7 +104,7 @@ type GenerateFlags struct {
 
 var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	Usage:        "sdk",
-	Short:        fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s + more coming soon)", strings.Join(SDKSupportedLanguageTargets(), ", ")),
+	Short:        fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s)", strings.Join(SDKSupportedLanguageTargets(), ", ")),
 	Long:         generateLongDesc,
 	Run:          genSDKs,
 	RequiresAuth: true,
@@ -160,7 +161,6 @@ var genUsageSnippetCmd = &model.ExecutableCommand[GenerateUsageSnippetFlags]{
 
 The following languages are currently supported:
 	- %s
-	- more coming soon
 
 You can generate usage snippets by OperationID or by Namespace. By default this command will write to stdout.
 
@@ -500,7 +500,6 @@ that are ready to use and publish to your favorite package registry.
 
 The following languages are currently supported:
 	- %s
-	- more coming soon
 
 By default the command will generate a Go SDK, but you can specify a different language using the --lang flag.
 It will also use generic defaults for things such as package name (openapi), etc.

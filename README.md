@@ -323,8 +323,8 @@ speakeasy [flags]
 
 * [speakeasy api](docs/api/README.md)  - Access the Speakeasy API via the CLI
 * [speakeasy auth](docs/auth/README.md)  - Authenticate the CLI
-* [speakeasy generate](docs/generate/README.md)  - Generate Client SDKs, OpenAPI specs from request logs (coming soon) and more
-* [speakeasy validate](docs/validate/README.md)  - Validate OpenAPI documents + more (coming soon)
+* [speakeasy generate](docs/generate/README.md)  - Generate Client SDKs and Terraform Providers
+* [speakeasy validate](docs/validate/README.md)  - Validate OpenAPI documents
 
 ## CLI  
 `speakeasy`  
@@ -335,11 +335,10 @@ The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Details
 
  A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php + more coming soon)
+	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, ruby, c#, unity, terraform)
 	- Validating OpenAPI specs
 	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic 								(coming soon)
-	- Generating Postman collections from OpenAPI Specs 							(coming soon)
+	- Generating Postman collections from OpenAPI Specs
 
 
 ### Usage
@@ -366,4 +365,4 @@ speakeasy [flags]
 * [speakeasy run](docs/run.md)	 - run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.
 * [speakeasy suggest](docs/suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
 * [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version
-* [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents + more (coming soon)
+* [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents
