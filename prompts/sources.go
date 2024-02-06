@@ -148,11 +148,53 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source, error) {
 	addOpenAPIFile := false
+	selectedDoc := "new"
 	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
-		charm_internal.NewBranchPrompt("Would you like to add an openapi file to this source?", &addOpenAPIFile)),
-		fmt.Sprintf("Let's add to the source %s", name))).
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Would you like to modify an existing OpenAPI document or add a new one?").
+				Options(huh.NewOptions(append([]string{"new"}, getCurrentSources(currentSource)...)...)...).
+				Value(&selectedDoc))),
+		fmt.Sprintf("Let's modify the source %s", name))).
 		Run(); err != nil {
 		return nil, err
+	}
+
+	addOpenAPIFile = selectedDoc == "new"
+	if !addOpenAPIFile {
+		fileLocation := selectedDoc
+		var authHeader, authSecret string
+		groups := []*huh.Group{
+			huh.NewGroup(
+				charm_internal.NewInput().
+					Title("What is the location of your OpenAPI document?\n").
+					Placeholder("local file path or remote file reference.").
+					Inline(false).
+					Value(&fileLocation),
+			),
+		}
+		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader, &authSecret)...)
+		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+			groups...),
+			fmt.Sprintf("Let's modify the source %s", name))).
+			Run(); err != nil {
+			return nil, err
+		}
+
+		for index, input := range currentSource.Inputs {
+			if input.Location == selectedDoc {
+				newInput := workflow.Document{}
+				newInput.Location = fileLocation
+				if authHeader != "" && authSecret != "" {
+					newInput.Auth = &workflow.Auth{
+						Header: authHeader,
+						Secret: authSecret,
+					}
+				}
+				currentSource.Inputs[index] = newInput
+				break
+			}
+		}
 	}
 
 	for addOpenAPIFile {
