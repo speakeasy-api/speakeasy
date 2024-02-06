@@ -71,6 +71,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return fmt.Errorf("you cannot run quickstart when a speakeasy workflow already exists, try speakeasy configure instead")
 	}
 
+	if _, err := os.Stat(workingDir + "/gen.yaml"); err == nil {
+		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
+	}
+
+	if _, err := os.Stat(workingDir + "/.speakeasy/gen.yaml"); err == nil {
+		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
+	}
+
 	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
 		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
 			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
