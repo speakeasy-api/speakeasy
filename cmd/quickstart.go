@@ -223,15 +223,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	if flags.ShouldCompile {
-		// Change working directory to our output directory
-		if err := os.Chdir(outDir); err != nil {
-			return errors.Wrapf(err, "failed to run speakeasy generate")
-		}
+	// Change working directory to our output directory
+	if err := os.Chdir(outDir); err != nil {
+		return errors.Wrapf(err, "failed to run speakeasy generate")
+	}
 
-		if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false, flags.ShouldCompile); err != nil {
-			return errors.Wrapf(err, "failed to run speakeasy generate")
-		}
+	if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false, flags.ShouldCompile); err != nil {
+		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
 	return nil
