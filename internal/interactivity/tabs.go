@@ -158,7 +158,7 @@ func (m tabsModel) View() string {
 	if activeTab.inspecting {
 		inspectInstructions = "back"
 	}
-	doc.WriteString("\n\n")
+	doc.WriteString("\n\n ")
 	doc.WriteString(styles.KeymapLegend([]string{"←/→", "↑/↓", "↵", "esc"}, []string{"switch tabs", "navigate", inspectInstructions, "quit"}))
 
 	return margins.Render(doc.String())
