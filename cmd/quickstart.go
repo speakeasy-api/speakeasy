@@ -229,7 +229,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			return errors.Wrapf(err, "failed to run speakeasy generate")
 		}
 
-		if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false); err != nil {
+		if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false, flags.ShouldCompile); err != nil {
 			return errors.Wrapf(err, "failed to run speakeasy generate")
 		}
 	}

@@ -19,6 +19,7 @@ type RunFlags struct {
 	Debug           bool   `json:"debug"`
 	Repo            string `json:"repo"`
 	RepoSubdir      string `json:"repo-subdir"`
+	ShouldCompile   bool   `json:"compile"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -68,6 +69,12 @@ A full workflow is capable of running the following steps:
 			Name:        "repo-subdir",
 			Shorthand:   "b",
 			Description: "the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
+		},
+		model.BooleanFlag{
+			Name:         "compile",
+			Shorthand:    "c",
+			Description:  "compile when generating the SDK",
+			DefaultValue: true,
 		},
 	},
 }
@@ -120,7 +127,7 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow := run.NewWorkflowStep("Workflow", nil)
 
-	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, workflow)
+	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, flags.ShouldCompile, workflow)
 
 	workflow.Finalize(err == nil)
 
@@ -133,5 +140,5 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug)
+	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, flags.ShouldCompile)
 }
