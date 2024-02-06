@@ -148,19 +148,19 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source, error) {
 	addOpenAPIFile := false
-	selectedDoc := "new"
+	selectedDoc := "new document"
 	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title("Would you like to modify an existing OpenAPI document or add a new one?").
-				Options(huh.NewOptions(append([]string{"new"}, getCurrentSources(currentSource)...)...)...).
+				Title("Would you like to modify the location of an existing OpenAPI document or add a new one?").
+				Options(huh.NewOptions(append(getCurrentSources(currentSource), "new document")...)...).
 				Value(&selectedDoc))),
 		fmt.Sprintf("Let's modify the source %s", name))).
 		Run(); err != nil {
 		return nil, err
 	}
 
-	addOpenAPIFile = selectedDoc == "new"
+	addOpenAPIFile = selectedDoc == "new document"
 	if !addOpenAPIFile {
 		fileLocation := selectedDoc
 		var authHeader, authSecret string
