@@ -2,7 +2,7 @@
 `speakeasy generate sdk`  
 
 
-Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)
+Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)  
 
 ## Details
 
@@ -20,7 +20,6 @@ The following languages are currently supported:
 	- terraform
 	- typescript
 	- unity
-	- more coming soon
 
 By default the command will generate a Go SDK, but you can specify a different language using the --lang flag.
 It will also use generic defaults for things such as package name (openapi), etc.
