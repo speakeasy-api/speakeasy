@@ -252,6 +252,29 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		currentSource.Overlays = append(currentSource.Overlays, *document)
 	}
 
+	outputLocation := ""
+	if currentSource.Output != nil {
+		outputLocation = *currentSource.Output
+
+	}
+
+	previousOutputLocation := outputLocation
+	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+		huh.NewGroup(
+			charm_internal.NewInput().
+				Title("Optionally provide an output location for your build source file:").
+				Value(&outputLocation).
+				Suggestions(schemaFilesInCurrentDir()),
+		)),
+		fmt.Sprintf("Let's modify the source %s", name))).
+		Run(); err != nil {
+		return nil, err
+	}
+
+	if previousOutputLocation != outputLocation {
+		currentSource.Output = &outputLocation
+	}
+
 	return currentSource, nil
 }
 
@@ -301,10 +324,6 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	if outputLocation != "" {
 		source.Output = &outputLocation
-	}
-
-	if err := source.Validate(); err != nil {
-		return "", nil, errors.Wrap(err, "failed to validate source")
 	}
 
 	return sourceName, source, nil
