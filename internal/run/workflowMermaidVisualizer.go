@@ -9,12 +9,13 @@ const classDefs = `
 classDef error stroke:#CE262A,color:#CE262A
 classDef success stroke:#63AC67,color:#63AC67
 classDef running stroke:#293D53,color:#293D53
+classDef skipped stroke:#D3D3D3,color:#D3D3D3
 `
 
 func (w *WorkflowStep) ToMermaidDiagram() string {
 	builder := strings.Builder{}
 	builder.WriteString("```mermaid\n")
-	builder.WriteString("flowchart TB\n")
+	builder.WriteString("flowchart LR\n")
 
 	i := 0
 
@@ -54,6 +55,8 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) string {
 		class = "running"
 	case StatusSucceeded:
 		class = "success"
+	case StatusSkipped:
+		class = "skipped"
 	}
 
 	if len(w.substeps) == 0 {

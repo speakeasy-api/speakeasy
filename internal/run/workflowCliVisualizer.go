@@ -78,6 +78,8 @@ func (m cliVisualizer) View() string {
 		statusStyle = styles.Error
 	case StatusSucceeded:
 		statusStyle = styles.Success
+	case StatusSkipped:
+		statusStyle = styles.Dimmed
 	}
 
 	summary := m.rootStep.PrettyString()

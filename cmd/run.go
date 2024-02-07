@@ -181,14 +181,20 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow := run.NewWorkflowStep("Workflow", nil)
+	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	if err != nil {
+		return err
+	}
 
-	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, workflow)
+	err = workflow.Run(ctx)
+	if err != nil {
+		return err
+	}
 
-	workflow.Finalize(err == nil)
+	workflow.RootStep.Finalize(err == nil)
 
 	if env.IsGithubAction() {
-		md := fmt.Sprintf("# Target: `%s` -- Generation Workflow Summary\n_This is a breakdown of the 'Generate Target' step above_\n%s", flags.Target, workflow.ToMermaidDiagram())
+		md := fmt.Sprintf("# Generation Workflow Summary\n_This is a breakdown of the 'Generate Target' step above_\n%s", workflow.RootStep.ToMermaidDiagram())
 		githubactions.AddStepSummary(md)
 	}
 
@@ -196,5 +202,10 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	if err != nil {
+		return err
+	}
+
+	return workflow.RunWithVisualization(ctx)
 }
