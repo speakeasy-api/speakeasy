@@ -1,6 +1,8 @@
 package charm
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -37,4 +39,12 @@ func FormatCommandTitle(title string, description string) string {
 
 func NewInput() *huh.Input {
 	return huh.NewInput().Prompt(" ").Inline(true)
+}
+
+func FormatEditOption(text string) string {
+	return fmt.Sprintf("✎ %s", text)
+}
+
+func FormatNewOption(text string) string {
+	return fmt.Sprintf("+ %s", text)
 }
