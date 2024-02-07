@@ -16,11 +16,12 @@ type RunFlags struct {
 	Target           string            `json:"target"`
 	Source           string            `json:"source"`
 	InstallationURL  string            `json:"installationURL"`
+	InstallationURLs map[string]string `json:"installationURLs"`
 	Debug            bool              `json:"debug"`
 	Repo             string            `json:"repo"`
 	RepoSubdir       string            `json:"repo-subdir"`
+	RepoSubdirs      map[string]string `json:"repo-subdirs"`
 	SkipCompile      bool              `json:"skip-compile"`
-	InstallationURLs map[string]string `json:"installationURLs"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -56,6 +57,10 @@ A full workflow is capable of running the following steps:
 			Shorthand:   "i",
 			Description: "the language specific installation URL for installation instructions if the SDK is not published to a package manager",
 		},
+		model.MapFlag{
+			Name:        "installationURLs",
+			Description: "a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager",
+		},
 		model.BooleanFlag{
 			Name:        "debug",
 			Shorthand:   "d",
@@ -71,13 +76,13 @@ A full workflow is capable of running the following steps:
 			Shorthand:   "b",
 			Description: "the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
 		},
+		model.MapFlag{
+			Name:        "repo-subdirs",
+			Description: "a map from target ID to the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
+		},
 		model.BooleanFlag{
 			Name:        "skip-compile",
 			Description: "skip compilation when generating the SDK",
-		},
-		model.MapFlag{
-			Name:        "installationURLs",
-			Description: "a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager",
 		},
 	},
 }
@@ -128,26 +133,49 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 		flags.Target = targets[0]
 	}
 
-	// Ensure installationURLs are properly set
-	if flags.InstallationURL != "" && len(flags.InstallationURLs) == 0 {
-		if flags.Target == "all" {
-			return fmt.Errorf("cannot specify singular installation URL when running all targets. Please use the installationURLs flag instead")
-		}
-
-		flags.InstallationURLs = map[string]string{flags.Target: flags.InstallationURL}
-	} else if len(flags.InstallationURLs) > 0 {
-		if flags.Target != "all" {
-			if _, ok := flags.InstallationURLs[flags.Target]; !ok {
-				return fmt.Errorf("installationURLs flag must contain an entry for the target flag")
+	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
+	// Helps ensure that the mapFlag ends up with a value for all the targets being run
+	checkAndGetMapFlagValue := func(flagName, singleFlag string, mapFlag map[string]string) (map[string]string, error) {
+		// If the single flag value is set, ensure we aren't running all targets, then set the map flag to the single flag value
+		if singleFlag != "" && len(mapFlag) == 0 {
+			if flags.Target == "all" {
+				return nil, fmt.Errorf("cannot specify singular %s when running all targets. Please use the %ss flag instead", flagName, flagName)
 			}
-		} else {
-			for _, target := range targets {
-				if _, ok := flags.InstallationURLs[target]; !ok {
-					return fmt.Errorf("installationURLs flag must contain an entry for the target flag")
+
+			return map[string]string{flags.Target: singleFlag}, nil
+		} else if len(mapFlag) > 0 {
+			// Ensure the map flag contains an entry for all targets we are running
+			if flags.Target != "all" {
+				if _, ok := mapFlag[flags.Target]; !ok {
+					return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, flags.Target)
+				}
+			} else {
+				for _, target := range targets {
+					if _, ok := mapFlag[target]; !ok {
+						return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, flags.Target)
+					}
 				}
 			}
+
+			return mapFlag, nil
 		}
+
+		return nil, nil
 	}
+
+	// Ensure installationURLs are properly set
+	installationURLs, err := checkAndGetMapFlagValue("installationURL", flags.InstallationURL, flags.InstallationURLs)
+	if err != nil {
+		return err
+	}
+	flags.InstallationURLs = installationURLs
+
+	// Ensure repoSubdirs are properly set
+	repoSubdirs, err := checkAndGetMapFlagValue("repoSubdir", flags.RepoSubdir, flags.RepoSubdirs)
+	if err != nil {
+		return err
+	}
+	flags.RepoSubdirs = repoSubdirs
 
 	return nil
 }
@@ -155,7 +183,7 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow := run.NewWorkflowStep("Workflow", nil)
 
-	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdir, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, workflow)
+	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, workflow)
 
 	workflow.Finalize(err == nil)
 
@@ -168,5 +196,5 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdir, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
 }

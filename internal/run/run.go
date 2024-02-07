@@ -70,7 +70,7 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 	return sources, targets, nil
 }
 
-func RunWithVisualization(ctx context.Context, target, source, genVersion, repo, repoSubDir string, installationURLs map[string]string, debug, shouldCompile bool) error {
+func RunWithVisualization(ctx context.Context, target, source, genVersion, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) error {
 	updatesChannel := make(chan UpdateMsg)
 	workflow := NewWorkflowStep("Workflow", updatesChannel)
 
@@ -82,7 +82,7 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, repo,
 		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
 		ctx := context.Background()
 		ctx = log.With(ctx, l)
-		err = Run(ctx, target, source, genVersion, repo, repoSubDir, installationURLs, debug, shouldCompile, workflow)
+		err = Run(ctx, target, source, genVersion, repo, repoSubDirs, installationURLs, debug, shouldCompile, workflow)
 
 		workflow.Finalize(err == nil)
 
@@ -133,7 +133,7 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, repo,
 	return err
 }
 
-func Run(ctx context.Context, target, source, genVersion, repo, repoSubDir string, installationURLs map[string]string, debug, shouldCompile bool, rootStep *WorkflowStep) error {
+func Run(ctx context.Context, target, source, genVersion, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool, rootStep *WorkflowStep) error {
 	if rootStep == nil {
 		rootStep = NewWorkflowStep("ignored", nil)
 	}
@@ -149,7 +149,7 @@ func Run(ctx context.Context, target, source, genVersion, repo, repoSubDir strin
 
 	if target == "all" {
 		for t := range wf.Targets {
-			err := runTarget(ctx, t, wf, projectDir, genVersion, repo, repoSubDir, installationURLs, debug, shouldCompile, rootStep)
+			err := runTarget(ctx, t, wf, projectDir, genVersion, repo, repoSubDirs, installationURLs, debug, shouldCompile, rootStep)
 			if err != nil {
 				return err
 			}
@@ -166,7 +166,7 @@ func Run(ctx context.Context, target, source, genVersion, repo, repoSubDir strin
 			return fmt.Errorf("target %s not found", target)
 		}
 
-		err := runTarget(ctx, target, wf, projectDir, genVersion, repo, repoSubDir, installationURLs, debug, shouldCompile, rootStep)
+		err := runTarget(ctx, target, wf, projectDir, genVersion, repo, repoSubDirs, installationURLs, debug, shouldCompile, rootStep)
 		if err != nil {
 			return err
 		}
@@ -194,7 +194,7 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, repo, repoSubDir string, installationURLs map[string]string, debug, shouldCompile bool, rootStep *WorkflowStep) error {
+func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool, rootStep *WorkflowStep) error {
 	rootStep = rootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := wf.Targets[target]
@@ -251,7 +251,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 		published,
 		false,
 		repo,
-		repoSubDir,
+		repoSubDirs[target],
 		shouldCompile,
 	); err != nil {
 		return err
