@@ -7,4 +7,5 @@ var HiddenCommands = []string{
 	"api",
 	"suggest",
 	"completion",
+	"help",
 }
