@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -192,28 +193,9 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	} else {
 		// To support legacy SDK configurations configure will detect an existing target setup in the current root directory
 		if existingSDK {
-			if cfg, err := config.Load(workingDir); err == nil && cfg.Config != nil && len(cfg.Config.Languages) > 0 {
-				var targetLanguage string
-				for lang := range cfg.Config.Languages {
-					targetLanguage = lang
-					if lang == "docs" {
-						break
-					}
-				}
-
-				var firstSourceName string
-				for name := range workflowFile.Sources {
-					firstSourceName = name
-					break
-				}
-
-				workflowFile.Targets[targetLanguage] = workflow.Target{
-					Target: targetLanguage,
-					Source: firstSourceName,
-				}
-				existingTargets = append(existingTargets, targetLanguage)
-				targetOptions = existingTargets
-			}
+			existingTargets, targetOptions = handleLegacySDKTarget(workingDir, workflowFile)
+		} else {
+			targetOptions = append(targetOptions, "new target")
 		}
 	}
 
@@ -307,4 +289,35 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	logger.PrintfStyled(boxStyle, "%s", success)
 
 	return nil
+}
+
+func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) ([]string, []string) {
+	if cfg, err := config.Load(workingDir); err == nil && cfg.Config != nil && len(cfg.Config.Languages) > 0 {
+		var targetLanguage string
+		for lang := range cfg.Config.Languages {
+			// A problem with some old gen.yaml files pulling in non language entries
+			if slices.Contains(generate.GetSupportedLanguages(), lang) {
+				targetLanguage = lang
+				if lang == "docs" {
+					break
+				}
+			}
+		}
+
+		if targetLanguage != "" {
+			var firstSourceName string
+			for name := range workflowFile.Sources {
+				firstSourceName = name
+				break
+			}
+
+			workflowFile.Targets[targetLanguage] = workflow.Target{
+				Target: targetLanguage,
+				Source: firstSourceName,
+			}
+			return []string{targetLanguage}, []string{targetLanguage}
+		}
+	}
+
+	return []string{}, []string{"new target"}
 }
