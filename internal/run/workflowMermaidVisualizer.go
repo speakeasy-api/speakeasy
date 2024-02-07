@@ -47,22 +47,30 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) string {
 	*nodeNum++
 	selfNodeNum := *nodeNum
 
-	var class string
+	var class, statusMessage string
 	switch w.status {
 	case StatusFailed:
 		class = "error"
+		statusMessage = " - failed"
 	case StatusRunning:
 		class = "running"
 	case StatusSucceeded:
 		class = "success"
 	case StatusSkipped:
 		class = "skipped"
+		statusMessage = " - skipped"
 	}
 
+	if statusMessage != "" && w.statusExplanation != "" {
+		statusMessage = fmt.Sprintf("%s (%s)", statusMessage, w.statusExplanation)
+	}
+
+	nodeNameDisplay := fmt.Sprintf("%s%s", w.name, statusMessage)
+
 	if len(w.substeps) == 0 {
-		builder.WriteString(fmt.Sprintf("%d(%s):::%s\n", selfNodeNum, w.name, class))
+		builder.WriteString(fmt.Sprintf("%d(\"%s\"):::%s\n", selfNodeNum, nodeNameDisplay, class))
 	} else {
-		builder.WriteString(fmt.Sprintf("subgraph %d [%s]\n", selfNodeNum, w.name))
+		builder.WriteString(fmt.Sprintf("subgraph %d [\"%s\"]\n", selfNodeNum, nodeNameDisplay))
 		for i, child := range w.substeps {
 			childNodeNum := *nodeNum + 1
 			writeChildNode(child)
