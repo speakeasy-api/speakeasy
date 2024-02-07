@@ -166,9 +166,15 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return err
 	}
 
+	existingSDK := prompts.HasExistingGeneration(workingDir)
+
 	var workflowFile *workflow.Workflow
 	if workflowFile, _, err = workflow.Load(workingDir); err != nil || workflowFile == nil || len(workflowFile.Sources) == 0 {
-		return errors.New("you must have a source to configure a target try speakeasy quickstart")
+		suggestion := "speakeasy quickstart"
+		if existingSDK {
+			suggestion = "speakeasy configure sources"
+		}
+		return errors.New(fmt.Sprintf("you must have a source to configure a target try %s", suggestion))
 	}
 
 	existingTarget := ""
@@ -176,11 +182,40 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		existingTarget = flags.ID
 	}
 
+	var targetOptions []string
 	var existingTargets []string
-	for targetName := range workflowFile.Targets {
-		existingTargets = append(existingTargets, targetName)
+	if len(workflowFile.Targets) > 0 {
+		for targetName := range workflowFile.Targets {
+			existingTargets = append(existingTargets, targetName)
+		}
+		targetOptions = append(existingTargets, "new target")
+	} else {
+		// To support legacy SDK configurations configure will detect an existing target setup in the current root directory
+		if existingSDK {
+			if cfg, err := config.Load(workingDir); err == nil && cfg.Config != nil && len(cfg.Config.Languages) > 0 {
+				var targetLanguage string
+				for lang := range cfg.Config.Languages {
+					targetLanguage = lang
+					if lang == "docs" {
+						break
+					}
+				}
+
+				var firstSourceName string
+				for name := range workflowFile.Sources {
+					firstSourceName = name
+					break
+				}
+
+				workflowFile.Targets[targetLanguage] = workflow.Target{
+					Target: targetLanguage,
+					Source: firstSourceName,
+				}
+				existingTargets = append(existingTargets, targetLanguage)
+				targetOptions = existingTargets
+			}
+		}
 	}
-	targetOptions := append(existingTargets, "new target")
 
 	if !flags.New && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
