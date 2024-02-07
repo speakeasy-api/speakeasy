@@ -152,7 +152,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	for _, option := range getCurrentInputs(currentSource) {
 		inputOptions = append(inputOptions, huh.NewOption(charm_internal.FormatEditOption(option), option))
 	}
-	inputOptions = append(inputOptions, huh.NewOption(charm_internal.FormatNewOption("new document"), "new document"))
+	inputOptions = append(inputOptions, huh.NewOption(charm_internal.FormatNewOption("New Document"), "new document"))
 	selectedDoc := ""
 	prompt := charm_internal.NewSelectPrompt("Would you like to modify the location of an existing OpenAPI document or add a new one?", "", inputOptions, &selectedDoc)
 	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
