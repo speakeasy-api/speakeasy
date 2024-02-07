@@ -24,16 +24,16 @@ func (i item) Title() string       { return i.title }
 func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
-type model struct {
+type ListSelect struct {
 	list     list.Model
 	selected *cobra.Command
 }
 
-func (m model) Init() tea.Cmd {
+func (m ListSelect) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -57,7 +57,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m ListSelect) View() string {
 	if m.selected != nil {
 		return ""
 	}
@@ -116,7 +116,7 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 		Quit:       key.NewBinding(key.WithKeys("esc")),
 	}
 
-	m := model{list: l}
+	m := ListSelect{list: l}
 	p := tea.NewProgram(m)
 
 	mResult, err := p.Run()
@@ -124,7 +124,7 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 		os.Exit(1)
 	}
 
-	if m, ok := mResult.(model); ok && m.selected != nil {
+	if m, ok := mResult.(ListSelect); ok && m.selected != nil {
 		return m.selected
 	}
 

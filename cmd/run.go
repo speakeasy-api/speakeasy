@@ -13,13 +13,14 @@ import (
 )
 
 type RunFlags struct {
-	Target          string `json:"target"`
-	Source          string `json:"source"`
-	InstallationURL string `json:"installationURL"`
-	Debug           bool   `json:"debug"`
-	Repo            string `json:"repo"`
-	RepoSubdir      string `json:"repo-subdir"`
-	SkipCompile     bool   `json:"skip-compile"`
+	Target           string            `json:"target"`
+	Source           string            `json:"source"`
+	InstallationURL  string            `json:"installationURL"`
+	Debug            bool              `json:"debug"`
+	Repo             string            `json:"repo"`
+	RepoSubdir       string            `json:"repo-subdir"`
+	SkipCompile      bool              `json:"skip-compile"`
+	InstallationURLs map[string]string `json:"installationURLs"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -74,6 +75,10 @@ A full workflow is capable of running the following steps:
 			Name:        "skip-compile",
 			Description: "skip compilation when generating the SDK",
 		},
+		model.MapFlag{
+			Name:        "installationURLs",
+			Description: "a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager",
+		},
 	},
 }
 
@@ -119,13 +124,38 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 		}
 	}
 
+	if flags.Target == "all" && len(targets) == 1 {
+		flags.Target = targets[0]
+	}
+
+	// Ensure installationURLs are properly set
+	if flags.InstallationURL != "" && len(flags.InstallationURLs) == 0 {
+		if flags.Target == "all" {
+			return fmt.Errorf("cannot specify singular installation URL when running all targets. Please use the installationURLs flag instead")
+		}
+
+		flags.InstallationURLs = map[string]string{flags.Target: flags.InstallationURL}
+	} else if len(flags.InstallationURLs) > 0 {
+		if flags.Target != "all" {
+			if _, ok := flags.InstallationURLs[flags.Target]; !ok {
+				return fmt.Errorf("installationURLs flag must contain an entry for the target flag")
+			}
+		} else {
+			for _, target := range targets {
+				if _, ok := flags.InstallationURLs[target]; !ok {
+					return fmt.Errorf("installationURLs flag must contain an entry for the target flag")
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow := run.NewWorkflowStep("Workflow", nil)
 
-	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, !flags.SkipCompile, workflow)
+	err := run.Run(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdir, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, workflow)
 
 	workflow.Finalize(err == nil)
 
@@ -138,5 +168,5 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.InstallationURL, flags.Repo, flags.RepoSubdir, flags.Debug, !flags.SkipCompile)
+	return run.RunWithVisualization(ctx, flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdir, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
 }
