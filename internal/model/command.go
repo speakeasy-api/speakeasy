@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"slices"
-	"strconv"
 )
 
 type Command interface {
@@ -138,23 +137,30 @@ func (c ExecutableCommand[F]) checkFlags() error {
 func (c ExecutableCommand[F]) GetFlags(cmd *cobra.Command) (*F, error) {
 	var flags F
 
+	findFlagDef := func(name string) Flag {
+		if slices.Contains(utils.FlagsToIgnore, name) {
+			return nil
+		}
+		for _, f := range c.Flags {
+			if f.getName() == name {
+				return f
+			}
+		}
+		return nil
+	}
+
 	jsonFlags := make(map[string]interface{})
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Value.Type() == "string" {
-			jsonFlags[f.Name] = f.Value.String()
-		} else if f.Value.Type() == "bool" {
-			b, err := strconv.ParseBool(f.Value.String())
-			if err != nil {
-				return
-			}
-			jsonFlags[f.Name] = b
-		} else if f.Value.Type() == "int" {
-			i, err := strconv.Atoi(f.Value.String())
-			if err != nil {
-				return
-			}
-			jsonFlags[f.Name] = i
+		flag := findFlagDef(f.Name)
+		if flag == nil {
+			return
 		}
+
+		v, err := flag.parseValue(f.Value.String())
+		if err != nil {
+			panic(err)
+		}
+		jsonFlags[f.Name] = v
 	})
 
 	jsonBytes, err := json.Marshal(jsonFlags)

@@ -113,11 +113,9 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	var missingRequiredFlags []*pflag.Flag
 	var missingOptionalFlags []*pflag.Flag
 
-	flagsToIgnore := []string{"help", "version", "logLevel"}
-
 	requestValue := func(flag *pflag.Flag) {
 		// If the flag already has a value, skip it
-		if flag.Changed || flag.Hidden || slices.Contains(flagsToIgnore, flag.Name) {
+		if flag.Changed || flag.Hidden || slices.Contains(utils.FlagsToIgnore, flag.Name) {
 			return
 		}
 
@@ -219,7 +217,7 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 
 	if cmd.Flags().HasFlags() {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if flag.Name != "help" && flag.Name != "version" && flag.Name != "logLevel" {
+			if slices.Contains(utils.FlagsToIgnore, flag.Name) {
 				onlyHasHelpFlags = false
 			}
 		})
