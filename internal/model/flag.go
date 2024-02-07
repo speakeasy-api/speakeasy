@@ -81,6 +81,11 @@ func (f IntFlag) parseValue(v string) (interface{}, error) {
 	return strconv.Atoi(v)
 }
 
+// MapFlag is a flag type for a map of strings
+// Supports JSON input, as well as a simple key-value pair format
+// Examples of valid input:
+// --flag='{"key1":"value1","key2":"value2"}'
+// --flag=key1:value1,key2:value2
 type MapFlag struct {
 	Name, Shorthand, Description string
 	Required, Hidden             bool
