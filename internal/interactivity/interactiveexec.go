@@ -217,7 +217,7 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 
 	if cmd.Flags().HasFlags() {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if slices.Contains(utils.FlagsToIgnore, flag.Name) {
+			if !slices.Contains(utils.FlagsToIgnore, flag.Name) {
 				onlyHasHelpFlags = false
 			}
 		})
@@ -227,5 +227,5 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 }
 
 func isHidden(cmd *cobra.Command) bool {
-	return cmd.Hidden || cmd.Name() == "completion"
+	return cmd.Hidden || slices.Contains(HiddenCommands, cmd.Name())
 }
