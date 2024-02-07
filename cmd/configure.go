@@ -99,11 +99,11 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		existingSource = &source
 	}
 
-	var sourceOptions []string
+	var sourceOptions []huh.Option[string]
 	for sourceName := range workflowFile.Sources {
-		sourceOptions = append(sourceOptions, sourceName)
+		sourceOptions = append(sourceOptions, huh.NewOption("✏️  "+sourceName, sourceName))
 	}
-	sourceOptions = append(sourceOptions, "new source")
+	sourceOptions = append(sourceOptions, huh.NewOption("➕ new source", "new source"))
 
 	if !flags.New && existingSource == nil {
 		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
@@ -177,10 +177,12 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	}
 
 	var existingTargets []string
+	var targetOptions []huh.Option[string]
 	for targetName := range workflowFile.Targets {
 		existingTargets = append(existingTargets, targetName)
+		targetOptions = append(targetOptions, huh.NewOption("✏️  "+targetName, targetName))
 	}
-	targetOptions := append(existingTargets, "new target")
+	targetOptions = append(targetOptions, huh.NewOption("➕ new target", "new target"))
 
 	if !flags.New && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
