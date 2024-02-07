@@ -9,6 +9,8 @@ import (
 	"golang.org/x/term"
 )
 
+var FlagsToIgnore = []string{"help", "version", "logLevel"}
+
 func CreateDirectory(filename string) error {
 	dir := filepath.Dir(filename)
 
