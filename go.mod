@@ -19,7 +19,7 @@ require (
 	github.com/pb33f/libopenapi v0.15.5
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.250.19
+	github.com/speakeasy-api/openapi-generation/v2 v2.250.21
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.2.0
