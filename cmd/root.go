@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
 	"slices"
 	"strings"
