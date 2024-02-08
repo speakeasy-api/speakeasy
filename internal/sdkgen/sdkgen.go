@@ -114,7 +114,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 		return err
 	}
 
-	if _, err := g.LoadConfig(outDir, true); err != nil {
+	if _, err := g.LoadConfig(ctx, outDir, true); err != nil {
 		return err
 	}
 
