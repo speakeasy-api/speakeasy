@@ -3,6 +3,8 @@ package sdkgen
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"os"
 	"strings"
 
@@ -20,6 +22,8 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	if !generate.CheckLanguageSupported(lang) {
 		return fmt.Errorf("language not supported: %s", lang)
 	}
+
+	ctx = events.SetTargetInContext(ctx, outDir)
 
 	logger := log.From(ctx).WithAssociatedFile(schemaPath)
 
@@ -78,12 +82,18 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, schemaPath, lang, outDir, isRemote, compile); len(errs) > 0 {
-		for _, err := range errs {
-			logger.Error("", zap.Error(err))
-		}
+	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
+		if errs := g.Generate(ctx, schema, schemaPath, lang, outDir, isRemote, compile); len(errs) > 0 {
+			for _, err := range errs {
+				logger.Error("", zap.Error(err))
+			}
 
-		return fmt.Errorf("failed to generate SDKs for %s ✖", lang)
+			return fmt.Errorf("failed to generate SDKs for %s ✖", lang)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"

@@ -36,7 +36,12 @@ func authInit() {
 }
 
 func loginExec(cmd *cobra.Command, args []string) error {
-	workspaceID, err := auth.Authenticate(true)
+	authCtx, err := auth.Authenticate(cmd.Context(), true)
+	if err != nil {
+		return err
+	}
+	cmd.SetContext(authCtx)
+	workspaceID, err := core.GetWorkspaceIDFromContext(authCtx)
 	if err != nil {
 		return err
 	}
@@ -44,7 +49,6 @@ func loginExec(cmd *cobra.Command, args []string) error {
 	log.From(cmd.Context()).
 		WithInteractiveOnly().
 		Successf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), workspaceID)
-
 	return nil
 }
 

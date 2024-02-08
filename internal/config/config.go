@@ -39,13 +39,13 @@ func GetCustomerID() string {
 	return vCfg.GetString("speakeasy_customer_id")
 }
 
-func GetSpeakeasyAPIKey() (string, bool) {
+func GetSpeakeasyAPIKey() string {
 	apiKey := os.Getenv("SPEAKEASY_API_KEY")
 	if apiKey == "" {
-		return vCfg.GetString("speakeasy_api_key"), false
+		return vCfg.GetString("speakeasy_api_key")
 	}
 
-	return apiKey, true
+	return apiKey
 }
 
 func GetWorkspaceID() string {

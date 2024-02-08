@@ -28,9 +28,6 @@ func RegisterAPICommands(root *cobra.Command) {
 		registerQueryEventLog,
 		registerGetRequestFromEventLog,
 		registerGetValidEmbedAccessTokens,
-		registerGetPlugins,
-		registerUpsertPlugin,
-		registerRunPlugin,
 	}
 
 	for _, cmd := range cmds {
@@ -46,9 +43,11 @@ func registerPrintableApiCommand(root *cobra.Command, newCommand *cobra.Command)
 
 func authCommand(exec func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		if _, err := auth.Authenticate(false); err != nil {
+		authCtx, err := auth.Authenticate(cmd.Context(), false)
+		if err != nil {
 			return err
 		}
+		cmd.SetContext(authCtx)
 
 		return exec(cmd, args)
 	}
@@ -335,43 +334,4 @@ func registerGetValidEmbedAccessTokens(root *cobra.Command) {
 		Long:  `Get all valid embed access tokens for the current workspace`,
 		RunE:  authCommand(getValidEmbedAccessTokens),
 	})
-}
-
-func registerGetPlugins(root *cobra.Command) {
-	registerPrintableApiCommand(root, &cobra.Command{
-		Use:   "get-plugins",
-		Short: "Get plugins",
-		Long:  "Get all plugins",
-		RunE:  authCommand(getPlugins),
-	})
-}
-
-func registerRunPlugin(root *cobra.Command) {
-	cmd := cobra.Command{
-		Use:   "run-plugin",
-		Short: "Run plugin",
-		Long:  "Run plugin in non-mutating capacity",
-		RunE:  authCommand(runPlugin),
-	}
-	cmd.Flags().String("filters", "", "Filters")
-	cmd.Flags().String("plugin-id", "", "Plugin ID")
-	cmd.MarkFlagRequired("plugin-id")
-
-	registerPrintableApiCommand(root, &cmd)
-}
-
-func registerUpsertPlugin(root *cobra.Command) {
-	cmd := cobra.Command{
-		Use:   "upsert-plugin",
-		Short: "Upsert plugin",
-		Long:  "Upsert plugin",
-		RunE:  authCommand(upsertPlugin),
-	}
-	cmd.Flags().String("plugin-id", "", "Plugin ID")
-	cmd.Flags().String("title", "", "Title")
-	cmd.Flags().String("file", "", "File")
-	cmd.MarkFlagRequired("plugin-id")
-	cmd.MarkFlagRequired("title")
-	cmd.MarkFlagRequired("file")
-	root.AddCommand(&cmd)
 }
