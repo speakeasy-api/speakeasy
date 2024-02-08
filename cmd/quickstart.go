@@ -18,7 +18,6 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"gopkg.in/yaml.v3"
 )
@@ -158,8 +157,29 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	var resolvedSchema string
-	for _, source := range quickstartObj.WorkflowFile.Sources {
+	var sourceName string
+	for name, source := range quickstartObj.WorkflowFile.Sources {
+		sourceName = name
 		resolvedSchema = source.Inputs[0].Location
+	}
+
+	absoluteOurDir, err := filepath.Abs(outDir)
+	if err != nil {
+		return err
+	}
+
+	// If we are referencing a local schema, set a relative path for the new out directory
+	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
+		absPath, err := filepath.Abs(resolvedSchema)
+		if err != nil {
+			return err
+		}
+
+		referencePath, err := filepath.Rel(outDir, absPath)
+		if err != nil {
+			return err
+		}
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
 	}
 
 	speakeasyFolderPath := outDir + "/" + ".speakeasy"
@@ -177,18 +197,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	for key, outConfig := range quickstartObj.LanguageConfigs {
 		if err := config.SaveConfig(outDir, outConfig); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
-		}
-	}
-
-	absoluteOurDir, err := filepath.Abs(outDir)
-	if err != nil {
-		return err
-	}
-
-	// If we are referencing a local schema, copy it to the output directory
-	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
-		if err := utils.CopyFile(resolvedSchema, outDir+"/"+resolvedSchema); err != nil {
-			return errors.Wrapf(err, "failed to copy schema file")
 		}
 	}
 
