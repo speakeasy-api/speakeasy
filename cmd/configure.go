@@ -100,11 +100,11 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		existingSource = &source
 	}
 
-	var sourceOptions []string
+	var sourceOptions []huh.Option[string]
 	for sourceName := range workflowFile.Sources {
-		sourceOptions = append(sourceOptions, sourceName)
+		sourceOptions = append(sourceOptions, huh.NewOption(charm.FormatEditOption(sourceName), sourceName))
 	}
-	sourceOptions = append(sourceOptions, "new source")
+	sourceOptions = append(sourceOptions, huh.NewOption(charm.FormatNewOption("New Source"), "new source"))
 
 	if !flags.New && existingSource == nil {
 		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
@@ -178,24 +178,29 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.New(fmt.Sprintf("you must have a source to configure a target try %s", suggestion))
 	}
 
+	if workflowFile.Targets == nil {
+		workflowFile.Targets = make(map[string]workflow.Target)
+	}
+
 	existingTarget := ""
 	if _, ok := workflowFile.Targets[flags.ID]; ok {
 		existingTarget = flags.ID
 	}
 
-	var targetOptions []string
+	var targetOptions []huh.Option[string]
 	var existingTargets []string
 	if len(workflowFile.Targets) > 0 {
 		for targetName := range workflowFile.Targets {
 			existingTargets = append(existingTargets, targetName)
+			targetOptions = append(targetOptions, huh.NewOption(charm.FormatEditOption(targetName), targetName))
 		}
-		targetOptions = append(existingTargets, "new target")
+		targetOptions = append(targetOptions, huh.NewOption(charm.FormatNewOption("New Target"), "new target"))
 	} else {
 		// To support legacy SDK configurations configure will detect an existing target setup in the current root directory
 		if existingSDK {
 			existingTargets, targetOptions = handleLegacySDKTarget(workingDir, workflowFile)
 		} else {
-			targetOptions = append(targetOptions, "new target")
+			targetOptions = append(targetOptions, huh.NewOption(charm.FormatNewOption("New Target"), "new target"))
 		}
 	}
 
@@ -291,7 +296,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	return nil
 }
 
-func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) ([]string, []string) {
+func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) ([]string, []huh.Option[string]) {
 	if cfg, err := config.Load(workingDir); err == nil && cfg.Config != nil && len(cfg.Config.Languages) > 0 {
 		var targetLanguage string
 		for lang := range cfg.Config.Languages {
@@ -315,9 +320,9 @@ func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) (
 				Target: targetLanguage,
 				Source: firstSourceName,
 			}
-			return []string{targetLanguage}, []string{targetLanguage}
+			return []string{targetLanguage}, []huh.Option[string]{huh.NewOption(charm.FormatEditOption(targetLanguage), targetLanguage)}
 		}
 	}
 
-	return []string{}, []string{"new target"}
+	return []string{}, []huh.Option[string]{huh.NewOption(charm.FormatNewOption("New Target"), "new target")}
 }

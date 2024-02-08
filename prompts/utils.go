@@ -51,7 +51,7 @@ func GetSupportedTargets() []string {
 	return filteredTargets
 }
 
-func getCurrentSources(currentSource *workflow.Source) []string {
+func getCurrentInputs(currentSource *workflow.Source) []string {
 	var sources []string
 	if currentSource != nil {
 		for _, input := range currentSource.Inputs {
