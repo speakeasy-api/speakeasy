@@ -170,12 +170,12 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	// If we are referencing a local schema, set a relative path for the new out directory
 	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
-		absSchemPath, err := filepath.Abs(resolvedSchema)
+		absSchemaPath, err := filepath.Abs(resolvedSchema)
 		if err != nil {
 			return err
 		}
 
-		referencePath, err := filepath.Rel(outDir, absSchemPath)
+		referencePath, err := filepath.Rel(outDir, absSchemaPath)
 		if err != nil {
 			return err
 		}
