@@ -178,6 +178,10 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.New(fmt.Sprintf("you must have a source to configure a target try %s", suggestion))
 	}
 
+	if workflowFile.Targets == nil {
+		workflowFile.Targets = make(map[string]workflow.Target)
+	}
+
 	existingTarget := ""
 	if _, ok := workflowFile.Targets[flags.ID]; ok {
 		existingTarget = flags.ID
