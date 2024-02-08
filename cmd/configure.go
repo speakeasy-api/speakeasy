@@ -320,5 +320,5 @@ func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) (
 		}
 	}
 
-	return []string{}, []huh.Option[string]{huh.NewOption(charm.FormatEditOption("New Target"), "new target")}
+	return []string{}, []huh.Option[string]{huh.NewOption(charm.FormatNewOption("New Target"), "new target")}
 }
