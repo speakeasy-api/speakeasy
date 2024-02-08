@@ -26,14 +26,16 @@ speakeasy run [flags]
 ### Options
 
 ```
-  -d, --debug                    enable writing debug files with broken code
-  -h, --help                     help for run
-  -i, --installationURL string   the language specific installation URL for installation instructions if the SDK is not published to a package manager
-  -p, --published                whether the SDK is published to a package manager or not, determines the type of installation instructions to generate
-  -r, --repo string              the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions
-  -b, --repo-subdir string       the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation
-  -s, --source string            source to run. specify 'all' to run all sources
-  -t, --target string            target to run. specify 'all' to run all targets
+  -d, --debug                     enable writing debug files with broken code
+  -h, --help                      help for run
+  -i, --installationURL string    the language specific installation URL for installation instructions if the SDK is not published to a package manager
+      --installationURLs string   a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager (default "null")
+  -r, --repo string               the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions
+  -b, --repo-subdir string        the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation
+      --repo-subdirs string       a map from target ID to the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation (default "null")
+      --skip-compile              skip compilation when generating the SDK
+  -s, --source string             source to run. specify 'all' to run all sources
+  -t, --target string             target to run. specify 'all' to run all targets
 ```
 
 ### Options inherited from parent commands

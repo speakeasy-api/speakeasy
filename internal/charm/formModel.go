@@ -1,6 +1,8 @@
 package charm
 
 import (
+	"os"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -18,7 +20,7 @@ func NewForm(form *huh.Form, args ...string) Model {
 	keyMap := huh.NewDefaultKeyMap()
 	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab", "right"), key.WithHelp("tab", "complete"), key.WithHelp("right", "complete"))
 	model := Model{
-		form: form.WithTheme(formTheme).WithKeyMap(keyMap),
+		form: form.WithTheme(formTheme).WithKeyMap(keyMap).WithShowHelp(false),
 	}
 
 	if len(args) > 0 {
@@ -39,8 +41,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc", "ctrl+c", "q":
-			return m, tea.Quit
+		case "esc", "ctrl+c":
+			os.Exit(0)
 		}
 	}
 
@@ -67,13 +69,17 @@ func (m Model) View() string {
 	}
 	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
 	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
+
+	legend := styles.KeymapLegend([]string{"tab/↵", "esc"}, []string{"next", "quit"})
+	content := m.form.View() + "\n" + legend + "\n"
+
 	if m.title != "" {
 		header := titleStyle.Render(m.title)
 		if m.description != "" {
 			header += "\n" + descriptionStyle.Render(m.description)
 		}
-		return header + "\n\n" + m.form.View()
+		return header + "\n\n" + content
 	}
 
-	return m.form.View()
+	return content
 }

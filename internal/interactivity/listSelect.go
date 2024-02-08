@@ -12,7 +12,7 @@ import (
 
 var (
 	docStyle  = styles.Margins.Copy()
-	maxHeight = 24
+	maxHeight = 20
 )
 
 type item struct {
@@ -24,20 +24,21 @@ func (i item) Title() string       { return i.title }
 func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
-type model struct {
+type ListSelect struct {
 	list     list.Model
 	selected *cobra.Command
 }
 
-func (m model) Init() tea.Cmd {
+func (m ListSelect) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "ctrl+c":
+		case "ctrl+c", "esc":
+			os.Exit(0)
 			return m, tea.Quit
 		case "enter":
 			selected, ok := m.list.SelectedItem().(item)
@@ -56,11 +57,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m ListSelect) View() string {
 	if m.selected != nil {
 		return ""
 	}
-	return docStyle.Render(m.list.View())
+
+	inputs := []string{"↑/↓"}
+	descriptions := []string{"navigate"}
+
+	if m.list.Paginator.TotalPages > 1 {
+		inputs = append(inputs, "←/→")
+		descriptions = append(descriptions, "change pages")
+	}
+
+	inputs = append(inputs, "↵", "esc")
+	descriptions = append(descriptions, "select", "quit")
+
+	inputLegend := styles.KeymapLegend(inputs, descriptions)
+
+	return docStyle.Render(m.list.View() + "\n\n" + inputLegend)
 }
 
 func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command {
@@ -91,12 +106,17 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 	l.Styles.Title = styles.HeavilyEmphasized
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{key.NewBinding(key.WithKeys("↵"), key.WithHelp("↵", "select"))}
-	}
-	l.AdditionalFullHelpKeys = l.AdditionalShortHelpKeys
+	l.SetShowHelp(false)
 
-	m := model{list: l}
+	l.KeyMap = list.KeyMap{
+		CursorUp:   key.NewBinding(key.WithKeys("up")),
+		CursorDown: key.NewBinding(key.WithKeys("down")),
+		NextPage:   key.NewBinding(key.WithKeys("right")),
+		PrevPage:   key.NewBinding(key.WithKeys("left")),
+		Quit:       key.NewBinding(key.WithKeys("esc")),
+	}
+
+	m := ListSelect{list: l}
 	p := tea.NewProgram(m)
 
 	mResult, err := p.Run()
@@ -104,7 +124,7 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 		os.Exit(1)
 	}
 
-	if m, ok := mResult.(model); ok && m.selected != nil {
+	if m, ok := mResult.(ListSelect); ok && m.selected != nil {
 		return m.selected
 	}
 

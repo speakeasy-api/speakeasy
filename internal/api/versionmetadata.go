@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/spf13/cobra"
 )

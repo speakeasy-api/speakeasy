@@ -48,7 +48,13 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 			charm.NewInput().
 				Title("What is a good output directory for your generation target?").
 				Validate(func(s string) error {
-					if currentDir(s) {
+					var enforceNewDir bool
+					if newTarget {
+						enforceNewDir = len(currentWorkflow.Targets) > 0
+					} else {
+						enforceNewDir = len(currentWorkflow.Targets) > 1
+					}
+					if enforceNewDir && currentDir(s) {
 						return fmt.Errorf("the output dir must not be the root directory")
 					}
 
@@ -107,7 +113,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 	}
 
 	if err := target.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
-		return "", nil, errors.Wrap(err, "failed to validate source")
+		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
 	return targetName, &target, nil
@@ -140,7 +146,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 	}
 
 	if err := newTarget.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
-		return "", nil, errors.Wrap(err, "failed to validate source")
+		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
 	if originalDir != outDir {

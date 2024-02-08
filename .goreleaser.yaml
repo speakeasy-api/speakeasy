@@ -67,7 +67,6 @@ chocolateys:
 
       Generating idiomatic client SDKs from OpenAPI3.X specs:
       Live: Go, Python3, Typescript(Node), Java, PHP, Ruby, Terraform
-      Coming soon: Rust, C# and more languages on upon request!
       Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages.
       Authenticating with the platform and managing API keys.
     release_notes: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"

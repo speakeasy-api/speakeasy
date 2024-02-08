@@ -31,9 +31,11 @@ func proxyInit() {
 }
 
 func proxyExec(cmd *cobra.Command, args []string) error {
-	if _, err := auth.Authenticate(false); err != nil {
+	authCtx, err := auth.Authenticate(cmd.Context(), false)
+	if err != nil {
 		return err
 	}
+	cmd.SetContext(authCtx)
 
 	downstreamBaseURL, err := cmd.Flags().GetString("downstream")
 	if err != nil {
@@ -69,7 +71,7 @@ func proxyExec(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	apiKey, _ := config.GetSpeakeasyAPIKey()
+	apiKey := config.GetSpeakeasyAPIKey()
 
 	return proxy.StartProxy(proxy.ProxyConfig{
 		DownstreamBaseURL: downstreamBaseURL,

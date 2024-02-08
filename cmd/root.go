@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/model"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -23,11 +25,11 @@ var rootCmd = &cobra.Command{
 	Use:   "speakeasy",
 	Short: "The speakeasy cli tool provides access to the speakeasyapi.dev toolchain",
 	Long: ` A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php + more coming soon)
+	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, c#, swift, ruby, terraform)
 	- Validating OpenAPI specs
 	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic 								(coming soon)
-	- Generating Postman collections from OpenAPI Specs 							(coming soon)
+	- Generating OpenAPI specs from your API traffic
+	- Generating Postman collections from OpenAPI Specs
 `,
 	RunE: rootExec,
 }
@@ -79,6 +81,8 @@ func Execute(version, artifactArch string) {
 		if cmd.Name() != "update" {
 			checkForUpdate(cmd, version, artifactArch)
 		}
+
+		cmd.SetContext(events.SetSpeakeasyVersionInContext(cmd.Context(), version))
 
 		if err := setLogLevel(cmd); err != nil {
 			return
@@ -153,8 +157,8 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	}
 
 	l := log.From(cmd.Context()).WithInteractiveOnly()
-	l.WithStyle(styles.HeavilyEmphasized).Println("Welcome to the Speakeasy CLI!")
-	l.WithStyle(styles.DimmedItalic).Println("This is interactive mode. For usage, run speakeasy -h instead.")
+	l.PrintfStyled(styles.HeavilyEmphasized, "Welcome to the Speakeasy CLI!\n")
+	l.PrintfStyled(styles.DimmedItalic, "This is interactive mode. For usage, run speakeasy -h instead.\n")
 
 	return interactivity.InteractiveExec(cmd, args, "Select a command to run")
 }

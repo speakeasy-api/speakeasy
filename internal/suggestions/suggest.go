@@ -161,9 +161,11 @@ func suggest(ctx context.Context, schema []byte, schemaPath string, errsWithLine
 
 	// local authentication should just be set in env variable
 	if os.Getenv("SPEAKEASY_SERVER_URL") != "http://localhost:35290" {
-		if _, err := auth.Authenticate(false); err != nil {
+		authCtx, err := auth.Authenticate(ctx, false)
+		if err != nil {
 			return nil, err
 		}
+		ctx = authCtx
 	}
 
 	suggestionToken, fileType, err := Upload(schema, schemaPath, config.Model)

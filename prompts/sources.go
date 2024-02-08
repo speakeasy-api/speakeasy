@@ -148,11 +148,55 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source, error) {
 	addOpenAPIFile := false
+	var inputOptions []huh.Option[string]
+	for _, option := range getCurrentInputs(currentSource) {
+		inputOptions = append(inputOptions, huh.NewOption(charm_internal.FormatEditOption(option), option))
+	}
+	inputOptions = append(inputOptions, huh.NewOption(charm_internal.FormatNewOption("New Document"), "new document"))
+	selectedDoc := ""
+	prompt := charm_internal.NewSelectPrompt("Would you like to modify the location of an existing OpenAPI document or add a new one?", "", inputOptions, &selectedDoc)
 	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
-		charm_internal.NewBranchPrompt("Would you like to add an openapi file to this source?", &addOpenAPIFile)),
-		fmt.Sprintf("Let's add to the source %s", name))).
+		prompt),
+		fmt.Sprintf("Let's modify the source %s", name))).
 		Run(); err != nil {
 		return nil, err
+	}
+
+	addOpenAPIFile = selectedDoc == "new document"
+	if !addOpenAPIFile {
+		fileLocation := selectedDoc
+		var authHeader, authSecret string
+		groups := []*huh.Group{
+			huh.NewGroup(
+				charm_internal.NewInput().
+					Title("What is the location of your OpenAPI document?\n").
+					Placeholder("local file path or remote file reference.").
+					Inline(false).
+					Value(&fileLocation),
+			),
+		}
+		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader, &authSecret)...)
+		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+			groups...),
+			fmt.Sprintf("Let's modify the source %s", name))).
+			Run(); err != nil {
+			return nil, err
+		}
+
+		for index, input := range currentSource.Inputs {
+			if input.Location == selectedDoc {
+				newInput := workflow.Document{}
+				newInput.Location = fileLocation
+				if authHeader != "" && authSecret != "" {
+					newInput.Auth = &workflow.Auth{
+						Header: authHeader,
+						Secret: authSecret,
+					}
+				}
+				currentSource.Inputs[index] = newInput
+				break
+			}
+		}
 	}
 
 	for addOpenAPIFile {
@@ -210,6 +254,34 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		currentSource.Overlays = append(currentSource.Overlays, *document)
 	}
 
+	if len(currentSource.Inputs)+len(currentSource.Overlays) > 1 {
+		outputLocation := ""
+		if currentSource.Output != nil {
+			outputLocation = *currentSource.Output
+		}
+
+		previousOutputLocation := outputLocation
+		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+			huh.NewGroup(
+				charm_internal.NewInput().
+					Title("Optionally provide an output location for your build source file:").
+					Value(&outputLocation).
+					Suggestions(schemaFilesInCurrentDir()),
+			)),
+			fmt.Sprintf("Let's modify the source %s", name))).
+			Run(); err != nil {
+			return nil, err
+		}
+
+		if previousOutputLocation != outputLocation {
+			currentSource.Output = &outputLocation
+		}
+	}
+
+	if err := currentSource.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate source")
+	}
+
 	return currentSource, nil
 }
 
@@ -230,7 +302,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			Suggestions(schemaFilesInCurrentDir()),
 	).WithHideFunc(
 		func() bool {
-			return len(currentWorkflow.Sources) == 0
+			return overlayFileLocation == ""
 		}))
 
 	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(

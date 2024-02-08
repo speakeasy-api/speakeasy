@@ -2,12 +2,13 @@ package api
 
 import (
 	"fmt"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +21,7 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := core.GetSDKFromContext(ctx)
 	if err != nil {
 		return err
 	}

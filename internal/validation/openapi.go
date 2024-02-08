@@ -144,16 +144,33 @@ func errorsToTabContents(schema []byte, errs []error) []interactivity.Inspectabl
 
 	lines := strings.Split(string(schema), "\n")
 
+	// Truncate very long lines (common for single-line json specs)
+	for i, line := range lines {
+		if len(line) > 1000 {
+			lines[i] = line[:1000] + "..."
+		}
+	}
+
 	for _, err := range errs {
 		vErr := errors.GetValidationErr(err)
 
-		lineNumber := styles.SeverityToStyle(vErr.Severity).Render(fmt.Sprintf("Line %d:", vErr.LineNumber))
-		errType := styles.Dimmed.Render(vErr.Rule)
-		s := fmt.Sprintf("%s %s - %s", lineNumber, errType, vErr.Message)
+		s := ""
+		var details *string
+
+		// Need to account for non-validation errors
+		if vErr == nil {
+			s = fmt.Sprintf("%v", err)
+		} else {
+			lineNumber := styles.SeverityToStyle(vErr.Severity).Render(fmt.Sprintf("Line %d:", vErr.LineNumber))
+			errType := styles.Dimmed.Render(vErr.Rule)
+			s = fmt.Sprintf("%s %s - %s", lineNumber, errType, vErr.Message)
+			d := getDetailedView(lines, *vErr)
+			details = &d
+		}
 
 		content := interactivity.InspectableContent{
 			Summary:      s,
-			DetailedView: getDetailedView(lines, *vErr),
+			DetailedView: details,
 		}
 
 		contents = append(contents, content)
@@ -163,7 +180,7 @@ func errorsToTabContents(schema []byte, errs []error) []interactivity.Inspectabl
 		s := styles.Emphasized.Render("Congrats, there are no issues!")
 		content := interactivity.InspectableContent{
 			Summary:      s,
-			DetailedView: s,
+			DetailedView: nil,
 		}
 		contents = append(contents, content)
 	}
