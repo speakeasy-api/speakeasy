@@ -69,11 +69,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return fmt.Errorf("you cannot run quickstart when a speakeasy workflow already exists, try speakeasy configure instead")
 	}
 
-	if _, err := os.Stat(workingDir + "/gen.yaml"); err == nil {
-		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
-	}
-
-	if _, err := os.Stat(workingDir + "/.speakeasy/gen.yaml"); err == nil {
+	if prompts.HasExistingGeneration(workingDir) {
 		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
 	}
 
@@ -226,8 +222,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
-	if err = run.RunWithVisualization(ctx, initialTarget, "", genVersion, "", "", "", false, !flags.SkipCompile); err != nil {
-		return errors.Wrapf(err, "failed to run speakeasy generate")
+	workflow, err := run.NewWorkflow("Workflow", initialTarget, "", genVersion, "", nil, nil, false, !flags.SkipCompile)
+	if err != nil {
+		return err
+	}
+
+	if err = workflow.RunWithVisualization(ctx); err != nil {
+		return errors.Wrapf(err, "failed to run generation workflow")
 	}
 
 	return nil

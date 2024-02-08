@@ -1,6 +1,7 @@
 package prompts
 
 import (
+	"os"
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -58,4 +59,16 @@ func getCurrentInputs(currentSource *workflow.Source) []string {
 		}
 	}
 	return sources
+}
+
+func HasExistingGeneration(dir string) bool {
+	if _, err := os.Stat(dir + "/gen.yaml"); err == nil {
+		return true
+	}
+
+	if _, err := os.Stat(dir + "/.speakeasy/gen.yaml"); err == nil {
+		return true
+	}
+
+	return false
 }

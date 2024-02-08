@@ -14,13 +14,15 @@ const (
 	StatusRunning   Status = "running"
 	StatusFailed    Status = "failed"
 	StatusSucceeded Status = "success"
+	StatusSkipped   Status = "skipped"
 )
 
 type WorkflowStep struct {
-	name     string
-	status   Status
-	substeps []*WorkflowStep
-	updates  chan<- UpdateMsg
+	name              string
+	status            Status
+	statusExplanation string
+	substeps          []*WorkflowStep
+	updates           chan<- UpdateMsg
 }
 
 func NewWorkflowStep(name string, updatesListener chan<- UpdateMsg) *WorkflowStep {
@@ -42,15 +44,24 @@ func (w *WorkflowStep) NewSubstep(name string) *WorkflowStep {
 
 func (w *WorkflowStep) AddSubstep(substep *WorkflowStep) {
 	if len(w.substeps) > 0 {
-		w.substeps[len(w.substeps)-1].status = StatusSucceeded // If we go to the next substep, we're successful
+		prev := w.substeps[len(w.substeps)-1]
+		if prev.status == StatusRunning {
+			prev.status = StatusSucceeded // If we go to the next substep, we're successful
+		}
 	}
 	w.substeps = append(w.substeps, substep)
 
 	w.Notify()
 }
 
+func (w *WorkflowStep) Skip(reason string) {
+	w.status = StatusSkipped
+	w.statusExplanation = reason
+	w.Notify()
+}
+
 func (w *WorkflowStep) SucceedWorkflow() {
-	if w.status != StatusFailed {
+	if w.status == StatusRunning {
 		w.status = StatusSucceeded
 	}
 	for _, substep := range w.substeps {
@@ -61,7 +72,7 @@ func (w *WorkflowStep) SucceedWorkflow() {
 }
 
 func (w *WorkflowStep) FailWorkflow() {
-	if w.status != StatusSucceeded {
+	if w.status == StatusRunning {
 		w.status = StatusFailed
 	}
 	for _, substep := range w.substeps {
@@ -130,12 +141,18 @@ func (w *WorkflowStep) toString(parentIndent, indent int) string {
 		style = styles.Info
 	case StatusSucceeded:
 		style = styles.Success
+	case StatusSkipped:
+		style = styles.Dimmed
 	}
 
 	statusStyle := style.Copy().Bold(false).Italic(true)
 
 	builder.WriteString(style.Render(s))
 	builder.WriteString(statusStyle.Render(" -", string(w.status)))
+
+	if w.statusExplanation != "" {
+		builder.WriteString(statusStyle.Render(fmt.Sprintf(" (%s)", w.statusExplanation)))
+	}
 
 	for _, child := range w.substeps {
 		builder.WriteString("\n")
