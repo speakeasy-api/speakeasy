@@ -37,7 +37,7 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	log.PrintArray(cmd, res.Classes, map[string]string{
+	log.PrintArray(cmd, res.APIEndpoints, map[string]string{
 		"APIID":         "ApiID",
 		"APIEndpointID": "ApiEndpointID",
 	})
