@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/events"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/events"
 
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
@@ -48,7 +49,7 @@ func init() {
 func Init(version, artifactArch string) {
 	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
 
-	//TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
+	// TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
 	addCommand(rootCmd, quickstartCmd)
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
@@ -62,6 +63,7 @@ func Init(version, artifactArch string) {
 	updateInit(version, artifactArch)
 	proxyInit()
 	apiInit()
+	languageServerInit(version)
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {
@@ -78,7 +80,7 @@ func Execute(version, artifactArch string) {
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		if cmd.Name() != "update" {
+		if !slices.Contains([]string{"update", "language-server"}, cmd.Name()) {
 			checkForUpdate(cmd, version, artifactArch)
 		}
 
