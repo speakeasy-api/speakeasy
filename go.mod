@@ -8,7 +8,6 @@ require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/huh v0.3.0
 	github.com/charmbracelet/lipgloss v0.9.1
-	github.com/daveshanley/vacuum v0.9.2
 	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/structs v1.1.0
 	github.com/google/go-github/v52 v52.0.0
@@ -20,7 +19,7 @@ require (
 	github.com/pb33f/libopenapi v0.15.7
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.252.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.253.0
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.2.0
@@ -67,6 +66,7 @@ require (
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/daveshanley/vacuum v0.9.2 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20221120152707-495c53812d05 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
-	github.com/evanw/esbuild v0.19.5 // indirect
+	github.com/evanw/esbuild v0.19.11 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
@@ -100,7 +100,7 @@ require (
 	github.com/gomarkdown/markdown v0.0.0-20191123064959-2c17d62f5098 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98 // indirect
+	github.com/google/pprof v0.0.0-20240117000934-35fc243c5815 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
@@ -197,5 +197,3 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
-
-replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
