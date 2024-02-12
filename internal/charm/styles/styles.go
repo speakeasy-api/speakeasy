@@ -10,9 +10,9 @@ var (
 	Margins = lipgloss.NewStyle().Margin(1, 2)
 
 	HeavilyEmphasized = lipgloss.
-		NewStyle().
-		Foreground(Colors.Yellow).
-		Bold(true)
+				NewStyle().
+				Foreground(Colors.Yellow).
+				Bold(true)
 
 	Emphasized = HeavilyEmphasized.Copy().Foreground(Colors.White)
 
@@ -42,7 +42,7 @@ var (
 		Red:        lipgloss.AdaptiveColor{Dark: "#D93337", Light: "#54121B"},
 		DimRed:     lipgloss.AdaptiveColor{Dark: "#54121B", Light: "#D93337"},
 		Green:      lipgloss.AdaptiveColor{Dark: "#63AC67", Light: "#3D6B40"},
-		DimGreen:   lipgloss.AdaptiveColor{Dark: "#3D6B40", Light: "#63AC67"},
+		DimGreen:   lipgloss.AdaptiveColor{Dark: "#293D2A", Light: "#63AC67"},
 		BrightGrey: lipgloss.AdaptiveColor{Dark: "#B4B2A6", Light: "#4B4A3F"},
 		Grey:       lipgloss.AdaptiveColor{Dark: "#8A887D", Light: "#68675F"},
 		DimGrey:    lipgloss.AdaptiveColor{Dark: "#4B4A3F", Light: "#B4B2A6"},
