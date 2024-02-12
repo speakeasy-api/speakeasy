@@ -19,7 +19,7 @@ require (
 	github.com/pb33f/libopenapi v0.15.7
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.252.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.252.7
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.2.0
@@ -76,7 +76,7 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20221120152707-495c53812d05 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
-	github.com/evanw/esbuild v0.19.5 // indirect
+	github.com/evanw/esbuild v0.19.11 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/forPelevin/gomoji v1.1.7 // indirect
@@ -100,7 +100,7 @@ require (
 	github.com/gomarkdown/markdown v0.0.0-20191123064959-2c17d62f5098 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98 // indirect
+	github.com/google/pprof v0.0.0-20240117000934-35fc243c5815 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
