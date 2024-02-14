@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
@@ -28,9 +29,11 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	ctx = events.SetTargetInContext(ctx, outDir)
 
 	var genLockID *string
-	if utils.FileExists(outDir+"/.speakeasy/gen.lock") || utils.FileExists(outDir+"/.gen/gen.lock") {
-		if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
-			genLockID = &cfg.LockFile.ID
+	if absOutDir, err := filepath.Abs(outDir); err == nil {
+		if utils.FileExists(filepath.Join(absOutDir, ".speakeasy/gen.lock")) || utils.FileExists(filepath.Join(absOutDir, ".gen/gen.lock")) {
+			if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
+				genLockID = &cfg.LockFile.ID
+			}
 		}
 	}
 
