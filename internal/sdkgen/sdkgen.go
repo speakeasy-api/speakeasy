@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -25,6 +26,9 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	}
 
 	ctx = events.SetTargetInContext(ctx, outDir)
+
+	// open generation access check
+	access.HasGenerationAccess(ctx)
 
 	logger := log.From(ctx).WithAssociatedFile(schemaPath)
 

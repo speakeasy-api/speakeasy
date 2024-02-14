@@ -619,8 +619,13 @@ github.com/speakeasy-api/sdk-gen-config v1.7.2 h1:i3lBFt8NSLg3U5QBxAEITGXDLwHcuF
 github.com/speakeasy-api/sdk-gen-config v1.7.2/go.mod h1:4R+8FTyM6UdLHltOVAigIoR5D2UfPsGMmEFzPOP1yCs=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.2.0 h1:5tEds8giLRGNPNhqjB6MQAaPeljqx71ga94S7EotXcQ=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.2.0/go.mod h1:FIOTyL6/J8Bln3TCY8ztxPr3KZ9+aodWGenzizvsu8A=
+github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.2.2/go.mod h1:FIOTyL6/J8Bln3TCY8ztxPr3KZ9+aodWGenzizvsu8A=
 github.com/speakeasy-api/speakeasy-core v0.1.0 h1:vxsLHiL66/JFACowwoGDIuI3kp1ftGJ/rFW8ZHVxrCA=
 github.com/speakeasy-api/speakeasy-core v0.1.0/go.mod h1:Y17J+gv5HfQi+xjS6c+6AyPpJNQidZ4TnayK2QKA5EE=
+github.com/speakeasy-api/speakeasy-core v0.1.1-0.20240214202308-44fd0972a3b3 h1:atkN0sHO7FBycokZ650n64Xo7OOIgDdno2H1qlG+SSM=
+github.com/speakeasy-api/speakeasy-core v0.1.1-0.20240214202308-44fd0972a3b3/go.mod h1:+lGUuIjRv4adRRnIZPFZmsHVBX2NvK3DD9JfuMiifh8=
+github.com/speakeasy-api/speakeasy-core v0.1.1-0.20240214203300-eb0fadd7b001 h1:xeZ/+CuLTdCvjeIgL2o19OCAtUPqBhRjE3aT9BWaCDQ=
+github.com/speakeasy-api/speakeasy-core v0.1.1-0.20240214203300-eb0fadd7b001/go.mod h1:+lGUuIjRv4adRRnIZPFZmsHVBX2NvK3DD9JfuMiifh8=
 github.com/speakeasy-api/speakeasy-go-sdk v1.8.0 h1:JvjsoEuK5UnGc1UQaBD4lNErpovb8WBGOJPjg0ypF6Y=
 github.com/speakeasy-api/speakeasy-go-sdk v1.8.0/go.mod h1:08kt/piztAbjQCLImQZSxNbrM3TLajObXQMgy4pvbTA=
 github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a h1:g7d9AVXEV1QcyQ8yWdCr7pm6HiqqG6LMkpzwwFlLxmo=
