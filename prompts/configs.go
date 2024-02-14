@@ -152,7 +152,7 @@ func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		quickstart.LanguageConfigs[key] = output
 	}
 
-	var nextState QuickstartState = GithubWorkflowBase
+	var nextState QuickstartState = Complete
 	return &nextState, nil
 }
 

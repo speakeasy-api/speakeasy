@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -19,7 +18,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
-	"gopkg.in/yaml.v3"
 )
 
 type QuickstartFlags struct {
@@ -198,25 +196,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if err := config.SaveConfig(outDir, outConfig); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
 		}
-	}
-
-	// Write a github workflow file.
-	var genWorkflowBuf bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
-	yamlEncoder.SetIndent(2)
-	if err := yamlEncoder.Encode(quickstartObj.GithubWorkflow); err != nil {
-		return errors.Wrapf(err, "failed to encode workflow file")
-	}
-
-	if _, err := os.Stat(outDir + "/" + ".github/workflows"); os.IsNotExist(err) {
-		err = os.MkdirAll(outDir+"/"+".github/workflows", 0o755)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err = os.WriteFile(outDir+"/"+".github/workflows/speakeasy_sdk_generation.yaml", genWorkflowBuf.Bytes(), 0o644); err != nil {
-		return errors.Wrapf(err, "failed to write github workflow file")
 	}
 
 	var initialTarget string
