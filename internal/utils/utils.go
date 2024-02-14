@@ -78,3 +78,12 @@ func CapitalizeFirst(s string) string {
 	r[0] = unicode.ToUpper(r[0])
 	return string(r)
 }
+
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	return !info.IsDir()
+}
