@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"unicode"
 
 	"golang.org/x/term"
@@ -90,4 +91,22 @@ func FileExists(file string) bool {
 	}
 
 	return !info.IsDir()
+}
+
+func SanitizeFilePath(path string) string {
+	sanitizedPath := path
+	if strings.HasPrefix(path, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return path
+		}
+
+		sanitizedPath = filepath.Join(homeDir, path[2:])
+	}
+
+	if absPath, err := filepath.Abs(sanitizedPath); err == nil {
+		sanitizedPath = absPath
+	}
+
+	return sanitizedPath
 }
