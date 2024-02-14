@@ -79,8 +79,12 @@ func CapitalizeFirst(s string) string {
 	return string(r)
 }
 
-func FileExists(filename string) bool {
-	info, err := os.Stat(filename)
+func FileExists(file string) bool {
+	if absPath, err := filepath.Abs(file); err == nil {
+		file = absPath
+	}
+
+	info, err := os.Stat(file)
 	if os.IsNotExist(err) {
 		return false
 	}
