@@ -93,8 +93,8 @@ type ConfigureGithubFlags struct{}
 
 var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	Usage:        "github",
-	Short:        "Configure your speakeasy workflow to generate and publish from your github repo.",
-	Long:         "Configure your speakeasy workflow to generate and publish from your github repo.",
+	Short:        "Configure Speakeasy for github.",
+	Long:         "Configure your Speakeasy workflow to generate and publish from your github repo.",
 	Run:          configureGithub,
 	RequiresAuth: true,
 }
