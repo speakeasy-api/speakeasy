@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	gen_config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
-
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
@@ -25,6 +27,18 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	}
 
 	ctx = events.SetTargetInContext(ctx, outDir)
+
+	var genLockID *string
+	if utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".speakeasy/gen.lock")) || utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".gen/gen.lock")) {
+		if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
+			genLockID = &cfg.LockFile.ID
+		}
+	}
+
+	// open generation access check
+	access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
+		GenLockID: genLockID,
+	})
 
 	logger := log.From(ctx).WithAssociatedFile(schemaPath)
 
