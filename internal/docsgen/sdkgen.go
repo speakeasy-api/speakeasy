@@ -3,10 +3,11 @@ package docsgen
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy-core/events"
 	"os"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/events"
 
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
@@ -80,7 +81,6 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		generate.WithRepoDetails(repo, repoSubDir),
 		generate.WithAllowRemoteReferences(),
 		generate.WithSDKDocLanguages(langs...),
-		generate.WithCleanDir(),
 	}
 
 	if compile {

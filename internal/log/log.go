@@ -23,6 +23,7 @@ import (
 type Level string
 
 const (
+	LevelDebug       Level = "debug"
 	LevelInfo        Level = "info"
 	LevelWarn        Level = "warn"
 	LevelErr         Level = "error"
@@ -69,6 +70,14 @@ func New() Logger {
 		level:     LevelInfo,
 		formatter: formatter,
 		writer:    os.Stderr,
+	}
+}
+
+func NewNoop() Logger {
+	return Logger{
+		level:     LevelErr,
+		formatter: BasicFormatter,
+		writer:    io.Discard,
 	}
 }
 
@@ -143,6 +152,19 @@ func (l Logger) Copy() Logger {
 /**
  * Logging methods
  */
+
+func (l Logger) Debug(msg string, fields ...zapcore.Field) {
+	if l.level != LevelDebug {
+		return
+	}
+
+	fields = append(l.fields, fields...)
+
+	msg, err, fields := getMessage(msg, fields)
+
+	msg = l.format(LevelDebug, msg, err) + fieldsToJSON(fields)
+	l.Println(msg)
+}
 
 func (l Logger) Info(msg string, fields ...zapcore.Field) {
 	if l.level != LevelInfo {

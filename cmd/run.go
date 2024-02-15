@@ -3,13 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/manifoldco/promptui"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/sethvargo/go-githubactions"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/run"
-	"golang.org/x/exp/slices"
-	"strings"
 )
 
 type RunFlags struct {
@@ -104,28 +104,10 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
 			flags.Source = sources[0]
 		} else {
-			// TODO update to use our proper interactive code
-			prompt := promptui.Prompt{
-				Label: fmt.Sprintf("Select a target (%s or 'all')", strings.Join(targets, ", ")),
-				Validate: func(input string) error {
-					if input == "" {
-						return fmt.Errorf("target cannot be empty")
-					}
-
-					if input != "all" && !slices.Contains(targets, input) {
-						return fmt.Errorf("invalid target")
-					}
-
-					return nil
-				},
-			}
-
-			result, err := prompt.Run()
+			flags.Target, err = askForTarget(targets)
 			if err != nil {
 				return err
 			}
-
-			flags.Target = result
 		}
 	}
 
@@ -152,7 +134,7 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 			} else {
 				for _, target := range targets {
 					if _, ok := mapFlag[target]; !ok {
-						return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, flags.Target)
+						return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, target)
 					}
 				}
 			}
@@ -178,6 +160,28 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 	flags.RepoSubdirs = repoSubdirs
 
 	return nil
+}
+
+func askForTarget(targets []string) (string, error) {
+	var targetOptions []huh.Option[string]
+	var existingTargets []string
+
+	for _, targetName := range targets {
+		existingTargets = append(existingTargets, targetName)
+		targetOptions = append(targetOptions, huh.NewOption(targetName, targetName))
+	}
+	targetOptions = append(targetOptions, huh.NewOption("✱ All", "all"))
+
+	target := ""
+
+	prompt := charm.NewSelectPrompt("What target would you like to run?", "You may choose an individual target or 'all'.", targetOptions, &target)
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
+		"Let's configure a target for your workflow.")).
+		Run(); err != nil {
+		return "", err
+	}
+
+	return target, nil
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
