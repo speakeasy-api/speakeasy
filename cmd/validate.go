@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -33,34 +34,34 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 	Long:           `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
 	Run:            validateOpenapi,
 	RunInteractive: validateOpenapiInteractive,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "schema",
 			Shorthand:   "s",
 			Description: "local filepath or URL for the OpenAPI schema",
 			Required:    true,
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:         "output-hints",
 			Shorthand:    "o",
 			Description:  "output validation hints in addition to warnings/errors",
 			DefaultValue: false,
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "header",
 			Shorthand:   "H",
 			Description: "header key to use if authentication is required for downloading schema from remote URL",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "token",
 			Description: "token value to use if authentication is required for downloading schema from remote URL",
 		},
-		model.IntFlag{
+		flag.IntFlag{
 			Name:         "max-validation-errors",
 			Description:  "limit the number of errors to output (default 1000, 0 = no limit)",
 			DefaultValue: 1000,
 		},
-		model.IntFlag{
+		flag.IntFlag{
 			Name:         "max-validation-warnings",
 			Description:  "limit the number of warnings to output (default 1000, 0 = no limit)",
 			DefaultValue: 1000,
@@ -77,8 +78,8 @@ var validateConfigCmd = &model.ExecutableCommand[validateConfigFlags]{
 	Short: "Validate a Speakeasy configuration file",
 	Long:  `Validates a Speakeasy configuration file for SDK generation.`,
 	Run:   validateConfig,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "dir",
 			Shorthand:   "d",
 			Description: "path to the directory containing the Speakeasy configuration file",
