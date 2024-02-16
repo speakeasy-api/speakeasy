@@ -44,6 +44,10 @@ var migrateCmd = &model.ExecutableCommand[MigrateFlags]{
 func migrateFunc(ctx context.Context, flags MigrateFlags) error {
 	// We intentionally don't do anything with the publish workflow. It can stay the same
 
+	if b, _ := os.ReadFile(fmt.Sprintf("%s/.speakeasy/workflow.yaml", flags.Directory)); b != nil {
+		return fmt.Errorf("a workflow.yaml file already exists in the .speakeasy directory. Aborting migration")
+	}
+
 	currentGhWorkflow, err := os.ReadFile(fmt.Sprintf("%s/.github/workflows/%s", flags.Directory, flags.GenFilename))
 	if err != nil {
 		return err
@@ -60,6 +64,10 @@ func migrateFunc(ctx context.Context, flags MigrateFlags) error {
 
 	workflowYaml, err := yaml.Marshal(workflow)
 	if err != nil {
+		return err
+	}
+
+	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", flags.Directory), 0755); err != nil {
 		return err
 	}
 
