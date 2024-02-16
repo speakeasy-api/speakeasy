@@ -2,7 +2,7 @@
 `speakeasy overlay apply`  
 
 
-Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.  
+Given an overlay, construct a new specification by extending a specification and applying the overlay, and output it to stdout.  
 
 ## Usage
 
@@ -14,8 +14,8 @@ speakeasy overlay apply [flags]
 
 ```
   -h, --help             help for apply
-  -o, --overlay string   overlay file to apply
-  -s, --schema string    schema to extend (optional)
+  -o, --overlay string   the overlay file to use
+  -s, --schema string    the schema to extend
 ```
 
 ### Options inherited from parent commands
