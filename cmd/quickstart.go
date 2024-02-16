@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,22 +36,22 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	Long:         `Guided setup to help you create a new SDK in minutes.`,
 	Run:          quickstartExec,
 	RequiresAuth: true,
-	Flags: []model.Flag{
-		model.BooleanFlag{
+	Flags: []flag.Flag{
+		flag.BooleanFlag{
 			Name:        "skip-compile",
 			Description: "skip compilation during generation after setup",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "schema",
 			Shorthand:   "s",
 			Description: "local filepath or URL for the OpenAPI schema",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "out-dir",
 			Shorthand:   "o",
 			Description: "output directory for the quickstart command",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "target",
 			Shorthand:   "t",
 			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")),

@@ -10,6 +10,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -48,7 +49,7 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 // F is a struct type that represents the flags for the command. The json tags on the struct fields are used to map to the command line flags
 type ExecutableCommand[F interface{}] struct {
 	Usage, Short, Long   string
-	Flags                []Flag
+	Flags                []flag.Flag
 	PreRun               func(ctx context.Context, flags *F) error
 	Run                  func(ctx context.Context, flags F) error
 	RunInteractive       func(ctx context.Context, flags F) error
@@ -69,7 +70,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			cmd.SetContext(authCtx)
 		}
 
-		flags, err := c.GetFlags(cmd)
+		flags, err := c.GetFlagValues(cmd)
 		if err != nil {
 			return err
 		}
@@ -121,7 +122,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	}
 
 	for _, flag := range c.Flags {
-		if err := flag.init(cmd); err != nil {
+		if err := flag.Init(cmd); err != nil {
 			return nil, err
 		}
 	}
@@ -139,23 +140,23 @@ func (c ExecutableCommand[F]) checkFlags() error {
 	}
 
 	for _, flag := range c.Flags {
-		if !slices.Contains(tags, flag.getName()) {
-			return fmt.Errorf("flag %s is missing from flags type for command %s", flag.getName(), c.Usage)
+		if !slices.Contains(tags, flag.GetName()) {
+			return fmt.Errorf("flag %s is missing from flags type for command %s", flag.GetName(), c.Usage)
 		}
 	}
 
 	return nil
 }
 
-func (c ExecutableCommand[F]) GetFlags(cmd *cobra.Command) (*F, error) {
-	var flags F
+func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
+	var flagValues F
 
-	findFlagDef := func(name string) Flag {
+	findFlagDef := func(name string) flag.Flag {
 		if slices.Contains(utils.FlagsToIgnore, name) {
 			return nil
 		}
 		for _, f := range c.Flags {
-			if f.getName() == name {
+			if f.GetName() == name {
 				return f
 			}
 		}
@@ -169,7 +170,7 @@ func (c ExecutableCommand[F]) GetFlags(cmd *cobra.Command) (*F, error) {
 			return
 		}
 
-		v, err := flag.parseValue(f.Value.String())
+		v, err := flag.ParseValue(f.Value.String())
 		if err != nil {
 			panic(err)
 		}
@@ -181,11 +182,11 @@ func (c ExecutableCommand[F]) GetFlags(cmd *cobra.Command) (*F, error) {
 		return nil, err
 	}
 
-	if err := json.Unmarshal(jsonBytes, &flags); err != nil {
+	if err := json.Unmarshal(jsonBytes, &flagValues); err != nil {
 		return nil, err
 	}
 
-	return &flags, nil
+	return &flagValues, nil
 }
 
 // Verify that the command types implement the Command interface

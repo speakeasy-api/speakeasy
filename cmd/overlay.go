@@ -1,96 +1,90 @@
 package cmd
 
 import (
-	"os"
-
-	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"context"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-
-	"github.com/spf13/cobra"
-
+	"github.com/speakeasy-api/speakeasy/internal/model"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
+	"os"
 )
 
-var overlayCmd = &cobra.Command{
-	Use:   "overlay",
-	Short: "Work with OpenAPI Overlays",
+var (
+	overlayFlag = flag.StringFlag{
+		Name:        "overlay",
+		Shorthand:   "o",
+		Description: "the overlay file to use",
+		Required:    true,
+	}
+)
+
+var overlayCmd = &model.CommandGroup{
+	Usage:    "overlay",
+	Short:    "Work with OpenAPI Overlays",
+	Commands: []model.Command{overlayCompareCmd, overlayValidateCmd, overlayApplyCmd},
 }
 
-var overlayValidateCmd = &cobra.Command{
-	Use:     "validate",
-	Short:   "Given an overlay, it will state whether it appears to be valid according to the OpenAPI Overlay specification",
-	Args:    cobra.NoArgs,
-	PreRunE: interactivity.GetMissingFlagsPreRun,
-	RunE:    runValidateOverlay,
+type overlayValidateFlags struct {
+	Overlay string `json:"overlay"`
 }
 
-var overlayCompareCmd = &cobra.Command{
-	Use:     "compare",
-	Short:   "Given two specs, it will output an overlay that describes the differences between them",
-	Args:    cobra.NoArgs,
-	PreRunE: interactivity.GetMissingFlagsPreRun,
-	RunE:    runCompare,
+var overlayValidateCmd = &model.ExecutableCommand[overlayValidateFlags]{
+	Usage: "validate",
+	Short: "Given an overlay, validate it according to the OpenAPI Overlay specification",
+	Run:   runValidateOverlay,
+	Flags: []flag.Flag{overlayFlag},
 }
 
-var overlayApplyCmd = &cobra.Command{
-	Use:     "apply",
-	Short:   "Given an overlay, it will construct a new specification by extending a specification and applying the overlay, and output it to stdout.",
-	Args:    cobra.NoArgs,
-	PreRunE: interactivity.GetMissingFlagsPreRun,
-	RunE:    runApply,
+type overlayCompareFlags struct {
+	Schemas []string `json:"schemas"`
 }
 
-func overlayInit() {
-	overlayCmd.AddCommand(overlayApplyCmd)
-	overlayCmd.AddCommand(overlayValidateCmd)
-	overlayCmd.AddCommand(overlayCompareCmd)
-
-	overlayValidateCmd.Flags().StringP("overlay", "o", "", "overlay file to validate")
-	overlayValidateCmd.MarkFlagRequired("overlay")
-
-	overlayCompareCmd.Flags().StringSliceP("schemas", "s", []string{}, "schemas to compare and generate overlay from")
-	overlayCompareCmd.MarkFlagRequired("schemas")
-
-	overlayApplyCmd.Flags().StringP("overlay", "o", "", "overlay file to apply")
-	overlayApplyCmd.MarkFlagRequired("overlay")
-	overlayApplyCmd.Flags().StringP("schema", "s", "", "schema to extend (optional)")
-
-	rootCmd.AddCommand(overlayCmd)
+var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
+	Usage: "compare",
+	Short: "Given two specs, output an overlay that describes the differences between them",
+	Run:   runCompare,
+	Flags: []flag.Flag{
+		flag.StringSliceFlag{
+			Name:        "schemas",
+			Shorthand:   "s",
+			Description: "two schemas to compare and generate overlay from",
+			Required:    true,
+		},
+	},
 }
 
-func runValidateOverlay(c *cobra.Command, args []string) error {
-	overlayFile, err := c.Flags().GetString("overlay")
-	if err != nil {
+type overlayApplyFlags struct {
+	Overlay string `json:"overlay"`
+	Schema  string `json:"schema"`
+}
+
+var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
+	Usage: "apply",
+	Short: "Given an overlay, construct a new specification by extending a specification and applying the overlay, and output it to stdout.",
+	Run:   runApply,
+	Flags: []flag.Flag{
+		overlayFlag,
+		flag.StringFlag{
+			Name:        "schema",
+			Shorthand:   "s",
+			Description: "the schema to extend",
+		},
+	},
+}
+
+func runValidateOverlay(ctx context.Context, flags overlayValidateFlags) error {
+	if err := overlay.Validate(flags.Overlay); err != nil {
 		return err
 	}
 
-	if err := overlay.Validate(overlayFile); err != nil {
-		return err
-	}
-
-	log.From(c.Context()).Successf("Overlay file %q is valid.", overlayFile)
+	log.From(ctx).Successf("Overlay file %q is valid.", flags.Overlay)
 	return nil
 }
 
-func runCompare(c *cobra.Command, args []string) error {
-	schemas, err := c.Flags().GetStringSlice("schemas")
-	if err != nil {
-		return err
-	}
-
-	return overlay.Compare(schemas)
+func runCompare(ctx context.Context, flags overlayCompareFlags) error {
+	return overlay.Compare(flags.Schemas)
 }
 
-func runApply(c *cobra.Command, args []string) error {
-	overlayFile, err := c.Flags().GetString("overlay")
-	if err != nil {
-		return err
-	}
-
-	schema, err := c.Flags().GetString("schema")
-	if err != nil {
-		return err
-	}
-
-	return overlay.Apply(schema, overlayFile, os.Stdout)
+func runApply(ctx context.Context, flags overlayApplyFlags) error {
+	return overlay.Apply(flags.Schema, flags.Overlay, os.Stdout)
 }
