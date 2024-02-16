@@ -119,9 +119,8 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 	runFnCli := func() error {
 		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
-		ctx := context.Background()
-		ctx = log.With(ctx, l)
-		err = w.Run(ctx)
+		runCtx := log.With(ctx, l)
+		err = w.Run(runCtx)
 
 		w.RootStep.Finalize(err == nil)
 
