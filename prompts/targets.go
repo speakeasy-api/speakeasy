@@ -169,7 +169,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 
 			if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
-					Title("Provide an output directory for your generation target.").
+					Title(fmt.Sprintf("Provide an output directory for your generation target %s.", targetName)).
 					Validate(func(s string) error {
 						if currentDir(s) {
 							return fmt.Errorf("the output dir must not be in the root folder")
