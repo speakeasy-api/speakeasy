@@ -352,12 +352,35 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		return err
 	}
 
-	// Write a github workflow file.
-	var genWorkflowBuf bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
-	yamlEncoder.SetIndent(2)
-	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
-		return errors.Wrapf(err, "failed to encode workflow file")
+	var publishingOptions []huh.Option[string]
+	for name, target := range workflowFile.Targets {
+		if slices.Contains(prompts.SupportedPublishingTagets, target.Target) {
+			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s (%s)", name, target.Target), name))
+		}
+	}
+
+	chosenTargets := make([]string, 0)
+	if len(publishingOptions) > 0 {
+		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title("Select any targets you would like to configure publishing for.").
+				Description("Setup variables to configure publishing directly from Speakeasy.\n").
+				Options(publishingOptions...).
+				Value(&chosenTargets),
+		)),
+			"Would you like to configure publishing for any existing targets?")).
+			Run(); err != nil {
+			return err
+		}
+	}
+
+	for _, name := range chosenTargets {
+		target := workflowFile.Targets[name]
+		modifiedTarget, err := prompts.ConfigurePublishing(&target)
+		if err != nil {
+			return err
+		}
+		workflowFile.Targets[name] = *modifiedTarget
 	}
 
 	if _, err := os.Stat(workingDir + "/" + ".github/workflows"); os.IsNotExist(err) {
@@ -367,8 +390,25 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
+	generationWorkflow, err = prompts.WritePublishingFile(generationWorkflow, workflowFile, workingDir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write publishing file")
+	}
+
+	// Write a github workflow file.
+	var genWorkflowBuf bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
+		return errors.Wrapf(err, "failed to encode workflow file")
+	}
+
 	if err = os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
 		return errors.Wrapf(err, "failed to write github workflow file")
+	}
+
+	if err := workflow.Save(workingDir, workflowFile); err != nil {
+		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
 	var remoteURL string

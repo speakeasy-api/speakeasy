@@ -1,6 +1,7 @@
 package prompts
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
@@ -11,16 +12,29 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/go-git/go-git/v5"
 	git_config "github.com/go-git/go-git/v5/config"
+	"github.com/pkg/errors"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	defaultGithubTokenSecretName     = "GITHUB_TOKEN"
 	defaultSpeakeasyAPIKeySecretName = "SPEAKEASY_API_KEY"
+	npmTokenDefault                  = "NPM_TOKEN"
+	pypiTokenDefault                 = "PYPI_TOKEN"
+	nugetTokenDefault                = "NUGET_API_KEY"
+	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
 )
+
+var SupportedPublishingTagets = []string{
+	"typescript",
+	"python",
+	"csharp",
+	"ruby",
+}
 
 func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow) (*config.GenerateWorkflow, error) {
 	if githubWorkflow == nil || githubWorkflow.Jobs.Generate.Uses == "" {
@@ -69,13 +83,13 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	for _, source := range workflow.Sources {
 		for _, input := range source.Inputs {
 			if input.Auth != nil {
-				secrets[input.Auth.Secret] = formatSecretName(strings.ToLower(input.Auth.Secret))
+				secrets[input.Auth.Secret] = formatSecretName(input.Auth.Secret)
 			}
 		}
 
 		for _, overlay := range source.Overlays {
 			if overlay.Auth != nil {
-				secrets[overlay.Auth.Secret] = formatSecretName(strings.ToLower(overlay.Auth.Secret))
+				secrets[overlay.Auth.Secret] = formatSecretName(overlay.Auth.Secret)
 			}
 		}
 	}
@@ -98,8 +112,103 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	return githubWorkflow, nil
 }
 
+func ConfigurePublishing(target *workflow.Target) (*workflow.Target, error) {
+	promptMap := make(map[string]*string)
+	switch target.Target {
+	case "typescript":
+		currentNpmToken := npmTokenDefault
+		if target.Publishing != nil && target.Publishing.NPM != nil {
+			currentNpmToken = target.Publishing.NPM.Token
+		}
+		npmTokenVal := &currentNpmToken
+		promptMap["NPM Token"] = npmTokenVal
+		if err := executePromptsForPublishing(promptMap, target); err != nil {
+			return nil, err
+		}
+		target.Publishing = &workflow.Publishing{
+			NPM: &workflow.NPM{
+				Token: formatSecret(*npmTokenVal),
+			},
+		}
+	case "python":
+		currentPyPIToken := pypiTokenDefault
+		if target.Publishing != nil && target.Publishing.PyPi != nil {
+			currentPyPIToken = target.Publishing.PyPi.Token
+		}
+		pypiTokenVal := &currentPyPIToken
+		promptMap["PyPI Token"] = pypiTokenVal
+		if err := executePromptsForPublishing(promptMap, target); err != nil {
+			return nil, err
+		}
+		target.Publishing = &workflow.Publishing{
+			PyPi: &workflow.PyPi{
+				Token: formatSecret(*pypiTokenVal),
+			},
+		}
+	case "csharp":
+		currentNugetKey := nugetTokenDefault
+		if target.Publishing != nil && target.Publishing.Nuget != nil {
+			currentNugetKey = target.Publishing.Nuget.APIKey
+		}
+		nugetKeyVal := &currentNugetKey
+		promptMap["Nuget API Key"] = nugetKeyVal
+		if err := executePromptsForPublishing(promptMap, target); err != nil {
+			return nil, err
+		}
+		target.Publishing = &workflow.Publishing{
+			Nuget: &workflow.Nuget{
+				APIKey: formatSecret(*nugetKeyVal),
+			},
+		}
+	case "ruby":
+		currentRubyGemsToken := rubyGemsTokenDefault
+		if target.Publishing != nil && target.Publishing.RubyGems != nil {
+			currentRubyGemsToken = target.Publishing.RubyGems.Token
+		}
+		rubyGemsTokenVal := &currentRubyGemsToken
+		promptMap["Ruby Gems Auth Token"] = rubyGemsTokenVal
+		if err := executePromptsForPublishing(promptMap, target); err != nil {
+			return nil, err
+		}
+		target.Publishing = &workflow.Publishing{
+			RubyGems: &workflow.RubyGems{
+				Token: formatSecret(*rubyGemsTokenVal),
+			},
+		}
+	}
+
+	return target, nil
+}
+
+func executePromptsForPublishing(prompts map[string]*string, target *workflow.Target) error {
+	fields := []huh.Field{}
+	for prompt, value := range prompts {
+		fields = append(fields,
+			charm.NewInput().
+				Title(fmt.Sprintf("Provide a value for %s:", prompt)).
+				Value(value),
+		)
+	}
+
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(fields...)),
+		fmt.Sprintf("Setup publishing variables for your %s target.", target.Target),
+		"These environment variables will be used to publish to package managers from your speakeasy workflow.")).
+		Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func formatSecretName(name string) string {
-	return fmt.Sprintf("${{ secrets.%s }}", name)
+	return fmt.Sprintf("${{ secrets.%s }}", strings.ToUpper(name))
+}
+
+func formatSecret(secret string) string {
+	if secret != "" && secret[0] == '$' {
+		secret = secret[1:]
+	}
+	return strings.ToLower(secret)
 }
 
 func FindGithubRepository(outDir string) *git.Repository {
@@ -170,4 +279,90 @@ func ParseGithubRemoteURL(repo *git.Repository) string {
 	}
 
 	return ""
+}
+
+func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
+	secrets := []string{}
+
+	if publishing.PyPi != nil {
+		secrets = append(secrets, publishing.PyPi.Token)
+	}
+
+	if publishing.NPM != nil {
+		secrets = append(secrets, publishing.NPM.Token)
+	}
+
+	if publishing.RubyGems != nil {
+		secrets = append(secrets, publishing.RubyGems.Token)
+	}
+
+	if publishing.Nuget != nil {
+		secrets = append(secrets, publishing.Nuget.APIKey)
+	}
+
+	return secrets
+}
+
+func WritePublishingFile(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, error) {
+	publishingWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
+	secrets := make(map[string]string)
+	for _, target := range workflowFile.Targets {
+		if target.Publishing != nil {
+			for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
+				secrets[secret] = formatSecretName(secret)
+			}
+		}
+	}
+
+	currentSecrets := genWorkflow.Jobs.Generate.Secrets
+	for secret, value := range secrets {
+		currentSecrets[secret] = value
+	}
+	genWorkflow.Jobs.Generate.Secrets = currentSecrets
+
+	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
+	if mode == "pr" {
+		publishingFile := &config.PublishWorkflow{
+			Name: "Publish",
+			On: config.PublishOn{
+				Push: config.Push{
+					Paths: []string{
+						"RELEASES.md",
+					},
+					Branches: []string{
+						"main",
+					},
+				},
+			},
+			Jobs: config.Jobs{
+				Publish: config.Job{
+					Uses: "speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15",
+					With: map[string]any{
+						"create_release": true,
+					},
+					Secrets: secrets,
+				},
+			},
+		}
+		// Write a github publishing file.
+		var publishingWorkflowBuf bytes.Buffer
+		yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
+		yamlEncoder.SetIndent(2)
+		if err := yamlEncoder.Encode(publishingFile); err != nil {
+			return nil, errors.Wrapf(err, "failed to encode workflow file")
+		}
+
+		if err := os.WriteFile(publishingWorkflowFilePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
+			return nil, errors.Wrapf(err, "failed to write github publishing file")
+		}
+	} else {
+		// We are in direct mode, remove any separate publishing workflow file.
+		if _, err := os.Stat(publishingWorkflowFilePath); err == nil {
+			if err := os.Remove(publishingWorkflowFilePath); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return genWorkflow, nil
 }
