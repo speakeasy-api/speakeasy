@@ -16,10 +16,10 @@ require (
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/orderedmap v0.3.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.15.9
+	github.com/pb33f/libopenapi v0.15.10
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.262.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.263.3
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.2.2
