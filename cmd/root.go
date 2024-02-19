@@ -64,7 +64,6 @@ func Init(version, artifactArch string) {
 	proxyInit()
 	apiInit()
 	languageServerInit(version)
-	patchInit()
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {
