@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"context"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -36,20 +39,22 @@ func authInit() {
 }
 
 func loginExec(cmd *cobra.Command, args []string) error {
-	authCtx, err := auth.Authenticate(cmd.Context(), true)
-	if err != nil {
-		return err
-	}
-	cmd.SetContext(authCtx)
-	workspaceID, err := core.GetWorkspaceIDFromContext(authCtx)
-	if err != nil {
-		return err
-	}
-
-	log.From(cmd.Context()).
-		WithInteractiveOnly().
-		Successf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), workspaceID)
-	return nil
+	return events.Telemetry(cmd.Context(), shared.InteractionTypeAuthenticate, func(ctx context.Context, event *shared.CliEvent) error {
+		authCtx, err := auth.Authenticate(cmd.Context(), true)
+		if err != nil {
+			return err
+		}
+		cmd.SetContext(authCtx)
+		workspaceID, err := core.GetWorkspaceIDFromContext(authCtx)
+		if err != nil {
+			return err
+		}
+		event.WorkspaceID = workspaceID
+		log.From(cmd.Context()).
+			WithInteractiveOnly().
+			Successf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), workspaceID)
+		return nil
+	})
 }
 
 func logoutExec(cmd *cobra.Command, args []string) error {
