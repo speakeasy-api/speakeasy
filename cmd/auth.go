@@ -39,7 +39,7 @@ func authInit() {
 }
 
 func loginExec(cmd *cobra.Command, args []string) error {
-	return events.Telemetry(cmd.Context(), shared.InteractionTypeAuthenticate, func(ctx context.Context, event *shared.CliEvent) error {
+	err := events.Telemetry(cmd.Context(), shared.InteractionTypeAuthenticate, func(ctx context.Context, event *shared.CliEvent) error {
 		authCtx, err := auth.Authenticate(cmd.Context(), true)
 		if err != nil {
 			return err
@@ -53,8 +53,15 @@ func loginExec(cmd *cobra.Command, args []string) error {
 		log.From(cmd.Context()).
 			WithInteractiveOnly().
 			Successf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), workspaceID)
+
 		return nil
 	})
+
+	// Manually Flush the events because Telemetry will have been initially called with an unauthorized context, now we've authenticated we can send the events
+	if err == nil {
+		_ = events.FlushEvents(cmd.Context())
+	}
+	return err
 }
 
 func logoutExec(cmd *cobra.Command, args []string) error {
