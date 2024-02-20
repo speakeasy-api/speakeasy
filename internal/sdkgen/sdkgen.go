@@ -115,8 +115,8 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		msg := styles.RenderInfoMessage(
 			"🚀 Time to Upgrade 🚀",
 			"\nYou have exceeded the limit of one free generated SDK.",
-			fmt.Sprintf("Your account will start to face restrictions in %d days.", daysToLimit),
-			"To upgrade your plan please reach out to the Speakeasy team.",
+			"Upgrade your account if you intend to generate multiple SDKs!",
+			fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit),
 			"\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team",
 		)
 		logger.Println("\n\n" + msg)
