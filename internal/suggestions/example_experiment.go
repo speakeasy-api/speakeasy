@@ -2,6 +2,7 @@ package suggestions
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"fmt"
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
@@ -65,6 +66,26 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 	}
 
 	for _, shard := range splitSchema {
+		cacheFile := filepath.Join(cacheFolder, base64(shard.Key)+".adjusted.yaml")
+		if _, err := os.Stat(cacheFile); err == nil {
+			content, err := os.ReadFile(cacheFile)
+			if err != nil {
+				return err
+			}
+			updatedDoc, err := libopenapi.NewDocumentWithConfiguration([]byte(content), getConfig())
+			if err != nil {
+				return err
+			}
+			v3UpdatedDoc, errs := updatedDoc.BuildV3Model()
+			if len(errs) > 0 {
+				return errors.NewValidationError("failed to build model", -1, err)
+			}
+
+			_, errs = merge.MergeDocuments(&v3OriginalDoc.Model, &v3UpdatedDoc.Model)
+			if len(errs) > 0 {
+				return fmt.Errorf("failed to merge documents: %v", errs)
+			}
+		}
 		model := shared.TwoGpt4TurboPreview
 		maxTokens := int64(30000)
 		// OAS currently not declared to support text/event-stream
@@ -98,6 +119,7 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 		contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
 		// load the new result with libopenapi
 		fmt.Printf("Content: %s\n", contentWithoutBackticks)
+		os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0644)
 		updatedDoc, err := libopenapi.NewDocumentWithConfiguration([]byte(contentWithoutBackticks), getConfig())
 		if err != nil {
 			return err
@@ -158,10 +180,11 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 
 	for pair := orderedmap.First(pathItems); pair != nil; pair = pair.Next() {
 		// construct a new document with just this path item
-		cacheFile := filepath.Join(cacheFolder, fmt.Sprintf("%s.yaml", pair.Key()))
+		// encode pair.Key in base64 for the filename (as it contains "/")
+		cacheFile := filepath.Join(cacheFolder, fmt.Sprintf("%s.yaml", base64(pair.Key())))
 		// if already exists, use it
 		if _, err := os.Stat(cacheFile); err == nil {
-			shards = append(shards, Shard{Content: cacheFile})
+			shards = append(shards, Shard{Content: cacheFile, Key: pair.Key()})
 			continue
 		}
 
@@ -184,9 +207,13 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 		}
 		// cache it
 		err = os.WriteFile(cacheFile, shard, 0644)
-		shards = append(shards, Shard{Content: string(shard)})
+		shards = append(shards, Shard{Content: string(shard), Key: pair.Key()})
 	}
 	return shards, nil
+}
+
+func base64(key string) string {
+	return b64.StdEncoding.EncodeToString([]byte(key))
 }
 
 func removeOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document]) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {

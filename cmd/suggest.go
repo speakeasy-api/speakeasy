@@ -155,6 +155,11 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 			return goerr.New("cache-folder is required for example-experiment")
 		}
 		// check its a valid directory
+		// if it doesn't exist, create it
+		err = os.MkdirAll(cacheFolder, os.ModePerm)
+		if err != nil {
+			return err
+		}
 		cacheFolderFileInfo, err := os.Stat(cacheFolder)
 		if err != nil {
 			return err
