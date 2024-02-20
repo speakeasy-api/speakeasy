@@ -21,23 +21,15 @@ import (
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile bool) error {
+func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile bool) (bool, error) {
 	if !generate.CheckLanguageSupported(lang) {
-		return fmt.Errorf("language not supported: %s", lang)
+		return false, fmt.Errorf("language not supported: %s", lang)
 	}
 
 	ctx = events.SetTargetInContext(ctx, outDir)
 
-	var genLockID *string
-	if utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".speakeasy/gen.lock")) || utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".gen/gen.lock")) {
-		if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
-			genLockID = &cfg.LockFile.ID
-		}
-	}
-
-	// open generation access check
-	access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
-		GenLockID: genLockID,
+	generationAccess, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
+		GenLockID: getGenLockID(outDir),
 	})
 
 	logger := log.From(ctx).WithAssociatedFile(schemaPath)
@@ -47,7 +39,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	if strings.TrimSpace(outDir) == "." {
 		wd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get current working directory: %w", err)
+			return generationAccess, fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
 		outDir = wd
@@ -55,7 +47,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to get schema contents: %w", err)
+		return generationAccess, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
 	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
@@ -93,7 +85,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	g, err := generate.New(opts...)
 	if err != nil {
-		return err
+		return generationAccess, err
 	}
 
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
@@ -107,7 +99,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return nil
 	})
 	if err != nil {
-		return err
+		return generationAccess, err
 	}
 
 	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"
@@ -115,7 +107,16 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	logger.Successf("\nSDK for %s generated successfully ✓", lang)
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
-	return nil
+	if !generationAccess {
+		msg := styles.RenderWarningMessage(
+			"WARNING FREE LIMIT EXCEEDED",
+			"You have exceeded the limit of one free generated SDK for your account.",
+			"To avoid disruption of service please reach out to the Speakeasy team - https://calendly.com/sagar-speakeasy/30min.",
+		)
+		logger.Println("\n\n" + msg)
+	}
+
+	return generationAccess, nil
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {
@@ -140,6 +141,16 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 
 	if _, err := g.LoadConfig(ctx, outDir, true); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func getGenLockID(outDir string) *string {
+	if utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".speakeasy/gen.lock")) || utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".gen/gen.lock")) {
+		if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
+			return &cfg.LockFile.ID
+		}
 	}
 
 	return nil

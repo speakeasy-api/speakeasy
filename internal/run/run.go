@@ -35,10 +35,11 @@ type Workflow struct {
 	Debug            bool
 	ShouldCompile    bool
 
-	RootStep           *WorkflowStep
-	workflow           *workflow.Workflow
-	projectDir         string
-	validatedDocuments []string
+	RootStep            *WorkflowStep
+	workflow            *workflow.Workflow
+	projectDir          string
+	validatedDocuments  []string
+	hasGenerationAccess bool
 }
 
 func NewWorkflow(name, target, source, genVersion, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
@@ -169,6 +170,15 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
 		)
 		logger.Println(msg)
+
+		if !w.hasGenerationAccess {
+			msg := styles.RenderWarningMessage(
+				"WARNING FREE LIMIT EXCEEDED",
+				"You have exceeded the limit of one free generated SDK for your account.",
+				"To avoid disruption of service please reach out to the Speakeasy team - https://calendly.com/sagar-speakeasy/30min.",
+			)
+			logger.Println("\n\n" + msg)
+		}
 	}
 
 	return err
@@ -265,7 +275,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	ctx = log.With(ctx, logger)
 	go genStep.ListenForSubsteps(logListener)
 
-	if err := sdkgen.Generate(
+	hasGenerationAccess, err := sdkgen.Generate(
 		ctx,
 		config.GetCustomerID(),
 		config.GetWorkspaceID(),
@@ -283,9 +293,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		w.Repo,
 		w.RepoSubDirs[target],
 		w.ShouldCompile,
-	); err != nil {
+	)
+	if err != nil {
 		return err
 	}
+	w.hasGenerationAccess = hasGenerationAccess
 
 	rootStep.NewSubstep("Cleaning up")
 

@@ -86,6 +86,21 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 	return boxStyle.Render(s)
 }
 
+func RenderWarningMessage(heading string, additionalLines ...string) string {
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(Colors.Yellow).
+		Padding(0, 1).
+		AlignHorizontal(lipgloss.Center)
+
+	s := lipgloss.NewStyle().Foreground(Colors.Yellow).Bold(true).Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Yellow).Render(line)
+	}
+
+	return boxStyle.Render(s)
+}
+
 func KeymapLegend(keys []string, descriptions []string) string {
 	var s string
 	for i, key := range keys {
