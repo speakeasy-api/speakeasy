@@ -10,15 +10,19 @@ import (
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
+	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
-	"github.com/speakeasy-api/speakeasy/pkg/merge"
 	openai "github.com/speakeasy-sdks/openai-go-sdk/v4"
 	"github.com/speakeasy-sdks/openai-go-sdk/v4/pkg/models/shared"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
 
 func system(content string) shared.ChatCompletionRequestMessage {
@@ -67,115 +71,162 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 	if err != nil {
 		return errors.NewValidationError("failed to load document", -1, err)
 	}
-	v3OriginalDoc, errs := doc.BuildV3Model()
-	if len(errs) > 0 {
-		return errors.NewValidationError("failed to build model", -1, err)
-	}
 	splitSchema, err := Split(doc, cacheFolder)
 	if err != nil {
 		return err
 	}
 
+	parallelism := 10
+
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, parallelism)
+
 	for _, shard := range splitSchema {
-		cacheFile := filepath.Join(cacheFolder, base64(shard.Key)+".adjusted.yaml")
-		if _, err := os.Stat(cacheFile); err == nil {
-			content, err := os.ReadFile(cacheFile)
-			if err != nil {
-				return err
-			}
-			updatedDoc, err := libopenapi.NewDocumentWithConfiguration([]byte(content), getConfig())
-			if err != nil {
-				return err
-			}
-			v3UpdatedDoc, errs := updatedDoc.BuildV3Model()
-			if len(errs) > 0 {
-				return errors.NewValidationError("failed to build model", -1, err)
-			}
+		wg.Add(1)
+		semaphore <- struct{}{} // Acquire a token
 
-			_, errs = merge.MergeDocuments(&v3OriginalDoc.Model, &v3UpdatedDoc.Model)
-			if len(errs) > 0 {
-				return fmt.Errorf("failed to merge documents: %v", errs)
-			}
-		}
-		model := shared.TwoGpt4TurboPreview
-		maxTokens := int64(4096)
-		// OAS currently not declared to support text/event-stream
-		shouldStream := false
-		finishAt := "(done)"
-		assistantMessages := []shared.ChatCompletionRequestMessage{}
-		subsequentErrors := 0
-		for {
-			messages := []shared.ChatCompletionRequestMessage{
-				system(fmt.Sprintf("Task Output a complete, modified  OpenAPI document with the following changes:\n1. For each JSON Schema which lacks an `example` field, write one. Look at the parent objects to generate them: they often have an example object defined, for the parent of each json schema. Your job is to propagate the first example into each json schema for the appropriate field.\n2. You are to do this using the `example` field. I.e. it should be in a format that is compliant to the JSON Schema type. For example, if it is `type: number`, and the parent of the field implies that it should be of value `1`, it should be set in the JSON Schema as `example: 1`. \n3. You do not need to set `example` for any composite types (object, array, oneOf, anyOf, allOf)\n4. Stay to the task: just write the modified document. No need for any changes except adding an example field where there isn't one.\n5. Continue from the prior assistant response, if there is one. You must continue to output a full OpenAPI document with all the same elements as in the user request. \n", finishAt)),
-				system("Example: \n```\n      requestBody:\n        content:\n          application/json:\n            schema:\n              title: UpdateContactRequest\n              type: object\n              properties:\n                first_name:\n                  type: string\n                last_name:\n                  type: string\n                display_name:\n                  type: string\n                addresses:\n                  title: UpdateContactAddresses\n                  type: array\n                  items:\n                    type: object\n                    title: UpdateContactAddress\n                    properties:\n                      address:\n                        description: The identifier that uniquely addresses an actor within a communications channel.\n                        type: string\n                      channel:\n                        $ref: '#/components/schemas/CommunicationChannel'\n                tags:\n                  $ref: '#/components/schemas/Tags'\n            examples:\n              Example 1 - Update Contact addresses:\n                value:\n                  addresses:\n                    - channel: tel\n                      address: '+37259000000'\n                    - channel: email\n                      address: ipletnjov@twilio.com\n              Example 2 - Update Contact tags:\n                value:\n                  tags:\n                    shirt_size: X-Large\n```\n => \n```\n      requestBody:\n        content:\n          application/json:\n            schema:\n              title: UpdateContactRequest\n              type: object\n              properties:\n                first_name:\n                  type: string\n                  example: Igor\n                last_name:\n                  type: string\n                  example: Pletnjov\n                display_name:\n                  type: string\n                  example: ipletnjov\n...\n```\n\n"),
-				user(fmt.Sprintf("Here's my OpenAPI file: ```%s```", shard.Content)),
-				user("I need to add an example field to each JSON Schema which lacks one. This should happens across the path item, as well as all component schemas (and request bodies, etc): anything that's a JSON Schema item. I should propagate the first example into each JSON Schema for the appropriate field. I should do this using the `example` field. I should stay to the task and just write the modified document, within triple back-ticks like ```\n"),
-			}
-			messages = append(messages, assistantMessages...)
-			fmt.Printf("Invoking ChatGPT to retrieve 4096 more tokens for operation %s.. ", shard.Key)
-			completion, err := sdk.Chat.CreateChatCompletion(ctx, shared.CreateChatCompletionRequest{
-				MaxTokens: &maxTokens,
-				Messages:  messages,
-				Model: shared.CreateChatCompletionRequestModel{
-					Two: &model,
-				},
-				Stop:   &shared.Stop{Str: &finishAt},
-				Stream: &shouldStream,
-			})
-			fmt.Printf("Done\n")
-			if err != nil {
-				if subsequentErrors > 5 {
-					break
-				}
-				subsequentErrors++
-				continue
-			}
-			if len(completion.CreateChatCompletionResponse.Choices) != 1 {
-				return fmt.Errorf("expected only 1 choice, got %d", len(completion.CreateChatCompletionResponse.Choices))
-			}
+		go func(shard Shard) {
+			defer wg.Done()
+			RunOnShard(ctx, sdk, shard, cacheFolder)
+			<-semaphore // Release the token
+		}(shard)
+	}
+	wg.Wait() // Wait for all goroutines to finish
 
-			choice := completion.CreateChatCompletionResponse.Choices[0]
-			content := choice.Message.Content
-			assistantMessages = append(assistantMessages, assistant(*content))
-			// check if we're actually done yet
-			if len(*content) == 0 || strings.Contains(*content, finishAt) {
-				break
-			}
-		}
-
-		// merge assistantMessages back to string
-		var content strings.Builder
-		for _, m := range assistantMessages {
-			if m.ChatCompletionRequestAssistantMessage != nil {
-				content.WriteString(*m.ChatCompletionRequestAssistantMessage.Content)
-			}
-		}
-		// trim the "Done, "```") from content
-		contentWithoutDone := strings.Replace(content.String(), finishAt, "", -1)
-		contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
-		// load the new result with libopenapi
-		fmt.Printf("Content: %s\n", contentWithoutBackticks)
-		os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0644)
-		updatedDoc, err := libopenapi.NewDocumentWithConfiguration([]byte(contentWithoutBackticks), getConfig())
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	relPath, err := filepath.Rel(wd, schemaPath)
+	if err != nil {
+		return err
+	}
+	combinedOverlay := overlay.Overlay{
+		Version: "0.0.1",
+		Info: overlay.Info{
+			Title:   "Overlay File created by Speakeasy Suggest",
+			Version: "0.0.1",
+		},
+		Extends: "file://" + relPath,
+		Actions: nil,
+	}
+	for _, shard := range splitSchema {
+		// merge the overlays together against the original document
+		overlayFile := filepath.Join(cacheFolder, base64(shard.Key)+".overlay.yaml")
+		newDoc, err := overlay.Parse(overlayFile)
 		if err != nil {
 			return err
 		}
-		v3UpdatedDoc, errs := updatedDoc.BuildV3Model()
-		if len(errs) > 0 {
-			return errors.NewValidationError("failed to build model", -1, err)
+		combinedOverlay.Actions = append(combinedOverlay.Actions, newDoc.Actions...)
+	}
+	// write the new document to the output file
+	combined, err := combinedOverlay.ToString()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(outputFile, []byte(combined), 0644)
+}
+
+func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder string) error {
+	cacheFile := filepath.Join(cacheFolder, base64(shard.Key)+".adjusted.yaml")
+	if _, err := os.Stat(cacheFile); err == nil {
+		handleUpdate(ctx, cacheFolder, shard)
+		return nil
+	}
+	model := shared.TwoGpt4TurboPreview
+	maxTokens := int64(4096)
+	// OAS currently not declared to support text/event-stream
+	shouldStream := false
+	finishAt := "<Completed Task>"
+	assistantMessages := []shared.ChatCompletionRequestMessage{}
+	subsequentErrors := 0
+	for {
+		messages := []shared.ChatCompletionRequestMessage{
+			system(fmt.Sprintf("Task Output a complete, modified  OpenAPI document with the following changes:\n1. For each JSON Schema which lacks an `example` field, write one. Look at the parent objects to generate them: they often have an example object defined, for the parent of each json schema. Your job is to propagate the first example into each json schema for the appropriate field.\n2. You are to do this using the `example` field. I.e. it should be in a format that is compliant to the JSON Schema type. For example, if it is `type: number`, and the parent of the field implies that it should be of value `1`, it should be set in the JSON Schema as `example: 1`. \n3. You do not need to set `example` for any composite types (object, array, oneOf, anyOf, allOf)\n4. Stay to the task: just write the modified document. You must always output yaml, no \"...\". No need for any changes except adding an example field where there isn't one.\n5. Continue from the prior assistant response, if there is one. You must continue to output a full OpenAPI document with all the same elements as in the user request. \n6. Once you are done, tell me you are done by stating \"%s\"\n", finishAt)),
+			system("Example: \n```\n      requestBody:\n        content:\n          application/json:\n            schema:\n              title: UpdateContactRequest\n              type: object\n              properties:\n                first_name:\n                  type: string\n                last_name:\n                  type: string\n                display_name:\n                  type: string\n                addresses:\n                  title: UpdateContactAddresses\n                  type: array\n                  items:\n                    type: object\n                    title: UpdateContactAddress\n                    properties:\n                      address:\n                        description: The identifier that uniquely addresses an actor within a communications channel.\n                        type: string\n                      channel:\n                        $ref: '#/components/schemas/CommunicationChannel'\n                tags:\n                  $ref: '#/components/schemas/Tags'\n            examples:\n              Example 1 - Update Contact addresses:\n                value:\n                  addresses:\n                    - channel: tel\n                      address: '+37259000000'\n                    - channel: email\n                      address: ipletnjov@twilio.com\n              Example 2 - Update Contact tags:\n                value:\n                  tags:\n                    shirt_size: X-Large\n```\n => \n```\n      requestBody:\n        content:\n          application/json:\n            schema:\n              title: UpdateContactRequest\n              type: object\n              properties:\n                first_name:\n                  type: string\n                  example: Igor\n                last_name:\n                  type: string\n                  example: Pletnjov\n                display_name:\n                  type: string\n                  example: ipletnjov\n...\n```\n\n"),
+			user(fmt.Sprintf("Here's my OpenAPI file: ```%s```", shard.Content)),
+			user("I need to add an example field to each JSON Schema which lacks one. This should happens across the path item, as well as all component schemas (and request bodies, etc): anything that's a JSON Schema item. I should propagate the first example into each JSON Schema for the appropriate field. I should do this using the `example` field. I should stay to the task and just write the modified document, within triple back-ticks like ```\n"),
+		}
+		messages = append(messages, assistantMessages...)
+		fmt.Printf("Invoking ChatGPT to retrieve 4096 more tokens for operation %s.. ", shard.Key)
+		completion, err := sdk.Chat.CreateChatCompletion(ctx, shared.CreateChatCompletionRequest{
+			MaxTokens: &maxTokens,
+			Messages:  messages,
+			Model: shared.CreateChatCompletionRequestModel{
+				Two: &model,
+			},
+			Stop:   &shared.Stop{Str: &finishAt},
+			Stream: &shouldStream,
+		})
+		fmt.Printf("Done\n")
+		if err != nil {
+			if subsequentErrors > 5 {
+				break
+			}
+			subsequentErrors++
+			// jitter
+			jitter := time.Duration(rand.Float32() * float32(time.Minute))
+			time.Sleep(jitter)
+			continue
+		}
+		if len(completion.CreateChatCompletionResponse.Choices) != 1 {
+			return fmt.Errorf("expected only 1 choice, got %d", len(completion.CreateChatCompletionResponse.Choices))
 		}
 
-		_, errs = merge.MergeDocuments(&v3OriginalDoc.Model, &v3UpdatedDoc.Model)
-		if len(errs) > 0 {
-			return fmt.Errorf("failed to merge documents: %v", errs)
+		choice := completion.CreateChatCompletionResponse.Choices[0]
+		content := choice.Message.Content
+		fmt.Printf("%s", *content)
+
+		assistantMessages = append(assistantMessages, assistant(*content))
+		// check if we're actually done yet
+		if len(*content) == 0 || strings.Contains(*content, finishAt) {
+			break
 		}
 	}
-	newDoc, err := doc.Render()
-	if err != nil {
-		return errors.NewValidationError("failed to render document", -1, err)
+
+	// merge assistantMessages back to string
+	var content strings.Builder
+	for _, m := range assistantMessages {
+		if m.ChatCompletionRequestAssistantMessage != nil {
+			content.WriteString(*m.ChatCompletionRequestAssistantMessage.Content)
+		}
 	}
-	fmt.Printf("Content: %s\n", newDoc)
-	return os.WriteFile(outputFile, newDoc, 0644)
+	// trim the "Done, "```") from content
+	contentWithoutDone := strings.Replace(content.String(), finishAt, "", -1)
+	contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
+	// load the new result with libopenapi
+	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0644)
+	handleUpdate(ctx, cacheFolder, shard)
+	return nil
+}
+
+func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
+	originalFile := filepath.Join(cacheFolder, base64(shard.Key)+".yaml")
+	y1, err := loader.LoadSpecification(originalFile)
+	if err != nil {
+		return fmt.Errorf("failed to load %q: %w", originalFile, err)
+	}
+
+	adjustedFile := filepath.Join(cacheFolder, base64(shard.Key)+".adjusted.yaml")
+	y2, err := loader.LoadSpecification(adjustedFile)
+	if err != nil {
+		return fmt.Errorf("failed to load %q: %w", adjustedFile, err)
+	}
+	//
+	//title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])
+	//
+	o, err := overlay.Compare("LLM", originalFile, y1, *y2)
+	if err != nil {
+		return fmt.Errorf("failed to compare spec files %q and %q: %w", originalFile, adjustedFile, err)
+	}
+	content, err := o.ToString()
+	if err != nil {
+		return fmt.Errorf("failed to format overlay: %w", err)
+	}
+
+	fmt.Printf("\n" + content + "\n")
+	os.WriteFile(filepath.Join(cacheFolder, base64(shard.Key)+".overlay.yaml"), []byte(content), 0644)
+	return nil
 }
 
 func getConfig() *datamodel.DocumentConfiguration {
@@ -189,6 +240,7 @@ func getConfig() *datamodel.DocumentConfiguration {
 
 type Shard struct {
 	Key     string
+	Encoded string
 	Content string
 }
 
@@ -224,7 +276,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 			if err != nil {
 				return nil, err
 			}
-			shards = append(shards, Shard{Content: string(cacheFileStr), Key: pair.Key()})
+			shards = append(shards, Shard{Content: string(cacheFileStr), Encoded: base64(pair.Key()), Key: pair.Key()})
 			continue
 		}
 
@@ -247,7 +299,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 		}
 		// cache it
 		err = os.WriteFile(cacheFile, shard, 0644)
-		shards = append(shards, Shard{Content: string(shard), Key: pair.Key()})
+		shards = append(shards, Shard{Content: string(shard), Encoded: base64(pair.Key()), Key: pair.Key()})
 	}
 	return shards, nil
 }
