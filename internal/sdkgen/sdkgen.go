@@ -3,9 +3,11 @@ package sdkgen
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -108,10 +110,14 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	if !generationAccess {
-		msg := styles.RenderWarningMessage(
-			"WARNING FREE LIMIT EXCEEDED",
-			"You have exceeded the limit of one free generated SDK for your account.",
-			"To avoid disruption of service please reach out to the Speakeasy team - https://calendly.com/sagar-speakeasy/30min.",
+		warningDate := time.Date(2024, time.March, 22, 0, 0, 0, 0, time.UTC)
+		daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
+		msg := styles.RenderInfoMessage(
+			"🚀 Time to Upgrade 🚀",
+			"\nYou have exceeded the limit of one free generated SDK.",
+			fmt.Sprintf("Your account will start to face restrictions in %d days.", daysToLimit),
+			"To upgrade your plan please reach out to the Speakeasy team.",
+			"\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team",
 		)
 		logger.Println("\n\n" + msg)
 	}

@@ -86,16 +86,16 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 	return boxStyle.Render(s)
 }
 
-func RenderWarningMessage(heading string, additionalLines ...string) string {
+func RenderInfoMessage(heading string, additionalLines ...string) string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Colors.Yellow).
+		BorderForeground(Colors.Blue).
 		Padding(0, 1).
 		AlignHorizontal(lipgloss.Center)
 
-	s := lipgloss.NewStyle().Foreground(Colors.Yellow).Bold(true).Render(utils.CapitalizeFirst(heading))
+	s := lipgloss.NewStyle().Foreground(Colors.Blue).Bold(true).Render(utils.CapitalizeFirst(heading))
 	for _, line := range additionalLines {
-		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Yellow).Render(line)
+		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Blue).Render(line)
 	}
 
 	return boxStyle.Render(s)
