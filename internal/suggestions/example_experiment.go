@@ -87,7 +87,12 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 
 		go func(shard Shard) {
 			defer wg.Done()
-			RunOnShard(ctx, sdk, shard, cacheFolder)
+			jitter := time.Duration(rand.Float32() * float32(time.Second) * 15)
+			time.Sleep(jitter)
+			errMessage := RunOnShard(ctx, sdk, shard, cacheFolder)
+			if errMessage != nil {
+				fmt.Println(errMessage)
+			}
 			<-semaphore // Release the token
 		}(shard)
 	}
@@ -117,7 +122,17 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 		if err != nil {
 			return err
 		}
-		combinedOverlay.Actions = append(combinedOverlay.Actions, newDoc.Actions...)
+		usedKeys := make(map[string]bool)
+		for _, action := range newDoc.Actions {
+			if action.Remove {
+				continue
+			}
+			usedKeys[action.Target] = true
+			// add if not seen before
+			if _, ok := usedKeys[action.Target]; !ok {
+				combinedOverlay.Actions = append(combinedOverlay.Actions, action)
+			}
+		}
 	}
 	// write the new document to the output file
 	combined, err := combinedOverlay.ToString()
@@ -130,8 +145,7 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder string) error {
 	cacheFile := filepath.Join(cacheFolder, base64(shard.Key)+".adjusted.yaml")
 	if _, err := os.Stat(cacheFile); err == nil {
-		handleUpdate(ctx, cacheFolder, shard)
-		return nil
+		return handleUpdate(ctx, cacheFolder, shard)
 	}
 	model := shared.TwoGpt4TurboPreview
 	maxTokens := int64(4096)
@@ -148,7 +162,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 			user("I need to add an example field to each JSON Schema which lacks one. This should happens across the path item, as well as all component schemas (and request bodies, etc): anything that's a JSON Schema item. I should propagate the first example into each JSON Schema for the appropriate field. I should do this using the `example` field. I should stay to the task and just write the modified document, within triple back-ticks like ```\n"),
 		}
 		messages = append(messages, assistantMessages...)
-		fmt.Printf("Invoking ChatGPT to retrieve 4096 more tokens for operation %s.. ", shard.Key)
+		fmt.Printf("Invoking ChatGPT to retrieve 4096 more tokens for operation %s.. \n", shard.Key)
 		completion, err := sdk.Chat.CreateChatCompletion(ctx, shared.CreateChatCompletionRequest{
 			MaxTokens: &maxTokens,
 			Messages:  messages,
@@ -158,7 +172,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 			Stop:   &shared.Stop{Str: &finishAt},
 			Stream: &shouldStream,
 		})
-		fmt.Printf("Done\n")
+		fmt.Printf("%s step done\n", shard.Key)
 		if err != nil {
 			if subsequentErrors > 5 {
 				break
@@ -175,7 +189,6 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 
 		choice := completion.CreateChatCompletionResponse.Choices[0]
 		content := choice.Message.Content
-		fmt.Printf("%s", *content)
 
 		assistantMessages = append(assistantMessages, assistant(*content))
 		// check if we're actually done yet
@@ -196,11 +209,15 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 	contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
 	// load the new result with libopenapi
 	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0644)
-	handleUpdate(ctx, cacheFolder, shard)
-	return nil
+	return handleUpdate(ctx, cacheFolder, shard)
 }
 
 func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
+	overlayFilePath := filepath.Join(cacheFolder, base64(shard.Key)+".overlay.yaml")
+	// if it exists, do nothing
+	if _, err := os.Stat(overlayFilePath); err == nil {
+		return nil
+	}
 	originalFile := filepath.Join(cacheFolder, base64(shard.Key)+".yaml")
 	y1, err := loader.LoadSpecification(originalFile)
 	if err != nil {
@@ -225,7 +242,7 @@ func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
 	}
 
 	fmt.Printf("\n" + content + "\n")
-	os.WriteFile(filepath.Join(cacheFolder, base64(shard.Key)+".overlay.yaml"), []byte(content), 0644)
+	os.WriteFile(overlayFilePath, []byte(content), 0644)
 	return nil
 }
 
