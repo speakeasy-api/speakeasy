@@ -80,29 +80,38 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, parallelism)
+	i := 0
 
 	for _, shard := range splitSchema {
 		wg.Add(1)
 		semaphore <- struct{}{} // Acquire a token
+		i++
 
-		go func(shard Shard) {
+		go func(shard Shard, i int) {
+			<-semaphore // Release the token
 			defer wg.Done()
+			return
+			fmt.Printf("Processing shard %s (%v / %v)\n", shard.Key, i, len(splitSchema))
 			jitter := time.Duration(rand.Float32() * float32(time.Second) * 15)
 			time.Sleep(jitter)
 			errMessage := RunOnShard(ctx, sdk, shard, cacheFolder)
 			if errMessage != nil {
 				fmt.Println(errMessage)
 			}
+			fmt.Printf("Shard %s complete (%v / %v)\n", shard.Key, i, len(splitSchema))
 			<-semaphore // Release the token
-		}(shard)
+		}(shard, i)
 	}
 	wg.Wait() // Wait for all goroutines to finish
-
+	schemaOut, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return err
+	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	relPath, err := filepath.Rel(wd, schemaPath)
+	relPath, err := filepath.Rel(wd, schemaOut)
 	if err != nil {
 		return err
 	}
@@ -115,21 +124,21 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 		Extends: "file://" + relPath,
 		Actions: nil,
 	}
+	usedKeys := make(map[string]bool)
 	for _, shard := range splitSchema {
 		// merge the overlays together against the original document
 		overlayFile := filepath.Join(cacheFolder, base64(shard.Key)+".overlay.yaml")
 		newDoc, err := overlay.Parse(overlayFile)
 		if err != nil {
-			return err
+			continue
 		}
-		usedKeys := make(map[string]bool)
 		for _, action := range newDoc.Actions {
 			if action.Remove {
 				continue
 			}
-			usedKeys[action.Target] = true
 			// add if not seen before
 			if _, ok := usedKeys[action.Target]; !ok {
+				usedKeys[action.Target] = true
 				combinedOverlay.Actions = append(combinedOverlay.Actions, action)
 			}
 		}
@@ -162,7 +171,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 			user("I need to add an example field to each JSON Schema which lacks one. This should happens across the path item, as well as all component schemas (and request bodies, etc): anything that's a JSON Schema item. I should propagate the first example into each JSON Schema for the appropriate field. I should do this using the `example` field. I should stay to the task and just write the modified document, within triple back-ticks like ```\n"),
 		}
 		messages = append(messages, assistantMessages...)
-		fmt.Printf("Invoking ChatGPT to retrieve 4096 more tokens for operation %s.. \n", shard.Key)
+		fmt.Printf("  Invoking ChatGPT to retrieve 4096 more tokens for operation %s.. \n", shard.Key)
 		completion, err := sdk.Chat.CreateChatCompletion(ctx, shared.CreateChatCompletionRequest{
 			MaxTokens: &maxTokens,
 			Messages:  messages,
@@ -172,7 +181,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 			Stop:   &shared.Stop{Str: &finishAt},
 			Stream: &shouldStream,
 		})
-		fmt.Printf("%s step done\n", shard.Key)
+		fmt.Printf("  %s chat-gpt invoke done\n", shard.Key)
 		if err != nil {
 			if subsequentErrors > 5 {
 				break
