@@ -29,7 +29,7 @@ const (
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
 )
 
-var SupportedPublishingTagets = []string{
+var SupportedPublishingTargets = []string{
 	"typescript",
 	"python",
 	"csharp",
@@ -303,7 +303,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishingFile(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, error) {
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, error) {
 	publishingWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
 	secrets := make(map[string]string)
 	for _, target := range workflowFile.Targets {

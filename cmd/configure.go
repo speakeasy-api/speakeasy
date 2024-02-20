@@ -36,7 +36,7 @@ var configureCmd = &model.CommandGroup{
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           `Configure your Speakeasy SDK Setup.`,
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd},
 }
 
 type ConfigureSourcesFlags struct {
@@ -96,6 +96,14 @@ var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	Short:        "Configure Speakeasy for github.",
 	Long:         "Configure your Speakeasy workflow to generate and publish from your github repo.",
 	Run:          configureGithub,
+	RequiresAuth: true,
+}
+
+var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+	Usage:        "publishing",
+	Short:        "Configure Speakeasy for publishing.",
+	Long:         "Configure your Speakeasy workflow to publish to package managers from your github repo.",
+	Run:          configurePublishing,
 	RequiresAuth: true,
 }
 
@@ -317,13 +325,10 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	return nil
 }
 
-func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
+func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error {
+	logger := log.From(ctx)
 
-	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
+	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -332,7 +337,14 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exists, try speakeasy quickstart")
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+	}
+
+	var publishingOptions []huh.Option[string]
+	for name, target := range workflowFile.Targets {
+		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
+			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s (%s)", name, strings.ToUpper(target.Target)), name))
+		}
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
@@ -345,6 +357,103 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		if err := yaml.Unmarshal(fileContent, generationWorkflow); err != nil {
 			return err
 		}
+	} else {
+		return fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
+	}
+
+	if len(publishingOptions) == 0 {
+		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
+	}
+
+	chosenTargets := make([]string, 0)
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(
+		huh.NewMultiSelect[string]().
+			Title("Select any targets you would like to configure publishing for.").
+			Description("Setup variables to configure publishing directly from Speakeasy.\n").
+			Options(publishingOptions...).
+			Value(&chosenTargets),
+	)),
+		"Would you like to configure publishing for any existing targets?")).
+		Run(); err != nil {
+		return err
+	}
+
+	for _, name := range chosenTargets {
+		target := workflowFile.Targets[name]
+		modifiedTarget, err := prompts.ConfigurePublishing(&target)
+		if err != nil {
+			return err
+		}
+		workflowFile.Targets[name] = *modifiedTarget
+	}
+
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write publishing configs")
+	}
+
+	// write a github workflow file.
+	var genWorkflowBuf bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
+		return errors.Wrapf(err, "failed to encode workflow file")
+	}
+
+	if err = os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
+		return errors.Wrapf(err, "failed to write github workflow file")
+	}
+
+	if err := workflow.Save(workingDir, workflowFile); err != nil {
+		return errors.Wrapf(err, "failed to save workflow file")
+	}
+
+	var agenda []string
+	for key := range generationWorkflow.Jobs.Generate.Secrets {
+		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
+			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.BoldString(strings.ToUpper(key))))
+		}
+	}
+
+	msg := styles.RenderInstructionalMessage("For your publishing setup to be complete perform the following steps.",
+		agenda...)
+	logger.Println(msg)
+
+	return nil
+}
+
+func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	logger := log.From(ctx)
+
+	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
+
+	workflowFile, _, _ := workflow.Load(workingDir)
+	if workflowFile == nil {
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+	}
+
+	generationWorkflow := &config.GenerateWorkflow{}
+	if _, err := os.Stat(generationWorkflowFilePath); err == nil {
+		fileContent, err := os.ReadFile(generationWorkflowFilePath)
+		if err != nil {
+			return err
+		}
+
+		if err := yaml.Unmarshal(fileContent, generationWorkflow); err != nil {
+			return err
+		}
+	} else {
+		logger.Println(styles.Info.Render(fmt.Sprintf("Could not find existing workflow file %s", generationWorkflowFilePath)))
 	}
 
 	generationWorkflow, err = prompts.ConfigureGithub(generationWorkflow, workflowFile)
@@ -354,8 +463,8 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	var publishingOptions []huh.Option[string]
 	for name, target := range workflowFile.Targets {
-		if slices.Contains(prompts.SupportedPublishingTagets, target.Target) {
-			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s (%s)", name, target.Target), name))
+		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
+			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s (%s)", name, strings.ToUpper(target.Target)), name))
 		}
 	}
 
@@ -390,12 +499,12 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	generationWorkflow, err = prompts.WritePublishingFile(generationWorkflow, workflowFile, workingDir)
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to write publishing file")
+		return errors.Wrapf(err, "failed to write publishing configs")
 	}
 
-	// Write a github workflow file.
+	// write a github workflow file.
 	var genWorkflowBuf bytes.Buffer
 	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
 	yamlEncoder.SetIndent(2)
@@ -416,7 +525,6 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		remoteURL = prompts.ParseGithubRemoteURL(repo)
 	}
 
-	logger := log.From(ctx)
 	agenda := []string{
 		fmt.Sprintf("• Setup an API Key - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID),
 		fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.BoldString(strings.ToUpper(config.SpeakeasyApiKey))),
