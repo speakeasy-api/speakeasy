@@ -6,6 +6,7 @@ import (
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/model"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"gopkg.in/yaml.v3"
 	"os"
 	"regexp"
@@ -25,14 +26,14 @@ var migrateCmd = &model.ExecutableCommand[MigrateFlags]{
 	Long:   "migrate to v15 of the speakeasy workflow + action",
 	Hidden: true,
 	Run:    migrateFunc,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:         "directory",
 			Shorthand:    "d",
 			Description:  "directory to migrate. Expected to contain a `.github/workflows` directory. Defaults to `.`",
 			DefaultValue: ".",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:         "gen-filename",
 			Shorthand:    "g",
 			Description:  "name of the file containing the generation workflow. Defaults to `speakeasy_sdk_generation.yml`",
