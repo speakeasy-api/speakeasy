@@ -15,8 +15,9 @@
 
   ![Group 26](https://github.com/speakeasy-api/speakeasy/assets/68016351/159f0565-0cfa-468a-8fcd-7c3590eea355)
 
-  ![ezgif com-video-to-gif (1)](https://github.com/speakeasy-api/speakeasy/assets/90289500/ff6972c4-4e8a-4a5c-a976-75e97cc42f5a)
 </div>
+![](https://github.com/speakeasy-api/speakeasy/assets/6267663/a472af47-719e-4d36-831f-242676cb311d)
+
 <br />
 
 ## What is Speakeasy?
