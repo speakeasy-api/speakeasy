@@ -14,11 +14,12 @@
    <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
 
   ![Group 26](https://github.com/speakeasy-api/speakeasy/assets/68016351/159f0565-0cfa-468a-8fcd-7c3590eea355)
-
+  <br />
+  <br />
+  <video src='https://github.com/speakeasy-api/speakeasy/assets/6267663/a472af47-719e-4d36-831f-242676cb311d' width=700 autoplay=true loop=true controls=false>
+  </video>
 </div>
-![](https://github.com/speakeasy-api/speakeasy/assets/6267663/a472af47-719e-4d36-831f-242676cb311d)
 
-<br />
 
 ## What is Speakeasy?
 
