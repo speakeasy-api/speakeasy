@@ -45,6 +45,17 @@ func user(content string) shared.ChatCompletionRequestMessage {
 	}
 }
 
+func assistant(content string) shared.ChatCompletionRequestMessage {
+	name := "assistant"
+	return shared.ChatCompletionRequestMessage{
+		ChatCompletionRequestAssistantMessage: &shared.ChatCompletionRequestAssistantMessage{
+			Content: &content,
+			Name:    &name,
+			Role:    shared.RoleAssistant,
+		},
+	}
+}
+
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
 	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{})
@@ -87,35 +98,60 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 			}
 		}
 		model := shared.TwoGpt4TurboPreview
-		maxTokens := int64(30000)
+		maxTokens := int64(4096)
 		// OAS currently not declared to support text/event-stream
 		shouldStream := false
 		finishAt := "(done)"
-		completion, err := sdk.Chat.CreateChatCompletion(ctx, shared.CreateChatCompletionRequest{
-			MaxTokens: &maxTokens,
-			Messages: []shared.ChatCompletionRequestMessage{
-				system(fmt.Sprintf("Task Output a complete, modified  OpenAPI document with the following changes:\n1. For each JSON Schema which lacks an `example` field, write one. Look at the parent objects to generate them: they often have an example object defined, for the parent of each json schema. Your job is to propagate the first example into each json schema for the appropriate field.\n2. You are to do this using the `example` field. I.e. it should be in a format that is compliant to the JSON Schema type. For example, if it is `type: number`, and the parent of the field implies that it should be of value `1`, it should be set in the JSON Schema as `example: 1`. \n3. You do not need to set `example` for any composite types (object, array, oneOf, anyOf, allOf)\n4. Stay to the task: just write the modified document. No need for any changes except adding an example field where there isn't one.\n5. Continue from the prior assistant response, if there is one.\n6. When done, tell me by saying '%s'\n", finishAt)),
+		assistantMessages := []shared.ChatCompletionRequestMessage{}
+		subsequentErrors := 0
+		for {
+			messages := []shared.ChatCompletionRequestMessage{
+				system(fmt.Sprintf("Task Output a complete, modified  OpenAPI document with the following changes:\n1. For each JSON Schema which lacks an `example` field, write one. Look at the parent objects to generate them: they often have an example object defined, for the parent of each json schema. Your job is to propagate the first example into each json schema for the appropriate field.\n2. You are to do this using the `example` field. I.e. it should be in a format that is compliant to the JSON Schema type. For example, if it is `type: number`, and the parent of the field implies that it should be of value `1`, it should be set in the JSON Schema as `example: 1`. \n3. You do not need to set `example` for any composite types (object, array, oneOf, anyOf, allOf)\n4. Stay to the task: just write the modified document. No need for any changes except adding an example field where there isn't one.\n5. Continue from the prior assistant response, if there is one. You must continue to output a full OpenAPI document with all the same elements as in the user request. \n", finishAt)),
 				system("Example: \n```\n      requestBody:\n        content:\n          application/json:\n            schema:\n              title: UpdateContactRequest\n              type: object\n              properties:\n                first_name:\n                  type: string\n                last_name:\n                  type: string\n                display_name:\n                  type: string\n                addresses:\n                  title: UpdateContactAddresses\n                  type: array\n                  items:\n                    type: object\n                    title: UpdateContactAddress\n                    properties:\n                      address:\n                        description: The identifier that uniquely addresses an actor within a communications channel.\n                        type: string\n                      channel:\n                        $ref: '#/components/schemas/CommunicationChannel'\n                tags:\n                  $ref: '#/components/schemas/Tags'\n            examples:\n              Example 1 - Update Contact addresses:\n                value:\n                  addresses:\n                    - channel: tel\n                      address: '+37259000000'\n                    - channel: email\n                      address: ipletnjov@twilio.com\n              Example 2 - Update Contact tags:\n                value:\n                  tags:\n                    shirt_size: X-Large\n```\n => \n```\n      requestBody:\n        content:\n          application/json:\n            schema:\n              title: UpdateContactRequest\n              type: object\n              properties:\n                first_name:\n                  type: string\n                  example: Igor\n                last_name:\n                  type: string\n                  example: Pletnjov\n                display_name:\n                  type: string\n                  example: ipletnjov\n...\n```\n\n"),
 				user(fmt.Sprintf("Here's my OpenAPI file: ```%s```", shard.Content)),
-				user("I need to add an example field to each JSON Schema which lacks one. I should use the parent objects to generate them. I should propagate the first example into each JSON Schema for the appropriate field. I should do this using the `example` field. I should stay to the task and just write the modified document, within triple back-ticks like ```\n"),
-			},
-			Model: shared.CreateChatCompletionRequestModel{
-				Two: &model,
-			},
-			Stop:   &shared.Stop{Str: &finishAt},
-			Stream: &shouldStream,
-		})
-		if err != nil {
-			return err
-		}
-		if len(completion.CreateChatCompletionResponse.Choices) != 1 {
-			return fmt.Errorf("expected only 1 choice, got %d", len(completion.CreateChatCompletionResponse.Choices))
+				user("I need to add an example field to each JSON Schema which lacks one. This should happens across the path item, as well as all component schemas (and request bodies, etc): anything that's a JSON Schema item. I should propagate the first example into each JSON Schema for the appropriate field. I should do this using the `example` field. I should stay to the task and just write the modified document, within triple back-ticks like ```\n"),
+			}
+			messages = append(messages, assistantMessages...)
+			fmt.Printf("Invoking ChatGPT to retrieve 4096 more tokens for operation %s.. ", shard.Key)
+			completion, err := sdk.Chat.CreateChatCompletion(ctx, shared.CreateChatCompletionRequest{
+				MaxTokens: &maxTokens,
+				Messages:  messages,
+				Model: shared.CreateChatCompletionRequestModel{
+					Two: &model,
+				},
+				Stop:   &shared.Stop{Str: &finishAt},
+				Stream: &shouldStream,
+			})
+			fmt.Printf("Done\n")
+			if err != nil {
+				if subsequentErrors > 5 {
+					break
+				}
+				subsequentErrors++
+				continue
+			}
+			if len(completion.CreateChatCompletionResponse.Choices) != 1 {
+				return fmt.Errorf("expected only 1 choice, got %d", len(completion.CreateChatCompletionResponse.Choices))
+			}
+
+			choice := completion.CreateChatCompletionResponse.Choices[0]
+			content := choice.Message.Content
+			assistantMessages = append(assistantMessages, assistant(*content))
+			// check if we're actually done yet
+			if len(*content) == 0 || strings.Contains(*content, finishAt) {
+				break
+			}
 		}
 
-		choice := completion.CreateChatCompletionResponse.Choices[0]
-		content := choice.Message.Content
+		// merge assistantMessages back to string
+		var content strings.Builder
+		for _, m := range assistantMessages {
+			if m.ChatCompletionRequestAssistantMessage != nil {
+				content.WriteString(*m.ChatCompletionRequestAssistantMessage.Content)
+			}
+		}
 		// trim the "Done, "```") from content
-		contentWithoutDone := strings.Replace(*content, finishAt, "", -1)
+		contentWithoutDone := strings.Replace(content.String(), finishAt, "", -1)
 		contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
 		// load the new result with libopenapi
 		fmt.Printf("Content: %s\n", contentWithoutBackticks)
@@ -184,7 +220,11 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 		cacheFile := filepath.Join(cacheFolder, fmt.Sprintf("%s.yaml", base64(pair.Key())))
 		// if already exists, use it
 		if _, err := os.Stat(cacheFile); err == nil {
-			shards = append(shards, Shard{Content: cacheFile, Key: pair.Key()})
+			cacheFileStr, err := os.ReadFile(cacheFile)
+			if err != nil {
+				return nil, err
+			}
+			shards = append(shards, Shard{Content: string(cacheFileStr), Key: pair.Key()})
 			continue
 		}
 
