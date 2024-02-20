@@ -2,7 +2,7 @@
 `speakeasy overlay validate`  
 
 
-Given an overlay, it will state whether it appears to be valid according to the OpenAPI Overlay specification  
+Given an overlay, validate it according to the OpenAPI Overlay specification  
 
 ## Usage
 
@@ -14,7 +14,7 @@ speakeasy overlay validate [flags]
 
 ```
   -h, --help             help for validate
-  -o, --overlay string   overlay file to validate
+  -o, --overlay string   the overlay file to use
 ```
 
 ### Options inherited from parent commands

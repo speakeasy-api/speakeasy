@@ -59,13 +59,12 @@ func Init(version, artifactArch string) {
 
 	authInit()
 	mergeInit()
-	overlayInit()
+	addCommand(rootCmd, overlayCmd)
 	suggestInit()
 	updateInit(version, artifactArch)
 	proxyInit()
 	apiInit()
 	languageServerInit(version)
-	patchInit()
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {

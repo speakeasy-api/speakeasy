@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"os"
 	"slices"
 
@@ -39,13 +40,13 @@ var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
 	Long:         "Guided prompts to configure a new or existing source in your speakeasy workflow.",
 	Run:          configureSources,
 	RequiresAuth: true,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "id",
 			Shorthand:   "i",
 			Description: "the name of an existing source to configure",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "new",
 			Shorthand:   "n",
 			Description: "configure a new source",
@@ -64,13 +65,13 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 	Long:         "Guided prompts to configure a new target in your speakeasy workflow.",
 	Run:          configureTarget,
 	RequiresAuth: true,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "id",
 			Shorthand:   "i",
 			Description: "the name of an existing target to configure",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "new",
 			Shorthand:   "n",
 			Description: "configure a new target",
