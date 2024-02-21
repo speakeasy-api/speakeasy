@@ -173,7 +173,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		logger.Println(msg)
 
 		if !w.hasGenerationAccess {
-			warningDate := time.Date(2024, time.March, 22, 0, 0, 0, 0, time.UTC)
+			warningDate := time.Date(2024, time.March, 25, 0, 0, 0, 0, time.UTC)
 			daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
 			msg := styles.RenderInfoMessage(
 				"🚀 Time to Upgrade 🚀",
