@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/charmbracelet/huh"
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -176,9 +176,9 @@ func askForTarget(targets []string) (string, error) {
 	target := ""
 
 	prompt := charm.NewSelectPrompt("What target would you like to run?", "You may choose an individual target or 'all'.", targetOptions, &target)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-		"Let's configure a target for your workflow.")).
-		Run(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt),
+		"Let's configure a target for your workflow.").
+		ExecuteForm(); err != nil {
 		return "", err
 	}
 

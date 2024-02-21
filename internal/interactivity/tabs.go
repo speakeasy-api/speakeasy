@@ -2,18 +2,20 @@ package interactivity
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"os"
-	"strings"
 )
 
 type tabsModel struct {
-	Tabs      []Tab
-	activeTab int
-	width     int
+	Tabs       []Tab
+	activeTab  int
+	width      int
+	signalExit bool
 }
 
 type Tab struct {
@@ -62,7 +64,7 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case "ctrl+c", "esc":
-			os.Exit(0)
+			m.signalExit = true
 			return m, tea.Quit
 		case "right", "l", "n", "tab":
 			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
@@ -200,9 +202,15 @@ func (m tabsModel) ActiveContents() string {
 
 func RunTabs(tabs []Tab) {
 	m := tabsModel{Tabs: tabs}
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	if mResult, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
+	} else {
+		if m, ok := mResult.(tabsModel); ok {
+			if m.signalExit {
+				os.Exit(0)
+			}
+		}
 	}
 }
 
