@@ -1,21 +1,17 @@
 package interactivity
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/paginator"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 type tabsModel struct {
-	Tabs       []Tab
-	activeTab  int
-	width      int
-	signalExit bool
+	Tabs      []Tab
+	activeTab int
+	width     int
 }
 
 type Tab struct {
@@ -34,7 +30,7 @@ type InspectableContent struct {
 	DetailedView *string
 }
 
-func (m tabsModel) Init() tea.Cmd {
+func (m tabsModel) Init() {
 	for i, tab := range m.Tabs {
 		tab.activeItem = 0
 		tab.inspecting = false
@@ -55,40 +51,28 @@ func (m tabsModel) Init() tea.Cmd {
 			m.activeTab = i
 		}
 	}
-
-	return nil
 }
 
-func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch keypress := msg.String(); keypress {
-		case "ctrl+c", "esc":
-			m.signalExit = true
-			return m, tea.Quit
-		case "right", "l", "n", "tab":
-			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
-			return m, nil
-		case "left", "h", "p", "shift+tab":
-			m.activeTab = max(m.activeTab-1, 0)
-			return m, nil
-		case "down":
-			m.Tabs[m.activeTab].activeItem = min(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
-			return m, nil
-		case "up":
-			m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
-			return m, nil
-		case "enter":
-			m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
-			return m, nil
-		}
-
-	case tea.WindowSizeMsg:
-		w, _ := margins.GetFrameSize()
-		m.width = msg.Width - w - 4
+func (m tabsModel) HandleKeypress(key string) bool {
+	switch key {
+	case "right", "l", "n", "tab":
+		m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
+	case "left", "h", "p", "shift+tab":
+		m.activeTab = max(m.activeTab-1, 0)
+	case "down":
+		m.Tabs[m.activeTab].activeItem = min(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
+	case "up":
+		m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
+	case "enter":
+		m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
 	}
 
-	return m, nil
+	return false
+}
+
+func (m tabsModel) SetWidth(width int) {
+	w, _ := margins.GetFrameSize()
+	m.width = width - w - 4
 }
 
 func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
@@ -109,7 +93,7 @@ var (
 	margins           = docStyle.Copy().Margin(1, 0)
 )
 
-func (m tabsModel) View() string {
+func (m tabsModel) Render() string {
 	doc := strings.Builder{}
 
 	var renderedTabs []string
@@ -202,16 +186,7 @@ func (m tabsModel) ActiveContents() string {
 
 func RunTabs(tabs []Tab) {
 	m := tabsModel{Tabs: tabs}
-	if mResult, err := tea.NewProgram(m).Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
-	} else {
-		if m, ok := mResult.(tabsModel); ok {
-			if m.signalExit {
-				os.Exit(0)
-			}
-		}
-	}
+	RunInteractiveModel(m)
 }
 
 func max(a, b int) int {
