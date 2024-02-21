@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -22,7 +21,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/prompts"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -340,6 +338,11 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
 	}
 
+	generationWorkflow := &config.GenerateWorkflow{}
+	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
+		return fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
+	}
+
 	var publishingOptions []huh.Option[string]
 	for name, target := range workflowFile.Targets {
 		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
@@ -347,34 +350,12 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		}
 	}
 
-	generationWorkflow := &config.GenerateWorkflow{}
-	if _, err := os.Stat(generationWorkflowFilePath); err == nil {
-		fileContent, err := os.ReadFile(generationWorkflowFilePath)
-		if err != nil {
-			return err
-		}
-
-		if err := yaml.Unmarshal(fileContent, generationWorkflow); err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
-	}
-
 	if len(publishingOptions) == 0 {
 		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
 	}
 
-	chosenTargets := make([]string, 0)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(
-		huh.NewMultiSelect[string]().
-			Title("Select any targets you would like to configure publishing for.").
-			Description("Setup variables to configure publishing directly from Speakeasy.\n").
-			Options(publishingOptions...).
-			Value(&chosenTargets),
-	)),
-		"Would you like to configure publishing for any existing targets?")).
-		Run(); err != nil {
+	chosenTargets, err := prompts.SelectPublishingTargets(publishingOptions)
+	if err != nil {
 		return err
 	}
 
@@ -387,20 +368,12 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		workflowFile.Targets[name] = *modifiedTarget
 	}
 
-	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml"))
 	if err != nil {
 		return errors.Wrapf(err, "failed to write publishing configs")
 	}
 
-	// write a github workflow file.
-	var genWorkflowBuf bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
-	yamlEncoder.SetIndent(2)
-	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
-		return errors.Wrapf(err, "failed to encode workflow file")
-	}
-
-	if err = os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
+	if err = prompts.WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
 		return errors.Wrapf(err, "failed to write github workflow file")
 	}
 
@@ -443,17 +416,8 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
-	if _, err := os.Stat(generationWorkflowFilePath); err == nil {
-		fileContent, err := os.ReadFile(generationWorkflowFilePath)
-		if err != nil {
-			return err
-		}
-
-		if err := yaml.Unmarshal(fileContent, generationWorkflow); err != nil {
-			return err
-		}
-	} else {
-		logger.Println(styles.Info.Render(fmt.Sprintf("Could not find existing workflow file %s", generationWorkflowFilePath)))
+	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
+		logger.Println(styles.Info.Render(fmt.Sprintf("Could not read existing workflow file %s", generationWorkflowFilePath)))
 	}
 
 	generationWorkflow, err = prompts.ConfigureGithub(generationWorkflow, workflowFile)
@@ -468,17 +432,10 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	chosenTargets := make([]string, 0)
+	var chosenTargets []string
 	if len(publishingOptions) > 0 {
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Select any targets you would like to configure publishing for.").
-				Description("Setup variables to configure publishing directly from Speakeasy.\n").
-				Options(publishingOptions...).
-				Value(&chosenTargets),
-		)),
-			"Would you like to configure publishing for any existing targets?")).
-			Run(); err != nil {
+		chosenTargets, err = prompts.SelectPublishingTargets(publishingOptions)
+		if err != nil {
 			return err
 		}
 	}
@@ -499,20 +456,12 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml"))
 	if err != nil {
 		return errors.Wrapf(err, "failed to write publishing configs")
 	}
 
-	// write a github workflow file.
-	var genWorkflowBuf bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
-	yamlEncoder.SetIndent(2)
-	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
-		return errors.Wrapf(err, "failed to encode workflow file")
-	}
-
-	if err = os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
+	if err = prompts.WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
 		return errors.Wrapf(err, "failed to write github workflow file")
 	}
 

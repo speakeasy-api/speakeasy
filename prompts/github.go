@@ -303,8 +303,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, error) {
-	publishingWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, publishingWorkflowFilePath string) (*config.GenerateWorkflow, error) {
 	secrets := make(map[string]string)
 	for _, target := range workflowFile.Targets {
 		if target.Publishing != nil {
@@ -365,4 +364,53 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	}
 
 	return genWorkflow, nil
+}
+
+func WriteGenerationFile(generationWorkflow *config.GenerateWorkflow, generationWorkflowFilePath string) error {
+	var genWorkflowBuf bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
+		return errors.Wrapf(err, "failed to encode workflow file")
+	}
+
+	if err := os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
+		return errors.Wrapf(err, "failed to write github workflow file")
+	}
+
+	return nil
+}
+
+func ReadGenerationFile(generationWorkflow *config.GenerateWorkflow, generationWorkflowFilePath string) error {
+	if _, err := os.Stat(generationWorkflowFilePath); err != nil {
+		return err
+	}
+
+	fileContent, err := os.ReadFile(generationWorkflowFilePath)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(fileContent, generationWorkflow); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SelectPublishingTargets(publishingOptions []huh.Option[string]) ([]string, error) {
+	chosenTargets := make([]string, 0)
+	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(
+		huh.NewMultiSelect[string]().
+			Title("Select any targets you would like to configure publishing for.").
+			Description("Setup variables to configure publishing directly from Speakeasy.\n").
+			Options(publishingOptions...).
+			Value(&chosenTargets),
+	)),
+		"Would you like to configure publishing for any existing targets?")).
+		Run(); err != nil {
+		return nil, err
+	}
+
+	return chosenTargets, nil
 }
