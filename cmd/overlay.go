@@ -56,6 +56,7 @@ var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 type overlayApplyFlags struct {
 	Overlay string `json:"overlay"`
 	Schema  string `json:"schema"`
+	Out     string `json:"out"`
 }
 
 var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
@@ -68,6 +69,10 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 			Name:        "schema",
 			Shorthand:   "s",
 			Description: "the schema to extend",
+		},
+		flag.StringFlag{
+			Name:        "out",
+			Description: "write directly to a file instead of stdout",
 		},
 	},
 }
@@ -86,5 +91,15 @@ func runCompare(ctx context.Context, flags overlayCompareFlags) error {
 }
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
-	return overlay.Apply(flags.Schema, flags.Overlay, os.Stdout)
+	out := os.Stdout
+	if flags.Out != "" {
+		file, err := os.Create(flags.Out)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		out = file
+	}
+	
+	return overlay.Apply(flags.Schema, flags.Overlay, out)
 }
