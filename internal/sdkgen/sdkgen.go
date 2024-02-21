@@ -110,7 +110,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	if !generationAccess {
-		warningDate := time.Date(2024, time.March, 25, 0, 0, 0, 0, time.UTC)
+		warningDate := time.Date(2024, time.March, 18, 0, 0, 0, 0, time.UTC)
 		daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
 		msg := styles.RenderInfoMessage(
 			"🚀 Time to Upgrade 🚀",
