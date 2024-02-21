@@ -155,9 +155,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			Run(); err != nil {
 			return err
 		}
-		if !strings.HasPrefix(promptedDir, "/") {
+		if !filepath.IsAbs(promptedDir) {
 			promptedDir = filepath.Join(workingDir, promptedDir)
 		}
+
 		outDir, err = filepath.Abs(promptedDir)
 		if err != nil {
 			return err
