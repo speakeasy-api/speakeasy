@@ -31,15 +31,13 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 		)
 	}
 
-	if fileLocation == nil || *fileLocation == "" {
-		initialGroup = append(initialGroup,
-			charm_internal.NewInput().
-				Title("What is the location of your OpenAPI document?").
-				Placeholder("local file path or remote file reference.").
-				Value(fileLocation).
-				Suggestions(schemaFilesInCurrentDir()),
-		)
-	}
+	initialGroup = append(initialGroup,
+		charm_internal.NewInput().
+			Title("What is the location of your OpenAPI document?").
+			Placeholder("local file path or remote file reference.").
+			Value(fileLocation).
+			Suggestions(schemaFilesInCurrentDir()),
+	)
 
 	var groups []*huh.Group
 
@@ -118,6 +116,10 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 	if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
+	}
+
+	if suggestions := schemaFilesInCurrentDir(); len(suggestions) > 0 {
+		fileLocation = suggestions[0]
 	}
 
 	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
