@@ -361,7 +361,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
-		modifiedTarget, err := prompts.ConfigurePublishing(&target)
+		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
 		if err != nil {
 			return err
 		}
@@ -442,7 +442,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
-		modifiedTarget, err := prompts.ConfigurePublishing(&target)
+		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
 		if err != nil {
 			return err
 		}

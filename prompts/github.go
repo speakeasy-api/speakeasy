@@ -112,7 +112,7 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	return githubWorkflow, nil
 }
 
-func ConfigurePublishing(target *workflow.Target) (*workflow.Target, error) {
+func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target, error) {
 	promptMap := make(map[string]*string)
 	switch target.Target {
 	case "typescript":
@@ -122,7 +122,7 @@ func ConfigurePublishing(target *workflow.Target) (*workflow.Target, error) {
 		}
 		npmTokenVal := &currentNpmToken
 		promptMap["NPM Token"] = npmTokenVal
-		if err := executePromptsForPublishing(promptMap, target); err != nil {
+		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
 		target.Publishing = &workflow.Publishing{
@@ -137,7 +137,7 @@ func ConfigurePublishing(target *workflow.Target) (*workflow.Target, error) {
 		}
 		pypiTokenVal := &currentPyPIToken
 		promptMap["PyPI Token"] = pypiTokenVal
-		if err := executePromptsForPublishing(promptMap, target); err != nil {
+		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
 		target.Publishing = &workflow.Publishing{
@@ -152,7 +152,7 @@ func ConfigurePublishing(target *workflow.Target) (*workflow.Target, error) {
 		}
 		nugetKeyVal := &currentNugetKey
 		promptMap["Nuget API Key"] = nugetKeyVal
-		if err := executePromptsForPublishing(promptMap, target); err != nil {
+		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
 		target.Publishing = &workflow.Publishing{
@@ -167,7 +167,7 @@ func ConfigurePublishing(target *workflow.Target) (*workflow.Target, error) {
 		}
 		rubyGemsTokenVal := &currentRubyGemsToken
 		promptMap["Ruby Gems Auth Token"] = rubyGemsTokenVal
-		if err := executePromptsForPublishing(promptMap, target); err != nil {
+		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
 		target.Publishing = &workflow.Publishing{
@@ -180,7 +180,7 @@ func ConfigurePublishing(target *workflow.Target) (*workflow.Target, error) {
 	return target, nil
 }
 
-func executePromptsForPublishing(prompts map[string]*string, target *workflow.Target) error {
+func executePromptsForPublishing(prompts map[string]*string, target *workflow.Target, name string) error {
 	fields := []huh.Field{}
 	for prompt, value := range prompts {
 		fields = append(fields,
@@ -191,7 +191,7 @@ func executePromptsForPublishing(prompts map[string]*string, target *workflow.Ta
 	}
 
 	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(fields...)),
-		fmt.Sprintf("Setup publishing variables for your %s target.", target.Target),
+		fmt.Sprintf("Setup publishing variables for your %s target %s.", target.Target, name),
 		"These environment variables will be used to publish to package managers from your speakeasy workflow.")).
 		Run(); err != nil {
 		return err
