@@ -161,6 +161,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTargets []string) error {
 	for _, targetName := range existingTargets {
 		if target, ok := currentWorkflow.Targets[targetName]; ok && (target.Output == nil || currentDir(*target.Output)) {
+			targetType := target.Target
 			outDir := ""
 			if target.Output != nil {
 				outDir = *target.Output
@@ -169,7 +170,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 
 			if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
-					Title(fmt.Sprintf("Provide an output directory for your generation target %s.", targetName)).
+					Title(fmt.Sprintf("Provide an output directory for your %s generation target %s.", targetType, targetName)).
 					Validate(func(s string) error {
 						if currentDir(s) {
 							return fmt.Errorf("the output dir must not be in the root folder")

@@ -346,7 +346,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	var publishingOptions []huh.Option[string]
 	for name, target := range workflowFile.Targets {
 		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
-			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s (%s)", name, strings.ToUpper(target.Target)), name))
+			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
 		}
 	}
 
@@ -428,7 +428,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	var publishingOptions []huh.Option[string]
 	for name, target := range workflowFile.Targets {
 		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
-			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s (%s)", name, strings.ToUpper(target.Target)), name))
+			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
 		}
 	}
 
