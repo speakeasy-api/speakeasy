@@ -2,7 +2,6 @@ package interactivity
 
 import (
 	"fmt"
-	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -22,9 +21,9 @@ type Tab struct {
 	BorderColor lipgloss.AdaptiveColor
 	TitleColor  lipgloss.AdaptiveColor
 	Default     bool
-	activeItem  int
-	paginator   paginator.Model
-	inspecting  bool
+
+	list       *List
+	inspecting bool
 }
 
 type InspectableContent struct {
@@ -34,18 +33,23 @@ type InspectableContent struct {
 
 func (m tabsModel) Init() tea.Cmd {
 	for i, tab := range m.Tabs {
-		tab.activeItem = 0
 		tab.inspecting = false
 
-		p := paginator.New()
-		p.Type = paginator.Dots
-		p.PerPage = 5
-		p.ActiveDot = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "235", Dark: "252"}).Render("•")
-		p.InactiveDot = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "250", Dark: "238"}).Render("•")
-		p.SetTotalPages(len(tab.Content))
-		p.Page = 0
+		items := make([]ListItem, len(tab.Content))
+		for i, content := range tab.Content {
+			items[i] = ListItem{
+				ContentOverride: content.Summary,
+			}
+		}
 
-		tab.paginator = p
+		list := &List{
+			Items:      items,
+			PerPage:    5,
+			Color:      tab.BorderColor,
+			ShowLegend: false,
+		}
+
+		tab.list = list
 
 		m.Tabs[i] = tab
 
@@ -70,12 +74,8 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "left", "h", "p", "shift+tab":
 			m.activeTab = max(m.activeTab-1, 0)
 			return m, nil
-		case "down":
-			m.Tabs[m.activeTab].activeItem = min(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
-			return m, nil
-		case "up":
-			m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
-			return m, nil
+		case "down", "up":
+			return m.Tabs[m.activeTab].list.Update(msg) // Pass along to inner list
 		case "enter":
 			m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
 			return m, nil
@@ -165,11 +165,8 @@ func (m tabsModel) View() string {
 }
 
 func (m tabsModel) ActiveContents() string {
-	contents := ""
 	activeTab := m.Tabs[m.activeTab]
-	activeContent := activeTab.Content[activeTab.activeItem]
-
-	activeTab.paginator.Page = activeTab.activeItem / activeTab.paginator.PerPage
+	activeContent := activeTab.Content[activeTab.list.currentItemIndex()]
 
 	width := m.width - windowStyle.GetHorizontalPadding()
 
@@ -177,25 +174,28 @@ func (m tabsModel) ActiveContents() string {
 		return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(*activeContent.DetailedView)
 	}
 
-	start, end := activeTab.paginator.GetSliceBounds(len(activeTab.Content))
+	activeTab.list.width = width
+	return activeTab.list.View()
 
-	for i, content := range activeTab.Content[start:end] {
-		summary := lipgloss.NewStyle().Width(width - 2).Render(content.Summary) // -2 because padding?
-		if start+i == activeTab.activeItem {
-			summary = styles.LeftBorder(activeTab.BorderColor).Render(summary)
-		} else {
-			summary = lipgloss.NewStyle().PaddingLeft(2).Render(summary)
-		}
-		contents += summary + "\n\n"
-	}
+	//start, end := activeTab.paginator.GetSliceBounds(len(activeTab.Content))
+	//
+	//for i, content := range activeTab.Content[start:end] {
+	//	summary := lipgloss.NewStyle().Width(width - 2).Render(content.Summary) // -2 because padding?
+	//	if start+i == activeTab.activeItem {
+	//		summary = styles.LeftBorder(activeTab.BorderColor).Render(summary)
+	//	} else {
+	//		summary = lipgloss.NewStyle().PaddingLeft(2).Render(summary)
+	//	}
+	//	contents += summary + "\n\n"
+	//}
 
-	if activeTab.paginator.TotalPages > 1 {
-		contents += "  " + activeTab.paginator.View()
-	} else {
-		contents += "\n"
-	}
-
-	return contents
+	//if activeTab.paginator.TotalPages > 1 {
+	//	contents += "  " + activeTab.paginator.View()
+	//} else {
+	//	contents += "\n"
+	//}
+	//
+	//return contents
 }
 
 func RunTabs(tabs []Tab) {

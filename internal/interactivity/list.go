@@ -11,9 +11,11 @@ import (
 )
 
 type List struct {
-	Items   []ListItem
-	PerPage int
-	Color   lipgloss.AdaptiveColor
+	Items      []ListItem
+	Title      string
+	PerPage    int
+	Color      lipgloss.AdaptiveColor
+	ShowLegend bool
 
 	hoveredPageElem int
 	pagination      paginator.Model
@@ -28,7 +30,7 @@ type ListItem struct {
 	ContentOverride     string // Use this to explicitly set what you want to show and how you want it styled, instead of using the above fields
 }
 
-func (l List) Init() tea.Cmd {
+func (l *List) Init() tea.Cmd {
 	l.hoveredPageElem = 0
 
 	p := paginator.New()
@@ -44,7 +46,7 @@ func (l List) Init() tea.Cmd {
 	return nil
 }
 
-func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (l *List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -87,33 +89,38 @@ func wrapAround(n, min, max int) int {
 	return n
 }
 
-var (
-	windowStyle = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(1, 1, 0, 1).Border(lipgloss.NormalBorder()).UnsetBorderTop()
-	margins     = docStyle.Copy().Margin(1, 0)
-)
-
-func (l List) currentItemIndex() int {
+func (l *List) currentItemIndex() int {
 	return l.pagination.Page*l.pagination.PerPage + l.hoveredPageElem
 }
 
-func (l List) View() string {
+func (l *List) View() string {
 	contents := strings.Builder{}
 
-	width := l.width - windowStyle.GetHorizontalPadding()
+	if l.Title != "" {
+		contents.WriteString(styles.HeavilyEmphasized.Render(l.Title) + "\n\n")
+	}
 
 	start, end := l.pagination.GetSliceBounds(len(l.Items))
 
 	for i, listItem := range l.Items[start:end] {
 		isHovered := i == l.hoveredPageElem
+
+		headingStyle := styles.Emphasized.Copy().Bold(true)
+		descriptionStyle := styles.Dimmed
+		if isHovered {
+			headingStyle = styles.Focused.Copy().Bold(true)
+			descriptionStyle = styles.FocusedDimmed
+		}
+
 		//summary := lipgloss.NewStyle().Width(width - 2).Render(listItem.Summary) // -2 because padding?
-		content := listItem.Heading
+		content := headingStyle.Render(listItem.Heading)
 
 		description := listItem.Description
 		if listItem.DetailedDescription != "" && isHovered {
-			content = listItem.DetailedDescription
+			description = listItem.DetailedDescription
 		}
 		if description != "" {
-			content += "\n" + description
+			content += "\n" + descriptionStyle.Render(description)
 		}
 
 		if listItem.ContentOverride != "" {
@@ -121,23 +128,42 @@ func (l List) View() string {
 		}
 
 		if isHovered {
-			content = styles.LeftBorder(l.Color).Copy().Width(width).Render(content)
+			content = styles.LeftBorder(l.Color).Copy().Width(l.width).Render(content)
 		} else {
-			content = lipgloss.NewStyle().Width(width).PaddingLeft(2).Render(content)
+			content = lipgloss.NewStyle().Width(l.width).PaddingLeft(2).Render(content)
 		}
-		contents.WriteString("\n\n")
+		contents.WriteString(content + "\n\n")
 	}
 
+	// Add pagination
 	if l.pagination.TotalPages > 1 {
 		contents.WriteString("  " + l.pagination.View())
 	} else {
 		contents.WriteString("\n")
 	}
 
-	return margins.Render(contents.String())
+	// Add legend
+	if l.ShowLegend {
+		inputs := []string{"↑/↓"}
+		descriptions := []string{"navigate"}
+
+		if l.pagination.TotalPages > 1 {
+			inputs = append(inputs, "←/→")
+			descriptions = append(descriptions, "change pages")
+		}
+
+		inputs = append(inputs, "↵", "esc")
+		descriptions = append(descriptions, "select", "quit")
+
+		inputLegend := styles.KeymapLegend(inputs, descriptions)
+
+		contents.WriteString("\n\n" + inputLegend)
+	}
+
+	return margins.Copy().Render(contents.String())
 }
 
-func (l List) Run() {
+func (l *List) Run() {
 	if _, err := tea.NewProgram(l).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
