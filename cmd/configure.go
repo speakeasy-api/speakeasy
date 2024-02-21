@@ -35,9 +35,10 @@ type ConfigureSourcesFlags struct {
 }
 
 var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
-	Usage:        "sources",
-	Short:        "Configure new or existing sources.",
-	Long:         "Guided prompts to configure a new or existing source in your speakeasy workflow.",
+	Usage: "sources",
+	Short: "Configure new or existing sources.",
+	Long: `Guided prompts to configure a new or existing source in your speakeasy workflow.
+A source is an OpenAPI document (or compiled set of documents and overlays) that describe your API.`,
 	Run:          configureSources,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
@@ -60,9 +61,10 @@ type ConfigureTargetFlags struct {
 }
 
 var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
-	Usage:        "targets",
-	Short:        "Configure new target.",
-	Long:         "Guided prompts to configure a new target in your speakeasy workflow.",
+	Usage: "targets",
+	Short: "Configure new target.",
+	Long: `Guided prompts to configure a new target in your speakeasy workflow.
+A target is a set of configurations that define what you would like to generate and how.`,
 	Run:          configureTarget,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
