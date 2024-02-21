@@ -20,6 +20,8 @@ speakeasy suggest [flags]
 
 ```
   -a, --auto-approve           auto continue through all prompts
+      --cache-folder string    caches computations into a given folder
+      --example-experiment     enables the example experiment for the suggest command, generating an updated document with examples for all primitives.
   -H, --header string          header key to use if authentication is required for downloading schema from remote URL
   -h, --help                   help for suggest
   -l, --level string           error, warn, or hint. The minimum level of severity to request suggestions for (default "warn")
