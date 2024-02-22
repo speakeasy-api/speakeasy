@@ -1,12 +1,12 @@
 package interactivity
 
 import (
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"os"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/spf13/cobra"
 )
@@ -30,11 +30,11 @@ type ListSelect struct {
 	selected *cobra.Command
 }
 
-func (m ListSelect) Init() tea.Cmd {
+func (m *ListSelect) Init() tea.Cmd {
 	return nil
 }
 
-func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -52,12 +52,12 @@ func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m ListSelect) SetWidth(width int) {
+func (m *ListSelect) SetWidth(width int) {
 	w, _ := docStyle.GetFrameSize()
 	m.list.SetWidth(width - w)
 }
 
-func (m ListSelect) View() string {
+func (m *ListSelect) View() string {
 	if m.selected != nil {
 		return ""
 	}
@@ -118,12 +118,12 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 
 	m := ListSelect{list: l}
 
-	mResult, err := charm_internal.RunModel(m)
+	mResult, err := charm_internal.RunModel(&m)
 	if err != nil {
 		os.Exit(1)
 	}
 
-	if m, ok := mResult.(ListSelect); ok && m.selected != nil {
+	if m, ok := mResult.(*ListSelect); ok && m.selected != nil {
 		return m.selected
 	}
 

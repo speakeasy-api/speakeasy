@@ -32,7 +32,7 @@ type InspectableContent struct {
 	DetailedView *string
 }
 
-func (m tabsModel) Init() tea.Cmd {
+func (m *tabsModel) Init() tea.Cmd {
 	for i, tab := range m.Tabs {
 		tab.activeItem = 0
 		tab.inspecting = false
@@ -57,7 +57,7 @@ func (m tabsModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -82,7 +82,7 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m tabsModel) SetWidth(width int) {
+func (m *tabsModel) SetWidth(width int) {
 	w, _ := margins.GetFrameSize()
 	m.width = width - w - 4
 }
@@ -105,7 +105,7 @@ var (
 	margins           = docStyle.Copy().Margin(1, 0)
 )
 
-func (m tabsModel) View() string {
+func (m *tabsModel) View() string {
 	doc := strings.Builder{}
 
 	var renderedTabs []string
@@ -162,7 +162,7 @@ func (m tabsModel) View() string {
 	return margins.Render(doc.String())
 }
 
-func (m tabsModel) ActiveContents() string {
+func (m *tabsModel) ActiveContents() string {
 	contents := ""
 	activeTab := m.Tabs[m.activeTab]
 	activeContent := activeTab.Content[activeTab.activeItem]
@@ -198,7 +198,7 @@ func (m tabsModel) ActiveContents() string {
 
 func RunTabs(tabs []Tab) {
 	m := tabsModel{Tabs: tabs}
-	charm_internal.RunModel(m)
+	charm_internal.RunModel(&m)
 }
 
 func max(a, b int) int {

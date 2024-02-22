@@ -14,12 +14,12 @@ type InternalModel interface {
 	SetWidth(width int)
 }
 
-type internalModel struct {
+type modelWrapper struct {
 	model      InternalModel
 	signalExit bool
 }
 
-func (m internalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m modelWrapper) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -31,26 +31,29 @@ func (m internalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.model.SetWidth(msg.Width)
 	}
 
-	_, cmd := m.model.Update(msg)
+	updated, cmd := m.model.Update(msg)
+	if updated != nil {
+		m.model = updated.(InternalModel)
+	}
 	return m, cmd
 }
 
-func (m internalModel) View() string {
+func (m modelWrapper) View() string {
 	return m.model.View()
 }
 
-func (m internalModel) Init() tea.Cmd {
+func (m modelWrapper) Init() tea.Cmd {
 	return m.model.Init()
 }
 
 func RunModel(m InternalModel, opts ...tea.ProgramOption) (InternalModel, error) {
-	model := internalModel{
+	model := modelWrapper{
 		model: m,
 	}
 	if mResult, err := tea.NewProgram(model, opts...).Run(); err != nil {
 		return nil, err
 	} else {
-		if m, ok := mResult.(internalModel); ok {
+		if m, ok := mResult.(modelWrapper); ok {
 			if m.signalExit {
 				os.Exit(0)
 			}
@@ -64,4 +67,4 @@ func RunModel(m InternalModel, opts ...tea.ProgramOption) (InternalModel, error)
 	return nil, nil
 }
 
-var _ tea.Model = internalModel{}
+var _ tea.Model = modelWrapper{}

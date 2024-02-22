@@ -75,11 +75,11 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 	return m
 }
 
-func (m MultiInput) Init() tea.Cmd {
+func (m *MultiInput) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -124,9 +124,9 @@ func (m MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // SetWidth Not yet implemented.
-func (m MultiInput) SetWidth(width int) {}
+func (m *MultiInput) SetWidth(width int) {}
 
-func (m MultiInput) Focus(index int) tea.Cmd {
+func (m *MultiInput) Focus(index int) tea.Cmd {
 	var cmd tea.Cmd
 
 	for i := 0; i <= len(m.inputModels)-1; i++ {
@@ -147,7 +147,7 @@ func (m MultiInput) Focus(index int) tea.Cmd {
 	return cmd
 }
 
-func (m MultiInput) updateInputs(msg tea.Msg) tea.Cmd {
+func (m *MultiInput) updateInputs(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, len(m.inputModels))
 
 	// Only text inputModels with Focus() set will respond, so it's safe to simply
@@ -159,7 +159,7 @@ func (m MultiInput) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m MultiInput) Validate() bool {
+func (m *MultiInput) Validate() bool {
 	if !m.inputsRequired {
 		return true
 	}
@@ -172,7 +172,7 @@ func (m MultiInput) Validate() bool {
 	return valid
 }
 
-func (m MultiInput) View() string {
+func (m *MultiInput) View() string {
 	if m.done {
 		fieldsString := "fields have"
 		if len(m.getFilledValues()) == 1 {
@@ -225,7 +225,7 @@ func (m MultiInput) View() string {
 	return fmt.Sprintf("%s\n%s\n%s", titleString, descriptionString, inputsString)
 }
 
-func (m MultiInput) getFilledValues() map[string]string {
+func (m *MultiInput) getFilledValues() map[string]string {
 	inputResults := make(map[string]string)
 	for _, input := range m.inputModels {
 		if input.Value() != "" {
@@ -237,13 +237,13 @@ func (m MultiInput) getFilledValues() map[string]string {
 }
 
 // Run returns a map from input name to the input value
-func (m MultiInput) Run() map[string]string {
+func (m *MultiInput) Run() map[string]string {
 	newM, err := charm_internal.RunModel(m)
 	if err != nil {
 		os.Exit(1)
 	}
 
-	resultingModel := newM.(MultiInput)
+	resultingModel := newM.(*MultiInput)
 
 	return resultingModel.getFilledValues()
 }
