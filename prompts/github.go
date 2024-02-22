@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/go-git/go-git/v5"
 	git_config "github.com/go-git/go-git/v5/config"
@@ -88,9 +87,9 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	}
 
 	prompt := charm.NewSelectPrompt("What mode would you like to setup for your github workflow?\n", "", modeOptions, &mode)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-		"Let's configure generation through github actions.")).
-		Run(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt),
+		"Let's configure generation through github actions.").
+		ExecuteForm(); err != nil {
 		return nil, err
 	}
 	githubWorkflow.Jobs.Generate.With[config.Mode] = mode
