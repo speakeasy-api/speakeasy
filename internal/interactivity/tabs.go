@@ -1,21 +1,19 @@
 package interactivity
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 type tabsModel struct {
-	Tabs       []Tab
-	activeTab  int
-	width      int
-	signalExit bool
+	Tabs      []Tab
+	activeTab int
+	width     int
 }
 
 type Tab struct {
@@ -63,9 +61,6 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "ctrl+c", "esc":
-			m.signalExit = true
-			return m, tea.Quit
 		case "right", "l", "n", "tab":
 			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
 			return m, nil
@@ -82,13 +77,14 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
 			return m, nil
 		}
-
-	case tea.WindowSizeMsg:
-		w, _ := margins.GetFrameSize()
-		m.width = msg.Width - w - 4
 	}
 
 	return m, nil
+}
+
+func (m tabsModel) SetWidth(width int) {
+	w, _ := margins.GetFrameSize()
+	m.width = width - w - 4
 }
 
 func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
@@ -202,16 +198,7 @@ func (m tabsModel) ActiveContents() string {
 
 func RunTabs(tabs []Tab) {
 	m := tabsModel{Tabs: tabs}
-	if mResult, err := tea.NewProgram(m).Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
-	} else {
-		if m, ok := mResult.(tabsModel); ok {
-			if m.signalExit {
-				os.Exit(0)
-			}
-		}
-	}
+	charm_internal.RunModel(m)
 }
 
 func max(a, b int) int {
