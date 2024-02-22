@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -120,11 +119,11 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	}
 
-	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+	if _, err := charm_internal.NewForm(huh.NewForm(
 		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
 		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
-		Run(); err != nil {
+		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+		ExecuteForm(); err != nil {
 		return nil, err
 	}
 
@@ -155,10 +154,10 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	inputOptions = append(inputOptions, huh.NewOption(charm_internal.FormatNewOption("New Document"), "new document"))
 	selectedDoc := ""
 	prompt := charm_internal.NewSelectPrompt("Would you like to modify the location of an existing OpenAPI document or add a new one?", "", inputOptions, &selectedDoc)
-	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+	if _, err := charm_internal.NewForm(huh.NewForm(
 		prompt),
-		fmt.Sprintf("Let's modify the source %s", name))).
-		Run(); err != nil {
+		fmt.Sprintf("Let's modify the source %s", name)).
+		ExecuteForm(); err != nil {
 		return nil, err
 	}
 
@@ -176,10 +175,10 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 			),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader, &authSecret)...)
-		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's modify the source %s", name))).
-			Run(); err != nil {
+			fmt.Sprintf("Let's modify the source %s", name)).
+			ExecuteForm(); err != nil {
 			return nil, err
 		}
 
@@ -212,10 +211,10 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader, &authSecret)...)
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
-		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name))).
-			Run(); err != nil {
+			fmt.Sprintf("Let's add to the source %s", name)).
+			ExecuteForm(); err != nil {
 			return nil, err
 		}
 		document, err := formatDocument(fileLocation, authHeader, authSecret, true)
@@ -227,10 +226,10 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	}
 
 	addOverlayFile := false
-	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+	if _, err := charm_internal.NewForm(huh.NewForm(
 		charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
-		fmt.Sprintf("Let's add to the source %s", name))).
-		Run(); err != nil {
+		fmt.Sprintf("Let's add to the source %s", name)).
+		ExecuteForm(); err != nil {
 		return nil, err
 	}
 
@@ -240,10 +239,10 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		trueVal := true
 		groups := getOverlayPrompts(&trueVal, &fileLocation, &authHeader, &authSecret)
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
-		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name))).
-			Run(); err != nil {
+			fmt.Sprintf("Let's add to the source %s", name)).
+			ExecuteForm(); err != nil {
 			return nil, err
 		}
 		document, err := formatDocument(fileLocation, authHeader, authSecret, true)
@@ -261,15 +260,15 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		}
 
 		previousOutputLocation := outputLocation
-		if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+		if _, err := charm_internal.NewForm(huh.NewForm(
 			huh.NewGroup(
 				charm_internal.NewInput().
 					Title("Optionally provide an output location for your build source file:").
 					Value(&outputLocation).
 					Suggestions(schemaFilesInCurrentDir()),
 			)),
-			fmt.Sprintf("Let's modify the source %s", name))).
-			Run(); err != nil {
+			fmt.Sprintf("Let's modify the source %s", name)).
+			ExecuteForm(); err != nil {
 			return nil, err
 		}
 
@@ -305,11 +304,11 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			return overlayFileLocation == ""
 		}))
 
-	if _, err := tea.NewProgram(charm_internal.NewForm(huh.NewForm(
+	if _, err := charm_internal.NewForm(huh.NewForm(
 		groups...),
 		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
-		Run(); err != nil {
+		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+		ExecuteForm(); err != nil {
 		return "", nil, err
 	}
 

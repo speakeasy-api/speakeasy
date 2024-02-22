@@ -9,7 +9,6 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
@@ -137,7 +136,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
 		}
 
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
 			Title("What directory should quickstart files be written too?").
 			Description(description+"\n").
 			Validate(func(s string) error {
@@ -149,8 +148,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 				return nil
 			}).
 			Inline(false).Prompt("").Value(&promptedDir))),
-			"Let's pick an output directory for your newly created files.")).
-			Run(); err != nil {
+			"Let's pick an output directory for your newly created files.").
+			ExecuteForm(); err != nil {
 			return err
 		}
 		if !filepath.IsAbs(promptedDir) {

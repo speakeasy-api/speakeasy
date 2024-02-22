@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
@@ -130,9 +130,8 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 
 	if !flags.New && existingSource == nil {
 		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-			"Let's configure a source for your workflow.")).
-			Run(); err != nil {
+		if _, err := charm.NewForm(huh.NewForm(prompt),
+			"Let's configure a source for your workflow.").ExecuteForm(); err != nil {
 			return err
 		}
 		if existingSourceName == "new source" {
@@ -228,9 +227,9 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 
 	if !flags.New && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-			"Let's configure a target for your workflow.")).
-			Run(); err != nil {
+		if _, err := charm.NewForm(huh.NewForm(prompt),
+			"Let's configure a target for your workflow.").
+			ExecuteForm(); err != nil {
 			return err
 		}
 		if existingTarget == "new target" {
