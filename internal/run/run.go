@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"math"
 	"os"
 	"path/filepath"
@@ -449,7 +450,13 @@ func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	var token, header string
 	if d.Auth != nil {
 		header = d.Auth.Header
-		token = os.Getenv(strings.TrimPrefix(d.Auth.Secret, "$"))
+		envVar := strings.TrimPrefix(d.Auth.Secret, "$")
+
+		// GitHub action secrets are prefixed with INPUT_
+		if env.IsGithubAction() {
+			envVar = "INPUT_" + envVar
+		}
+		token = os.Getenv(envVar)
 	}
 
 	if err := download.DownloadFile(d.Location, outPath, header, token); err != nil {

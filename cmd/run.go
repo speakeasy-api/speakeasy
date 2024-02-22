@@ -192,9 +192,6 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 	}
 
 	err = workflow.Run(ctx)
-	if err != nil {
-		return err
-	}
 
 	workflow.RootStep.Finalize(err == nil)
 
