@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/spf13/cobra"
 )
@@ -26,8 +25,9 @@ func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
 type ListSelect struct {
-	list     list.Model
-	selected *cobra.Command
+	list       list.Model
+	selected   *cobra.Command
+	signalExit bool
 }
 
 func (m ListSelect) Init() tea.Cmd {
@@ -38,6 +38,9 @@ func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
+		case "ctrl+c", "esc":
+			m.signalExit = true
+			return m, tea.Quit
 		case "enter":
 			selected, ok := m.list.SelectedItem().(item)
 			if ok {
@@ -45,16 +48,14 @@ func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 		}
+	case tea.WindowSizeMsg:
+		w, _ := docStyle.GetFrameSize()
+		m.list.SetWidth(msg.Width - w)
 	}
 
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
-}
-
-func (m ListSelect) SetWidth(width int) {
-	w, _ := docStyle.GetFrameSize()
-	m.list.SetWidth(width - w)
 }
 
 func (m ListSelect) View() string {
@@ -117,13 +118,21 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 	}
 
 	m := ListSelect{list: l}
+	p := tea.NewProgram(m)
 
-	mResult, err := charm_internal.RunModel(m)
+	mResult, err := p.Run()
 	if err != nil {
 		os.Exit(1)
 	}
 
-	if m, ok := mResult.(ListSelect); ok && m.selected != nil {
+	if m, ok := mResult.(ListSelect); ok {
+		if m.signalExit {
+			os.Exit(0)
+		}
+
+		if m.selected != nil {
+			return m.selected
+		}
 		return m.selected
 	}
 

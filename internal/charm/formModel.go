@@ -1,6 +1,8 @@
 package charm
 
 import (
+	"os"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -8,16 +10,17 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
-type FormModel struct {
+type Model struct {
 	title       string
 	description string
 	form        *huh.Form // huh.Form is just a tea.Model
+	signalExit  bool
 }
 
-func NewForm(form *huh.Form, args ...string) FormModel {
+func NewForm(form *huh.Form, args ...string) Model {
 	keyMap := huh.NewDefaultKeyMap()
 	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab", "right"), key.WithHelp("tab", "complete"), key.WithHelp("right", "complete"))
-	model := FormModel{
+	model := Model{
 		form: form.WithTheme(formTheme).WithKeyMap(keyMap).WithShowHelp(false),
 	}
 
@@ -31,11 +34,20 @@ func NewForm(form *huh.Form, args ...string) FormModel {
 	return model
 }
 
-func (m FormModel) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return m.form.Init()
 }
 
-func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc", "ctrl+c":
+			m.signalExit = true
+			return m, tea.Quit
+		}
+	}
+
 	var cmds []tea.Cmd
 
 	// Process the form
@@ -53,10 +65,7 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// SetWidth Not yet implemented.
-func (m FormModel) SetWidth(width int) {}
-
-func (m FormModel) View() string {
+func (m Model) View() string {
 	if m.form.State == huh.StateCompleted {
 		return ""
 	}
@@ -77,10 +86,15 @@ func (m FormModel) View() string {
 	return content
 }
 
-func (m FormModel) ExecuteForm(opts ...tea.ProgramOption) (tea.Model, error) {
-	mResult, err := RunModel(m, opts...)
+func (m Model) ExecuteForm(opts ...tea.ProgramOption) (tea.Model, error) {
+	mResult, err := tea.NewProgram(m, opts...).Run()
 	if err != nil {
 		return mResult, err
+	}
+	if m, ok := mResult.(Model); ok {
+		if m.signalExit {
+			os.Exit(0)
+		}
 	}
 
 	return mResult, nil

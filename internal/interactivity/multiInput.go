@@ -38,6 +38,7 @@ type MultiInput struct {
 	cursorMode cursor.Mode
 	focusIndex int
 	done       bool
+	signalExit bool
 }
 
 type InputField struct {
@@ -83,6 +84,10 @@ func (m MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "ctrl+c", "esc":
+			m.signalExit = true
+			return m, tea.Quit
+
 		// Set focus to next input
 		case "tab", "shift+tab", "enter", "up", "down":
 			s := msg.String()
@@ -122,9 +127,6 @@ func (m MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, cmd
 }
-
-// SetWidth Not yet implemented.
-func (m MultiInput) SetWidth(width int) {}
 
 func (m MultiInput) Focus(index int) tea.Cmd {
 	var cmd tea.Cmd
@@ -244,6 +246,9 @@ func (m MultiInput) Run() map[string]string {
 	}
 
 	resultingModel := newM.(MultiInput)
+	if resultingModel.signalExit {
+		os.Exit(0)
+	}
 
 	return resultingModel.getFilledValues()
 }
