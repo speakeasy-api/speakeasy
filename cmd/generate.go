@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+
 	"github.com/speakeasy-api/speakeasy/internal/docsgen"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -35,44 +37,44 @@ func SDKSupportedLanguageTargets() []string {
 }
 
 var (
-	headerFlag = model.StringFlag{
+	headerFlag = flag.StringFlag{
 		Name:        "header",
 		Shorthand:   "H",
 		Description: "header key to use if authentication is required for downloading schema from remote URL",
 	}
-	tokenFlag = model.StringFlag{
+	tokenFlag = flag.StringFlag{
 		Name:        "token",
 		Description: "token value to use if authentication is required for downloading schema from remote URL",
 	}
-	schemaFlag = model.StringFlag{
+	schemaFlag = flag.StringFlag{
 		Name:         "schema",
 		Shorthand:    "s",
 		Description:  "local filepath or URL for the OpenAPI schema",
 		Required:     true,
 		DefaultValue: "./openapi.yaml",
 	}
-	outFlag = model.StringFlag{
+	outFlag = flag.StringFlag{
 		Name:        "out",
 		Shorthand:   "o",
 		Description: "path to the output directory",
 		Required:    true,
 	}
-	debugFlag = model.BooleanFlag{
+	debugFlag = flag.BooleanFlag{
 		Name:        "debug",
 		Shorthand:   "d",
 		Description: "enable writing debug files with broken code",
 	}
-	autoYesFlag = model.BooleanFlag{
+	autoYesFlag = flag.BooleanFlag{
 		Name:        "auto-yes",
 		Shorthand:   "y",
 		Description: "auto answer yes to all prompts",
 	}
-	repoFlag = model.StringFlag{
+	repoFlag = flag.StringFlag{
 		Name:        "repo",
 		Shorthand:   "r",
 		Description: "the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions",
 	}
-	repoSubdirFlag = model.StringFlag{
+	repoSubdirFlag = flag.StringFlag{
 		Name:        "repo-subdir",
 		Shorthand:   "b",
 		Description: "the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
@@ -108,8 +110,8 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	Long:         generateLongDesc,
 	Run:          genSDKs,
 	RequiresAuth: true,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:         "lang",
 			Shorthand:    "l",
 			DefaultValue: "go",
@@ -121,19 +123,19 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 		tokenFlag,
 		debugFlag,
 		autoYesFlag,
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "installationURL",
 			Shorthand:   "i",
 			Description: "the language specific installation URL for installation instructions if the SDK is not published to a package manager",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "published",
 			Shorthand:   "p",
 			Description: "whether the SDK is published to a package manager or not, determines the type of installation instructions to generate",
 		},
 		repoFlag,
 		repoSubdirFlag,
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "output-tests",
 			Shorthand:   "t",
 			Description: "output internal tests for internal speakeasy use cases",
@@ -167,8 +169,8 @@ You can generate usage snippets by OperationID or by Namespace. By default this 
 You can also select to write to a file or write to a formatted output directory.
 `, strings.Join(usagegen.SupportedLanguagesUsageSnippets, "\n	- ")),
 	Run: genUsageSnippets,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:         "lang",
 			Shorthand:    "l",
 			Description:  fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(usagegen.SupportedLanguagesUsageSnippets, ", ")),
@@ -177,23 +179,23 @@ You can also select to write to a file or write to a formatted output directory.
 		schemaFlag,
 		headerFlag,
 		tokenFlag,
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "operation-id",
 			Shorthand:   "i",
 			Description: "The OperationID to generate usage snippet for",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "namespace",
 			Shorthand:   "n",
 			Description: "The namespace to generate multiple usage snippets for. This could correspond to a tag or a x-speakeasy-group-name in your OpenAPI spec.",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:      "out",
 			Shorthand: "o",
 			Description: `By default this command will write to stdout. If a filepath is provided results will be written into that file.
 	If the path to an existing directory is provided, all results will be formatted into that directory with each operation getting its own sub folder.`,
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:         "config-path",
 			Shorthand:    "c",
 			DefaultValue: ".",
@@ -211,8 +213,8 @@ var genSDKVersionCmd = &model.ExecutableCommand[GenerateSDKVersionFlags]{
 	Short: "Print the version number of the SDK generator",
 	Long:  `Print the version number of the SDK generator including the latest changelog entry`,
 	Run:   getLatestVersionInfo,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "language",
 			Shorthand:   "l",
 			Description: "if language is set to one of the supported languages it will print version numbers for that languages features and the changelog for that language",
@@ -238,10 +240,10 @@ var genSDKDocsCmd = &model.ExecutableCommand[GenerateSDKDocsFlags]{
 	Short: "Use this command to generate content for the SDK docs directory.",
 	Long:  "Use this command to generate content for the SDK docs directory.",
 	Run:   genSDKDocsContent,
-	Flags: []model.Flag{
+	Flags: []flag.Flag{
 		outFlag,
 		schemaFlag,
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "langs",
 			Shorthand:   "l",
 			Description: "a list of languages to include in SDK Docs generation. Example usage -l go,python,typescript",
@@ -250,7 +252,7 @@ var genSDKDocsCmd = &model.ExecutableCommand[GenerateSDKDocsFlags]{
 		tokenFlag,
 		debugFlag,
 		autoYesFlag,
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "compile",
 			Shorthand:   "c",
 			Description: "automatically compile SDK docs content for a single page doc site",
@@ -273,28 +275,28 @@ var genSDKChangelogCmd = &model.ExecutableCommand[GenerateSDKChangelogFlags]{
 	Short: "Prints information about changes to the SDK generator",
 	Long:  `Prints information about changes to the SDK generator with the ability to filter by version and format the output for the terminal or parsing. By default it will print the latest changelog entry.`,
 	Run:   getChangelogs,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "target",
 			Shorthand:   "t",
 			Description: "the version(s) to get changelogs from, if not specified the latest version(s) will be used",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "previous",
 			Shorthand:   "p",
 			Description: "the version(s) to get changelogs between this and the target version(s)",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "specific",
 			Shorthand:   "s",
 			Description: "the version to get changelogs for, not used if language is specified",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "language",
 			Shorthand:   "l",
 			Description: "the language to get changelogs for, if not specified the changelog for the generator itself will be returned",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "raw",
 			Shorthand:   "r",
 			Description: "don't format the output for the terminal",
@@ -305,7 +307,7 @@ var genSDKChangelogCmd = &model.ExecutableCommand[GenerateSDKChangelogFlags]{
 var genVersion string
 
 func genSDKs(ctx context.Context, flags GenerateFlags) error {
-	if err := sdkgen.Generate(
+	if _, err := sdkgen.Generate(
 		ctx,
 		config.GetCustomerID(),
 		config.GetWorkspaceID(),

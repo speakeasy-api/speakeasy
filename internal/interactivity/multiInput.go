@@ -174,7 +174,11 @@ func (m MultiInput) Validate() bool {
 
 func (m MultiInput) View() string {
 	if m.done {
-		successMessage := fmt.Sprintf("Values for %d fields have been supplied ✔\n", len(m.getFilledValues()))
+		fieldsString := "fields have"
+		if len(m.getFilledValues()) == 1 {
+			fieldsString = "field has"
+		}
+		successMessage := fmt.Sprintf("Values for %d %s been supplied ✔\n", len(m.getFilledValues()), fieldsString)
 		return styles.Success.Copy().
 			Margin(0, 2, 1, 2).
 			Render(successMessage)
