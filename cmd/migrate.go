@@ -105,7 +105,7 @@ func parseWorkflowFiles(genWorkflow string) (*workflow.Workflow, *config.Generat
 		Permissions: generationWorkflow.Permissions,
 		Jobs: config.Jobs{
 			Generate: config.Job{
-				Uses: "speakeasy-api/sdk-generation-action-v15/.github/workflows/workflow-executor.yaml@v15",
+				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/workflow-executor.yaml@v15",
 				With: map[string]any{
 					"force":             generationWorkflow.Jobs.Generate.With["force"],
 					"speakeasy_version": generationWorkflow.Jobs.Generate.With["speakeasy_version"],
@@ -122,9 +122,24 @@ func parseWorkflowFiles(genWorkflow string) (*workflow.Workflow, *config.Generat
 
 	docLocations := []string{}
 	if docs, ok := generationWorkflow.Jobs.Generate.With["openapi_docs"]; ok {
-		docLocations = append(docLocations, docs.([]string)...)
+		if docsArray, ok := docs.([]string); ok {
+			docLocations = append(docLocations, docsArray...)
+		} else if docsString, ok := docs.(string); ok {
+			// In this case, `docsString` will look something like | \n - ./openapi/moov.yaml
+			i := strings.IndexRune(docsString, '-')
+			if i != -1 {
+				docsString = strings.TrimSpace(docsString[i+1:])
+			}
+			docLocations = append(docLocations, docsString)
+		} else {
+			return nil, nil, fmt.Errorf("openapi_docs must be a string or an array of strings")
+		}
 	} else if docLocation, ok := generationWorkflow.Jobs.Generate.With["openapi_doc_location"]; ok {
-		docLocations = append(docLocations, docLocation.(string))
+		if docLocationString, ok := docLocation.(string); ok {
+			docLocations = append(docLocations, docLocationString)
+		} else {
+			return nil, nil, fmt.Errorf("openapi_doc_location must be a string")
+		}
 	}
 
 	header := ""
