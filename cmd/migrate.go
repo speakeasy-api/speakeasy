@@ -68,7 +68,7 @@ func migrateFunc(ctx context.Context, flags MigrateFlags) error {
 		return err
 	}
 
-	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", flags.Directory), 0755); err != nil {
+	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", flags.Directory), 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 
