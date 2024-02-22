@@ -102,7 +102,7 @@ func merge(inSchemas [][]byte) ([]byte, error) {
 		}
 
 		var errs []error
-		mergedDoc, errs = mergeDocuments(mergedDoc, doc)
+		mergedDoc, errs = MergeDocuments(mergedDoc, doc)
 		warnings = append(warnings, errs...)
 	}
 
@@ -144,7 +144,7 @@ func loadOpenAPIDocument(data []byte) (*v3.Document, error) {
 	return &model.Model, nil
 }
 
-func mergeDocuments(mergedDoc, doc *v3.Document) (*v3.Document, []error) {
+func MergeDocuments(mergedDoc, doc *v3.Document) (*v3.Document, []error) {
 	mergedVersion, _ := version.NewSemver(mergedDoc.Version)
 	docVersion, _ := version.NewSemver(doc.Version)
 	errs := make([]error, 0)

@@ -129,7 +129,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if (isUncleanDir && outDir == workingDir) || (targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider")) {
-		promptedDir := "."
+		promptedDir, _ := filepath.Abs(workingDir)
 		if outDir != workingDir {
 			promptedDir = outDir
 		}
@@ -154,7 +154,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			ExecuteForm(); err != nil {
 			return err
 		}
-		outDir = filepath.Join(workingDir, promptedDir)
+		if !filepath.IsAbs(promptedDir) {
+			promptedDir = filepath.Join(workingDir, promptedDir)
+		}
+
+		outDir, err = filepath.Abs(promptedDir)
+		if err != nil {
+			return err
+		}
 	}
 
 	var resolvedSchema string
@@ -164,13 +171,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		resolvedSchema = source.Inputs[0].Location
 	}
 
-	absoluteOurDir, err := filepath.Abs(outDir)
-	if err != nil {
-		return err
-	}
-
 	// If we are referencing a local schema, set a relative path for the new out directory
-	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
+	if _, err := os.Stat(resolvedSchema); err == nil && outDir != workingDir {
 		absSchemaPath, err := filepath.Abs(resolvedSchema)
 		if err != nil {
 			return err

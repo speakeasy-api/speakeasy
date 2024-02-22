@@ -3,8 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/speakeasy/internal/docsgen"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -306,7 +307,7 @@ var genSDKChangelogCmd = &model.ExecutableCommand[GenerateSDKChangelogFlags]{
 var genVersion string
 
 func genSDKs(ctx context.Context, flags GenerateFlags) error {
-	if err := sdkgen.Generate(
+	if _, err := sdkgen.Generate(
 		ctx,
 		config.GetCustomerID(),
 		config.GetWorkspaceID(),

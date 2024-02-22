@@ -14,6 +14,7 @@ speakeasy overlay apply [flags]
 
 ```
   -h, --help             help for apply
+      --out string       write directly to a file instead of stdout
   -o, --overlay string   the overlay file to use
   -s, --schema string    the schema to extend
 ```
