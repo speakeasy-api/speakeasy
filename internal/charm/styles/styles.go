@@ -86,6 +86,22 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 	return boxStyle.Render(s)
 }
 
+func RenderInstructionalMessage(heading string, additionalLines ...string) string {
+	instructionStyle := lipgloss.NewStyle().
+		AlignHorizontal(lipgloss.Left)
+
+	s := Info.Render(utils.CapitalizeFirst(heading + "\n"))
+	for _, line := range additionalLines {
+		s += "\n\n" + Info.Render(line)
+	}
+
+	return instructionStyle.Render(s)
+}
+
+func BoldString(s string) string {
+	return lipgloss.NewStyle().Bold(true).Render(s)
+}
+
 func RenderInfoMessage(heading string, additionalLines ...string) string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).

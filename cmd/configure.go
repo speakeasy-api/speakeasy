@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
@@ -14,11 +17,19 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/prompts"
+	"gopkg.in/yaml.v3"
+)
+
+const (
+	appInstallationLink  = "https://github.com/apps/speakeasy-github/installations/new"
+	repositorySecretPath = "Settings > Secrets & Variables > Actions"
+	githubSetupDocs      = "https://www.speakeasyapi.dev/docs/advanced-setup/github-setup"
 )
 
 var configureCmd = &model.CommandGroup{
@@ -26,7 +37,7 @@ var configureCmd = &model.CommandGroup{
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           `Configure your Speakeasy SDK Setup.`,
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd},
 }
 
 type ConfigureSourcesFlags struct {
@@ -77,6 +88,16 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 			Description: "configure a new target",
 		},
 	},
+}
+
+type ConfigureGithubFlags struct{}
+
+var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+	Usage:        "github",
+	Short:        "Configure Speakeasy for github.",
+	Long:         "Configure your Speakeasy workflow to generate and publish from your github repo.",
+	Run:          configureGithub,
+	RequiresAuth: true,
 }
 
 func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
@@ -292,6 +313,90 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	success := styles.Success.Render(fmt.Sprintf("Successfully Configured the Target %s 🎉", targetName))
 	logger := log.From(ctx)
 	logger.PrintfStyled(boxStyle, "%s", success)
+
+	return nil
+}
+
+func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
+
+	workflowFile, _, _ := workflow.Load(workingDir)
+	if workflowFile == nil {
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exists, try speakeasy quickstart")
+	}
+
+	generationWorkflow := &config.GenerateWorkflow{}
+	if _, err := os.Stat(generationWorkflowFilePath); err == nil {
+		fileContent, err := os.ReadFile(generationWorkflowFilePath)
+		if err != nil {
+			return err
+		}
+
+		if err := yaml.Unmarshal(fileContent, generationWorkflow); err != nil {
+			return err
+		}
+	}
+
+	generationWorkflow, err = prompts.ConfigureGithub(generationWorkflow, workflowFile)
+	if err != nil {
+		return err
+	}
+
+	// Write a github workflow file.
+	var genWorkflowBuf bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
+		return errors.Wrapf(err, "failed to encode workflow file")
+	}
+
+	if _, err := os.Stat(workingDir + "/" + ".github/workflows"); os.IsNotExist(err) {
+		err = os.MkdirAll(workingDir+"/"+".github/workflows", 0o755)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
+		return errors.Wrapf(err, "failed to write github workflow file")
+	}
+
+	var remoteURL string
+	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
+		remoteURL = prompts.ParseGithubRemoteURL(repo)
+	}
+
+	logger := log.From(ctx)
+	agenda := []string{
+		fmt.Sprintf("• Setup an API Key - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID),
+		fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.BoldString(strings.ToUpper(config.SpeakeasyApiKey))),
+	}
+
+	for key := range generationWorkflow.Jobs.Generate.Secrets {
+		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
+			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.BoldString(strings.ToUpper(key))))
+		}
+	}
+
+	if remoteURL != "" {
+		agenda = append(agenda, fmt.Sprintf("• Install the Speakeasy Github App - %s", appInstallationLink))
+	}
+
+	msg := styles.RenderInstructionalMessage("For your github workflow setup to be complete perform the following steps.",
+		agenda...)
+	logger.Println(msg)
+
+	logger.Println(styles.Info.Render("\n\n" + fmt.Sprintf("For more information see - %s", githubSetupDocs)))
 
 	return nil
 }
