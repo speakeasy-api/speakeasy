@@ -456,7 +456,7 @@ func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 		if env.IsGithubAction() {
 			envVar = "INPUT_" + envVar
 		}
-		token = os.Getenv(strings.TrimPrefix(d.Auth.Secret, "$"))
+		token = os.Getenv(envVar)
 	}
 
 	if err := download.DownloadFile(d.Location, outPath, header, token); err != nil {
