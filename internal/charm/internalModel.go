@@ -31,7 +31,8 @@ func (m internalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.model.SetWidth(msg.Width)
 	}
 
-	return m.model.Update(msg)
+	_, cmd := m.model.Update(msg)
+	return m, cmd
 }
 
 func (m internalModel) View() string {
