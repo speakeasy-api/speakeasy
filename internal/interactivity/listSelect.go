@@ -25,8 +25,9 @@ func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
 type ListSelect struct {
-	list     list.Model
-	selected *cobra.Command
+	list       list.Model
+	selected   *cobra.Command
+	signalExit bool
 }
 
 func (m ListSelect) Init() tea.Cmd {
@@ -38,7 +39,7 @@ func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case "ctrl+c", "esc":
-			os.Exit(0)
+			m.signalExit = true
 			return m, tea.Quit
 		case "enter":
 			selected, ok := m.list.SelectedItem().(item)
@@ -124,7 +125,14 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 		os.Exit(1)
 	}
 
-	if m, ok := mResult.(ListSelect); ok && m.selected != nil {
+	if m, ok := mResult.(ListSelect); ok {
+		if m.signalExit {
+			os.Exit(0)
+		}
+
+		if m.selected != nil {
+			return m.selected
+		}
 		return m.selected
 	}
 
