@@ -43,7 +43,7 @@ func registerPrintableApiCommand(root *cobra.Command, newCommand *cobra.Command)
 
 func authCommand(exec func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		authCtx, err := auth.Authenticate(cmd.Context(), false)
+		authCtx, err := auth.Authenticate(cmd.Context(), false, "")
 		if err != nil {
 			return err
 		}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+
 	"github.com/fatih/structs"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -14,7 +16,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"slices"
 )
 
 type Command interface {
@@ -61,18 +62,27 @@ type ExecutableCommand[F interface{}] struct {
 
 func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	run := func(cmd *cobra.Command, args []string) error {
+		flags, err := c.GetFlagValues(cmd)
+		if err != nil {
+			return err
+		}
+
 		if c.RequiresAuth {
-			authCtx, err := auth.Authenticate(cmd.Context(), false)
+			// Try to get the APIKey from the flags
+			apiKey := ""
+			fields := structs.Fields(*flags)
+			for _, field := range fields {
+				if field.Tag("json") == "apikey" {
+					apiKey = field.Value().(string)
+					break
+				}
+			}
+			authCtx, err := auth.Authenticate(cmd.Context(), false, apiKey)
 			if err != nil {
 				cmd.SilenceUsage = true
 				return err
 			}
 			cmd.SetContext(authCtx)
-		}
-
-		flags, err := c.GetFlagValues(cmd)
-		if err != nil {
-			return err
 		}
 
 		if c.PreRun != nil {

@@ -8,8 +8,10 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
-func Authenticate(ctx context.Context, force bool) (context.Context, error) {
-	existingKey := config.GetSpeakeasyAPIKey()
+func Authenticate(ctx context.Context, force bool, existingKey string) (context.Context, error) {
+	if existingKey != "" {
+		existingKey = config.GetSpeakeasyAPIKey()
+	}
 	authCtx, res, err := core.Authenticate(ctx, existingKey, force)
 	if err != nil {
 		return authCtx, err

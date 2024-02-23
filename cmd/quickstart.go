@@ -26,6 +26,7 @@ type QuickstartFlags struct {
 	Schema      string `json:"schema"`
 	OutDir      string `json:"out-dir"`
 	TargetType  string `json:"target"`
+	APIKey      string `json:"apikey"`
 }
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
@@ -53,6 +54,12 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:        "target",
 			Shorthand:   "t",
 			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")),
+		},
+		flag.StringFlag{
+			Name:        "apikey",
+			Shorthand:   "a",
+			Description: fmt.Sprintf("API token to use for authentication"),
+			Required:    false,
 		},
 	},
 }
