@@ -8,4 +8,5 @@ var HiddenCommands = []string{
 	"suggest",
 	"completion",
 	"help",
+	"migrate",
 }

@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+
 	"github.com/charmbracelet/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
@@ -33,22 +34,22 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	Long:         `Guided setup to help you create a new SDK in minutes.`,
 	Run:          quickstartExec,
 	RequiresAuth: true,
-	Flags: []model.Flag{
-		model.BooleanFlag{
+	Flags: []flag.Flag{
+		flag.BooleanFlag{
 			Name:        "skip-compile",
 			Description: "skip compilation during generation after setup",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "schema",
 			Shorthand:   "s",
 			Description: "local filepath or URL for the OpenAPI schema",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "out-dir",
 			Shorthand:   "o",
 			Description: "output directory for the quickstart command",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "target",
 			Shorthand:   "t",
 			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")),
@@ -126,7 +127,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if (isUncleanDir && outDir == workingDir) || (targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider")) {
-		promptedDir := "."
+		promptedDir, _ := filepath.Abs(workingDir)
 		if outDir != workingDir {
 			promptedDir = outDir
 		}
@@ -135,7 +136,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
 		}
 
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
 			Title("What directory should quickstart files be written too?").
 			Description(description+"\n").
 			Validate(func(s string) error {
@@ -147,11 +148,18 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 				return nil
 			}).
 			Inline(false).Prompt("").Value(&promptedDir))),
-			"Let's pick an output directory for your newly created files.")).
-			Run(); err != nil {
+			"Let's pick an output directory for your newly created files.").
+			ExecuteForm(); err != nil {
 			return err
 		}
-		outDir = filepath.Join(workingDir, promptedDir)
+		if !filepath.IsAbs(promptedDir) {
+			promptedDir = filepath.Join(workingDir, promptedDir)
+		}
+
+		outDir, err = filepath.Abs(promptedDir)
+		if err != nil {
+			return err
+		}
 	}
 
 	var resolvedSchema string
@@ -161,13 +169,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		resolvedSchema = source.Inputs[0].Location
 	}
 
-	absoluteOurDir, err := filepath.Abs(outDir)
-	if err != nil {
-		return err
-	}
-
 	// If we are referencing a local schema, set a relative path for the new out directory
-	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
+	if _, err := os.Stat(resolvedSchema); err == nil && outDir != workingDir {
 		absSchemaPath, err := filepath.Abs(resolvedSchema)
 		if err != nil {
 			return err

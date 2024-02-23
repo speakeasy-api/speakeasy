@@ -102,6 +102,21 @@ func BoldString(s string) string {
 	return lipgloss.NewStyle().Bold(true).Render(s)
 }
 
+func RenderInfoMessage(heading string, additionalLines ...string) string {
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(Colors.Blue).
+		Padding(0, 1).
+		AlignHorizontal(lipgloss.Center)
+
+	s := lipgloss.NewStyle().Foreground(Colors.Blue).Bold(true).Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Blue).Render(line)
+	}
+
+	return boxStyle.Render(s)
+}
+
 func KeymapLegend(keys []string, descriptions []string) string {
 	var s string
 	for i, key := range keys {

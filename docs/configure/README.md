@@ -31,5 +31,6 @@ speakeasy configure [flags]
 * [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
+* [speakeasy configure github](github.md)	 - Configure Speakeasy for github.
 * [speakeasy configure sources](sources.md)	 - Configure new or existing sources.
 * [speakeasy configure targets](targets.md)	 - Configure new target.

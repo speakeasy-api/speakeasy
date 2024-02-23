@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -97,10 +96,10 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetType, outDir string) (string, *workflow.Target, error) {
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
+	if _, err := charm.NewForm(huh.NewForm(prompts),
 		"Let's setup a new target for your workflow.",
-		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).
-		Run(); err != nil {
+		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").
+		ExecuteForm(); err != nil {
 		return "", nil, err
 	}
 
@@ -130,10 +129,9 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 	originalDir := outDir
 
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
+	if _, err := charm.NewForm(huh.NewForm(prompts),
 		"Let's setup a new target for your workflow.",
-		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).
-		Run(); err != nil {
+		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").ExecuteForm(); err != nil {
 		return "", nil, err
 	}
 
@@ -168,7 +166,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 			}
 			originalDir := outDir
 
-			if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+			if _, err := charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
 					Title(fmt.Sprintf("Provide an output directory for your %s generation target %s.", targetType, targetName)).
 					Validate(func(s string) error {
@@ -179,8 +177,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 						return nil
 					}).
 					Value(&outDir))),
-				"To setup multiple targets you must select an output directory not in the root folder.")).
-				Run(); err != nil {
+				"To setup multiple targets you must select an output directory not in the root folder.").ExecuteForm(); err != nil {
 				return err
 			}
 

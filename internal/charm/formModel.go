@@ -14,6 +14,7 @@ type Model struct {
 	title       string
 	description string
 	form        *huh.Form // huh.Form is just a tea.Model
+	signalExit  bool
 }
 
 func NewForm(form *huh.Form, args ...string) Model {
@@ -42,7 +43,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "ctrl+c":
-			os.Exit(0)
+			m.signalExit = true
+			return m, tea.Quit
 		}
 	}
 
@@ -82,4 +84,18 @@ func (m Model) View() string {
 	}
 
 	return content
+}
+
+func (m Model) ExecuteForm(opts ...tea.ProgramOption) (tea.Model, error) {
+	mResult, err := tea.NewProgram(m, opts...).Run()
+	if err != nil {
+		return mResult, err
+	}
+	if m, ok := mResult.(Model); ok {
+		if m.signalExit {
+			os.Exit(0)
+		}
+	}
+
+	return mResult, nil
 }

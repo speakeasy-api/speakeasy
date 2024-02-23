@@ -3,12 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/charmbracelet/huh"
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/model"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 )
 
@@ -41,46 +42,46 @@ A full workflow is capable of running the following steps:
 	Run:            runFunc,
 	RunInteractive: runInteractive,
 	RequiresAuth:   true,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "target",
 			Shorthand:   "t",
 			Description: "target to run. specify 'all' to run all targets",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "source",
 			Shorthand:   "s",
 			Description: "source to run. specify 'all' to run all sources",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "installationURL",
 			Shorthand:   "i",
 			Description: "the language specific installation URL for installation instructions if the SDK is not published to a package manager",
 		},
-		model.MapFlag{
+		flag.MapFlag{
 			Name:        "installationURLs",
 			Description: "a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "debug",
 			Shorthand:   "d",
 			Description: "enable writing debug files with broken code",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "repo",
 			Shorthand:   "r",
 			Description: "the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions",
 		},
-		model.StringFlag{
+		flag.StringFlag{
 			Name:        "repo-subdir",
 			Shorthand:   "b",
 			Description: "the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
 		},
-		model.MapFlag{
+		flag.MapFlag{
 			Name:        "repo-subdirs",
 			Description: "a map from target ID to the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "skip-compile",
 			Description: "skip compilation when generating the SDK",
 		},
@@ -175,9 +176,9 @@ func askForTarget(targets []string) (string, error) {
 	target := ""
 
 	prompt := charm.NewSelectPrompt("What target would you like to run?", "You may choose an individual target or 'all'.", targetOptions, &target)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-		"Let's configure a target for your workflow.")).
-		Run(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt),
+		"Let's configure a target for your workflow.").
+		ExecuteForm(); err != nil {
 		return "", err
 	}
 
@@ -191,9 +192,6 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 	}
 
 	err = workflow.Run(ctx)
-	if err != nil {
-		return err
-	}
 
 	workflow.RootStep.Finalize(err == nil)
 

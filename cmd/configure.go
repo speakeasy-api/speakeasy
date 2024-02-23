@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -8,7 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
@@ -21,6 +23,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/prompts"
+	"gopkg.in/yaml.v3"
+)
+
+const (
+	appInstallationLink  = "https://github.com/apps/speakeasy-github/installations/new"
+	repositorySecretPath = "Settings > Secrets & Variables > Actions"
+	githubSetupDocs      = "https://www.speakeasyapi.dev/docs/advanced-setup/github-setup"
 )
 
 const (
@@ -48,13 +57,13 @@ var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
 	Long:         "Guided prompts to configure a new or existing source in your speakeasy workflow.",
 	Run:          configureSources,
 	RequiresAuth: true,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "id",
 			Shorthand:   "i",
 			Description: "the name of an existing source to configure",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "new",
 			Shorthand:   "n",
 			Description: "configure a new source",
@@ -73,13 +82,13 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 	Long:         "Guided prompts to configure a new target in your speakeasy workflow.",
 	Run:          configureTarget,
 	RequiresAuth: true,
-	Flags: []model.Flag{
-		model.StringFlag{
+	Flags: []flag.Flag{
+		flag.StringFlag{
 			Name:        "id",
 			Shorthand:   "i",
 			Description: "the name of an existing target to configure",
 		},
-		model.BooleanFlag{
+		flag.BooleanFlag{
 			Name:        "new",
 			Shorthand:   "n",
 			Description: "configure a new target",
@@ -135,9 +144,8 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 
 	if !flags.New && existingSource == nil {
 		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-			"Let's configure a source for your workflow.")).
-			Run(); err != nil {
+		if _, err := charm.NewForm(huh.NewForm(prompt),
+			"Let's configure a source for your workflow.").ExecuteForm(); err != nil {
 			return err
 		}
 		if existingSourceName == "new source" {
@@ -233,9 +241,9 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 
 	if !flags.New && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-			"Let's configure a target for your workflow.")).
-			Run(); err != nil {
+		if _, err := charm.NewForm(huh.NewForm(prompt),
+			"Let's configure a target for your workflow.").
+			ExecuteForm(); err != nil {
 			return err
 		}
 		if existingTarget == "new target" {

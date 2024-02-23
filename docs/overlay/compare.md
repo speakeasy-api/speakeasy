@@ -2,7 +2,7 @@
 `speakeasy overlay compare`  
 
 
-Given two specs, it will output an overlay that describes the differences between them  
+Given two specs, output an overlay that describes the differences between them  
 
 ## Usage
 
@@ -14,7 +14,7 @@ speakeasy overlay compare [flags]
 
 ```
   -h, --help              help for compare
-  -s, --schemas strings   schemas to compare and generate overlay from
+  -s, --schemas strings   two schemas to compare and generate overlay from (comma-separated list)
 ```
 
 ### Options inherited from parent commands
