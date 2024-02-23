@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/go-git/go-git/v5"
 	git_config "github.com/go-git/go-git/v5/config"
@@ -102,9 +101,9 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	}
 
 	prompt := charm.NewSelectPrompt("What mode would you like to setup for your github workflow?\n", "", modeOptions, &mode)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompt),
-		"Let's configure generation through github actions.")).
-		Run(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt),
+		"Let's configure generation through github actions.").
+		ExecuteForm(); err != nil {
 		return nil, err
 	}
 	githubWorkflow.Jobs.Generate.With[config.Mode] = mode
@@ -190,10 +189,10 @@ func executePromptsForPublishing(prompts map[string]*string, target *workflow.Ta
 		)
 	}
 
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(fields...)),
+	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(fields...)),
 		fmt.Sprintf("Setup publishing variables for your %s target %s.", target.Target, name),
-		"These environment variables will be used to publish to package managers from your speakeasy workflow.")).
-		Run(); err != nil {
+		"These environment variables will be used to publish to package managers from your speakeasy workflow.").
+		ExecuteForm(); err != nil {
 		return err
 	}
 
@@ -400,15 +399,15 @@ func ReadGenerationFile(generationWorkflow *config.GenerateWorkflow, generationW
 
 func SelectPublishingTargets(publishingOptions []huh.Option[string]) ([]string, error) {
 	chosenTargets := make([]string, 0)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(
+	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
 			Title("Select any targets you would like to configure publishing for.").
 			Description("Setup variables to configure publishing directly from Speakeasy.\n").
 			Options(publishingOptions...).
 			Value(&chosenTargets),
 	)),
-		"Would you like to configure publishing for any existing targets?")).
-		Run(); err != nil {
+		"Would you like to configure publishing for any existing targets?").
+		ExecuteForm(); err != nil {
 		return nil, err
 	}
 
