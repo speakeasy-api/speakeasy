@@ -61,7 +61,7 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 			},
 			Jobs: config.Jobs{
 				Generate: config.Job{
-					Uses: "speakeasy-api/sdk-generation-action/.github/workflows/sdk-generation.yaml@v15",
+					Uses: "speakeasy-api/sdk-generation-action/.github/workflows/workflow-executor.yaml@v15",
 					With: map[string]any{
 						"speakeasy_version": "latest",
 						"force":             "${{ github.event.inputs.force }}",
@@ -413,74 +413,4 @@ func SelectPublishingTargets(publishingOptions []huh.Option[string]) ([]string, 
 	}
 
 	return chosenTargets, nil
-}
-
-func FindGithubRepository(outDir string) *git.Repository {
-	if _, err := os.Stat(outDir); os.IsNotExist(err) {
-		return nil
-	}
-
-	gitFolder, err := filepath.Abs(outDir)
-	if err != nil {
-		return nil
-	}
-	prior := ""
-	for {
-		if _, err := os.Stat(path.Join(gitFolder, ".git")); err == nil {
-			break
-		}
-		prior = gitFolder
-		gitFolder = filepath.Dir(gitFolder)
-		if gitFolder == prior {
-			// No longer have a parent directory
-			return nil
-		}
-	}
-
-	repo, err := git.PlainOpen(gitFolder)
-	if err != nil {
-		return nil
-	}
-	return repo
-}
-
-func ParseGithubRemoteURL(repo *git.Repository) string {
-	cfg, err := repo.ConfigScoped(git_config.SystemScope)
-	if err != nil {
-		return ""
-	}
-
-	var defaultRemote string
-	defaultBranch := cfg.Init.DefaultBranch
-	if len(defaultBranch) == 0 {
-		defaultRemote = git.DefaultRemoteName
-	} else {
-		defaultBranchConfig, ok := cfg.Branches[defaultBranch]
-		if !ok {
-			return ""
-		}
-
-		defaultRemote = defaultBranchConfig.Remote
-	}
-
-	if len(defaultRemote) == 0 {
-		return ""
-	}
-
-	remoteCfg, ok := cfg.Remotes[defaultRemote]
-	if !ok {
-		return ""
-	}
-
-	for _, url := range remoteCfg.URLs {
-		if strings.Contains(url, "https://github.com") {
-			return url
-		}
-
-		if strings.Contains(url, "git@github.com") {
-			return strings.Replace(url, "git@github.com:", "https://github.com/", 1)
-		}
-	}
-
-	return ""
 }

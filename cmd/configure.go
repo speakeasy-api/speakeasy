@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -23,13 +22,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/prompts"
-	"gopkg.in/yaml.v3"
-)
-
-const (
-	appInstallationLink  = "https://github.com/apps/speakeasy-github/installations/new"
-	repositorySecretPath = "Settings > Secrets & Variables > Actions"
-	githubSetupDocs      = "https://www.speakeasyapi.dev/docs/advanced-setup/github-setup"
 )
 
 const (
