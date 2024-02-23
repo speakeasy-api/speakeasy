@@ -10,6 +10,7 @@ import (
 type InternalModel interface {
 	Init() tea.Cmd
 	Update(msg tea.Msg) (tea.Model, tea.Cmd)
+	HandleKeypress(key string) tea.Cmd // A convenience method for handling keypresses. Should usually return nil.
 	View() string
 	SetWidth(width int)
 }
@@ -26,15 +27,16 @@ func (m modelWrapper) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "esc":
 			m.signalExit = true
 			return m, tea.Quit
+		default:
+			if cmd := m.model.HandleKeypress(keypress); cmd != nil {
+				return m, cmd
+			}
 		}
 	case tea.WindowSizeMsg:
 		m.model.SetWidth(msg.Width)
 	}
 
-	updated, cmd := m.model.Update(msg)
-	if updated != nil {
-		m.model = updated.(InternalModel)
-	}
+	_, cmd := m.model.Update(msg)
 	return m, cmd
 }
 

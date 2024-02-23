@@ -35,21 +35,22 @@ func (m *ListSelect) Init() tea.Cmd {
 }
 
 func (m *ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch keypress := msg.String(); keypress {
-		case "enter":
-			selected, ok := m.list.SelectedItem().(item)
-			if ok {
-				m.selected = selected.cmd
-			}
-			return m, tea.Quit
-		}
-	}
-
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
+}
+
+func (m *ListSelect) HandleKeypress(key string) tea.Cmd {
+	switch key {
+	case "enter":
+		selected, ok := m.list.SelectedItem().(item)
+		if ok {
+			m.selected = selected.cmd
+		}
+		return tea.Quit
+	}
+
+	return nil
 }
 
 func (m *ListSelect) SetWidth(width int) {

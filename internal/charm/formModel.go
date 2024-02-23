@@ -53,6 +53,10 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m FormModel) HandleKeypress(key string) tea.Cmd {
+	return nil
+}
+
 // SetWidth Not yet implemented.
 func (m FormModel) SetWidth(width int) {}
 

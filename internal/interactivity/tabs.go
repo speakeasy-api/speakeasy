@@ -58,28 +58,45 @@ func (m *tabsModel) Init() tea.Cmd {
 }
 
 func (m *tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch keypress := msg.String(); keypress {
-		case "right", "l", "n", "tab":
-			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
-			return m, nil
-		case "left", "h", "p", "shift+tab":
-			m.activeTab = max(m.activeTab-1, 0)
-			return m, nil
-		case "down":
-			m.Tabs[m.activeTab].activeItem = min(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
-			return m, nil
-		case "up":
-			m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
-			return m, nil
-		case "enter":
-			m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
-			return m, nil
-		}
-	}
+	//switch msg := msg.(type) {
+	//case tea.KeyMsg:
+	//	switch keypress := msg.String(); keypress {
+	//	case "right", "l", "n", "tab":
+	//		m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
+	//		return m, nil
+	//	case "left", "h", "p", "shift+tab":
+	//		m.activeTab = max(m.activeTab-1, 0)
+	//		return m, nil
+	//	case "down":
+	//		m.Tabs[m.activeTab].activeItem = min(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
+	//		return m, nil
+	//	case "up":
+	//		m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
+	//		return m, nil
+	//	case "enter":
+	//		m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
+	//		return m, nil
+	//	}
+	//}
 
 	return m, nil
+}
+
+func (m *tabsModel) HandleKeypress(key string) tea.Cmd {
+	switch key {
+	case "right", "l", "n", "tab":
+		m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
+	case "left", "h", "p", "shift+tab":
+		m.activeTab = max(m.activeTab-1, 0)
+	case "down":
+		m.Tabs[m.activeTab].activeItem = min(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
+	case "up":
+		m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
+	case "enter":
+		m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
+	}
+
+	return nil
 }
 
 func (m *tabsModel) SetWidth(width int) {

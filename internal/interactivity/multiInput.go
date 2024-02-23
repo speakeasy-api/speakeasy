@@ -80,47 +80,44 @@ func (m *MultiInput) Init() tea.Cmd {
 }
 
 func (m *MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		// Set focus to next input
-		case "tab", "shift+tab", "enter", "up", "down":
-			s := msg.String()
-
-			// Did the user press enter while the submit button was focused?
-			// If so, exit.
-			if s == "enter" && m.focusIndex == len(m.inputModels) {
-				if m.Validate() {
-					m.done = true
-					return m, tea.Quit
-				} else {
-					break
-				}
-			}
-
-			// Cycle indexes
-			if s == "up" || s == "shift+tab" {
-				m.focusIndex--
-			} else {
-				m.focusIndex++
-			}
-
-			if m.focusIndex > len(m.inputModels) {
-				m.focusIndex = 0
-			} else if m.focusIndex < 0 {
-				m.focusIndex = len(m.inputModels)
-			}
-
-			cmd := m.Focus(m.focusIndex)
-
-			return m, cmd
-		}
-	}
-
 	// Handle character input and blinking
 	cmd := m.updateInputs(msg)
 
 	return m, cmd
+}
+
+func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
+	switch key {
+	// Set focus to next input
+	case "tab", "shift+tab", "enter", "up", "down":
+		// Did the user press enter while the submit button was focused?
+		// If so, exit.
+		if key == "enter" && m.focusIndex == len(m.inputModels) {
+			if m.Validate() {
+				m.done = true
+				return tea.Quit
+			} else {
+				break
+			}
+		}
+
+		// Cycle indexes
+		if key == "up" || key == "shift+tab" {
+			m.focusIndex--
+		} else {
+			m.focusIndex++
+		}
+
+		if m.focusIndex > len(m.inputModels) {
+			m.focusIndex = 0
+		} else if m.focusIndex < 0 {
+			m.focusIndex = len(m.inputModels)
+		}
+
+		return m.Focus(m.focusIndex)
+	}
+
+	return nil
 }
 
 // SetWidth Not yet implemented.
