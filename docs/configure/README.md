@@ -32,5 +32,6 @@ speakeasy configure [flags]
 ### Sub Commands
 
 * [speakeasy configure github](github.md)	 - Configure Speakeasy for github.
+* [speakeasy configure publishing](publishing.md)	 - Configure Speakeasy for publishing.
 * [speakeasy configure sources](sources.md)	 - Configure new or existing sources.
 * [speakeasy configure targets](targets.md)	 - Configure new target.
