@@ -274,7 +274,7 @@ func GetOpenAIKey() string {
 }
 
 func getSpeakeasyAPIKey() (string, error) {
-	key, _ := config.GetSpeakeasyAPIKey()
+	key := config.GetSpeakeasyAPIKey()
 	if key == "" {
 		return "", fmt.Errorf("no speakeasy api key available, please set SPEAKEASY_API_KEY or run 'speakeasy auth' to authenticate the CLI with the Speakeasy Platform")
 	}

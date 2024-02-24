@@ -36,6 +36,8 @@ func suggestInit() {
 	suggestCmd.Flags().BoolP("summary", "y", false, "show a summary of the remaining validation errors and their counts")
 	suggestCmd.Flags().IntP("validation-loops", "v", -1, "number of times to run the validation loop, the default is no limit (only used in parallelized implementation)")
 	suggestCmd.Flags().IntP("num-specs", "c", -1, "number of specs to run suggest on, the default is no limit")
+	suggestCmd.Flags().StringP("cache-folder", "", "", "caches computations into a given folder")
+	suggestCmd.Flags().BoolP("example-experiment", "", false, "enables the example experiment for the suggest command, generating an updated document with examples for all primitives.")
 	_ = suggestCmd.MarkFlagRequired("schema")
 	rootCmd.AddCommand(suggestCmd)
 }
@@ -142,6 +144,30 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 
 	if validationLoops != -1 {
 		suggestionConfig.ValidationLoops = &validationLoops
+	}
+	cacheFolder, err := cmd.Flags().GetString("cache-folder")
+	if err != nil {
+		return err
+	}
+
+	if exampleExperiment, _ := cmd.Flags().GetBool("example-experiment"); exampleExperiment {
+		if len(cacheFolder) == 0 {
+			return goerr.New("cache-folder is required for example-experiment")
+		}
+		// check its a valid directory
+		// if it doesn't exist, create it
+		err = os.MkdirAll(cacheFolder, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		cacheFolderFileInfo, err := os.Stat(cacheFolder)
+		if err != nil {
+			return err
+		}
+		if !cacheFolderFileInfo.IsDir() {
+			return goerr.New("cache-folder must be a directory")
+		}
+		return suggestions.StartExampleExperiment(cmd.Context(), schemaPath, cacheFolder, outputFile)
 	}
 
 	isDir := schemaPathFileInfo != nil && schemaPathFileInfo.IsDir()

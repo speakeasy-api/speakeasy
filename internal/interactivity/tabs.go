@@ -2,18 +2,20 @@ package interactivity
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"os"
-	"strings"
 )
 
 type tabsModel struct {
-	Tabs      []Tab
-	activeTab int
-	width     int
+	Tabs       []Tab
+	activeTab  int
+	width      int
+	signalExit bool
 }
 
 type Tab struct {
@@ -29,7 +31,7 @@ type Tab struct {
 
 type InspectableContent struct {
 	Summary      string
-	DetailedView string
+	DetailedView *string
 }
 
 func (m tabsModel) Init() tea.Cmd {
@@ -61,7 +63,8 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "ctrl+c", "q":
+		case "ctrl+c", "esc":
+			m.signalExit = true
 			return m, tea.Quit
 		case "right", "l", "n", "tab":
 			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
@@ -77,9 +80,6 @@ func (m tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
-			return m, nil
-		case "esc":
-			m.Tabs[m.activeTab].inspecting = false
 			return m, nil
 		}
 
@@ -156,11 +156,12 @@ func (m tabsModel) View() string {
 	doc.WriteString("\n")
 	doc.WriteString(windowStyle.Render(m.ActiveContents()))
 
-	inspectInstructions := "↵ inspect"
+	inspectInstructions := "inspect"
 	if activeTab.inspecting {
-		inspectInstructions = "esc/↵ back"
+		inspectInstructions = "back"
 	}
-	doc.WriteString(styles.Dimmed.Render(fmt.Sprintf("\n  ←/→ switch tabs, ↑/↓ navigate, %s, q quit", inspectInstructions)))
+	doc.WriteString("\n\n ")
+	doc.WriteString(styles.KeymapLegend([]string{"←/→", "↑/↓", "↵", "esc"}, []string{"switch tabs", "navigate", inspectInstructions, "quit"}))
 
 	return margins.Render(doc.String())
 }
@@ -168,13 +169,14 @@ func (m tabsModel) View() string {
 func (m tabsModel) ActiveContents() string {
 	contents := ""
 	activeTab := m.Tabs[m.activeTab]
+	activeContent := activeTab.Content[activeTab.activeItem]
 
 	activeTab.paginator.Page = activeTab.activeItem / activeTab.paginator.PerPage
 
 	width := m.width - windowStyle.GetHorizontalPadding()
 
-	if activeTab.inspecting {
-		return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(activeTab.Content[activeTab.activeItem].DetailedView)
+	if activeTab.inspecting && activeContent.DetailedView != nil {
+		return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(*activeContent.DetailedView)
 	}
 
 	start, end := activeTab.paginator.GetSliceBounds(len(activeTab.Content))
@@ -200,9 +202,15 @@ func (m tabsModel) ActiveContents() string {
 
 func RunTabs(tabs []Tab) {
 	m := tabsModel{Tabs: tabs}
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	if mResult, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
+	} else {
+		if m, ok := mResult.(tabsModel); ok {
+			if m.signalExit {
+				os.Exit(0)
+			}
+		}
 	}
 }
 

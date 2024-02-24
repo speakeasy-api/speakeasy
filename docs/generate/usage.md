@@ -18,7 +18,6 @@ The following languages are currently supported:
 	- ruby
 	- csharp
 	- unity
-	- more coming soon
 
 You can generate usage snippets by OperationID or by Namespace. By default this command will write to stdout.
 

@@ -37,14 +37,14 @@ var (
 	}{
 		Yellow:     lipgloss.AdaptiveColor{Dark: "#FBE331", Light: "#AF9A04"},
 		DimYellow:  lipgloss.AdaptiveColor{Dark: "#AF9A04", Light: "#212015"},
-		Brown:      lipgloss.AdaptiveColor{Dark: "#212015", Light: "#212015"},
+		Brown:      lipgloss.AdaptiveColor{Dark: "#212015", Light: "#FBE331"},
 		White:      lipgloss.AdaptiveColor{Dark: "#F3F0E3", Light: "#16150E"},
 		Red:        lipgloss.AdaptiveColor{Dark: "#D93337", Light: "#54121B"},
 		DimRed:     lipgloss.AdaptiveColor{Dark: "#54121B", Light: "#D93337"},
-		Green:      lipgloss.AdaptiveColor{Dark: "#63AC67", Light: "#293D2A"},
+		Green:      lipgloss.AdaptiveColor{Dark: "#63AC67", Light: "#3D6B40"},
 		DimGreen:   lipgloss.AdaptiveColor{Dark: "#293D2A", Light: "#63AC67"},
 		BrightGrey: lipgloss.AdaptiveColor{Dark: "#B4B2A6", Light: "#4B4A3F"},
-		Grey:       lipgloss.AdaptiveColor{Dark: "#8A887D", Light: "#BAB8AA"},
+		Grey:       lipgloss.AdaptiveColor{Dark: "#8A887D", Light: "#68675F"},
 		DimGrey:    lipgloss.AdaptiveColor{Dark: "#4B4A3F", Light: "#B4B2A6"},
 		Blue:       lipgloss.AdaptiveColor{Dark: "#679FE1", Light: "#1D2A3A"},
 		DimBlue:    lipgloss.AdaptiveColor{Dark: "#1D2A3A", Light: "#679FE1"},
@@ -84,4 +84,43 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 	}
 
 	return boxStyle.Render(s)
+}
+
+func RenderInstructionalMessage(heading string, additionalLines ...string) string {
+	instructionStyle := lipgloss.NewStyle().
+		AlignHorizontal(lipgloss.Left)
+
+	s := Info.Render(utils.CapitalizeFirst(heading + "\n"))
+	for _, line := range additionalLines {
+		s += "\n\n" + Info.Render(line)
+	}
+
+	return instructionStyle.Render(s)
+}
+
+func BoldString(s string) string {
+	return lipgloss.NewStyle().Bold(true).Render(s)
+}
+
+func RenderInfoMessage(heading string, additionalLines ...string) string {
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(Colors.Blue).
+		Padding(0, 1).
+		AlignHorizontal(lipgloss.Center)
+
+	s := lipgloss.NewStyle().Foreground(Colors.Blue).Bold(true).Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Blue).Render(line)
+	}
+
+	return boxStyle.Render(s)
+}
+
+func KeymapLegend(keys []string, descriptions []string) string {
+	var s string
+	for i, key := range keys {
+		s += key + " " + Dimmed.Render(descriptions[i]) + "  "
+	}
+	return s
 }

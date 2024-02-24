@@ -3,11 +3,12 @@ package api
 import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"io"
 
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/spf13/cobra"
 )
@@ -142,7 +143,11 @@ func generatePostmanCollection(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	log.From(ctx).Println(string(res.PostmanCollection))
+	collection, err := io.ReadAll(res.PostmanCollection)
+	if err != nil {
+		return err
+	}
+	log.From(ctx).Println(string(collection))
 
 	return nil
 }

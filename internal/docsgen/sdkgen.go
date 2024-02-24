@@ -6,6 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/events"
+
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
@@ -78,7 +81,6 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		generate.WithRepoDetails(repo, repoSubDir),
 		generate.WithAllowRemoteReferences(),
 		generate.WithSDKDocLanguages(langs...),
-		generate.WithCleanDir(),
 	}
 
 	if compile {
@@ -94,12 +96,18 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		return err
 	}
 
-	if errs := g.Generate(context.Background(), schema, schemaPath, "docs", outDir, isRemote, false); len(errs) > 0 {
-		for _, err := range errs {
-			logger.Error("", zap.Error(err))
-		}
+	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
+		if errs := g.Generate(ctx, schema, schemaPath, "docs", outDir, isRemote, false); len(errs) > 0 {
+			for _, err := range errs {
+				logger.Error("", zap.Error(err))
+			}
 
-		return fmt.Errorf("failed to generate SDKs Docs for %s ✖", strings.Join(langs, ", "))
+			return fmt.Errorf("failed to generate SDKs Docs for %s ✖", strings.Join(langs, ", "))
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	logger.Successf("Generated SDK(s) for %s... ✓", strings.Join(langs, ", "))

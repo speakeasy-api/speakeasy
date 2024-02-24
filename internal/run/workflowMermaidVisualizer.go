@@ -9,12 +9,13 @@ const classDefs = `
 classDef error stroke:#CE262A,color:#CE262A
 classDef success stroke:#63AC67,color:#63AC67
 classDef running stroke:#293D53,color:#293D53
+classDef skipped stroke:#D3D3D3,color:#D3D3D3
 `
 
 func (w *WorkflowStep) ToMermaidDiagram() string {
 	builder := strings.Builder{}
 	builder.WriteString("```mermaid\n")
-	builder.WriteString("flowchart TB\n")
+	builder.WriteString("flowchart LR\n")
 
 	i := 0
 
@@ -46,20 +47,30 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) string {
 	*nodeNum++
 	selfNodeNum := *nodeNum
 
-	var class string
+	var class, statusMessage string
 	switch w.status {
 	case StatusFailed:
 		class = "error"
+		statusMessage = " - failed"
 	case StatusRunning:
 		class = "running"
 	case StatusSucceeded:
 		class = "success"
+	case StatusSkipped:
+		class = "skipped"
+		statusMessage = " - skipped"
 	}
 
+	if statusMessage != "" && w.statusExplanation != "" {
+		statusMessage = fmt.Sprintf("%s (%s)", statusMessage, w.statusExplanation)
+	}
+
+	nodeNameDisplay := fmt.Sprintf("%s%s", w.name, statusMessage)
+
 	if len(w.substeps) == 0 {
-		builder.WriteString(fmt.Sprintf("%d(%s):::%s\n", selfNodeNum, w.name, class))
+		builder.WriteString(fmt.Sprintf("%d(\"%s\"):::%s\n", selfNodeNum, nodeNameDisplay, class))
 	} else {
-		builder.WriteString(fmt.Sprintf("subgraph %d [%s]\n", selfNodeNum, w.name))
+		builder.WriteString(fmt.Sprintf("subgraph %d [\"%s\"]\n", selfNodeNum, nodeNameDisplay))
 		for i, child := range w.substeps {
 			childNodeNum := *nodeNum + 1
 			writeChildNode(child)

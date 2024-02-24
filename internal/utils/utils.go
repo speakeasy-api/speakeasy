@@ -4,10 +4,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"unicode"
 
 	"golang.org/x/term"
 )
+
+var FlagsToIgnore = []string{"help", "version", "logLevel"}
 
 func CreateDirectory(filename string) error {
 	dir := filepath.Dir(filename)
@@ -75,4 +78,35 @@ func CapitalizeFirst(s string) string {
 	r := []rune(s)
 	r[0] = unicode.ToUpper(r[0])
 	return string(r)
+}
+
+func FileExists(file string) bool {
+	if absPath, err := filepath.Abs(file); err == nil {
+		file = absPath
+	}
+
+	info, err := os.Stat(file)
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	return !info.IsDir()
+}
+
+func SanitizeFilePath(path string) string {
+	sanitizedPath := path
+	if strings.HasPrefix(path, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return path
+		}
+
+		sanitizedPath = filepath.Join(homeDir, path[2:])
+	}
+
+	if absPath, err := filepath.Abs(sanitizedPath); err == nil {
+		sanitizedPath = absPath
+	}
+
+	return sanitizedPath
 }

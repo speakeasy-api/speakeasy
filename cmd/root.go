@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/model"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/events"
+
+	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -44,20 +47,22 @@ func init() {
 func Init(version, artifactArch string) {
 	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
 
-	//TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
+	// TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
 	addCommand(rootCmd, quickstartCmd)
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
 	addCommand(rootCmd, generateCmd)
 	addCommand(rootCmd, validateCmd)
+	addCommand(rootCmd, migrateCmd)
 
 	authInit()
 	mergeInit()
-	overlayInit()
+	addCommand(rootCmd, overlayCmd)
 	suggestInit()
 	updateInit(version, artifactArch)
 	proxyInit()
 	apiInit()
+	languageServerInit(version)
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {
@@ -74,9 +79,11 @@ func Execute(version, artifactArch string) {
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		if cmd.Name() != "update" {
+		if !slices.Contains([]string{"update", "language-server"}, cmd.Name()) {
 			checkForUpdate(cmd, version, artifactArch)
 		}
+
+		cmd.SetContext(events.SetSpeakeasyVersionInContext(cmd.Context(), version))
 
 		if err := setLogLevel(cmd); err != nil {
 			return
@@ -87,7 +94,7 @@ func Execute(version, artifactArch string) {
 
 	if err := rootCmd.Execute(); err != nil {
 		l.Error("", zap.Error(err))
-		l.WithInteractiveOnly().Errorf("Run '%s --help' for usage.\n", rootCmd.CommandPath())
+		l.WithInteractiveOnly().PrintfStyled(styles.DimmedItalic, "Run '%s --help' for usage.\n", rootCmd.CommandPath())
 		os.Exit(1)
 	}
 }
@@ -151,8 +158,8 @@ func rootExec(cmd *cobra.Command, args []string) error {
 	}
 
 	l := log.From(cmd.Context()).WithInteractiveOnly()
-	l.WithStyle(styles.HeavilyEmphasized).Println("Welcome to the Speakeasy CLI!")
-	l.WithStyle(styles.DimmedItalic).Println("This is interactive mode. For usage, run speakeasy -h instead.")
+	l.PrintfStyled(styles.HeavilyEmphasized, "Welcome to the Speakeasy CLI!\n")
+	l.PrintfStyled(styles.DimmedItalic, "This is interactive mode. For usage, run speakeasy -h instead.\n")
 
 	return interactivity.InteractiveExec(cmd, args, "Select a command to run")
 }

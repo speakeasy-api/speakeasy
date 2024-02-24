@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -48,7 +47,13 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 			charm.NewInput().
 				Title("What is a good output directory for your generation target?").
 				Validate(func(s string) error {
-					if currentDir(s) {
+					var enforceNewDir bool
+					if newTarget {
+						enforceNewDir = len(currentWorkflow.Targets) > 0
+					} else {
+						enforceNewDir = len(currentWorkflow.Targets) > 1
+					}
+					if enforceNewDir && currentDir(s) {
 						return fmt.Errorf("the output dir must not be the root directory")
 					}
 
@@ -91,10 +96,10 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetType, outDir string) (string, *workflow.Target, error) {
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
+	if _, err := charm.NewForm(huh.NewForm(prompts),
 		"Let's setup a new target for your workflow.",
-		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).
-		Run(); err != nil {
+		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").
+		ExecuteForm(); err != nil {
 		return "", nil, err
 	}
 
@@ -107,7 +112,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 	}
 
 	if err := target.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
-		return "", nil, errors.Wrap(err, "failed to validate source")
+		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
 	return targetName, &target, nil
@@ -124,10 +129,9 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 	originalDir := outDir
 
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
-	if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(prompts),
+	if _, err := charm.NewForm(huh.NewForm(prompts),
 		"Let's setup a new target for your workflow.",
-		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).
-		Run(); err != nil {
+		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").ExecuteForm(); err != nil {
 		return "", nil, err
 	}
 
@@ -140,7 +144,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 	}
 
 	if err := newTarget.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
-		return "", nil, errors.Wrap(err, "failed to validate source")
+		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
 	if originalDir != outDir {
@@ -155,15 +159,16 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTargets []string) error {
 	for _, targetName := range existingTargets {
 		if target, ok := currentWorkflow.Targets[targetName]; ok && (target.Output == nil || currentDir(*target.Output)) {
+			targetType := target.Target
 			outDir := ""
 			if target.Output != nil {
 				outDir = *target.Output
 			}
 			originalDir := outDir
 
-			if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(
+			if _, err := charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
-					Title("Provide an output directory for your generation target.").
+					Title(fmt.Sprintf("Provide an output directory for your %s generation target %s.", targetType, targetName)).
 					Validate(func(s string) error {
 						if currentDir(s) {
 							return fmt.Errorf("the output dir must not be in the root folder")
@@ -172,8 +177,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 						return nil
 					}).
 					Value(&outDir))),
-				"To setup multiple targets you must select an output directory not in the root folder.")).
-				Run(); err != nil {
+				"To setup multiple targets you must select an output directory not in the root folder.").ExecuteForm(); err != nil {
 				return err
 			}
 

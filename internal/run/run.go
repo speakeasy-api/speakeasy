@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,6 +26,46 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
+
+type Workflow struct {
+	Target           string
+	Source           string
+	GenVersion       string
+	Repo             string
+	RepoSubDirs      map[string]string
+	InstallationURLs map[string]string
+	Debug            bool
+	ShouldCompile    bool
+
+	RootStep            *WorkflowStep
+	workflow            *workflow.Workflow
+	projectDir          string
+	validatedDocuments  []string
+	hasGenerationAccess bool
+}
+
+func NewWorkflow(name, target, source, genVersion, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
+	wf, projectDir, err := GetWorkflowAndDir()
+	if err != nil {
+		return nil, err
+	}
+
+	rootStep := NewWorkflowStep(name, nil)
+
+	return &Workflow{
+		Target:           target,
+		Source:           source,
+		GenVersion:       genVersion,
+		Repo:             repo,
+		RepoSubDirs:      repoSubDirs,
+		InstallationURLs: installationURLs,
+		Debug:            debug,
+		ShouldCompile:    shouldCompile,
+		workflow:         wf,
+		projectDir:       projectDir,
+		RootStep:         rootStep,
+	}, nil
+}
 
 func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
 	wd, err := os.Getwd()
@@ -70,9 +112,9 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 	return sources, targets, nil
 }
 
-func RunWithVisualization(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool) error {
+func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	updatesChannel := make(chan UpdateMsg)
-	workflow := NewWorkflowStep("Workflow", updatesChannel)
+	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
 
 	var logs bytes.Buffer
 	var err, runErr error
@@ -80,11 +122,10 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 
 	runFnCli := func() error {
 		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
-		ctx := context.Background()
-		ctx = log.With(ctx, l)
-		err = Run(ctx, target, source, genVersion, installationURL, repo, repoSubDir, debug, workflow)
+		runCtx := log.With(ctx, l)
+		err = w.Run(runCtx)
 
-		workflow.Finalize(err == nil)
+		w.RootStep.Finalize(err == nil)
 
 		if err != nil {
 			runErr = err
@@ -95,8 +136,10 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 	}
 
 	startTime := time.Now()
-	err = workflow.RunWithVisualization(runFnCli, updatesChannel)
+	err = w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
 	endDuration := time.Since(startTime)
+
+	// Display error logs if the workflow failed
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
@@ -109,14 +152,18 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
 	}
 
+	// Display success message if the workflow succeeded
 	if err == nil && runErr == nil {
-		t, err := getTarget(target)
+		t, err := getTarget(w.Target)
 		if err != nil {
 			return err
 		}
 		tOut := "the current directory"
 		if t.Output != nil && *t.Output != "" && *t.Output != "." {
 			tOut = *t.Output
+		}
+		if w.Target == "all" {
+			tOut = "the paths specified in workflow.yaml"
 		}
 
 		msg := styles.RenderSuccessMessage(
@@ -125,55 +172,58 @@ func RunWithVisualization(ctx context.Context, target, source, genVersion, insta
 			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
 		)
 		logger.Println(msg)
+
+		if !w.hasGenerationAccess {
+			warningDate := time.Date(2024, time.March, 18, 0, 0, 0, 0, time.UTC)
+			daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
+			msg := styles.RenderInfoMessage(
+				"🚀 Time to Upgrade 🚀",
+				"\nYou have exceeded the limit of one free generated SDK.",
+				"Upgrade your account if you intend to generate multiple SDKs!",
+				fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit),
+				"\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team",
+			)
+			logger.Println("\n\n" + msg)
+		}
 	}
 
 	return err
 }
 
-func Run(ctx context.Context, target, source, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
-	if rootStep == nil {
-		rootStep = NewWorkflowStep("ignored", nil)
-	}
-
-	wf, projectDir, err := GetWorkflowAndDir()
-	if err != nil {
-		return err
-	}
-
-	if source != "" && target != "" {
+func (w *Workflow) Run(ctx context.Context) error {
+	if w.Source != "" && w.Target != "" {
 		return fmt.Errorf("cannot specify both a target and a source")
 	}
 
-	if target == "all" {
-		for t := range wf.Targets {
-			err := runTarget(ctx, t, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug, rootStep)
+	if w.Target == "all" {
+		for t := range w.workflow.Targets {
+			err := w.runTarget(ctx, t)
 			if err != nil {
 				return err
 			}
 		}
-	} else if source == "all" {
-		for id, s := range wf.Sources {
-			_, err := runSource(ctx, id, &s, rootStep)
+	} else if w.Source == "all" {
+		for id := range w.workflow.Sources {
+			_, err := w.runSource(ctx, w.RootStep, id)
 			if err != nil {
 				return err
 			}
 		}
-	} else if target != "" {
-		if _, ok := wf.Targets[target]; !ok {
-			return fmt.Errorf("target %s not found", target)
+	} else if w.Target != "" {
+		if _, ok := w.workflow.Targets[w.Target]; !ok {
+			return fmt.Errorf("target %s not found", w.Target)
 		}
 
-		err := runTarget(ctx, target, wf, projectDir, genVersion, installationURL, repo, repoSubDir, debug, rootStep)
+		err := w.runTarget(ctx, w.Target)
 		if err != nil {
 			return err
 		}
-	} else if source != "" {
-		s, ok := wf.Sources[source]
-		if !ok {
-			return fmt.Errorf("source %s not found", source)
+	} else if w.Source != "" {
+		if _, ok := w.workflow.Sources[w.Source]; !ok {
+			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := runSource(ctx, source, &s, rootStep)
+		_, err := w.runSource(ctx, w.RootStep, w.Source)
 		if err != nil {
 			return err
 		}
@@ -191,27 +241,26 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projectDir, genVersion, installationURL, repo, repoSubDir string, debug bool, rootStep *WorkflowStep) error {
-	rootStep = rootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
+func (w *Workflow) runTarget(ctx context.Context, target string) error {
+	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
-	t := wf.Targets[target]
+	t := w.workflow.Targets[target]
 
 	log.From(ctx).Infof("Running target %s (%s)...\n", target, t.Target)
 
-	source, sourcePath, err := wf.GetTargetSource(target)
+	source, sourcePath, err := w.workflow.GetTargetSource(target)
 	if err != nil {
 		return err
 	}
 
 	if source != nil {
-		sourcePath, err = runSource(ctx, t.Source, source, rootStep)
+		sourcePath, err = w.runSource(ctx, rootStep, t.Source)
 
 		if err != nil {
 			return err
 		}
 	} else {
-		rootStep.NewSubstep("Validating document")
-		if err := validateDocument(ctx, sourcePath); err != nil {
+		if err := w.validateDocument(ctx, rootStep, sourcePath); err != nil {
 			return err
 		}
 	}
@@ -220,7 +269,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 	if t.Output != nil {
 		outDir = *t.Output
 	} else {
-		outDir = projectDir
+		outDir = w.projectDir
 	}
 
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
@@ -232,7 +281,7 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 	ctx = log.With(ctx, logger)
 	go genStep.ListenForSubsteps(logListener)
 
-	if err := sdkgen.Generate(
+	hasGenerationAccess, err := sdkgen.Generate(
 		ctx,
 		config.GetCustomerID(),
 		config.GetWorkspaceID(),
@@ -241,18 +290,20 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 		"",
 		"",
 		outDir,
-		genVersion,
-		installationURL,
-		debug,
+		w.GenVersion,
+		w.InstallationURLs[target],
+		w.Debug,
 		true,
 		published,
 		false,
-		repo,
-		repoSubDir,
-		true,
-	); err != nil {
+		w.Repo,
+		w.RepoSubDirs[target],
+		w.ShouldCompile,
+	)
+	if err != nil {
 		return err
 	}
+	w.hasGenerationAccess = hasGenerationAccess
 
 	rootStep.NewSubstep("Cleaning up")
 
@@ -264,8 +315,9 @@ func runTarget(ctx context.Context, target string, wf *workflow.Workflow, projec
 	return nil
 }
 
-func runSource(ctx context.Context, id string, source *workflow.Source, rootStep *WorkflowStep) (string, error) {
-	rootStep = rootStep.NewSubstep(fmt.Sprintf("Source: %s", id))
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string) (string, error) {
+	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
+	source := w.workflow.Sources[id]
 
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
@@ -358,15 +410,34 @@ func runSource(ctx context.Context, id string, source *workflow.Source, rootStep
 		}
 	}
 
-	rootStep.NewSubstep("Validating document")
-
-	if err := validateDocument(ctx, outputLocation); err != nil {
+	if err := w.validateDocument(ctx, rootStep, outputLocation); err != nil {
 		return "", err
 	}
 
 	rootStep.SucceedWorkflow()
 
 	return outputLocation, nil
+}
+
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath string) error {
+	step := parentStep.NewSubstep("Validating document")
+
+	if slices.Contains(w.validatedDocuments, schemaPath) {
+		step.Skip("already validated")
+		return nil
+	}
+
+	limits := &validation.OutputLimits{
+		MaxErrors:   1000,
+		MaxWarns:    1000,
+		OutputHints: false,
+	}
+
+	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits)
+
+	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
+
+	return res
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
@@ -379,7 +450,13 @@ func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	var token, header string
 	if d.Auth != nil {
 		header = d.Auth.Header
-		token = os.Getenv(strings.TrimPrefix(d.Auth.Secret, "$"))
+		envVar := strings.TrimPrefix(d.Auth.Secret, "$")
+
+		// GitHub action secrets are prefixed with INPUT_
+		if env.IsGithubAction() {
+			envVar = "INPUT_" + envVar
+		}
+		token = os.Getenv(envVar)
 	}
 
 	if err := download.DownloadFile(d.Location, outPath, header, token); err != nil {
@@ -426,14 +503,4 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 	log.From(ctx).Successf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
 
 	return nil
-}
-
-func validateDocument(ctx context.Context, schemaPath string) error {
-	limits := &validation.OutputLimits{
-		MaxErrors:   1000,
-		MaxWarns:    1000,
-		OutputHints: false,
-	}
-
-	return validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits)
 }

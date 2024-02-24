@@ -3,10 +3,11 @@ package api
 import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/spf13/cobra"
 )
@@ -43,9 +44,9 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 		APIID:     apiID,
 		VersionID: versionID,
 		RequestBody: operations.RegisterSchemaRequestBody{
-			File: operations.RegisterSchemaRequestBodyFile{
-				Content: data,
-				File:    filepath.Base(schemaPath),
+			File: operations.File{
+				Content:  data,
+				FileName: filepath.Base(schemaPath),
 			},
 		},
 	})
@@ -92,7 +93,7 @@ func getSchemas(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	log.PrintArray(cmd, res.Schemata, map[string]string{
+	log.PrintArray(cmd, res.Classes, map[string]string{
 		"APIID": "ApiID",
 	})
 
@@ -219,7 +220,22 @@ func downloadLatestSchema(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	log.From(ctx).Println(string(res.Schema))
+	if res.TwoHundredApplicationJSONSchema != nil {
+		defer res.TwoHundredApplicationJSONSchema.Close()
+		jsonSchema, err := io.ReadAll(res.TwoHundredApplicationJSONSchema)
+		if err != nil {
+			return err
+		}
+		log.From(ctx).Println(string(jsonSchema))
+	}
+	if res.TwoHundredApplicationXYamlSchema != nil {
+		defer res.TwoHundredApplicationXYamlSchema.Close()
+		yamlSchema, err := io.ReadAll(res.TwoHundredApplicationXYamlSchema)
+		if err != nil {
+			return err
+		}
+		log.From(ctx).Println(string(yamlSchema))
+	}
 
 	return nil
 }
@@ -260,7 +276,22 @@ func downloadSchemaRevision(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	log.From(ctx).Println(string(res.Schema))
+	if res.TwoHundredApplicationJSONSchema != nil {
+		defer res.TwoHundredApplicationJSONSchema.Close()
+		jsonSchema, err := io.ReadAll(res.TwoHundredApplicationJSONSchema)
+		if err != nil {
+			return err
+		}
+		log.From(ctx).Println(string(jsonSchema))
+	}
+	if res.TwoHundredApplicationXYamlSchema != nil {
+		defer res.TwoHundredApplicationXYamlSchema.Close()
+		yamlSchema, err := io.ReadAll(res.TwoHundredApplicationXYamlSchema)
+		if err != nil {
+			return err
+		}
+		log.From(ctx).Println(string(yamlSchema))
+	}
 
 	return nil
 }

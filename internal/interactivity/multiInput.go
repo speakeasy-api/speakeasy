@@ -37,6 +37,7 @@ type MultiInput struct {
 	cursorMode cursor.Mode
 	focusIndex int
 	done       bool
+	signalExit bool
 }
 
 type InputField struct {
@@ -83,6 +84,7 @@ func (m MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
+			m.signalExit = true
 			return m, tea.Quit
 
 		// Set focus to next input
@@ -173,7 +175,11 @@ func (m MultiInput) Validate() bool {
 
 func (m MultiInput) View() string {
 	if m.done {
-		successMessage := fmt.Sprintf("Values for %d fields have been supplied ✔\n", len(m.getFilledValues()))
+		fieldsString := "fields have"
+		if len(m.getFilledValues()) == 1 {
+			fieldsString = "field has"
+		}
+		successMessage := fmt.Sprintf("Values for %d %s been supplied ✔\n", len(m.getFilledValues()), fieldsString)
 		return styles.Success.Copy().
 			Margin(0, 2, 1, 2).
 			Render(successMessage)
@@ -239,6 +245,9 @@ func (m MultiInput) Run() map[string]string {
 	}
 
 	resultingModel := newM.(MultiInput)
+	if resultingModel.signalExit {
+		os.Exit(0)
+	}
 
 	return resultingModel.getFilledValues()
 }
