@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
@@ -11,8 +12,8 @@ import (
 
 var validateCmd = &model.CommandGroup{
 	Usage:          "validate",
-	Short:          "Validate OpenAPI documents + more (coming soon)",
-	Long:           `The "validate" command provides a set of commands for validating OpenAPI docs and more (coming soon).`,
+	Short:          "Validate OpenAPI documents",
+	Long:           `The "validate" command provides a set of commands for validating OpenAPI docs.`,
 	InteractiveMsg: "What do you want to validate?",
 	Commands:       []model.Command{validateOpenapiCmd, validateConfigCmd},
 }

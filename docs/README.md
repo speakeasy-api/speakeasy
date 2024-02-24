@@ -10,8 +10,8 @@ The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php + more coming soon)
 	- Validating OpenAPI specs
 	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic 								(coming soon)
-	- Generating Postman collections from OpenAPI Specs 							(coming soon)
+	- Generating OpenAPI specs from your API traffic
+	- Generating Postman collections from OpenAPI Specs
 
 
 ## Usage

@@ -42,7 +42,7 @@ For upcoming features and bug fixes, check out our [public roadmap](https://gith
 
 The [Speakeasy CLI](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) is a tool for interacting with the Speakeasy platform that brings the functionality of Speakeasy into your development workflow. 
 
-You can run the Speakeasy CLI locally or in your CI/CD pipeline to validate your API specs, generate SDKs, and more. Looking to embed this into your GitHub CI/CD? Check out [these docs](https://speakeasyapi.dev/docs/create-client-sdks/github-setup/) instead. 
+You can run the Speakeasy CLI locally or in your CI/CD pipeline to validate your API specs, generate SDKs, and more. Looking to embed this into your GitHub CI/CD? Check out [these docs](https://speakeasyapi.dev/docs/create-client-sdks/github-setup/) instead.
 
 Here are a few key functions of the CLI:
 

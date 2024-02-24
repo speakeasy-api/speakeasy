@@ -61,13 +61,12 @@ chocolateys:
     tags: openapi api codegen validation speakeasy llm client-libraries sdks
     summary: Speakeasy CLI makes validating API specs and generating idiomatic SDKs easy!
     description: |-
-      This CLI is a tool for interacting with the Speakeasy platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more.
+      This CLI is a tool for interacting with the Speakeasy platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs, terraform providers and docs sites.
 
       Current functions of the CLI include:
 
       Generating idiomatic client SDKs from OpenAPI3.X specs:
-      Live: Go, Python3, Typescript(Node), Java, PHP, Ruby, Terraform
-      Coming soon: Rust, C# and more languages on upon request!
+      Live: Go, Python, Typescript, Java, PHP, Ruby, Csharp, Unity, Swift, and Terraform
       Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages.
       Authenticating with the platform and managing API keys.
     release_notes: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
