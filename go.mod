@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/structs v1.1.0
+	github.com/go-git/go-git/v5 v5.11.0
 	github.com/google/go-github/v52 v52.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
@@ -19,9 +20,9 @@ require (
 	github.com/pb33f/libopenapi v0.15.10
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.263.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.272.7
 	github.com/speakeasy-api/openapi-overlay v0.3.0
-	github.com/speakeasy-api/sdk-gen-config v1.7.2
+	github.com/speakeasy-api/sdk-gen-config v1.7.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.3.3
 	github.com/speakeasy-api/speakeasy-core v0.1.2
 	github.com/speakeasy-api/speakeasy-proxy v0.0.0-20230602101639-c41c44041e5a
@@ -90,7 +91,6 @@ require (
 	github.com/go-chi/chi/v5 v5.0.7 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
-	github.com/go-git/go-git/v5 v5.11.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.0 // indirect

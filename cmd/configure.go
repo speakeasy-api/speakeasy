@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -21,12 +24,18 @@ import (
 	"github.com/speakeasy-api/speakeasy/prompts"
 )
 
+const (
+	appInstallationLink  = "https://github.com/apps/speakeasy-github/installations/new"
+	repositorySecretPath = "Settings > Secrets & Variables > Actions"
+	githubSetupDocs      = "https://www.speakeasyapi.dev/docs/advanced-setup/github-setup"
+)
+
 var configureCmd = &model.CommandGroup{
 	Usage:          "configure",
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           `Configure your Speakeasy SDK Setup.`,
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd},
 }
 
 type ConfigureSourcesFlags struct {
@@ -77,6 +86,24 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 			Description: "configure a new target",
 		},
 	},
+}
+
+type ConfigureGithubFlags struct{}
+
+var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+	Usage:        "github",
+	Short:        "Configure Speakeasy for github.",
+	Long:         "Configure your Speakeasy workflow to generate and publish from your github repo.",
+	Run:          configureGithub,
+	RequiresAuth: true,
+}
+
+var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+	Usage:        "publishing",
+	Short:        "Configure Speakeasy for publishing.",
+	Long:         "Configure your Speakeasy workflow to publish to package managers from your github repo.",
+	Run:          configurePublishing,
+	RequiresAuth: true,
 }
 
 func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
@@ -292,6 +319,181 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	success := styles.Success.Render(fmt.Sprintf("Successfully Configured the Target %s 🎉", targetName))
 	logger := log.From(ctx)
 	logger.PrintfStyled(boxStyle, "%s", success)
+
+	return nil
+}
+
+func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error {
+	logger := log.From(ctx)
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
+
+	workflowFile, _, _ := workflow.Load(workingDir)
+	if workflowFile == nil {
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+	}
+
+	generationWorkflow := &config.GenerateWorkflow{}
+	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
+		return fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
+	}
+
+	var publishingOptions []huh.Option[string]
+	for name, target := range workflowFile.Targets {
+		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
+			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
+		}
+	}
+
+	if len(publishingOptions) == 0 {
+		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
+	}
+
+	chosenTargets, err := prompts.SelectPublishingTargets(publishingOptions)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range chosenTargets {
+		target := workflowFile.Targets[name]
+		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
+		if err != nil {
+			return err
+		}
+		workflowFile.Targets[name] = *modifiedTarget
+	}
+
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml"))
+	if err != nil {
+		return errors.Wrapf(err, "failed to write publishing configs")
+	}
+
+	if err = prompts.WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
+		return errors.Wrapf(err, "failed to write github workflow file")
+	}
+
+	if err := workflow.Save(workingDir, workflowFile); err != nil {
+		return errors.Wrapf(err, "failed to save workflow file")
+	}
+
+	var agenda []string
+	for key := range generationWorkflow.Jobs.Generate.Secrets {
+		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
+			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.MakeBold(strings.ToUpper(key))))
+		}
+	}
+
+	msg := styles.RenderInstructionalMessage("For your publishing setup to be complete perform the following steps.",
+		agenda...)
+	logger.Println(msg)
+
+	return nil
+}
+
+func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	logger := log.From(ctx)
+
+	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
+
+	workflowFile, _, _ := workflow.Load(workingDir)
+	if workflowFile == nil {
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+	}
+
+	generationWorkflow := &config.GenerateWorkflow{}
+	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
+		logger.Println(styles.Info.Render(fmt.Sprintf("Could not read existing workflow file %s", generationWorkflowFilePath)))
+	}
+
+	generationWorkflow, err = prompts.ConfigureGithub(generationWorkflow, workflowFile)
+	if err != nil {
+		return err
+	}
+
+	var publishingOptions []huh.Option[string]
+	for name, target := range workflowFile.Targets {
+		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
+			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
+		}
+	}
+
+	var chosenTargets []string
+	if len(publishingOptions) > 0 {
+		chosenTargets, err = prompts.SelectPublishingTargets(publishingOptions)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, name := range chosenTargets {
+		target := workflowFile.Targets[name]
+		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
+		if err != nil {
+			return err
+		}
+		workflowFile.Targets[name] = *modifiedTarget
+	}
+
+	if _, err := os.Stat(workingDir + "/" + ".github/workflows"); os.IsNotExist(err) {
+		err = os.MkdirAll(workingDir+"/"+".github/workflows", 0o755)
+		if err != nil {
+			return err
+		}
+	}
+
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml"))
+	if err != nil {
+		return errors.Wrapf(err, "failed to write publishing configs")
+	}
+
+	if err = prompts.WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
+		return errors.Wrapf(err, "failed to write github workflow file")
+	}
+
+	if err := workflow.Save(workingDir, workflowFile); err != nil {
+		return errors.Wrapf(err, "failed to save workflow file")
+	}
+
+	var remoteURL string
+	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
+		remoteURL = prompts.ParseGithubRemoteURL(repo)
+	}
+
+	agenda := []string{
+		fmt.Sprintf("• Setup an API Key - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID),
+		fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.MakeBold(strings.ToUpper(config.SpeakeasyApiKey))),
+	}
+
+	for key := range generationWorkflow.Jobs.Generate.Secrets {
+		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
+			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.MakeBold(strings.ToUpper(key))))
+		}
+	}
+
+	if remoteURL != "" {
+		agenda = append(agenda, fmt.Sprintf("• Install the Speakeasy Github App - %s", appInstallationLink))
+	}
+
+	msg := styles.RenderInstructionalMessage("For your github workflow setup to be complete perform the following steps.",
+		agenda...)
+	logger.Println(msg)
+
+	logger.Println(styles.Info.Render("\n\n" + fmt.Sprintf("For more information see - %s", githubSetupDocs)))
 
 	return nil
 }

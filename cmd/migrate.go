@@ -68,7 +68,7 @@ func migrateFunc(ctx context.Context, flags MigrateFlags) error {
 		return err
 	}
 
-	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", flags.Directory), 0755); err != nil {
+	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", flags.Directory), 0755); err != nil && !os.IsExist(err) {
 		return err
 	}
 
@@ -105,7 +105,7 @@ func parseWorkflowFiles(genWorkflow string) (*workflow.Workflow, *config.Generat
 		Permissions: generationWorkflow.Permissions,
 		Jobs: config.Jobs{
 			Generate: config.Job{
-				Uses: "speakeasy-api/sdk-generation-action-v15/.github/workflows/workflow-executor.yaml@v15",
+				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/workflow-executor.yaml@v15",
 				With: map[string]any{
 					"force":             generationWorkflow.Jobs.Generate.With["force"],
 					"speakeasy_version": generationWorkflow.Jobs.Generate.With["speakeasy_version"],
@@ -122,9 +122,19 @@ func parseWorkflowFiles(genWorkflow string) (*workflow.Workflow, *config.Generat
 
 	docLocations := []string{}
 	if docs, ok := generationWorkflow.Jobs.Generate.With["openapi_docs"]; ok {
-		docLocations = append(docLocations, docs.([]string)...)
+		var items []string
+		err := yaml.Unmarshal([]byte(docs.(string)), &items)
+		if err != nil {
+			return nil, nil, fmt.Errorf("openapi_docs must be an array: %d", err)
+		}
+
+		docLocations = append(docLocations, items...)
 	} else if docLocation, ok := generationWorkflow.Jobs.Generate.With["openapi_doc_location"]; ok {
-		docLocations = append(docLocations, docLocation.(string))
+		if docLocationString, ok := docLocation.(string); ok {
+			docLocations = append(docLocations, docLocationString)
+		} else {
+			return nil, nil, fmt.Errorf("openapi_doc_location must be a string")
+		}
 	}
 
 	header := ""
