@@ -122,18 +122,13 @@ func parseWorkflowFiles(genWorkflow string) (*workflow.Workflow, *config.Generat
 
 	docLocations := []string{}
 	if docs, ok := generationWorkflow.Jobs.Generate.With["openapi_docs"]; ok {
-		if docsArray, ok := docs.([]string); ok {
-			docLocations = append(docLocations, docsArray...)
-		} else if docsString, ok := docs.(string); ok {
-			// In this case, `docsString` will look something like | \n - ./openapi/moov.yaml
-			i := strings.IndexRune(docsString, '-')
-			if i != -1 {
-				docsString = strings.TrimSpace(docsString[i+1:])
-			}
-			docLocations = append(docLocations, docsString)
-		} else {
-			return nil, nil, fmt.Errorf("openapi_docs must be a string or an array of strings")
+		var items []string
+		err := yaml.Unmarshal([]byte(docs.(string)), &items)
+		if err != nil {
+			return nil, nil, fmt.Errorf("openapi_docs must be an array: %d", err)
 		}
+
+		docLocations = append(docLocations, items...)
 	} else if docLocation, ok := generationWorkflow.Jobs.Generate.With["openapi_doc_location"]; ok {
 		if docLocationString, ok := docLocation.(string); ok {
 			docLocations = append(docLocations, docLocationString)
