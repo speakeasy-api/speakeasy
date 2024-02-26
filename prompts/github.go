@@ -96,8 +96,8 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	mode := githubWorkflow.Jobs.Generate.With[config.Mode].(string)
 
 	modeOptions := []huh.Option[string]{
-		huh.NewOption(styles.BoldString("pr mode:")+" creates a running PR that you can merge at your convenience [RECOMMENDED]", "pr"),
-		huh.NewOption(styles.BoldString("direct mode:")+" attempts to automatically merge changes into your main branch", "direct"),
+		huh.NewOption(styles.MakeBold("pr mode:")+" creates a running PR that you can merge at your convenience [RECOMMENDED]", "pr"),
+		huh.NewOption(styles.MakeBold("direct mode:")+" attempts to automatically merge changes into your main branch", "direct"),
 	}
 
 	prompt := charm.NewSelectPrompt("What mode would you like to setup for your github workflow?\n", "", modeOptions, &mode)

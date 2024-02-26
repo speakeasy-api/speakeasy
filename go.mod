@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/structs v1.1.0
-	github.com/go-git/go-git/v5 v5.11.1-0.20240108164718-d274f20d9b93
+	github.com/go-git/go-git/v5 v5.11.0
 	github.com/google/go-github/v58 v58.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
@@ -20,7 +20,7 @@ require (
 	github.com/pb33f/libopenapi v0.15.10
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.272.4
+	github.com/speakeasy-api/openapi-generation/v2 v2.272.7
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.3.3

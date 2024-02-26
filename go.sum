@@ -259,8 +259,8 @@ github.com/gin-contrib/sse v0.1.0 h1:Y/yl/+YNO8GZSjAhjMsSuLt29uWRFHdHYUb5lYOV9qE
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=
 github.com/gin-gonic/gin v1.9.1 h1:4idEAncQnU5cB7BeOkPtxjfCSye0AAm1R0RVIqJ+Jmg=
 github.com/gin-gonic/gin v1.9.1/go.mod h1:hPrL7YrpYKXt5YId3A/Tnip5kqbEAP+KLuI3SUcPTeU=
-github.com/gliderlabs/ssh v0.3.6 h1:ZzjlDa05TcFRICb3anf/dSPN3ewz1Zx6CMLPWgkm3b8=
-github.com/gliderlabs/ssh v0.3.6/go.mod h1:zpHEXBstFnQYtGnB8k8kQLol82umzn/2/snG7alWVD8=
+github.com/gliderlabs/ssh v0.3.5 h1:OcaySEmAQJgyYcArR+gGGTHCyE7nvhEMTlYY+Dp8CpY=
+github.com/gliderlabs/ssh v0.3.5/go.mod h1:8XB4KraRrX39qHhT6yxPsHedjA08I/uBVwj4xC+/+z4=
 github.com/go-chi/chi/v5 v5.0.7 h1:rDTPXLDHGATaeHvVlLcR4Qe0zftYethFucbjVQ1PxU8=
 github.com/go-chi/chi/v5 v5.0.7/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 h1:+zs/tPmkDkHx3U66DAb0lQFJrpS6731Oaa12ikc+DiI=
@@ -269,8 +269,8 @@ github.com/go-git/go-billy/v5 v5.5.0 h1:yEY4yhzCDuMGSv83oGxiBotRzhwhNr8VZyphhiu+
 github.com/go-git/go-billy/v5 v5.5.0/go.mod h1:hmexnoNsr2SJU1Ju67OaNz5ASJY3+sHgFRpCtpDCKow=
 github.com/go-git/go-git-fixtures/v4 v4.3.2-0.20231010084843-55a94097c399 h1:eMje31YglSBqCdIqdhKBW8lokaMrL3uTkpGYlE2OOT4=
 github.com/go-git/go-git-fixtures/v4 v4.3.2-0.20231010084843-55a94097c399/go.mod h1:1OCfN199q1Jm3HZlxleg+Dw/mwps2Wbk9frAWm+4FII=
-github.com/go-git/go-git/v5 v5.11.1-0.20240108164718-d274f20d9b93 h1:KvEx1y0CHnQ4XF/ulJTqN5gsdoAN1yU58mJl8OUsjzU=
-github.com/go-git/go-git/v5 v5.11.1-0.20240108164718-d274f20d9b93/go.mod h1:p9571gzeC4WAh+PN+iHJZqOemzIKqsOcJGijUNWpq0g=
+github.com/go-git/go-git/v5 v5.11.0 h1:XIZc1p+8YzypNr34itUfSvYJcv+eYdTnTvOZ2vD3cA4=
+github.com/go-git/go-git/v5 v5.11.0/go.mod h1:6GFcX2P3NM7FPBfpePbpLd21XxsgdAt+lKqXmCUiUCY=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
@@ -615,8 +615,8 @@ github.com/sourcegraph/jsonrpc2 v0.2.0/go.mod h1:ZafdZgk/axhT1cvZAPOhw+95nz2I/Ra
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/speakeasy-api/easytemplate v0.8.2 h1:Votb3gadvJzJQWPecSrLS4jafzBEY+AMV8TkG/KpWJQ=
 github.com/speakeasy-api/easytemplate v0.8.2/go.mod h1:U6wzurClS7ewa+0kvHzFTePeRMDUS5UiM1A2QkgYP8s=
-github.com/speakeasy-api/openapi-generation/v2 v2.272.4 h1:pZrndiq3MsMDf/QEQkTI3XOBTeeU6KoRUvNRmwdkm+Y=
-github.com/speakeasy-api/openapi-generation/v2 v2.272.4/go.mod h1:kdLzM6fuOCEFS5RkDxWqOcoQ61tglx4JYOi+AgrZT0U=
+github.com/speakeasy-api/openapi-generation/v2 v2.272.7 h1:wW2yzHtftg+KYYS4BFAlpiEWxHBXkzqN1MRKAc3ZZGc=
+github.com/speakeasy-api/openapi-generation/v2 v2.272.7/go.mod h1:kdLzM6fuOCEFS5RkDxWqOcoQ61tglx4JYOi+AgrZT0U=
 github.com/speakeasy-api/openapi-overlay v0.3.0 h1:+5hIbDzyO7rD0ix9num8Y0bxbhwzRF28QluZ+dCuugA=
 github.com/speakeasy-api/openapi-overlay v0.3.0/go.mod h1:f5FloQrHA7MsxYg9djzMD5h6dxrHjVVByWKh7an8TRc=
 github.com/speakeasy-api/sdk-gen-config v1.7.3 h1:LgYR44bnl/1z6a3t80YiP1jGAm2szshTgdZkmSGJTFM=

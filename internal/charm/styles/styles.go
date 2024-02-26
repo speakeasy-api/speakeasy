@@ -4,6 +4,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/term"
+	"os"
 )
 
 var (
@@ -51,6 +53,11 @@ var (
 	}
 )
 
+func TerminalWidth() int {
+	termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
+	return termWidth
+}
+
 func LeftBorder(color lipgloss.TerminalColor) lipgloss.Style {
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), false, false, false, true). // Left border only
@@ -72,18 +79,21 @@ func SeverityToStyle(severity errors.Severity) lipgloss.Style {
 }
 
 func RenderSuccessMessage(heading string, additionalLines ...string) string {
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Colors.Green).
-		Padding(0, 1).
-		AlignHorizontal(lipgloss.Center)
-
 	s := Success.Render(utils.CapitalizeFirst(heading))
 	for _, line := range additionalLines {
 		s += "\n" + Dimmed.Render(line)
 	}
 
-	return boxStyle.Render(s)
+	return MakeBoxed(s, Colors.Green)
+}
+
+func RenderInfoMessage(heading string, additionalLines ...string) string {
+	s := lipgloss.NewStyle().Foreground(Colors.Blue).Bold(true).Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Blue).Render(line)
+	}
+
+	return MakeBoxed(s, Colors.Blue)
 }
 
 func RenderInstructionalMessage(heading string, additionalLines ...string) string {
@@ -98,26 +108,25 @@ func RenderInstructionalMessage(heading string, additionalLines ...string) strin
 	return instructionStyle.Render(s)
 }
 
-func BoldString(s string) string {
+func MakeBold(s string) string {
 	return lipgloss.NewStyle().Bold(true).Render(s)
 }
 
-func RenderInfoMessage(heading string, additionalLines ...string) string {
-	boxStyle := lipgloss.NewStyle().
+func MakeBoxed(s string, borderColor lipgloss.AdaptiveColor) string {
+	termWidth := TerminalWidth() - 2     // Leave room for padding (if the terminal is too small to fit, we need to wrap)
+	stringWidth := lipgloss.Width(s) + 2 // Account for padding (on the other hand, if the terminal is wide enough, add back in the space so it doesn't needlessly wrap)
+	w := min(termWidth, stringWidth)
+
+	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Colors.Blue).
+		BorderForeground(borderColor).
 		Padding(0, 1).
-		AlignHorizontal(lipgloss.Center)
-
-	s := lipgloss.NewStyle().Foreground(Colors.Blue).Bold(true).Render(utils.CapitalizeFirst(heading))
-	for _, line := range additionalLines {
-		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Blue).Render(line)
-	}
-
-	return boxStyle.Render(s)
+		AlignHorizontal(lipgloss.Center).
+		Width(w).
+		Render(s)
 }
 
-func KeymapLegend(keys []string, descriptions []string) string {
+func RenderKeymapLegend(keys []string, descriptions []string) string {
 	var s string
 	for i, key := range keys {
 		s += key + " " + Dimmed.Render(descriptions[i]) + "  "
