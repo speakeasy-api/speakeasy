@@ -37,7 +37,7 @@ func suggestInit() {
 	suggestCmd.Flags().IntP("validation-loops", "v", -1, "number of times to run the validation loop, the default is no limit (only used in parallelized implementation)")
 	suggestCmd.Flags().IntP("num-specs", "c", -1, "number of specs to run suggest on, the default is no limit")
 	suggestCmd.Flags().StringP("cache-folder", "", "", "caches computations into a given folder")
-	suggestCmd.Flags().BoolP("example-experiment", "", false, "enables the example experiment for the suggest command, generating an updated document with examples for all primitives.")
+	suggestCmd.Flags().BoolP("examples", "", false, "enables the example generation for the suggest command, generating an updated document with examples for all primitives.")
 	_ = suggestCmd.MarkFlagRequired("schema")
 	rootCmd.AddCommand(suggestCmd)
 }
@@ -150,9 +150,9 @@ func suggestFixesOpenAPI(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if exampleExperiment, _ := cmd.Flags().GetBool("example-experiment"); exampleExperiment {
+	if exampleExperiment, _ := cmd.Flags().GetBool("examples"); exampleExperiment {
 		if len(cacheFolder) == 0 {
-			return goerr.New("cache-folder is required for example-experiment")
+			return goerr.New("cache-folder is required for example generation")
 		}
 		// check its a valid directory
 		// if it doesn't exist, create it
