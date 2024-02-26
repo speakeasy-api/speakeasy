@@ -12,17 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/term"
-
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/download"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
@@ -146,8 +144,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
-		termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(termWidth - 8) // -8 because of padding
+		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(styles.TerminalWidth() - 8) // -8 because of padding
 		logsHeading := styles.Dimmed.Render("Workflow run logs")
 		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
 	}

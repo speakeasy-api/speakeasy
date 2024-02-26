@@ -72,7 +72,7 @@ func (m Model) View() string {
 	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
 	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
 
-	legend := styles.KeymapLegend([]string{"tab/↵", "esc"}, []string{"next", "quit"})
+	legend := styles.RenderKeymapLegend([]string{"tab/↵", "esc"}, []string{"next", "quit"})
 	content := m.form.View() + "\n" + legend + "\n"
 
 	if m.title != "" {

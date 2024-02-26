@@ -74,7 +74,7 @@ func (m ListSelect) View() string {
 	inputs = append(inputs, "↵", "esc")
 	descriptions = append(descriptions, "select", "quit")
 
-	inputLegend := styles.KeymapLegend(inputs, descriptions)
+	inputLegend := styles.RenderKeymapLegend(inputs, descriptions)
 
 	return docStyle.Render(m.list.View() + "\n\n" + inputLegend)
 }

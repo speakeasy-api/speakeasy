@@ -384,7 +384,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	var agenda []string
 	for key := range generationWorkflow.Jobs.Generate.Secrets {
 		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
-			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.BoldString(strings.ToUpper(key))))
+			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
 
@@ -476,12 +476,12 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	agenda := []string{
 		fmt.Sprintf("• Setup an API Key - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID),
-		fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.BoldString(strings.ToUpper(config.SpeakeasyApiKey))),
+		fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.MakeBold(strings.ToUpper(config.SpeakeasyApiKey))),
 	}
 
 	for key := range generationWorkflow.Jobs.Generate.Secrets {
 		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
-			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.BoldString(strings.ToUpper(key))))
+			agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the repository secret %s", repositorySecretPath, styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
 
