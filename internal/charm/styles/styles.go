@@ -1,11 +1,12 @@
 package styles
 
 import (
+	"os"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/term"
-	"os"
 )
 
 var (
@@ -84,7 +85,7 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 		s += "\n" + Dimmed.Render(line)
 	}
 
-	return MakeBoxed(s, Colors.Green)
+	return MakeBoxed(s, Colors.Green, lipgloss.Center)
 }
 
 func RenderInfoMessage(heading string, additionalLines ...string) string {
@@ -93,26 +94,23 @@ func RenderInfoMessage(heading string, additionalLines ...string) string {
 		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Blue).Render(line)
 	}
 
-	return MakeBoxed(s, Colors.Blue)
+	return MakeBoxed(s, Colors.Blue, lipgloss.Center)
 }
 
 func RenderInstructionalMessage(heading string, additionalLines ...string) string {
-	instructionStyle := lipgloss.NewStyle().
-		AlignHorizontal(lipgloss.Left)
-
 	s := Info.Render(utils.CapitalizeFirst(heading + "\n"))
 	for _, line := range additionalLines {
 		s += "\n\n" + Info.Render(line)
 	}
 
-	return instructionStyle.Render(s)
+	return MakeBoxed(s, Colors.Blue, lipgloss.Left)
 }
 
 func MakeBold(s string) string {
 	return lipgloss.NewStyle().Bold(true).Render(s)
 }
 
-func MakeBoxed(s string, borderColor lipgloss.AdaptiveColor) string {
+func MakeBoxed(s string, borderColor lipgloss.AdaptiveColor, alignment lipgloss.Position) string {
 	termWidth := TerminalWidth() - 2     // Leave room for padding (if the terminal is too small to fit, we need to wrap)
 	stringWidth := lipgloss.Width(s) + 2 // Account for padding (on the other hand, if the terminal is wide enough, add back in the space so it doesn't needlessly wrap)
 	w := min(termWidth, stringWidth)
@@ -121,7 +119,7 @@ func MakeBoxed(s string, borderColor lipgloss.AdaptiveColor) string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
 		Padding(0, 1).
-		AlignHorizontal(lipgloss.Center).
+		AlignHorizontal(alignment).
 		Width(w).
 		Render(s)
 }

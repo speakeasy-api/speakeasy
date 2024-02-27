@@ -275,13 +275,15 @@ func ParseGithubRemoteURL(repo *git.Repository) string {
 	}
 
 	for _, url := range remoteCfg.URLs {
-		if strings.Contains(url, "https://github.com") {
-			return url
+		if strings.Contains(url, "git@github.com") {
+			url = strings.Replace(url, "git@github.com:", "https://github.com/", 1)
 		}
 
-		if strings.Contains(url, "git@github.com") {
-			return strings.Replace(url, "git@github.com:", "https://github.com/", 1)
+		if strings.HasSuffix(url, ".git") {
+			url = url[:len(url)-4]
 		}
+
+		return url
 	}
 
 	return ""
