@@ -2,8 +2,10 @@ package sdk
 
 import (
 	"errors"
-	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"os"
+
+	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
 )
@@ -17,7 +19,7 @@ func InitSDK(apiKey string) (*speakeasy.Speakeasy, error) {
 	}
 
 	opts := []speakeasy.SDKOption{
-		speakeasy.WithSecurity(apiKey),
+		speakeasy.WithSecurity(shared.Security{APIKey: &apiKey}),
 	}
 
 	serverURL := os.Getenv("SPEAKEASY_SERVER_URL")

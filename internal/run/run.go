@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"math"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -35,11 +36,11 @@ type Workflow struct {
 	Debug            bool
 	ShouldCompile    bool
 
-	RootStep            *WorkflowStep
-	workflow            *workflow.Workflow
-	projectDir          string
-	validatedDocuments  []string
-	hasGenerationAccess bool
+	RootStep           *WorkflowStep
+	workflow           *workflow.Workflow
+	projectDir         string
+	validatedDocuments []string
+	generationAccess   *sdkgen.GenerationAccess
 }
 
 func NewWorkflow(name, target, source, genVersion, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
@@ -170,13 +171,12 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		)
 		logger.Println(msg)
 
-		if !w.hasGenerationAccess {
+		if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
 			warningDate := time.Date(2024, time.March, 18, 0, 0, 0, 0, time.UTC)
 			daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
 			msg := styles.RenderInfoMessage(
-				"🚀 Time to Upgrade 🚀",
-				"\nYou have exceeded the limit of one free generated SDK.",
-				"Upgrade your account if you intend to generate multiple SDKs!",
+				"🚀 Time to Upgrade 🚀\n",
+				w.generationAccess.Message,
 				fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit),
 				"\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team",
 			)
@@ -278,7 +278,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	ctx = log.With(ctx, logger)
 	go genStep.ListenForSubsteps(logListener)
 
-	hasGenerationAccess, err := sdkgen.Generate(
+	generationAccess, err := sdkgen.Generate(
 		ctx,
 		config.GetCustomerID(),
 		config.GetWorkspaceID(),
@@ -300,7 +300,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	if err != nil {
 		return err
 	}
-	w.hasGenerationAccess = hasGenerationAccess
+	w.generationAccess = generationAccess
 
 	rootStep.NewSubstep("Cleaning up")
 
