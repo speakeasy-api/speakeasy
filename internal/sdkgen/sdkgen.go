@@ -130,11 +130,13 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	if !generationAccess {
 		warningDate := time.Date(2024, time.March, 18, 0, 0, 0, 0, time.UTC)
 		daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
+		additionalLines := strings.Split(message, "\n")
+		additionalLines = append(additionalLines, fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit))
+		additionalLines = append(additionalLines, "\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team")
+
 		msg := styles.RenderInfoMessage(
 			"🚀 Time to Upgrade 🚀\n",
-			message,
-			fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit),
-			"\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team",
+			additionalLines...,
 		)
 		logger.Println("\n\n" + msg)
 	}
