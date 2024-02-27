@@ -633,7 +633,7 @@ github.com/speakeasy-api/speakeasy-schemas v1.3.0 h1:7Arm2d0/K9owEBQPmNon1KPERmf
 github.com/speakeasy-api/speakeasy-schemas v1.3.0/go.mod h1:g6NfrOjYLCJZp81ZLY2ksF7afC9BW9bL4Bg1V1oAFlw=
 github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1 h1:rlvHm0OitAExc8z9MOZDGtTcOqxbWuEcmVaKbxvW7BU=
 github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1/go.mod h1:UVQdxUkPRXaYgE1R9AMAwhzbXoWQ3mnPNfMOxrC5O0w=
-github.com/spfz13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
+github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
 github.com/spf13/afero v1.11.0/go.mod h1:GH9Y3pIexgf1MTIWtNGyogA5MwRIDXGUr+hbWNoBjkY=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.6.0 h1:GEiTHELF+vaR5dhz3VqZfFSzZjYbgeKDpBxQVS4GYJ0=
