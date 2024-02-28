@@ -274,12 +274,10 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 }
 
 func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, error) {
-	publishingTargets := 0
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	for _, target := range workflowFile.Targets {
 		if target.Publishing != nil {
-			publishingTargets += 1
 			for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
 				secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 			}
@@ -300,11 +298,6 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		if err := readPublishingFile(publishingFile, filePath); err != nil {
 			publishingFile = defaultPublishingFile()
 		}
-		releasePath := "RELEASES.md"
-		if publishingTargets > 1 {
-			releasePath = "*/RELEASES.md"
-		}
-		publishingFile.On.Push.Paths = []string{releasePath}
 
 		// Write a github publishing file.
 		var publishingWorkflowBuf bytes.Buffer
@@ -419,7 +412,10 @@ func defaultPublishingFile() *config.PublishWorkflow {
 		Name: "Publish",
 		On: config.PublishOn{
 			Push: config.Push{
-				Paths: []string{},
+				Paths: []string{
+					"RELEASES.md",
+					"*/RELEASES.md",
+				},
 				Branches: []string{
 					"main",
 				},
