@@ -85,7 +85,11 @@ func Migrate(ctx context.Context, directory string) error {
 
 	// Special case: pull use_sonatype_central from the publishing workflow
 	if strings.Contains(currentPubWorkflow, "use_sonatype_central: true") {
-		workflow.Targets["java"].Publishing.Java.UseSonatypeLegacy = false
+		for _, target := range workflow.Targets {
+			if target.Target == "java" {
+				target.Publishing.Java.UseSonatypeLegacy = true
+			}
+		}
 	}
 
 	workflowYaml, err := yaml.Marshal(workflow)
