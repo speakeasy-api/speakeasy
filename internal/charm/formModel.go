@@ -1,8 +1,6 @@
 package charm
 
 import (
-	"os"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
@@ -10,16 +8,17 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
-type Model struct {
+type FormModel struct {
 	title       string
 	description string
 	form        *huh.Form // huh.Form is just a tea.Model
+	signalExit  bool
 }
 
-func NewForm(form *huh.Form, args ...string) Model {
+func NewForm(form *huh.Form, args ...string) FormModel {
 	keyMap := huh.NewDefaultKeyMap()
 	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab", "right"), key.WithHelp("tab", "complete"), key.WithHelp("right", "complete"))
-	model := Model{
+	model := FormModel{
 		form: form.WithTheme(formTheme).WithKeyMap(keyMap).WithShowHelp(false),
 	}
 
@@ -33,19 +32,11 @@ func NewForm(form *huh.Form, args ...string) Model {
 	return model
 }
 
-func (m Model) Init() tea.Cmd {
+func (m FormModel) Init() tea.Cmd {
 	return m.form.Init()
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "ctrl+c":
-			os.Exit(0)
-		}
-	}
-
+func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	// Process the form
@@ -63,14 +54,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m FormModel) HandleKeypress(key string) tea.Cmd {
+	return nil
+}
+
+// SetWidth Not yet implemented.
+func (m FormModel) SetWidth(width int) {}
+
+func (m FormModel) View() string {
 	if m.form.State == huh.StateCompleted {
 		return ""
 	}
 	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
 	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
 
-	legend := styles.KeymapLegend([]string{"tab/↵", "esc"}, []string{"next", "quit"})
+	legend := styles.RenderKeymapLegend([]string{"tab/↵", "esc"}, []string{"next", "quit"})
 	content := m.form.View() + "\n" + legend + "\n"
 
 	if m.title != "" {
@@ -82,4 +80,13 @@ func (m Model) View() string {
 	}
 
 	return content
+}
+
+func (m FormModel) ExecuteForm(opts ...tea.ProgramOption) (tea.Model, error) {
+	mResult, err := RunModel(m, opts...)
+	if err != nil {
+		return mResult, err
+	}
+
+	return mResult, nil
 }

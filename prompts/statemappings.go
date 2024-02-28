@@ -13,7 +13,6 @@ type (
 type Quickstart struct {
 	WorkflowFile    *workflow.Workflow
 	LanguageConfigs map[string]*config.Configuration
-	GithubWorkflow  *config.GenerateWorkflow
 	Defaults        Defaults
 }
 
@@ -28,13 +27,11 @@ const (
 	SourceBase
 	TargetBase
 	ConfigBase
-	GithubWorkflowBase
 )
 
 // TODO: Add Github Configuration Next
 var StateMapping map[QuickstartState]formFunction = map[QuickstartState]formFunction{
-	SourceBase:         sourceBaseForm,
-	TargetBase:         targetBaseForm,
-	ConfigBase:         configBaseForm,
-	GithubWorkflowBase: githubWorkflowBaseForm,
+	SourceBase: sourceBaseForm,
+	TargetBase: targetBaseForm,
+	ConfigBase: configBaseForm,
 }

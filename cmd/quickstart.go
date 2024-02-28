@@ -1,15 +1,14 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"os"
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+
 	"github.com/charmbracelet/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
@@ -20,7 +19,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
-	"gopkg.in/yaml.v3"
 )
 
 type QuickstartFlags struct {
@@ -129,7 +127,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if (isUncleanDir && outDir == workingDir) || (targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider")) {
-		promptedDir := "."
+		promptedDir, _ := filepath.Abs(workingDir)
 		if outDir != workingDir {
 			promptedDir = outDir
 		}
@@ -138,7 +136,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
 		}
 
-		if _, err := tea.NewProgram(charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
 			Title("What directory should quickstart files be written too?").
 			Description(description+"\n").
 			Validate(func(s string) error {
@@ -150,11 +148,18 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 				return nil
 			}).
 			Inline(false).Prompt("").Value(&promptedDir))),
-			"Let's pick an output directory for your newly created files.")).
-			Run(); err != nil {
+			"Let's pick an output directory for your newly created files.").
+			ExecuteForm(); err != nil {
 			return err
 		}
-		outDir = filepath.Join(workingDir, promptedDir)
+		if !filepath.IsAbs(promptedDir) {
+			promptedDir = filepath.Join(workingDir, promptedDir)
+		}
+
+		outDir, err = filepath.Abs(promptedDir)
+		if err != nil {
+			return err
+		}
 	}
 
 	var resolvedSchema string
@@ -164,13 +169,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		resolvedSchema = source.Inputs[0].Location
 	}
 
-	absoluteOurDir, err := filepath.Abs(outDir)
-	if err != nil {
-		return err
-	}
-
 	// If we are referencing a local schema, set a relative path for the new out directory
-	if _, err := os.Stat(resolvedSchema); err == nil && absoluteOurDir != workingDir {
+	if _, err := os.Stat(resolvedSchema); err == nil && outDir != workingDir {
 		absSchemaPath, err := filepath.Abs(resolvedSchema)
 		if err != nil {
 			return err
@@ -199,25 +199,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if err := config.SaveConfig(outDir, outConfig); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
 		}
-	}
-
-	// Write a github workflow file.
-	var genWorkflowBuf bytes.Buffer
-	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
-	yamlEncoder.SetIndent(2)
-	if err := yamlEncoder.Encode(quickstartObj.GithubWorkflow); err != nil {
-		return errors.Wrapf(err, "failed to encode workflow file")
-	}
-
-	if _, err := os.Stat(outDir + "/" + ".github/workflows"); os.IsNotExist(err) {
-		err = os.MkdirAll(outDir+"/"+".github/workflows", 0o755)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err = os.WriteFile(outDir+"/"+".github/workflows/speakeasy_sdk_generation.yaml", genWorkflowBuf.Bytes(), 0o644); err != nil {
-		return errors.Wrapf(err, "failed to write github workflow file")
 	}
 
 	var initialTarget string

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -123,11 +122,11 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	if !isQuickstart {
 		descriptionMessage = "Default config values have been provided. You only need to edit values that you want to modify."
 	}
-	if _, err := tea.NewProgram(charm.NewForm(form,
+	if _, err := charm.NewForm(form,
 		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
 		"This will configure a config file that defines parameters for how your SDK is generated. \n"+
-			descriptionMessage)).
-		Run(); err != nil {
+			descriptionMessage).
+		ExecuteForm(); err != nil {
 		return nil, err
 	}
 
@@ -152,7 +151,7 @@ func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		quickstart.LanguageConfigs[key] = output
 	}
 
-	var nextState QuickstartState = GithubWorkflowBase
+	var nextState QuickstartState = Complete
 	return &nextState, nil
 }
 
