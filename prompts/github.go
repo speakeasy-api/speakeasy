@@ -298,6 +298,10 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			publishingFile = defaultPublishingFile()
 		}
 
+		for name, value := range secrets {
+			publishingFile.Jobs.Publish.Secrets[name] = value
+		}
+
 		// Write a github publishing file.
 		var publishingWorkflowBuf bytes.Buffer
 		yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
