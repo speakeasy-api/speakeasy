@@ -299,13 +299,15 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			publishingFile = defaultPublishingFile()
 		}
 
+		publishingFile.On.Push.Paths = []string{}
 		for _, target := range workflowFile.Targets {
 			if target.Publishing != nil {
+				releasePath := "RELEASES.md"
 				if target.Output != nil {
-					publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *target.Output)}
-				} else {
-					publishingFile.On.Push.Paths = []string{"RELEASES.md"}
+					releasePath = fmt.Sprintf("%s/RELEASES.md", *target.Output)
 				}
+
+				publishingFile.On.Push.Paths = append(publishingFile.On.Push.Paths, releasePath)
 			}
 		}
 
@@ -422,9 +424,7 @@ func defaultPublishingFile() *config.PublishWorkflow {
 		Name: "Publish",
 		On: config.PublishOn{
 			Push: config.Push{
-				Paths: []string{
-					"RELEASES.md",
-				},
+				Paths: []string{},
 				Branches: []string{
 					"main",
 				},
