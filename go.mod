@@ -22,7 +22,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.272.7
 	github.com/speakeasy-api/openapi-overlay v0.3.0
-	github.com/speakeasy-api/sdk-gen-config v1.7.3
+	github.com/speakeasy-api/sdk-gen-config v1.7.5
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.3.10
 	github.com/speakeasy-api/speakeasy-core v0.1.4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
