@@ -334,11 +334,18 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
 			yamlEncoder.SetIndent(2)
 			if err := yamlEncoder.Encode(publishingFile); err != nil {
-				return nil, errors.Wrapf(err, "failed to encode workflow file")
+				return genWorkflow, errors.Wrapf(err, "failed to encode workflow file")
+			}
+
+			if _, err := os.Stat(strings.Replace(filePath, "/sdk_publish.yaml", "", -1)); os.IsNotExist(err) {
+				err = os.MkdirAll(strings.Replace(filePath, "/sdk_publish.yaml", "", -1), 0o755)
+				if err != nil {
+					return genWorkflow, err
+				}
 			}
 
 			if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
-				return nil, errors.Wrapf(err, "failed to write github publishing file")
+				return genWorkflow, errors.Wrapf(err, "failed to write github publishing file")
 			}
 		}
 
