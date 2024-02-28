@@ -368,7 +368,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		workflowFile.Targets[name] = *modifiedTarget
 	}
 
-	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml"))
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write publishing configs")
 	}
@@ -472,7 +472,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml"))
+	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write publishing configs")
 	}
