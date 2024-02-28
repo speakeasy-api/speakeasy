@@ -83,6 +83,11 @@ func Migrate(ctx context.Context, directory string) error {
 		return err
 	}
 
+	// Special case: pull use_sonatype_central from the publishing workflow
+	if strings.Contains(currentPubWorkflow, "use_sonatype_central: true") {
+		workflow.Targets["java"].Publishing.Java.UseSonatypeLegacy = false
+	}
+
 	workflowYaml, err := yaml.Marshal(workflow)
 	if err != nil {
 		return err
@@ -334,10 +339,11 @@ func getPublishing(genWorkflow config.GenerateWorkflow, lang string) *workflow.P
 		case "java":
 			return &workflow.Publishing{
 				Java: &workflow.Java{
-					OSSRHUsername: "$OSSRH_USERNAME",
-					OSSHRPassword: "$OSSRH_PASSWORD",
-					GPGSecretKey:  "$JAVA_GPG_SECRET_KEY",
-					GPGPassPhrase: "$JAVA_GPG_PASSPHRASE",
+					OSSRHUsername:     "$OSSRH_USERNAME",
+					OSSHRPassword:     "$OSSRH_PASSWORD",
+					GPGSecretKey:      "$JAVA_GPG_SECRET_KEY",
+					GPGPassPhrase:     "$JAVA_GPG_PASSPHRASE",
+					UseSonatypeLegacy: true, // Default to true for backwards compatibility
 				},
 			}
 		case "ruby":
