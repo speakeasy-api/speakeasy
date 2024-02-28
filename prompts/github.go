@@ -292,61 +292,33 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if mode == "pr" {
-		publishingTargets := make(map[string]workflow.Target)
-		publishingFilePaths := make(map[string]string)
-		for name, target := range workflowFile.Targets {
+
+		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
+		publishingFile := &config.PublishWorkflow{}
+		if err := readPublishingFile(publishingFile, filePath); err != nil {
+			publishingFile = defaultPublishingFile()
+		}
+
+		for _, target := range workflowFile.Targets {
 			if target.Publishing != nil {
-				publishingTargets[name] = target
+				if target.Output != nil {
+					publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *target.Output)}
+				} else {
+					publishingFile.On.Push.Paths = []string{"RELEASES.md"}
+				}
 			}
 		}
 
-		for name := range publishingTargets {
-			if len(publishingTargets) == 1 {
-				publishingFilePaths[name] = filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
-			} else {
-				publishingFilePaths[name] = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_publish.yaml", name))
-			}
+		// Write a github publishing file.
+		var publishingWorkflowBuf bytes.Buffer
+		yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
+		yamlEncoder.SetIndent(2)
+		if err := yamlEncoder.Encode(publishingFile); err != nil {
+			return genWorkflow, errors.Wrapf(err, "failed to encode workflow file")
 		}
 
-		for name, target := range publishingTargets {
-			filePath := publishingFilePaths[name]
-			publishingFile := &config.PublishWorkflow{}
-			if err := readPublishingFile(publishingFile, filePath); err != nil {
-				actionName := "Publish"
-				if len(publishingTargets) > 1 {
-					actionName += " " + name
-				}
-				publishingFile = defaultPublishingFile(actionName)
-			}
-
-			if target.Output != nil {
-				publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *target.Output)}
-			}
-
-			publishingFile.Jobs.Publish.With[fmt.Sprintf("publish_%s", target.Target)] = true
-			publishingFile.Jobs.Publish.Secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
-			for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
-				publishingFile.Jobs.Publish.Secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
-			}
-
-			// Write a github publishing file.
-			var publishingWorkflowBuf bytes.Buffer
-			yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
-			yamlEncoder.SetIndent(2)
-			if err := yamlEncoder.Encode(publishingFile); err != nil {
-				return genWorkflow, errors.Wrapf(err, "failed to encode workflow file")
-			}
-
-			if _, err := os.Stat(strings.Replace(filePath, "/sdk_publish.yaml", "", -1)); os.IsNotExist(err) {
-				err = os.MkdirAll(strings.Replace(filePath, "/sdk_publish.yaml", "", -1), 0o755)
-				if err != nil {
-					return genWorkflow, err
-				}
-			}
-
-			if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
-				return genWorkflow, errors.Wrapf(err, "failed to write github publishing file")
-			}
+		if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
+			return genWorkflow, errors.Wrapf(err, "failed to write github publishing file")
 		}
 
 	}
@@ -445,9 +417,9 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 	}
 }
 
-func defaultPublishingFile(name string) *config.PublishWorkflow {
+func defaultPublishingFile() *config.PublishWorkflow {
 	return &config.PublishWorkflow{
-		Name: name,
+		Name: "Publish",
 		On: config.PublishOn{
 			Push: config.Push{
 				Paths: []string{
