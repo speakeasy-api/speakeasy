@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -172,15 +171,9 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		logger.Println(msg)
 
 		if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
-			warningDate := time.Date(2024, time.March, 18, 0, 0, 0, 0, time.UTC)
-			daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
-			additionalLines := strings.Split(w.generationAccess.Message, "\n")
-			additionalLines = append(additionalLines, fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit))
-			additionalLines = append(additionalLines, "\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team")
-
 			msg := styles.RenderInfoMessage(
 				"🚀 Time to Upgrade 🚀\n",
-				additionalLines...,
+				strings.Split(w.generationAccess.Message, "\n")...,
 			)
 			logger.Println("\n\n" + msg)
 		}

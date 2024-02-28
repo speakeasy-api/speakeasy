@@ -3,11 +3,9 @@ package sdkgen
 import (
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -128,15 +126,9 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	if !generationAccess {
-		warningDate := time.Date(2024, time.March, 18, 0, 0, 0, 0, time.UTC)
-		daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
-		additionalLines := strings.Split(message, "\n")
-		additionalLines = append(additionalLines, fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit))
-		additionalLines = append(additionalLines, "\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team")
-
 		msg := styles.RenderInfoMessage(
 			"🚀 Time to Upgrade 🚀\n",
-			additionalLines...,
+			strings.Split(message, "\n")...,
 		)
 		logger.Println("\n\n" + msg)
 	}
