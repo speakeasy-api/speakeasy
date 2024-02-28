@@ -3,11 +3,9 @@ package sdkgen
 import (
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -23,15 +21,21 @@ import (
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile bool) (bool, error) {
+type GenerationAccess struct {
+	AccessAllowed bool
+	Message       string
+}
+
+func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, genVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile bool) (*GenerationAccess, error) {
 	if !generate.CheckLanguageSupported(lang) {
-		return false, fmt.Errorf("language not supported: %s", lang)
+		return nil, fmt.Errorf("language not supported: %s", lang)
 	}
 
 	ctx = events.SetTargetInContext(ctx, outDir)
 
-	generationAccess, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
-		GenLockID: getGenLockID(outDir),
+	generationAccess, message, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
+		GenLockID:  getGenLockID(outDir),
+		TargetType: &lang,
 	})
 
 	logger := log.From(ctx).WithAssociatedFile(schemaPath)
@@ -41,7 +45,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	if strings.TrimSpace(outDir) == "." {
 		wd, err := os.Getwd()
 		if err != nil {
-			return generationAccess, fmt.Errorf("failed to get current working directory: %w", err)
+			return &GenerationAccess{
+				AccessAllowed: generationAccess,
+				Message:       message,
+			}, fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
 		outDir = wd
@@ -49,7 +56,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
-		return generationAccess, fmt.Errorf("failed to get schema contents: %w", err)
+		return &GenerationAccess{
+			AccessAllowed: generationAccess,
+			Message:       message,
+		}, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
 	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
@@ -87,7 +97,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	g, err := generate.New(opts...)
 	if err != nil {
-		return generationAccess, err
+		return &GenerationAccess{
+			AccessAllowed: generationAccess,
+			Message:       message,
+		}, err
 	}
 
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
@@ -101,7 +114,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return nil
 	})
 	if err != nil {
-		return generationAccess, err
+		return &GenerationAccess{
+			AccessAllowed: generationAccess,
+			Message:       message,
+		}, err
 	}
 
 	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"
@@ -110,19 +126,17 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	if !generationAccess {
-		warningDate := time.Date(2024, time.March, 18, 0, 0, 0, 0, time.UTC)
-		daysToLimit := int(math.Round(warningDate.Sub(time.Now().Truncate(24*time.Hour)).Hours() / 24))
 		msg := styles.RenderInfoMessage(
-			"🚀 Time to Upgrade 🚀",
-			"\nYou have exceeded the limit of one free generated SDK.",
-			"Upgrade your account if you intend to generate multiple SDKs!",
-			fmt.Sprintf("Please reach out to the Speakeasy team in the next %d days to ensure continued access.", daysToLimit),
-			"\nhttps://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team",
+			"🚀 Time to Upgrade 🚀\n",
+			strings.Split(message, "\n")...,
 		)
 		logger.Println("\n\n" + msg)
 	}
 
-	return generationAccess, nil
+	return &GenerationAccess{
+		AccessAllowed: generationAccess,
+		Message:       message,
+	}, nil
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {
