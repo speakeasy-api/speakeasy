@@ -6,7 +6,10 @@ import (
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -192,7 +195,9 @@ func buildGenerationWorkflowFiles(genWorkflow string) (*workflow.Workflow, *conf
 
 	targets := map[string]workflow.Target{}
 	for lang, output := range langToOutput {
-		targets[fmt.Sprintf("%s-target", lang)] = workflow.Target{
+		name := promptForTargetName(lang, maps.Keys(targets))
+
+		targets[name] = workflow.Target{
 			Source:     defaultSourceName,
 			Target:     lang,
 			Output:     output,
@@ -207,6 +212,22 @@ func buildGenerationWorkflowFiles(genWorkflow string) (*workflow.Workflow, *conf
 	}
 
 	return workflowFile, newGenWorkflow, nil
+}
+
+func promptForTargetName(lang string, existingNames []string) string {
+	validateUnique := func(input string) error {
+		if slices.Contains(existingNames, input) {
+			return fmt.Errorf("target name must be unique within this workflow")
+		}
+		return nil
+	}
+
+	form := interactivity.NewSimpleInput(interactivity.InputField{
+		Name:        fmt.Sprintf("Choose a name to identify your %s generation target", lang),
+		Placeholder: fmt.Sprintf("My %s Target", utils.CapitalizeFirst(lang)),
+	}, validateUnique)
+
+	return form.Run()
 }
 
 func buildNewPublishingWorkflow(pubWorkflow string) (*config.PublishWorkflow, error) {
