@@ -93,7 +93,7 @@ func GetMissingFlags(cmd *cobra.Command) error {
 		if len(modifiedFlags) > 0 {
 			flagString := ""
 			for _, flag := range getSetFlags(cmd.Flags()) {
-				flagString += fmt.Sprintf(" --%s=%s", flag.Name, flag.Value)
+				flagString += fmt.Sprintf(" --%s=%s", flag.Name, flag.Value.String())
 			}
 
 			running := styles.DimmedItalic.Render("Running command")

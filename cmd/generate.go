@@ -154,6 +154,7 @@ type GenerateUsageSnippetFlags struct {
 	Namespace  string `json:"namespace"`
 	Out        string `json:"out"`
 	ConfigPath string `json:"config-path"`
+	All        bool   `json:"all"`
 }
 
 var genUsageSnippetCmd = &model.ExecutableCommand[GenerateUsageSnippetFlags]{
@@ -188,6 +189,11 @@ You can also select to write to a file or write to a formatted output directory.
 			Name:        "namespace",
 			Shorthand:   "n",
 			Description: "The namespace to generate multiple usage snippets for. This could correspond to a tag or a x-speakeasy-group-name in your OpenAPI spec.",
+		},
+		flag.BooleanFlag{
+			Name:        "all",
+			Shorthand:   "a",
+			Description: "Generate usage snippets for all operations. Overrides operation-id and namespace flags.",
 		},
 		flag.StringFlag{
 			Name:      "out",
@@ -346,6 +352,8 @@ func genUsageSnippets(ctx context.Context, flags GenerateUsageSnippetFlags) erro
 		flags.Operation,
 		flags.Namespace,
 		flags.ConfigPath,
+		flags.All,
+		nil,
 	); err != nil {
 		rootCmd.SilenceUsage = true
 

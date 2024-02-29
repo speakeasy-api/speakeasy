@@ -21,7 +21,7 @@ var (
 var overlayCmd = &model.CommandGroup{
 	Usage:    "overlay",
 	Short:    "Work with OpenAPI Overlays",
-	Commands: []model.Command{overlayCompareCmd, overlayValidateCmd, overlayApplyCmd},
+	Commands: []model.Command{overlayCompareCmd, overlayValidateCmd, overlayApplyCmd, overlayCodeSamplesCmd},
 }
 
 type overlayValidateFlags struct {
@@ -77,6 +77,45 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 	},
 }
 
+type overlayCodeSamplesFlags struct {
+	Schema     string   `json:"schema"`
+	Header     string   `json:"header"`
+	Token      string   `json:"token"`
+	Langs      []string `json:"langs"`
+	ConfigPath string   `json:"config-path"`
+	Out        string   `json:"out"`
+}
+
+var overlayCodeSamplesCmd = &model.ExecutableCommand[overlayCodeSamplesFlags]{
+	Usage: "codeSamples",
+	Short: "Creates an overlay for a given spec containing x-codeSamples extensions for the given languages.",
+	Run:   runCodeSamples,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "schema",
+			Shorthand:   "s",
+			Description: "the schema to generate code samples for",
+			Required:    true,
+		},
+		headerFlag,
+		tokenFlag,
+		flag.StringSliceFlag{
+			Name:        "langs",
+			Shorthand:   "l",
+			Description: "the languages to generate code samples for",
+			Required:    true,
+		},
+		flag.StringFlag{
+			Name:        "config-path",
+			Description: "the path to the directory containing the gen.yaml file(s) to use",
+		},
+		flag.StringFlag{
+			Name:        "out",
+			Description: "write directly to a file instead of stdout",
+		},
+	},
+}
+
 func runValidateOverlay(ctx context.Context, flags overlayValidateFlags) error {
 	if err := overlay.Validate(flags.Overlay); err != nil {
 		return err
@@ -100,6 +139,10 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		defer file.Close()
 		out = file
 	}
-	
+
 	return overlay.Apply(flags.Schema, flags.Overlay, out)
+}
+
+func runCodeSamples(ctx context.Context, flags overlayCodeSamplesFlags) error {
+	return overlay.CodeSamples(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs)
 }
