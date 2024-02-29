@@ -37,58 +37,20 @@ var SupportedPublishingTargets = []string{
 
 func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow) (*config.GenerateWorkflow, error) {
 	if githubWorkflow == nil || githubWorkflow.Jobs.Generate.Uses == "" {
-		secrets := make(map[string]string)
-		secrets[config.GithubAccessToken] = formatSecretName(defaultGithubTokenSecretName)
-		secrets[config.SpeakeasyApiKey] = formatSecretName(defaultSpeakeasyAPIKeySecretName)
-		githubWorkflow = &config.GenerateWorkflow{
-			Name: "Generate",
-			On: config.GenerateOn{
-				WorkflowDispatch: config.WorkflowDispatch{
-					Inputs: config.Inputs{
-						Force: config.Force{
-							Description: "Force generation of SDKs",
-							Type:        "boolean",
-							Default:     false,
-						},
-					},
-				},
-				Schedule: []config.Schedule{
-					{
-						Cron: "0 0 * * *",
-					},
-				},
-			},
-			Jobs: config.Jobs{
-				Generate: config.Job{
-					Uses: "speakeasy-api/sdk-generation-action/.github/workflows/workflow-executor.yaml@v15",
-					With: map[string]any{
-						"speakeasy_version": "latest",
-						"force":             "${{ github.event.inputs.force }}",
-						config.Mode:         "pr",
-					},
-					Secrets: secrets,
-				},
-			},
-			Permissions: config.Permissions{
-				Checks:       config.GithubWritePermission,
-				Statuses:     config.GithubWritePermission,
-				Contents:     config.GithubWritePermission,
-				PullRequests: config.GithubWritePermission,
-			},
-		}
+		githubWorkflow = defaultGenerationFile()
 	}
 
 	secrets := githubWorkflow.Jobs.Generate.Secrets
 	for _, source := range workflow.Sources {
 		for _, input := range source.Inputs {
 			if input.Auth != nil {
-				secrets[input.Auth.Secret] = formatSecretName(input.Auth.Secret)
+				secrets[formatGithubSecret(input.Auth.Secret)] = formatGithubSecretName(input.Auth.Secret)
 			}
 		}
 
 		for _, overlay := range source.Overlays {
 			if overlay.Auth != nil {
-				secrets[overlay.Auth.Secret] = formatSecretName(overlay.Auth.Secret)
+				secrets[formatGithubSecret(overlay.Auth.Secret)] = formatGithubSecretName(overlay.Auth.Secret)
 			}
 		}
 	}
@@ -96,8 +58,8 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	mode := githubWorkflow.Jobs.Generate.With[config.Mode].(string)
 
 	modeOptions := []huh.Option[string]{
-		huh.NewOption(styles.BoldString("pr mode:")+" creates a running PR that you can merge at your convenience [RECOMMENDED]", "pr"),
-		huh.NewOption(styles.BoldString("direct mode:")+" attempts to automatically merge changes into your main branch", "direct"),
+		huh.NewOption(styles.MakeBold("pr mode:")+" creates a running PR that you can merge at your convenience [RECOMMENDED]", "pr"),
+		huh.NewOption(styles.MakeBold("direct mode:")+" attempts to automatically merge changes into your main branch", "direct"),
 	}
 
 	prompt := charm.NewSelectPrompt("What mode would you like to setup for your github workflow?\n", "", modeOptions, &mode)
@@ -126,7 +88,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 		target.Publishing = &workflow.Publishing{
 			NPM: &workflow.NPM{
-				Token: formatSecret(*npmTokenVal),
+				Token: formatWorkflowSecret(*npmTokenVal),
 			},
 		}
 	case "python":
@@ -141,7 +103,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 		target.Publishing = &workflow.Publishing{
 			PyPi: &workflow.PyPi{
-				Token: formatSecret(*pypiTokenVal),
+				Token: formatWorkflowSecret(*pypiTokenVal),
 			},
 		}
 	case "csharp":
@@ -156,7 +118,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 		target.Publishing = &workflow.Publishing{
 			Nuget: &workflow.Nuget{
-				APIKey: formatSecret(*nugetKeyVal),
+				APIKey: formatWorkflowSecret(*nugetKeyVal),
 			},
 		}
 	case "ruby":
@@ -171,7 +133,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 		target.Publishing = &workflow.Publishing{
 			RubyGems: &workflow.RubyGems{
-				Token: formatSecret(*rubyGemsTokenVal),
+				Token: formatWorkflowSecret(*rubyGemsTokenVal),
 			},
 		}
 	}
@@ -199,11 +161,18 @@ func executePromptsForPublishing(prompts map[string]*string, target *workflow.Ta
 	return nil
 }
 
-func formatSecretName(name string) string {
-	return fmt.Sprintf("${{ secrets.%s }}", strings.ToUpper(name))
+func formatGithubSecretName(name string) string {
+	return fmt.Sprintf("${{ secrets.%s }}", strings.ToUpper(formatGithubSecret(name)))
 }
 
-func formatSecret(secret string) string {
+func formatWorkflowSecret(secret string) string {
+	if secret != "" && secret[0] != '$' {
+		secret = "$" + secret
+	}
+	return strings.ToLower(secret)
+}
+
+func formatGithubSecret(secret string) string {
 	if secret != "" && secret[0] == '$' {
 		secret = secret[1:]
 	}
@@ -268,13 +237,15 @@ func ParseGithubRemoteURL(repo *git.Repository) string {
 	}
 
 	for _, url := range remoteCfg.URLs {
-		if strings.Contains(url, "https://github.com") {
-			return url
+		if strings.Contains(url, "git@github.com") {
+			url = strings.Replace(url, "git@github.com:", "https://github.com/", 1)
 		}
 
-		if strings.Contains(url, "git@github.com") {
-			return strings.Replace(url, "git@github.com:", "https://github.com/", 1)
+		if strings.HasSuffix(url, ".git") {
+			url = url[:len(url)-4]
 		}
+
+		return url
 	}
 
 	return ""
@@ -302,12 +273,13 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, publishingWorkflowFilePath string) (*config.GenerateWorkflow, error) {
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, error) {
 	secrets := make(map[string]string)
+	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	for _, target := range workflowFile.Targets {
 		if target.Publishing != nil {
 			for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
-				secrets[secret] = formatSecretName(secret)
+				secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 			}
 		}
 	}
@@ -320,46 +292,28 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if mode == "pr" {
-		publishingFile := &config.PublishWorkflow{
-			Name: "Publish",
-			On: config.PublishOn{
-				Push: config.Push{
-					Paths: []string{
-						"RELEASES.md",
-					},
-					Branches: []string{
-						"main",
-					},
-				},
-			},
-			Jobs: config.Jobs{
-				Publish: config.Job{
-					Uses: "speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15",
-					With: map[string]any{
-						"create_release": true,
-					},
-					Secrets: secrets,
-				},
-			},
+		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
+		publishingFile := &config.PublishWorkflow{}
+		if err := readPublishingFile(publishingFile, filePath); err != nil {
+			publishingFile = defaultPublishingFile()
 		}
+
+		for name, value := range secrets {
+			publishingFile.Jobs.Publish.Secrets[name] = value
+		}
+
 		// Write a github publishing file.
 		var publishingWorkflowBuf bytes.Buffer
 		yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
 		yamlEncoder.SetIndent(2)
 		if err := yamlEncoder.Encode(publishingFile); err != nil {
-			return nil, errors.Wrapf(err, "failed to encode workflow file")
+			return genWorkflow, errors.Wrapf(err, "failed to encode workflow file")
 		}
 
-		if err := os.WriteFile(publishingWorkflowFilePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
-			return nil, errors.Wrapf(err, "failed to write github publishing file")
+		if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
+			return genWorkflow, errors.Wrapf(err, "failed to write github publishing file")
 		}
-	} else {
-		// We are in direct mode, remove any separate publishing workflow file.
-		if _, err := os.Stat(publishingWorkflowFilePath); err == nil {
-			if err := os.Remove(publishingWorkflowFilePath); err != nil {
-				return nil, err
-			}
-		}
+
 	}
 
 	return genWorkflow, nil
@@ -395,6 +349,91 @@ func ReadGenerationFile(generationWorkflow *config.GenerateWorkflow, generationW
 	}
 
 	return nil
+}
+
+func readPublishingFile(publishingFile *config.PublishWorkflow, publishingWorkflowFilePath string) error {
+	if _, err := os.Stat(publishingWorkflowFilePath); err != nil {
+		return err
+	}
+
+	fileContent, err := os.ReadFile(publishingWorkflowFilePath)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(fileContent, publishingFile); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func defaultGenerationFile() *config.GenerateWorkflow {
+	secrets := make(map[string]string)
+	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
+	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
+	return &config.GenerateWorkflow{
+		Name: "Generate",
+		On: config.GenerateOn{
+			WorkflowDispatch: config.WorkflowDispatch{
+				Inputs: config.Inputs{
+					Force: config.Force{
+						Description: "Force generation of SDKs",
+						Type:        "boolean",
+						Default:     false,
+					},
+				},
+			},
+			Schedule: []config.Schedule{
+				{
+					Cron: "0 0 * * *",
+				},
+			},
+		},
+		Jobs: config.Jobs{
+			Generate: config.Job{
+				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/workflow-executor.yaml@v15",
+				With: map[string]any{
+					"speakeasy_version": "latest",
+					"force":             "${{ github.event.inputs.force }}",
+					config.Mode:         "pr",
+				},
+				Secrets: secrets,
+			},
+		},
+		Permissions: config.Permissions{
+			Checks:       config.GithubWritePermission,
+			Statuses:     config.GithubWritePermission,
+			Contents:     config.GithubWritePermission,
+			PullRequests: config.GithubWritePermission,
+		},
+	}
+}
+
+func defaultPublishingFile() *config.PublishWorkflow {
+	return &config.PublishWorkflow{
+		Name: "Publish",
+		On: config.PublishOn{
+			Push: config.Push{
+				Paths: []string{
+					"RELEASES.md",
+					"*/RELEASES.md",
+				},
+				Branches: []string{
+					"main",
+				},
+			},
+		},
+		Jobs: config.Jobs{
+			Publish: config.Job{
+				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15",
+				With: map[string]any{
+					"create_release": true,
+				},
+				Secrets: make(map[string]string),
+			},
+		},
+	}
 }
 
 func SelectPublishingTargets(publishingOptions []huh.Option[string]) ([]string, error) {

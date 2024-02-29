@@ -1,6 +1,7 @@
 package interactivity
 
 import (
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"os"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -25,40 +26,39 @@ func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
 type ListSelect struct {
-	list       list.Model
-	selected   *cobra.Command
-	signalExit bool
+	list     list.Model
+	selected *cobra.Command
 }
 
-func (m ListSelect) Init() tea.Cmd {
+func (m *ListSelect) Init() tea.Cmd {
 	return nil
 }
 
-func (m ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch keypress := msg.String(); keypress {
-		case "ctrl+c", "esc":
-			m.signalExit = true
-			return m, tea.Quit
-		case "enter":
-			selected, ok := m.list.SelectedItem().(item)
-			if ok {
-				m.selected = selected.cmd
-			}
-			return m, tea.Quit
-		}
-	case tea.WindowSizeMsg:
-		w, _ := docStyle.GetFrameSize()
-		m.list.SetWidth(msg.Width - w)
-	}
-
+func (m *ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }
 
-func (m ListSelect) View() string {
+func (m *ListSelect) HandleKeypress(key string) tea.Cmd {
+	switch key {
+	case "enter":
+		selected, ok := m.list.SelectedItem().(item)
+		if ok {
+			m.selected = selected.cmd
+		}
+		return tea.Quit
+	}
+
+	return nil
+}
+
+func (m *ListSelect) SetWidth(width int) {
+	w, _ := docStyle.GetFrameSize()
+	m.list.SetWidth(width - w)
+}
+
+func (m *ListSelect) View() string {
 	if m.selected != nil {
 		return ""
 	}
@@ -74,7 +74,7 @@ func (m ListSelect) View() string {
 	inputs = append(inputs, "↵", "esc")
 	descriptions = append(descriptions, "select", "quit")
 
-	inputLegend := styles.KeymapLegend(inputs, descriptions)
+	inputLegend := styles.RenderKeymapLegend(inputs, descriptions)
 
 	return docStyle.Render(m.list.View() + "\n\n" + inputLegend)
 }
@@ -118,21 +118,13 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 	}
 
 	m := ListSelect{list: l}
-	p := tea.NewProgram(m)
 
-	mResult, err := p.Run()
+	mResult, err := charm_internal.RunModel(&m)
 	if err != nil {
 		os.Exit(1)
 	}
 
-	if m, ok := mResult.(ListSelect); ok {
-		if m.signalExit {
-			os.Exit(0)
-		}
-
-		if m.selected != nil {
-			return m.selected
-		}
+	if m, ok := mResult.(*ListSelect); ok && m.selected != nil {
 		return m.selected
 	}
 

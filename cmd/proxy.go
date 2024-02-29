@@ -73,7 +73,7 @@ func proxyExec(cmd *cobra.Command, args []string) error {
 
 	apiKey := config.GetSpeakeasyAPIKey()
 
-	return proxy.StartProxy(proxy.ProxyConfig{
+	return proxy.StartProxy(proxy.Options{
 		DownstreamBaseURL: downstreamBaseURL,
 		APIKey:            apiKey,
 		Port:              port,
