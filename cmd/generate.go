@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/docsgen"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -83,8 +83,8 @@ var (
 
 var generateCmd = &model.CommandGroup{
 	Usage:          "generate",
-	Short:          "Generate client SDKs, docsites, and more",
-	Long:           `The "generate" command provides a set of commands for generating client SDKs and Terraform providers`,
+	Short:          "Generate client SDKs, terraform providers and docs",
+	Long:           `The "generate" command provides a set of commands for generating client SDKs, terraform providers and documentation sites.`,
 	InteractiveMsg: "What do you want to generate?",
 	Commands:       []model.Command{genSDKCmd, genSDKDocsCmd, genUsageSnippetCmd, genSDKVersionCmd, genSDKChangelogCmd},
 }

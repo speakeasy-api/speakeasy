@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+  
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
-
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"

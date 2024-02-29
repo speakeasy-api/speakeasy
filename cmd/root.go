@@ -26,12 +26,10 @@ var rootCmd = &cobra.Command{
 	Use:   "speakeasy",
 	Short: "The speakeasy cli tool provides access to the speakeasyapi.dev toolchain",
 	Long: ` A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, c#, swift, ruby, terraform)
+	- Generating Client SDKs from OpenAPI specs
 	- Validating OpenAPI specs
-	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic
-	- Generating Postman collections from OpenAPI Specs
-`,
+	- Interacting with the Speakeasy to create and manage your API workspaces
+
 	RunE: rootExec,
 }
 
