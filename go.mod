@@ -20,7 +20,7 @@ require (
 	github.com/pb33f/libopenapi v0.15.10
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.272.7
+	github.com/speakeasy-api/openapi-generation/v2 v2.275.2
 	github.com/speakeasy-api/openapi-overlay v0.3.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.5
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.3.10
@@ -42,7 +42,7 @@ require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
-	cloud.google.com/go/functions v1.15.1 // indirect
+	cloud.google.com/go/functions v1.15.4 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/AlekSi/pointer v1.2.0 // indirect
 	github.com/GoogleCloudPlatform/functions-framework-go v1.6.1 // indirect
@@ -167,7 +167,7 @@ require (
 	github.com/skeema/knownhosts v1.2.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.8.2 // indirect
+	github.com/speakeasy-api/easytemplate v0.9.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
@@ -186,6 +186,8 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	github.com/zclconf/go-cty v1.13.0 // indirect
+	go.opentelemetry.io/otel v1.24.0 // indirect
+	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
@@ -196,8 +198,8 @@ require (
 	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect
-	google.golang.org/grpc v1.59.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
+	google.golang.org/grpc v1.61.1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
