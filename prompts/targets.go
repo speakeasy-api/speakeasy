@@ -3,6 +3,7 @@ package prompts
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
@@ -199,24 +200,42 @@ func moveOutDir(outDir string, previousDir string) error {
 		return err
 	}
 
-	newSpeakeasyFolderPath := workingDir + "/" + outDir + "/" + ".speakeasy"
-	existingSpeakeasyFolderPath := workingDir + "/" + previousDir + "/" + ".speakeasy"
-	if _, err := os.Stat(newSpeakeasyFolderPath); os.IsNotExist(err) {
-		err = os.MkdirAll(newSpeakeasyFolderPath, 0o755)
-		if err != nil {
-			return err
-		}
+	newDirPath, err := filepath.Abs(filepath.Join(workingDir, outDir))
+	if err != nil {
+		return err
 	}
 
-	if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.yaml"); err == nil {
-		if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.yaml", newSpeakeasyFolderPath+"/"+"gen.yaml"); err != nil {
-			return errors.Wrapf(err, "failed to copy config file")
-		}
+	previousDirPath, err := filepath.Abs(filepath.Join(workingDir, previousDir))
+	if err != nil {
+		return err
 	}
 
-	if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.lock"); err == nil {
-		if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.lock", newSpeakeasyFolderPath+"/"+"gen.lock"); err != nil {
-			return errors.Wrapf(err, "failed to copy config file")
+	newSpeakeasyFolderPath := filepath.Join(newDirPath, ".speakeasy")
+	existingSpeakeasyFolderPath := filepath.Join(previousDirPath, ".speakeasy")
+	if newSpeakeasyFolderPath != existingSpeakeasyFolderPath {
+		if _, err := os.Stat(newSpeakeasyFolderPath); os.IsNotExist(err) {
+			err = os.MkdirAll(newSpeakeasyFolderPath, 0o755)
+			if err != nil {
+				return err
+			}
+		}
+
+		if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.yaml"); err == nil {
+			if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.yaml", newSpeakeasyFolderPath+"/"+"gen.yaml"); err != nil {
+				return errors.Wrapf(err, "failed to copy config file")
+			}
+		}
+
+		if _, err := os.Stat(previousDirPath + "/" + "gen.yaml"); err == nil {
+			if err := utils.MoveFile(previousDirPath+"/"+"gen.yaml", newDirPath+"/"+"gen.yaml"); err != nil {
+				return errors.Wrapf(err, "failed to copy config file")
+			}
+		}
+
+		if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.lock"); err == nil {
+			if err := utils.MoveFile(existingSpeakeasyFolderPath+"/"+"gen.lock", newSpeakeasyFolderPath+"/"+"gen.lock"); err != nil {
+				return errors.Wrapf(err, "failed to copy config file")
+			}
 		}
 	}
 

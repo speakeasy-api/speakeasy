@@ -42,7 +42,7 @@ var ignoredKeys = []string{
 
 func PromptForTargetConfig(targetName string, target *workflow.Target, existingConfig *config.Configuration, isQuickstart bool) (*config.Configuration, error) {
 	var output *config.Configuration
-	if existingConfig != nil {
+	if existingConfig != nil && len(existingConfig.Languages) > 0 {
 		output = existingConfig
 	} else {
 		var err error
