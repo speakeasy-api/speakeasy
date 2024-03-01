@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/cmd/generate"
 
 	"github.com/charmbracelet/huh"
 	"github.com/sethvargo/go-githubactions"
@@ -186,7 +187,7 @@ func askForTarget(targets []string) (string, error) {
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, generate.GenVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
 	if err != nil {
 		return err
 	}
@@ -204,7 +205,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, genVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, generate.GenVersion, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
 	if err != nil {
 		return err
 	}
