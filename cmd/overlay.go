@@ -100,6 +100,6 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		defer file.Close()
 		out = file
 	}
-	
+
 	return overlay.Apply(flags.Schema, flags.Overlay, out)
 }

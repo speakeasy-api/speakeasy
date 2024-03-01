@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/schema"
@@ -29,7 +30,7 @@ var SupportedLanguagesUsageSnippets = []string{
 	"unity",
 }
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string) error {
+func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string, all bool, outputBuffer *bytes.Buffer) error {
 	matchedLanguage := false
 	for _, language := range SupportedLanguagesUsageSnippets {
 		if language == lang {
@@ -48,17 +49,22 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 
 	l := log.From(ctx).WithAssociatedFile(schemaPath)
 
-	outputBuffer := &bytes.Buffer{}
+	tmpOutput := outputBuffer
+	if tmpOutput == nil {
+		tmpOutput = &bytes.Buffer{}
+	}
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
 		generate.WithCustomerID(customerID),
-		generate.WithFileFuncs(writeFileWithBuffer(outputBuffer), os.ReadFile),
+		generate.WithFileFuncs(writeFileWithBuffer(tmpOutput), os.ReadFile),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithAllowRemoteReferences(),
 	}
 
-	if operation == "" && namespace == "" {
+	if all {
+		opts = append(opts, generate.WithUsageSnippetArgsGenerateAll())
+	} else if operation == "" && namespace == "" {
 		opts = append(opts, generate.WithUsageSnippetArgsByRootExample())
 	} else if operation != "" {
 		opts = append(opts, generate.WithUsageSnippetArgsByOperationID(operation))
@@ -80,8 +86,10 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 	}
 
 	if out == "" {
-		// By default, write to stdout
-		fmt.Println(outputBuffer.String())
+		if outputBuffer == nil {
+			// By default, write to stdout
+			fmt.Println(tmpOutput.String())
+		}
 	} else if isDirectory(out) {
 		return writeFormattedDirectory(lang, out, outputBuffer.String())
 	} else {
@@ -115,39 +123,86 @@ func writeFileWithBuffer(buf *bytes.Buffer) func(outFileName string, data []byte
 // writeFormattedDirectory: writes each OperationIDs usage snippet into its own directory with a single main file
 // This will be used frequently by things like devcontainers
 func writeFormattedDirectory(lang, path, content string) error {
-	// Split the input string by the key phrase "Usage snippet provided for"
-	snippets := strings.Split(content, "Usage snippet provided for")
-
-	// Throw out the first line it will just be // or #
-	if strings.Contains(snippets[0], "//") || strings.Contains(snippets[0], "#") {
-		snippets = snippets[1:]
+	snippets, err := ParseUsageOutput(lang, content)
+	if err != nil {
+		return err
 	}
 
 	for _, snippet := range snippets {
-		lines := strings.Split(snippet, "\n")
-
-		// grab the operation name and trim it out of the snippet
-		operationName := strings.TrimSpace(lines[0])
-		lines = lines[1:]
-
-		// remove the trailing line if it includes an empty comment string
-		if strings.TrimSpace(lines[len(lines)-1]) == "//" || strings.TrimSpace(lines[len(lines)-1]) == "#" {
-			lines = lines[0 : len(lines)-1]
-		}
-
-		// trim empty lines at the end of the snippet
-		for len(strings.TrimSpace(lines[len(lines)-1])) == 0 {
-			lines = lines[0 : len(lines)-1]
-		}
+		// TODO: do we still need to do this?
+		//remove the trailing line if it includes an empty comment string
+		//if strings.TrimSpace(lines[len(lines)-1]) == "//" || strings.TrimSpace(lines[len(lines)-1]) == "#" {
+		//	lines = lines[0 : len(lines)-1]
+		//}
 
 		// write out directory structure
-		directoryPath := path + "/" + strings.ToLower(operationName)
-		if err := writeExampleCode(lang, directoryPath, strings.Join(lines, "\n")); err != nil {
+		directoryPath := path + "/" + strings.ToLower(snippet.OperationId)
+		if err := writeExampleCode(lang, directoryPath, snippet.Snippet); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+type UsageSnippet struct {
+	Language    string
+	OperationId string
+	Method      string
+	Path        string
+	Snippet     string
+}
+
+// Input will look something like:
+// // Usage snippet provided for ...
+// ...
+func ParseUsageOutput(lang, s string) ([]UsageSnippet, error) {
+	sections := strings.Split(s, "// Usage snippet provided for ")
+
+	snippets := make([]UsageSnippet, len(sections)-1)
+	for i, section := range sections[1:] {
+		snippet, err := parseOperationInfoAndCodeSample(lang, section)
+		if err != nil {
+			return nil, err
+		}
+		snippets[i] = *snippet
+	}
+
+	return snippets, nil
+}
+
+// Input will look something like:
+// getApis (get /v1/apis)
+// package main
+// ...
+func parseOperationInfoAndCodeSample(lang, usageOutputSection string) (*UsageSnippet, error) {
+	parts := strings.SplitN(usageOutputSection, "\n", 2)
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("expected at least two lines: %s", usageOutputSection)
+	}
+
+	// Define a regular expression to capture the API name, method, and endpoint
+	apiDetailsRegex := regexp.MustCompile(`(\w+)\s+\((\w+)\s+(.*)\)`)
+
+	// Find and extract the API details
+	matches := apiDetailsRegex.FindStringSubmatch(parts[0])
+	if len(matches) < 3 {
+		return nil, fmt.Errorf("failed to extract API details from usage output section: %s", parts[0])
+	}
+
+	operationId := matches[1]
+	method := matches[2]
+	path := matches[3]
+
+	snippet := strings.TrimSpace(parts[1])
+
+	return &UsageSnippet{
+		Language:    lang,
+		OperationId: operationId,
+		Method:      method,
+		Path:        path,
+		Snippet:     snippet,
+	}, nil
 }
 
 func writeExampleCode(lang, path, code string) error {

@@ -2,12 +2,11 @@ package overlay
 
 import (
 	"fmt"
-	"io"
-	"os"
-
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"gopkg.in/yaml.v3"
+	"io"
+	"os"
 )
 
 func Validate(overlayFile string) error {
