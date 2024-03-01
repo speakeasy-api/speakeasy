@@ -111,7 +111,7 @@ func CodeSamples(ctx context.Context, schema, header, token, configPath, overlay
 		}
 
 		for _, snippet := range snippets {
-			target := fmt.Sprintf(`$["paths"]["%s"]["%s"]"`, snippet.Path, snippet.Method)
+			target := fmt.Sprintf(`$["paths"]["%s"]["%s"]`, snippet.Path, snippet.Method)
 
 			targetToCodeSamples[target] = append(targetToCodeSamples[target], snippet)
 		}

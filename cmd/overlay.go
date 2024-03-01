@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -144,5 +146,15 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 }
 
 func runCodeSamples(ctx context.Context, flags overlayCodeSamplesFlags) error {
-	return overlay.CodeSamples(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs)
+	err := overlay.CodeSamples(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs)
+
+	if err == nil {
+		locationString := "Overlay file written to stdout"
+		if flags.Out != "" {
+			locationString = fmt.Sprintf("Overlay file written to %s", flags.Out)
+		}
+		log.From(ctx).Println(styles.RenderSuccessMessage("Code samples generated successfully", locationString, "To apply the overlay, use the `overlay apply` command"))
+	}
+
+	return err
 }
