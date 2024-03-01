@@ -15,7 +15,6 @@ import (
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"gopkg.in/yaml.v3"
 )
 
@@ -55,21 +54,6 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 		}
 	}
 	githubWorkflow.Jobs.Generate.Secrets = secrets
-	mode := githubWorkflow.Jobs.Generate.With[config.Mode].(string)
-
-	modeOptions := []huh.Option[string]{
-		huh.NewOption(styles.MakeBold("pr mode:")+" creates a running PR that you can merge at your convenience [RECOMMENDED]", "pr"),
-		huh.NewOption(styles.MakeBold("direct mode:")+" attempts to automatically merge changes into your main branch", "direct"),
-	}
-
-	prompt := charm.NewSelectPrompt("What mode would you like to setup for your github workflow?\n", "", modeOptions, &mode)
-	if _, err := charm.NewForm(huh.NewForm(prompt),
-		"Let's configure generation through github actions.").
-		ExecuteForm(); err != nil {
-		return nil, err
-	}
-	githubWorkflow.Jobs.Generate.With[config.Mode] = mode
-
 	return githubWorkflow, nil
 }
 
