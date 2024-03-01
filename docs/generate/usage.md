@@ -33,6 +33,7 @@ speakeasy generate usage [flags]
 ### Options
 
 ```
+  -a, --all                   Generate usage snippets for all operations. Overrides operation-id and namespace flags.
   -c, --config-path string    An optional argument to pass in the path to a directory that holds the gen.yaml configuration file. (default ".")
   -H, --header string         header key to use if authentication is required for downloading schema from remote URL
   -h, --help                  help for usage
