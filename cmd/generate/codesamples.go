@@ -39,8 +39,9 @@ var codeSamplesCmd = &model.ExecutableCommand[codeSamplesFlags]{
 			Required:    true,
 		},
 		flag.StringFlag{
-			Name:        "config-path",
-			Description: "the path to the directory containing the gen.yaml file(s) to use",
+			Name:         "config-path",
+			Description:  "the path to the directory containing the gen.yaml file(s) to use",
+			DefaultValue: ".",
 		},
 		flag.StringFlag{
 			Name:        "out",
