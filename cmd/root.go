@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/cmd/generate"
 	"os"
 	"slices"
 	"strings"
@@ -53,7 +54,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, quickstartCmd)
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
-	addCommand(rootCmd, generateCmd)
+	addCommand(rootCmd, generate.GenerateCmd)
 	addCommand(rootCmd, validateCmd)
 	addCommand(rootCmd, migrateCmd)
 
