@@ -8,6 +8,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/events"
+
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/charmbracelet/huh"
@@ -27,6 +30,7 @@ import (
 const (
 	appInstallationLink  = "https://github.com/apps/speakeasy-github/installations/new"
 	repositorySecretPath = "Settings > Secrets & Variables > Actions"
+	actionsPath          = "Actions > Generate"
 	githubSetupDocs      = "https://www.speakeasyapi.dev/docs/advanced-setup/github-setup"
 )
 
@@ -368,7 +372,8 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		workflowFile.Targets[name] = *modifiedTarget
 	}
 
-	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
+	var publishPath string
+	generationWorkflow, publishPath, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write publishing configs")
 	}
@@ -391,22 +396,43 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
 	}
 
+	_, workflowFilePath, err := workflow.Load(workingDir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load workflow file")
+	}
+
+	status := []string{
+		fmt.Sprintf("Speakeasy workflow written to - %s", workflowFilePath),
+	}
+	if publishPath != "" {
+		status = append(status, fmt.Sprintf("GitHub action (generate) written to - %s", generationWorkflowFilePath))
+		status = append(status, fmt.Sprintf("GitHub action (publish) written to - %s", publishPath))
+	} else {
+		status = append(status, fmt.Sprintf("GitHub action (generate+publish) written to - %s", generationWorkflowFilePath))
+	}
+
 	var agenda []string
 	for key := range generationWorkflow.Jobs.Generate.Secrets {
-		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
-			agenda = append(agenda, fmt.Sprintf("\t◦ %s", styles.MakeBold(strings.ToUpper(key))))
+		if key != config.GithubAccessToken {
+			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
+
+	logger.Println(styles.Info.Render("Files successfully generated!\n"))
+	for _, statusMsg := range status {
+		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
+	}
+	logger.Println(styles.Info.Render("\n"))
 
 	if len(agenda) != 0 {
 		agenda = append([]string{
 			fmt.Sprintf("• In your repo navigate to %s and setup the following repository secrets:", secretPath),
 		}, agenda...)
-	}
 
-	msg := styles.RenderInstructionalMessage("For your publishing setup to be complete perform the following steps.",
-		agenda...)
-	logger.Println(msg)
+		msg := styles.RenderInstructionalMessage("For your publishing setup to be complete perform the following steps.",
+			agenda...)
+		logger.Println(msg)
+	}
 
 	return nil
 }
@@ -431,10 +457,10 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
 	}
 
+	ctx = events.SetTargetInContext(ctx, workingDir)
+
 	generationWorkflow := &config.GenerateWorkflow{}
-	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
-		logger.Println(styles.Info.Render(fmt.Sprintf("Could not read existing workflow file %s", generationWorkflowFilePath)))
-	}
+	prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
 
 	generationWorkflow, err = prompts.ConfigureGithub(generationWorkflow, workflowFile)
 	if err != nil {
@@ -472,7 +498,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	generationWorkflow, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
+	generationWorkflow, publishPath, err := prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write publishing configs")
 	}
@@ -495,21 +521,56 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
 	}
 
-	agenda := []string{
-		fmt.Sprintf("• Setup an API Key - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID),
-		fmt.Sprintf("• In your repo navigate to %s and setup the following repository secrets:", secretPath),
-		fmt.Sprintf("\t◦ %s", styles.MakeBold(strings.ToUpper(config.SpeakeasyApiKey))),
+	_, workflowFilePath, err := workflow.Load(workingDir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to load workflow file")
 	}
 
+	status := []string{
+		fmt.Sprintf("Speakeasy workflow written to - %s", workflowFilePath),
+	}
+	if publishPath != "" {
+		status = append(status, fmt.Sprintf("GitHub action (generate) written to - %s", generationWorkflowFilePath))
+		status = append(status, fmt.Sprintf("GitHub action (publish) written to - %s", publishPath))
+	} else {
+		status = append(status, fmt.Sprintf("GitHub action (generate+publish) written to - %s", generationWorkflowFilePath))
+	}
+
+	agenda := []string{}
+
+	// check if the git repository is a github URI
+	event := shared.CliEvent{}
+	events.EnrichEventWithGitMetadata(ctx, &event)
+	// This attribute is nil when not in a git repository
+	if event.GitRelativeCwd == nil {
+		agenda = append(agenda, fmt.Sprintf("• Initialize your Git Repository - https://github.com/git-guides/git-init"))
+	}
+	// this attribute is nil when the remote isn't github
+	if event.GitRemoteDefaultOwner == nil {
+		agenda = append(agenda, fmt.Sprintf("• Configure your GitHub remote - https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories"))
+	}
+
+	actionPath := actionsPath
+	if remoteURL != "" {
+		actionPath = fmt.Sprintf("%s/actions", remoteURL)
+	}
+
+	agenda = append(agenda, fmt.Sprintf("• Setup a Speakeasy API Key as a GitHub Secret - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID))
+	agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the following repository secrets:", secretPath))
+
 	for key := range generationWorkflow.Jobs.Generate.Secrets {
-		if key != config.SpeakeasyApiKey && key != config.GithubAccessToken {
-			agenda = append(agenda, fmt.Sprintf("\t◦ %s", styles.MakeBold(strings.ToUpper(key))))
+		if key != config.GithubAccessToken {
+			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
 
-	if remoteURL != "" {
-		agenda = append(agenda, fmt.Sprintf("• Once complete navigate to %s/actions to kick off a generation", remoteURL))
+	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to view your generations.", actionPath))
+
+	logger.Println(styles.Info.Render("Files successfully generated!\n"))
+	for _, statusMsg := range status {
+		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
 	}
+	logger.Println(styles.Info.Render("\n"))
 
 	msg := styles.RenderInstructionalMessage("For your github workflow setup to be complete perform the following steps.",
 		agenda...)
