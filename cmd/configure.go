@@ -373,9 +373,11 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	}
 
 	var publishPath string
-	generationWorkflow, publishPath, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
-	if err != nil {
-		return errors.Wrapf(err, "failed to write publishing configs")
+	if len(chosenTargets) > 0 {
+		generationWorkflow, publishPath, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
+		if err != nil {
+			return errors.Wrapf(err, "failed to write publishing configs")
+		}
 	}
 
 	if err = prompts.WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
@@ -498,9 +500,12 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	generationWorkflow, publishPath, err := prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
-	if err != nil {
-		return errors.Wrapf(err, "failed to write publishing configs")
+	var publishPath string
+	if len(chosenTargets) > 0 {
+		generationWorkflow, publishPath, err = prompts.WritePublishing(generationWorkflow, workflowFile, workingDir)
+		if err != nil {
+			return errors.Wrapf(err, "failed to write publishing configs")
+		}
 	}
 
 	if err = prompts.WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
