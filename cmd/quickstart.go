@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	genCmd "github.com/speakeasy-api/speakeasy/cmd/generate"
 	"os"
 	"path/filepath"
 	"strings"
@@ -213,7 +212,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
-	workflow, err := run.NewWorkflow("Workflow", initialTarget, "", genCmd.GenVersion, "", nil, nil, false, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("Workflow", initialTarget, "", "", nil, nil, false, !flags.SkipCompile)
 	if err != nil {
 		return err
 	}

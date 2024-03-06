@@ -3,11 +3,14 @@ package generate
 import (
 	"context"
 	"fmt"
+	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/events"
+
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"strings"
 )
 
 type GenerateFlags struct {
@@ -66,8 +69,6 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	NonInteractiveSubcommands: []model.Command{genSDKVersionCmd, genSDKChangelogCmd},
 }
 
-var GenVersion string
-
 func genSDKs(ctx context.Context, flags GenerateFlags) error {
 	_, err := sdkgen.Generate(
 		ctx,
@@ -78,7 +79,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		flags.Header,
 		flags.Token,
 		flags.OutDir,
-		GenVersion,
+		events.GetSpeakeasyVersionFromContext(ctx),
 		flags.InstallationURL,
 		flags.Debug,
 		flags.AutoYes,

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -28,7 +29,6 @@ import (
 type Workflow struct {
 	Target           string
 	Source           string
-	GenVersion       string
 	Repo             string
 	RepoSubDirs      map[string]string
 	InstallationURLs map[string]string
@@ -42,7 +42,7 @@ type Workflow struct {
 	generationAccess   *sdkgen.GenerationAccess
 }
 
-func NewWorkflow(name, target, source, genVersion, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
+func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
 	wf, projectDir, err := GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
@@ -53,7 +53,6 @@ func NewWorkflow(name, target, source, genVersion, repo string, repoSubDirs, ins
 	return &Workflow{
 		Target:           target,
 		Source:           source,
-		GenVersion:       genVersion,
 		Repo:             repo,
 		RepoSubDirs:      repoSubDirs,
 		InstallationURLs: installationURLs,
@@ -247,7 +246,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 	if source != nil {
 		sourcePath, err = w.runSource(ctx, rootStep, t.Source)
-
 		if err != nil {
 			return err
 		}
@@ -282,7 +280,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		"",
 		"",
 		outDir,
-		w.GenVersion,
+		events.GetSpeakeasyVersionFromContext(ctx),
 		w.InstallationURLs[target],
 		w.Debug,
 		true,
