@@ -25,6 +25,10 @@ const (
 	pypiTokenDefault                 = "PYPI_TOKEN"
 	nugetTokenDefault                = "NUGET_API_KEY"
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
+	packagistTokenDefault            = "PACKAGIST_TOKEN"
+	ossrhPasswordDefault             = "OSSRH_PASSWORD"
+	gpgSecretKeyDefault              = "GPG_SECRET_KEY"
+	gpgPassPhraseDefault             = "GPG_PASS_PHRASE"
 )
 
 var SupportedPublishingTargets = []string{
@@ -32,6 +36,8 @@ var SupportedPublishingTargets = []string{
 	"python",
 	"csharp",
 	"ruby",
+	"php",
+	"java",
 }
 
 func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow) (*config.GenerateWorkflow, error) {
@@ -118,6 +124,58 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		target.Publishing = &workflow.Publishing{
 			RubyGems: &workflow.RubyGems{
 				Token: formatWorkflowSecret(*rubyGemsTokenVal),
+			},
+		}
+	case "php":
+		currentPackagistToken := packagistTokenDefault
+		currentPackagistUserName := ""
+		if target.Publishing != nil && target.Publishing.Packagist != nil {
+			currentPackagistToken = target.Publishing.Packagist.Token
+			currentPackagistUserName = target.Publishing.Packagist.Username
+		}
+		packagistToken := &currentPackagistToken
+		packagistUsername := &currentPackagistUserName
+		promptMap["Packagist Token"] = packagistToken
+		promptMap["Packagist Username"] = packagistUsername
+		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
+			return nil, err
+		}
+		target.Publishing = &workflow.Publishing{
+			Packagist: &workflow.Packagist{
+				Token:    formatWorkflowSecret(*packagistToken),
+				Username: *packagistUsername,
+			},
+		}
+	case "java":
+		sonatypeLegacy := target.Publishing != nil && target.Publishing.Java != nil && target.Publishing.Java.UseSonatypeLegacy
+		currentGPGSecretKey := gpgSecretKeyDefault
+		currentGPGPassPhrase := gpgPassPhraseDefault
+		currentossrhPassword := ossrhPasswordDefault
+		currentossrhUsername := ""
+		if target.Publishing != nil && target.Publishing.Java != nil {
+			currentGPGSecretKey = target.Publishing.Java.GPGSecretKey
+			currentGPGPassPhrase = target.Publishing.Java.GPGPassPhrase
+			currentossrhPassword = target.Publishing.Java.OSSHRPassword
+			currentossrhUsername = target.Publishing.Java.OSSRHUsername
+		}
+		gpgSecretKey := &currentGPGSecretKey
+		gpgPassPhrase := &currentGPGPassPhrase
+		ossrhPassword := &currentossrhPassword
+		ossrhUsername := &currentossrhUsername
+		promptMap["GPG Secret Key"] = gpgSecretKey
+		promptMap["GPG Pass Phrase"] = gpgPassPhrase
+		promptMap["OSSRH Password"] = ossrhPassword
+		promptMap["OSSRH Username"] = ossrhUsername
+		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
+			return nil, err
+		}
+		target.Publishing = &workflow.Publishing{
+			Java: &workflow.Java{
+				GPGSecretKey:      formatWorkflowSecret(*gpgSecretKey),
+				GPGPassPhrase:     formatWorkflowSecret(*gpgPassPhrase),
+				OSSHRPassword:     formatWorkflowSecret(*ossrhPassword),
+				OSSRHUsername:     *ossrhUsername,
+				UseSonatypeLegacy: sonatypeLegacy,
 			},
 		}
 	}
@@ -254,12 +312,23 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 		secrets = append(secrets, publishing.Nuget.APIKey)
 	}
 
+	if publishing.Packagist != nil {
+		secrets = append(secrets, publishing.Packagist.Token)
+	}
+
+	if publishing.Java != nil {
+		secrets = append(secrets, publishing.Java.GPGSecretKey)
+		secrets = append(secrets, publishing.Java.GPGPassPhrase)
+		secrets = append(secrets, publishing.Java.OSSHRPassword)
+	}
+
 	return secrets
 }
 
 func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
+	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
 	for _, target := range workflowFile.Targets {
 		if target.Publishing != nil {
 			for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
