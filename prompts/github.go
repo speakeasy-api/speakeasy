@@ -257,7 +257,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, error) {
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	for _, target := range workflowFile.Targets {
@@ -291,16 +291,17 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
 		yamlEncoder.SetIndent(2)
 		if err := yamlEncoder.Encode(publishingFile); err != nil {
-			return genWorkflow, errors.Wrapf(err, "failed to encode workflow file")
+			return genWorkflow, "", errors.Wrapf(err, "failed to encode workflow file")
 		}
 
 		if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
-			return genWorkflow, errors.Wrapf(err, "failed to write github publishing file")
+			return genWorkflow, filePath, errors.Wrapf(err, "failed to write github publishing file")
 		}
 
+		return genWorkflow, filePath, nil
 	}
 
-	return genWorkflow, nil
+	return genWorkflow, "", nil
 }
 
 func WriteGenerationFile(generationWorkflow *config.GenerateWorkflow, generationWorkflowFilePath string) error {
