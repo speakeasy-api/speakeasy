@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+
 	"github.com/fatih/structs"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -14,7 +16,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"slices"
 )
 
 type Command interface {
@@ -57,6 +58,7 @@ type ExecutableCommand[F interface{}] struct {
 
 	// Deprecated: try to avoid using this. It is only present for backwards compatibility with the old CLI
 	NonInteractiveSubcommands []Command
+	CLIVersion                string
 }
 
 func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
