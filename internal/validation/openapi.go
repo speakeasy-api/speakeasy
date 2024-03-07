@@ -245,7 +245,7 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 
 	g, err := generate.New(generate.WithFileFuncs(
 		func(filename string, data []byte, perm os.FileMode) error { return nil },
-		func(filename string) ([]byte, error) { return nil, nil },
+		os.ReadFile,
 	), generate.WithLogger(l))
 	if err != nil {
 		return nil, nil, nil, err
