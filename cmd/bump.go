@@ -19,9 +19,16 @@ const (
 )
 
 var bumpCommand = &cobra.Command{
-	Use:    "bump [patch|minor|major]",
-	Short:  "Bumps the version of a Speakeasy Generation Target",
-	Long:   `Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.`,
+	Use:   "bump [patch|minor|major]",
+	Short: "Bumps the version of a Speakeasy Generation Target",
+	Long: `Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.
+
+Examples:
+
+- speakeasy bump patch - Bumps the target's version by one patch version
+- speakeasy bump -v 1.2.3 - Sets the target's version to 1.2.3
+- speakeasy bump major -t typescript - Bumps the typescript target's version by one major version
+`,
 	Args:   cobra.RangeArgs(0, 1),
 	Hidden: true,
 }
