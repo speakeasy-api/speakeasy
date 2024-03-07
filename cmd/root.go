@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/cmd/generate"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/cmd/generate"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 
@@ -66,6 +67,7 @@ func Init(version, artifactArch string) {
 	proxyInit()
 	apiInit()
 	languageServerInit(version)
+	bumpInit()
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {
