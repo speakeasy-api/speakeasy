@@ -92,6 +92,9 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 
 	if len(targets) > 1 {
 		target, err = askForTarget("Select the target you want to bump", "We will bump the version of the selected target", "Lets bump your target's version", targets, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	langCfg := cfg.Config.Languages[target]
