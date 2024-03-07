@@ -105,7 +105,7 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
 			flags.Source = sources[0]
 		} else {
-			flags.Target, err = askForTarget(targets)
+			flags.Target, err = askForTarget("What target would you like to run?", "You may choose an individual target or 'all'.", "Let's configure a target for your workflow.", targets, true)
 			if err != nil {
 				return err
 			}
@@ -163,7 +163,7 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 	return nil
 }
 
-func askForTarget(targets []string) (string, error) {
+func askForTarget(title, description, confirmation string, targets []string, allowAll bool) (string, error) {
 	var targetOptions []huh.Option[string]
 	var existingTargets []string
 
@@ -171,14 +171,14 @@ func askForTarget(targets []string) (string, error) {
 		existingTargets = append(existingTargets, targetName)
 		targetOptions = append(targetOptions, huh.NewOption(targetName, targetName))
 	}
-	targetOptions = append(targetOptions, huh.NewOption("✱ All", "all"))
+	if allowAll {
+		targetOptions = append(targetOptions, huh.NewOption("✱ All", "all"))
+	}
 
 	target := ""
 
-	prompt := charm.NewSelectPrompt("What target would you like to run?", "You may choose an individual target or 'all'.", targetOptions, &target)
-	if _, err := charm.NewForm(huh.NewForm(prompt),
-		"Let's configure a target for your workflow.").
-		ExecuteForm(); err != nil {
+	prompt := charm.NewSelectPrompt(title, description, targetOptions, &target)
+	if _, err := charm.NewForm(huh.NewForm(prompt), confirmation).ExecuteForm(); err != nil {
 		return "", err
 	}
 
