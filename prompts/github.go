@@ -490,8 +490,13 @@ func defaultPublishingFile() *config.PublishWorkflow {
 	}
 }
 
-func SelectPublishingTargets(publishingOptions []huh.Option[string]) ([]string, error) {
+func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect bool) ([]string, error) {
 	chosenTargets := make([]string, 0)
+	if autoSelect {
+		for _, option := range publishingOptions {
+			chosenTargets = append(chosenTargets, option.Value)
+		}
+	}
 	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
 			Title("Select any targets you would like to configure publishing for.").
