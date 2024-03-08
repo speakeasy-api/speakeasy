@@ -358,7 +358,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
 	}
 
-	chosenTargets, err := prompts.SelectPublishingTargets(publishingOptions)
+	chosenTargets, err := prompts.SelectPublishingTargets(publishingOptions, true)
 	if err != nil {
 		return err
 	}
@@ -478,7 +478,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	var chosenTargets []string
 	if len(publishingOptions) > 0 {
-		chosenTargets, err = prompts.SelectPublishingTargets(publishingOptions)
+		chosenTargets, err = prompts.SelectPublishingTargets(publishingOptions, false)
 		if err != nil {
 			return err
 		}
