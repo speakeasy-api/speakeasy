@@ -8,9 +8,11 @@ import (
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"go.uber.org/zap"
 )
 
 type RunFlags struct {
@@ -195,10 +197,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 
 	workflow.RootStep.Finalize(err == nil)
 
-	if env.IsGithubAction() {
-		md := fmt.Sprintf("# Generation Workflow Summary\n_This is a breakdown of the 'Generate Target' step above_\n%s", workflow.RootStep.ToMermaidDiagram())
-		githubactions.AddStepSummary(md)
-	}
+	addGitHubSummary(ctx, workflow)
 
 	return err
 }
@@ -210,4 +209,22 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	}
 
 	return workflow.RunWithVisualization(ctx)
+}
+
+func addGitHubSummary(ctx context.Context, workflow *run.Workflow) {
+	if !env.IsGithubAction() {
+		return
+	}
+
+	logger := log.From(ctx)
+	md := ""
+	chart, err := workflow.RootStep.ToMermaidDiagram()
+	if err == nil {
+		md = fmt.Sprintf("# Generation Workflow Summary\n\n_This is a breakdown of the 'Generate Target' step above_\n%s", chart)
+	} else {
+		logger.Error("failed to generate github workflow summary", zap.Error(err))
+		md = "# Generation Workflow Summary\n\n:stop_sign: Failed to generate workflow summary. Please try again or [contact support](mailto:support@speakeasyapi.dev)."
+	}
+
+	githubactions.AddStepSummary(md)
 }

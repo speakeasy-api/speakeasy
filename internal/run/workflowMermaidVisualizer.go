@@ -1,6 +1,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -12,7 +13,9 @@ classDef running stroke:#293D53,color:#293D53
 classDef skipped stroke:#D3D3D3,color:#D3D3D3
 `
 
-func (w *WorkflowStep) ToMermaidDiagram() string {
+var ErrGraphTooDeep = errors.New("mermaid only supports two levels of nesting for subgraphs")
+
+func (w *WorkflowStep) ToMermaidDiagram() (string, error) {
 	builder := strings.Builder{}
 	builder.WriteString("```mermaid\n")
 	builder.WriteString("flowchart LR\n")
@@ -21,24 +24,34 @@ func (w *WorkflowStep) ToMermaidDiagram() string {
 
 	// Iterate down a level because mermaid only supports two levels of nesting for subgraphs
 	for _, substep := range w.substeps {
-		builder.WriteString(substep.toMermaidInternal(&i, 0))
+		step, err := substep.toMermaidInternal(&i, 0)
+		if err != nil {
+			return "", err
+		}
+		builder.WriteString(step)
 	}
 
 	builder.WriteString(classDefs)
 	builder.WriteString("```\n")
 
-	return builder.String()
+	return builder.String(), nil
 }
 
-func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) string {
+func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) (string, error) {
 	builder := strings.Builder{}
 
 	if depth > 2 {
-		panic("mermaid only supports two levels of nesting for subgraphs")
+		return "", ErrGraphTooDeep
 	}
 
-	writeChildNode := func(child *WorkflowStep) {
-		builder.WriteString(child.toMermaidInternal(nodeNum, depth+1))
+	writeChildNode := func(child *WorkflowStep) error {
+		step, err := child.toMermaidInternal(nodeNum, depth+1)
+		if err != nil {
+			return err
+		}
+
+		builder.WriteString(step)
+		return nil
 	}
 	writeConnection := func(from, to int) {
 		builder.WriteString(fmt.Sprintf("%d --> %d\n", from, to))
@@ -73,7 +86,9 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) string {
 		builder.WriteString(fmt.Sprintf("subgraph %d [\"%s\"]\n", selfNodeNum, nodeNameDisplay))
 		for i, child := range w.substeps {
 			childNodeNum := *nodeNum + 1
-			writeChildNode(child)
+			if err := writeChildNode(child); err != nil {
+				return "", err
+			}
 
 			if i < len(w.substeps)-1 {
 				writeConnection(childNodeNum, *nodeNum+1)
@@ -83,5 +98,5 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) string {
 		builder.WriteString(fmt.Sprintf("class %d %s\n", selfNodeNum, class)) // Subgraph class assignment needs to happen after the subgraph is defined
 	}
 
-	return builder.String()
+	return builder.String(), nil
 }
