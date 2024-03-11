@@ -64,7 +64,7 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 }
 
 func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target, error) {
-	promptMap := make(map[string]*string)
+	promptMap := make(map[publishingPrompt]*string)
 	switch target.Target {
 	case "typescript":
 		currentNpmToken := npmTokenDefault
@@ -72,7 +72,10 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 			currentNpmToken = target.Publishing.NPM.Token
 		}
 		npmTokenVal := &currentNpmToken
-		promptMap["NPM Token"] = npmTokenVal
+		promptMap[publishingPrompt{
+			key:       "NPM Token",
+			entryType: publishingTypeSecret,
+		}] = npmTokenVal
 		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
@@ -87,7 +90,10 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 			currentPyPIToken = target.Publishing.PyPi.Token
 		}
 		pypiTokenVal := &currentPyPIToken
-		promptMap["PyPI Token"] = pypiTokenVal
+		promptMap[publishingPrompt{
+			key:       "PyPI Token",
+			entryType: publishingTypeSecret,
+		}] = pypiTokenVal
 		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
@@ -102,7 +108,10 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 			currentNugetKey = target.Publishing.Nuget.APIKey
 		}
 		nugetKeyVal := &currentNugetKey
-		promptMap["Nuget API Key"] = nugetKeyVal
+		promptMap[publishingPrompt{
+			key:       "Nuget API Key",
+			entryType: publishingTypeSecret,
+		}] = nugetKeyVal
 		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
@@ -117,7 +126,10 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 			currentRubyGemsToken = target.Publishing.RubyGems.Token
 		}
 		rubyGemsTokenVal := &currentRubyGemsToken
-		promptMap["Ruby Gems Auth Token"] = rubyGemsTokenVal
+		promptMap[publishingPrompt{
+			key:       "Ruby Gems Auth Token",
+			entryType: publishingTypeSecret,
+		}] = rubyGemsTokenVal
 		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
@@ -135,8 +147,14 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 		packagistToken := &currentPackagistToken
 		packagistUsername := &currentPackagistUserName
-		promptMap["Packagist Token"] = packagistToken
-		promptMap["Packagist Username"] = packagistUsername
+		promptMap[publishingPrompt{
+			key:       "Packagist Token",
+			entryType: publishingTypeSecret,
+		}] = packagistToken
+		promptMap[publishingPrompt{
+			key:       "Packagist Username",
+			entryType: publishingTypeValue,
+		}] = packagistUsername
 		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
@@ -162,10 +180,22 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		gpgPassPhrase := &currentGPGPassPhrase
 		ossrhPassword := &currentossrhPassword
 		ossrhUsername := &currentossrhUsername
-		promptMap["GPG Secret Key"] = gpgSecretKey
-		promptMap["GPG Pass Phrase"] = gpgPassPhrase
-		promptMap["OSSRH Password"] = ossrhPassword
-		promptMap["OSSRH Username"] = ossrhUsername
+		promptMap[publishingPrompt{
+			key:       "GPG Secret Key",
+			entryType: publishingTypeSecret,
+		}] = gpgSecretKey
+		promptMap[publishingPrompt{
+			key:       "GPG Pass Phrase",
+			entryType: publishingTypeSecret,
+		}] = gpgPassPhrase
+		promptMap[publishingPrompt{
+			key:       "OSSRH Password",
+			entryType: publishingTypeSecret,
+		}] = ossrhPassword
+		promptMap[publishingPrompt{
+			key:       "OSSRH Username",
+			entryType: publishingTypeValue,
+		}] = ossrhUsername
 		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
@@ -183,13 +213,33 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 	return target, nil
 }
 
-func executePromptsForPublishing(prompts map[string]*string, target *workflow.Target, name string) error {
+type publishingEntryType int
+
+const (
+	publishingTypeSecret publishingEntryType = iota
+	publishingTypeValue
+)
+
+type publishingPrompt struct {
+	key       string
+	entryType publishingEntryType
+}
+
+func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *workflow.Target, name string) error {
 	fields := []huh.Field{}
 	for prompt, value := range prompts {
+		var input *huh.Input
+		if prompt.entryType == publishingTypeSecret {
+			input = charm.NewInput().
+				Title(fmt.Sprintf("Provide a name for your %s secret:", prompt.key)).
+				Value(value)
+		} else {
+			input = charm.NewInput().
+				Title(fmt.Sprintf("Provide the value of your %s:", prompt.key)).
+				Value(value)
+		}
 		fields = append(fields,
-			charm.NewInput().
-				Title(fmt.Sprintf("Provide a value for %s:", prompt)).
-				Value(value),
+			input,
 		)
 	}
 
@@ -499,7 +549,7 @@ func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect 
 	}
 	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
-			Title("Select any targets you would like to configure publishing for.").
+			Title("Select targets to configure publishing configs for.").
 			Description("Setup variables to configure publishing directly from Speakeasy.\n").
 			Options(publishingOptions...).
 			Value(&chosenTargets),
