@@ -23,8 +23,8 @@ require (
 	github.com/speakeasy-api/openapi-generation/v2 v2.279.1
 	github.com/speakeasy-api/openapi-overlay v0.4.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.5
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.3.10
-	github.com/speakeasy-api/speakeasy-core v0.3.1
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.4.1
+	github.com/speakeasy-api/speakeasy-core v0.3.2
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0
@@ -78,7 +78,7 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/ericlagergren/decimal v0.0.0-20221120152707-495c53812d05 // indirect
+	github.com/ericlagergren/decimal v0.0.0-20240305081647-93d586550569 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/evanw/esbuild v0.19.11 // indirect
 	github.com/fatih/color v1.16.0 // indirect
