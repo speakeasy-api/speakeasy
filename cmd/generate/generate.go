@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -43,11 +44,12 @@ var (
 		Description: "token value to use if authentication is required for downloading schema from remote URL",
 	}
 	schemaFlag = flag.StringFlag{
-		Name:         "schema",
-		Shorthand:    "s",
-		Description:  "local filepath or URL for the OpenAPI schema",
-		Required:     true,
-		DefaultValue: "./openapi.yaml",
+		Name:                       "schema",
+		Shorthand:                  "s",
+		Description:                "local filepath or URL for the OpenAPI schema",
+		Required:                   true,
+		DefaultValue:               "./openapi.yaml",
+		AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 	}
 	outFlag = flag.StringFlag{
 		Name:        "out",

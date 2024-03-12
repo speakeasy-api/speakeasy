@@ -9,7 +9,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
-	"github.com/charmbracelet/huh"
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/pkg/errors"
@@ -40,9 +40,10 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Description: "skip compilation during generation after setup",
 		},
 		flag.StringFlag{
-			Name:        "schema",
-			Shorthand:   "s",
-			Description: "local filepath or URL for the OpenAPI schema",
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "local filepath or URL for the OpenAPI schema",
+			AutocompleteFileExtensions: charm.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
 			Name:        "out-dir",

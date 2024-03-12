@@ -3,6 +3,10 @@ package migrate
 import (
 	"context"
 	"fmt"
+	"os"
+	"regexp"
+	"strings"
+
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -12,9 +16,6 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
-	"os"
-	"regexp"
-	"strings"
 )
 
 const defaultSourceName = "my-source"
@@ -60,7 +61,6 @@ func Migrate(ctx context.Context, directory string) error {
 				break
 			}
 		}
-
 	}
 
 	if currentGenWorkflow == "" {
@@ -107,21 +107,21 @@ func Migrate(ctx context.Context, directory string) error {
 		return err
 	}
 
-	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", directory), 0755); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", directory), 0o755); err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/.speakeasy/workflow.yaml", directory), workflowYaml, 0644); err != nil {
+	if err := os.WriteFile(fmt.Sprintf("%s/.speakeasy/workflow.yaml", directory), workflowYaml, 0o644); err != nil {
 		return err
 	}
 
 	// Write these last since they overwrite the existing files
-	if err := os.WriteFile(fmt.Sprintf("%s/.github/workflows/%s", directory, genWorkflowFilename), genActionWorkflowYaml, 0644); err != nil {
+	if err := os.WriteFile(fmt.Sprintf("%s/.github/workflows/%s", directory, genWorkflowFilename), genActionWorkflowYaml, 0o644); err != nil {
 		return err
 	}
 
 	if pubActionWorkflow != nil {
-		if err := os.WriteFile(fmt.Sprintf("%s/.github/workflows/%s", directory, pubWorkflowFilename), pubActionWorkflowYaml, 0644); err != nil {
+		if err := os.WriteFile(fmt.Sprintf("%s/.github/workflows/%s", directory, pubWorkflowFilename), pubActionWorkflowYaml, 0o644); err != nil {
 			return err
 		}
 	}

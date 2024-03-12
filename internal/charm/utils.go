@@ -2,11 +2,18 @@ package charm
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
+
+const AutoCompleteAnnotation = "autocomplete_extensions"
+
+var OpenAPIFileExtensions = []string{".yaml", ".yml", ".json"}
 
 func NewBranchPrompt(title string, output *bool) *huh.Group {
 	return huh.NewGroup(huh.NewConfirm().
@@ -47,4 +54,43 @@ func FormatEditOption(text string) string {
 
 func FormatNewOption(text string) string {
 	return fmt.Sprintf("+ %s", text)
+}
+
+// Populates tab complete for schema files in the relative directory
+func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []string {
+	var validFiles []string
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return validFiles
+	}
+
+	targetDir := filepath.Join(workingDir, relativeDir)
+
+	files, err := os.ReadDir(targetDir)
+	if err != nil {
+		return validFiles
+	}
+
+	for _, file := range files {
+		if !file.Type().IsDir() {
+			for _, ext := range fileExtensions {
+				if strings.HasSuffix(file.Name(), ext) {
+					validFiles = append(validFiles, filepath.Join(relativeDir, file.Name()))
+				}
+			}
+		}
+	}
+
+	return validFiles
+}
+
+func SuggestionCallback(fileExtensions []string) func(val string) []string {
+	return func(val string) []string {
+		var files []string
+		if info, err := os.Stat(val); err == nil && info.IsDir() {
+			files = SchemaFilesInCurrentDir(val, fileExtensions)
+		}
+
+		return files
+	}
 }

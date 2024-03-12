@@ -2,21 +2,21 @@ package cmd
 
 import (
 	"context"
+	"os"
+
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
-	"os"
 )
 
-var (
-	overlayFlag = flag.StringFlag{
-		Name:        "overlay",
-		Shorthand:   "o",
-		Description: "the overlay file to use",
-		Required:    true,
-	}
-)
+var overlayFlag = flag.StringFlag{
+	Name:        "overlay",
+	Shorthand:   "o",
+	Description: "the overlay file to use",
+	Required:    true,
+}
 
 var overlayCmd = &model.CommandGroup{
 	Usage:    "overlay",
@@ -66,9 +66,10 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 	Flags: []flag.Flag{
 		overlayFlag,
 		flag.StringFlag{
-			Name:        "schema",
-			Shorthand:   "s",
-			Description: "the schema to extend",
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "the schema to extend",
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
 			Name:        "out",

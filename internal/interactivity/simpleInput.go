@@ -2,12 +2,13 @@ package interactivity
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"os"
 )
 
 type SimpleInput struct {
@@ -36,6 +37,12 @@ func NewSimpleInput(input InputField, validate func(s string) error) SimpleInput
 	t.PromptStyle = focusedPromptStyle
 	t.TextStyle = styles.Focused
 	t.Cursor.Style = styles.Cursor
+	if len(input.AutocompleteFileExtensions) > 0 {
+		suggestions := charm_internal.SchemaFilesInCurrentDir("", input.AutocompleteFileExtensions)
+		t.SetSuggestions(suggestions)
+		t.ShowSuggestions = len(suggestions) > 0
+		t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
+	}
 
 	m.inputModel = t
 
@@ -62,6 +69,14 @@ func (m *SimpleInput) HandleKeypress(key string) tea.Cmd {
 			return tea.Quit
 		} else {
 			break
+		}
+	default:
+		if len(m.input.AutocompleteFileExtensions) > 0 {
+			if suggestions := charm_internal.SuggestionCallback(m.input.AutocompleteFileExtensions)(m.inputModel.Value()); len(suggestions) > 0 {
+				m.inputModel.ShowSuggestions = true
+				m.inputModel.KeyMap.AcceptSuggestion.SetEnabled(true)
+				m.inputModel.SetSuggestions(suggestions)
+			}
 		}
 	}
 

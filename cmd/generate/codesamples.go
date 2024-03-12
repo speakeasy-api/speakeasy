@@ -3,6 +3,8 @@ package generate
 import (
 	"context"
 	"fmt"
+
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -25,10 +27,11 @@ var codeSamplesCmd = &model.ExecutableCommand[codeSamplesFlags]{
 	Run:   runCodeSamples,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:        "schema",
-			Shorthand:   "s",
-			Description: "the schema to generate code samples for",
-			Required:    true,
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "the schema to generate code samples for",
+			Required:                   true,
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		headerFlag,
 		tokenFlag,
