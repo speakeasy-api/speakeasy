@@ -178,9 +178,6 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		}
 	}
 
-	s, err := w.RootStep.ToMermaidDiagram()
-	fmt.Println(s)
-
 	return err
 }
 
