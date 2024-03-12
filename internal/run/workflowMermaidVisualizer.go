@@ -22,9 +22,9 @@ func (w *WorkflowStep) ToMermaidDiagram() (string, error) {
 
 	i := 0
 
-	// Iterate down a level because mermaid only supports two levels of nesting for subgraphs
+	// Iterate down a level to get rid of the needless top-level "Workflow" node
 	for _, substep := range w.substeps {
-		step, err := substep.toMermaidInternal(&i, 0)
+		step, err := substep.toMermaidInternal(&i)
 		if err != nil {
 			return "", err
 		}
@@ -37,15 +37,11 @@ func (w *WorkflowStep) ToMermaidDiagram() (string, error) {
 	return builder.String(), nil
 }
 
-func (w *WorkflowStep) toMermaidInternal(nodeNum *int, depth int) (string, error) {
+func (w *WorkflowStep) toMermaidInternal(nodeNum *int) (string, error) {
 	builder := strings.Builder{}
 
-	if depth > 2 {
-		return "", ErrGraphTooDeep
-	}
-
 	writeChildNode := func(child *WorkflowStep) error {
-		step, err := child.toMermaidInternal(nodeNum, depth+1)
+		step, err := child.toMermaidInternal(nodeNum)
 		if err != nil {
 			return err
 		}
