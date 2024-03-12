@@ -2,6 +2,7 @@ package sdkgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 type GenerationAccess struct {
 	AccessAllowed bool
 	Message       string
+	Level         *shared.Level
 }
 
 func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, cliVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile bool) (*GenerationAccess, error) {
@@ -33,12 +35,25 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	ctx = events.SetTargetInContext(ctx, outDir)
 
-	generationAccess, message, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
+	logger := log.From(ctx).WithAssociatedFile(schemaPath)
+
+	generationAccess, level, message, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
 		GenLockID:  getGenLockID(outDir),
 		TargetType: &lang,
 	})
 
-	logger := log.From(ctx).WithAssociatedFile(schemaPath)
+	if !generationAccess && level != nil && *level == shared.LevelBlocked {
+		msg := styles.RenderErrorMessage(
+			"Upgrade Required\n",
+			strings.Split(message, "\n")...,
+		)
+		logger.Println("\n\n" + msg)
+		return &GenerationAccess{
+			AccessAllowed: generationAccess,
+			Message:       message,
+			Level:         level,
+		}, errors.New("generation access blocked")
+	}
 
 	logger.Infof("Generating SDK for %s...\n", lang)
 
@@ -48,6 +63,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 			return &GenerationAccess{
 				AccessAllowed: generationAccess,
 				Message:       message,
+				Level:         level,
 			}, fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
@@ -59,6 +75,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
 			Message:       message,
+			Level:         level,
 		}, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
@@ -101,6 +118,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
 			Message:       message,
+			Level:         level,
 		}, err
 	}
 
@@ -118,6 +136,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
 			Message:       message,
+			Level:         level,
 		}, err
 	}
 
