@@ -20,7 +20,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.279.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.280.6
 	github.com/speakeasy-api/openapi-overlay v0.4.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.5
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.4.3
@@ -75,7 +75,7 @@ require (
 	github.com/daveshanley/vacuum v0.9.5 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
-	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d // indirect
+	github.com/dop251/goja v0.0.0-20240220182346-e401ed450204 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20231122114759-e84d9a924c5c // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -170,7 +170,7 @@ require (
 	github.com/skeema/knownhosts v1.2.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.9.0 // indirect
+	github.com/speakeasy-api/easytemplate v0.10.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
