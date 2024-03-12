@@ -179,7 +179,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 		return err
 	}
 
-	if _, err := g.LoadConfig(ctx, outDir, true); err != nil {
+	if _, err := g.LoadConfig(ctx, outDir, generate.GetSupportedLanguages()...); err != nil {
 		return err
 	}
 
