@@ -43,7 +43,7 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:                       "schema",
 			Shorthand:                  "s",
 			Description:                "local filepath or URL for the OpenAPI schema",
-			AutocompleteFileExtensions: []string{".json", ".yaml", ".yml"},
+			AutocompleteFileExtensions: charm.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
 			Name:        "out-dir",

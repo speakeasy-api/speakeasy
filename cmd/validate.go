@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -41,7 +42,7 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 			Shorthand:                  "s",
 			Description:                "local filepath or URL for the OpenAPI schema",
 			Required:                   true,
-			AutocompleteFileExtensions: []string{".json", ".yaml", ".yml"},
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		flag.BooleanFlag{
 			Name:         "output-hints",

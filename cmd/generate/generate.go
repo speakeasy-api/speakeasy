@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -48,7 +49,7 @@ var (
 		Description:                "local filepath or URL for the OpenAPI schema",
 		Required:                   true,
 		DefaultValue:               "./openapi.yaml",
-		AutocompleteFileExtensions: []string{".json", ".yaml", ".yml"},
+		AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 	}
 	outFlag = flag.StringFlag{
 		Name:        "out",

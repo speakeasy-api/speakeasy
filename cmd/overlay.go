@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -68,7 +69,7 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 			Name:                       "schema",
 			Shorthand:                  "s",
 			Description:                "the schema to extend",
-			AutocompleteFileExtensions: []string{".json", ".yaml", ".yml"},
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
 			Name:        "out",
