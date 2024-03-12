@@ -43,7 +43,7 @@ func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string
 	if mergedSchema == nil {
 		return err
 	} else if err != nil {
-		fmt.Printf("WARNING: %s\n\n", err.Error())
+		log.From(ctx).Warnf("Got warning(s) when merging:  %s\n\n", err.Error())
 	}
 
 	if err := os.WriteFile(outFile, mergedSchema, 0o644); err != nil {
