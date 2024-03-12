@@ -63,8 +63,11 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 		t.Prompt = input.Name
 		t.Placeholder = input.Placeholder
 		t.SetValue(input.Value)
-		t.SetSuggestions(charm_internal.SchemaFilesInCurrentDir(""))
 		t.Cursor.Style = styles.Cursor
+		suggestions := charm_internal.SchemaFilesInCurrentDir("")
+		t.SetSuggestions(suggestions)
+		t.ShowSuggestions = len(suggestions) > 0
+		t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
 
 		m.inputModels[i] = t
 	}
@@ -89,7 +92,7 @@ func (m *MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 	switch key {
 	// Set focus to next input
-	case "tab", "shift+tab", "enter", "up", "down":
+	case "shift+tab", "enter", "up", "down":
 		// Did the user press enter while the submit button was focused?
 		// If so, exit.
 		if key == "enter" && m.focusIndex == len(m.inputModels) {
@@ -117,6 +120,8 @@ func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 		return m.Focus(m.focusIndex)
 	default:
 		if suggestions := charm_internal.SuggestionCallback(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {
+			m.inputModels[m.focusIndex].ShowSuggestions = true
+			m.inputModels[m.focusIndex].KeyMap.AcceptSuggestion.SetEnabled(true)
 			m.inputModels[m.focusIndex].SetSuggestions(suggestions)
 		}
 	}

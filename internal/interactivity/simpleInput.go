@@ -37,7 +37,10 @@ func NewSimpleInput(input InputField, validate func(s string) error) SimpleInput
 	t.PromptStyle = focusedPromptStyle
 	t.TextStyle = styles.Focused
 	t.Cursor.Style = styles.Cursor
-	t.SetSuggestions(charm_internal.SchemaFilesInCurrentDir(""))
+	suggestions := charm_internal.SchemaFilesInCurrentDir("")
+	t.SetSuggestions(suggestions)
+	t.ShowSuggestions = len(suggestions) > 0
+	t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
 
 	m.inputModel = t
 
@@ -67,6 +70,8 @@ func (m *SimpleInput) HandleKeypress(key string) tea.Cmd {
 		}
 	default:
 		if suggestions := charm_internal.SuggestionCallback(m.inputModel.Value()); len(suggestions) > 0 {
+			m.inputModel.ShowSuggestions = true
+			m.inputModel.KeyMap.AcceptSuggestion.SetEnabled(true)
 			m.inputModel.SetSuggestions(suggestions)
 		}
 	}
