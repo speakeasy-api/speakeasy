@@ -40,7 +40,7 @@ func NewSimpleInput(input InputField, validate func(s string) error) SimpleInput
 	if len(input.AutocompleteFileExtensions) > 0 {
 		suggestions := charm_internal.SchemaFilesInCurrentDir("", input.AutocompleteFileExtensions)
 		t.SetSuggestions(suggestions)
-		t.ShowSuggestions = true
+		t.ShowSuggestions = len(suggestions) > 0
 		t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
 	}
 
@@ -71,8 +71,8 @@ func (m *SimpleInput) HandleKeypress(key string) tea.Cmd {
 			break
 		}
 	default:
-		if m.inputModel.ShowSuggestions {
-			if suggestions := charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)(m.inputModel.Value()); len(suggestions) > 0 {
+		if len(m.input.AutocompleteFileExtensions) > 0 {
+			if suggestions := charm_internal.SuggestionCallback(m.input.AutocompleteFileExtensions)(m.inputModel.Value()); len(suggestions) > 0 {
 				m.inputModel.ShowSuggestions = true
 				m.inputModel.KeyMap.AcceptSuggestion.SetEnabled(true)
 				m.inputModel.SetSuggestions(suggestions)
