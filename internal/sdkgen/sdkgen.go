@@ -160,28 +160,24 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {
-	//l := log.From(ctx).WithAssociatedFile("gen.yaml") // TODO if we want to associate annotations with this file we need to get the actual path
-	//
-	//opts := []generate.GeneratorOptions{
-	//	generate.WithLogger(l),
-	//	generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
-	//		if err := utils.CreateDirectory(filename); err != nil {
-	//			return err
-	//		}
-	//
-	//		return os.WriteFile(filename, data, perm)
-	//	}, os.ReadFile),
-	//	generate.WithRunLocation("cli"),
-	//}
-	//
-	//g, err := generate.New(opts...)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if _, err := g.LoadConfig(ctx, outDir, generate.GetSupportedLanguages()...); err != nil {
-	//	return err
-	//}
+	l := log.From(ctx).WithAssociatedFile("gen.yaml") // TODO if we want to associate annotations with this file we need to get the actual path
+
+	opts := []generate.GeneratorOptions{
+		generate.WithLogger(l),
+		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
+			return nil
+		}, os.ReadFile),
+		generate.WithRunLocation("cli"),
+	}
+
+	g, err := generate.New(opts...)
+	if err != nil {
+		return err
+	}
+
+	if _, err := g.LoadConfig(ctx, outDir, generate.GetSupportedLanguages()...); err != nil {
+		return err
+	}
 
 	return nil
 }
