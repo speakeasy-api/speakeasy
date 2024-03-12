@@ -26,11 +26,11 @@ var codeSamplesCmd = &model.ExecutableCommand[codeSamplesFlags]{
 	Run:   runCodeSamples,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:              "schema",
-			Shorthand:         "s",
-			Description:       "the schema to generate code samples for",
-			Required:          true,
-			AllowAutocomplete: true,
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "the schema to generate code samples for",
+			Required:                   true,
+			AutocompleteFileExtensions: []string{".json", ".yaml", ".yml"},
 		},
 		headerFlag,
 		tokenFlag,

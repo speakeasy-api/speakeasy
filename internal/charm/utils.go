@@ -11,7 +11,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
-const AutoCompleteAnnotation = "autocomplete"
+const AutoCompleteAnnotation = "autocomplete_extensions"
+
+var OpenAPIFileExtensions = []string{".yaml", ".yml", ".json"}
 
 func NewBranchPrompt(title string, output *bool) *huh.Group {
 	return huh.NewGroup(huh.NewConfirm().
@@ -55,7 +57,7 @@ func FormatNewOption(text string) string {
 }
 
 // Populates tab complete for schema files in the relative directory
-func SchemaFilesInCurrentDir(relativeDir string) []string {
+func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []string {
 	var validFiles []string
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -70,19 +72,25 @@ func SchemaFilesInCurrentDir(relativeDir string) []string {
 	}
 
 	for _, file := range files {
-		if !file.Type().IsDir() && (strings.HasSuffix(file.Name(), ".yaml") || strings.HasSuffix(file.Name(), ".yml") || strings.HasSuffix(file.Name(), ".json")) {
-			validFiles = append(validFiles, filepath.Join(relativeDir, file.Name()))
+		if !file.Type().IsDir() {
+			for _, ext := range fileExtensions {
+				if strings.HasSuffix(file.Name(), ext) {
+					validFiles = append(validFiles, filepath.Join(relativeDir, file.Name()))
+				}
+			}
 		}
 	}
 
 	return validFiles
 }
 
-func SuggestionCallback(val string) []string {
-	var files []string
-	if info, err := os.Stat(val); err == nil && info.IsDir() {
-		files = SchemaFilesInCurrentDir(val)
-	}
+func SuggestionCallback(fileExtensions []string) func(val string) []string {
+	return func(val string) []string {
+		var files []string
+		if info, err := os.Stat(val); err == nil && info.IsDir() {
+			files = SchemaFilesInCurrentDir(val, fileExtensions)
+		}
 
-	return files
+		return files
+	}
 }

@@ -37,11 +37,11 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 	RunInteractive: validateOpenapiInteractive,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:              "schema",
-			Shorthand:         "s",
-			Description:       "local filepath or URL for the OpenAPI schema",
-			Required:          true,
-			AllowAutocomplete: true,
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "local filepath or URL for the OpenAPI schema",
+			Required:                   true,
+			AutocompleteFileExtensions: []string{".json", ".yaml", ".yml"},
 		},
 		flag.BooleanFlag{
 			Name:         "output-hints",

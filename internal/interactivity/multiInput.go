@@ -41,10 +41,10 @@ type MultiInput struct {
 }
 
 type InputField struct {
-	Name              string
-	Placeholder       string
-	Value             string
-	AllowAutocomplete bool
+	Name                       string
+	Placeholder                string
+	Value                      string
+	AutocompleteFileExtensions []string
 }
 
 func NewMultiInput(title, description string, required bool, inputs ...InputField) MultiInput {
@@ -65,8 +65,8 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 		t.Placeholder = input.Placeholder
 		t.SetValue(input.Value)
 		t.Cursor.Style = styles.Cursor
-		if input.AllowAutocomplete {
-			suggestions := charm_internal.SchemaFilesInCurrentDir("")
+		if len(input.AutocompleteFileExtensions) > 0 {
+			suggestions := charm_internal.SchemaFilesInCurrentDir("", input.AutocompleteFileExtensions)
 			t.SetSuggestions(suggestions)
 			t.ShowSuggestions = true
 			t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
@@ -123,7 +123,7 @@ func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 		return m.Focus(m.focusIndex)
 	default:
 		if m.inputModels[m.focusIndex].ShowSuggestions {
-			if suggestions := charm_internal.SuggestionCallback(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {
+			if suggestions := charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {
 				m.inputModels[m.focusIndex].ShowSuggestions = true
 				m.inputModels[m.focusIndex].KeyMap.AcceptSuggestion.SetEnabled(true)
 				m.inputModels[m.focusIndex].SetSuggestions(suggestions)

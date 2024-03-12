@@ -195,8 +195,8 @@ func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[str
 	inputs := make([]InputField, len(flags))
 	for i, flag := range flags {
 		inputs[i] = InputField{Name: flag.Name, Placeholder: flag.Usage}
-		if ann, ok := flag.Annotations[charm.AutoCompleteAnnotation]; ok && len(ann) > 0 && ann[0] == "true" {
-			inputs[i].AllowAutocomplete = true
+		if ann, ok := flag.Annotations[charm.AutoCompleteAnnotation]; ok && len(ann) > 0 {
+			inputs[i].AutocompleteFileExtensions = ann
 		}
 	}
 

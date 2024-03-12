@@ -9,7 +9,7 @@ type StringFlag struct {
 	Name, Shorthand, Description string
 	Required, Hidden             bool
 	DefaultValue                 string
-	AllowAutocomplete            bool
+	AutocompleteFileExtensions   []string
 }
 
 func (f StringFlag) Init(cmd *cobra.Command) error {
@@ -17,8 +17,8 @@ func (f StringFlag) Init(cmd *cobra.Command) error {
 	if err := setRequiredAndHidden(cmd, f.Name, f.Required, f.Hidden); err != nil {
 		return err
 	}
-	if f.AllowAutocomplete {
-		if err := cmd.Flags().SetAnnotation(f.Name, charm.AutoCompleteAnnotation, []string{"true"}); err != nil {
+	if len(f.AutocompleteFileExtensions) > 0 {
+		if err := cmd.Flags().SetAnnotation(f.Name, charm.AutoCompleteAnnotation, f.AutocompleteFileExtensions); err != nil {
 			return err
 		}
 	}

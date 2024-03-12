@@ -65,10 +65,10 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 	Flags: []flag.Flag{
 		overlayFlag,
 		flag.StringFlag{
-			Name:              "schema",
-			Shorthand:         "s",
-			Description:       "the schema to extend",
-			AllowAutocomplete: true,
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "the schema to extend",
+			AutocompleteFileExtensions: []string{".json", ".yaml", ".yml"},
 		},
 		flag.StringFlag{
 			Name:        "out",
