@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
@@ -36,9 +33,9 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 			charm_internal.NewInput().
 				Title("What is the location of your OpenAPI document?").
 				Placeholder("local file path or remote file reference.").
-				Value(fileLocation).
-				Suggestions(schemaFilesInCurrentDir("")).
-				SetSuggestionCallback(suggestionCallback),
+				Suggestions(charm_internal.SchemaFilesInCurrentDir("")).
+				SetSuggestionCallback(charm_internal.SuggestionCallback).
+				Value(fileLocation),
 		)
 	}
 
@@ -99,8 +96,9 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, auth
 			charm_internal.NewInput().
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
-				Value(overlayLocation).
-				Suggestions(schemaFilesInCurrentDir("")),
+				Suggestions(charm_internal.SchemaFilesInCurrentDir("")).
+				SetSuggestionCallback(charm_internal.SuggestionCallback).
+				Value(overlayLocation),
 		).WithHideFunc(func() bool {
 			return !*promptForOverlay
 		}),
@@ -172,6 +170,8 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 				charm_internal.NewInput().
 					Title("What is the location of your OpenAPI document?\n").
 					Placeholder("local file path or remote file reference.").
+					Suggestions(charm_internal.SchemaFilesInCurrentDir("")).
+					SetSuggestionCallback(charm_internal.SuggestionCallback).
 					Inline(false).
 					Value(&fileLocation),
 			),
@@ -208,6 +208,8 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 				charm_internal.NewInput().
 					Title("What is the location of your OpenAPI document?").
 					Placeholder("local file path or remote file reference.").
+					Suggestions(charm_internal.SchemaFilesInCurrentDir("")).
+					SetSuggestionCallback(charm_internal.SuggestionCallback).
 					Value(&fileLocation),
 			),
 		}
@@ -266,8 +268,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 			huh.NewGroup(
 				charm_internal.NewInput().
 					Title("Optionally provide an output location for your build source file:").
-					Value(&outputLocation).
-					Suggestions(schemaFilesInCurrentDir("")),
+					Suggestions(charm_internal.SchemaFilesInCurrentDir("")).
+					SetSuggestionCallback(charm_internal.SuggestionCallback).
+					Value(&outputLocation),
 			)),
 			fmt.Sprintf("Let's modify the source %s", name)).
 			ExecuteForm(); err != nil {
@@ -299,8 +302,9 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 		charm_internal.NewInput().
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
-			Value(&outputLocation).
-			Suggestions(schemaFilesInCurrentDir("")),
+			Suggestions(charm_internal.SchemaFilesInCurrentDir("")).
+			SetSuggestionCallback(charm_internal.SuggestionCallback).
+			Value(&outputLocation),
 	).WithHideFunc(
 		func() bool {
 			return overlayFileLocation == ""
@@ -360,37 +364,4 @@ func formatDocument(fileLocation, authHeader, authSecret string, validate bool) 
 	}
 
 	return document, nil
-}
-
-// Populates tab complete for schema files in the relative directory
-func schemaFilesInCurrentDir(relativeDir string) []string {
-	var validFiles []string
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return validFiles
-	}
-
-	targetDir := filepath.Join(workingDir, relativeDir)
-
-	files, err := os.ReadDir(targetDir)
-	if err != nil {
-		return validFiles
-	}
-
-	for _, file := range files {
-		if !file.Type().IsDir() && (strings.HasSuffix(file.Name(), ".yaml") || strings.HasSuffix(file.Name(), ".yml") || strings.HasSuffix(file.Name(), ".json")) {
-			validFiles = append(validFiles, filepath.Join(relativeDir, file.Name()))
-		}
-	}
-
-	return validFiles
-}
-
-func suggestionCallback(val string) []string {
-	var files []string
-	if info, err := os.Stat(val); err == nil && info.IsDir() {
-		files = schemaFilesInCurrentDir(val)
-	}
-
-	return files
 }

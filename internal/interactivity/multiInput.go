@@ -63,7 +63,7 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 		t.Prompt = input.Name
 		t.Placeholder = input.Placeholder
 		t.SetValue(input.Value)
-
+		t.SetSuggestions(charm_internal.SchemaFilesInCurrentDir(""))
 		t.Cursor.Style = styles.Cursor
 
 		m.inputModels[i] = t
@@ -115,6 +115,10 @@ func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 		}
 
 		return m.Focus(m.focusIndex)
+	default:
+		if suggestions := charm_internal.SuggestionCallback(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {
+			m.inputModels[m.focusIndex].SetSuggestions(suggestions)
+		}
 	}
 
 	return nil
