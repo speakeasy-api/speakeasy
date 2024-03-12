@@ -6,12 +6,18 @@ type StringFlag struct {
 	Name, Shorthand, Description string
 	Required, Hidden             bool
 	DefaultValue                 string
+	AllowAutocomplete            bool
 }
 
 func (f StringFlag) Init(cmd *cobra.Command) error {
 	cmd.Flags().StringP(f.Name, f.Shorthand, f.DefaultValue, f.Description)
 	if err := setRequiredAndHidden(cmd, f.Name, f.Required, f.Hidden); err != nil {
 		return err
+	}
+	if f.AllowAutocomplete {
+		if err := cmd.Flags().SetAnnotation(f.Name, "autocomplete", []string{"true"}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

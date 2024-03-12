@@ -194,6 +194,9 @@ func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[str
 	inputs := make([]InputField, len(flags))
 	for i, flag := range flags {
 		inputs[i] = InputField{Name: flag.Name, Placeholder: flag.Usage}
+		if flag.Annotations["autocomplete"][0] == "true" {
+			inputs[i].AllowAutocomplete = true
+		}
 	}
 
 	multiInputPrompt := NewMultiInput(title, description, required, inputs...)
