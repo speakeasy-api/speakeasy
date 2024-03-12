@@ -29,7 +29,7 @@ type cliVisualizer struct {
 	updates  <-chan UpdateMsg // where we'll receive activity notifications
 	rootStep *WorkflowStep
 	runFn    func() error
-	spinner  spinner.Model
+	spinner  *spinner.Model
 	err      error
 }
 
@@ -63,7 +63,7 @@ func (m cliVisualizer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	m.spinner, cmd = m.spinner.Update(msg)
+	*m.spinner, cmd = m.spinner.Update(msg)
 	return m, cmd
 }
 
@@ -93,11 +93,11 @@ func (m cliVisualizer) View() string {
 	return style.Render(summary)
 }
 
-func initSpinner() spinner.Model {
+func initSpinner() *spinner.Model {
 	s := spinner.New()
 	s.Spinner = spinner.Meter
 	s.Style = lipgloss.NewStyle().Foreground(styles.Colors.Yellow)
-	return s
+	return &s
 }
 
 var _ charm_internal.InternalModel = &cliVisualizer{}
