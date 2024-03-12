@@ -165,11 +165,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
 		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
-			if err := utils.CreateDirectory(filename); err != nil {
-				return err
-			}
-
-			return os.WriteFile(filename, data, perm)
+			return nil
 		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 	}
@@ -179,7 +175,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 		return err
 	}
 
-	if _, err := g.LoadConfig(ctx, outDir, true); err != nil {
+	if _, err := g.LoadConfig(ctx, outDir, generate.GetSupportedLanguages()...); err != nil {
 		return err
 	}
 
