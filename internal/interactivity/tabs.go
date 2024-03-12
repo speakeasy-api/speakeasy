@@ -192,6 +192,8 @@ func (m *tabsModel) ActiveContents() string {
 	return contents
 }
 
+func (m *tabsModel) OnUserExit() {}
+
 func RunTabs(tabs []Tab) {
 	m := tabsModel{Tabs: tabs}
 	charm_internal.RunModel(&m)

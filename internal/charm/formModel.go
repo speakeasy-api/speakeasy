@@ -82,6 +82,8 @@ func (m FormModel) View() string {
 	return content
 }
 
+func (m FormModel) OnUserExit() {}
+
 func (m FormModel) ExecuteForm(opts ...tea.ProgramOption) (tea.Model, error) {
 	mResult, err := RunModel(m, opts...)
 	if err != nil {
