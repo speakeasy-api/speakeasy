@@ -1,6 +1,9 @@
 package flag
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/spf13/cobra"
+)
 
 type StringFlag struct {
 	Name, Shorthand, Description string
@@ -15,7 +18,7 @@ func (f StringFlag) Init(cmd *cobra.Command) error {
 		return err
 	}
 	if f.AllowAutocomplete {
-		if err := cmd.Flags().SetAnnotation(f.Name, "autocomplete", []string{"true"}); err != nil {
+		if err := cmd.Flags().SetAnnotation(f.Name, charm.AutoCompleteAnnotation, []string{"true"}); err != nil {
 			return err
 		}
 	}

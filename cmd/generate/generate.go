@@ -43,11 +43,12 @@ var (
 		Description: "token value to use if authentication is required for downloading schema from remote URL",
 	}
 	schemaFlag = flag.StringFlag{
-		Name:         "schema",
-		Shorthand:    "s",
-		Description:  "local filepath or URL for the OpenAPI schema",
-		Required:     true,
-		DefaultValue: "./openapi.yaml",
+		Name:              "schema",
+		Shorthand:         "s",
+		Description:       "local filepath or URL for the OpenAPI schema",
+		Required:          true,
+		DefaultValue:      "./openapi.yaml",
+		AllowAutocomplete: true,
 	}
 	outFlag = flag.StringFlag{
 		Name:        "out",

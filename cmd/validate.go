@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -36,10 +37,11 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 	RunInteractive: validateOpenapiInteractive,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:        "schema",
-			Shorthand:   "s",
-			Description: "local filepath or URL for the OpenAPI schema",
-			Required:    true,
+			Name:              "schema",
+			Shorthand:         "s",
+			Description:       "local filepath or URL for the OpenAPI schema",
+			Required:          true,
+			AllowAutocomplete: true,
 		},
 		flag.BooleanFlag{
 			Name:         "output-hints",

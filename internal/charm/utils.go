@@ -11,6 +11,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
+const AutoCompleteAnnotation = "autocomplete"
+
 func NewBranchPrompt(title string, output *bool) *huh.Group {
 	return huh.NewGroup(huh.NewConfirm().
 		Title(title).

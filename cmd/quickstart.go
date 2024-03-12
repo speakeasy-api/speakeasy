@@ -40,9 +40,10 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Description: "skip compilation during generation after setup",
 		},
 		flag.StringFlag{
-			Name:        "schema",
-			Shorthand:   "s",
-			Description: "local filepath or URL for the OpenAPI schema",
+			Name:              "schema",
+			Shorthand:         "s",
+			Description:       "local filepath or URL for the OpenAPI schema",
+			AllowAutocomplete: true,
 		},
 		flag.StringFlag{
 			Name:        "out-dir",
