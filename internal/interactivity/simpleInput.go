@@ -111,6 +111,8 @@ func (m *SimpleInput) View() string {
 	return inputBoxStyle.Render(fmt.Sprintf("%s\n%s", input, helper))
 }
 
+func (m *SimpleInput) OnUserExit() {}
+
 // Run returns a map from input name to the input value
 func (m *SimpleInput) Run() string {
 	newM, err := charm_internal.RunModel(m)

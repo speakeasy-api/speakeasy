@@ -72,14 +72,17 @@ func (w *WorkflowStep) SucceedWorkflow() {
 }
 
 func (w *WorkflowStep) FailWorkflow() {
+	w.FailWorkflowWithoutNotifying()
+	w.Notify()
+}
+
+func (w *WorkflowStep) FailWorkflowWithoutNotifying() {
 	if w.status == StatusRunning {
 		w.status = StatusFailed
 	}
 	for _, substep := range w.substeps {
-		substep.FailWorkflow()
+		substep.FailWorkflowWithoutNotifying()
 	}
-
-	w.Notify()
 }
 
 func (w *WorkflowStep) Finalize(succeeded bool) {

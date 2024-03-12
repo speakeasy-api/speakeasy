@@ -247,6 +247,8 @@ func (m *MultiInput) getFilledValues() map[string]string {
 	return inputResults
 }
 
+func (m *MultiInput) OnUserExit() {}
+
 // Run returns a map from input name to the input value
 func (m *MultiInput) Run() map[string]string {
 	newM, err := charm_internal.RunModel(m)

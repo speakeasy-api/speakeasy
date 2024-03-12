@@ -2,6 +2,7 @@ package run
 
 import (
 	"fmt"
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,7 +27,6 @@ func listenForUpdates(sub <-chan UpdateMsg) tea.Cmd {
 
 type cliVisualizer struct {
 	updates  <-chan UpdateMsg // where we'll receive activity notifications
-	status   Status
 	rootStep *WorkflowStep
 	runFn    func() error
 	spinner  spinner.Model
@@ -46,22 +46,18 @@ func (m cliVisualizer) Init() tea.Cmd {
 	)
 }
 
+func (m cliVisualizer) OnUserExit() {
+	m.rootStep.FailWorkflowWithoutNotifying()
+	m.rootStep.statusExplanation = "user exited"
+}
+
 func (m cliVisualizer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" || msg.String() == "esc" {
-			m.status = StatusFailed
-			return m, tea.Quit
-		}
 	case UpdateMsg:
 		switch msg {
 		case MsgUpdated:
 			return m, listenForUpdates(m.updates) // wait for next event
-		case MsgSucceeded:
-			m.status = StatusSucceeded
-			return m, tea.Quit
-		case MsgFailed:
-			m.status = StatusFailed
+		case MsgSucceeded, MsgFailed:
 			return m, tea.Quit
 		}
 	}
@@ -71,9 +67,12 @@ func (m cliVisualizer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m cliVisualizer) HandleKeypress(key string) tea.Cmd { return nil }
+func (m cliVisualizer) SetWidth(width int)                {}
+
 func (m cliVisualizer) View() string {
 	statusStyle := styles.Info
-	switch m.status {
+	switch m.rootStep.status {
 	case StatusFailed:
 		statusStyle = styles.Error
 	case StatusSucceeded:
@@ -84,7 +83,7 @@ func (m cliVisualizer) View() string {
 
 	summary := m.rootStep.PrettyString()
 
-	if m.status == StatusRunning {
+	if m.rootStep.status == StatusRunning {
 		summary = fmt.Sprintf("%s\n%s", summary, m.spinner.View())
 	}
 
@@ -101,20 +100,17 @@ func initSpinner() spinner.Model {
 	return s
 }
 
+var _ charm_internal.InternalModel = &cliVisualizer{}
+
 func (w *WorkflowStep) RunWithVisualization(runFn func() error, updatesChannel chan UpdateMsg) error {
 	v := cliVisualizer{
 		updates:  updatesChannel,
 		rootStep: w,
 		runFn:    runFn,
 		spinner:  initSpinner(),
-		status:   StatusRunning,
-	}
-	p := tea.NewProgram(v)
-
-	model, err := p.Run()
-	if err != nil {
-		return err
 	}
 
-	return model.(cliVisualizer).err
+	_, err := charm_internal.RunModel(&v)
+
+	return err
 }

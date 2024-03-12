@@ -13,6 +13,7 @@ type InternalModel interface {
 	HandleKeypress(key string) tea.Cmd // A convenience method for handling keypresses. Should usually return nil.
 	View() string
 	SetWidth(width int)
+	OnUserExit()
 }
 
 type modelWrapper struct {
@@ -25,6 +26,7 @@ func (m modelWrapper) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case "ctrl+c", "esc":
+			m.model.OnUserExit()
 			m.signalExit = true
 			return m, tea.Quit
 		default:

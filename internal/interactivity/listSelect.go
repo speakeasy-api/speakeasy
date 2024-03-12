@@ -79,6 +79,8 @@ func (m *ListSelect) View() string {
 	return docStyle.Render(m.list.View() + "\n\n" + inputLegend)
 }
 
+func (m *ListSelect) OnUserExit() {}
+
 func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command {
 	items := make([]list.Item, len(options))
 	for i, option := range options {
