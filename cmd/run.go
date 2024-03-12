@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/charmbracelet/huh"
 	"github.com/sethvargo/go-githubactions"
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"

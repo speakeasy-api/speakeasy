@@ -4,9 +4,8 @@ go 1.21.5
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
-	github.com/charmbracelet/bubbles v0.17.2-0.20240108170749-ec883029c8e6
+	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.25.0
-	github.com/charmbracelet/huh v0.3.0
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/structs v1.1.0
@@ -20,6 +19,7 @@ require (
 	github.com/pb33f/libopenapi v0.15.10
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
+	github.com/speakeasy-api/huh v0.0.2
 	github.com/speakeasy-api/openapi-generation/v2 v2.279.1
 	github.com/speakeasy-api/openapi-overlay v0.4.0
 	github.com/speakeasy-api/sdk-gen-config v1.7.5
@@ -62,6 +62,8 @@ require (
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/charmbracelet/huh v0.3.0 // indirect
+	github.com/charmbracelet/x/exp/strings v0.0.0-20240304160204-3835fda67169 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
@@ -76,6 +78,7 @@ require (
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20231122114759-e84d9a924c5c // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20240305081647-93d586550569 // indirect
@@ -195,7 +198,7 @@ require (
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect

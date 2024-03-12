@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 )
@@ -36,7 +37,8 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 				Title("What is the location of your OpenAPI document?").
 				Placeholder("local file path or remote file reference.").
 				Value(fileLocation).
-				Suggestions(schemaFilesInCurrentDir()),
+				Suggestions(schemaFilesInCurrentDir("")).
+				SetSuggestionCallback(suggestionCallback),
 		)
 	}
 
@@ -98,7 +100,7 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, auth
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
 				Value(overlayLocation).
-				Suggestions(schemaFilesInCurrentDir()),
+				Suggestions(schemaFilesInCurrentDir("")),
 		).WithHideFunc(func() bool {
 			return !*promptForOverlay
 		}),
@@ -265,7 +267,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 				charm_internal.NewInput().
 					Title("Optionally provide an output location for your build source file:").
 					Value(&outputLocation).
-					Suggestions(schemaFilesInCurrentDir()),
+					Suggestions(schemaFilesInCurrentDir("")),
 			)),
 			fmt.Sprintf("Let's modify the source %s", name)).
 			ExecuteForm(); err != nil {
@@ -298,7 +300,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
 			Value(&outputLocation).
-			Suggestions(schemaFilesInCurrentDir()),
+			Suggestions(schemaFilesInCurrentDir("")),
 	).WithHideFunc(
 		func() bool {
 			return overlayFileLocation == ""
@@ -360,24 +362,35 @@ func formatDocument(fileLocation, authHeader, authSecret string, validate bool) 
 	return document, nil
 }
 
-// Populates tab complete for schema files in the current directory
-func schemaFilesInCurrentDir() []string {
+// Populates tab complete for schema files in the relative directory
+func schemaFilesInCurrentDir(relativeDir string) []string {
 	var validFiles []string
-	dir, err := os.Getwd()
+	workingDir, err := os.Getwd()
 	if err != nil {
 		return validFiles
 	}
 
-	files, err := os.ReadDir(dir)
+	targetDir := filepath.Join(workingDir, relativeDir)
+
+	files, err := os.ReadDir(targetDir)
 	if err != nil {
 		return validFiles
 	}
 
 	for _, file := range files {
-		if !file.IsDir() && (strings.HasSuffix(file.Name(), ".yaml") || strings.HasSuffix(file.Name(), ".yml") || strings.HasSuffix(file.Name(), ".json")) {
-			validFiles = append(validFiles, file.Name())
+		if !file.Type().IsDir() && (strings.HasSuffix(file.Name(), ".yaml") || strings.HasSuffix(file.Name(), ".yml") || strings.HasSuffix(file.Name(), ".json")) {
+			validFiles = append(validFiles, filepath.Join(relativeDir, file.Name()))
 		}
 	}
 
 	return validFiles
+}
+
+func suggestionCallback(val string) []string {
+	var files []string
+	if info, err := os.Stat(val); err == nil && info.IsDir() {
+		files = schemaFilesInCurrentDir(val)
+	}
+
+	return files
 }

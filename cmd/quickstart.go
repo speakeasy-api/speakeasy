@@ -9,7 +9,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
-	"github.com/charmbracelet/huh"
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/pkg/errors"
