@@ -1,18 +1,19 @@
-# codeSamples  
-`speakeasy generate codeSamples`  
 
+# codeSamples 
+
+`speakeasy generate codeSamples`  
 
 Creates an overlay for a given spec containing x-codeSamples extensions for the given languages.  
 
 ## Usage
 
-```
+```bash
 speakeasy generate codeSamples [flags]
 ```
 
 ### Options
 
-```
+```sql
       --config-path string   the path to the directory containing the gen.yaml file(s) to use (default ".")
   -H, --header string        header key to use if authentication is required for downloading schema from remote URL
   -h, --help                 help for codeSamples
@@ -24,10 +25,10 @@ speakeasy generate codeSamples [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy generate](README.md)	 - Generate client SDKs, docsites, and more
+* [speakeasy generate](README.md) - Generate client SDKs, docsites, and more

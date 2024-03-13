@@ -1,6 +1,7 @@
-# changelog  
-`speakeasy generate sdk changelog`  
 
+# changelog  
+
+`speakeasy generate sdk changelog`  
 
 Prints information about changes to the SDK generator  
 
@@ -10,13 +11,13 @@ Prints information about changes to the SDK generator with the ability to filter
 
 ## Usage
 
-```
+```bash
 speakeasy generate sdk changelog [flags]
 ```
 
 ### Options
 
-```
+```sql
   -h, --help              help for changelog
   -l, --language string   the language to get changelogs for, if not specified the changelog for the generator itself will be returned
   -p, --previous string   the version(s) to get changelogs between this and the target version(s)
@@ -27,10 +28,10 @@ speakeasy generate sdk changelog [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy generate sdk](README.md)	 - Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)
+* [speakeasy generate sdk](README.md) - Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)

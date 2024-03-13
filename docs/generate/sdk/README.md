@@ -107,7 +107,7 @@ For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-spe
 
 ## Usage
 
-```
+```bash
 speakeasy generate sdk [flags]
 ```
 
@@ -130,14 +130,14 @@ speakeasy generate sdk [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy generate](../README.md)	 - Generate client SDKs, docsites, and more
+* [speakeasy generate](../README.md) - Generate client SDKs, docsites, and more
 ### Sub Commands
 
-* [speakeasy generate sdk changelog](changelog.md)	 - Prints information about changes to the SDK generator
-* [speakeasy generate sdk version](version.md)	 - Print the version number of the SDK generator
+* [speakeasy generate sdk changelog](changelog.md) - Prints information about changes to the SDK generator
+* [speakeasy generate sdk version](version.md) - Print the version number of the SDK generator

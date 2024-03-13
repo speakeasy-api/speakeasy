@@ -1,18 +1,19 @@
-# apply  
-`speakeasy overlay apply`  
 
+# apply  
+
+`speakeasy overlay apply`  
 
 Given an overlay, construct a new specification by extending a specification and applying the overlay, and output it to stdout.  
 
 ## Usage
 
-```
+```bash
 speakeasy overlay apply [flags]
 ```
 
 ### Options
 
-```
+```sql
   -h, --help             help for apply
       --out string       write directly to a file instead of stdout
   -o, --overlay string   the overlay file to use
@@ -21,10 +22,10 @@ speakeasy overlay apply [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy overlay](README.md)	 - Work with OpenAPI Overlays
+* [speakeasy overlay](README.md) - Work with OpenAPI Overlays

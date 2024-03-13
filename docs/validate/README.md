@@ -1,6 +1,7 @@
-# validate  
-`speakeasy validate`  
 
+# validate  
+
+`speakeasy validate`  
 
 Validate OpenAPI documents + more  
 
@@ -10,26 +11,26 @@ The "validate" command provides a set of commands for validating OpenAPI docs an
 
 ## Usage
 
-```
+```bash
 speakeasy validate [flags]
 ```
 
 ### Options
 
-```
+```sql
   -h, --help   help for validate
 ```
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md) - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy validate config](config.md)	 - Validate a Speakeasy configuration file
-* [speakeasy validate openapi](openapi.md)	 - Validate an OpenAPI document
+* [speakeasy validate config](config.md) - Validate a Speakeasy configuration file
+* [speakeasy validate openapi](openapi.md) - Validate an OpenAPI document

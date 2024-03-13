@@ -1,6 +1,7 @@
-# sources  
-`speakeasy configure sources`  
 
+# sources  
+
+`speakeasy configure sources`  
 
 Configure new or existing sources.  
 
@@ -10,13 +11,13 @@ Guided prompts to configure a new or existing source in your speakeasy workflow.
 
 ## Usage
 
-```
+```bash
 speakeasy configure sources [flags]
 ```
 
 ### Options
 
-```
+```sql
   -h, --help        help for sources
   -i, --id string   the name of an existing source to configure
   -n, --new         configure a new source
@@ -24,10 +25,10 @@ speakeasy configure sources [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy configure](README.md)	 - Configure your Speakeasy SDK Setup.
+* [speakeasy configure](README.md) - Configure your Speakeasy SDK Setup.

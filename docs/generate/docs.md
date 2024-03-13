@@ -1,6 +1,7 @@
-# docs  
-`speakeasy generate docs`  
 
+# docs  
+
+`speakeasy generate docs`  
 
 Use this command to generate content for the SDK docs directory.  
 
@@ -10,13 +11,13 @@ Use this command to generate content for the SDK docs directory.
 
 ## Usage
 
-```
+```bash
 speakeasy generate docs [flags]
 ```
 
 ### Options
 
-```
+```sql
   -y, --auto-yes             auto answer yes to all prompts
   -c, --compile              automatically compile SDK docs content for a single page doc site
   -d, --debug                enable writing debug files with broken code
@@ -32,10 +33,10 @@ speakeasy generate docs [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy generate](README.md)	 - Generate client SDKs, docsites, and more
+* [speakeasy generate](README.md) - Generate client SDKs, docsites, and more

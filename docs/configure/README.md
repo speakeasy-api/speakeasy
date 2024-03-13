@@ -10,28 +10,28 @@ Configure your Speakeasy SDK Setup.
 
 ## Usage
 
-```
+```bash
 speakeasy configure [flags]
 ```
 
 ### Options
 
-```
+```sql
   -h, --help   help for configure
 ```
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md) - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy configure github](github.md)	 - Configure Speakeasy for github.
-* [speakeasy configure publishing](publishing.md)	 - Configure Speakeasy for publishing.
-* [speakeasy configure sources](sources.md)	 - Configure new or existing sources.
-* [speakeasy configure targets](targets.md)	 - Configure new target.
+* [speakeasy configure github](github.md) - Configure Speakeasy for github.
+* [speakeasy configure publishing](publishing.md) - Configure Speakeasy for publishing.
+* [speakeasy configure sources](sources.md) - Configure new or existing sources.
+* [speakeasy configure targets](targets.md) - Configure new target.

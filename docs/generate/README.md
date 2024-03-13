@@ -10,30 +10,30 @@ The "generate" command provides a set of commands for generating client SDKs and
 
 ## Usage
 
-```
+```bash
 speakeasy generate [flags]
 ```
 
 ### Options
 
-```
+```sql
   -h, --help   help for generate
 ```
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md) - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
 ### Sub Commands
 
-* [speakeasy generate changelog](changelog.md)	 - Prints information about changes to the SDK generator
-* [speakeasy generate codeSamples](codeSamples.md)	 - Creates an overlay for a given spec containing x-codeSamples extensions for the given languages.
-* [speakeasy generate docs](docs.md)	 - Use this command to generate content for the SDK docs directory.
-* [speakeasy generate sdk](sdk/README.md)	 - Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)
-* [speakeasy generate usage](usage.md)	 - Generate standalone usage snippets for SDKs in (go, typescript, python, java, php, swift, ruby, csharp, unity)
-* [speakeasy generate version](version.md)	 - Print the version number of the SDK generator
+* [speakeasy generate changelog](changelog.md) - Prints information about changes to the SDK generator
+* [speakeasy generate codeSamples](codeSamples.md) - Creates an overlay for a given spec containing x-codeSamples extensions for the given languages.
+* [speakeasy generate docs](docs.md) - Use this command to generate content for the SDK docs directory.
+* [speakeasy generate sdk](sdk/README.md) - Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)
+* [speakeasy generate usage](usage.md) - Generate standalone usage snippets for SDKs in (go, typescript, python, java, php, swift, ruby, csharp, unity)
+* [speakeasy generate version](version.md) - Print the version number of the SDK generator

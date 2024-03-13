@@ -1,6 +1,7 @@
-# openapi  
-`speakeasy validate openapi`  
 
+# openapi  
+
+`speakeasy validate openapi`  
 
 Validate an OpenAPI document  
 
@@ -10,13 +11,13 @@ Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI spe
 
 ## Usage
 
-```
+```bash
 speakeasy validate openapi [flags]
 ```
 
 ### Options
 
-```
+```sql
   -H, --header string                 header key to use if authentication is required for downloading schema from remote URL
   -h, --help                          help for openapi
       --max-validation-errors int     limit the number of errors to output (default 1000, 0 = no limit) (default 1000)
@@ -28,10 +29,10 @@ speakeasy validate openapi [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy validate](README.md)	 - Validate OpenAPI documents + more
+* [speakeasy validate](README.md) - Validate OpenAPI documents + more

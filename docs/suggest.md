@@ -1,6 +1,7 @@
-# suggest  
-`speakeasy suggest`  
 
+# suggest 
+
+`speakeasy suggest`  
 
 Validate an OpenAPI document and get fixes suggested by ChatGPT  
 
@@ -12,13 +13,13 @@ you must first create an API key via https://app.speakeasyapi.dev and then set t
 
 ## Usage
 
-```
+```bash
 speakeasy suggest [flags]
 ```
 
 ### Options
 
-```
+```sql
   -a, --auto-approve           auto continue through all prompts
       --cache-folder string    caches computations into a given folder
       --examples               enables the example generation for the suggest command, generating an updated document with examples for all primitives.
@@ -38,10 +39,10 @@ speakeasy suggest [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](README.md) - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain

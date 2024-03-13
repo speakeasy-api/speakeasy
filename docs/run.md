@@ -1,6 +1,7 @@
-# run  
-`speakeasy run`  
 
+# run  
+
+`speakeasy run`  
 
 run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.  
 
@@ -19,13 +20,13 @@ If `speakeasy run` is run without any arguments it will run either the first tar
 
 ## Usage
 
-```
+```bash
 speakeasy run [flags]
 ```
 
 ### Options
 
-```
+```sql
   -d, --debug                     enable writing debug files with broken code
   -h, --help                      help for run
   -i, --installationURL string    the language specific installation URL for installation instructions if the SDK is not published to a package manager
@@ -40,10 +41,10 @@ speakeasy run [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](README.md)  - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain

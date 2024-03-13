@@ -10,13 +10,13 @@ Guided setup to help you create a new SDK in minutes.
 
 ## Usage
 
-```
+```bash
 speakeasy quickstart [flags]
 ```
 
 ### Options
 
-```
+```sql
   -h, --help             help for quickstart
   -o, --out-dir string   output directory for the quickstart command
   -s, --schema string    local filepath or URL for the OpenAPI schema
@@ -26,10 +26,10 @@ speakeasy quickstart [flags]
 
 ### Options inherited from parent commands
 
-```
+```sql
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 ### Parent Command
 
-* [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](README.md) - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain

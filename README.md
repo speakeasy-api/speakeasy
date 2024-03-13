@@ -156,13 +156,13 @@ Note that you don't need to be logged in to the Speakeasy platform to validate y
 
 **Command**:
 
-```bash
+```ps
 speakeasy validate openapi [flags]
 ```
 
 **Options**:
 
-```bash
+```sql
   -h, --help            help for OpenAPI
   -s, --schema string   path to the OpenAPI schema
 ```
@@ -181,7 +181,7 @@ speakeasy usage [flags]
 
 **Options**:
 
-```bash
+```sql
   -d, --debug         enable writing debug files with broken code
   -f, --file string   path to file to generate usage information for
   -h, --help          help for usage
@@ -315,7 +315,7 @@ speakeasy [flags]
 
 #### Options
 
-```bash
+```sql
   -h, --help   help for speakeasy
 ```
 
@@ -327,8 +327,8 @@ speakeasy [flags]
 * [speakeasy validate](docs/validate/README.md)  - Validate OpenAPI documents
 
 ## CLI  
-`speakeasy`  
 
+`speakeasy`  
 
 The speakeasy CLI provides access to the speakeasyapi.dev toolchain  
 
@@ -344,26 +344,26 @@ The speakeasy CLI provides access to the speakeasyapi.dev toolchain
 
 ### Usage
 
-```
+```bash
 speakeasy [flags]
 ```
 
 #### Options
 
-```
+```sql
   -h, --help              help for speakeasy
       --logLevel string   the log level (available options: [info, warn, error]) (default "info")
 ```
 
 #### Sub Commands
 
-* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
-* [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
-* [speakeasy generate](docs/generate/README.md)	 - Generate client SDKs, doc sites, and more
-* [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
-* [speakeasy overlay](docs/overlay/README.md)	 - Work with OpenAPI Overlays
-* [speakeasy quickstart](docs/quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
-* [speakeasy run](docs/run.md)	 - run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.
-* [speakeasy suggest](docs/suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
-* [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version
-* [speakeasy validate](docs/validate/README.md)	 - Validate OpenAPI documents + more
+* [speakeasy auth](docs/auth/README.md) - Authenticate the CLI
+* [speakeasy configure](docs/configure/README.md) - Configure your Speakeasy SDK Setup.
+* [speakeasy generate](docs/generate/README.md) - Generate client SDKs, doc sites, and more
+* [speakeasy merge](docs/merge.md) - Merge multiple OpenAPI documents into a single document
+* [speakeasy overlay](docs/overlay/README.md) - Work with OpenAPI Overlays
+* [speakeasy quickstart](docs/quickstart.md) - Guided setup to help you create a new SDK in minutes.
+* [speakeasy run](docs/run.md) - run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.
+* [speakeasy suggest](docs/suggest.md) - Validate an OpenAPI document and get fixes suggested by ChatGPT
+* [speakeasy update](docs/update.md) - Update the Speakeasy CLI to the latest version
+* [speakeasy validate](docs/validate/README.md) - Validate OpenAPI documents + more
