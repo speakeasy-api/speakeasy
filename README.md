@@ -138,7 +138,7 @@ speakeasy generate sdk [flags]
 
 **Options**:
 
-```bash
+```sql
   -b, --baseurl string   base URL for the API (only required if OpenAPI spec doesn't specify root server URLs)
   -d, --debug            enable writing debug files with broken code
   -h, --help             help for SDK
