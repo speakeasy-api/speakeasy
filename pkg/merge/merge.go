@@ -33,7 +33,7 @@ func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string
 		}
 
 		if err := validate(ctx, inFile, data); err != nil {
-			return err
+			log.From(ctx).Errorf("failed validating spec %s", inFile, zap.Error(err))
 		}
 
 		inSchemas[i] = data
