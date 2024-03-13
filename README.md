@@ -330,11 +330,11 @@ speakeasy [flags]
 `speakeasy`  
 
 
-The speakeasy cli tool provides access to the speakeasyapi.dev toolchain  
+The speakeasy CLI provides access to the speakeasyapi.dev toolchain  
 
 ### Details
 
- A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
+ A CLI tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
 	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, c#, swift, ruby, terraform)
 	- Validating OpenAPI specs
 	- Interacting with the Speakeasy API to create and manage your API workspaces
@@ -359,7 +359,7 @@ speakeasy [flags]
 
 * [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
-* [speakeasy generate](docs/generate/README.md)	 - Generate client SDKs, docsites, and more
+* [speakeasy generate](docs/generate/README.md)	 - Generate client SDKs, doc sites, and more
 * [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy overlay](docs/overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy quickstart](docs/quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
