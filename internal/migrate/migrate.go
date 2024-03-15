@@ -41,7 +41,7 @@ func Migrate(ctx context.Context, directory string) error {
 		if !file.IsDir() {
 			fileBytes, err := os.ReadFile(fmt.Sprintf("%s/.github/workflows/%s", directory, file.Name()))
 			if err != nil {
-				return err
+				continue
 			}
 
 			fileContents := string(fileBytes)
