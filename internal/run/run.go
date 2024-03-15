@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"os"
 	"path/filepath"
 	"slices"
@@ -143,9 +144,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
-		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(styles.TerminalWidth() - 8) // -8 because of padding
-		logsHeading := styles.Dimmed.Render("Workflow run logs")
-		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
+		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
 	}
 
 	// Display success message if the workflow succeeded
@@ -263,6 +262,18 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	}
 
 	published := t.Publishing != nil && t.Publishing.IsPublished(target)
+
+	rootStep.NewSubstep("Validating gen.yaml")
+
+	genConfig, err := sdkGenConfig.Load(outDir)
+	if err != nil {
+		return err
+	}
+
+	err = validateConfigAndPrintErrors(ctx, target, genConfig, published)
+	if err != nil {
+		return err
+	}
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 
