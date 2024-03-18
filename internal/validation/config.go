@@ -27,7 +27,7 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 				logger.Error(fmt.Sprintf("%v", err))
 			}
 
-			return fmt.Errorf("gen.yaml config is invalid for target %s", target)
+			return fmt.Errorf("gen.yaml config is invalid for target %s. See workflow logs for details", target)
 		}
 
 		return nil

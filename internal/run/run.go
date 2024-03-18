@@ -270,7 +270,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		return err
 	}
 
-	err = validateConfigAndPrintErrors(ctx, target, genConfig, published)
+	err = validation.ValidateConfigAndPrintErrors(ctx, target, genConfig, published)
 	if err != nil {
 		return err
 	}
