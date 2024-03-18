@@ -120,13 +120,34 @@ func Migrate(ctx context.Context, directory string) error {
 		return err
 	}
 
-	if pubActionWorkflow != nil {
+	if pubActionWorkflow != nil && pubWorkflowFilename != "" {
 		if err := os.WriteFile(fmt.Sprintf("%s/.github/workflows/%s", directory, pubWorkflowFilename), pubActionWorkflowYaml, 0o644); err != nil {
 			return err
 		}
 	}
 
-	logger.Println(styles.RenderSuccessMessage("Successfully migrated to the new workflow format!", "Created .speakeasy/workflow.yaml", "Updated GitHub action workflow files"))
+	status := []string{
+		fmt.Sprintf("Speakeasy workflow written to - %s/.speakeasy/workflow.yaml", directory),
+		fmt.Sprintf("GitHub action (generate) written to - %s/.github/workflows/%s", directory, genWorkflowFilename),
+	}
+	if pubActionWorkflow != nil && pubWorkflowFilename != "" {
+		status = append(status, fmt.Sprintf("GitHub action (publish) written to - %s/.github/workflows/%s", directory, pubWorkflowFilename))
+	}
+
+	status = append(status, "The following openapi specs are currently included:")
+	for _, source := range workflow.Sources {
+		for _, spec := range source.Inputs {
+			status = append(status, fmt.Sprintf("\t• %s", spec.Location))
+		}
+	}
+
+	status = append(status, "The following languages are configured:")
+	for _, target := range workflow.Targets {
+		status = append(status, fmt.Sprintf("\t• %s", target.Target))
+	}
+	status = append(status, "Try out speakeasy run to regenerate your SDK locally!")
+
+	logger.Println(styles.RenderInstructionalMessage("Successfully migrated to the new workflow format!", status...))
 
 	return nil
 }
