@@ -145,6 +145,7 @@ func Migrate(ctx context.Context, directory string) error {
 	for _, target := range workflow.Targets {
 		status = append(status, fmt.Sprintf("• %s", target.Target))
 	}
+	status = append(status, "Try out speakeasy run to regenerate your SDK locally!")
 
 	logger.Println(styles.RenderSuccessMessage("Successfully migrated to the new workflow format!", status...))
 
