@@ -530,10 +530,7 @@ func defaultPublishingFile() *config.PublishWorkflow {
 		},
 		Jobs: config.Jobs{
 			Publish: config.Job{
-				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15",
-				With: map[string]any{
-					"create_release": true,
-				},
+				Uses:    "speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15",
 				Secrets: make(map[string]string),
 			},
 		},
