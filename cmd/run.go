@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/huh"
@@ -91,7 +92,7 @@ A full workflow is capable of running the following steps:
 }
 
 func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
-	wf, _, err := run.GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
 	}

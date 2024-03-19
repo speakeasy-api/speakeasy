@@ -44,7 +44,7 @@ type Workflow struct {
 }
 
 func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
-	wf, projectDir, err := GetWorkflowAndDir()
+	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
@@ -65,28 +65,8 @@ func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURL
 	}, nil
 }
 
-func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, "", err
-	}
-
-	wf, workflowFileLocation, err := workflow.Load(wd)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Get the project directory which is the parent of the .speakeasy folder the workflow file is in
-	projectDir := filepath.Dir(filepath.Dir(workflowFileLocation))
-	if err := os.Chdir(projectDir); err != nil {
-		return nil, "", err
-	}
-
-	return wf, projectDir, nil
-}
-
 func ParseSourcesAndTargets() ([]string, []string, error) {
-	wf, _, err := GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -223,7 +203,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 }
 
 func getTarget(target string) (*workflow.Target, error) {
-	wf, _, err := GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +241,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		outDir = w.projectDir
 	}
 
-	published := t.Publishing != nil && t.Publishing.IsPublished(target)
+	published := t.IsPublished()
 
 	rootStep.NewSubstep("Validating gen.yaml")
 

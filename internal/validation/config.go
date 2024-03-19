@@ -8,12 +8,49 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-// ValidateConfigAndPrintErrors validates the generation config for a target and prints any errors
+// GetAndValidateConfigs validates the generation config for a target and prints any errors
 // Returns an error if the config is invalid, nil otherwise
+func GetAndValidateConfigs(ctx context.Context) (map[string]sdkGenConfig.Config, error) {
+	wf, wfDir, err := utils.GetWorkflowAndDir()
+	if err != nil {
+		return nil, err
+	}
+
+	targetToConfig := make(map[string]sdkGenConfig.Config)
+
+	err = nil
+	for _, target := range wf.Targets {
+		dir := wfDir
+		if target.Output != nil && *target.Output != "" {
+			dir = filepath.Join(wfDir, *target.Output)
+		}
+
+		genConfig, err := sdkGenConfig.Load(dir)
+		if err != nil {
+			return nil, err
+		}
+
+		log.From(ctx).Infof("Found gen.yaml for target %s at %s\n", target.Target, genConfig.ConfigPath)
+
+		err = ValidateConfigAndPrintErrors(ctx, target.Target, genConfig, target.IsPublished())
+
+		targetToConfig[target.Target] = *genConfig
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("gen.yaml config is invalid. See logs above for details")
+	}
+
+	return targetToConfig, nil
+}
+
 func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGenConfig.Config, publishingEnabled bool) error {
 	logger := log.From(ctx)
 	logger.Infof("\nValidating gen.yaml for target %s...\n", target)
@@ -24,7 +61,7 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 		errs := ValidateConfig(target, cfg, publishingEnabled)
 		if len(errs) > 0 {
 			for _, err := range errs {
-				logger.Error(fmt.Sprintf("%v", err))
+				logger.Error(fmt.Sprintf("%v\n", err))
 			}
 
 			return fmt.Errorf("gen.yaml config is invalid for target %s. See workflow logs for details", target)
@@ -38,9 +75,10 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 
 // ValidateConfig validates the generation config for a target and returns a list of errors
 func ValidateConfig(target string, cfg *sdkGenConfig.Config, publishingEnabled bool) []error {
-	if cfg == nil || cfg.Config == nil || cfg.Config.Languages == nil {
+	if cfg == nil || cfg.Config == nil || len(cfg.Config.Languages) == 0 {
 		return []error{fmt.Errorf("no configuration found")}
 	} else if _, ok := cfg.Config.Languages[target]; !ok {
+		println("FOUND: ", strings.Join(maps.Keys(cfg.Config.Languages), ", "))
 		return []error{fmt.Errorf("target %s not found in configuration", target)}
 	}
 
