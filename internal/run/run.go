@@ -418,9 +418,8 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	}
 
 	limits := &validation.OutputLimits{
-		MaxErrors:   1000,
-		MaxWarns:    1000,
-		OutputHints: false,
+		MaxErrors: 1000,
+		MaxWarns:  1000,
 	}
 
 	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits)

@@ -24,9 +24,6 @@ type OutputLimits struct {
 
 	// MaxWarns prevents warnings after this limit from being displayed.
 	MaxWarns int
-
-	// OutputHints enables hints to be displayed.
-	OutputHints bool
 }
 
 func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits) error {
@@ -251,7 +248,7 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 		return nil, nil, nil, err
 	}
 
-	errs := g.Validate(context.Background(), schema, schemaPath, limits.OutputHints, isRemote)
+	errs := g.Validate(context.Background(), schema, schemaPath, isRemote)
 	var vErrs []error
 	var vWarns []error
 	var vInfo []error
@@ -278,14 +275,16 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 
 	vWarns = append(vWarns, g.GetWarnings()...)
 
-	if limits.MaxWarns > 0 && len(vWarns) > limits.MaxWarns {
-		vWarns = append(vWarns, fmt.Errorf("and %d more warnings", len(vWarns)-limits.MaxWarns+1))
-		vWarns = vWarns[:limits.MaxWarns-1]
-	}
+	if limits != nil {
+		if limits.MaxWarns > 0 && len(vWarns) > limits.MaxWarns {
+			vWarns = append(vWarns, fmt.Errorf("and %d more warnings", len(vWarns)-limits.MaxWarns+1))
+			vWarns = vWarns[:limits.MaxWarns-1]
+		}
 
-	if limits.MaxErrors > 0 && len(vErrs) > limits.MaxErrors {
-		vErrs = append(vErrs, fmt.Errorf("and %d more errors", len(vWarns)-limits.MaxErrors+1))
-		vErrs = vErrs[:limits.MaxErrors]
+		if limits.MaxErrors > 0 && len(vErrs) > limits.MaxErrors {
+			vErrs = append(vErrs, fmt.Errorf("and %d more errors", len(vWarns)-limits.MaxErrors+1))
+			vErrs = vErrs[:limits.MaxErrors]
+		}
 	}
 
 	return vErrs, vWarns, vInfo, nil

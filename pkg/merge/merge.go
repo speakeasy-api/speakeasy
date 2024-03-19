@@ -60,8 +60,7 @@ func validate(ctx context.Context, schemaPath string, schema []byte) error {
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
 	limits := &validation.OutputLimits{
-		OutputHints: false,
-		MaxWarns:    10,
+		MaxWarns: 10,
 	}
 
 	vErrs, vWarns, _, err := validation.Validate(ctx, schema, schemaPath, limits, false)

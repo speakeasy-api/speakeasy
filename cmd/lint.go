@@ -13,29 +13,29 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
-var validateCmd = &model.CommandGroup{
-	Usage:          "validate",
-	Short:          "Validate OpenAPI documents + more",
-	Long:           `The "validate" command provides a set of commands for validating OpenAPI docs and more.`,
-	InteractiveMsg: "What do you want to validate?",
-	Commands:       []model.Command{validateOpenapiCmd, validateConfigCmd},
+var lintCmd = &model.CommandGroup{
+	Usage:          "lint",
+	Aliases:        []string{"validate"},
+	Short:          "Lint OpenAPI documents + more",
+	Long:           `The "lint" command provides a set of commands for linting OpenAPI docs and more.`,
+	InteractiveMsg: "What do you want to lint?",
+	Commands:       []model.Command{lintOpenapiCmd, lintConfigCmd},
 }
 
-type ValidateOpenapiFlags struct {
+type LintOpenapiFlags struct {
 	SchemaPath            string `json:"schema"`
 	Header                string `json:"header"`
 	Token                 string `json:"token"`
-	OutputHints           bool   `json:"output-hints"`
 	MaxValidationErrors   int    `json:"max-validation-errors"`
 	MaxValidationWarnings int    `json:"max-validation-warnings"`
 }
 
-var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
+var lintOpenapiCmd = model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "openapi",
-	Short:          "Validate an OpenAPI document",
+	Short:          "Lint an OpenAPI document",
 	Long:           `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
-	Run:            validateOpenapi,
-	RunInteractive: validateOpenapiInteractive,
+	Run:            lintOpenapi,
+	RunInteractive: lintOpenapiInteractive,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:                       "schema",
@@ -43,12 +43,6 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 			Description:                "local filepath or URL for the OpenAPI schema",
 			Required:                   true,
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
-		},
-		flag.BooleanFlag{
-			Name:         "output-hints",
-			Shorthand:    "o",
-			Description:  "output validation hints in addition to warnings/errors",
-			DefaultValue: false,
 		},
 		flag.StringFlag{
 			Name:        "header",
@@ -72,15 +66,15 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 	},
 }
 
-type validateConfigFlags struct {
+type lintConfigFlags struct {
 	Dir string `json:"dir"`
 }
 
-var validateConfigCmd = &model.ExecutableCommand[validateConfigFlags]{
+var lintConfigCmd = &model.ExecutableCommand[lintConfigFlags]{
 	Usage: "config",
-	Short: "Validate a Speakeasy configuration file",
+	Short: "Lint a Speakeasy configuration file",
 	Long:  `Validates a Speakeasy configuration file for SDK generation.`,
-	Run:   validateConfig,
+	Run:   lintConfig,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "dir",
@@ -91,13 +85,12 @@ var validateConfigCmd = &model.ExecutableCommand[validateConfigFlags]{
 	},
 }
 
-func validateOpenapi(ctx context.Context, flags ValidateOpenapiFlags) error {
+func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 	// no authentication required for validating specs
 
 	limits := validation.OutputLimits{
-		OutputHints: flags.OutputHints,
-		MaxWarns:    flags.MaxValidationWarnings,
-		MaxErrors:   flags.MaxValidationErrors,
+		MaxWarns:  flags.MaxValidationWarnings,
+		MaxErrors: flags.MaxValidationErrors,
 	}
 
 	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
@@ -113,11 +106,10 @@ func validateOpenapi(ctx context.Context, flags ValidateOpenapiFlags) error {
 	return nil
 }
 
-func validateOpenapiInteractive(ctx context.Context, flags ValidateOpenapiFlags) error {
+func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 	limits := validation.OutputLimits{
-		OutputHints: flags.OutputHints,
-		MaxWarns:    flags.MaxValidationWarnings,
-		MaxErrors:   flags.MaxValidationErrors,
+		MaxWarns:  flags.MaxValidationWarnings,
+		MaxErrors: flags.MaxValidationErrors,
 	}
 
 	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
@@ -127,7 +119,7 @@ func validateOpenapiInteractive(ctx context.Context, flags ValidateOpenapiFlags)
 	return nil
 }
 
-func validateConfig(ctx context.Context, flags validateConfigFlags) error {
+func lintConfig(ctx context.Context, flags lintConfigFlags) error {
 	// no authentication required for validating configs
 
 	if err := sdkgen.ValidateConfig(ctx, flags.Dir); err != nil {
