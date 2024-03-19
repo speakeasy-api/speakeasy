@@ -3,13 +3,16 @@ package cmd
 import (
 	"context"
 	"fmt"
-
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
-	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
@@ -83,10 +86,10 @@ var validateConfigCmd = &model.ExecutableCommand[validateConfigFlags]{
 	Run:   validateConfig,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:        "dir",
-			Shorthand:   "d",
-			Description: "path to the directory containing the Speakeasy configuration file",
-			Required:    true,
+			Name:         "dir",
+			Shorthand:    "d",
+			Description:  "path to the directory containing the Speakeasy configuration file",
+			DefaultValue: ".",
 		},
 	},
 }
@@ -128,15 +131,28 @@ func validateOpenapiInteractive(ctx context.Context, flags ValidateOpenapiFlags)
 }
 
 func validateConfig(ctx context.Context, flags validateConfigFlags) error {
-	// no authentication required for validating configs
-
-	if err := sdkgen.ValidateConfig(ctx, flags.Dir); err != nil {
-		rootCmd.SilenceUsage = true
-
-		return fmt.Errorf("%s", err)
+	// To support the old version of this command, check if there is no workflow.yaml. If there isn't, run the old version
+	wf, _, err := utils.GetWorkflowAndDir()
+	if wf == nil {
+		log.From(ctx).Info("No workflow.yaml found, running legacy version of this command...")
+		return sdkgen.ValidateConfig(ctx, flags.Dir)
 	}
 
-	log.From(ctx).Success("Config valid ✓")
+	// Below is the workflow file based version of this command
+
+	targetToConfig, err := validation.GetAndValidateConfigs(ctx)
+	if err != nil {
+		return err
+	}
+
+	langs := strings.Join(maps.Keys(targetToConfig), ", ")
+
+	msg := styles.RenderSuccessMessage(
+		"SDK generation configuration is valid ✓",
+		"Validated targets: "+langs,
+	)
+
+	log.From(ctx).Println(msg)
 
 	return nil
 }

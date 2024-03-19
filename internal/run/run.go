@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"os"
 	"path/filepath"
 	"slices"
@@ -43,7 +44,7 @@ type Workflow struct {
 }
 
 func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
-	wf, projectDir, err := GetWorkflowAndDir()
+	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
@@ -64,28 +65,8 @@ func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURL
 	}, nil
 }
 
-func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, "", err
-	}
-
-	wf, workflowFileLocation, err := workflow.Load(wd)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Get the project directory which is the parent of the .speakeasy folder the workflow file is in
-	projectDir := filepath.Dir(filepath.Dir(workflowFileLocation))
-	if err := os.Chdir(projectDir); err != nil {
-		return nil, "", err
-	}
-
-	return wf, projectDir, nil
-}
-
 func ParseSourcesAndTargets() ([]string, []string, error) {
-	wf, _, err := GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -143,9 +124,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
-		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(styles.TerminalWidth() - 8) // -8 because of padding
-		logsHeading := styles.Dimmed.Render("Workflow run logs")
-		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
+		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
 	}
 
 	// Display success message if the workflow succeeded
@@ -224,7 +203,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 }
 
 func getTarget(target string) (*workflow.Target, error) {
-	wf, _, err := GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +241,19 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		outDir = w.projectDir
 	}
 
-	published := t.Publishing != nil && t.Publishing.IsPublished(target)
+	published := t.IsPublished()
+
+	rootStep.NewSubstep("Validating gen.yaml")
+
+	genConfig, err := sdkGenConfig.Load(outDir)
+	if err != nil {
+		return err
+	}
+
+	err = validation.ValidateConfigAndPrintErrors(ctx, target, genConfig, published)
+	if err != nil {
+		return err
+	}
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 

@@ -1,7 +1,9 @@
 package styles
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
@@ -131,6 +133,33 @@ func MakeBoxed(s string, borderColor lipgloss.AdaptiveColor, alignment lipgloss.
 		AlignHorizontal(alignment).
 		Width(w).
 		Render(s)
+}
+
+// MakeSection returns a string enclosed in a top and bottom border with a title
+func MakeSection(title, content string, color lipgloss.AdaptiveColor) string {
+	titleLine := MakeBreak(title, '─', color, true)
+	footerLine := MakeBreak(title, '─', color, false)
+
+	return fmt.Sprintf("%s\n\n%s\n\n%s", titleLine, content, footerLine)
+}
+
+func MakeBreak(heading string, character rune, color lipgloss.AdaptiveColor, isStart bool) string {
+	termWidth := TerminalWidth()
+
+	line := ""
+	if heading == "" {
+		line = strings.Repeat(string(character), termWidth)
+	} else {
+		separator := " ↑ "
+		if isStart {
+			separator = " ↓ "
+		}
+		borderWidth := (termWidth - lipgloss.Width(heading) - 2*lipgloss.Width(separator)) / 2
+		borderString := strings.Repeat(string(character), borderWidth)
+		line = fmt.Sprintf("%s%s%s%s%s", borderString, separator, heading, separator, borderString)
+	}
+
+	return lipgloss.NewStyle().Bold(true).Foreground(color).Render(line)
 }
 
 func RenderKeymapLegend(keys []string, descriptions []string) string {
