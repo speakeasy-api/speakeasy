@@ -394,7 +394,12 @@ func fieldsToJSON(fields []zapcore.Field) string {
 			}
 			jsonObj[field.Key] = err.Error()
 		default:
-			panic("not yet implemented")
+			bs, err := json.Marshal(field.Interface)
+			if err != nil {
+				jsonObj[field.Key] = "<skipped>"
+				continue
+			}
+			jsonObj[field.Key] = json.RawMessage(bs)
 		}
 	}
 
