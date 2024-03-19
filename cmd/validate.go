@@ -134,6 +134,7 @@ func validateConfig(ctx context.Context, flags validateConfigFlags) error {
 	// To support the old version of this command, check if there is no workflow.yaml. If there isn't, run the old version
 	wf, _, err := utils.GetWorkflowAndDir()
 	if wf == nil {
+		log.From(ctx).Info("No workflow.yaml found, running legacy version of this command...")
 		return sdkgen.ValidateConfig(ctx, flags.Dir)
 	}
 
