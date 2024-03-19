@@ -217,6 +217,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if err != nil {
 		return err
 	}
+	workflow.FromQuickstart = true
 
 	if err = workflow.RunWithVisualization(ctx); err != nil {
 		return errors.Wrapf(err, "failed to run generation workflow")

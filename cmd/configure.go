@@ -185,7 +185,11 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 	}
 
 	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
-	success := styles.Success.Render(fmt.Sprintf("Successfully Configured the Source %s 🎉", existingSourceName))
+	successMsg := fmt.Sprintf("Successfully Configured the Source %s 🎉", existingSourceName)
+	if workflowFile.Targets != nil || len(workflowFile.Targets) > 0 {
+		successMsg += "\n\nExecute speakeasy run to regenerate your SDK!"
+	}
+	success := styles.Success.Render(successMsg)
 	logger := log.From(ctx)
 	logger.PrintfStyled(boxStyle, "%s", success)
 
@@ -319,8 +323,13 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
+	successMsg := fmt.Sprintf("Successfully Configured the Target %s 🎉", targetName)
+	if workflowFile.Targets != nil && len(workflowFile.Targets) > 0 {
+		successMsg += "\n\nExecute speakeasy run to regenerate your SDK!"
+	}
+
 	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
-	success := styles.Success.Render(fmt.Sprintf("Successfully Configured the Target %s 🎉", targetName))
+	success := styles.Success.Render(successMsg)
 	logger := log.From(ctx)
 	logger.PrintfStyled(boxStyle, "%s", success)
 
