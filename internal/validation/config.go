@@ -3,17 +3,19 @@ package validation
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/exp/maps"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
+
+var NoConfigFound error = fmt.Errorf("no configuration found")
 
 // GetAndValidateConfigs validates the generation config for a target and prints any errors
 // Returns an error if the config is invalid, nil otherwise
@@ -60,6 +62,10 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 	err := events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		errs := ValidateConfig(target, cfg, publishingEnabled)
 		if len(errs) > 0 {
+			if errors.Is(errs[0], NoConfigFound) {
+				return NoConfigFound
+			}
+
 			for _, err := range errs {
 				logger.Error(fmt.Sprintf("%v\n", err))
 			}
@@ -76,9 +82,8 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 // ValidateConfig validates the generation config for a target and returns a list of errors
 func ValidateConfig(target string, cfg *sdkGenConfig.Config, publishingEnabled bool) []error {
 	if cfg == nil || cfg.Config == nil || len(cfg.Config.Languages) == 0 {
-		return []error{fmt.Errorf("no configuration found")}
+		return []error{NoConfigFound}
 	} else if _, ok := cfg.Config.Languages[target]; !ok {
-		println("FOUND: ", strings.Join(maps.Keys(cfg.Config.Languages), ", "))
 		return []error{fmt.Errorf("target %s not found in configuration", target)}
 	}
 
