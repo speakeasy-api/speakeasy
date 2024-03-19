@@ -32,9 +32,9 @@ func GetAndValidateConfigs(ctx context.Context) (map[string]sdkGenConfig.Config,
 			dir = filepath.Join(wfDir, *target.Output)
 		}
 
-		genConfig, err := sdkGenConfig.Load(dir)
-		if err != nil {
-			return nil, err
+		genConfig, cfgLoadErr := sdkGenConfig.Load(dir)
+		if cfgLoadErr != nil {
+			return nil, cfgLoadErr
 		}
 
 		log.From(ctx).Infof("Found gen.yaml for target %s at %s\n", target.Target, genConfig.ConfigPath)
