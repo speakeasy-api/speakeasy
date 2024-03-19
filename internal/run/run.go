@@ -41,6 +41,7 @@ type Workflow struct {
 	projectDir         string
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
+	FromQuickstart     bool
 }
 
 func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
@@ -141,10 +142,18 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			tOut = "the paths specified in workflow.yaml"
 		}
 
+		additionalLines := []string{
+			"✎ Output written to " + tOut,
+			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+		}
+
+		if w.FromQuickstart {
+			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
+		}
+
 		msg := styles.RenderSuccessMessage(
 			t.Target+" SDK Generated Successfully",
-			"✎ Output written to "+tOut,
-			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+			additionalLines...,
 		)
 		logger.Println(msg)
 
