@@ -260,7 +260,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		return err
 	}
 
-	err = validation.ValidateConfigAndPrintErrors(ctx, target, genConfig, published)
+	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published)
 	if err != nil {
 		if errors.Is(err, validation.NoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
