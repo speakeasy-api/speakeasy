@@ -3,6 +3,7 @@ package run
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"os"
@@ -252,7 +253,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 	published := t.IsPublished()
 
-	rootStep.NewSubstep("Validating gen.yaml")
+	genYamlStep := rootStep.NewSubstep("Validating gen.yaml")
 
 	genConfig, err := sdkGenConfig.Load(outDir)
 	if err != nil {
@@ -261,7 +262,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 	err = validation.ValidateConfigAndPrintErrors(ctx, target, genConfig, published)
 	if err != nil {
-		return err
+		if errors.Is(err, validation.NoConfigFound) {
+			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
+		} else {
+			return err
+		}
 	}
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
