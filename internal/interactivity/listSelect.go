@@ -2,6 +2,7 @@ package interactivity
 
 import (
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -84,7 +85,7 @@ func (m *ListSelect) OnUserExit() {}
 func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command {
 	items := make([]list.Item, len(options))
 	for i, option := range options {
-		items[i] = item{title: option.Name(), desc: option.Short, cmd: option}
+		items[i] = item{title: option.Name(), desc: utils.CapitalizeFirst(option.Short), cmd: option}
 	}
 
 	itemDelegate := list.NewDefaultDelegate()
