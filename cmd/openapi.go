@@ -106,7 +106,7 @@ func runHTMLReport(flags OpenAPIDiffFlags, shouldOpen bool) error {
 }
 
 func runCommand(cmd *cobra.Command, flags OpenAPIDiffFlags) error {
-	cmd.Flags().Bool("no-logo", true, "")
+	cmd.Flags().Bool("no-logo", true, "") // Hides the pb33f logo
 	return cmd.RunE(cmd, []string{flags.LeftSchema, flags.RightSchema})
 }
 
