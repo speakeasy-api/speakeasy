@@ -28,6 +28,7 @@ type LintOpenapiFlags struct {
 	Token                 string `json:"token"`
 	MaxValidationErrors   int    `json:"max-validation-errors"`
 	MaxValidationWarnings int    `json:"max-validation-warnings"`
+	Ruleset               string `json:"ruleset"`
 }
 
 var lintOpenapiCmd = model.ExecutableCommand[LintOpenapiFlags]{
@@ -63,6 +64,12 @@ var lintOpenapiCmd = model.ExecutableCommand[LintOpenapiFlags]{
 			Description:  "limit the number of warnings to output (default 1000, 0 = no limit)",
 			DefaultValue: 1000,
 		},
+		flag.StringFlag{
+			Name:         "ruleset",
+			Shorthand:    "r",
+			Description:  "ruleset to use for linting",
+			DefaultValue: "speakeasy-recommended",
+		},
 	},
 }
 
@@ -93,7 +100,7 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 		MaxErrors: flags.MaxValidationErrors,
 	}
 
-	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
+	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, "", ""); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
@@ -112,7 +119,7 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 		MaxErrors: flags.MaxValidationErrors,
 	}
 
-	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
+	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, "", ""); err != nil {
 		return err
 	}
 

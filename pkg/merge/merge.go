@@ -22,7 +22,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string) error {
+func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile, defaultRuleset, workingDir string) error {
 	inSchemas := make([][]byte, len(inFiles))
 
 	// TODO at some point we prob want to support remote schemas
@@ -32,8 +32,8 @@ func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string
 			return err
 		}
 
-		if err := validate(ctx, inFile, data); err != nil {
-			log.From(ctx).Errorf("failed validating spec %s", inFile, zap.Error(err))
+		if err := validate(ctx, inFile, data, defaultRuleset, workingDir); err != nil {
+			log.From(ctx).Error(fmt.Sprintf("failed validating spec %s", inFile), zap.Error(err))
 		}
 
 		inSchemas[i] = data
@@ -53,7 +53,7 @@ func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string
 	return nil
 }
 
-func validate(ctx context.Context, schemaPath string, schema []byte) error {
+func validate(ctx context.Context, schemaPath string, schema []byte, defaultRuleset, workingDir string) error {
 	logger := log.From(ctx)
 	logger.Info(fmt.Sprintf("Validating OpenAPI spec %s...\n", schemaPath))
 
@@ -63,7 +63,7 @@ func validate(ctx context.Context, schemaPath string, schema []byte) error {
 		MaxWarns: 10,
 	}
 
-	vErrs, vWarns, _, err := validation.Validate(ctx, schema, schemaPath, limits, false)
+	vErrs, vWarns, _, err := validation.Validate(ctx, schema, schemaPath, limits, false, defaultRuleset, workingDir)
 	if err != nil {
 		return err
 	}

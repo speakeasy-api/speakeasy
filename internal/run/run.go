@@ -250,7 +250,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 			return err
 		}
 	} else {
-		if err := w.validateDocument(ctx, rootStep, sourcePath); err != nil {
+		if err := w.validateDocument(ctx, rootStep, sourcePath, "", w.projectDir); err != nil {
 			return err
 		}
 	}
@@ -309,6 +309,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
+	rulesetToUse := ""
+	if source.Ruleset != nil {
+		rulesetToUse = *source.Ruleset
+	}
+
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
 
@@ -363,7 +368,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
 
-		if err := mergeDocuments(ctx, inSchemas, mergeLocation); err != nil {
+		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.projectDir); err != nil {
 			return "", err
 		}
 
@@ -400,7 +405,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		}
 	}
 
-	if err := w.validateDocument(ctx, rootStep, outputLocation); err != nil {
+	if err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir); err != nil {
 		return "", err
 	}
 
@@ -409,7 +414,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	return outputLocation, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath string) error {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset, projectDir string) error {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -422,7 +427,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 		MaxWarns:  1000,
 	}
 
-	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits)
+	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, projectDir)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
@@ -455,12 +460,12 @@ func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	return outPath, nil
 }
 
-func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) error {
+func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string) error {
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile); err != nil {
+	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir); err != nil {
 		return err
 	}
 
