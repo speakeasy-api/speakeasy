@@ -91,10 +91,6 @@ A full workflow is capable of running the following steps:
 			Description: "skip compilation when generating the SDK",
 		},
 		flag.BooleanFlag{
-			Name:        "skip-compile",
-			Description: "skip compilation when generating the SDK",
-		},
-		flag.BooleanFlag{
 			Name:        "force",
 			Description: "Force generation of SDKs even when no changes are present",
 		},
