@@ -27,6 +27,7 @@ speakeasy run [flags]
 
 ```
   -d, --debug                     enable writing debug files with broken code
+      --force                     Force generation of SDKs even when no changes are present
   -h, --help                      help for run
   -i, --installationURL string    the language specific installation URL for installation instructions if the SDK is not published to a package manager
       --installationURLs string   a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager (default "null")

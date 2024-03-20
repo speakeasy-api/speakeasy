@@ -116,6 +116,7 @@ speakeasy generate sdk [flags]
 ```
   -y, --auto-yes                 auto answer yes to all prompts
   -d, --debug                    enable writing debug files with broken code
+      --force                    Force generation of SDKs even when no changes are present
   -H, --header string            header key to use if authentication is required for downloading schema from remote URL
   -h, --help                     help for sdk
   -i, --installationURL string   the language specific installation URL for installation instructions if the SDK is not published to a package manager
