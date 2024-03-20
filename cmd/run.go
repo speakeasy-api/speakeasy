@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/sethvargo/go-githubactions"
@@ -26,6 +27,7 @@ type RunFlags struct {
 	RepoSubdir       string            `json:"repo-subdir"`
 	RepoSubdirs      map[string]string `json:"repo-subdirs"`
 	SkipCompile      bool              `json:"skip-compile"`
+	Force            bool              `json:"force"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -87,6 +89,10 @@ A full workflow is capable of running the following steps:
 		flag.BooleanFlag{
 			Name:        "skip-compile",
 			Description: "skip compilation when generating the SDK",
+		},
+		flag.BooleanFlag{
+			Name:        "force",
+			Description: "Force generation of SDKs even when no changes are present",
 		},
 	},
 }
@@ -189,7 +195,7 @@ func askForTarget(title, description, confirmation string, targets []string, all
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
 	if err != nil {
 		return err
 	}
@@ -204,7 +210,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
 	if err != nil {
 		return err
 	}

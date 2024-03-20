@@ -28,7 +28,7 @@ type GenerationAccess struct {
 	Level         *shared.Level
 }
 
-func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, cliVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile bool) (*GenerationAccess, error) {
+func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, cliVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile, force bool) (*GenerationAccess, error) {
 	if !generate.CheckLanguageSupported(lang) {
 		return nil, fmt.Errorf("language not supported: %s", lang)
 	}
@@ -102,6 +102,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		generate.WithRepoDetails(repo, repoSubDir),
 		generate.WithAllowRemoteReferences(),
 		generate.WithCLIVersion(cliVersion),
+	}
+
+	if force {
+		opts = append(opts, generate.WithForceGeneration())
 	}
 
 	if debug {
