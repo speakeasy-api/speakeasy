@@ -5,12 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -36,6 +37,7 @@ type Workflow struct {
 	InstallationURLs map[string]string
 	Debug            bool
 	ShouldCompile    bool
+	ForceGeneration  bool
 
 	RootStep           *WorkflowStep
 	workflow           *workflow.Workflow
@@ -45,7 +47,7 @@ type Workflow struct {
 	FromQuickstart     bool
 }
 
-func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
+func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
@@ -64,6 +66,7 @@ func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURL
 		workflow:         wf,
 		projectDir:       projectDir,
 		RootStep:         rootStep,
+		ForceGeneration:  forceGeneration,
 	}, nil
 }
 
@@ -294,6 +297,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		w.Repo,
 		w.RepoSubDirs[target],
 		w.ShouldCompile,
+		w.ForceGeneration,
 	)
 	if err != nil {
 		return err
