@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
 )
 
-func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string) error {
+func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, skipExtends bool) error {
 	targetToCodeSamples := map[string][]UsageSnippet{}
 
 	for _, lang := range langs {
@@ -94,8 +95,11 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 			Title:   fmt.Sprintf("CodeSamples overlay for %s", schema),
 			Version: "0.0.0",
 		},
-		Extends: extends,
 		Actions: actions,
+	}
+
+	if !skipExtends {
+		overlay.Extends = extends
 	}
 
 	overlayString, err := overlay.ToString()

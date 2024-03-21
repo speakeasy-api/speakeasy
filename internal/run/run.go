@@ -315,7 +315,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		if t.Output != nil {
 			configPath = *t.Output
 		}
-		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, t.CodeSamples.Output, []string{t.Target})
+		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, t.CodeSamples.Output, []string{t.Target}, true)
 		if err != nil {
 			return err
 		}
