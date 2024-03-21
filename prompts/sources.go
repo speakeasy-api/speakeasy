@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
@@ -346,6 +347,11 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 }
 
 func formatDocument(fileLocation, authHeader, authSecret string, validate bool) (*workflow.Document, error) {
+	if strings.Contains(fileLocation, "github.com") {
+		fileLocation = strings.Replace(fileLocation, "github.com", "raw.githubusercontent.com", 1)
+		fileLocation = strings.Replace(fileLocation, "/blob/", "/", 1)
+	}
+
 	document := &workflow.Document{
 		Location: fileLocation,
 	}
