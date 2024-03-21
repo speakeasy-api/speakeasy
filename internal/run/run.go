@@ -411,7 +411,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			if overlay.IsRemote() {
 				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
 
-				downloadedPath, err := resolveRemoteDocument(ctx, overlay, workflow.GetTempDir())
+				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
 				if err != nil {
 					return "", err
 				}
@@ -434,6 +434,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	rootStep.SucceedWorkflow()
+
+	rootStep.NewSubstep("Cleaning up")
+
+	// Clean up temp files on success
+	os.RemoveAll(workflow.GetTempDir())
 
 	return outputLocation, nil
 }
