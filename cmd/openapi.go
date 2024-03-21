@@ -31,9 +31,9 @@ var openapiValidateCmd = &model.ExecutableCommand[ValidateOpenapiFlags]{
 }
 
 type OpenAPIDiffFlags struct {
-	LeftSchema  string `json:"left"`
-	RightSchema string `json:"right"`
-	Output      string `json:"output"`
+	OldSchema string `json:"old"`
+	NewSchema string `json:"new"`
+	Output    string `json:"output"`
 }
 
 var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
@@ -44,16 +44,14 @@ var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 	RunInteractive: diffOpenapiInteractive,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:                       "left",
-			Shorthand:                  "l",
-			Description:                "local filepath or URL for the OpenAPI schema",
+			Name:                       "old",
+			Description:                "local filepath or URL for the base OpenAPI schema to compare against",
 			Required:                   true,
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
-			Name:                       "right",
-			Shorthand:                  "r",
-			Description:                "local filepath or URL for the OpenAPI schema",
+			Name:                       "new",
+			Description:                "local filepath or URL for the updated OpenAPI schema",
 			Required:                   true,
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
@@ -70,7 +68,7 @@ var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
 	switch flags.Output {
 	case "summary":
-		return changes.RunSummary(flags.LeftSchema, flags.RightSchema)
+		return changes.RunSummary(flags.OldSchema, flags.NewSchema)
 	case "html":
 		return runHTMLReport(flags, false)
 	case "console":
@@ -83,7 +81,7 @@ func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
 func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 	switch flags.Output {
 	case "summary":
-		return changes.RunSummary(flags.LeftSchema, flags.RightSchema)
+		return changes.RunSummary(flags.OldSchema, flags.NewSchema)
 	case "html":
 		return runHTMLReport(flags, true)
 	case "console":
@@ -107,7 +105,7 @@ func runHTMLReport(flags OpenAPIDiffFlags, shouldOpen bool) error {
 }
 
 func runCommand(cmd *cobra.Command, flags OpenAPIDiffFlags) error {
-	return cmd.RunE(cmd, []string{flags.LeftSchema, flags.RightSchema})
+	return cmd.RunE(cmd, []string{flags.OldSchema, flags.NewSchema})
 }
 
 func openInBrowser(path string) error {
