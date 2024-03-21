@@ -3,6 +3,7 @@ package changes
 import (
 	"bytes"
 	changes "github.com/speakeasy-api/openapi-changes/cmd"
+	"io"
 	"strings"
 )
 
@@ -21,25 +22,20 @@ type ChangesSummary struct {
 }
 
 func GetSummary(left, right string) (ChangesSummary, error) {
-	cmd := changes.GetSummaryCommand()
-
 	bump := None
-
 	out := &bytes.Buffer{}
-	cmd.SetOut(out)
-	if err := cmd.RunE(cmd, []string{left, right}); err != nil {
-		if strings.Contains(err.Error(), "breaking changes discovered") {
-			bump = Major
-		} else {
-			return ChangesSummary{}, err
-		}
+
+	breaking, err := runSummaryInternal(left, right, out)
+	if err != nil {
+		return ChangesSummary{}, err
 	}
 
 	summary := out.String()
-	// Breaking changes return an error, so everything at this point is a minor or patch bump
-	if strings.Contains(summary, "Additions: ") && bump == None {
+	if breaking {
+		bump = Major
+	} else if strings.Contains(summary, "Additions: ") {
 		bump = Minor
-	} else if strings.Contains(summary, "Modifications: ") && bump == None {
+	} else if strings.Contains(summary, "Modifications: ") {
 		bump = Patch
 	}
 
@@ -47,4 +43,31 @@ func GetSummary(left, right string) (ChangesSummary, error) {
 		Bump:    bump,
 		Summary: summary,
 	}, nil
+}
+
+// RunSummary runs the summary command and prints the output to the terminal
+// The purpose of this utility is that it handles the "breaking changes discovered" error.
+// Instead, it only errors when there is a real error.
+func RunSummary(left, right string) error {
+	_, err := runSummaryInternal(left, right, nil)
+	return err
+}
+
+// First return value is whether there are breaking changes
+func runSummaryInternal(left, right string, outOverride io.Writer) (bool, error) {
+	cmd := changes.GetSummaryCommand()
+
+	if outOverride != nil {
+		cmd.SetOut(outOverride)
+	}
+
+	if err := cmd.RunE(cmd, []string{left, right}); err != nil {
+		if strings.Contains(err.Error(), "breaking changes discovered") {
+			return true, nil
+		} else {
+			return false, err
+		}
+	}
+
+	return false, nil
 }

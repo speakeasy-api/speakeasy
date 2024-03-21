@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	openapiChanges "github.com/speakeasy-api/openapi-changes/cmd"
+	"github.com/speakeasy-api/speakeasy/internal/changes"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -69,7 +70,7 @@ var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
 	switch flags.Output {
 	case "summary":
-		return runCommand(openapiChanges.GetSummaryCommand(), flags)
+		return changes.RunSummary(flags.LeftSchema, flags.RightSchema)
 	case "html":
 		return runHTMLReport(flags, false)
 	case "console":
@@ -82,7 +83,7 @@ func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
 func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 	switch flags.Output {
 	case "summary":
-		return runCommand(openapiChanges.GetSummaryCommand(), flags)
+		return changes.RunSummary(flags.LeftSchema, flags.RightSchema)
 	case "html":
 		return runHTMLReport(flags, true)
 	case "console":
