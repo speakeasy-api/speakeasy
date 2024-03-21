@@ -15,8 +15,8 @@ import (
 var openapiCmd = &model.CommandGroup{
 	Usage:          "openapi",
 	Short:          "Validate and compare OpenAPI documents",
-	Long:           `The "validate" command provides a set of commands for validating OpenAPI docs and more.`,
-	InteractiveMsg: "What do you want to validate?",
+	Long:           `The "openapi" command provides a set of commands for validating and comparing OpenAPI docs.`,
+	InteractiveMsg: "What do you want to do?",
 	Commands:       []model.Command{openapiValidateCmd, openapiDiffCmd},
 }
 
@@ -37,8 +37,8 @@ type OpenAPIDiffFlags struct {
 
 var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 	Usage:          "diff",
-	Short:          "Visualize the openapiChanges between two OpenAPI documents",
-	Long:           `Visualize the openapiChanges between two OpenAPI documents`,
+	Short:          "Visualize the changes between two OpenAPI documents",
+	Long:           `Visualize the changes between two OpenAPI documents`,
 	Run:            diffOpenapi,
 	RunInteractive: diffOpenapiInteractive,
 	Flags: []flag.Flag{
