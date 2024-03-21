@@ -6,7 +6,7 @@ Ask Speakeasy trained AI for assistance right from the CLI.
 
 ## Details
 
-Ask a question to Speakeasy trained AI. Doesn't begin a chat.
+Begins a chat session with Speakeasy trained AI. 
 
 ## Usage
 
