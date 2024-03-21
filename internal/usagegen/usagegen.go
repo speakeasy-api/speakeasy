@@ -60,6 +60,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithAllowRemoteReferences(),
+		generate.WithForceGeneration(),
 	}
 
 	if all {
