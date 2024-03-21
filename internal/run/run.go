@@ -157,7 +157,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		}
 
 		if t.CodeSamples != nil {
-			additionalLines = append(additionalLines, fmt.Sprintf("Code samples written successfully, overlay file written to %s", t.CodeSamples.Output))
+			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 		}
 
 		msg := styles.RenderSuccessMessage(
@@ -312,10 +312,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	if t.CodeSamples != nil {
 		rootStep.NewSubstep("Generating CodeSamples")
 		configPath := "."
+		outputPath := t.CodeSamples.Output
 		if t.Output != nil {
 			configPath = *t.Output
+			outputPath = filepath.Join(*t.Output, outputPath)
 		}
-		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, t.CodeSamples.Output, []string{t.Target}, true)
+
+		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
 		if err != nil {
 			return err
 		}
