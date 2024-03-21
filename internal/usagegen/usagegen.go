@@ -60,6 +60,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithAllowRemoteReferences(),
+		generate.WithForceGeneration(),
 	}
 
 	if all {
@@ -154,10 +155,11 @@ type UsageSnippet struct {
 }
 
 // Input will look something like:
-// // Usage snippet provided for ...
+// Usage snippet provided for ...
 // ...
 func ParseUsageOutput(lang, s string) ([]UsageSnippet, error) {
-	sections := strings.Split(s, "// Usage snippet provided for ")
+	sectionsRegex := regexp.MustCompile(`\s*(?://|#) Usage snippet provided for `)
+	sections := sectionsRegex.Split(s, -1)
 
 	snippets := make([]UsageSnippet, len(sections)-1)
 	for i, section := range sections[1:] {

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -153,6 +154,10 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 		if w.FromQuickstart {
 			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
+		}
+
+		if t.CodeSamples != nil {
+			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 		}
 
 		msg := styles.RenderSuccessMessage(
@@ -303,6 +308,21 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		return err
 	}
 	w.generationAccess = generationAccess
+
+	if t.CodeSamples != nil {
+		rootStep.NewSubstep("Generating CodeSamples")
+		configPath := "."
+		outputPath := t.CodeSamples.Output
+		if t.Output != nil {
+			configPath = *t.Output
+			outputPath = filepath.Join(*t.Output, outputPath)
+		}
+
+		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
+		if err != nil {
+			return err
+		}
+	}
 
 	rootStep.NewSubstep("Cleaning up")
 
