@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	changes "github.com/speakeasy-api/openapi-changes/cmd"
+	openapiChanges "github.com/speakeasy-api/openapi-changes/cmd"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -37,8 +37,8 @@ type OpenAPIDiffFlags struct {
 
 var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 	Usage:          "diff",
-	Short:          "Visualize the changes between two OpenAPI documents",
-	Long:           `Visualize the changes between two OpenAPI documents`,
+	Short:          "Visualize the openapiChanges between two OpenAPI documents",
+	Long:           `Visualize the openapiChanges between two OpenAPI documents`,
 	Run:            diffOpenapi,
 	RunInteractive: diffOpenapiInteractive,
 	Flags: []flag.Flag{
@@ -69,7 +69,7 @@ var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
 	switch flags.Output {
 	case "summary":
-		return runCommand(changes.GetSummaryCommand(), flags)
+		return runCommand(openapiChanges.GetSummaryCommand(), flags)
 	case "html":
 		return runHTMLReport(flags, false)
 	case "console":
@@ -82,18 +82,18 @@ func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
 func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 	switch flags.Output {
 	case "summary":
-		return runCommand(changes.GetSummaryCommand(), flags)
+		return runCommand(openapiChanges.GetSummaryCommand(), flags)
 	case "html":
 		return runHTMLReport(flags, true)
 	case "console":
-		return runCommand(changes.GetConsoleCommand(), flags)
+		return runCommand(openapiChanges.GetConsoleCommand(), flags)
 	}
 
 	return fmt.Errorf("invalid output type: %s", flags.Output)
 }
 
 func runHTMLReport(flags OpenAPIDiffFlags, shouldOpen bool) error {
-	err := runCommand(changes.GetHTMLReportCommand(), flags)
+	err := runCommand(openapiChanges.GetHTMLReportCommand(), flags)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,6 @@ func runHTMLReport(flags OpenAPIDiffFlags, shouldOpen bool) error {
 }
 
 func runCommand(cmd *cobra.Command, flags OpenAPIDiffFlags) error {
-	cmd.Flags().Bool("no-logo", true, "") // Hides the pb33f logo
 	return cmd.RunE(cmd, []string{flags.LeftSchema, flags.RightSchema})
 }
 
