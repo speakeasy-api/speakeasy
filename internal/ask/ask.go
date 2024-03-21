@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+    "bufio"
+    "os"
+
 	aiapigo "github.com/inkeep/ai-api-go"
 	"github.com/inkeep/ai-api-go/models/components"
 	"github.com/inkeep/ai-api-go/models/sdkerrors"
@@ -22,6 +25,8 @@ type AskFlags struct {
 	Message string `json:"message"`
 	SessionID string `json:"sessionId,omitempty"`
 }
+
+
 
 func Ask(ctx context.Context, flags AskFlags) (string, error) {
 	logger := log.From(ctx)
@@ -53,7 +58,7 @@ func Ask(ctx context.Context, flags AskFlags) (string, error) {
 	} else {
 		res, err := s.ChatSession.Continue(ctx, flags.SessionID, components.ContinueChatSessionWithChatResultInput{
 			IntegrationID: integrationID,
-            Message: components.Message{ 
+            Message: components.Message{
                 AssistantMessage: &components.AssistantMessage{
                     Content: flags.Message,
                 },
@@ -127,5 +132,74 @@ func printWithFootnotes(ctx context.Context, text string) {
     logger.PrintfStyled(styles.Focused, "\nReferences:")
     for _, ref := range orderedRefs {
         logger.PrintfStyled(styles.Dimmed, "[%s]: %s\n", ref, footnotes[ref])
+    }
+}
+
+
+
+func StartFunc(ctx context.Context, initialFlags AskFlags) error {
+    logger := log.From(ctx)
+	sessionID := "" 
+	scanner := bufio.NewScanner(os.Stdin)
+    logger.PrintfStyled(styles.Focused, "Entering interactive chat session, type exit to quit.")
+
+	if initialFlags.Message != "" {
+		logger.PrintfStyled(styles.Focused, "\nProcessing your question...")
+		var err error
+		sessionID, err = Ask(ctx, initialFlags)
+		if err != nil {
+			fmt.Printf("An error occurred: %v\n", err)
+			// Decide whether to exit or continue
+			return err
+		}
+	}
+
+	for {
+        promptStyle := styles.Focused.Render("> ") 
+        fmt.Print(promptStyle) 
+		if !scanner.Scan() {
+			break
+		}
+
+		input := scanner.Text()
+		if input == "exit" {
+            logger.PrintfStyled(styles.Focused, "Exiting chat session.")
+			break
+		}
+
+		flags := AskFlags{
+			Message:   input,
+			SessionID: sessionID,
+		}
+
+		var err error
+		sessionID, err = Ask(ctx, flags)
+		if err != nil {
+			fmt.Printf("An error occurred: %v\n", err)
+			break
+		}
+	}
+
+	return nil
+}
+
+// OfferChatSessionOnError offers the user to enter an interactive chat session if an error occurs.
+func OfferChatSessionOnError(ctx context.Context, message string) {
+    logger := log.From(ctx) // Assuming From is a function that retrieves a Logger from the context.
+
+    fmt.Println("Would you like to enter an interactive chat session for help? (yes/no): ")
+    scanner := bufio.NewScanner(os.Stdin)
+    if scanner.Scan() {
+        input := scanner.Text()
+        if strings.ToLower(input) == "yes" {
+            // Initialize ask.AskFlags with the error message as the initial input, if desired
+            initialFlags := AskFlags{
+                Message: message, // Optional: Start the chat with the error as the initial message
+            }
+            // Enter the interactive chat session
+            if err := StartFunc(ctx, initialFlags); err != nil {
+                logger.Errorf("Failed to start interactive chat session: %v", err)
+            }
+        }
     }
 }
