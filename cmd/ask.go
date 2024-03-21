@@ -18,12 +18,12 @@ var AskCmd = &model.ExecutableCommand[ask.AskFlags]{
             Name:        "message",
             Shorthand:   "m",
             Description: "Your question",
-            Required:    true, 
+            Required:    false, 
         },
     },
 }
 
 
 func AskFunc(ctx context.Context, flags ask.AskFlags) error {
-	return ask.StartFunc(ctx, flags)
+	return ask.RunInteractiveChatSession(ctx, flags)
 }

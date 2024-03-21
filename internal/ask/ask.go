@@ -16,25 +16,26 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
-const (
-	bearerToken   = ""
-	integrationID = ""
-)
-
 type AskFlags struct {
 	Message string `json:"message"`
 	SessionID string `json:"sessionId,omitempty"`
 }
 
 
+var (
+    boldRegex   = regexp.MustCompile(`\*\*(.*?)\*\*`)
+    italicRegex = regexp.MustCompile(`\*(.*?)\*`)
+    linkRegex   = regexp.MustCompile(`\[\(?(.*?)\)?\]\((https?:\/\/[^\s]+)\)`)
+)
+
 
 func Ask(ctx context.Context, flags AskFlags) (string, error) {
 	logger := log.From(ctx)
-	s := aiapigo.New(aiapigo.WithSecurity(bearerToken))
+	s := aiapigo.New(aiapigo.WithSecurity(os.Getenv("INKEEP_API_KEY")))
     var SessionID string
 	if flags.SessionID == "" {
         res, err := s.ChatSession.Create(ctx, components.CreateChatSessionWithChatResultInput{
-            IntegrationID: integrationID,
+            IntegrationID: os.Getenv("INKEEP_INTEGRATION_ID"),
             ChatSession: components.ChatSessionInput{
                 Messages: []components.Message{{
                     UserMessage: &components.UserMessage{
@@ -53,11 +54,11 @@ func Ask(ctx context.Context, flags AskFlags) (string, error) {
 		if res.ChatResult != nil {
             printWithFootnotes(ctx, res.ChatResult.Message.Content)
         } else {
-            fmt.Println("\nNo response received.")
+            logger.Error("\nNo response received.")
         }
 	} else {
 		res, err := s.ChatSession.Continue(ctx, flags.SessionID, components.ContinueChatSessionWithChatResultInput{
-			IntegrationID: integrationID,
+			IntegrationID: os.Getenv("INKEEP_INTEGRATION_ID"),
             Message: components.Message{
                 AssistantMessage: &components.AssistantMessage{
                     Content: flags.Message,
@@ -73,7 +74,7 @@ func Ask(ctx context.Context, flags AskFlags) (string, error) {
         if res.ChatResult != nil {
             printWithFootnotes(ctx, res.ChatResult.Message.Content)
         } else {
-            fmt.Println("\nNo response received.")
+            logger.Error("\nNo chat response received.")
         }
 	}
 
@@ -84,30 +85,32 @@ func Ask(ctx context.Context, flags AskFlags) (string, error) {
 func handleError(logger log.Logger, err error) {
 	switch e := err.(type) {
 	case *sdkerrors.HTTPValidationError:
-		logger.Printf("HTTP Validation Error: %v", e)
+		logger.Errorf("HTTP Validation Error: %v", e)
 	case *sdkerrors.SDKError:
-		logger.Printf("SDK Error: %v", e)
+		logger.Errorf("SDK Error: %v", e)
 	default:
-		logger.Printf("Error: %v", err)
+		logger.Errorf("Error: %v", err)
 	}
 }
 
-func printWithFootnotes(ctx context.Context, text string) {
-	logger := log.From(ctx)
-    // Handle bold by removing ** 
-    boldRegex := regexp.MustCompile(`\*\*(.*?)\*\*`)
+func processMarkdown(text string) string {
     text = boldRegex.ReplaceAllStringFunc(text, func(match string) string {
         return strings.ToUpper(match[2 : len(match)-2])
     })
 
-    // Handle italic by removing *
-    italicRegex := regexp.MustCompile(`\*(.*?)\*`)
     text = italicRegex.ReplaceAllStringFunc(text, func(match string) string {
         return match[1 : len(match)-1] 
     })
-    
+
+    return text
+}
+
+
+func printWithFootnotes(ctx context.Context, text string) {
+	logger := log.From(ctx)
+    text = processMarkdown(text)
+
     // Transform footnotes
-    linkRegex := regexp.MustCompile(`\[\(?(.*?)\)?\]\((https?:\/\/[^\s]+)\)`)
     matches := linkRegex.FindAllStringSubmatch(text, -1)
 
     if len(matches) == 0 {
@@ -137,19 +140,18 @@ func printWithFootnotes(ctx context.Context, text string) {
 
 
 
-func StartFunc(ctx context.Context, initialFlags AskFlags) error {
+func RunInteractiveChatSession(ctx context.Context, initialFlags AskFlags) error {
     logger := log.From(ctx)
 	sessionID := "" 
 	scanner := bufio.NewScanner(os.Stdin)
-    logger.PrintfStyled(styles.Focused, "Entering interactive chat session, type exit to quit.")
+    logger.Info("Entering interactive chat session, type exit to quit.")
 
 	if initialFlags.Message != "" {
-		logger.PrintfStyled(styles.Focused, "\nProcessing your question...")
+		logger.Info("\nProcessing your question...")
 		var err error
 		sessionID, err = Ask(ctx, initialFlags)
 		if err != nil {
-			fmt.Printf("An error occurred: %v\n", err)
-			// Decide whether to exit or continue
+            logger.Errorf("An error occurred while processing question, ending chat: %v", err)
 			return err
 		}
 	}
@@ -163,7 +165,7 @@ func StartFunc(ctx context.Context, initialFlags AskFlags) error {
 
 		input := scanner.Text()
 		if input == "exit" {
-            logger.PrintfStyled(styles.Focused, "Exiting chat session.")
+            logger.Info("Exiting chat session.")
 			break
 		}
 
@@ -175,7 +177,7 @@ func StartFunc(ctx context.Context, initialFlags AskFlags) error {
 		var err error
 		sessionID, err = Ask(ctx, flags)
 		if err != nil {
-			fmt.Printf("An error occurred: %v\n", err)
+            logger.Errorf("An error occurred: %v\n", err)
 			break
 		}
 	}
@@ -185,20 +187,18 @@ func StartFunc(ctx context.Context, initialFlags AskFlags) error {
 
 // OfferChatSessionOnError offers the user to enter an interactive chat session if an error occurs.
 func OfferChatSessionOnError(ctx context.Context, message string) {
-    logger := log.From(ctx) // Assuming From is a function that retrieves a Logger from the context.
+    logger := log.From(ctx) 
 
-    fmt.Println("Would you like to enter an interactive chat session for help? (yes/no): ")
+    logger.PrintfStyled(styles.Focused, "Would you like to enter an interactive chat session with Speakeasy AI for help? (yes/no):")
     scanner := bufio.NewScanner(os.Stdin)
     if scanner.Scan() {
         input := scanner.Text()
-        if strings.ToLower(input) == "yes" {
-            // Initialize ask.AskFlags with the error message as the initial input, if desired
+        if input == "yes" || input == "y" {
             initialFlags := AskFlags{
-                Message: message, // Optional: Start the chat with the error as the initial message
+                Message: message, 
             }
-            // Enter the interactive chat session
-            if err := StartFunc(ctx, initialFlags); err != nil {
-                logger.Errorf("Failed to start interactive chat session: %v", err)
+            if err := RunInteractiveChatSession(ctx, initialFlags); err != nil {
+                logger.Errorf("Failed to start chat session: %v", err)
             }
         }
     }
