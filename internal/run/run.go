@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
@@ -506,25 +508,59 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) err
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
 	currentBase := schema
+	for _, overlayFile := range overlayFiles {
+		applyPath := getTempApplyPath(overlayFile)
+		tempOutFile, err := os.Create(applyPath)
+		if err != nil {
+			return err
+		}
+
+		if err := overlay.Apply(currentBase, overlayFile, tempOutFile); err != nil {
+			return err
+		}
+
+		if err := tempOutFile.Close(); err != nil {
+			return err
+		}
+
+		currentBase = applyPath
+	}
 
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	f, err := os.Create(outFile)
+	finalTempFile, err := os.Open(currentBase)
 	if err != nil {
 		return err
 	}
+	defer finalTempFile.Close()
 
-	for _, overlayFile := range overlayFiles {
-		if err := overlay.Apply(currentBase, overlayFile, f); err != nil {
-			return err
-		}
+	outFileWriter, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer outFileWriter.Close()
 
-		currentBase = outFile
+	if _, err := io.Copy(outFileWriter, finalTempFile); err != nil {
+		return err
 	}
 
 	log.From(ctx).Successf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
 
 	return nil
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+var randStringBytes = func(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func getTempApplyPath(overlayFile string) string {
+	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
 }
