@@ -194,7 +194,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, err := w.runSource(ctx, w.RootStep, id)
+			_, err := w.runSource(ctx, w.RootStep, id, true)
 			if err != nil {
 				return err
 			}
@@ -213,7 +213,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := w.runSource(ctx, w.RootStep, w.Source)
+		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
 			return err
 		}
@@ -244,7 +244,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	}
 
 	if source != nil {
-		sourcePath, err = w.runSource(ctx, rootStep, t.Source)
+		sourcePath, err = w.runSource(ctx, rootStep, t.Source, false)
 		if err != nil {
 			return err
 		}
@@ -336,7 +336,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
@@ -437,10 +437,12 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 	rootStep.SucceedWorkflow()
 
-	rootStep.NewSubstep("Cleaning up")
+	if cleanUp {
+		rootStep.NewSubstep("Cleaning up")
 
-	// Clean up temp files on success
-	os.RemoveAll(workflow.GetTempDir())
+		// Clean up temp files on success
+		os.RemoveAll(workflow.GetTempDir())
+	}
 
 	return outputLocation, nil
 }
