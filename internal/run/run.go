@@ -128,7 +128,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display error logs if the workflow failed
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
-	}
+	}g
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
@@ -216,7 +216,6 @@ func (w *Workflow) Run(ctx context.Context) error {
 
 		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
-			fmt.Print("test")
 			return err
 		}
 	}
