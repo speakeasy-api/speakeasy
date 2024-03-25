@@ -459,6 +459,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	return res
 }
 
+// TODO: RETAIN THE INPUT_ addition
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
 	log.From(ctx).Infof("Downloading %s... to %s\n", d.Location, outPath)
 
@@ -498,7 +499,6 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) err
 
 	return nil
 }
-
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
 	currentBase := schema
 

@@ -22,8 +22,8 @@ require (
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-changes v1.0.3
 	github.com/speakeasy-api/openapi-generation/v2 v2.286.5
-	github.com/speakeasy-api/openapi-overlay v0.4.0
-	github.com/speakeasy-api/sdk-gen-config v1.9.0
+	github.com/speakeasy-api/openapi-overlay v0.5.0
+	github.com/speakeasy-api/sdk-gen-config v1.9.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.4.3
 	github.com/speakeasy-api/speakeasy-core v0.3.3
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
@@ -213,3 +213,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
+
+replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
