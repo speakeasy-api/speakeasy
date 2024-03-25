@@ -15,6 +15,11 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
+var additionalRelevantConfigs = []string{
+	"maxMethodParams",
+	"author",
+}
+
 // During quickstart we ask for a limited subset of configs per language
 var quickstartScopedKeys = map[string][]string{
 	"go": {
@@ -185,10 +190,10 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		}
 
 		if valid, defaultValue, validateRegex, validateMessage := getValuesForField(field, langConfig); valid {
-			if !isQuickstart {
+			if lang, ok := quickstartScopedKeys[language]; ok && slices.Contains(lang, field.Name) && slices.Contains(additionalRelevantConfigs, field.Name) {
 				appliedKeys = append(appliedKeys, field.Name)
 				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
-			} else if lang, ok := quickstartScopedKeys[language]; ok && slices.Contains(lang, field.Name) {
+			} else if slices.Contains(lang, field.Name) {
 				appliedKeys = append(appliedKeys, field.Name)
 				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
 			}

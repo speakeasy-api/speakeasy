@@ -65,11 +65,15 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
-		return fmt.Errorf("you cannot run quickstart when a speakeasy workflow already exists, try speakeasy configure instead")
+		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+			"cd .. and run speakeasy quickstart to create a brand new SDK directory. \n" +
+			"Run speakeasy configure to add an additional SDK to this workflow.")
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
+		return fmt.Errorf("You cannot run quickstart when an existing gen.yaml already exists in the direcotry. \n" +
+			"cd .. and run speakeasy quickstart to create a brand new SDK direcotry. \n" +
+			"Run speakeasy configure to add an additional SDK to this workflow.")
 	}
 
 	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
@@ -117,50 +121,39 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	var isUncleanDir bool
-	if entry, err := os.ReadDir(workingDir); err == nil {
-		for _, e := range entry {
-			if !strings.HasPrefix(e.Name(), ".") && !strings.HasSuffix(e.Name(), ".yaml") && !strings.HasSuffix(e.Name(), ".yml") && !strings.HasSuffix(e.Name(), ".json") {
-				isUncleanDir = true
-				break
-			}
-		}
+	promptedDir := targetType
+	if outDir != workingDir {
+		promptedDir = outDir
+	}
+	description := "We have provided a default directory option mapped to your language. To use the current directory keep this empty."
+	if targetType == "terraform" {
+		description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
+		outDir = "terraform-provider"
 	}
 
-	if (isUncleanDir && outDir == workingDir) || (targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider")) {
-		promptedDir, _ := filepath.Abs(workingDir)
-		if outDir != workingDir {
-			promptedDir = outDir
-		}
-		description := "The default option we have provided maps to the current root directory."
-		if targetType == "terraform" {
-			description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
-		}
-
-		if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
-			Title("What directory should quickstart files be written too?").
-			Description(description+"\n").
-			Validate(func(s string) error {
-				if targetType == "terraform" {
-					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
-						return errors.New("a terraform provider directory must start with 'terraform-provider'")
-					}
+	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		Title("What directory should quickstart files be written too?").
+		Description(description+"\n").
+		Validate(func(s string) error {
+			if targetType == "terraform" {
+				if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
+					return errors.New("a terraform provider directory must start with 'terraform-provider'")
 				}
-				return nil
-			}).
-			Inline(false).Prompt("").Value(&promptedDir))),
-			"Let's pick an output directory for your newly created files.").
-			ExecuteForm(); err != nil {
-			return err
-		}
-		if !filepath.IsAbs(promptedDir) {
-			promptedDir = filepath.Join(workingDir, promptedDir)
-		}
+			}
+			return nil
+		}).
+		Inline(false).Prompt("").Value(&promptedDir))),
+		"Pick an output directory for your newly created files.").
+		ExecuteForm(); err != nil {
+		return err
+	}
+	if !filepath.IsAbs(promptedDir) {
+		promptedDir = filepath.Join(workingDir, promptedDir)
+	}
 
-		outDir, err = filepath.Abs(promptedDir)
-		if err != nil {
-			return err
-		}
+	outDir, err = filepath.Abs(promptedDir)
+	if err != nil {
+		return err
 	}
 
 	var resolvedSchema string

@@ -222,6 +222,8 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		existingTarget = flags.ID
 	}
 
+	newTarget := flags.New
+
 	var targetOptions []huh.Option[string]
 	var existingTargets []string
 	if len(workflowFile.Targets) > 0 {
@@ -235,11 +237,11 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		if existingSDK {
 			existingTargets, targetOptions = handleLegacySDKTarget(workingDir, workflowFile)
 		} else {
-			targetOptions = append(targetOptions, huh.NewOption(charm.FormatNewOption("New Target"), "new target"))
+			newTarget = true
 		}
 	}
 
-	if !flags.New && existingTarget == "" {
+	if newTarget && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
 		if _, err := charm.NewForm(huh.NewForm(prompt),
 			"Let's configure a target for your workflow.").
