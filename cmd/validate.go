@@ -18,7 +18,7 @@ import (
 
 var validateCmd = &model.CommandGroup{
 	Usage:          "validate",
-	Short:          "Validate OpenAPI documents + more",
+	Short:          "Validate OpenAPI documents and Speakeasy configuration files",
 	Long:           `The "validate" command provides a set of commands for validating OpenAPI docs and more.`,
 	InteractiveMsg: "What do you want to validate?",
 	Commands:       []model.Command{validateOpenapiCmd, validateConfigCmd},

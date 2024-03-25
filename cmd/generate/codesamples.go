@@ -54,7 +54,7 @@ var codeSamplesCmd = &model.ExecutableCommand[codeSamplesFlags]{
 }
 
 func runCodeSamples(ctx context.Context, flags codeSamplesFlags) error {
-	err := usagegen.GenerateCodeSamplesOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs)
+	err := usagegen.GenerateCodeSamplesOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs, false)
 
 	if err == nil {
 		locationString := "Overlay file written to stdout"

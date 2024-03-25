@@ -34,6 +34,20 @@ var quickstartScopedKeys = map[string][]string{
 	"docs": {
 		"defaultLanguage",
 	},
+	"csharp": {
+		"packageName",
+	},
+	"unity": {
+		"packageName",
+	},
+	"php": {
+		"packageName",
+		"namespace",
+	},
+	"ruby": {
+		"packageName",
+		"author",
+	},
 }
 
 var ignoredKeys = []string{

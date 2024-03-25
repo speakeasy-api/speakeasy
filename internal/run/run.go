@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -156,6 +159,10 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
 		}
 
+		if t.CodeSamples != nil {
+			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+		}
+
 		msg := styles.RenderSuccessMessage(
 			t.Target+" SDK Generated Successfully",
 			additionalLines...,
@@ -188,7 +195,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, err := w.runSource(ctx, w.RootStep, id)
+			_, err := w.runSource(ctx, w.RootStep, id, true)
 			if err != nil {
 				return err
 			}
@@ -207,7 +214,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := w.runSource(ctx, w.RootStep, w.Source)
+		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
 			fmt.Print("test")
 			return err
@@ -238,7 +245,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	}
 
 	if source != nil {
-		sourcePath, err = w.runSource(ctx, rootStep, t.Source)
+		sourcePath, err = w.runSource(ctx, rootStep, t.Source, false)
 		if err != nil {
 			return err
 		}
@@ -305,6 +312,21 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	}
 	w.generationAccess = generationAccess
 
+	if t.CodeSamples != nil {
+		rootStep.NewSubstep("Generating CodeSamples")
+		configPath := "."
+		outputPath := t.CodeSamples.Output
+		if t.Output != nil {
+			configPath = *t.Output
+			outputPath = filepath.Join(*t.Output, outputPath)
+		}
+
+		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	rootStep.NewSubstep("Cleaning up")
 
 	// Clean up temp files on success
@@ -315,7 +337,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
@@ -392,7 +414,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			if overlay.IsRemote() {
 				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
 
-				downloadedPath, err := resolveRemoteDocument(ctx, overlay, workflow.GetTempDir())
+				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
 				if err != nil {
 					return "", err
 				}
@@ -415,6 +437,13 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	rootStep.SucceedWorkflow()
+
+	if cleanUp {
+		rootStep.NewSubstep("Cleaning up")
+
+		// Clean up temp files on success
+		os.RemoveAll(workflow.GetTempDir())
+	}
 
 	return outputLocation, nil
 }
@@ -482,25 +511,59 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) err
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
 	currentBase := schema
+	for _, overlayFile := range overlayFiles {
+		applyPath := getTempApplyPath(overlayFile)
+		tempOutFile, err := os.Create(applyPath)
+		if err != nil {
+			return err
+		}
+
+		if err := overlay.Apply(currentBase, overlayFile, tempOutFile); err != nil {
+			return err
+		}
+
+		if err := tempOutFile.Close(); err != nil {
+			return err
+		}
+
+		currentBase = applyPath
+	}
 
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	f, err := os.Create(outFile)
+	finalTempFile, err := os.Open(currentBase)
 	if err != nil {
 		return err
 	}
+	defer finalTempFile.Close()
 
-	for _, overlayFile := range overlayFiles {
-		if err := overlay.Apply(currentBase, overlayFile, f); err != nil {
-			return err
-		}
+	outFileWriter, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer outFileWriter.Close()
 
-		currentBase = outFile
+	if _, err := io.Copy(outFileWriter, finalTempFile); err != nil {
+		return err
 	}
 
 	log.From(ctx).Successf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
 
 	return nil
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+var randStringBytes = func(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func getTempApplyPath(overlayFile string) string {
+	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
 }
