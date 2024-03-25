@@ -312,7 +312,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	w.generationAccess = generationAccess
 
 	if t.CodeSamples != nil {
-		rootStep.NewSubstep("Generating CodeSamples")
+		rootStep.NewSubstep("Generating Code Samples")
 		configPath := "."
 		outputPath := t.CodeSamples.Output
 		if t.Output != nil {
