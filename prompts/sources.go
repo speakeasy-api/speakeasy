@@ -113,7 +113,7 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	source := &workflow.Source{}
 	var sourceName, fileLocation, authHeader, authSecret string
 	if len(quickstart.WorkflowFile.Sources) == 0 {
-		sourceName = "openapi"
+		sourceName = "my-first-source"
 	}
 
 	if quickstart.Defaults.SchemaPath != nil {
