@@ -514,8 +514,13 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRul
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
 	currentBase := schema
+	if err := os.MkdirAll(workflow.GetTempDir(), os.ModePerm); err != nil {
+		return err
+	}
+
 	for _, overlayFile := range overlayFiles {
 		applyPath := getTempApplyPath(overlayFile)
+
 		tempOutFile, err := os.Create(applyPath)
 		if err != nil {
 			return err
