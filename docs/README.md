@@ -32,6 +32,7 @@ speakeasy [flags]
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
 * [speakeasy configure](configure/README.md)	 - Configure your Speakeasy SDK Setup.
 * [speakeasy generate](generate/README.md)	 - Generate client SDKs, docsites, and more
+* [speakeasy lint](lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy openapi](openapi/README.md)	 - Validate and compare OpenAPI documents
 * [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
@@ -39,4 +40,3 @@ speakeasy [flags]
 * [speakeasy run](run.md)	 - run the workflow defined in your workflow.yaml file
 * [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
-* [speakeasy validate](validate/README.md)	 - Validate OpenAPI documents and Speakeasy configuration files

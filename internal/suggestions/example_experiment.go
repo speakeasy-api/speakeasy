@@ -4,6 +4,14 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
@@ -16,13 +24,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	openai "github.com/speakeasy-sdks/openai-go-sdk/v4"
 	"github.com/speakeasy-sdks/openai-go-sdk/v4/pkg/models/shared"
-	"math/rand"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 func system(content string) shared.ChatCompletionRequestMessage {
@@ -62,7 +63,7 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{})
+	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{}, "", "")
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(outputFile, []byte(combined), 0644)
+	return os.WriteFile(outputFile, []byte(combined), 0o644)
 }
 
 func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder string) error {
@@ -217,7 +218,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 	contentWithoutDone := strings.Replace(content.String(), finishAt, "", -1)
 	contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
 	// load the new result with libopenapi
-	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0644)
+	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0o644)
 	return handleUpdate(ctx, cacheFolder, shard)
 }
 
@@ -251,7 +252,7 @@ func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
 	}
 
 	fmt.Printf("\n" + content + "\n")
-	os.WriteFile(overlayFilePath, []byte(content), 0644)
+	os.WriteFile(overlayFilePath, []byte(content), 0o644)
 	return nil
 }
 
@@ -324,7 +325,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 			return nil, errors.NewValidationError("failed to render document", -1, err)
 		}
 		// cache it
-		err = os.WriteFile(cacheFile, shard, 0644)
+		err = os.WriteFile(cacheFile, shard, 0o644)
 		shards = append(shards, Shard{Content: string(shard), Encoded: base64(pair.Key()), Key: pair.Key()})
 	}
 	return shards, nil
@@ -407,7 +408,7 @@ func removeOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		for key, ref := range resultMap {
 
 			u := strings.Split(key, "#/")
-			var keyAlt = key
+			keyAlt := key
 			if len(u) == 2 {
 				if u[0] == "" {
 					keyAlt = fmt.Sprintf("%s#/%s", context.Index.GetSpecAbsolutePath(), u[1])
