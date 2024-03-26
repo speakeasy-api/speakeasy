@@ -139,14 +139,10 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 
 	configGroups = append(configGroups, languageForms...)
 	form := huh.NewForm(configGroups...)
-	descriptionMessage := "We will go through a few basic configurations here, but you can always modify further in the future."
-	if !isQuickstart {
-		descriptionMessage = "Default config values have been provided. You only need to edit values that you want to modify."
-	}
 	if _, err := charm.NewForm(form,
 		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
 		"This will configure a config file that defines parameters for how your SDK is generated. \n"+
-			descriptionMessage).
+			"Default config values have been provided. You only need to edit values that you want to modify.").
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
