@@ -70,7 +70,7 @@ func New() Logger {
 	return Logger{
 		level:     LevelInfo,
 		formatter: formatter,
-		writer:    os.Stdout,
+		writer:    os.Stderr,
 	}
 }
 
