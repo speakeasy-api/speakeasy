@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,6 +28,9 @@ type QuickstartFlags struct {
 	OutDir      string `json:"out-dir"`
 	TargetType  string `json:"target"`
 }
+
+//go:embed sample_openapi.yaml
+var sampleSpec string
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	Usage:        "quickstart",
@@ -66,14 +70,16 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
 		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"cd .. and run speakeasy quickstart to create a brand new SDK directory. \n" +
-			"Run speakeasy configure to add an additional SDK to this workflow. Run speakeasy run to rerun the generation workflow")
+			"To create a brand new SDK directory: cd .. and run `speakeasy quickstart`. \n" +
+			"To add an additional SDK to this workflow: run `speakeasy configure`. \n" +
+			"To regenerate the current workflow: run `speakeasy run`.")
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("You cannot run quickstart when an existing gen.yaml already exists in the directory. \n" +
-			"cd .. and run speakeasy quickstart to create a brand new SDK direcotry. \n" +
-			"Run speakeasy configure to add an additional SDK to this workflow. Run speakeasy run to rerun the generation workflow")
+		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+			"To create a brand new SDK directory: cd .. and run `speakeasy quickstart`. \n" +
+			"To add an additional SDK to this workflow: run `speakeasy configure`. \n" +
+			"To regenerate the current workflow: run `speakeasy run`.")
 	}
 
 	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
@@ -156,6 +162,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return err
 	}
 
+	speakeasyFolderPath := filepath.Join(outDir, ".speakeasy")
+	if _, err := os.Stat(speakeasyFolderPath); os.IsNotExist(err) {
+		err = os.MkdirAll(speakeasyFolderPath, 0o755)
+		if err != nil {
+			return err
+		}
+	}
+
 	var resolvedSchema string
 	var sourceName string
 	for name, source := range quickstartObj.WorkflowFile.Sources {
@@ -177,12 +191,18 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
 	}
 
-	speakeasyFolderPath := outDir + "/" + ".speakeasy"
-	if _, err := os.Stat(speakeasyFolderPath); os.IsNotExist(err) {
-		err = os.MkdirAll(speakeasyFolderPath, 0o755)
+	if quickstartObj.IsUsingSampleOpenAPISpec {
+		absSchemaPath := filepath.Join(outDir, "openapi.yaml")
+		if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
+			return errors.Wrapf(err, "failed to write sample openapi spec")
+		}
+		fmt.Printf("The OpenAPI sample document will be used.\nIt can be found here, you can edit it at anytime:\n\n  %s\n\n", absSchemaPath)
+
+		referencePath, err := filepath.Rel(outDir, absSchemaPath)
 		if err != nil {
 			return err
 		}
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
 	}
 
 	if err := workflow.Save(outDir, quickstartObj.WorkflowFile); err != nil {

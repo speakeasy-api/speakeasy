@@ -120,12 +120,33 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	}
 
-	if _, err := charm_internal.NewForm(huh.NewForm(
-		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
-		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
-		ExecuteForm(); err != nil {
+	useSampleSpec := false
+	_, err := charm_internal.NewForm(huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Do you have an existing OpenAPI spec?").
+				Description("You can provide a local file path or a remote file reference to your OpenAPI spec.").
+				Affirmative("No, use a sample OpenAPI spec").
+				Negative("Yes").
+				Value(&useSampleSpec),
+		),
+	)).ExecuteForm()
+	if err != nil {
 		return nil, err
+	}
+
+	if useSampleSpec {
+		quickstart.IsUsingSampleOpenAPISpec = true
+		fileLocation = "openapi.yaml"
+	} else {
+		if _, err := charm_internal.NewForm(huh.NewForm(
+			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
+			"Let's setup a new source for your workflow.",
+			"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+			ExecuteForm(); err != nil {
+			return nil, err
+		}
+
 	}
 
 	document, err := formatDocument(fileLocation, authHeader, authSecret, false)

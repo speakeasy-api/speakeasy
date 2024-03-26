@@ -149,7 +149,12 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		tOut := "the current directory"
+		workingDirectory, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+
+		tOut := workingDirectory
 		if t.Output != nil && *t.Output != "" && *t.Output != "." {
 			tOut = *t.Output
 		}
@@ -159,12 +164,12 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 		titleMsg := " SDK Generated Successfully"
 		additionalLines := []string{
-			"✎ Output written to " + tOut,
 			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+			"✎ Output written to " + tOut,
 		}
 
 		if w.FromQuickstart {
-			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
+			additionalLines = append(additionalLines, "Execute `speakeasy run` to regenerate your SDK!")
 		}
 
 		if t.CodeSamples != nil {
