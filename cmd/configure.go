@@ -241,7 +241,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		}
 	}
 
-	if newTarget && existingTarget == "" {
+	if !newTarget && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
 		if _, err := charm.NewForm(huh.NewForm(prompt),
 			"Let's configure a target for your workflow.").
@@ -257,9 +257,11 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	var target *workflow.Target
 	var targetConfig *config.Configuration
 	if existingTarget == "" {
-		// If a second target is added to an existing workflow file you must change the outdir of either target cannot be the root dir.
-		if err := prompts.PromptForOutDirMigration(workflowFile, existingTargets); err != nil {
-			return err
+		if len(workflowFile.Targets) > 0 {
+			// If a second target is added to an existing workflow file you must change the outdir of either target cannot be the root dir.
+			if err := prompts.PromptForOutDirMigration(workflowFile, existingTargets); err != nil {
+				return err
+			}
 		}
 
 		targetName, target, err = prompts.PromptForNewTarget(workflowFile, "", "", "")
