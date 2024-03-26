@@ -103,11 +103,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
 
 	var logs bytes.Buffer
+	warnings := make([]string, 0)
+
 	var err, runErr error
 	logger := log.From(ctx)
 
 	runFnCli := func() error {
-		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
+		l := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
 		runCtx := log.With(ctx, l)
 		err = w.Run(runCtx)
 
@@ -125,14 +127,20 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	err = w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
 	endDuration := time.Since(startTime)
 
-	// Display error logs if the workflow failed
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
+
+	criticalWarns := getCriticalWarnings(warnings)
+
+	// Display error logs if the workflow failed
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
+	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
+		s := strings.Join(criticalWarns, "\n")
+		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
 	}
 
 	// Display success message if the workflow succeeded
@@ -149,6 +157,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			tOut = "the paths specified in workflow.yaml"
 		}
 
+		titleMsg := " SDK Generated Successfully"
 		additionalLines := []string{
 			"✎ Output written to " + tOut,
 			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
@@ -162,8 +171,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 		}
 
+		if len(criticalWarns) > 0 {
+			additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
+			titleMsg = " SDK Generated with Warnings"
+		}
+
 		msg := styles.RenderSuccessMessage(
-			t.Target+" SDK Generated Successfully",
+			t.Target+titleMsg,
 			additionalLines...,
 		)
 		logger.Println(msg)
