@@ -67,13 +67,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
 		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
 			"cd .. and run speakeasy quickstart to create a brand new SDK directory. \n" +
-			"Run speakeasy configure to add an additional SDK to this workflow.")
+			"Run speakeasy configure to add an additional SDK to this workflow. Run speakeasy run to rerun the generation workflow")
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("You cannot run quickstart when an existing gen.yaml already exists in the direcotry. \n" +
+		return fmt.Errorf("You cannot run quickstart when an existing gen.yaml already exists in the directory. \n" +
 			"cd .. and run speakeasy quickstart to create a brand new SDK direcotry. \n" +
-			"Run speakeasy configure to add an additional SDK to this workflow.")
+			"Run speakeasy configure to add an additional SDK to this workflow. Run speakeasy run to rerun the generation workflow")
 	}
 
 	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
@@ -127,7 +127,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 	description := "We have provided a default directory option mapped to your language. To use the current directory keep this empty."
 	if targetType == "terraform" {
-		description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
+		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
 		outDir = "terraform-provider"
 	}
 
