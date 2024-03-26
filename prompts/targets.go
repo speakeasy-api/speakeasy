@@ -13,7 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
-func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outDir *string, newTarget bool) *huh.Group {
+func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outDir *string, newTarget bool) []*huh.Group {
 	targetFields := []huh.Field{}
 	if newTarget {
 		targetFields = append(targetFields, huh.NewSelect[string]().
@@ -43,9 +43,12 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	}
 
 	targetFields = append(targetFields, rendersSelectSource(currentWorkflow, sourceName)...)
+	groups := []*huh.Group{
+		huh.NewGroup(targetFields...),
+	}
 	if len(currentWorkflow.Targets) > 0 {
-		targetFields = append(targetFields,
-			charm.NewInput().
+		groups = append(groups,
+			huh.NewGroup(charm.NewInput().
 				Title("What is a good output directory for your generation target?").
 				Validate(func(s string) error {
 					var enforceNewDir bool
@@ -61,10 +64,10 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 					return nil
 				}).
 				Value(outDir),
-		)
+			))
 	}
 
-	return huh.NewGroup(targetFields...)
+	return groups
 }
 
 func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
@@ -97,7 +100,7 @@ func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetType, outDir string) (string, *workflow.Target, error) {
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
-	if _, err := charm.NewForm(huh.NewForm(prompts),
+	if _, err := charm.NewForm(huh.NewForm(prompts...),
 		"Let's setup a new target for your workflow.",
 		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").
 		ExecuteForm(); err != nil {
@@ -130,7 +133,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 	originalDir := outDir
 
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
-	if _, err := charm.NewForm(huh.NewForm(prompts),
+	if _, err := charm.NewForm(huh.NewForm(prompts...),
 		"Let's setup a new target for your workflow.",
 		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").ExecuteForm(); err != nil {
 		return "", nil, err
