@@ -516,6 +516,9 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 	currentBase := schema
 	for _, overlayFile := range overlayFiles {
 		applyPath := getTempApplyPath(overlayFile)
+		if err := os.MkdirAll(filepath.Dir(applyPath), os.ModePerm); err != nil {
+			return err
+		}
 		tempOutFile, err := os.Create(applyPath)
 		if err != nil {
 			return err
