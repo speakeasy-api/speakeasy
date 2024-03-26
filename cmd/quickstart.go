@@ -73,7 +73,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if prompts.HasExistingGeneration(workingDir) {
 		return fmt.Errorf("You cannot run quickstart when an existing gen.yaml already exists in the direcotry. \n" +
 			"cd .. and run speakeasy quickstart to create a brand new SDK direcotry. \n" +
-			"Run speakeasy configure to add an additional SDK to this workflow.")
+			"Run speakeasy configure to add an additional SDK to this workflow. Run speakeasy run to rerun the generation workflow")
 	}
 
 	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
