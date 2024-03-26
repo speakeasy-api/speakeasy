@@ -127,7 +127,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 	description := "We have provided a default directory option mapped to your language. To use the current directory keep this empty."
 	if targetType == "terraform" {
-		description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
+		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
 		outDir = "terraform-provider"
 	}
 
