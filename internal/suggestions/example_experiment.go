@@ -64,6 +64,9 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
 	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{}, "", "")
+	if len(os.Getenv("OPENAI_API_KEY")) == 0 {
+		return errors.NewValidationError("OPENAI_API_KEY is not set", -1, nil)
+	}
 	if err != nil {
 		return err
 	}
@@ -184,7 +187,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 		fmt.Printf("  %s chat-gpt invoke done\n", shard.Key)
 		if err != nil {
 			if subsequentErrors > 5 {
-				break
+				return fmt.Errorf("failed to get completion: %w", err)
 			}
 			subsequentErrors++
 			// jitter
