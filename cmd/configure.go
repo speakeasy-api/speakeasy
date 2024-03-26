@@ -210,7 +210,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		if existingSDK {
 			suggestion = "speakeasy configure sources"
 		}
-		return errors.New(fmt.Sprintf("you must have a source to configure a target try %s", suggestion))
+		return errors.New(fmt.Sprintf("you must have a source to configure a target try, %s", suggestion))
 	}
 
 	if workflowFile.Targets == nil {
