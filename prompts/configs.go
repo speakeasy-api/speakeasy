@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -66,19 +67,36 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 		}
 	}
 
-	var sdkClassName string
+	var sdkClassName string = ""
 	if !isQuickstart && output.Generation.SDKClassName != "" {
 		sdkClassName = output.Generation.SDKClassName
 	}
-	configFields := []huh.Field{
-		huh.NewInput().
-			Title("Name your SDK:").
-			Placeholder("your users will access SDK methods with <sdk_name>.doThing()").
-			Inline(true).
-			Prompt(" ").
-			Value(&sdkClassName),
+	_, err := charm.NewForm(
+		huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Name your SDK:").
+					Description("your users will access SDK methods with myCompanySDK.doThing()").
+					// TODO: Are there languages where the default should be `my_company_sdk` python? What about terraform?
+					// TODO: If they are using the petstore spec we should default to `PetstoreSDK`
+					Placeholder("MyCompanySDK").
+					Prompt(" ").
+					// TODO: Can we do better in terms of validation? ie valid identifier
+					Validate(func(s string) error {
+						if s == "" {
+							return errors.New("SDK name must not be empty")
+						}
+						return nil
+					}).
+					Value(&sdkClassName),
+			),
+		)).
+		ExecuteForm()
+	if err != nil {
+		return nil, err
 	}
 
+	configFields := []huh.Field{}
 	var baseServerURL string
 	if !isQuickstart && output.Generation.BaseServerURL != "" {
 		baseServerURL = output.Generation.BaseServerURL
@@ -122,7 +140,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 		return nil, err
 	}
 
-	languageForms, appliedKeys, err := languageSpecificForms(target.Target, output, defaultConfigs, isQuickstart)
+	languageForms, appliedKeys, err := languageSpecificForms(target.Target, output, defaultConfigs, isQuickstart, sdkClassName)
 	if err != nil {
 		return nil, err
 	}
@@ -169,12 +187,22 @@ func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	return &nextState, nil
 }
 
-func languageSpecificForms(language string, existingConfig *config.Configuration, configFields []config.SDKGenConfigField, isQuickstart bool) ([]huh.Field, []string, error) {
+func languageSpecificForms(language string, existingConfig *config.Configuration, configFields []config.SDKGenConfigField, isQuickstart bool, sdkClassName string) ([]huh.Field, []string, error) {
 	langConfig := config.LanguageConfig{}
 	if existingConfig != nil {
 		if conf, ok := existingConfig.Languages[language]; ok {
 			langConfig = conf
 		}
+	}
+
+	// Default the packageName to the SDKClassName
+	// TODO: This updates the placeholder but is intended to be a default value
+	// TODO: We should explain what this is by example ie:
+	//    * python: pip install my-company-sdk
+	//    * go: go get github.com/my-company/my-company-sdk
+	//    * typescript: npm install my-company-sdk
+	if isQuickstart && (language == "go" || language == "typescript" || language == "python") {
+		langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
 	}
 
 	fields := []huh.Field{}
