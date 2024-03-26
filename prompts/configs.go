@@ -77,8 +77,8 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 				huh.NewInput().
 					Title("Name your SDK:").
 					Description("your users will access SDK methods with myCompanySDK.doThing()").
-					// TODO: Are there languages where the default should be `my_company_sdk` python? What about terraform?
-					// TODO: If they are using the petstore spec we should default to `MyPetStoreSDK`
+					// TODO: Are there languages where the default should not be PascalCase? What about terraform?
+					// TODO: If they are using the sample petstore spec during quickstart we should default to `MyPetStoreSDK`
 					Placeholder("MyCompanySDK").
 					Prompt(" ").
 					// TODO: Can we do better in terms of validation? ie valid identifier
