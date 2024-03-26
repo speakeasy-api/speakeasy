@@ -213,10 +213,11 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
-	workflow, err := run.NewWorkflow("Workflow", initialTarget, "", "", nil, nil, false, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("Workflow", initialTarget, "", "", nil, nil, false, !flags.SkipCompile, false)
 	if err != nil {
 		return err
 	}
+	workflow.FromQuickstart = true
 
 	if err = workflow.RunWithVisualization(ctx); err != nil {
 		return errors.Wrapf(err, "failed to run generation workflow")

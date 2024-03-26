@@ -3,12 +3,18 @@ package run
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -34,16 +40,18 @@ type Workflow struct {
 	InstallationURLs map[string]string
 	Debug            bool
 	ShouldCompile    bool
+	ForceGeneration  bool
 
 	RootStep           *WorkflowStep
 	workflow           *workflow.Workflow
 	projectDir         string
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
+	FromQuickstart     bool
 }
 
-func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile bool) (*Workflow, error) {
-	wf, projectDir, err := GetWorkflowAndDir()
+func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
+	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
@@ -61,31 +69,12 @@ func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURL
 		workflow:         wf,
 		projectDir:       projectDir,
 		RootStep:         rootStep,
+		ForceGeneration:  forceGeneration,
 	}, nil
 }
 
-func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, "", err
-	}
-
-	wf, workflowFileLocation, err := workflow.Load(wd)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Get the project directory which is the parent of the .speakeasy folder the workflow file is in
-	projectDir := filepath.Dir(filepath.Dir(workflowFileLocation))
-	if err := os.Chdir(projectDir); err != nil {
-		return nil, "", err
-	}
-
-	return wf, projectDir, nil
-}
-
 func ParseSourcesAndTargets() ([]string, []string, error) {
-	wf, _, err := GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -143,9 +132,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
-		style := styles.LeftBorder(styles.Dimmed.GetForeground()).Width(styles.TerminalWidth() - 8) // -8 because of padding
-		logsHeading := styles.Dimmed.Render("Workflow run logs")
-		logger.PrintfStyled(style, "%s\n\n%s", logsHeading, strings.TrimSpace(logs.String()))
+		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
 	}
 
 	// Display success message if the workflow succeeded
@@ -162,10 +149,22 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			tOut = "the paths specified in workflow.yaml"
 		}
 
+		additionalLines := []string{
+			"✎ Output written to " + tOut,
+			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+		}
+
+		if w.FromQuickstart {
+			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
+		}
+
+		if t.CodeSamples != nil {
+			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+		}
+
 		msg := styles.RenderSuccessMessage(
 			t.Target+" SDK Generated Successfully",
-			"✎ Output written to "+tOut,
-			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+			additionalLines...,
 		)
 		logger.Println(msg)
 
@@ -195,7 +194,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, err := w.runSource(ctx, w.RootStep, id)
+			_, err := w.runSource(ctx, w.RootStep, id, true)
 			if err != nil {
 				return err
 			}
@@ -214,7 +213,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := w.runSource(ctx, w.RootStep, w.Source)
+		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
 			return err
 		}
@@ -224,7 +223,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 }
 
 func getTarget(target string) (*workflow.Target, error) {
-	wf, _, err := GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +244,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	}
 
 	if source != nil {
-		sourcePath, err = w.runSource(ctx, rootStep, t.Source)
+		sourcePath, err = w.runSource(ctx, rootStep, t.Source, false)
 		if err != nil {
 			return err
 		}
@@ -262,7 +261,23 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		outDir = w.projectDir
 	}
 
-	published := t.Publishing != nil && t.Publishing.IsPublished(target)
+	published := t.IsPublished()
+
+	genYamlStep := rootStep.NewSubstep("Validating gen.yaml")
+
+	genConfig, err := sdkGenConfig.Load(outDir)
+	if err != nil {
+		return err
+	}
+
+	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published)
+	if err != nil {
+		if errors.Is(err, validation.NoConfigFound) {
+			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
+		} else {
+			return err
+		}
+	}
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 
@@ -289,11 +304,27 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		w.Repo,
 		w.RepoSubDirs[target],
 		w.ShouldCompile,
+		w.ForceGeneration,
 	)
 	if err != nil {
 		return err
 	}
 	w.generationAccess = generationAccess
+
+	if t.CodeSamples != nil {
+		rootStep.NewSubstep("Generating Code Samples")
+		configPath := "."
+		outputPath := t.CodeSamples.Output
+		if t.Output != nil {
+			configPath = *t.Output
+			outputPath = filepath.Join(*t.Output, outputPath)
+		}
+
+		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
+		if err != nil {
+			return err
+		}
+	}
 
 	rootStep.NewSubstep("Cleaning up")
 
@@ -305,7 +336,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
@@ -387,7 +418,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			if overlay.IsRemote() {
 				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
 
-				downloadedPath, err := resolveRemoteDocument(ctx, overlay, workflow.GetTempDir())
+				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
 				if err != nil {
 					return "", err
 				}
@@ -410,6 +441,13 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	rootStep.SucceedWorkflow()
+
+	if cleanUp {
+		rootStep.NewSubstep("Cleaning up")
+
+		// Clean up temp files on success
+		os.RemoveAll(workflow.GetTempDir())
+	}
 
 	return outputLocation, nil
 }
@@ -476,25 +514,59 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRul
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
 	currentBase := schema
+	for _, overlayFile := range overlayFiles {
+		applyPath := getTempApplyPath(overlayFile)
+		tempOutFile, err := os.Create(applyPath)
+		if err != nil {
+			return err
+		}
+
+		if err := overlay.Apply(currentBase, overlayFile, tempOutFile); err != nil {
+			return err
+		}
+
+		if err := tempOutFile.Close(); err != nil {
+			return err
+		}
+
+		currentBase = applyPath
+	}
 
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	f, err := os.Create(outFile)
+	finalTempFile, err := os.Open(currentBase)
 	if err != nil {
 		return err
 	}
+	defer finalTempFile.Close()
 
-	for _, overlayFile := range overlayFiles {
-		if err := overlay.Apply(currentBase, overlayFile, f); err != nil {
-			return err
-		}
+	outFileWriter, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer outFileWriter.Close()
 
-		currentBase = outFile
+	if _, err := io.Copy(outFileWriter, finalTempFile); err != nil {
+		return err
 	}
 
 	log.From(ctx).Successf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
 
 	return nil
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+var randStringBytes = func(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func getTempApplyPath(overlayFile string) string {
+	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
 }

@@ -75,7 +75,12 @@ func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []stri
 		if !file.Type().IsDir() {
 			for _, ext := range fileExtensions {
 				if strings.HasSuffix(file.Name(), ext) {
-					validFiles = append(validFiles, filepath.Join(relativeDir, file.Name()))
+					fileSuggestion := filepath.Join(relativeDir, file.Name())
+					// allows us to support current directory relative paths
+					if relativeDir == "./" {
+						fileSuggestion = relativeDir + file.Name()
+					}
+					validFiles = append(validFiles, fileSuggestion)
 				}
 			}
 		}

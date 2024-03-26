@@ -2,7 +2,7 @@
 `speakeasy validate`  
 
 
-Validate OpenAPI documents + more  
+Validate OpenAPI documents and Speakeasy configuration files  
 
 ## Details
 

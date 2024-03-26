@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"io"
 	"os"
 	"path/filepath"
@@ -109,4 +110,24 @@ func SanitizeFilePath(path string) string {
 	}
 
 	return sanitizedPath
+}
+
+func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, "", err
+	}
+
+	wf, workflowFileLocation, err := workflow.Load(wd)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Get the project directory which is the parent of the .speakeasy folder the workflow file is in
+	projectDir := filepath.Dir(filepath.Dir(workflowFileLocation))
+	if err := os.Chdir(projectDir); err != nil {
+		return nil, "", err
+	}
+
+	return wf, projectDir, nil
 }

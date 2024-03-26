@@ -26,6 +26,7 @@ type GenerateFlags struct {
 	Repo            string `json:"repo"`
 	RepoSubdir      string `json:"repo-subdir"`
 	OutputTests     bool   `json:"output-tests"`
+	Force           bool   `json:"force"`
 }
 
 var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
@@ -65,6 +66,10 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 			Description: "output internal tests for internal speakeasy use cases",
 			Hidden:      true,
 		},
+		flag.BooleanFlag{
+			Name:        "force",
+			Description: "Force generation of SDKs even when no changes are present",
+		},
 	},
 	NonInteractiveSubcommands: []model.Command{genSDKVersionCmd, genSDKChangelogCmd},
 }
@@ -88,6 +93,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		flags.Repo,
 		flags.RepoSubdir,
 		false,
+		flags.Force,
 	)
 
 	return err

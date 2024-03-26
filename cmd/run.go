@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -25,11 +27,12 @@ type RunFlags struct {
 	RepoSubdir       string            `json:"repo-subdir"`
 	RepoSubdirs      map[string]string `json:"repo-subdirs"`
 	SkipCompile      bool              `json:"skip-compile"`
+	Force            bool              `json:"force"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
 	Usage: "run",
-	Short: "run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.",
+	Short: "run the workflow defined in your workflow.yaml file",
 	Long: "run the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
 A workflow can consist of multiple targets that define a source OpenAPI document that can be downloaded from a URL, exist as a local file, or be created via merging multiple OpenAPI documents together and/or overlaying them with an OpenAPI overlay document.
 A full workflow is capable of running the following steps:
@@ -87,11 +90,15 @@ A full workflow is capable of running the following steps:
 			Name:        "skip-compile",
 			Description: "skip compilation when generating the SDK",
 		},
+		flag.BooleanFlag{
+			Name:        "force",
+			Description: "Force generation of SDKs even when no changes are present",
+		},
 	},
 }
 
 func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
-	wf, _, err := run.GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
 	}
@@ -188,7 +195,7 @@ func askForTarget(title, description, confirmation string, targets []string, all
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
 	if err != nil {
 		return err
 	}
@@ -203,7 +210,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile)
+	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
 	if err != nil {
 		return err
 	}

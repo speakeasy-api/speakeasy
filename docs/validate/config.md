@@ -17,7 +17,7 @@ speakeasy validate config [flags]
 ### Options
 
 ```
-  -d, --dir string   path to the directory containing the Speakeasy configuration file
+  -d, --dir string   path to the directory containing the Speakeasy configuration file (default ".")
   -h, --help         help for config
 ```
 
@@ -29,4 +29,4 @@ speakeasy validate config [flags]
 
 ### Parent Command
 
-* [speakeasy validate](README.md)	 - Validate OpenAPI documents + more
+* [speakeasy validate](README.md)	 - Validate OpenAPI documents and Speakeasy configuration files

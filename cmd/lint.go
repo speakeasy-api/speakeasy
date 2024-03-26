@@ -3,20 +3,23 @@ package cmd
 import (
 	"context"
 	"fmt"
-
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
-	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
 var lintCmd = &model.CommandGroup{
 	Usage:          "lint",
 	Aliases:        []string{"validate"},
-	Short:          "Lint OpenAPI documents + more",
+	Short:          "Lint/Validate OpenAPI documents and Speakeasy configuration files",
 	Long:           `The "lint" command provides a set of commands for linting OpenAPI docs and more.`,
 	InteractiveMsg: "What do you want to lint?",
 	Commands:       []model.Command{lintOpenapiCmd, lintConfigCmd},
@@ -84,10 +87,10 @@ var lintConfigCmd = &model.ExecutableCommand[lintConfigFlags]{
 	Run:   lintConfig,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:        "dir",
-			Shorthand:   "d",
-			Description: "path to the directory containing the Speakeasy configuration file",
-			Required:    true,
+			Name:         "dir",
+			Shorthand:    "d",
+			Description:  "path to the directory containing the Speakeasy configuration file",
+			DefaultValue: ".",
 		},
 	},
 }
@@ -127,15 +130,28 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 }
 
 func lintConfig(ctx context.Context, flags lintConfigFlags) error {
-	// no authentication required for validating configs
-
-	if err := sdkgen.ValidateConfig(ctx, flags.Dir); err != nil {
-		rootCmd.SilenceUsage = true
-
-		return fmt.Errorf("%s", err)
+	// To support the old version of this command, check if there is no workflow.yaml. If there isn't, run the old version
+	wf, _, err := utils.GetWorkflowAndDir()
+	if wf == nil {
+		log.From(ctx).Info("No workflow.yaml found, running legacy version of this command...")
+		return sdkgen.ValidateConfig(ctx, flags.Dir)
 	}
 
-	log.From(ctx).Success("Config valid ✓")
+	// Below is the workflow file based version of this command
+
+	targetToConfig, err := validation.GetAndValidateConfigs(ctx)
+	if err != nil {
+		return err
+	}
+
+	langs := strings.Join(maps.Keys(targetToConfig), ", ")
+
+	msg := styles.RenderSuccessMessage(
+		"SDK generation configuration is valid ✓",
+		"Validated targets: "+langs,
+	)
+
+	log.From(ctx).Println(msg)
 
 	return nil
 }
