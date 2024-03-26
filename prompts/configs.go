@@ -300,6 +300,10 @@ func saveLanguageConfigValues(language string, form *huh.Form, configuration *co
 					if transform, err := strconv.Atoi(form.GetString(key)); err == nil {
 						configuration.Languages[language].Cfg[key] = transform
 					}
+				case int64:
+					if transform, err := strconv.Atoi(form.GetString(key)); err == nil {
+						configuration.Languages[language].Cfg[key] = int64(transform)
+					}
 				case bool:
 					if transform, err := strconv.ParseBool(form.GetString(key)); err == nil {
 						configuration.Languages[language].Cfg[key] = transform
