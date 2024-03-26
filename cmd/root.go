@@ -59,6 +59,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, lintCmd)
 	addCommand(rootCmd, openapiCmd)
 	addCommand(rootCmd, migrateCmd)
+	addCommand(rootCmd, AskCmd)
 
 	authInit()
 	mergeInit()
