@@ -15,6 +15,11 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
+var additionalRelevantConfigs = []string{
+	"maxMethodParams",
+	"author",
+}
+
 // During quickstart we ask for a limited subset of configs per language
 var quickstartScopedKeys = map[string][]string{
 	"go": {
@@ -185,10 +190,10 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		}
 
 		if valid, defaultValue, validateRegex, validateMessage := getValuesForField(field, langConfig); valid {
-			if !isQuickstart {
+			if lang, ok := quickstartScopedKeys[language]; (ok && slices.Contains(lang, field.Name)) || slices.Contains(additionalRelevantConfigs, field.Name) {
 				appliedKeys = append(appliedKeys, field.Name)
 				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
-			} else if lang, ok := quickstartScopedKeys[language]; ok && slices.Contains(lang, field.Name) {
+			} else if slices.Contains(lang, field.Name) {
 				appliedKeys = append(appliedKeys, field.Name)
 				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
 			}
@@ -200,6 +205,8 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 
 func getValuesForField(field config.SDKGenConfigField, langConfig config.LanguageConfig) (bool, string, string, string) {
 	defaultValue := ""
+	if field.Name == "maxMethodParams" {
+	}
 	if field.DefaultValue != nil {
 		// We only support string and boolean fields at this particular moment, more to come.
 		switch val := (*field.DefaultValue).(type) {
@@ -207,6 +214,8 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 			defaultValue = val
 		case int:
 			defaultValue = strconv.Itoa(val)
+		case int64:
+			defaultValue = strconv.FormatInt(val, 10)
 		case bool:
 			defaultValue = strconv.FormatBool(val)
 		default:
@@ -221,6 +230,8 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 			defaultValue = val
 		case int:
 			defaultValue = strconv.Itoa(val)
+		case int64:
+			defaultValue = strconv.FormatInt(val, 10)
 		case bool:
 			defaultValue = strconv.FormatBool(val)
 		}
@@ -288,6 +299,10 @@ func saveLanguageConfigValues(language string, form *huh.Form, configuration *co
 				case int:
 					if transform, err := strconv.Atoi(form.GetString(key)); err == nil {
 						configuration.Languages[language].Cfg[key] = transform
+					}
+				case int64:
+					if transform, err := strconv.Atoi(form.GetString(key)); err == nil {
+						configuration.Languages[language].Cfg[key] = int64(transform)
 					}
 				case bool:
 					if transform, err := strconv.ParseBool(form.GetString(key)); err == nil {

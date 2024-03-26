@@ -210,7 +210,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		if existingSDK {
 			suggestion = "speakeasy configure sources"
 		}
-		return errors.New(fmt.Sprintf("you must have a source to configure a target try %s", suggestion))
+		return errors.New(fmt.Sprintf("you must have a source to configure a target try, %s", suggestion))
 	}
 
 	if workflowFile.Targets == nil {
@@ -221,6 +221,8 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	if _, ok := workflowFile.Targets[flags.ID]; ok {
 		existingTarget = flags.ID
 	}
+
+	newTarget := flags.New
 
 	var targetOptions []huh.Option[string]
 	var existingTargets []string
@@ -235,11 +237,11 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		if existingSDK {
 			existingTargets, targetOptions = handleLegacySDKTarget(workingDir, workflowFile)
 		} else {
-			targetOptions = append(targetOptions, huh.NewOption(charm.FormatNewOption("New Target"), "new target"))
+			newTarget = true
 		}
 	}
 
-	if !flags.New && existingTarget == "" {
+	if !newTarget && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
 		if _, err := charm.NewForm(huh.NewForm(prompt),
 			"Let's configure a target for your workflow.").
@@ -255,9 +257,11 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	var target *workflow.Target
 	var targetConfig *config.Configuration
 	if existingTarget == "" {
-		// If a second target is added to an existing workflow file you must change the outdir of either target cannot be the root dir.
-		if err := prompts.PromptForOutDirMigration(workflowFile, existingTargets); err != nil {
-			return err
+		if len(workflowFile.Targets) > 0 {
+			// If a second target is added to an existing workflow file you must change the outdir of either target cannot be the root dir.
+			if err := prompts.PromptForOutDirMigration(workflowFile, existingTargets); err != nil {
+				return err
+			}
 		}
 
 		targetName, target, err = prompts.PromptForNewTarget(workflowFile, "", "", "")

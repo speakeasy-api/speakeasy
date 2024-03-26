@@ -70,7 +70,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	var targetName string
 	if len(quickstart.WorkflowFile.Targets) == 0 {
-		targetName = "first-target"
+		targetName = "my-first-target"
 	}
 
 	var targetType string
