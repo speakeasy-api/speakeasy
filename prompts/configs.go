@@ -188,10 +188,7 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		}
 
 		if valid, defaultValue, validateRegex, validateMessage := getValuesForField(field, langConfig); valid {
-			if lang, ok := quickstartScopedKeys[language]; (ok && slices.Contains(lang, field.Name)) || slices.Contains(additionalRelevantConfigs, field.Name) {
-				appliedKeys = append(appliedKeys, field.Name)
-				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart))
-			} else if slices.Contains(lang, field.Name) {
+			if lang, ok := quickstartScopedKeys[language]; (ok && slices.Contains(lang, field.Name)) || (!isQuickstart && slices.Contains(additionalRelevantConfigs, field.Name)) {
 				appliedKeys = append(appliedKeys, field.Name)
 				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart))
 			}
