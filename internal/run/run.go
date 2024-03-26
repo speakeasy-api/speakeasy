@@ -16,17 +16,17 @@ import (
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
-	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/download"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
@@ -128,7 +128,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display error logs if the workflow failed
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
-	}g
+	}
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))

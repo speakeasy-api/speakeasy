@@ -11,9 +11,16 @@ import (
 	aiapigo "github.com/inkeep/ai-api-go"
 	"github.com/inkeep/ai-api-go/models/components"
 	"github.com/inkeep/ai-api-go/models/sdkerrors"
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-
 	"github.com/speakeasy-api/speakeasy/internal/log"
+
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+)
+
+const (
+	bearerToken   = ""
+	integrationID = ""
 )
 
 type AskFlags struct {
@@ -29,11 +36,11 @@ var (
 
 func Ask(ctx context.Context, flags AskFlags) (string, error) {
 	logger := log.From(ctx)
-	s := aiapigo.New(aiapigo.WithSecurity(os.GetEnv(INKEEP_API_KEY)))
+	s := aiapigo.New(aiapigo.WithSecurity(bearerToken))
 	var SessionID string
 	if flags.SessionID == "" {
 		res, err := s.ChatSession.Create(ctx, components.CreateChatSessionWithChatResultInput{
-			IntegrationID: os.GetEnv(INKEEP_INTEGRATION_ID),
+			IntegrationID: integrationID,
 			ChatSession: components.ChatSessionInput{
 				Messages: []components.Message{{
 					UserMessage: &components.UserMessage{
@@ -56,7 +63,7 @@ func Ask(ctx context.Context, flags AskFlags) (string, error) {
 		}
 	} else {
 		res, err := s.ChatSession.Continue(ctx, flags.SessionID, components.ContinueChatSessionWithChatResultInput{
-			IntegrationID: os.GetEnv(INKEEP_INTEGRATION_ID),
+			IntegrationID: integrationID,
 			Message: components.Message{
 				AssistantMessage: &components.AssistantMessage{
 					Content: flags.Message,
@@ -141,7 +148,7 @@ func RunInteractiveChatSession(ctx context.Context, initialFlags AskFlags) error
 	logger.Info("Entering interactive chat session, type exit to quit.")
 
 	if initialFlags.Message != "" {
-		logger.Info("\nProcessing your question...")
+		logger.Info("\nProcessing your question, this may take some time...")
 		var err error
 		sessionID, err = Ask(ctx, initialFlags)
 		if err != nil {
@@ -179,21 +186,23 @@ func RunInteractiveChatSession(ctx context.Context, initialFlags AskFlags) error
 	return nil
 }
 
-// OfferChatSessionOnError offers the user to enter an interactive chat session if an error occurs.
 func OfferChatSessionOnError(ctx context.Context, message string) {
 	logger := log.From(ctx)
+	var confirm bool
 
-	logger.PrintfStyled(styles.Focused, "Would you like to enter an interactive chat session with Speakeasy AI for help? (yes/no):")
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		input := scanner.Text()
-		if input == "yes" || input == "y" {
-			initialFlags := AskFlags{
-				Message: message,
-			}
-			if err := RunInteractiveChatSession(ctx, initialFlags); err != nil {
-				logger.Errorf("Failed to start chat session: %v", err)
-			}
+	if _, err := charm_internal.NewForm(huh.NewForm(
+		charm_internal.NewBranchPrompt("Would you like to enter an interactive chat session with Speakeasy AI for help?", &confirm)), fmt.Sprintf("Ask Speakeasy AI:")).
+		ExecuteForm(); err != nil {
+		logger.Printf("Failed to display confirmation prompt: %v", err)
+		return
+	}
+
+	if confirm {
+		initialFlags := AskFlags{
+			Message: message,
+		}
+		if err := RunInteractiveChatSession(ctx, initialFlags); err != nil {
+			logger.Printf("Failed to start chat session: %v", err)
 		}
 	}
 }
