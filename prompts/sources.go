@@ -1,9 +1,12 @@
 package prompts
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -109,6 +112,9 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, auth
 	return groups
 }
 
+//go:embed sample_openapi.yaml
+var sampleSpec string
+
 func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	source := &workflow.Source{}
 	var sourceName, fileLocation, authHeader, authSecret string
@@ -120,12 +126,54 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	}
 
-	if _, err := charm_internal.NewForm(huh.NewForm(
-		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
-		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
-		ExecuteForm(); err != nil {
+	useSampleSpec := false
+	_, err := charm_internal.NewForm(huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Do you have an OpenAPI document you can use for generation?").
+				Affirmative("No, use a sample OpenAPI document").
+				Negative("Yes").
+				Value(&useSampleSpec),
+		),
+	)).ExecuteForm()
+	if err != nil {
 		return nil, err
+	}
+
+	if useSampleSpec {
+		workingDir, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		fileLocation = filepath.Join(workingDir, "openapi.yaml")
+		file, err := os.Create(fileLocation)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+
+		if _, err := file.WriteString(sampleSpec); err != nil {
+			return nil, err
+		}
+
+		if _, err := charm_internal.NewForm(huh.NewForm(
+			huh.NewGroup(
+				huh.NewNote().
+					Title("The OpenAPI sample document will be used").
+					Description("\nIt can be found here, you can edit it at anytime:\n\n" + fileLocation + "\n\nPress enter to continue"),
+			),
+		)).ExecuteForm(); err != nil {
+			return nil, err
+		}
+	} else {
+		if _, err := charm_internal.NewForm(huh.NewForm(
+			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
+			"Let's setup a new source for your workflow.",
+			"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+			ExecuteForm(); err != nil {
+			return nil, err
+		}
+
 	}
 
 	document, err := formatDocument(fileLocation, authHeader, authSecret, false)
