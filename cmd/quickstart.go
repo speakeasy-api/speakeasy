@@ -67,7 +67,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
 		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
 			"cd .. and run speakeasy quickstart to create a brand new SDK directory. \n" +
-			"Run speakeasy configure to add an additional SDK to this workflow.")
+			"Run speakeasy configure to add an additional SDK to this workflow. Run speakeasy run to rerun the generation workflow")
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
