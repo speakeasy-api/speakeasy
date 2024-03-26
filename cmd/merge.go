@@ -19,9 +19,9 @@ Note: That any duplicate operations, components, etc. will be overwritten by the
 func mergeInit() {
 	// TODO: Make the usage description change based on whether its being shown in interactive mode. Use a shared description for all array flags
 	mergeCmd.Flags().StringArrayP("schemas", "s", []string{}, "a list of paths to OpenAPI documents to merge, specify -s `path/to/schema1.json` -s `path/to/schema2.json` etc")
-	mergeCmd.MarkFlagRequired("schemas")
+	_ = mergeCmd.MarkFlagRequired("schemas")
 	mergeCmd.Flags().StringP("out", "o", "", "path to the output file")
-	mergeCmd.MarkFlagRequired("out")
+	_ = mergeCmd.MarkFlagRequired("out")
 
 	rootCmd.AddCommand(mergeCmd)
 }
@@ -37,7 +37,7 @@ func mergeExec(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(cmd.Context(), inSchemas, outFile); err != nil {
+	if err := merge.MergeOpenAPIDocuments(cmd.Context(), inSchemas, outFile, "", ""); err != nil {
 		return err
 	}
 

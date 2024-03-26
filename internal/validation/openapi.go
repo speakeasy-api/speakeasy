@@ -24,12 +24,9 @@ type OutputLimits struct {
 
 	// MaxWarns prevents warnings after this limit from being displayed.
 	MaxWarns int
-
-	// OutputHints enables hints to be displayed.
-	OutputHints bool
 }
 
-func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits) error {
+func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) error {
 	logger := log.From(ctx)
 	logger.Info("Validating OpenAPI spec...\n")
 
@@ -40,7 +37,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	vErrs, vWarns, vInfo, err := Validate(ctx, schema, schemaPath, limits, isRemote)
+	vErrs, vWarns, vInfo, err := Validate(ctx, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
 	if err != nil {
 		return err
 	}
@@ -83,7 +80,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 	return nil
 }
 
-func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits) error {
+func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) error {
 	logger := log.From(ctx)
 	logger.Info("Validating OpenAPI spec...\n")
 
@@ -96,7 +93,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 
 	hasWarnings := false
 
-	vErrs, vWarns, vInfo, err := Validate(ctx, schema, schemaPath, limits, isRemote)
+	vErrs, vWarns, vInfo, err := Validate(ctx, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
 	if err != nil {
 		return err
 	}
@@ -239,19 +236,28 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(ctx context.Context, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool) ([]error, []error, []error, error) {
+func Validate(ctx context.Context, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string) ([]error, []error, []error, error) {
 	// TODO: is this still true: Set to error because g.Validate sometimes logs all warnings for some reason
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
-	g, err := generate.New(generate.WithFileFuncs(
-		func(filename string, data []byte, perm os.FileMode) error { return nil },
-		os.ReadFile,
-	), generate.WithLogger(l))
+	opts := []generate.GeneratorOptions{
+		generate.WithFileFuncs(
+			func(filename string, data []byte, perm os.FileMode) error { return nil },
+			os.ReadFile,
+		),
+		generate.WithLogger(l),
+	}
+
+	if defaultRuleset != "" {
+		opts = append(opts, generate.WithValidationRuleset(defaultRuleset))
+	}
+
+	g, err := generate.New(opts...)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	errs := g.Validate(context.Background(), schema, schemaPath, limits.OutputHints, isRemote)
+	errs := g.Validate(context.Background(), schema, schemaPath, isRemote, workingDir)
 	var vErrs []error
 	var vWarns []error
 	var vInfo []error
@@ -278,14 +284,16 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 
 	vWarns = append(vWarns, g.GetWarnings()...)
 
-	if limits.MaxWarns > 0 && len(vWarns) > limits.MaxWarns {
-		vWarns = append(vWarns, fmt.Errorf("and %d more warnings", len(vWarns)-limits.MaxWarns+1))
-		vWarns = vWarns[:limits.MaxWarns-1]
-	}
+	if limits != nil {
+		if limits.MaxWarns > 0 && len(vWarns) > limits.MaxWarns {
+			vWarns = append(vWarns, fmt.Errorf("and %d more warnings", len(vWarns)-limits.MaxWarns+1))
+			vWarns = vWarns[:limits.MaxWarns-1]
+		}
 
-	if limits.MaxErrors > 0 && len(vErrs) > limits.MaxErrors {
-		vErrs = append(vErrs, fmt.Errorf("and %d more errors", len(vWarns)-limits.MaxErrors+1))
-		vErrs = vErrs[:limits.MaxErrors]
+		if limits.MaxErrors > 0 && len(vErrs) > limits.MaxErrors {
+			vErrs = append(vErrs, fmt.Errorf("and %d more errors", len(vWarns)-limits.MaxErrors+1))
+			vErrs = vErrs[:limits.MaxErrors]
+		}
 	}
 
 	return vErrs, vWarns, vInfo, nil

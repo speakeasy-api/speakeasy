@@ -24,15 +24,17 @@ type Command interface {
 
 type CommandGroup struct {
 	Usage, Short, Long, InteractiveMsg string
+	Aliases                            []string
 	Commands                           []Command
 }
 
 func (c CommandGroup) Init() (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:   c.Usage,
-		Short: c.Short,
-		Long:  c.Long,
-		RunE:  interactivity.InteractiveRunFn(c.InteractiveMsg),
+		Use:     c.Usage,
+		Short:   c.Short,
+		Long:    c.Long,
+		Aliases: c.Aliases,
+		RunE:    interactivity.InteractiveRunFn(c.InteractiveMsg),
 	}
 
 	for _, subcommand := range c.Commands {

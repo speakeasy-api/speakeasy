@@ -56,7 +56,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
 	addCommand(rootCmd, generate.GenerateCmd)
-	addCommand(rootCmd, validateCmd)
+	addCommand(rootCmd, lintCmd)
 	addCommand(rootCmd, openapiCmd)
 	addCommand(rootCmd, migrateCmd)
 
