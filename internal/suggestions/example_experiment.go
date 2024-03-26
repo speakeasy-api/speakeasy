@@ -91,7 +91,6 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 		go func(shard Shard, i int) {
 			<-semaphore // Release the token
 			defer wg.Done()
-			return
 			fmt.Printf("Processing shard %s (%v / %v)\n", shard.Key, i, len(splitSchema))
 			jitter := time.Duration(rand.Float32() * float32(time.Second) * 15)
 			time.Sleep(jitter)
@@ -440,54 +439,80 @@ func removeOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 	// let's start killing orphans
 	anyRemoved := false
 	schemas := components.Schemas
+	toDelete := make([]string, 0)
 	for pair := orderedmap.First(schemas); pair != nil; pair = pair.Next() {
 		// remove all schemas that are not referenced
 		if !isReferenced(pair.Key(), "schemas", notUsed) {
-			schemas.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			fmt.Printf("dropped #/components/schemas/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		schemas.Delete(key)
+	}
+
 	responses := components.Responses
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(responses); pair != nil; pair = pair.Next() {
 		// remove all responses that are not referenced
 		if !isReferenced(pair.Key(), "responses", notUsed) {
-			responses.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			fmt.Printf("dropped #/components/responses/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		responses.Delete(key)
+	}
 	parameters := components.Parameters
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(parameters); pair != nil; pair = pair.Next() {
 		// remove all parameters that are not referenced
 		if !isReferenced(pair.Key(), "parameters", notUsed) {
-			parameters.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		parameters.Delete(key)
+	}
 	examples := components.Examples
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(examples); pair != nil; pair = pair.Next() {
 		// remove all examples that are not referenced
 		if !isReferenced(pair.Key(), "examples", notUsed) {
-			examples.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		examples.Delete(key)
+	}
 	requestBodies := components.RequestBodies
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(requestBodies); pair != nil; pair = pair.Next() {
 		// remove all requestBodies that are not referenced
 		if !isReferenced(pair.Key(), "requestBodies", notUsed) {
-			requestBodies.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		requestBodies.Delete(key)
+	}
+
 	headers := components.Headers
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(headers); pair != nil; pair = pair.Next() {
 		// remove all headers that are not referenced
 		if !isReferenced(pair.Key(), "headers", notUsed) {
-			headers.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
+	}
+	for _, key := range toDelete {
+		headers.Delete(key)
 	}
 	if anyRemoved {
 		return removeOrphans(doc, model)
