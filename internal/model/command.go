@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -106,9 +107,12 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		return nil, err
 	}
 
+	short := strings.Trim(c.Short, " .")
+	short = utils.CapitalizeFirst(short)
+
 	cmd := &cobra.Command{
 		Use:     c.Usage,
-		Short:   c.Short,
+		Short:   short,
 		Long:    c.Long,
 		PreRunE: interactivity.GetMissingFlagsPreRun,
 		RunE:    run,

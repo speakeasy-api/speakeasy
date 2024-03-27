@@ -59,7 +59,6 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, validateCmd)
 	addCommand(rootCmd, openapiCmd)
 	addCommand(rootCmd, migrateCmd)
-	addCommand(rootCmd, AskCmd)
 
 	authInit()
 	mergeInit()
@@ -70,6 +69,8 @@ func Init(version, artifactArch string) {
 	apiInit()
 	languageServerInit(version)
 	bumpInit()
+
+	addCommand(rootCmd, AskCmd)
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {
