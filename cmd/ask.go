@@ -14,8 +14,8 @@ type AskFlags struct {
 
 var AskCmd = &model.ExecutableCommand[AskFlags]{
 	Usage:        "ask",
-	Short:        "Ask AI",
-	Long:         "Starts a conversation with Speakeasy trained AI.",
+	Short:        "Starts a conversation with Speakeasy trained AI",
+	Long:         "Starts a conversation with Speakeasy trained AI. Ask about OpenAPI, Speakeasy, configuring SDKs, or anything else you need help with.",
 	Run:          AskFunc,
 	RequiresAuth: false,
 	Flags: []flag.Flag{
