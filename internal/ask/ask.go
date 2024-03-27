@@ -23,29 +23,23 @@ const (
 	integrationID = ""
 )
 
-type AskFlags struct {
-	Message   string `json:"message"`
-	SessionID string `json:"sessionId,omitempty"`
-}
-
 var (
 	boldRegex   = regexp.MustCompile(`\*\*(.*?)\*\*`)
 	italicRegex = regexp.MustCompile(`\*(.*?)\*`)
 	linkRegex   = regexp.MustCompile(`\[\(?(.*?)\)?\]\((https?:\/\/[^\s]+)\)`)
 )
 
-func Ask(ctx context.Context, flags AskFlags) (string, error) {
+func Ask(ctx context.Context, message string, sessionID string) (string, error) {
 	logger := log.From(ctx)
 	s := aiapigo.New(aiapigo.WithSecurity(bearerToken))
-	var SessionID string
-	if flags.SessionID == "" {
+	if sessionID == "" {
 		res, err := s.ChatSession.Create(ctx, components.CreateChatSessionWithChatResultInput{
 			IntegrationID: integrationID,
 			ChatSession: components.ChatSessionInput{
 				Messages: []components.Message{{
 					UserMessage: &components.UserMessage{
 						Role:    "user",
-						Content: flags.Message,
+						Content: message,
 					},
 				}},
 			},
@@ -56,17 +50,17 @@ func Ask(ctx context.Context, flags AskFlags) (string, error) {
 		}
 
 		if res.ChatResult != nil {
-			SessionID = res.ChatResult.ChatSessionID
+			sessionID = res.ChatResult.ChatSessionID
 			printWithFootnotes(ctx, res.ChatResult.Message.Content)
 		} else {
 			logger.Error("\nNo response received.")
 		}
 	} else {
-		res, err := s.ChatSession.Continue(ctx, flags.SessionID, components.ContinueChatSessionWithChatResultInput{
+		res, err := s.ChatSession.Continue(ctx, sessionID, components.ContinueChatSessionWithChatResultInput{
 			IntegrationID: integrationID,
 			Message: components.Message{
 				AssistantMessage: &components.AssistantMessage{
-					Content: flags.Message,
+					Content: message,
 				},
 			},
 		})
@@ -76,14 +70,14 @@ func Ask(ctx context.Context, flags AskFlags) (string, error) {
 		}
 
 		if res.ChatResult != nil {
-			SessionID = res.ChatResult.ChatSessionID
+			sessionID = res.ChatResult.ChatSessionID
 			printWithFootnotes(ctx, res.ChatResult.Message.Content)
 		} else {
 			logger.Error("\nNo chat response received.")
 		}
 	}
 
-	return SessionID, nil
+	return sessionID, nil
 }
 
 func handleError(logger log.Logger, err error) {
@@ -141,16 +135,15 @@ func printWithFootnotes(ctx context.Context, text string) {
 	}
 }
 
-func RunInteractiveChatSession(ctx context.Context, initialFlags AskFlags) error {
+func RunInteractiveChatSession(ctx context.Context, message string, sessionID string) error {
 	logger := log.From(ctx)
-	sessionID := ""
 	scanner := bufio.NewScanner(os.Stdin)
 	logger.Info("Entering interactive chat session, type exit to quit.")
 
-	if initialFlags.Message != "" {
+	if message != "" {
 		logger.Info("\nProcessing your question, this may take some time...")
 		var err error
-		sessionID, err = Ask(ctx, initialFlags)
+		sessionID, err = Ask(ctx, message, "")
 		if err != nil {
 			logger.Errorf("An error occurred while processing question, ending chat: %v", err)
 			return err
@@ -170,13 +163,8 @@ func RunInteractiveChatSession(ctx context.Context, initialFlags AskFlags) error
 			break
 		}
 
-		flags := AskFlags{
-			Message:   input,
-			SessionID: sessionID,
-		}
-
 		var err error
-		sessionID, err = Ask(ctx, flags)
+		sessionID, err = Ask(ctx, message, sessionID)
 		if err != nil {
 			logger.Errorf("An error occurred: %v\n", err)
 			break
@@ -198,10 +186,7 @@ func OfferChatSessionOnError(ctx context.Context, message string) {
 	}
 
 	if confirm {
-		initialFlags := AskFlags{
-			Message: message,
-		}
-		if err := RunInteractiveChatSession(ctx, initialFlags); err != nil {
+		if err := RunInteractiveChatSession(ctx, message, ""); err != nil {
 			logger.Printf("Failed to start chat session: %v", err)
 		}
 	}

@@ -7,7 +7,12 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
 
-var AskCmd = &model.ExecutableCommand[ask.AskFlags]{
+type AskFlags struct {
+	Message   string `json:"message"`
+	SessionID string `json:"sessionID,omitempty"`
+}
+
+var AskCmd = &model.ExecutableCommand[AskFlags]{
 	Usage:        "ask",
 	Short:        "Ask AI",
 	Long:         "Starts a conversation with Speakeasy trained AI.",
@@ -23,6 +28,6 @@ var AskCmd = &model.ExecutableCommand[ask.AskFlags]{
 	},
 }
 
-func AskFunc(ctx context.Context, flags ask.AskFlags) error {
-	return ask.RunInteractiveChatSession(ctx, flags)
+func AskFunc(ctx context.Context, flags AskFlags) error {
+	return ask.RunInteractiveChatSession(ctx, flags.Message, flags.SessionID)
 }
