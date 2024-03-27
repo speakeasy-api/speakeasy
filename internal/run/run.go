@@ -1,10 +1,13 @@
 package run
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"io"
 	"math/rand"
 	"os"
@@ -12,9 +15,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -132,7 +132,8 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
-		ask.OfferChatSessionOnError(ctx, logs.String())
+		filteredLogs := filterLogs(ctx, &logs)
+		ask.OfferChatSessionOnError(ctx, filteredLogs)
 
 	}
 
@@ -565,4 +566,21 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(overlayFile string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
+}
+
+func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
+	logger := log.From(ctx)
+	var filteredLogs strings.Builder
+	scanner := bufio.NewScanner(logBuffer)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "ERROR") || strings.Contains(line, "WARN") {
+			filteredLogs.WriteString(line + "\n")
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Errorf("Failed to format question: %s", err)
+	}
+
+	return filteredLogs.String()
 }
