@@ -30,6 +30,7 @@ speakeasy [flags]
 ### Sub Commands
 
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
+* [speakeasy bump](bump.md)	 - Bumps the version of a Speakeasy Generation Target
 * [speakeasy configure](configure/README.md)	 - Configure your Speakeasy SDK Setup.
 * [speakeasy generate](generate/README.md)	 - Generate client SDKs, docsites, and more
 * [speakeasy lint](lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
