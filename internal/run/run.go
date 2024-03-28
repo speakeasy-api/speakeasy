@@ -25,7 +25,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -103,11 +102,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
 
 	var logs bytes.Buffer
+	warnings := make([]string, 0)
+
 	var err, runErr error
 	logger := log.From(ctx)
 
 	runFnCli := func() error {
-		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
+		l := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
 		runCtx := log.With(ctx, l)
 		err = w.Run(runCtx)
 
@@ -125,14 +126,20 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	err = w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
 	endDuration := time.Since(startTime)
 
-	// Display error logs if the workflow failed
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
+
+	criticalWarns := getCriticalWarnings(warnings)
+
+	// Display error logs if the workflow failed
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
+	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
+		s := strings.Join(criticalWarns, "\n")
+		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
 	}
 
 	// Display success message if the workflow succeeded
@@ -149,6 +156,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			tOut = "the paths specified in workflow.yaml"
 		}
 
+		titleMsg := " SDK Generated Successfully"
 		additionalLines := []string{
 			"✎ Output written to " + tOut,
 			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
@@ -162,8 +170,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 		}
 
+		if len(criticalWarns) > 0 {
+			additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
+			titleMsg = " SDK Generated with Warnings"
+		}
+
 		msg := styles.RenderSuccessMessage(
-			t.Target+" SDK Generated Successfully",
+			t.Target+titleMsg,
 			additionalLines...,
 		)
 		logger.Println(msg)
@@ -194,7 +207,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, err := w.runSource(ctx, w.RootStep, id)
+			_, err := w.runSource(ctx, w.RootStep, id, true)
 			if err != nil {
 				return err
 			}
@@ -213,7 +226,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := w.runSource(ctx, w.RootStep, w.Source)
+		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
 			return err
 		}
@@ -244,12 +257,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	}
 
 	if source != nil {
-		sourcePath, err = w.runSource(ctx, rootStep, t.Source)
+		sourcePath, err = w.runSource(ctx, rootStep, t.Source, false)
 		if err != nil {
 			return err
 		}
 	} else {
-		if err := w.validateDocument(ctx, rootStep, sourcePath); err != nil {
+		if err := w.validateDocument(ctx, rootStep, sourcePath, ""); err != nil {
 			return err
 		}
 	}
@@ -312,7 +325,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	w.generationAccess = generationAccess
 
 	if t.CodeSamples != nil {
-		rootStep.NewSubstep("Generating CodeSamples")
+		rootStep.NewSubstep("Generating Code Samples")
 		configPath := "."
 		outputPath := t.CodeSamples.Output
 		if t.Output != nil {
@@ -336,9 +349,14 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
+
+	rulesetToUse := ""
+	if source.Ruleset != nil {
+		rulesetToUse = *source.Ruleset
+	}
 
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
@@ -439,16 +457,23 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	 * Validate
 	 */
 
-	if err := w.validateDocument(ctx, rootStep, outputLocation); err != nil {
+	if err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse); err != nil {
 		return "", err
 	}
 
 	rootStep.SucceedWorkflow()
 
+	if cleanUp {
+		rootStep.NewSubstep("Cleaning up")
+
+		// Clean up temp files on success
+		os.RemoveAll(workflow.GetTempDir())
+	}
+
 	return outputLocation, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath string) error {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset string) error {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -457,12 +482,11 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	}
 
 	limits := &validation.OutputLimits{
-		MaxErrors:   1000,
-		MaxWarns:    1000,
-		OutputHints: false,
+		MaxErrors: 1000,
+		MaxWarns:  1000,
 	}
 
-	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits)
+	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, w.projectDir)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
@@ -496,40 +520,16 @@ func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	return outPath, nil
 }
 
-func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) error {
+func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string) error {
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile); err != nil {
+	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir); err != nil {
 		return err
 	}
 
 	log.From(ctx).Printf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
-
-	return nil
-}
-func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
-	currentBase := schema
-
-	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
-		return err
-	}
-
-	f, err := os.Create(outFile)
-	if err != nil {
-		return err
-	}
-
-	for _, overlayFile := range overlayFiles {
-		if err := overlay.Apply(currentBase, overlayFile, f); err != nil {
-			return err
-		}
-
-		currentBase = outFile
-	}
-
-	log.From(ctx).Successf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
 
 	return nil
 }

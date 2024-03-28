@@ -23,7 +23,7 @@ var (
 			BorderForeground(styles.Colors.DimYellow)
 
 	focusedPromptStyle = styles.Focused.Copy().Bold(true)
-	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(styles.Colors.White)
+	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(styles.Colors.WhiteBlackAdaptive)
 	placeholderStyle   = styles.Dimmed.Copy()
 )
 

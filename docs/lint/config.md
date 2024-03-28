@@ -1,8 +1,8 @@
 # config  
-`speakeasy validate config`  
+`speakeasy lint config`  
 
 
-Validate a Speakeasy configuration file  
+Lint a Speakeasy configuration file  
 
 ## Details
 
@@ -11,7 +11,7 @@ Validates a Speakeasy configuration file for SDK generation.
 ## Usage
 
 ```
-speakeasy validate config [flags]
+speakeasy lint config [flags]
 ```
 
 ### Options
@@ -29,4 +29,4 @@ speakeasy validate config [flags]
 
 ### Parent Command
 
-* [speakeasy validate](README.md)	 - Validate OpenAPI documents + more
+* [speakeasy lint](README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files

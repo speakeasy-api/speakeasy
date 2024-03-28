@@ -2,7 +2,7 @@
 `speakeasy run`  
 
 
-run the workflow(s) defined in your `.speakeasy/workflow.yaml` file.  
+run the workflow defined in your workflow.yaml file  
 
 ## Details
 
