@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/bundler"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -341,93 +343,101 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
 
+	memFS := bundler.NewMemFS()
+	rwfs := bundler.NewReadWriteFS(os.DirFS("."), memFS)
+	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{})
+
+	if len(source.Inputs) == 0 {
+		return "", fmt.Errorf("source %s has no inputs", id)
+	}
+
+	/*
+	 * Fetch input docs
+	 */
+
+	rootStep.NewSubstep("Loading OpenAPI documents")
+
+	resolvedDocLocations, err := pipeline.FetchDocuments(ctx, rwfs, bundler.FetchDocumentsOptions{
+		SourceFSBasePath: ".",
+		OutputRoot:       bundler.InputsRootPath,
+		Documents:        source.Inputs,
+	})
+	if err != nil || len(resolvedDocLocations) == 0 {
+		return "", fmt.Errorf("error loading input OpenAPI documents: %w", err)
+	}
+
+	/*
+	 * Merge input docs
+	 */
+
+	rwfs = bundler.NewReadWriteFS(memFS, memFS) // From now on, we only need to read from the in-memory filesystem
+
+	finalDocLocation := resolvedDocLocations[0]
+	if len(source.Inputs) > 1 {
+		rootStep.NewSubstep(fmt.Sprintf("Merging %d documents", len(source.Inputs)))
+
+		finalDocLocation, err = pipeline.Merge(ctx, rwfs, bundler.MergeOptions{
+			BasePath:   bundler.InputsRootPath,
+			InputPaths: resolvedDocLocations,
+		})
+		if err != nil {
+			return "", fmt.Errorf("error merging documents: %w", err)
+		}
+	}
+
+	/*
+	 * Fetch and apply overlays, if there are any
+	 */
+
+	if len(source.Overlays) > 0 {
+		overlayStep := rootStep.NewSubstep(fmt.Sprintf("Detected %d overlays", len(source.Overlays)))
+
+		overlayStep.NewSubstep("Loading overlay documents")
+
+		overlays, err := pipeline.FetchDocuments(ctx, rwfs, bundler.FetchDocumentsOptions{
+			OutputRoot: bundler.OverlaysRootPath,
+			Documents:  source.Overlays,
+		})
+		if err != nil {
+			return "", fmt.Errorf("error fetching overlay documents: %w", err)
+		}
+
+		overlayStep.NewSubstep("Applying overlay documents")
+
+		finalDocLocation, err = pipeline.Overlay(ctx, rwfs, bundler.OverlayOptions{
+			BaseDocumentPath: finalDocLocation,
+			OverlayPaths:     overlays,
+		})
+		if err != nil {
+			return "", fmt.Errorf("error applying overlays: %w", err)
+		}
+	}
+
+	/*
+	 * Persist final document
+	 */
+
+	rootStep.NewSubstep("Writing final document")
+
 	outputLocation, err := source.GetOutputLocation()
 	if err != nil {
 		return "", err
 	}
 
-	var currentDocument string
+	dst, err := os.Create(outputLocation)
 
-	if len(source.Inputs) == 1 {
-		if source.Inputs[0].IsRemote() {
-			rootStep.NewSubstep("Downloading document")
-
-			downloadLocation := outputLocation
-			if len(source.Overlays) > 0 {
-				downloadLocation = source.Inputs[0].GetTempDownloadPath(workflow.GetTempDir())
-			}
-
-			currentDocument, err = resolveRemoteDocument(ctx, source.Inputs[0], downloadLocation)
-			if err != nil {
-				return "", err
-			}
-		} else {
-			currentDocument = source.Inputs[0].Location
-		}
-	} else {
-		mergeStep := rootStep.NewSubstep("Merge documents")
-
-		mergeLocation := source.GetTempMergeLocation()
-		if len(source.Overlays) == 0 {
-			mergeLocation = outputLocation
-		}
-
-		logger.Infof("Merging %d schemas into %s...", len(source.Inputs), mergeLocation)
-
-		inSchemas := []string{}
-		for _, input := range source.Inputs {
-			if input.IsRemote() {
-				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
-				if err != nil {
-					return "", err
-				}
-
-				inSchemas = append(inSchemas, downloadedPath)
-			} else {
-				inSchemas = append(inSchemas, input.Location)
-			}
-		}
-
-		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
-
-		if err := mergeDocuments(ctx, inSchemas, mergeLocation); err != nil {
-			return "", err
-		}
-
-		currentDocument = mergeLocation
+	finalDoc, err := rwfs.Open(finalDocLocation)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving finalized document: %w", err)
 	}
 
-	if len(source.Overlays) > 0 {
-		overlayStep := rootStep.NewSubstep("Applying overlays")
-
-		overlayLocation := outputLocation
-
-		logger.Infof("Applying %d overlays into %s...", len(source.Overlays), overlayLocation)
-
-		overlaySchemas := []string{}
-		for _, overlay := range source.Overlays {
-			if overlay.IsRemote() {
-				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, overlay, workflow.GetTempDir())
-				if err != nil {
-					return "", err
-				}
-
-				overlaySchemas = append(overlaySchemas, downloadedPath)
-			} else {
-				overlaySchemas = append(overlaySchemas, overlay.Location)
-			}
-		}
-
-		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
-
-		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
-			return "", err
-		}
+	if _, err := io.Copy(dst, finalDoc); err != nil {
+		return "", fmt.Errorf("error writing finalized document: %w", err)
 	}
+
+	/*
+	 * Validate
+	 */
 
 	if err := w.validateDocument(ctx, rootStep, outputLocation); err != nil {
 		return "", err
