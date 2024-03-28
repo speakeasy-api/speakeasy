@@ -293,6 +293,10 @@ func (l Logger) Github(msg string) {
 	}
 }
 
+func (l Logger) GetWriter() io.Writer {
+	return l.writer
+}
+
 /**
  * Formatters
  */

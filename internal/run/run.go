@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -19,6 +20,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
+	charmLog "github.com/charmbracelet/log"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -353,6 +355,10 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
+	if len(source.Inputs) == 0 {
+		return "", fmt.Errorf("source %s has no inputs", id)
+	}
+
 	rulesetToUse := ""
 	if source.Ruleset != nil {
 		rulesetToUse = *source.Ruleset
@@ -361,96 +367,18 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
 
-	memFS := bundler.NewMemFS()
-	rwfs := bundler.NewReadWriteFS(os.DirFS("."), memFS)
-	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{})
-
-	if len(source.Inputs) == 0 {
-		return "", fmt.Errorf("source %s has no inputs", id)
-	}
-
-	/*
-	 * Fetch input docs
-	 */
-
-	rootStep.NewSubstep("Loading OpenAPI documents")
-
-	resolvedDocLocations, err := pipeline.FetchDocuments(ctx, rwfs, bundler.FetchDocumentsOptions{
-		SourceFSBasePath: ".",
-		OutputRoot:       bundler.InputsRootPath,
-		Documents:        source.Inputs,
-	})
-	if err != nil || len(resolvedDocLocations) == 0 {
-		return "", fmt.Errorf("error loading input OpenAPI documents: %w", err)
-	}
-
-	/*
-	 * Merge input docs
-	 */
-
-	rwfs = bundler.NewReadWriteFS(memFS, memFS) // From now on, we only need to read from the in-memory filesystem
-
-	finalDocLocation := resolvedDocLocations[0]
-	if len(source.Inputs) > 1 {
-		rootStep.NewSubstep(fmt.Sprintf("Merging %d documents", len(source.Inputs)))
-
-		finalDocLocation, err = pipeline.Merge(ctx, rwfs, bundler.MergeOptions{
-			BasePath:   bundler.InputsRootPath,
-			InputPaths: resolvedDocLocations,
-		})
-		if err != nil {
-			return "", fmt.Errorf("error merging documents: %w", err)
-		}
-	}
-
-	/*
-	 * Fetch and apply overlays, if there are any
-	 */
-
-	if len(source.Overlays) > 0 {
-		overlayStep := rootStep.NewSubstep(fmt.Sprintf("Detected %d overlays", len(source.Overlays)))
-
-		overlayStep.NewSubstep("Loading overlay documents")
-
-		overlays, err := pipeline.FetchDocuments(ctx, rwfs, bundler.FetchDocumentsOptions{
-			OutputRoot: bundler.OverlaysRootPath,
-			Documents:  source.Overlays,
-		})
-		if err != nil {
-			return "", fmt.Errorf("error fetching overlay documents: %w", err)
-		}
-
-		overlayStep.NewSubstep("Applying overlay documents")
-
-		finalDocLocation, err = pipeline.Overlay(ctx, rwfs, bundler.OverlayOptions{
-			BaseDocumentPath: finalDocLocation,
-			OverlayPaths:     overlays,
-		})
-		if err != nil {
-			return "", fmt.Errorf("error applying overlays: %w", err)
-		}
-	}
-
-	/*
-	 * Persist final document
-	 */
-
-	rootStep.NewSubstep("Writing final document")
-
 	outputLocation, err := source.GetOutputLocation()
 	if err != nil {
 		return "", err
 	}
 
-	dst, err := os.Create(outputLocation)
-
-	finalDoc, err := rwfs.Open(finalDocLocation)
-	if err != nil {
-		return "", fmt.Errorf("error retrieving finalized document: %w", err)
-	}
-
-	if _, err := io.Copy(dst, finalDoc); err != nil {
-		return "", fmt.Errorf("error writing finalized document: %w", err)
+	// outputLocation will be the same as the input location if it's a single local file with no overlays
+	// In that case, we don't need to run the bundler
+	if outputLocation != source.Inputs[0].Location {
+		err := w.runBundler(ctx, rootStep, source, outputLocation)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	/*
@@ -471,6 +399,100 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	return outputLocation, nil
+}
+
+func (w *Workflow) runBundler(ctx context.Context, rootStep *WorkflowStep, source workflow.Source, outputLocation string) error {
+	memFS := bundler.NewMemFS()
+	localReadFs := bundler.NewReadWriteFS(os.DirFS("."), memFS)
+	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{
+		Logger: slog.New(charmLog.New(log.From(ctx).GetWriter())),
+	})
+
+	/*
+	 * Fetch input docs
+	 */
+
+	rootStep.NewSubstep("Loading OpenAPI document(s)")
+
+	resolvedDocLocations, err := pipeline.FetchDocuments(ctx, localReadFs, bundler.FetchDocumentsOptions{
+		SourceFSBasePath: ".",
+		OutputRoot:       bundler.InputsRootPath,
+		Documents:        source.Inputs,
+	})
+	if err != nil || len(resolvedDocLocations) == 0 {
+		return fmt.Errorf("error loading input OpenAPI documents: %w", err)
+	}
+
+	/*
+	 * Merge input docs
+	 */
+
+	rwfs := bundler.NewReadWriteFS(memFS, memFS)
+
+	finalDocLocation := resolvedDocLocations[0]
+	if len(source.Inputs) > 1 {
+		rootStep.NewSubstep(fmt.Sprintf("Merging %d documents", len(source.Inputs)))
+
+		finalDocLocation, err = pipeline.Merge(ctx, rwfs, bundler.MergeOptions{
+			BasePath:   bundler.InputsRootPath,
+			InputPaths: resolvedDocLocations,
+		})
+		if err != nil {
+			return fmt.Errorf("error merging documents: %w", err)
+		}
+	}
+
+	/*
+	 * Fetch and apply overlays, if there are any
+	 */
+
+	if len(source.Overlays) > 0 {
+		overlayStep := rootStep.NewSubstep(fmt.Sprintf("Detected %d overlay(s)", len(source.Overlays)))
+
+		overlayStep.NewSubstep("Loading overlay documents")
+
+		overlays, err := pipeline.FetchDocuments(ctx, localReadFs, bundler.FetchDocumentsOptions{
+			SourceFSBasePath: ".",
+			OutputRoot:       bundler.OverlaysRootPath,
+			Documents:        source.Overlays,
+		})
+		if err != nil {
+			return fmt.Errorf("error fetching overlay documents: %w", err)
+		}
+
+		overlayStep.NewSubstep("Applying overlay documents")
+
+		finalDocLocation, err = pipeline.Overlay(ctx, rwfs, bundler.OverlayOptions{
+			BaseDocumentPath: finalDocLocation,
+			OverlayPaths:     overlays,
+		})
+		if err != nil {
+			return fmt.Errorf("error applying overlays: %w", err)
+		}
+	}
+
+	/*
+	 * Persist final document
+	 */
+
+	rootStep.NewSubstep("Writing final document")
+
+	if err = os.MkdirAll(filepath.Dir(outputLocation), os.ModePerm); err != nil {
+		return err
+	}
+
+	dst, err := os.Create(outputLocation)
+	if err != nil {
+		return fmt.Errorf("error creating output file: %w", err)
+	}
+
+	file, err := rwfs.Open(finalDocLocation)
+	if err != nil {
+		return fmt.Errorf("error opening final document: %w", err)
+	}
+
+	_, err = io.Copy(dst, file)
+	return err
 }
 
 func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset string) error {
