@@ -403,7 +403,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 func (w *Workflow) runBundler(ctx context.Context, rootStep *WorkflowStep, source workflow.Source, outputLocation string) error {
 	memFS := bundler.NewMemFS()
-	localReadFs := bundler.NewReadWriteFS(os.DirFS("."), memFS)
+	rwfs := bundler.NewReadWriteFS(memFS, memFS)
 	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{
 		Logger: slog.New(charmLog.New(log.From(ctx).GetWriter())),
 	})
@@ -414,7 +414,7 @@ func (w *Workflow) runBundler(ctx context.Context, rootStep *WorkflowStep, sourc
 
 	rootStep.NewSubstep("Loading OpenAPI document(s)")
 
-	resolvedDocLocations, err := pipeline.FetchDocuments(ctx, localReadFs, bundler.FetchDocumentsOptions{
+	resolvedDocLocations, err := pipeline.FetchDocumentsLocalFS(ctx, rwfs, bundler.FetchDocumentsOptions{
 		SourceFSBasePath: ".",
 		OutputRoot:       bundler.InputsRootPath,
 		Documents:        source.Inputs,
@@ -426,8 +426,6 @@ func (w *Workflow) runBundler(ctx context.Context, rootStep *WorkflowStep, sourc
 	/*
 	 * Merge input docs
 	 */
-
-	rwfs := bundler.NewReadWriteFS(memFS, memFS)
 
 	finalDocLocation := resolvedDocLocations[0]
 	if len(source.Inputs) > 1 {
@@ -451,7 +449,7 @@ func (w *Workflow) runBundler(ctx context.Context, rootStep *WorkflowStep, sourc
 
 		overlayStep.NewSubstep("Loading overlay documents")
 
-		overlays, err := pipeline.FetchDocuments(ctx, localReadFs, bundler.FetchDocumentsOptions{
+		overlays, err := pipeline.FetchDocumentsLocalFS(ctx, rwfs, bundler.FetchDocumentsOptions{
 			SourceFSBasePath: ".",
 			OutputRoot:       bundler.OverlaysRootPath,
 			Documents:        source.Overlays,
