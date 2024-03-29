@@ -126,26 +126,30 @@ func ValidateTarget(target string, config map[string]any, publishingEnabled bool
 			}
 		}
 
+		// If the field is not in the config, skip the rest of the checks
+		if _, ok := config[field.Name]; !ok {
+			continue
+		}
+
 		// Check validation regex
 		if field.ValidationRegex != nil {
 			validationRegex := strings.Replace(*field.ValidationRegex, `\u002f`, `/`, -1)
 			regex := regexp.MustCompile(validationRegex)
 
-			if _, ok := config[field.Name]; !ok {
-				continue
-			}
-
-			val, ok := config[field.Name]
-			if !ok {
-				msg = fmt.Sprintf("field '%s' is expected to be a string", field.Name)
-			}
-
-			sVal := fmt.Sprintf("%v", val)
+			sVal := fmt.Sprintf("%v", config[field.Name])
 			if !regex.MatchString(sVal) {
 				msg = fmt.Sprintf("field '%s' does not match required format", field.Name)
 				if field.ValidationMessage != nil {
 					msg += ": " + *field.ValidationMessage
 				}
+			}
+		}
+
+		// Check custom validations
+		if validateFn := getValidation(t.Target, field.Name); validateFn != nil {
+			if err := validateFn(config[field.Name]); err != nil {
+				msg = fmt.Sprintf("field '%s' is invalid", field.Name)
+				msg += ": " + err.Error()
 			}
 		}
 
