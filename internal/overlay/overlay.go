@@ -1,10 +1,13 @@
 package overlay
 
 import (
+	"context"
 	"fmt"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
-	"gopkg.in/yaml.v3"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy/internal/bundler"
+	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"io"
 	"os"
 )
@@ -47,29 +50,13 @@ func Compare(schemas []string) error {
 	return nil
 }
 
-func Apply(schema string, overlayFile string, w io.Writer) error {
-	o, err := loader.LoadOverlay(overlayFile)
-	if err != nil {
-		return err
+func Apply(ctx context.Context, schema string, overlayFile string, w io.Writer) error {
+	step := workflowTracking.NewWorkflowStep("Overlaying OpenAPI documents", nil)
+
+	source := workflow.Source{
+		Inputs:   []workflow.Document{{Location: schema}},
+		Overlays: []workflow.Document{{Location: overlayFile}},
 	}
 
-	if err := o.Validate(); err != nil {
-		return err
-	}
-
-	ys, specFile, err := loader.LoadEitherSpecification(schema, o)
-	if err != nil {
-		return err
-	}
-
-	if err := o.ApplyTo(ys); err != nil {
-		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
-	}
-
-	enc := yaml.NewEncoder(w)
-	if err := enc.Encode(ys); err != nil {
-		return fmt.Errorf("failed to encode spec file %q: %w", specFile, err)
-	}
-
-	return nil
+	return bundler.CompileSourceTo(ctx, step, "", source, w)
 }

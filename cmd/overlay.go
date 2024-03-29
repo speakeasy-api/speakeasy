@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"os"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -102,5 +104,15 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		out = file
 	}
 
-	return overlay.Apply(flags.Schema, flags.Overlay, out)
+	logger := log.From(ctx)
+	var logs bytes.Buffer
+	ctx = log.With(ctx, logger.WithWriter(&logs))
+
+	err := overlay.Apply(ctx, flags.Schema, flags.Overlay, out)
+	if err != nil {
+		logger.Println(styles.MakeSection("Overlay Logs", logs.String(), styles.Colors.Red))
+	} else if flags.Out != "" {
+		logger.Successf("Overlay applied successfully. Output written to %q.", flags.Out)
+	}
+	return err
 }

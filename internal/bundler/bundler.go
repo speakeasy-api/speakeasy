@@ -19,7 +19,51 @@ import (
 	"strings"
 )
 
-func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, source workflow.Source) error {
+func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceId string, source workflow.Source) (string, error) {
+	outputLocation, err := source.GetOutputLocation()
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outputLocation), os.ModePerm); err != nil {
+		return "", err
+	}
+
+	dst, err := os.Create(outputLocation)
+	if err != nil {
+		return "", fmt.Errorf("error creating output file: %w", err)
+	}
+
+	defer dst.Close()
+	return outputLocation, CompileSourceTo(ctx, rootStep, sourceId, source, dst)
+}
+
+func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceId string, source workflow.Source, dst io.Writer) error {
+	if len(source.Inputs) == 0 {
+		return fmt.Errorf("source %s has no inputs", sourceId)
+	}
+	// We will only use the ruleset to validate the final document
+	rulesetToUse := ""
+	if source.Ruleset != nil {
+		rulesetToUse = *source.Ruleset
+	}
+
+	// outputLocation will be the same as the input location if it's a single local file with no overlays
+	// In that case, we only need to run validation
+	if outputLocation, _ := source.GetOutputLocation(); outputLocation == source.Inputs[0].Location {
+		rootStep.NewSubstep("Validating OpenAPI document")
+		absPath, err := filepath.Abs(source.Inputs[0].Location)
+		if err != nil {
+			return err
+		}
+		dir, base := filepath.Split(absPath)
+		return validate(ctx, os.DirFS(dir), base, rulesetToUse)
+	}
+
+	/*
+	 * Prepare in memory filesystem and bundler pipeline
+	 */
+
 	memFS := bundler.NewMemFS()
 	rwfs := bundler.NewReadWriteFS(memFS, memFS)
 	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{
@@ -56,11 +100,14 @@ func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep,
 	 * Validate input docs
 	 */
 
-	rootStep.NewSubstep("Validating OpenAPI document(s)")
+	// Only validate here if we are going to merge or overlay
+	if len(source.Inputs) > 1 || len(source.Overlays) > 0 {
+		rootStep.NewSubstep("Validating OpenAPI document(s)")
 
-	for _, doc := range resolvedDocLocations {
-		if err := validate(ctx, rwfs, doc); err != nil {
-			return fmt.Errorf("error validating input OpenAPI documents: %w", err)
+		for _, doc := range resolvedDocLocations {
+			if err := validate(ctx, rwfs, doc, ""); err != nil {
+				return fmt.Errorf("error validating input OpenAPI documents: %w", err)
+			}
 		}
 	}
 
@@ -69,8 +116,11 @@ func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep,
 	 */
 
 	finalDocLocation := resolvedDocLocations[0]
+
+	numMerged := 0
 	if len(source.Inputs) > 1 {
-		rootStep.NewSubstep(fmt.Sprintf("Merging %d documents", len(source.Inputs)))
+		numMerged = len(source.Inputs)
+		rootStep.NewSubstep(fmt.Sprintf("Merging %d documents", numMerged))
 
 		finalDocLocation, err = pipeline.Merge(ctx, rwfs, bundler.MergeOptions{
 			BasePath:   bundler.InputsRootPath,
@@ -80,9 +130,12 @@ func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep,
 			return fmt.Errorf("error merging documents: %w", err)
 		}
 
-		rootStep.NewSubstep("Validating Merged Document")
-		if err := validate(ctx, rwfs, finalDocLocation); err != nil {
-			return fmt.Errorf("error validating merged OpenAPI document: %w", err)
+		// If we don't have overlays, this will be the final document and will be validated at the end
+		if len(source.Overlays) > 0 {
+			rootStep.NewSubstep("Validating Merged Document")
+			if err := validate(ctx, rwfs, finalDocLocation, ""); err != nil {
+				return fmt.Errorf("error validating merged OpenAPI document: %w", err)
+			}
 		}
 	}
 
@@ -90,8 +143,10 @@ func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep,
 	 * Fetch and apply overlays, if there are any
 	 */
 
+	numOverlaid := 0
 	if len(source.Overlays) > 0 {
-		overlayStep := rootStep.NewSubstep(fmt.Sprintf("Detected %d overlay(s)", len(source.Overlays)))
+		numOverlaid = len(source.Overlays)
+		overlayStep := rootStep.NewSubstep(fmt.Sprintf("Detected %d overlay(s)", numOverlaid))
 
 		overlayStep.NewSubstep("Loading overlay documents")
 
@@ -114,12 +169,21 @@ func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep,
 			return fmt.Errorf("error applying overlays: %w", err)
 		}
 
-		overlayStep.NewSubstep("Validating Overlaid Document")
-		if err := validate(ctx, rwfs, finalDocLocation); err != nil {
-			return fmt.Errorf("error validating overlaid OpenAPI document: %w", err)
-		}
+		overlayStep.SucceedWorkflow()
+	}
 
-		overlayStep.Finalize(true)
+	/*
+	 * Validate final document
+	 */
+
+	stepName := "Validating OpenAPI document"
+	if numMerged > 0 || numOverlaid > 0 {
+		stepName = fmt.Sprintf("Validating final document (%d merged, %d overlaid)", numMerged, numOverlaid)
+	}
+	rootStep.NewSubstep(stepName)
+
+	if err = validate(ctx, rwfs, finalDocLocation, rulesetToUse); err != nil {
+		return fmt.Errorf("error validating final OpenAPI document: %w", err)
 	}
 
 	/*
@@ -127,20 +191,6 @@ func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep,
 	 */
 
 	rootStep.NewSubstep("Writing final document")
-
-	outputLocation, err := source.GetOutputLocation()
-	if err != nil {
-		return err
-	}
-
-	if err = os.MkdirAll(filepath.Dir(outputLocation), os.ModePerm); err != nil {
-		return err
-	}
-
-	dst, err := os.Create(outputLocation)
-	if err != nil {
-		return fmt.Errorf("error creating output file: %w", err)
-	}
 
 	file, err := rwfs.Open(finalDocLocation)
 	if err != nil {
@@ -151,7 +201,7 @@ func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep,
 	return err
 }
 
-func validate(ctx context.Context, fs fs.FS, schemaPath string) error {
+func validate(ctx context.Context, fs fs.FS, schemaPath, ruleset string) error {
 	logger := log.From(ctx)
 	logger.Info(fmt.Sprintf("Validating OpenAPI spec %s...\n", schemaPath))
 
@@ -167,10 +217,10 @@ func validate(ctx context.Context, fs fs.FS, schemaPath string) error {
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
 	limits := &validation.OutputLimits{
-		MaxWarns: 10,
+		MaxWarns: 20,
 	}
 
-	vErrs, vWarns, _, err := validation.Validate(ctx, schemaData, schemaPath, limits, false, "", "")
+	vErrs, vWarns, _, err := validation.Validate(ctx, schemaData, schemaPath, limits, false, ruleset, "")
 	if err != nil {
 		return err
 	}
@@ -187,7 +237,7 @@ func validate(ctx context.Context, fs fs.FS, schemaPath string) error {
 		return fmt.Errorf(status)
 	}
 
-	log.From(ctx).Success(fmt.Sprintf("Successfully validated %s", schemaPath))
+	logger.Success(fmt.Sprintf("Successfully validated %s", schemaPath))
 
 	return nil
 }

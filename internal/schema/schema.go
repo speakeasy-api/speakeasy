@@ -22,6 +22,7 @@ func GetSchemaContents(ctx context.Context, schemaPath string, header, token str
 		}
 		return false, schema, nil
 	} else {
+		println(err.Error())
 		u, err := url.Parse(schemaPath)
 		if err != nil {
 			return false, nil, fmt.Errorf("failed to parse schema url: %w", err)

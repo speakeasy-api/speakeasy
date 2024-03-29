@@ -203,7 +203,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, err := w.runSource(ctx, w.RootStep, id, true)
+			_, err := w.runWorkflowSource(ctx, w.RootStep, id, true)
 			if err != nil {
 				return err
 			}
@@ -222,7 +222,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
+		_, err := w.runWorkflowSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
 			return err
 		}
@@ -244,6 +244,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
+	sourceID := t.Source
 
 	log.From(ctx).Infof("Running target %s (%s)...\n", target, t.Target)
 
@@ -252,15 +253,17 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		return err
 	}
 
-	if source != nil {
-		sourcePath, err = w.runSource(ctx, rootStep, t.Source, false)
-		if err != nil {
-			return err
+	// If the inputPath is supplied directly, construct a wrapper source for it
+	if source == nil {
+		sourceID = sourcePath
+		source = &workflow.Source{
+			Inputs: []workflow.Document{{Location: sourcePath}},
 		}
-	} else {
-		if err := w.validateDocument(ctx, rootStep, sourcePath, ""); err != nil {
-			return err
-		}
+	}
+
+	sourcePath, err = w.runSource(ctx, rootStep, sourceID, *source, false)
+	if err != nil {
+		return err
 	}
 
 	var outDir string
@@ -345,44 +348,20 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, id string, cleanUp bool) (string, error) {
-	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
+func (w *Workflow) runWorkflowSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, id string, cleanUp bool) (string, error) {
 	source := w.workflow.Sources[id]
+	return w.runSource(ctx, parentStep, id, source, cleanUp)
+}
 
-	if len(source.Inputs) == 0 {
-		return "", fmt.Errorf("source %s has no inputs", id)
-	}
-
-	rulesetToUse := ""
-	if source.Ruleset != nil {
-		rulesetToUse = *source.Ruleset
-	}
-
+func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, id string, source workflow.Source, cleanUp bool) (string, error) {
+	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
 
-	outputLocation, err := source.GetOutputLocation()
+	outputLocation, err := bundler.CompileSource(ctx, rootStep, id, source)
 	if err != nil {
 		return "", err
 	}
-
-	// outputLocation will be the same as the input location if it's a single local file with no overlays
-	// In that case, we don't need to run the bundler
-	if outputLocation != source.Inputs[0].Location {
-		if err := bundler.CompileSource(ctx, rootStep, source); err != nil {
-			return "", err
-		}
-	}
-
-	/*
-	 * Validate
-	 */
-
-	if err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse); err != nil {
-		return "", err
-	}
-
-	rootStep.SucceedWorkflow()
 
 	if cleanUp {
 		rootStep.NewSubstep("Cleaning up")
@@ -390,6 +369,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		// Clean up temp files on success
 		os.RemoveAll(workflow.GetTempDir())
 	}
+
+	rootStep.SucceedWorkflow()
 
 	return outputLocation, nil
 }
