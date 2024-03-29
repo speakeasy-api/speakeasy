@@ -15,7 +15,7 @@ import (
 
 func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool) error {
 	targetToCodeSamples := map[string][]UsageSnippet{}
-	isJSON := filepath.Ext(schema) != ".json"
+	isJSON := filepath.Ext(schema) == ".json"
 
 	for _, lang := range langs {
 		usageOutput := &bytes.Buffer{}
