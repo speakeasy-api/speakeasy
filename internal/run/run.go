@@ -5,9 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/bundler"
-	"io"
-	"log/slog"
+	"github.com/speakeasy-api/speakeasy/internal/bundler"
+	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,20 +16,15 @@ import (
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
-	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-
-	charmLog "github.com/charmbracelet/log"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
-	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
-	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
 type Workflow struct {
@@ -43,7 +37,7 @@ type Workflow struct {
 	ShouldCompile    bool
 	ForceGeneration  bool
 
-	RootStep           *WorkflowStep
+	RootStep           *workflowTracking.WorkflowStep
 	workflow           *workflow.Workflow
 	projectDir         string
 	validatedDocuments []string
@@ -57,7 +51,7 @@ func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURL
 		return nil, err
 	}
 
-	rootStep := NewWorkflowStep(name, nil)
+	rootStep := workflowTracking.NewWorkflowStep(name, nil)
 
 	return &Workflow{
 		Target:           target,
@@ -100,8 +94,8 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 }
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
-	updatesChannel := make(chan UpdateMsg)
-	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
+	updatesChannel := make(chan workflowTracking.UpdateMsg)
+	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", updatesChannel)
 
 	var logs bytes.Buffer
 	warnings := make([]string, 0)
@@ -351,7 +345,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, id string, cleanUp bool) (string, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
@@ -375,8 +369,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	// outputLocation will be the same as the input location if it's a single local file with no overlays
 	// In that case, we don't need to run the bundler
 	if outputLocation != source.Inputs[0].Location {
-		err := w.runBundler(ctx, rootStep, source, outputLocation)
-		if err != nil {
+		if err := bundler.CompileSource(ctx, rootStep, source); err != nil {
 			return "", err
 		}
 	}
@@ -401,99 +394,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	return outputLocation, nil
 }
 
-func (w *Workflow) runBundler(ctx context.Context, rootStep *WorkflowStep, source workflow.Source, outputLocation string) error {
-	memFS := bundler.NewMemFS()
-	rwfs := bundler.NewReadWriteFS(memFS, memFS)
-	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{
-		Logger: slog.New(charmLog.New(log.From(ctx).GetWriter())),
-	})
-
-	/*
-	 * Fetch input docs
-	 */
-
-	rootStep.NewSubstep("Loading OpenAPI document(s)")
-
-	resolvedDocLocations, err := pipeline.FetchDocumentsLocalFS(ctx, rwfs, bundler.FetchDocumentsOptions{
-		SourceFSBasePath: ".",
-		OutputRoot:       bundler.InputsRootPath,
-		Documents:        source.Inputs,
-	})
-	if err != nil || len(resolvedDocLocations) == 0 {
-		return fmt.Errorf("error loading input OpenAPI documents: %w", err)
-	}
-
-	/*
-	 * Merge input docs
-	 */
-
-	finalDocLocation := resolvedDocLocations[0]
-	if len(source.Inputs) > 1 {
-		rootStep.NewSubstep(fmt.Sprintf("Merging %d documents", len(source.Inputs)))
-
-		finalDocLocation, err = pipeline.Merge(ctx, rwfs, bundler.MergeOptions{
-			BasePath:   bundler.InputsRootPath,
-			InputPaths: resolvedDocLocations,
-		})
-		if err != nil {
-			return fmt.Errorf("error merging documents: %w", err)
-		}
-	}
-
-	/*
-	 * Fetch and apply overlays, if there are any
-	 */
-
-	if len(source.Overlays) > 0 {
-		overlayStep := rootStep.NewSubstep(fmt.Sprintf("Detected %d overlay(s)", len(source.Overlays)))
-
-		overlayStep.NewSubstep("Loading overlay documents")
-
-		overlays, err := pipeline.FetchDocumentsLocalFS(ctx, rwfs, bundler.FetchDocumentsOptions{
-			SourceFSBasePath: ".",
-			OutputRoot:       bundler.OverlaysRootPath,
-			Documents:        source.Overlays,
-		})
-		if err != nil {
-			return fmt.Errorf("error fetching overlay documents: %w", err)
-		}
-
-		overlayStep.NewSubstep("Applying overlay documents")
-
-		finalDocLocation, err = pipeline.Overlay(ctx, rwfs, bundler.OverlayOptions{
-			BaseDocumentPath: finalDocLocation,
-			OverlayPaths:     overlays,
-		})
-		if err != nil {
-			return fmt.Errorf("error applying overlays: %w", err)
-		}
-	}
-
-	/*
-	 * Persist final document
-	 */
-
-	rootStep.NewSubstep("Writing final document")
-
-	if err = os.MkdirAll(filepath.Dir(outputLocation), os.ModePerm); err != nil {
-		return err
-	}
-
-	dst, err := os.Create(outputLocation)
-	if err != nil {
-		return fmt.Errorf("error creating output file: %w", err)
-	}
-
-	file, err := rwfs.Open(finalDocLocation)
-	if err != nil {
-		return fmt.Errorf("error opening final document: %w", err)
-	}
-
-	_, err = io.Copy(dst, file)
-	return err
-}
-
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset string) error {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, schemaPath, defaultRuleset string) error {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -511,45 +412,4 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
 	return res
-}
-
-// TODO: RETAIN THE INPUT_ addition
-func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
-	log.From(ctx).Infof("Downloading %s... to %s\n", d.Location, outPath)
-
-	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
-		return "", err
-	}
-
-	var token, header string
-	if d.Auth != nil {
-		header = d.Auth.Header
-		envVar := strings.TrimPrefix(d.Auth.Secret, "$")
-
-		// GitHub action secrets are prefixed with INPUT_
-		if env.IsGithubAction() {
-			envVar = "INPUT_" + envVar
-		}
-		token = os.Getenv(envVar)
-	}
-
-	if err := download.DownloadFile(d.Location, outPath, header, token); err != nil {
-		return "", err
-	}
-
-	return outPath, nil
-}
-
-func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string) error {
-	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
-		return err
-	}
-
-	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir); err != nil {
-		return err
-	}
-
-	log.From(ctx).Printf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
-
-	return nil
 }

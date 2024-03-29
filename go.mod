@@ -222,3 +222,4 @@ require (
 )
 
 replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
+replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
