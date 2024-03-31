@@ -15,6 +15,7 @@ type Quickstart struct {
 	LanguageConfigs          map[string]*config.Configuration
 	Defaults                 Defaults
 	IsUsingSampleOpenAPISpec bool
+	SDKClassName             string
 }
 
 type Defaults struct {

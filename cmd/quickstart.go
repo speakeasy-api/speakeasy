@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -122,12 +123,19 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		outDir = flags.OutDir
 	}
 	var targetType string
+	var sdkClassName string
+	// Assume just one language possible during quickstart
 	for _, target := range quickstartObj.WorkflowFile.Targets {
 		targetType = target.Target
+		for _, config := range quickstartObj.LanguageConfigs {
+			sdkClassName = config.Generation.SDKClassName
+			break
+		}
+
 		break
 	}
 
-	promptedDir := filepath.Join(workingDir, targetType)
+	promptedDir := filepath.Join(workingDir, strcase.ToKebab(sdkClassName)+"-"+targetType)
 	if outDir != workingDir {
 		promptedDir = outDir
 	}
