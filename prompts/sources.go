@@ -139,7 +139,8 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 	if useSampleSpec {
 		quickstart.IsUsingSampleOpenAPISpec = true
-		fileLocation = "https://example.com" // This is a placeholder it will be filled in properly later
+		// This is a placeholder to pass document validation, it will be overwritten when we know where the output directory is
+		fileLocation = "https://example.com/placeholder"
 	} else {
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
