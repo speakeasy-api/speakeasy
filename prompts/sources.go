@@ -123,11 +123,13 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	useSampleSpec := false
 	_, err := charm_internal.NewForm(huh.NewForm(
 		huh.NewGroup(
-			huh.NewConfirm().
+			huh.NewSelect[bool]().
 				Title("Do you have an existing OpenAPI spec?").
-				Description("You can provide a local file path or a remote file reference to your OpenAPI spec.").
-				Affirmative("No, use a sample OpenAPI spec").
-				Negative("Yes").
+				Description("You can provide a local file path or a remote file URL to your OpenAPI spec.").
+				Options(
+					huh.NewOption("Yes", false),
+					huh.NewOption("No, use a sample OpenAPI spec", true),
+				).
 				Value(&useSampleSpec),
 		),
 	)).ExecuteForm()
@@ -137,7 +139,7 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 
 	if useSampleSpec {
 		quickstart.IsUsingSampleOpenAPISpec = true
-		fileLocation = "openapi.yaml"
+		fileLocation = "https://example.com" // This is a placeholder it will be filled in properly later
 	} else {
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),

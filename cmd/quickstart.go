@@ -127,18 +127,18 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	promptedDir := targetType
+	promptedDir := filepath.Join(workingDir, targetType)
 	if outDir != workingDir {
 		promptedDir = outDir
 	}
-	description := "We have provided a default directory option mapped to your language. To use the current directory keep this empty."
+	description := "We recommend a directory per target type. eg my-sdk-go, my-sdk-python. To use the current directory, leave empty."
 	if targetType == "terraform" {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
 		outDir = "terraform-provider"
 	}
 
 	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
-		Title("What directory should quickstart files be written too?").
+		Title("What directory should the "+targetType+" files be written to?").
 		Description(description+"\n").
 		Validate(func(s string) error {
 			if targetType == "terraform" {
@@ -192,9 +192,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if quickstartObj.IsUsingSampleOpenAPISpec {
-		absSchemaPath := filepath.Join(outDir, "openapi.yaml")
+		// Try writing the sample spec to the parent of the outDir, fallback to outDir
+		outDirParent := filepath.Dir(outDir)
+		absSchemaPath := filepath.Join(outDirParent, "openapi.yaml")
 		if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
-			return errors.Wrapf(err, "failed to write sample openapi spec")
+			absSchemaPath = filepath.Join(outDir, "openapi.yaml")
+			if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
+				return errors.Wrapf(err, "failed to write sample OpenAPI spec")
+			}
 		}
 		fmt.Printf("The OpenAPI sample document will be used.\nIt can be found here, you can edit it at anytime:\n\n  %s\n\n", absSchemaPath)
 
