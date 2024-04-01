@@ -73,19 +73,41 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	}
 
 	var sdkClassName string = ""
+	var suggestions []string
 	if !isQuickstart && output.Generation.SDKClassName != "" {
 		sdkClassName = output.Generation.SDKClassName
+		suggestions = append(suggestions, sdkClassName)
+	} else {
+		suggestions = append(suggestions, "MyCompanySDK")
 	}
 
-	firstGroup := []huh.Field{
-		huh.NewInput().
-			Title("Name your SDK:").
-			Placeholder("your users will access SDK methods with <sdk_name>.doThing()").
-			Inline(true).
-			Prompt(" ").
-			Value(&sdkClassName),
+	_, err := charm.NewForm(
+		huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Name your SDK:").
+					Description("your users will access SDK methods with myCompanySDK.doThing()").
+					// TODO: Are there languages where the default should not be PascalCase? What about terraform?
+					// TODO: If they are using the sample petstore spec during quickstart we should default to `MyPetStoreSDK`
+					Placeholder("MyCompanySDK").
+					Suggestions(suggestions).
+					Prompt(" ").
+					// TODO: Can we do better in terms of validation? ie valid identifier
+					Validate(func(s string) error {
+						if s == "" {
+							return errors.New("SDK name must not be empty")
+						}
+						return nil
+					}).
+					Value(&sdkClassName),
+			),
+		)).
+		ExecuteForm()
+	if err != nil {
+		return nil, err
 	}
 
+	var firstGroup []huh.Field
 	var baseServerURL string
 	if !isQuickstart && output.Generation.BaseServerURL != "" {
 		baseServerURL = output.Generation.BaseServerURL
