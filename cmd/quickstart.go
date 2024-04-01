@@ -71,16 +71,16 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
 		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: cd .. and run `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: run `speakeasy configure`. \n" +
-			"To regenerate the current workflow: run `speakeasy run`.")
+			"To create a brand new SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
+			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
 		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: cd .. and run `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: run `speakeasy configure`. \n" +
-			"To regenerate the current workflow: run `speakeasy run`.")
+			"To create a brand new SDK directory: cd .. and then `speakeasy quickstart`. \n" +
+			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
 	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
