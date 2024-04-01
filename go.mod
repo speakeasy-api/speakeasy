@@ -15,6 +15,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/orderedmap v0.3.0
+	github.com/iancoleman/strcase v0.3.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pb33f/libopenapi v0.15.14
 	github.com/pkg/errors v0.9.1
@@ -121,7 +122,6 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.17.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
-	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
