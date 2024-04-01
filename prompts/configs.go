@@ -191,7 +191,7 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
 	}
 
-	groups := []huh.Group{}
+	groups := []*huh.Group{}
 	var appliedKeys []string
 	for _, field := range configFields {
 		if slices.Contains(ignoredKeys, field.Name) {
