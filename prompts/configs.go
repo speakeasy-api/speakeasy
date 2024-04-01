@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -83,14 +84,15 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	_, err := charm.NewForm(
 		huh.NewForm(
 			huh.NewGroup(
-				huh.NewInput().
+				charm.NewInput().
 					Title("Name your SDK:").
-					Description("your users will access SDK methods with myCompanySDK.doThing()").
+					Description("your users will access SDK methods with myCompanySDK.doThing()\n").
 					// TODO: Are there languages where the default should not be PascalCase? What about terraform?
 					// TODO: If they are using the sample petstore spec during quickstart we should default to `MyPetStoreSDK`
 					Placeholder("MyCompanySDK").
 					Suggestions(suggestions).
-					Prompt(" ").
+					Prompt("").
+					Inline(false).
 					// TODO: Can we do better in terms of validation? ie valid identifier
 					Validate(func(s string) error {
 						if s == "" {
@@ -100,7 +102,11 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 					}).
 					Value(&sdkClassName),
 			),
-		)).
+		),
+		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
+		"This will configure a config file that defines parameters for how your SDK is generated. \n"+
+			"Default config values have been provided. You only need to edit values that you want to modify.",
+	).
 		ExecuteForm()
 	if err != nil {
 		return nil, err
@@ -210,9 +216,9 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 	//    * python: pip install my-company-sdk
 	//    * go: go get github.com/my-company/my-company-sdk
 	//    * typescript: npm install my-company-sdk
-	//if isQuickstart && (language == "go" || language == "typescript" || language == "python") {
-	//	langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
-	//}
+	if isQuickstart && (language == "go" || language == "typescript" || language == "python") {
+		langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
+	}
 
 	groups := []*huh.Group{}
 	var appliedKeys []string
