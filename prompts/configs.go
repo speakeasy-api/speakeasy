@@ -81,44 +81,28 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 		suggestions = append(suggestions, "MyCompanySDK")
 	}
 
-	_, err := charm.NewForm(
-		huh.NewForm(
-			huh.NewGroup(
-				charm.NewInput().
-					Title("Name your SDK:").
-					Description("your users will access SDK methods with myCompanySDK.doThing()\n").
-					// TODO: Are there languages where the default should not be PascalCase? What about terraform?
-					// TODO: If they are using the sample petstore spec during quickstart we should default to `MyPetStoreSDK`
-					Placeholder("MyCompanySDK").
-					Suggestions(suggestions).
-					Prompt("").
-					Inline(false).
-					// TODO: Can we do better in terms of validation? ie valid identifier
-					Validate(func(s string) error {
-						if s == "" {
-							return errors.New("SDK name must not be empty")
-						}
-						return nil
-					}).
-					Value(&sdkClassName),
-			),
-		),
-		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
-		"This will configure a config file that defines parameters for how your SDK is generated. \n"+
-			"Default config values have been provided. You only need to edit values that you want to modify.",
-	).
-		ExecuteForm()
-	if err != nil {
-		return nil, err
+	initialFields := []huh.Field{
+		huh.NewInput().
+			Title("Name your SDK:").
+			Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
+			Placeholder("MyCompanySDK").
+			Suggestions(suggestions).
+			Prompt("").
+			Validate(func(s string) error {
+				if strings.TrimSpace(s) == "" {
+					return errors.New("SDK name must not be empty")
+				}
+				return nil
+			}).
+			Value(&sdkClassName),
 	}
 
-	var firstGroup []huh.Field
 	var baseServerURL string
 	if !isQuickstart && output.Generation.BaseServerURL != "" {
 		baseServerURL = output.Generation.BaseServerURL
 	}
 	if !isQuickstart {
-		firstGroup = append(firstGroup, huh.NewInput().
+		initialFields = append(initialFields, huh.NewInput().
 			Title("Provide a base server URL for your SDK to use:").
 			Placeholder("You must do this if a server URL is not defined in your OpenAPI spec").
 			Inline(true).
@@ -138,7 +122,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			}
 		}
 
-		firstGroup = append(firstGroup,
+		initialFields = append(initialFields,
 			huh.NewMultiSelect[string]().
 				Title("Select your SDK Docs Languages:").
 				Description("These languages will appear as options in your generated SDK Docs site.").
@@ -146,10 +130,14 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 				Value(&docsLanguages))
 	}
 
-	var configGroups []*huh.Group
+	formTitle := fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName)
+	formSubtitle := "This will configure a config file that defines parameters for how your SDK is generated. \n" +
+		"Default config values have been provided. You only need to edit values that you want to modify."
 
-	if len(firstGroup) != 0 {
-		configGroups = append(configGroups, huh.NewGroup(firstGroup...))
+	form := huh.NewForm(huh.NewGroup(initialFields...))
+	if _, err := charm.NewForm(form, formTitle, formSubtitle).
+		ExecuteForm(); err != nil {
+		return nil, err
 	}
 
 	t, err := generate.GetTargetFromTargetString(target.Target)
@@ -162,17 +150,13 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 		return nil, err
 	}
 
-	languageForms, appliedKeys, err := languageSpecificForms(target.Target, output, defaultConfigs, isQuickstart, sdkClassName)
+	languageGroups, appliedKeys, err := languageSpecificForms(target.Target, output, defaultConfigs, isQuickstart, sdkClassName)
 	if err != nil {
 		return nil, err
 	}
 
-	configGroups = append(configGroups, languageForms...)
-	form := huh.NewForm(configGroups...)
-	if _, err := charm.NewForm(form,
-		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
-		"This will configure a config file that defines parameters for how your SDK is generated. \n"+
-			"Default config values have been provided. You only need to edit values that you want to modify.").
+	form = huh.NewForm(languageGroups...)
+	if _, err := charm.NewForm(form, formTitle, formSubtitle).
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -210,27 +194,18 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		}
 	}
 
-	// Default the packageName to the SDKClassName
-	// TODO: This updates the placeholder but is intended to be a default value
-	// TODO: We should explain what this is by example ie:
-	//    * python: pip install my-company-sdk
-	//    * go: go get github.com/my-company/my-company-sdk
-	//    * typescript: npm install my-company-sdk
-	if isQuickstart && (language == "go" || language == "typescript" || language == "python") {
-		langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
-	}
-
 	groups := []*huh.Group{}
+
 	var appliedKeys []string
 	for _, field := range configFields {
 		if slices.Contains(ignoredKeys, field.Name) {
 			continue
 		}
 
-		if valid, defaultValue, validateRegex, validateMessage := getValuesForField(field, langConfig); valid {
+		if valid, defaultValue, validateRegex, validateMessage, description := getValuesForField(field, langConfig, language, sdkClassName, isQuickstart); valid {
 			if lang, ok := quickstartScopedKeys[language]; (ok && slices.Contains(lang, field.Name)) || (!isQuickstart && slices.Contains(additionalRelevantConfigs, field.Name)) {
 				appliedKeys = append(appliedKeys, field.Name)
-				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart))
+				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, &description, isQuickstart))
 			}
 		}
 	}
@@ -238,7 +213,7 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 	return groups, appliedKeys, nil
 }
 
-func getValuesForField(field config.SDKGenConfigField, langConfig config.LanguageConfig) (bool, string, string, string) {
+func getValuesForField(field config.SDKGenConfigField, langConfig config.LanguageConfig, language string, sdkClassName string, isQuickstart bool) (bool, string, string, string, string) {
 	defaultValue := ""
 	if field.Name == "maxMethodParams" {
 	}
@@ -254,7 +229,7 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 		case bool:
 			defaultValue = strconv.FormatBool(val)
 		default:
-			return false, "", "", ""
+			return false, "", "", "", ""
 		}
 	}
 
@@ -283,7 +258,25 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 		validationMessage = *field.ValidationMessage
 	}
 
-	return true, defaultValue, validationRegex, validationMessage
+	description := ""
+	if field.Description != nil {
+		description = *field.Description
+	}
+	if field.Name == "packageName" && isQuickstart && sdkClassName != "" {
+		switch language {
+		case "go":
+			defaultValue = "github.com/my-company/" + strcase.ToKebab(sdkClassName)
+			description = description + "\nTo install your SDK users will execute:\ngo get " + defaultValue
+		case "typescript":
+			defaultValue = strcase.ToKebab(sdkClassName)
+			description = description + "\nTo install your SDK users will execute:\nnpm install " + defaultValue
+		case "python":
+			defaultValue = strcase.ToKebab(sdkClassName)
+			description = description + "\nTo install your SDK users will execute:\npip install " + defaultValue
+		}
+	}
+
+	return true, defaultValue, validationRegex, validationMessage, description
 }
 
 func addPromptForField(key, defaultValue, validateRegex, validateMessage string, description *string, isQuickstart bool) *huh.Group {
@@ -309,8 +302,6 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 
 	if defaultValue != "" {
 		input = input.Value(&defaultValue)
-	} else {
-		input = input.Placeholder(defaultValue).Suggestions([]string{defaultValue})
 	}
 
 	return huh.NewGroup(input)
