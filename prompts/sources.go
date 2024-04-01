@@ -120,12 +120,38 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	}
 
-	if _, err := charm_internal.NewForm(huh.NewForm(
-		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
-		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
-		ExecuteForm(); err != nil {
+	useSampleSpec := false
+	_, err := charm_internal.NewForm(huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[bool]().
+				Title("Do you have an existing OpenAPI spec?").
+				Description("You can provide a local file path or a remote file URL to your OpenAPI spec.").
+				Options(
+					huh.NewOption("Yes", false),
+					huh.NewOption("No, use a sample OpenAPI spec", true),
+				).
+				Value(&useSampleSpec),
+		),
+	)).ExecuteForm()
+	if err != nil {
 		return nil, err
+	}
+
+	if useSampleSpec {
+		quickstart.IsUsingSampleOpenAPISpec = true
+		// Other parts of the code make assumptions that the workflow has a valid source
+		// This is a hack to satisfy those assumptions, we will overwrite this with a proper
+		// file location when we have written the sample spec to disk when we know the SDK output directory
+		fileLocation = "https://example.com/OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
+	} else {
+		if _, err := charm_internal.NewForm(huh.NewForm(
+			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
+			"Let's setup a new source for your workflow.",
+			"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+			ExecuteForm(); err != nil {
+			return nil, err
+		}
+
 	}
 
 	document, err := formatDocument(fileLocation, authHeader, authSecret, false)
