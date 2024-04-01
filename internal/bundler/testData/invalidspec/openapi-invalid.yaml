@@ -1,0 +1,361 @@
+openapi: 3.1.0
+info:
+  title: Person API
+  version: "2.0"
+servers:
+  - url: https://person.clearbit.com/v2
+paths:
+  people/find:
+    get:
+      summary: look up a person by their email address
+      operationId: find
+      description: >
+        The Person API allows you to look up a person by their email address. Alongside the email address, you may also provide any additional attributes you have about the person, such as their given and family names.
+      parameters:
+        - name: email
+          in: query
+          description: The email address to look up
+          required: true
+          schema:
+            type: string
+        - name: email
+          in: query
+          description: A webhook URL that results will be sent to
+          schema:
+            type: string
+        - name: given_name
+          in: query
+          description: The person's first name
+          schema:
+            type: string
+        - name: family_name
+          in: query
+          description: The person's last name. If you have this, passing this is strongly recommended to improve match rates
+          schema:
+            type: string
+        - name: ip_address
+          in: query
+          description: The person's IP address. If you have this, passing this is strongly recommended to improve match rates
+          schema:
+            type: string
+        - name: location
+          in: query
+          description: The city or country where the person lives
+          schema:
+            type: string
+        - name: company
+          in: query
+          description: The name of the company the person works for
+          schema:
+            type: string
+        - name: company_domain
+          in: query
+          description: The domain of the company the person works for
+          schema:
+            type: string
+        - name: linkedin
+          in: query
+          description: The person's LinkedIn profile URL
+          schema:
+            type: string
+        - name: twitter
+          in: query
+          description: The person's Twitter profile username
+          schema:
+            type: string
+        - name: facebook
+          in: query
+          description: The person's Facebook profile URL
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessfulLookup'
+        '202':
+          description: Asynchronously looking up the person
+        '404':
+          description: Person not found
+    tag: person
+components:
+  responses:
+    SuccessfulLookup:
+      description: Successful lookup, person encoded in the response body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Person'
+
+  schemas:
+    Person:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "d54c54ad-40be-4305-8a34-0ab44710b90d"
+          description: Clearbit's internal identifier for the person.
+        name:
+          type: object
+          properties:
+            fullName:
+              type: string
+              example: "Alex MacCaw"
+              description: The person's full name. This may exist even if the givenName or familyName aren't available.
+            givenName:
+              type: string
+              example: "Alex"
+              description: The person's first name.
+            familyName:
+              type: string
+              example: "MacCaw"
+              description: The person's last name.
+        email:
+          type: string
+          format: email
+          example: "alex@clearbit.com"
+          description: The person's email.
+        location:
+          type: string
+          example: "San Francisco, CA, US"
+          description: The city, state, and country where the person lives.
+        timeZone:
+          type: string
+          example: "America/Los_Angeles"
+          description: The person's time zone based on their location.
+        utcOffset:
+          type: integer
+          example: -7
+          description: The difference in hours from the person's time zone to UTC (-12 to 14).
+        geo:
+          type: object
+          properties:
+            city:
+              type: string
+              example: "San Francisco"
+              description: The city the person lives in based on their location.
+            state:
+              type: string
+              example: "California"
+              description: The state the person lives in based on their location.
+            stateCode:
+              type: string
+              example: "CA"
+              description: The state code of the state the person lives in based on their location.
+            country:
+              type: string
+              example: "United States"
+              description: The country the person lives in based on their location.
+            countryCode:
+              type: string
+              example: "US"
+              description: The country code of the country the person lives in based on their location.
+            lat:
+              type: number
+              format: float
+              example: 37.7749295
+              description: The latitude based on the person's location.
+            lng:
+              type: number
+              format: float
+              example: -122.4194155
+              description: The longitude based on the person's location.
+        bio:
+          type: string
+          example: "O'Reilly author, software engineer & traveller. Founder of https://clearbit.com"
+          description: The person's bio surfaced through their own social media accounts.
+        site:
+          type: string
+          example: "http://alexmaccaw.com"
+          description: The person's website surfaced through their own social media accounts.
+        avatar:
+          type: string
+          example: "https://d1ts43dypk8bqh.cloudfront.net/v1/avatars/d54c54ad-40be-4305-8a34-0ab44710b90d"
+          description: The person's profile picture surfaced through their own social media accounts.
+        employment:
+          type: object
+          properties:
+            domain:
+              type: string
+              example: "clearbit.com"
+              description: The domain of the company the person works for.
+            name:
+              type: string
+              example: "Clearbit"
+              description: The name of the company the person works for.
+            title:
+              type: string
+              example: "Co-founder, CEO"
+              description: The person's title at the company they work for.
+            role:
+              type: string
+              example: "leadership"
+              description: The person's standardized role at the company they work for based on their title.
+            subRole:
+              type: string
+              example: "ceo"
+              description: The person's standardized sub role at the company they work for based on their title.
+            seniority:
+              type: string
+              example: "executive"
+              description: The person's standardized seniority at the company they work for based on their title.
+        facebook:
+          type: object
+          properties:
+            handle:
+              type: string
+              example: "amaccaw"
+              description: The person's Facebook profile username (e.g. amaccaw).
+        github:
+          type: object
+          properties:
+            handle:
+              type: string
+              example: "maccman"
+              description: The person's GitHub profile username (e.g. maccman).
+            id:
+              type: integer
+              example: 2142
+              description: The ID of the person's GitHub profile.
+            avatar:
+              type: string
+              example: "https://avatars.githubusercontent.com/u/2142?v=2"
+              description: The profile picture of the person's GitHub profile.
+            company:
+              type: string
+              example: "Clearbit"
+              description: The company the person works for as listed on their GitHub profile.
+            blog:
+              type: string
+              example: "http://alexmaccaw.com"
+              description: The person's website as listed on their GitHub profile.
+            followers:
+              type: integer
+              example: 3594
+              description: The number of followers the person has on GitHub.
+            following:
+              type: integer
+              example: 111
+              description: The number of people the person follows on GitHub.
+        twitter:
+          type: object
+          properties:
+            handle:
+              type: string
+              example: "maccaw"
+              description: The person's Twitter profile username (e.g. maccaw).
+            id:
+              type: integer
+              example: 2006261
+              description: The ID of the person's Twitter profile.
+            bio:
+              type: string
+              example: "O'Reilly author, software engineer & traveller. Founder of https://clearbit.com"
+              description: The person's bio as listed on their Twitter profile.
+            followers:
+              type: integer
+              example: 15248
+              description: The number of followers the person has on Twitter.
+            following:
+              type: integer
+              example: 1711
+              description: The number of people the person follows on Twitter.
+            statuses:
+              type: integer
+              example: 14300
+              description: The number of tweets the person has shared on Twitter.
+            favorites:
+              type: integer
+              example: 21100
+              description: The number of tweets the person has liked on Twitter.
+            location:
+              type: string
+              example: "San Francisco"
+              description: The person's location as listed on their Twitter profile.
+            site:
+              type: string
+              example: "http://alexmaccaw.com"
+              description: The person's website as listed on their Twitter profile.
+            avatar:
+              type: string
+              example: "https://pbs.twimg.com/profile_images/1826201101/297606_10150904890650705_570400704_21211347_1883468370_n.jpeg"
+              description: The profile picture of the person's Twitter profile.
+        linkedin:
+          type: object
+          properties:
+            handle:
+              type: string
+              example: "in/alex-maccaw-ab592978"
+              description: The last section of the person's LinkedIn profile URL (e.g. in/alex-maccaw-ab592978).
+        googleplus:
+          type: object
+          properties:
+            handle:
+              type: string
+              nullable: true
+              description: The person's Google Plus username. This field has been deprecated.
+        gravatar:
+          type: object
+          properties:
+            handle:
+              type: string
+              example: "maccman"
+              description: The person's Gravatar profile username (e.g., maccman).
+            urls:
+              type: array
+              items:
+                type: object
+                properties:
+                  value:
+                    type: string
+                    example: "http://alexmaccaw.com"
+                    description: The website URL listed by the person on their Gravatar profile.
+                  title:
+                    type: string
+                    example: "Personal Website"
+                    description: The title of the website listed by the person on their Gravatar profile.
+            avatar:
+              type: string
+              example: "http://2.gravatar.com/avatar/994909da96d3afaf4daaf54973914b64"
+              description: The profile picture of the person's Gravatar profile.
+            avatars:
+              type: array
+              items:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    example: "http://2.gravatar.com/avatar/994909da96d3afaf4daaf54973914b64"
+                    description: The URL of a picture listed by the person on their Gravatar profile.
+                  type:
+                    type: string
+                    example: "thumbnail"
+                    description: The type of picture listed by the person on their Gravatar profile.
+        fuzzy:
+          type: boolean
+          example: false
+          description: Indicates whether the person's search was fuzzy or an exact match.
+        emailProvider:
+          type: boolean
+          example: false
+          description: Indicates whether the person's email domain is associated with a free email provider (e.g., Gmail). Useful for distinguishing between personal emails and work emails.
+        indexedAt:
+          type: string
+          format: date-time
+          example: "2016-11-07T00:00:00.000Z"
+          description: Timestamp indicating when the person's record was last updated in Clearbit's database. A record update may or may not include new information about the person.
+        phone:
+          type: string
+          example: "+1 123-456-7890"
+          description: The person's phone number.
+        activeAt:
+          type: string
+          format: date-time
+          example: "2014-11-25T18:56:43.000Z"
+          description: Timestamp indicating when Clearbit detected the person's email became active.
+        inactiveAt:
+          type: string
+          format: date-time
+          example: "2021-11-25T18:56:43.000Z"
+          description: Timestamp indicating when Clearbit detected the person's email became inactive.
+tags:
+  - name: person

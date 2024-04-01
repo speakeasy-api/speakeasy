@@ -1,0 +1,7 @@
+workflowVersion: 1.0.0
+sources:
+  my-source:
+    inputs:
+      - location: testData/overlay/openapi.yaml
+    overlays:
+      - location: testData/overlay/openapi-overlay.yaml

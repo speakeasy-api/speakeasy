@@ -1,0 +1,6 @@
+workflowVersion: 1.0.0
+sources:
+  my-source:
+    inputs:
+      - location: testData/invalidspec/openapi.yaml
+      - location: testData/invalidspec/openapi-invalid.yaml

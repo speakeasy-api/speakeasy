@@ -7,7 +7,6 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/bundler"
-	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"io"
 	"os"
 )
@@ -51,12 +50,10 @@ func Compare(schemas []string) error {
 }
 
 func Apply(ctx context.Context, schema string, overlayFile string, w io.Writer) error {
-	step := workflowTracking.NewWorkflowStep("Overlaying OpenAPI documents", nil)
-
 	source := workflow.Source{
 		Inputs:   []workflow.Document{{Location: schema}},
 		Overlays: []workflow.Document{{Location: overlayFile}},
 	}
 
-	return bundler.CompileSourceTo(ctx, step, "", source, w)
+	return bundler.CompileSourceTo(ctx, nil, "", source, w)
 }

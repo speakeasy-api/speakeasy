@@ -1,0 +1,2094 @@
+openapi: 3.0.3
+info:
+  description: The Speakeasy API allows teams to manage common operations with
+    their APIs
+  title: Speakeasy API
+  version: 0.4.0
+servers:
+  - url: https://api.prod.speakeasyapi.dev
+    x-speakeasy-server-id: prod
+x-speakeasy-globals:
+  parameters:
+    - name: workspaceID
+      in: path
+      schema:
+        type: string
+security:
+  - APIKey: [ ]
+  - Bearer: [ ]
+tags:
+  - description: REST APIs for managing Authentication
+    name: Auth
+  - description: REST APIs for managing Api entities
+    name: Apis
+  - description: REST APIs for managing ApiEndpoint entities
+    name: ApiEndpoints
+  - description: REST APIs for managing Version Metadata entities
+    name: Metadata
+  - description: REST APIs for managing Schema entities
+    name: Schemas
+  - description: REST APIs for retrieving request information
+    name: Requests
+  - description: REST APIs for managing embeds
+    name: Embeds
+  - description: REST APIs for capturing event data
+    name: Events
+externalDocs:
+  url: /docs
+  description: The Speakeasy Platform Documentation
+paths:
+  /v1/apis:
+    get:
+      summary: Get a list of Apis for a given workspace
+      description: |-
+        Get a list of all Apis and their versions for a given workspace.
+        Supports filtering the APIs based on metadata attributes.
+      operationId: getApis
+      x-speakeasy-usage-example: true
+      parameters:
+        - description: Configuration for filter operations
+          explode: true
+          in: query
+          name: op
+          required: false
+          schema:
+            properties:
+              and:
+                description: Whether to AND or OR the filters
+                type: boolean
+            required:
+              - and
+            type: object
+          style: deepObject
+        - description: Metadata to filter Apis on
+          explode: true
+          in: query
+          name: metadata
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            description: Map of metadata key/values to filter on
+            type: object
+          style: deepObject
+      responses:
+        "200":
+          content:
+            application/json:
+              x-speakeasy-usage-example: true
+              schema:
+                title: Apis
+                description: A list of Apis for the given workspace
+                items:
+                  $ref: "#/components/schemas/Api"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Apis
+  /v1/apis/{apiID}:
+    get:
+      summary: Get all Api versions for a particular ApiEndpoint.
+      description: |-
+        Get all Api versions for a particular ApiEndpoint.
+        Supports filtering the versions based on metadata attributes.
+      operationId: getAllApiVersions
+      parameters:
+        - description: The ID of the Api to retrieve.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: Configuration for filter operations
+          explode: true
+          in: query
+          name: op
+          schema:
+            properties:
+              and:
+                description: Whether to AND or OR the filters
+                type: boolean
+            required:
+              - and
+            type: object
+          style: deepObject
+        - description: Metadata to filter Apis on
+          explode: true
+          in: query
+          name: metadata
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            description: Map of metadata key/values to filter on
+            type: object
+          style: deepObject
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                title: Apis
+                description: A list of Api versions for the given apiID
+                items:
+                  $ref: "#/components/schemas/Api"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Apis
+    put:
+      summary: Upsert an Api
+      description: |-
+        Upsert an Api. If the Api does not exist, it will be created.
+        If the Api exists, it will be updated.
+      operationId: upsertApi
+      parameters:
+        - description: The ID of the Api to upsert.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A JSON representation of the Api to upsert
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Api"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Api"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Apis
+  /v1/apis/{apiID}/api_endpoints:
+    get:
+      summary: Get all Api endpoints for a particular apiID.
+      operationId: getAllApiEndpoints
+      parameters:
+        - description: The ID of the Api to retrieve ApiEndpoints for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                title: ApiEndpoints
+                items:
+                  $ref: "#/components/schemas/ApiEndpoint"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+  /v1/apis/{apiID}/version/{versionID}:
+    delete:
+      summary: Delete an Api.
+      description: |-
+        Delete a particular version of an Api. The will also delete all associated ApiEndpoints, Metadata, Schemas & Request Logs (if using a Postgres datastore).
+      operationId: deleteApi
+      parameters:
+        - description: The ID of the Api to delete.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Apis
+  /v1/apis/{apiID}/version/{versionID}/api_endpoints:
+    get:
+      summary: Get all ApiEndpoints for a particular apiID and versionID.
+      operationId: getAllForVersionApiEndpoints
+      parameters:
+        - description: The ID of the Api to retrieve ApiEndpoints for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to retrieve ApiEndpoints for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                title: APIEndpoints
+                items:
+                  $ref: "#/components/schemas/ApiEndpoint"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+  /v1/apis/{apiID}/version/{versionID}/api_endpoints/find/{displayName}:
+    get:
+      summary: Find an ApiEndpoint via its displayName.
+      description: |-
+        Find an ApiEndpoint via its displayName (set by operationId from a registered OpenAPI schema).
+        This is useful for finding the ID of an ApiEndpoint to use in the /v1/apis/{apiID}/version/{versionID}/api_endpoints/{apiEndpointID} endpoints.
+      operationId: findApiEndpoint
+      parameters:
+        - description: The ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The displayName of the ApiEndpoint to find (set by operationId from OpenAPI schema).
+          in: path
+          name: displayName
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEndpoint"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+  /v1/apis/{apiID}/version/{versionID}/api_endpoints/{apiEndpointID}:
+    delete:
+      summary: Delete an ApiEndpoint.
+      description: |-
+        Delete an ApiEndpoint. This will also delete all associated Request Logs (if using a Postgres datastore).
+      operationId: deleteApiEndpoint
+      parameters:
+        - description: The ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The ID of the ApiEndpoint to delete.
+          in: path
+          name: apiEndpointID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+    get:
+      summary: Get an ApiEndpoint.
+      operationId: getApiEndpoint
+      parameters:
+        - description: The ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The ID of the ApiEndpoint to retrieve.
+          in: path
+          name: apiEndpointID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEndpoint"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+    put:
+      summary: Upsert an ApiEndpoint.
+      description: |-
+        Upsert an ApiEndpoint. If the ApiEndpoint does not exist it will be created, otherwise it will be updated.
+      operationId: upsertApiEndpoint
+      parameters:
+        - description: The ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api the ApiEndpoint belongs to.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The ID of the ApiEndpoint to upsert.
+          in: path
+          name: apiEndpointID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A JSON representation of the ApiEndpoint to upsert.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiEndpoint"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEndpoint"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+  /v1/apis/{apiID}/version/{versionID}/api_endpoints/{apiEndpointID}/generate/openapi:
+    get:
+      summary: Generate an OpenAPI specification for a particular ApiEndpoint.
+      description: |-
+        This endpoint will generate a new operation in any registered OpenAPI document if the operation does not already exist in the document.
+        Returns the original document and the newly generated document allowing a diff to be performed to see what has changed.
+      operationId: generateOpenApiSpecForApiEndpoint
+      parameters:
+        - description: The ID of the Api to generate an OpenAPI specification for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to generate an OpenAPI specification for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The ID of the ApiEndpoint to generate an OpenAPI specification for.
+          in: path
+          name: apiEndpointID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateOpenApiSpecDiff"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+  /v1/apis/{apiID}/version/{versionID}/api_endpoints/{apiEndpointID}/generate/postman:
+    get:
+      summary: Generate a Postman collection for a particular ApiEndpoint.
+      description: |-
+        Generates a postman collection that allows the endpoint to be called from postman variables produced for any path/query/header parameters included in the OpenAPI document.
+      operationId: generatePostmanCollectionForApiEndpoint
+      parameters:
+        - description: The ID of the Api to generate a Postman collection for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to generate a Postman collection for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The ID of the ApiEndpoint to generate a Postman collection for.
+          in: path
+          name: apiEndpointID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/octet-stream:
+              schema:
+                format: binary
+                title: PostmanCollection
+                type: string
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - ApiEndpoints
+  /v1/apis/{apiID}/version/{versionID}/generate/openapi:
+    get:
+      summary: Generate an OpenAPI specification for a particular Api.
+      description: |-
+        This endpoint will generate any missing operations in any registered OpenAPI document if the operation does not already exist in the document.
+        Returns the original document and the newly generated document allowing a diff to be performed to see what has changed.
+      operationId: generateOpenApiSpec
+      parameters:
+        - description: The ID of the Api to generate an OpenAPI specification for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to generate an OpenAPI specification for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateOpenApiSpecDiff"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Apis
+  /v1/apis/{apiID}/version/{versionID}/generate/postman:
+    get:
+      summary: Generate a Postman collection for a particular Api.
+      description: |-
+        Generates a postman collection containing all endpoints for a particular API. Includes variables produced for any path/query/header parameters included in the OpenAPI document.
+      operationId: generatePostmanCollection
+      parameters:
+        - description: The ID of the Api to generate a Postman collection for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to generate a Postman collection for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/octet-stream:
+              schema:
+                format: binary
+                title: PostmanCollection
+                type: string
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Apis
+  /v1/apis/{apiID}/version/{versionID}/metadata:
+    get:
+      summary: Get all metadata for a particular apiID and versionID.
+      operationId: getVersionMetadata
+      parameters:
+        - description: The ID of the Api to retrieve metadata for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to retrieve metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                title: VersionMetadata
+                items:
+                  $ref: "#/components/schemas/VersionMetadata"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Metadata
+    post:
+      summary: Insert metadata for a particular apiID and versionID.
+      operationId: insertVersionMetadata
+      parameters:
+        - description: The ID of the Api to insert metadata for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to insert metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A JSON representation of the metadata to insert.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VersionMetadata"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionMetadata"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Metadata
+  /v1/apis/{apiID}/version/{versionID}/metadata/{metaKey}/{metaValue}:
+    delete:
+      summary: Delete metadata for a particular apiID and versionID.
+      operationId: deleteVersionMetadata
+      parameters:
+        - description: The ID of the Api to delete metadata for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The key of the metadata to delete.
+          in: path
+          name: metaKey
+          required: true
+          schema:
+            type: string
+        - description: The value of the metadata to delete.
+          in: path
+          name: metaValue
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Metadata
+  /v1/apis/{apiID}/version/{versionID}/schema:
+    get:
+      summary: Get information about the latest schema.
+      description: |-
+        Returns information about the last uploaded schema for a particular API version. 
+        This won't include the schema itself, that can be retrieved via the downloadSchema operation.
+      operationId: getSchema
+      parameters:
+        - description: The ID of the Api to get the schema for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schema"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+    post:
+      summary: Register a schema.
+      description: |-
+        Allows uploading a schema for a particular API version.
+        This will be used to populate ApiEndpoints and used as a base for any schema generation if present.
+      operationId: registerSchema
+      parameters:
+        - description: The ID of the Api to get the schema for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The schema file to upload provided as a multipart/form-data file segment.
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                file:
+                  format: binary
+                  type: string
+              required:
+                - file
+              type: object
+        required: true
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+  /v1/apis/{apiID}/version/{versionID}/schema/download:
+    get:
+      summary: Download the latest schema for a particular apiID.
+      operationId: downloadSchema
+      parameters:
+        - description: The ID of the Api to download the schema for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                format: binary
+                title: Schema
+                type: string
+            application/x-yaml:
+              schema:
+                format: binary
+                title: Schema
+                type: string
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+  /v1/apis/{apiID}/version/{versionID}/schema/{baseRevisionID}/diff/{targetRevisionID}:
+    get:
+      summary: Get a diff of two schema revisions for an Api.
+      operationId: getSchemaDiff
+      parameters:
+        - description: The ID of the Api to retrieve schemas for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The base revision ID of the schema to retrieve.
+          in: path
+          name: baseRevisionID
+          required: true
+          schema:
+            type: string
+        - description: The target revision ID of the schema to retrieve.
+          in: path
+          name: targetRevisionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDiff"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+  /v1/apis/{apiID}/version/{versionID}/schema/{revisionID}:
+    delete:
+      summary: Delete a particular schema revision for an Api.
+      operationId: deleteSchema
+      parameters:
+        - description: The ID of the Api to delete schemas for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The revision ID of the schema to delete.
+          in: path
+          name: revisionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+    get:
+      summary: Get information about a particular schema revision for an Api.
+      description: |-
+        Returns information about the last uploaded schema for a particular schema revision. 
+        This won't include the schema itself, that can be retrieved via the downloadSchema operation.
+      operationId: getSchemaRevision
+      parameters:
+        - description: The ID of the Api to retrieve schemas for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The revision ID of the schema to retrieve.
+          in: path
+          name: revisionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schema"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+  /v1/apis/{apiID}/version/{versionID}/schema/{revisionID}/download:
+    get:
+      summary: Download a particular schema revision for an Api.
+      operationId: downloadSchemaRevision
+      parameters:
+        - description: The ID of the Api to retrieve schemas for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+        - description: The revision ID of the schema to retrieve.
+          in: path
+          name: revisionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                format: binary
+                title: Schema
+                type: string
+            application/x-yaml:
+              schema:
+                format: binary
+                title: Schema
+                type: string
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+  /v1/apis/{apiID}/version/{versionID}/schemas:
+    get:
+      summary: Get information about all schemas associated with a particular apiID.
+      description: |-
+        Returns information the schemas associated with a particular apiID. 
+        This won't include the schemas themselves, they can be retrieved via the downloadSchema operation.
+      operationId: getSchemas
+      parameters:
+        - description: The ID of the Api to retrieve schemas for.
+          in: path
+          name: apiID
+          required: true
+          schema:
+            type: string
+        - description: The version ID of the Api to delete metadata for.
+          in: path
+          name: versionID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/Schema"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Schemas
+  /v1/auth/validate:
+    get:
+      summary: Validate the current api key.
+      operationId: validateApiKey
+      tags:
+        - Auth
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyDetails"
+        default:
+          $ref: "#/components/responses/default"
+  /v1/auth/access_token:
+    get:
+      summary: Get or refresh an access token for the current workspace.
+      security: [{}]
+      operationId: getAccessToken
+      tags:
+        - Auth
+      parameters:
+        - description: The workspace ID
+          in: query
+          name: workspace_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessToken"
+        default:
+          $ref: "#/components/responses/default"
+  /v1/eventlog/query:
+    get:
+      summary: Query the event log to retrieve a list of requests.
+      description: |-
+        Supports retrieving a list of request captured by the SDK for this workspace.
+        Allows the filtering of requests on a number of criteria such as ApiID, VersionID, Path, Method, etc.
+      operationId: queryEventLog
+      parameters:
+        - content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Filters"
+          description: The filter to apply to the query.
+          in: query
+          name: filters
+          required: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                title: BoundedRequests
+                items:
+                  $ref: "#/components/schemas/BoundedRequest"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Requests
+  /v1/eventlog/{requestID}:
+    get:
+      summary: Get information about a particular request.
+      operationId: getRequestFromEventLog
+      parameters:
+        - description: The ID of the request to retrieve.
+          in: path
+          name: requestID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnboundedRequest"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Requests
+  /v1/eventlog/{requestID}/generate/postman:
+    get:
+      summary: Generate a Postman collection for a particular request.
+      description: |-
+        Generates a Postman collection for a particular request. 
+        Allowing it to be replayed with the same inputs that were captured by the SDK.
+      operationId: generateRequestPostmanCollection
+      parameters:
+        - description: The ID of the request to retrieve.
+          in: path
+          name: requestID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/octet-stream:
+              schema:
+                format: binary
+                title: PostmanCollection
+                type: string
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Requests
+  /v1/workspace/embed-access-token:
+    get:
+      summary: Get an embed access token for the current workspace.
+      description: |-
+        Returns an embed access token for the current workspace. This can be used to authenticate access to externally embedded content.
+        Filters can be applied allowing views to be filtered to things like particular customerIds.
+      operationId: getEmbedAccessToken
+      parameters:
+        - description: The description of the embed access token.
+          in: query
+          name: description
+          required: false
+          schema:
+            type: string
+        - description: The duration (in minutes) of the embed access token.
+          in: query
+          name: duration
+          required: false
+          schema:
+            type: integer
+        - content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Filters"
+          description: The filter to apply to the query.
+          in: query
+          name: filters
+          required: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbedAccessTokenResponse"
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Embeds
+  /v1/workspace/embed-access-tokens/valid:
+    get:
+      summary: Get all valid embed access tokens for the current workspace.
+      operationId: getValidEmbedAccessTokens
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                title: EmbedTokens
+                items:
+                  $ref: "#/components/schemas/EmbedToken"
+                type: array
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Embeds
+  /v1/workspace/embed-access-tokens/{tokenID}:
+    delete:
+      summary: Revoke an embed access EmbedToken.
+      operationId: revokeEmbedAccessToken
+      parameters:
+        - description: The ID of the EmbedToken to revoke.
+          in: path
+          name: tokenID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+        default:
+          $ref: "#/components/responses/default"
+      tags:
+        - Embeds
+  /v1/workspace/{workspaceID}/events:
+    parameters:
+      - name: workspaceID
+        in: path
+        required: true
+        description: Unique identifier of the workspace.
+        schema:
+          type: string
+    get:
+      description: Load recent events for a particular workspace
+      operationId: getWorkspaceEvents
+      tags:
+        - Events
+      parameters:
+        - in: query
+          name: generate_gen_lock_id
+          description: Filter to only return events corresponding to a particular gen_lock_id (gen_lock_id uniquely identifies a target)
+          required: false
+          schema:
+            type: string
+        - name: after_created_at
+          in: query
+          description: Filter to only return events created after this timestamp
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CliEventBatch'
+        5XX:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Post events for a specific workspace
+      description: Sends an array of events to be stored for a particular workspace.
+      operationId: postWorkspaceEvents
+      # Idempotent, so allow retries
+      x-speakeasy-retries:
+        strategy: backoff
+        backoff:
+          initialInterval: 100        # 100 milliseconds
+          maxInterval: 2000          # 2 seconds
+          maxElapsedTime: 30000     # 30 seconds
+          exponent: 1.5
+        statusCodes:
+          - 408
+          - 500
+          - 502
+          - 503
+        retryConnectionErrors: true
+      tags:
+        - Events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CliEventBatch'
+      responses:
+        2XX:
+          description: Success
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/workspace/access:
+    get:
+      summary: Get access allowances for a particular workspace
+      description: Checks if generation is permitted for a particular run of the CLI
+      operationId: getWorkspaceAccess
+      x-speakeasy-retries:
+        strategy: backoff
+        backoff:
+          initialInterval: 100        # 100 milliseconds
+          maxInterval: 2000          # 2 seconds
+          maxElapsedTime: 30000     # 30 seconds
+          exponent: 1.5
+        statusCodes:
+          - 408
+          - 500
+          - 502
+          - 503
+        retryConnectionErrors: true
+      tags:
+        - Auth
+      parameters:
+        - name: genLockId
+          in: query
+          description: Unique identifier of the generation target.
+          schema:
+            type: string
+        - name: targetType
+          in: query
+          description: The type of the generated target.
+          schema:
+            type: string
+        - name: passive
+          in: query
+          description: Skip side-effects like incrementing metrics.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessDetails"
+  /v1/workspace/{workspaceID}/events/targets:
+    parameters:
+      - name: workspaceID
+        in: path
+        required: true
+        description: Unique identifier of the workspace.
+        schema:
+          type: string
+      - name: after_last_event_created_at
+        in: query
+        description: Filter to only return targets with events created after this timestamp
+        required: false
+        schema:
+          type: string
+          format: date-time
+    get:
+      description: Load targets for a particular workspace
+      operationId: getWorkspaceTargets
+      tags:
+        - Events
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetSDKList'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  responses:
+    default:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      description: Default error response
+  schemas:
+    ApiKeyDetails:
+      type: object
+      properties:
+        workspace_id:
+          type: string
+        generation_access_unlimited:
+          type: boolean
+        account_type:
+          type: string
+          enum:
+            - free
+            - scale-up
+            - enterprise
+      required:
+        - workspace_id
+        - account_type
+    AccessDetails:
+      type: object
+      properties:
+        generation_allowed:
+          type: boolean
+        message:
+          type: string
+      required:
+        - generation_allowed
+        - message
+    Api:
+      description: An Api is representation of a API (a collection of API Endpoints) within the Speakeasy Platform.
+      properties:
+        api_id:
+          description: The ID of this Api. This is a human-readable name (subject to change).
+          type: string
+        created_at:
+          description: Creation timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        description:
+          description: A detailed description of the Api.
+          type: string
+        matched:
+          description: Determines if all the endpoints within the Api are found in the OpenAPI spec associated with the Api.
+          readOnly: true
+          type: boolean
+        meta_data:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          description: A set of values associated with a meta_data key. This field is only set on get requests.
+          type: object
+        updated_at:
+          description: Last update timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        version_id:
+          description: The version ID of this Api. This is semantic version identifier.
+          type: string
+        workspace_id:
+          description: The workspace ID this Api belongs to.
+          readOnly: true
+          type: string
+      required:
+        - api_id
+        - created_at
+        - description
+        - updated_at
+        - version_id
+        - workspace_id
+      type: object
+    ApiEndpoint:
+      description: An ApiEndpoint is a description of an Endpoint for an API.
+      properties:
+        api_endpoint_id:
+          description: The ID of this ApiEndpoint. This is a hash of the method and path.
+          type: string
+        api_id:
+          description: The ID of the Api this ApiEndpoint belongs to.
+          readOnly: true
+          type: string
+        created_at:
+          description: Creation timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        description:
+          description: A detailed description of the ApiEndpoint.
+          type: string
+        display_name:
+          description: A human-readable name for the ApiEndpoint.
+          type: string
+        matched:
+          description: Determines if the endpoint was found in the OpenAPI spec associated with the parent Api.
+          readOnly: true
+          type: boolean
+        method:
+          description: HTTP verb.
+          type: string
+        path:
+          description: Path that handles this Api.
+          type: string
+        updated_at:
+          description: Last update timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        version_id:
+          description: The version ID of the Api this ApiEndpoint belongs to.
+          type: string
+        workspace_id:
+          description: The workspace ID this ApiEndpoint belongs to.
+          readOnly: true
+          type: string
+      required:
+        - api_endpoint_id
+        - api_id
+        - created_at
+        - description
+        - display_name
+        - method
+        - path
+        - updated_at
+        - version_id
+        - workspace_id
+      type: object
+    BoundedRequest:
+      description: A BoundedRequest is a request that has been logged by the Speakeasy without the contents of the request.
+      properties:
+        api_endpoint_id:
+          description: The ID of the ApiEndpoint this request was made to.
+          readOnly: true
+          type: string
+        api_id:
+          description: The ID of the Api this request was made to.
+          readOnly: true
+          type: string
+        created_at:
+          description: Creation timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        customer_id:
+          description: The ID of the customer that made this request.
+          readOnly: true
+          type: string
+        latency:
+          description: The latency of the request.
+          readOnly: true
+          type: integer
+        method:
+          description: HTTP verb.
+          readOnly: true
+          type: string
+        path:
+          description: The path of the request.
+          readOnly: true
+          type: string
+        request_finish_time:
+          description: The time the request finished.
+          format: date-time
+          readOnly: true
+          type: string
+        request_id:
+          description: The ID of this request.
+          readOnly: true
+          type: string
+        request_start_time:
+          description: The time the request was made.
+          format: date-time
+          readOnly: true
+          type: string
+        status:
+          description: The status code of the request.
+          readOnly: true
+          type: integer
+        version_id:
+          description: The version ID of the Api this request was made to.
+          readOnly: true
+          type: string
+        workspace_id:
+          description: The workspace ID this request was made to.
+          readOnly: true
+          type: string
+        metadata:
+          description: Metadata associated with this request
+          readOnly: true
+          items:
+            $ref: "#/components/schemas/RequestMetadata"
+          type: array
+      required:
+        - api_endpoint_id
+        - api_id
+        - created_at
+        - customer_id
+        - latency
+        - method
+        - path
+        - request_finish_time
+        - request_id
+        - request_start_time
+        - status
+        - version_id
+        - workspace_id
+      type: object
+    RequestMetadata:
+      description: Key-Value pairs associated with a request
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      type: object
+    EmbedAccessTokenResponse:
+      description: An EmbedAccessTokenResponse contains a token that can be used to embed a Speakeasy dashboard.
+      properties:
+        access_token:
+          type: string
+      required:
+        - access_token
+      type: object
+    AccessToken:
+      description: An AccessToken is a token that can be used to authenticate with the Speakeasy API.
+      properties:
+        access_token:
+          type: string
+        claims:
+          type: object
+        user:
+          type: object
+          properties:
+            email:
+              type: string
+            id:
+              type: string
+            display_name:
+              type: string
+            admin:
+              type: boolean
+            created_at:
+              type: string
+              format: date-time
+            email_verified:
+              type: boolean
+        workspaces:
+            type: array
+            items:
+                type: object
+                properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                updated_at:
+                    type: string
+                    format: date-time
+                account_type:
+                    type: string
+                    enum:
+                    - free
+                    - scale-up
+                    - enterprise
+
+      required:
+        - access_token
+        - claims
+        - user
+      type: object
+    EmbedToken:
+      description: A representation of an embed token granted for working with Speakeasy components.
+      properties:
+        created_at:
+          description: Creation timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        created_by:
+          description: The ID of the user that created this token.
+          readOnly: true
+          type: string
+        description:
+          description: A detailed description of the EmbedToken.
+          type: string
+        expires_at:
+          description: The time this token expires.
+          format: date-time
+          readOnly: true
+          type: string
+        filters:
+          description: The filters applied to this token.
+          readOnly: true
+          type: string
+        id:
+          description: The ID of this EmbedToken.
+          readOnly: true
+          type: string
+        last_used:
+          description: The last time this token was used.
+          format: date-time
+          readOnly: true
+          type: string
+        revoked_at:
+          description: The time this token was revoked.
+          format: date-time
+          readOnly: true
+          type: string
+        revoked_by:
+          description: The ID of the user that revoked this token.
+          readOnly: true
+          type: string
+        workspace_id:
+          description: The workspace ID this token belongs to.
+          readOnly: true
+          type: string
+      required:
+        - created_by
+        - created_at
+        - description
+        - expires_at
+        - filters
+        - id
+        - workspace_id
+      type: object
+    Error:
+      description: The `Status` type defines a logical error model
+      properties:
+        message:
+          description: A developer-facing error message.
+          type: string
+        status_code:
+          description: The HTTP status code
+          format: int32
+          type: integer
+      required:
+        - message
+        - status_code
+      type: object
+    Filter:
+      description: A filter is a key-value pair that can be used to filter a list of requests.
+      properties:
+        key:
+          description: The key of the filter.
+          type: string
+        operator:
+          description: The operator of the filter.
+          type: string
+        value:
+          description: The value of the filter.
+          type: string
+      required:
+        - key
+        - value
+        - operator
+      type: object
+    Filters:
+      description: Filters are used to query requests.
+      properties:
+        filters:
+          description: A list of filters to apply to the query.
+          items:
+            $ref: "#/components/schemas/Filter"
+          type: array
+        limit:
+          description: The maximum number of results to return.
+          type: integer
+        offset:
+          description: The offset to start the query from.
+          type: integer
+        operator:
+          description: The operator to use when combining filters.
+          type: string
+      required:
+        - filters
+        - limit
+        - offset
+        - operator
+      type: object
+    GenerateOpenApiSpecDiff:
+      properties:
+        current_schema:
+          type: string
+        new_schema:
+          type: string
+      required:
+        - current_schema
+        - new_schema
+      type: object
+    Plugin:
+      description: A plugin is a short script that is run against ingested requests
+      properties:
+        workspace_id:
+          type: string
+        plugin_id:
+          type: string
+        title:
+          type: string
+        code:
+          type: string
+        eval_hash:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - workspace_id
+        - plugin_id
+        - title
+        - code
+      type: object
+    Schema:
+      description: A Schema represents an API schema for a particular Api and Version.
+      properties:
+        api_id:
+          description: The ID of the Api this Schema belongs to.
+          readOnly: true
+          type: string
+        created_at:
+          description: Creation timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        description:
+          description: A detailed description of the Schema.
+          type: string
+        revision_id:
+          description: An ID referencing this particular revision of the Schema.
+          type: string
+        version_id:
+          description: The version ID of the Api this Schema belongs to.
+          readOnly: true
+          type: string
+        workspace_id:
+          description: The workspace ID this Schema belongs to.
+          readOnly: true
+          type: string
+      required:
+        - api_id
+        - created_at
+        - description
+        - revision_id
+        - version_id
+        - workspace_id
+      type: object
+    SchemaDiff:
+      description: A SchemaDiff represents a diff of two Schemas.
+      properties:
+        additions:
+          description: Holds every addition change in the diff.
+          items:
+            type: string
+          type: array
+        deletions:
+          description: Holds every deletion change in the diff.
+          items:
+            type: string
+          type: array
+        modifications:
+          additionalProperties:
+            properties:
+              From:
+                description: Represents the previous value of the element.
+                type: string
+              To:
+                description: Represents the current value of the element.
+                type: string
+            required:
+              - From
+              - To
+            title: ValueChange
+            type: object
+          description: Holds every modification change in the diff.
+          type: object
+      required:
+        - additions
+        - deletions
+        - modifications
+      type: object
+    UnboundedRequest:
+      description: An UnboundedRequest represents the HAR content capture by Speakeasy when logging a request.
+      properties:
+        created_at:
+          description: Creation timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        har:
+          description: The HAR content of the request.
+          readOnly: true
+          type: string
+        har_size_bytes:
+          description: The size of the HAR content in bytes.
+          readOnly: true
+          type: integer
+        request_id:
+          description: The ID of this request.
+          readOnly: true
+          type: string
+        workspace_id:
+          description: The workspace ID this request was made to.
+          readOnly: true
+          type: string
+      required:
+        - created_at
+        - har
+        - har_size_bytes
+        - request_id
+        - workspace_id
+      type: object
+    VersionMetadata:
+      description: A set of keys and associated values, attached to a particular version of an Api.
+      properties:
+        api_id:
+          description: The ID of the Api this Metadata belongs to.
+          readOnly: true
+          type: string
+        created_at:
+          description: Creation timestamp.
+          format: date-time
+          readOnly: true
+          type: string
+        meta_key:
+          description: The key for this metadata.
+          type: string
+        meta_value:
+          description: One of the values for this metadata.
+          type: string
+        version_id:
+          description: The version ID of the Api this Metadata belongs to.
+          readOnly: true
+          type: string
+        workspace_id:
+          description: The workspace ID this Metadata belongs to.
+          readOnly: true
+          type: string
+      required:
+        - api_id
+        - created_at
+        - meta_key
+        - meta_value
+        - version_id
+        - workspace_id
+      type: object
+    CliEventBatch:
+      type: array
+      items:
+        $ref: '#/components/schemas/CliEvent'
+      minItems: 1
+    CliEvent:
+      type: object
+      required:
+        - id
+        - execution_id
+        - workspace_id
+        - speakeasy_api_key_name
+        - interaction_type
+        - local_started_at
+        - created_at
+        - speakeasy_version
+        - success
+      properties:
+        id:
+          type: string
+          description: Unique identifier for each event.
+        execution_id:
+          type: string
+          description: Unique identifier for each execution of the CLI.
+        workspace_id:
+          type: string
+          description: Identifier of the workspace.
+        speakeasy_api_key_name:
+          type: string
+          description: Identifier of the Speakeasy API key.
+        interaction_type:
+          type: string
+          description: Type of interaction.
+          enum:
+            - CLI_EXEC
+            - TARGET_GENERATE
+            - AUTHENTICATE
+            - QUICKSTART
+            - RUN
+            - CONFIGURE
+            - PUBLISH
+        local_started_at:
+          type: string
+          format: date-time
+          description: Timestamp when the event started, in local time.
+        local_completed_at:
+          type: string
+          format: date-time
+          description: Timestamp when the event completed, in local time.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the event was created in the database.
+        speakeasy_version:
+          type: string
+          description: Version of the Speakeasy CLI.
+        success:
+          type: boolean
+          description: Indicates whether the event was successful.
+        raw_command:
+          type: string
+          description: Full CLI command.
+        duration_ms:
+          type: integer
+          description: Duration of the event in milliseconds.
+        gh_action_run_link:
+          type: string
+          description: Link to the GitHub action run.
+        gh_action_version:
+          type: string
+          description: Version of the GitHub action.
+        gh_action_organization:
+          type: string
+          description: GitHub organization of the action.
+        gh_action_repository:
+          type: string
+          description: GitHub repository of the action.
+        repo_label:
+          type: string
+          description: Label of the git repository.
+        commit_head:
+          type: string
+          description: Remote commit ID.
+        hostname:
+          type: string
+          description: Remote hostname.
+        git_user_name:
+          type: string
+          description: User's name from git configuration. (not GitHub username)
+        git_user_email:
+          type: string
+          description: User email from git configuration.
+        git_remote_default_owner:
+          type: string
+          description: Default owner for git remote.
+        git_remote_default_repo:
+          type: string
+          description: Default repository name for git remote.
+        git_relative_cwd:
+          type: string
+          description: Current working directory relative to the git root.
+        generate_target:
+          type: string
+          description: The target of the event.
+        generate_target_version:
+          type: string
+          description: The version of the target.
+        generate_gen_lock_id:
+          type: string
+          description: gen.lock ID (expected to be a uuid).
+        management_doc_checksum:
+          type: string
+          description: Checksum of the currently Rendered OpenAPI document.
+        management_doc_version:
+          type: string
+          description: Version taken from info.version field of the Rendered OpenAPI document.
+        generate_version:
+          type: string
+          description: Version of the generation logic used.
+        generate_output_tests:
+          type: boolean
+          description: Indicates whether tests were output.
+        generate_config_pre_raw:
+          type: string
+          description: Rendered configuration file (prior to generation)
+        generate_config_post_raw:
+          type: string
+          description: Rendered configuration file (post generation)
+        generate_config_pre_version:
+          type: string
+          description: The version of the customer's SDK before we generated
+        generate_config_post_version:
+            type: string
+            description: The version of the customer's SDK that we just generated
+        generate_config_pre_checksum:
+          type: string
+          description: Checksum of the configuration file (prior to generation)
+        generate_config_post_checksum:
+          type: string
+          description: Checksum of the configuration file (post generation)
+        generate_gen_lock_pre_features:
+          type: string
+          description: Features prior to generation
+        generate_gen_lock_post_features:
+          type: string
+          description: Features post generation
+        generate_gen_lock_pre_doc_version:
+          type: string
+          description: info.Version of the Previous Rendered OpenAPI document (prior to generation, via gen lock)
+        generate_gen_lock_pre_doc_checksum:
+          type: string
+          description: Checksum of the Previous Rendered OpenAPI document (prior to generation, via gen lock)
+        generate_gen_lock_pre_version:
+          type: string
+          description: Artifact version for the Previous Generation
+        generate_bump_type:
+          type: string
+          description: Bump type of the lock file (calculated semver delta, or a custom change (manual release))
+          enum:
+            - major
+            - minor
+            - patch
+            - custom
+            - none
+        generate_published:
+          type: boolean
+          description: Indicates whether the target was considered published.
+        generate_repo_url:
+          type: string
+          description: Expected Repo URL, for use in documentation generation.
+        publish_package_url:
+          type: string
+          description: URL of the published package.
+        publish_package_name:
+          type: string
+          description: Name of the published package.
+        publish_package_version:
+          type: string
+          description: Version of the published package.
+        publish_package_registry_name:
+          type: string
+          description: Name of the registry where the package was published.
+    TargetSDKList:
+      type: array
+      items:
+        $ref: '#/components/schemas/TargetSDK'
+      minItems: 1
+    TargetSDK:
+      type: object
+      required:
+        - id
+        - generate_target
+        - generate_gen_lock_id
+        - last_event_id
+        - last_event_created_at
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the target the same as `generate_gen_lock_id`
+        last_event_id:
+          type: string
+          description: Unique identifier of the last event for the target
+        last_event_created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the event was created in the database.
+        success:
+          type: boolean
+          description: Indicates whether the event was successful.
+        commit_head:
+          type: string
+          description: Remote commit ID.
+        git_remote_default_owner:
+          type: string
+          description: Default owner for git remote.
+        git_remote_default_repo:
+          type: string
+          description: Default repository name for git remote.
+        git_relative_cwd:
+          type: string
+          description: Current working directory relative to the git root.
+        generate_target:
+          type: string
+          description: eg `typescript`, `terraform`, `python`
+        generate_target_name:
+          type: string
+          description: The name of the target as defined by the user.
+        generate_gen_lock_id:
+          type: string
+          description: gen.lock ID (expected to be a uuid). The same as `id`. A unique identifier for the target.
+        generate_target_version:
+          type: string
+          description: The version of the Speakeasy generator for this target eg v2 of the typescript generator.
+        generate_config_post_version:
+          type: string
+          description: Version of the generated target (post generation)
+        generate_published:
+          type: boolean
+          description: Indicates whether the target was considered published.
+        gh_action_run_link:
+          type: string
+          description: Link to the GitHub action run.
+        gh_action_version:
+          type: string
+          description: Version of the GitHub action.
+        gh_action_organization:
+          type: string
+          description: GitHub organization of the action.
+        gh_action_repository:
+          type: string
+          description: GitHub repository of the action.
+        repo_label:
+          type: string
+          description: Label of the git repository.
+        hostname:
+          type: string
+          description: Remote hostname.
+        git_user_name:
+          type: string
+          description: User's name from git configuration. (not GitHub username)
+        git_user_email:
+          type: string
+          description: User email from git configuration.
+  securitySchemes:
+    APIKey:
+      description: The API Key for the workspace
+      in: header
+      name: x-api-key
+      type: apiKey
+    Bearer:
+      description: The Bearer token for the workspace
+      type: http
+      scheme: bearer

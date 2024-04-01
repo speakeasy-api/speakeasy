@@ -1,0 +1,8 @@
+overlay: 1.0.0
+info:
+  title: Overlay openapi.yaml => openapi2.yaml
+  version: 0.0.0
+extends: file:///Users/robertcrumbaugh/code/openapi.yaml
+actions:
+  - target: $["info"]["version"]
+    update: 1.0.1

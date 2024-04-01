@@ -1,6 +1,7 @@
 package bundler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	charmLog "github.com/charmbracelet/log"
@@ -42,6 +43,11 @@ func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowSte
 	if len(source.Inputs) == 0 {
 		return fmt.Errorf("source %s has no inputs", sourceId)
 	}
+
+	if rootStep == nil {
+		rootStep = workflowTracking.NewWorkflowStep("ignored", nil)
+	}
+
 	// We will only use the ruleset to validate the final document
 	rulesetToUse := ""
 	if source.Ruleset != nil {
@@ -57,17 +63,18 @@ func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowSte
 			return err
 		}
 		dir, base := filepath.Split(absPath)
-		return validate(ctx, os.DirFS(dir), base, rulesetToUse)
+		return validate(ctx, nil, os.DirFS(dir), base, rulesetToUse)
 	}
 
 	/*
 	 * Prepare in memory filesystem and bundler pipeline
 	 */
 
+	logger := log.From(ctx)
 	memFS := bundler.NewMemFS()
 	rwfs := bundler.NewReadWriteFS(memFS, memFS)
 	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{
-		Logger: slog.New(charmLog.New(log.From(ctx).GetWriter())),
+		Logger: slog.New(charmLog.New(logger.GetWriter())),
 	})
 
 	/*
@@ -105,8 +112,9 @@ func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowSte
 		rootStep.NewSubstep("Validating OpenAPI document(s)")
 
 		for _, doc := range resolvedDocLocations {
-			if err := validate(ctx, rwfs, doc, ""); err != nil {
-				return fmt.Errorf("error validating input OpenAPI documents: %w", err)
+			if err := validate(ctx, pipeline, rwfs, doc, ""); err != nil {
+				// Ignore error, only the validation at the end NEEDS to pass
+				logger.Error(err.Error())
 			}
 		}
 	}
@@ -133,8 +141,9 @@ func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowSte
 		// If we don't have overlays, this will be the final document and will be validated at the end
 		if len(source.Overlays) > 0 {
 			rootStep.NewSubstep("Validating Merged Document")
-			if err := validate(ctx, rwfs, finalDocLocation, ""); err != nil {
-				return fmt.Errorf("error validating merged OpenAPI document: %w", err)
+			if err = validate(ctx, pipeline, rwfs, finalDocLocation, ""); err != nil {
+				// Ignore error, only the validation at the end NEEDS to pass
+				logger.Error(err.Error())
 			}
 		}
 	}
@@ -182,7 +191,7 @@ func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowSte
 	}
 	rootStep.NewSubstep(stepName)
 
-	if err = validate(ctx, rwfs, finalDocLocation, rulesetToUse); err != nil {
+	if err = validate(ctx, pipeline, rwfs, finalDocLocation, rulesetToUse); err != nil {
 		return fmt.Errorf("error validating final OpenAPI document: %w", err)
 	}
 
@@ -201,9 +210,17 @@ func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowSte
 	return err
 }
 
-func validate(ctx context.Context, fs fs.FS, schemaPath, ruleset string) error {
+func validate(ctx context.Context, pipeline *bundler.Pipeline, fs fs.FS, schemaPath, ruleset string) error {
 	logger := log.From(ctx)
-	logger.Info(fmt.Sprintf("Validating OpenAPI spec %s...\n", schemaPath))
+
+	originalPath := ""
+	if pipeline != nil {
+		if p := pipeline.GetSourcePath(schemaPath); p != "" {
+			originalPath = fmt.Sprintf(" (source: %s)", p)
+		}
+	}
+	schemaDisplay := fmt.Sprintf("OpenAPI document %s%s", schemaPath, originalPath)
+	logger.Info(fmt.Sprintf("Validating %s...\n", schemaDisplay))
 
 	schema, err := fs.Open(schemaPath)
 	if err != nil {
@@ -214,16 +231,14 @@ func validate(ctx context.Context, fs fs.FS, schemaPath, ruleset string) error {
 		return fmt.Errorf("failed to read schema: %w", err)
 	}
 
-	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
-
-	limits := &validation.OutputLimits{
-		MaxWarns: 20,
-	}
-
-	vErrs, vWarns, _, err := validation.Validate(ctx, schemaData, schemaPath, limits, false, ruleset, "")
+	var out bytes.Buffer
+	newCtx := log.With(ctx, logger.WithWriter(&out)) // Don't write every log to the console
+	vErrs, vWarns, vInfos, err := validation.Validate(newCtx, schemaData, schemaPath, nil, false, ruleset, "")
 	if err != nil {
 		return err
 	}
+
+	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
 	for _, warn := range vWarns {
 		prefixedLogger.Warn("", zap.Error(warn))
@@ -233,11 +248,14 @@ func validate(ctx context.Context, fs fs.FS, schemaPath, ruleset string) error {
 	}
 
 	if len(vErrs) > 0 {
-		status := "\nOpenAPI spec invalid ✖"
-		return fmt.Errorf(status)
+		return fmt.Errorf(fmt.Sprintf("Invalid with %d error(s): %s", len(vErrs), schemaDisplay))
 	}
 
-	logger.Success(fmt.Sprintf("Successfully validated %s", schemaPath))
+	suffix := ""
+	if len(vInfos) > 0 || len(vWarns) > 0 {
+		suffix = " Run `speakeasy validate openapi...` to examine them."
+	}
+	logger.Success(fmt.Sprintf("%s is valid with %d hint(s) and %d warning(s).%s", schemaDisplay, len(vInfos), len(vWarns), suffix))
 
 	return nil
 }

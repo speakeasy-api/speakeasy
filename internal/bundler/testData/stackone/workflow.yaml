@@ -1,0 +1,10 @@
+workflowVersion: 1.0.0
+sources:
+  my-source:
+    inputs:
+      - location: https://api2.eu1.stackone.com/oas/stackone.json
+      - location: https://api2.eu1.stackone.com/oas/hris.json
+      - location: https://api2.eu1.stackone.com/oas/ats.json
+      - location: https://api2.eu1.stackone.com/oas/crm.json
+      - location: https://api2.eu1.stackone.com/oas/iam.json
+      - location: https://api2.eu1.stackone.com/oas/marketing.json
