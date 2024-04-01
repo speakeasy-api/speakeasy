@@ -202,14 +202,9 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if quickstartObj.IsUsingSampleOpenAPISpec {
-		// Try writing the sample spec to the parent of the outDir, fallback to outDir
-		outDirParent := filepath.Dir(outDir)
-		absSchemaPath := filepath.Join(outDirParent, "openapi.yaml")
+		absSchemaPath := filepath.Join(outDir, "openapi.yaml")
 		if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
-			absSchemaPath = filepath.Join(outDir, "openapi.yaml")
-			if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
-				return errors.Wrapf(err, "failed to write sample OpenAPI spec")
-			}
+			return errors.Wrapf(err, "failed to write sample OpenAPI spec")
 		}
 
 		fmt.Println(
