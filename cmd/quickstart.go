@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/huh"
@@ -210,7 +211,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 				return errors.Wrapf(err, "failed to write sample OpenAPI spec")
 			}
 		}
-		fmt.Printf("The OpenAPI sample document will be used.\nIt can be found here, you can edit it at anytime:\n\n  %s\n\n", absSchemaPath)
+
+		fmt.Println(
+			styles.RenderInfoMessage(
+				"The OpenAPI sample document will be used",
+				"It can be found here, you can edit it at anytime:",
+				absSchemaPath,
+			),
+		)
 
 		referencePath, err := filepath.Rel(outDir, absSchemaPath)
 		if err != nil {
