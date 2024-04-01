@@ -103,11 +103,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
 
 	var logs bytes.Buffer
+	warnings := make([]string, 0)
+
 	var err, runErr error
 	logger := log.From(ctx)
 
 	runFnCli := func() error {
-		l := logger.WithWriter(&logs) // Swallow logs other than the workflow display
+		l := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
 		runCtx := log.With(ctx, l)
 		err = w.Run(runCtx)
 
@@ -125,14 +127,20 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	err = w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
 	endDuration := time.Since(startTime)
 
-	// Display error logs if the workflow failed
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
+
+	criticalWarns := getCriticalWarnings(warnings)
+
+	// Display error logs if the workflow failed
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
 
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
+	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
+		s := strings.Join(criticalWarns, "\n")
+		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
 	}
 
 	// Display success message if the workflow succeeded
@@ -149,6 +157,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			tOut = "the paths specified in workflow.yaml"
 		}
 
+		titleMsg := " SDK Generated Successfully"
 		additionalLines := []string{
 			"✎ Output written to " + tOut,
 			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
@@ -162,8 +171,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 		}
 
+		if len(criticalWarns) > 0 {
+			additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
+			titleMsg = " SDK Generated with Warnings"
+		}
+
 		msg := styles.RenderSuccessMessage(
-			t.Target+" SDK Generated Successfully",
+			t.Target+titleMsg,
 			additionalLines...,
 		)
 		logger.Println(msg)
@@ -249,7 +263,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 			return err
 		}
 	} else {
-		if err := w.validateDocument(ctx, rootStep, sourcePath); err != nil {
+		if err := w.validateDocument(ctx, rootStep, sourcePath, "", w.projectDir); err != nil {
 			return err
 		}
 	}
@@ -340,6 +354,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
+	rulesetToUse := ""
+	if source.Ruleset != nil {
+		rulesetToUse = *source.Ruleset
+	}
+
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
 
@@ -394,7 +413,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
 
-		if err := mergeDocuments(ctx, inSchemas, mergeLocation); err != nil {
+		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.projectDir); err != nil {
 			return "", err
 		}
 
@@ -431,7 +450,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		}
 	}
 
-	if err := w.validateDocument(ctx, rootStep, outputLocation); err != nil {
+	if err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir); err != nil {
 		return "", err
 	}
 
@@ -447,7 +466,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	return outputLocation, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath string) error {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset, projectDir string) error {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -456,12 +475,11 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	}
 
 	limits := &validation.OutputLimits{
-		MaxErrors:   1000,
-		MaxWarns:    1000,
-		OutputHints: false,
+		MaxErrors: 1000,
+		MaxWarns:  1000,
 	}
 
-	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits)
+	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, projectDir)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
@@ -494,12 +512,12 @@ func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	return outPath, nil
 }
 
-func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) error {
+func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string) error {
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile); err != nil {
+	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir); err != nil {
 		return err
 	}
 
@@ -510,8 +528,13 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile string) err
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
 	currentBase := schema
+	if err := os.MkdirAll(workflow.GetTempDir(), os.ModePerm); err != nil {
+		return err
+	}
+
 	for _, overlayFile := range overlayFiles {
 		applyPath := getTempApplyPath(overlayFile)
+
 		tempOutFile, err := os.Create(applyPath)
 		if err != nil {
 			return err

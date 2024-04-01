@@ -16,29 +16,30 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
-var validateCmd = &model.CommandGroup{
-	Usage:          "validate",
-	Short:          "Validate OpenAPI documents and Speakeasy configuration files",
-	Long:           `The "validate" command provides a set of commands for validating OpenAPI docs and more.`,
-	InteractiveMsg: "What do you want to validate?",
-	Commands:       []model.Command{validateOpenapiCmd, validateConfigCmd},
+var lintCmd = &model.CommandGroup{
+	Usage:          "lint",
+	Aliases:        []string{"validate"},
+	Short:          "Lint/Validate OpenAPI documents and Speakeasy configuration files",
+	Long:           `The "lint" command provides a set of commands for linting OpenAPI docs and more.`,
+	InteractiveMsg: "What do you want to lint?",
+	Commands:       []model.Command{lintOpenapiCmd, lintConfigCmd},
 }
 
-type ValidateOpenapiFlags struct {
+type LintOpenapiFlags struct {
 	SchemaPath            string `json:"schema"`
 	Header                string `json:"header"`
 	Token                 string `json:"token"`
-	OutputHints           bool   `json:"output-hints"`
 	MaxValidationErrors   int    `json:"max-validation-errors"`
 	MaxValidationWarnings int    `json:"max-validation-warnings"`
+	Ruleset               string `json:"ruleset"`
 }
 
-var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
+var lintOpenapiCmd = model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "openapi",
-	Short:          "Validate an OpenAPI document",
+	Short:          "Lint an OpenAPI document",
 	Long:           `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
-	Run:            validateOpenapi,
-	RunInteractive: validateOpenapiInteractive,
+	Run:            lintOpenapi,
+	RunInteractive: lintOpenapiInteractive,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:                       "schema",
@@ -46,12 +47,6 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 			Description:                "local filepath or URL for the OpenAPI schema",
 			Required:                   true,
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
-		},
-		flag.BooleanFlag{
-			Name:         "output-hints",
-			Shorthand:    "o",
-			Description:  "output validation hints in addition to warnings/errors",
-			DefaultValue: false,
 		},
 		flag.StringFlag{
 			Name:        "header",
@@ -72,18 +67,24 @@ var validateOpenapiCmd = model.ExecutableCommand[ValidateOpenapiFlags]{
 			Description:  "limit the number of warnings to output (default 1000, 0 = no limit)",
 			DefaultValue: 1000,
 		},
+		flag.StringFlag{
+			Name:         "ruleset",
+			Shorthand:    "r",
+			Description:  "ruleset to use for linting",
+			DefaultValue: "speakeasy-recommended",
+		},
 	},
 }
 
-type validateConfigFlags struct {
+type lintConfigFlags struct {
 	Dir string `json:"dir"`
 }
 
-var validateConfigCmd = &model.ExecutableCommand[validateConfigFlags]{
+var lintConfigCmd = &model.ExecutableCommand[lintConfigFlags]{
 	Usage: "config",
-	Short: "Validate a Speakeasy configuration file",
+	Short: "Lint a Speakeasy configuration file",
 	Long:  `Validates a Speakeasy configuration file for SDK generation.`,
-	Run:   validateConfig,
+	Run:   lintConfig,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:         "dir",
@@ -94,16 +95,15 @@ var validateConfigCmd = &model.ExecutableCommand[validateConfigFlags]{
 	},
 }
 
-func validateOpenapi(ctx context.Context, flags ValidateOpenapiFlags) error {
+func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 	// no authentication required for validating specs
 
 	limits := validation.OutputLimits{
-		OutputHints: flags.OutputHints,
-		MaxWarns:    flags.MaxValidationWarnings,
-		MaxErrors:   flags.MaxValidationErrors,
+		MaxWarns:  flags.MaxValidationWarnings,
+		MaxErrors: flags.MaxValidationErrors,
 	}
 
-	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
+	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, "", ""); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
@@ -116,21 +116,20 @@ func validateOpenapi(ctx context.Context, flags ValidateOpenapiFlags) error {
 	return nil
 }
 
-func validateOpenapiInteractive(ctx context.Context, flags ValidateOpenapiFlags) error {
+func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 	limits := validation.OutputLimits{
-		OutputHints: flags.OutputHints,
-		MaxWarns:    flags.MaxValidationWarnings,
-		MaxErrors:   flags.MaxValidationErrors,
+		MaxWarns:  flags.MaxValidationWarnings,
+		MaxErrors: flags.MaxValidationErrors,
 	}
 
-	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits); err != nil {
+	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, "", ""); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func validateConfig(ctx context.Context, flags validateConfigFlags) error {
+func lintConfig(ctx context.Context, flags lintConfigFlags) error {
 	// To support the old version of this command, check if there is no workflow.yaml. If there isn't, run the old version
 	wf, _, err := utils.GetWorkflowAndDir()
 	if wf == nil {

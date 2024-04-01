@@ -3,14 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"runtime"
+
 	openapiChanges "github.com/speakeasy-api/openapi-changes/cmd"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/spf13/cobra"
-	"os/exec"
-	"runtime"
 )
 
 var openapiCmd = &model.CommandGroup{
@@ -21,13 +22,13 @@ var openapiCmd = &model.CommandGroup{
 	Commands:       []model.Command{openapiValidateCmd, openapiDiffCmd},
 }
 
-var openapiValidateCmd = &model.ExecutableCommand[ValidateOpenapiFlags]{
+var openapiValidateCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "validate",
-	Short:          validateOpenapiCmd.Short,
-	Long:           validateOpenapiCmd.Long,
-	Run:            validateOpenapiCmd.Run,
-	RunInteractive: validateOpenapiCmd.RunInteractive,
-	Flags:          validateOpenapiCmd.Flags,
+	Short:          lintOpenapiCmd.Short,
+	Long:           lintOpenapiCmd.Long,
+	Run:            lintOpenapiCmd.Run,
+	RunInteractive: lintOpenapiCmd.RunInteractive,
+	Flags:          lintOpenapiCmd.Flags,
 }
 
 type OpenAPIDiffFlags struct {

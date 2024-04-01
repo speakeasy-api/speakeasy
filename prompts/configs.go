@@ -16,6 +16,11 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
+var additionalRelevantConfigs = []string{
+	"maxMethodParams",
+	"author",
+}
+
 // During quickstart we ask for a limited subset of configs per language
 var quickstartScopedKeys = map[string][]string{
 	"go": {
@@ -71,38 +76,22 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	if !isQuickstart && output.Generation.SDKClassName != "" {
 		sdkClassName = output.Generation.SDKClassName
 	}
-	_, err := charm.NewForm(
-		huh.NewForm(
-			huh.NewGroup(
-				huh.NewInput().
-					Title("Name your SDK:").
-					Description("your users will access SDK methods with myCompanySDK.doThing()").
-					// TODO: Are there languages where the default should not be PascalCase? What about terraform?
-					// TODO: If they are using the sample petstore spec during quickstart we should default to `MyPetStoreSDK`
-					Placeholder("MyCompanySDK").
-					Prompt(" ").
-					// TODO: Can we do better in terms of validation? ie valid identifier
-					Validate(func(s string) error {
-						if s == "" {
-							return errors.New("SDK name must not be empty")
-						}
-						return nil
-					}).
-					Value(&sdkClassName),
-			),
-		)).
-		ExecuteForm()
-	if err != nil {
-		return nil, err
+
+	firstGroup := []huh.Field{
+		huh.NewInput().
+			Title("Name your SDK:").
+			Placeholder("your users will access SDK methods with <sdk_name>.doThing()").
+			Inline(true).
+			Prompt(" ").
+			Value(&sdkClassName),
 	}
 
-	configFields := []huh.Field{}
 	var baseServerURL string
 	if !isQuickstart && output.Generation.BaseServerURL != "" {
 		baseServerURL = output.Generation.BaseServerURL
 	}
 	if !isQuickstart {
-		configFields = append(configFields, huh.NewInput().
+		firstGroup = append(firstGroup, huh.NewInput().
 			Title("Provide a base server URL for your SDK to use:").
 			Placeholder("You must do this if a server URL is not defined in your OpenAPI spec").
 			Inline(true).
@@ -122,12 +111,16 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			}
 		}
 
-		configFields = append(configFields,
+		firstGroup = append(firstGroup,
 			huh.NewMultiSelect[string]().
 				Title("Select your SDK Docs Languages:").
 				Description("These languages will appear as options in your generated SDK Docs site.").
 				Options(huh.NewOptions(generate.SupportedSDKDocsLanguages...)...).
 				Value(&docsLanguages))
+	}
+
+	configGroups := []*huh.Group{
+		huh.NewGroup(firstGroup...),
 	}
 
 	t, err := generate.GetTargetFromTargetString(target.Target)
@@ -145,19 +138,12 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 		return nil, err
 	}
 
-	configFields = append(configFields, languageForms...)
-	form := huh.NewForm(
-		huh.NewGroup(
-			configFields...,
-		))
-	descriptionMessage := "We will go through a few basic configurations here, but you can always modify further in the future."
-	if !isQuickstart {
-		descriptionMessage = "Default config values have been provided. You only need to edit values that you want to modify."
-	}
+	configGroups = append(configGroups, languageForms...)
+	form := huh.NewForm(configGroups...)
 	if _, err := charm.NewForm(form,
 		fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName),
 		"This will configure a config file that defines parameters for how your SDK is generated. \n"+
-			descriptionMessage).
+			"Default config values have been provided. You only need to edit values that you want to modify.").
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -187,7 +173,7 @@ func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	return &nextState, nil
 }
 
-func languageSpecificForms(language string, existingConfig *config.Configuration, configFields []config.SDKGenConfigField, isQuickstart bool, sdkClassName string) ([]huh.Field, []string, error) {
+func languageSpecificForms(language string, existingConfig *config.Configuration, configFields []config.SDKGenConfigField, isQuickstart bool, sdkClassName string) ([]*huh.Group, []string, error) {
 	langConfig := config.LanguageConfig{}
 	if existingConfig != nil {
 		if conf, ok := existingConfig.Languages[language]; ok {
@@ -205,7 +191,7 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
 	}
 
-	fields := []huh.Field{}
+	groups := []huh.Group{}
 	var appliedKeys []string
 	for _, field := range configFields {
 		if slices.Contains(ignoredKeys, field.Name) {
@@ -213,21 +199,20 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 		}
 
 		if valid, defaultValue, validateRegex, validateMessage := getValuesForField(field, langConfig); valid {
-			if !isQuickstart {
+			if lang, ok := quickstartScopedKeys[language]; (ok && slices.Contains(lang, field.Name)) || (!isQuickstart && slices.Contains(additionalRelevantConfigs, field.Name)) {
 				appliedKeys = append(appliedKeys, field.Name)
-				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
-			} else if lang, ok := quickstartScopedKeys[language]; ok && slices.Contains(lang, field.Name) {
-				appliedKeys = append(appliedKeys, field.Name)
-				fields = append(fields, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart)...)
+				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, field.Description, isQuickstart))
 			}
 		}
 	}
 
-	return fields, appliedKeys, nil
+	return groups, appliedKeys, nil
 }
 
 func getValuesForField(field config.SDKGenConfigField, langConfig config.LanguageConfig) (bool, string, string, string) {
 	defaultValue := ""
+	if field.Name == "maxMethodParams" {
+	}
 	if field.DefaultValue != nil {
 		// We only support string and boolean fields at this particular moment, more to come.
 		switch val := (*field.DefaultValue).(type) {
@@ -235,6 +220,8 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 			defaultValue = val
 		case int:
 			defaultValue = strconv.Itoa(val)
+		case int64:
+			defaultValue = strconv.FormatInt(val, 10)
 		case bool:
 			defaultValue = strconv.FormatBool(val)
 		default:
@@ -249,6 +236,8 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 			defaultValue = val
 		case int:
 			defaultValue = strconv.Itoa(val)
+		case int64:
+			defaultValue = strconv.FormatInt(val, 10)
 		case bool:
 			defaultValue = strconv.FormatBool(val)
 		}
@@ -268,7 +257,7 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 	return true, defaultValue, validationRegex, validationMessage
 }
 
-func addPromptForField(key, defaultValue, validateRegex, validateMessage string, description *string, isQuickstart bool) []huh.Field {
+func addPromptForField(key, defaultValue, validateRegex, validateMessage string, description *string, isQuickstart bool) *huh.Group {
 	input := charm.NewInput().
 		Key(key).
 		Title(fmt.Sprintf("Provide a value for your %s config", key)).
@@ -295,9 +284,7 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 		input = input.Placeholder(defaultValue).Suggestions([]string{defaultValue})
 	}
 
-	return []huh.Field{
-		input,
-	}
+	return huh.NewGroup(input)
 }
 
 func saveLanguageConfigValues(language string, form *huh.Form, configuration *config.Configuration, appliedKeys []string, configFields []config.SDKGenConfigField) {
@@ -316,6 +303,10 @@ func saveLanguageConfigValues(language string, form *huh.Form, configuration *co
 				case int:
 					if transform, err := strconv.Atoi(form.GetString(key)); err == nil {
 						configuration.Languages[language].Cfg[key] = transform
+					}
+				case int64:
+					if transform, err := strconv.Atoi(form.GetString(key)); err == nil {
+						configuration.Languages[language].Cfg[key] = int64(transform)
 					}
 				case bool:
 					if transform, err := strconv.ParseBool(form.GetString(key)); err == nil {

@@ -41,6 +41,7 @@ type Logger struct {
 	style           *lipgloss.Style
 	formatter       func(l Logger, level Level, msg string, err error) string
 	writer          io.Writer
+	warnCapture     *[]string
 	listener        chan Msg
 }
 
@@ -130,6 +131,12 @@ func (l Logger) WithWriter(w io.Writer) Logger {
 	return l2
 }
 
+func (l Logger) WithWarnCapture(dst *[]string) Logger {
+	l2 := l.Copy()
+	l2.warnCapture = dst
+	return l2
+}
+
 func (l Logger) WithListener(listener chan Msg) Logger {
 	l2 := l.Copy()
 	l2.listener = listener
@@ -145,6 +152,7 @@ func (l Logger) Copy() Logger {
 		style:           l.style,
 		formatter:       l.formatter,
 		writer:          l.writer,
+		warnCapture:     l.warnCapture,
 		listener:        l.listener,
 	}
 }
@@ -193,7 +201,12 @@ func (l Logger) Warn(msg string, fields ...zapcore.Field) {
 	msg, err, fields := getMessage(msg, fields)
 
 	msg = l.format(LevelWarn, msg, err) + fieldsToJSON(fields)
+
 	l.Println(msg)
+
+	if l.warnCapture != nil {
+		*l.warnCapture = append(*l.warnCapture, msg)
+	}
 }
 
 func (l Logger) Warnf(format string, a ...any) {
@@ -235,17 +248,28 @@ func (l Logger) PrintfStyled(style lipgloss.Style, format string, a ...any) {
 }
 
 func (l Logger) Println(s string) {
-	l.Print(s + "\n")
+	l.Fprintln(l.writer, s)
+}
+
+func (l Logger) Fprintln(w io.Writer, s string) {
+	l.Fprint(w, s+"\n")
 }
 
 func (l Logger) Print(s string) {
+	l.Fprint(l.writer, s)
+}
+
+func (l Logger) Fprint(w io.Writer, s string) {
+	if w == nil {
+		return
+	}
 	if l.interactiveOnly && (!utils.IsInteractive() || env.IsGithubAction()) {
 		return
 	}
 	if l.style != nil {
 		s = l.style.Render(s)
 	}
-	fmt.Fprint(l.writer, s)
+	fmt.Fprint(w, s)
 }
 
 func (l Logger) PrintlnUnstyled(a any) {

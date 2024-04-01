@@ -56,7 +56,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
 	addCommand(rootCmd, generate.GenerateCmd)
-	addCommand(rootCmd, validateCmd)
+	addCommand(rootCmd, lintCmd)
 	addCommand(rootCmd, openapiCmd)
 	addCommand(rootCmd, migrateCmd)
 
@@ -134,7 +134,7 @@ func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
 		updateString := "Run `speakeasy update` to update to the latest version"
 
 		l := log.From(cmd.Context())
-		style := styles.Emphasized.Copy().Background(styles.Colors.DimYellow).Foreground(styles.Colors.Brown).Padding(1, 2)
+		style := styles.Emphasized.Copy().Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary).Padding(1, 2)
 		l.PrintfStyled(style, "%s\n%s", versionString, updateString)
 		l.Println("\n")
 

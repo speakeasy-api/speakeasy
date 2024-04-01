@@ -4,6 +4,14 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
@@ -16,13 +24,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	openai "github.com/speakeasy-sdks/openai-go-sdk/v4"
 	"github.com/speakeasy-sdks/openai-go-sdk/v4/pkg/models/shared"
-	"math/rand"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 func system(content string) shared.ChatCompletionRequestMessage {
@@ -62,7 +63,10 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{})
+	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{}, "", "")
+	if len(os.Getenv("OPENAI_API_KEY")) == 0 {
+		return errors.NewValidationError("OPENAI_API_KEY is not set", -1, nil)
+	}
 	if err != nil {
 		return err
 	}
@@ -90,7 +94,6 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 		go func(shard Shard, i int) {
 			<-semaphore // Release the token
 			defer wg.Done()
-			return
 			fmt.Printf("Processing shard %s (%v / %v)\n", shard.Key, i, len(splitSchema))
 			jitter := time.Duration(rand.Float32() * float32(time.Second) * 15)
 			time.Sleep(jitter)
@@ -148,7 +151,7 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(outputFile, []byte(combined), 0644)
+	return os.WriteFile(outputFile, []byte(combined), 0o644)
 }
 
 func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder string) error {
@@ -184,7 +187,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 		fmt.Printf("  %s chat-gpt invoke done\n", shard.Key)
 		if err != nil {
 			if subsequentErrors > 5 {
-				break
+				return fmt.Errorf("failed to get completion: %w", err)
 			}
 			subsequentErrors++
 			// jitter
@@ -217,7 +220,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 	contentWithoutDone := strings.Replace(content.String(), finishAt, "", -1)
 	contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
 	// load the new result with libopenapi
-	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0644)
+	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0o644)
 	return handleUpdate(ctx, cacheFolder, shard)
 }
 
@@ -251,7 +254,7 @@ func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
 	}
 
 	fmt.Printf("\n" + content + "\n")
-	os.WriteFile(overlayFilePath, []byte(content), 0644)
+	os.WriteFile(overlayFilePath, []byte(content), 0o644)
 	return nil
 }
 
@@ -324,7 +327,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 			return nil, errors.NewValidationError("failed to render document", -1, err)
 		}
 		// cache it
-		err = os.WriteFile(cacheFile, shard, 0644)
+		err = os.WriteFile(cacheFile, shard, 0o644)
 		shards = append(shards, Shard{Content: string(shard), Encoded: base64(pair.Key()), Key: pair.Key()})
 	}
 	return shards, nil
@@ -407,7 +410,7 @@ func removeOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		for key, ref := range resultMap {
 
 			u := strings.Split(key, "#/")
-			var keyAlt = key
+			keyAlt := key
 			if len(u) == 2 {
 				if u[0] == "" {
 					keyAlt = fmt.Sprintf("%s#/%s", context.Index.GetSpecAbsolutePath(), u[1])
@@ -439,54 +442,80 @@ func removeOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 	// let's start killing orphans
 	anyRemoved := false
 	schemas := components.Schemas
+	toDelete := make([]string, 0)
 	for pair := orderedmap.First(schemas); pair != nil; pair = pair.Next() {
 		// remove all schemas that are not referenced
 		if !isReferenced(pair.Key(), "schemas", notUsed) {
-			schemas.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			fmt.Printf("dropped #/components/schemas/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		schemas.Delete(key)
+	}
+
 	responses := components.Responses
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(responses); pair != nil; pair = pair.Next() {
 		// remove all responses that are not referenced
 		if !isReferenced(pair.Key(), "responses", notUsed) {
-			responses.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			fmt.Printf("dropped #/components/responses/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		responses.Delete(key)
+	}
 	parameters := components.Parameters
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(parameters); pair != nil; pair = pair.Next() {
 		// remove all parameters that are not referenced
 		if !isReferenced(pair.Key(), "parameters", notUsed) {
-			parameters.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		parameters.Delete(key)
+	}
 	examples := components.Examples
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(examples); pair != nil; pair = pair.Next() {
 		// remove all examples that are not referenced
 		if !isReferenced(pair.Key(), "examples", notUsed) {
-			examples.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		examples.Delete(key)
+	}
 	requestBodies := components.RequestBodies
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(requestBodies); pair != nil; pair = pair.Next() {
 		// remove all requestBodies that are not referenced
 		if !isReferenced(pair.Key(), "requestBodies", notUsed) {
-			requestBodies.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
 	}
+	for _, key := range toDelete {
+		requestBodies.Delete(key)
+	}
+
 	headers := components.Headers
+	toDelete = make([]string, 0)
 	for pair := orderedmap.First(headers); pair != nil; pair = pair.Next() {
 		// remove all headers that are not referenced
 		if !isReferenced(pair.Key(), "headers", notUsed) {
-			headers.Delete(pair.Key())
+			toDelete = append(toDelete, pair.Key())
 			anyRemoved = true
 		}
+	}
+	for _, key := range toDelete {
+		headers.Delete(key)
 	}
 	if anyRemoved {
 		return removeOrphans(doc, model)
