@@ -142,7 +142,7 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		// Other parts of the code make assumptions that the workflow has a valid source
 		// This is a hack to satisfy those assumptions, we will overwrite this with a proper
 		// file location when we have written the sample spec to disk when we know the SDK output directory
-		fileLocation = "OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
+		fileLocation = "https://example.com/OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
 	} else {
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
