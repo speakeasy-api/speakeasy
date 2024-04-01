@@ -140,8 +140,10 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 				Value(&docsLanguages))
 	}
 
-	configGroups := []*huh.Group{
-		huh.NewGroup(firstGroup...),
+	var configGroups []*huh.Group
+
+	if len(firstGroup) != 0 {
+		configGroups = append(configGroups, huh.NewGroup(firstGroup...))
 	}
 
 	t, err := generate.GetTargetFromTargetString(target.Target)
