@@ -149,7 +149,11 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		tOut := "the current directory"
+		workingDirectory, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		tOut := workingDirectory
 		if t.Output != nil && *t.Output != "" && *t.Output != "." {
 			tOut = *t.Output
 		}
