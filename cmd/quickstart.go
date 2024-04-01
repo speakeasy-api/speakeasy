@@ -140,7 +140,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if outDir != workingDir {
 		promptedDir = outDir
 	}
-	description := "We recommend a directory per target type. eg my-sdk-go, my-sdk-python. To use the current directory, leave empty."
+	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
 	if targetType == "terraform" {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
 		outDir = "terraform-provider"
