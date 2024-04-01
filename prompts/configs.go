@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -209,9 +208,9 @@ func languageSpecificForms(language string, existingConfig *config.Configuration
 	//    * python: pip install my-company-sdk
 	//    * go: go get github.com/my-company/my-company-sdk
 	//    * typescript: npm install my-company-sdk
-	if isQuickstart && (language == "go" || language == "typescript" || language == "python") {
-		langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
-	}
+	//if isQuickstart && (language == "go" || language == "typescript" || language == "python") {
+	//	langConfig.Cfg["packageName"] = strcase.ToKebab(sdkClassName)
+	//}
 
 	groups := []*huh.Group{}
 	var appliedKeys []string
@@ -300,7 +299,7 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 		input = input.Description(*description + "\n").Inline(false).Prompt("")
 	}
 
-	if !isQuickstart && defaultValue != "" {
+	if defaultValue != "" {
 		input = input.Value(&defaultValue)
 	} else {
 		input = input.Placeholder(defaultValue).Suggestions([]string{defaultValue})
