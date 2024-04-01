@@ -122,16 +122,17 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if flags.OutDir != "" {
 		outDir = flags.OutDir
 	}
+
+	// Pull the target type and sdk class name from the first target
+	// Assume just one target possible during quickstart
 	var targetType string
 	var sdkClassName string
-	// Assume just one language possible during quickstart
 	for _, target := range quickstartObj.WorkflowFile.Targets {
 		targetType = target.Target
-		for _, config := range quickstartObj.LanguageConfigs {
-			sdkClassName = config.Generation.SDKClassName
-			break
-		}
-
+		break
+	}
+	for _, config := range quickstartObj.LanguageConfigs {
+		sdkClassName = config.Generation.SDKClassName
 		break
 	}
 
