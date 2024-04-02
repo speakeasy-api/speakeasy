@@ -22,7 +22,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-changes v1.0.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.295.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.295.3
 	github.com/speakeasy-api/openapi-overlay v0.4.0
 	github.com/speakeasy-api/sdk-gen-config v1.9.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.4.3
@@ -175,7 +175,7 @@ require (
 	github.com/skeema/knownhosts v1.2.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.10.0 // indirect
+	github.com/speakeasy-api/easytemplate v0.11.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
