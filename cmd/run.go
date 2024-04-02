@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
@@ -28,6 +29,7 @@ type RunFlags struct {
 	RepoSubdirs      map[string]string `json:"repo-subdirs"`
 	SkipCompile      bool              `json:"skip-compile"`
 	Force            bool              `json:"force"`
+	Output           string            `json:"output"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -93,6 +95,13 @@ A full workflow is capable of running the following steps:
 		flag.BooleanFlag{
 			Name:        "force",
 			Description: "Force generation of SDKs even when no changes are present",
+		},
+		flag.EnumFlag{
+			Name:          "output",
+			Shorthand:     "o",
+			Description:   "What to output while running",
+			AllowedValues: []string{"summary", "mermaid", "console"},
+			DefaultValue:  "summary",
 		},
 	},
 }
@@ -215,7 +224,22 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		return err
 	}
 
-	return workflow.RunWithVisualization(ctx)
+	switch flags.Output {
+	case "summary":
+		return workflow.RunWithVisualization(ctx)
+	case "mermaid":
+		err = workflow.Run(ctx)
+		workflow.RootStep.Finalize(err == nil)
+		mermaid, err := workflow.RootStep.ToMermaidDiagram()
+		if err != nil {
+			return err
+		}
+		log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
+	case "console":
+		return runFunc(ctx, flags)
+	}
+
+	return nil
 }
 
 func addGitHubSummary(ctx context.Context, workflow *run.Workflow) {
