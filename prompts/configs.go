@@ -37,9 +37,6 @@ var quickstartScopedKeys = map[string][]string{
 		"artifactID",
 	},
 	"terraform": {},
-	"docs": {
-		"defaultLanguage",
-	},
 	"csharp": {
 		"packageName",
 	},
@@ -110,26 +107,6 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 			Value(&baseServerURL))
 	}
 
-	var docsLanguages []string
-	if target.Target == "docs" {
-		if existingConfig != nil {
-			if docsCfg, ok := existingConfig.Languages["docs"]; ok {
-				if langs, ok := docsCfg.Cfg["docsLanguages"]; ok {
-					for _, lang := range langs.([]interface{}) {
-						docsLanguages = append(docsLanguages, lang.(string))
-					}
-				}
-			}
-		}
-
-		initialFields = append(initialFields,
-			huh.NewMultiSelect[string]().
-				Title("Select your SDK Docs Languages:").
-				Description("These languages will appear as options in your generated SDK Docs site.").
-				Options(huh.NewOptions(generate.SupportedSDKDocsLanguages...)...).
-				Value(&docsLanguages))
-	}
-
 	formTitle := fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName)
 	formSubtitle := "This will configure a config file that defines parameters for how your SDK is generated. \n" +
 		"Default config values have been provided. You only need to edit values that you want to modify."
@@ -163,9 +140,6 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 
 	output.Generation.SDKClassName = sdkClassName
 	output.Generation.BaseServerURL = baseServerURL
-	if target.Target == "docs" {
-		output.Languages["docs"].Cfg["docsLanguages"] = docsLanguages
-	}
 
 	saveLanguageConfigValues(target.Target, form, output, appliedKeys, defaultConfigs)
 
