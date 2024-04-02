@@ -27,10 +27,10 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 			schema,
 			header,
 			token,
-			"./speakeasyusagegen",
 			"",
 			"",
-			configPath,
+			"",
+			filepath.Join(configPath, "speakeasyusagegen"),
 			true,
 			usageOutput,
 		); err != nil {

@@ -86,23 +86,23 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		return fmt.Errorf("failed to generate usage snippets for %s ✖", lang)
 	}
 
-	if outputBuffer == nil {
-		if out == "" {
+	if out == "" {
+		if outputBuffer == nil {
 			// By default, write to stdout
 			fmt.Println(tmpOutput.String())
-		} else if isDirectory(out) {
-			return writeFormattedDirectory(lang, out, outputBuffer.String())
-		} else {
-			file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
-			if err != nil {
-				return errors.Wrap(err, "cannot write to provided file")
-			}
-			defer file.Close()
+		}
+	} else if isDirectory(out) {
+		return writeFormattedDirectory(lang, out, outputBuffer.String())
+	} else {
+		file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+		if err != nil {
+			return errors.Wrap(err, "cannot write to provided file")
+		}
+		defer file.Close()
 
-			_, err = file.WriteString(outputBuffer.String())
-			if err != nil {
-				return errors.Wrap(err, "cannot write to provided file")
-			}
+		_, err = file.WriteString(outputBuffer.String())
+		if err != nil {
+			return errors.Wrap(err, "cannot write to provided file")
 		}
 	}
 
