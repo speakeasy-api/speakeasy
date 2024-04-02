@@ -11,9 +11,10 @@ type (
 )
 
 type Quickstart struct {
-	WorkflowFile    *workflow.Workflow
-	LanguageConfigs map[string]*config.Configuration
-	Defaults        Defaults
+	WorkflowFile             *workflow.Workflow
+	LanguageConfigs          map[string]*config.Configuration
+	Defaults                 Defaults
+	IsUsingSampleOpenAPISpec bool
 }
 
 type Defaults struct {

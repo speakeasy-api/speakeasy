@@ -15,15 +15,16 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/orderedmap v0.3.0
+	github.com/iancoleman/strcase v0.3.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pb33f/libopenapi v0.15.14
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-changes v1.0.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.292.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.295.1
 	github.com/speakeasy-api/openapi-overlay v0.4.0
-	github.com/speakeasy-api/sdk-gen-config v1.9.1
+	github.com/speakeasy-api/sdk-gen-config v1.9.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.4.3
 	github.com/speakeasy-api/speakeasy-core v0.3.4
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
@@ -121,7 +122,6 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.17.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
-	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
