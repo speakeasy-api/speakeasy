@@ -44,6 +44,10 @@ func pythonAdditionalDependenciesValidation(v any) error {
 		return err
 	}
 
+	if ad.Dependencies == nil || ad.ExtraDependencies == nil {
+		return fmt.Errorf("either dependencies or extraDependencies must be provided, or the entire field should be omitted")
+	}
+
 	validateDepMap := func(m map[string]string) error {
 		for k, v := range m {
 			if v == "" {
