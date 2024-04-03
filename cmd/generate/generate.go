@@ -81,8 +81,8 @@ var (
 
 var GenerateCmd = &model.CommandGroup{
 	Usage:          "generate",
-	Short:          "Generate client SDKs, docsites, and more",
-	Long:           `The "generate" command provides a set of commands for generating client SDKs and Terraform providers`,
+	Short:          "One off Generations for client SDKs, docsites, and more",
+	Long:           `The "generate" command provides a set of commands for one off generations of client SDKs and Terraform providers`,
 	InteractiveMsg: "What do you want to generate?",
 	Commands:       []model.Command{genSDKCmd, genSDKDocsCmd, genUsageSnippetCmd, codeSamplesCmd, genSDKVersionCmd, genSDKChangelogCmd},
 }
