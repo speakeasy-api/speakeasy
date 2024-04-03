@@ -35,7 +35,7 @@ type RunFlags struct {
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
 	Usage: "run",
-	Short: "generate an SDK, compile sources, and more from a defined workflow.yaml file",
+	Short: "generate an SDK, compile OpenAPI sources, and much more from a defined workflow.yaml file",
 	Long: "run the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
 A workflow can consist of multiple targets that define a source OpenAPI document that can be downloaded from a URL, exist as a local file, or be created via merging multiple OpenAPI documents together and/or overlaying them with an OpenAPI overlay document.
 A full workflow is capable of running the following steps:
