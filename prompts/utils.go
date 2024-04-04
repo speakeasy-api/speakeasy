@@ -42,7 +42,7 @@ func GetSupportedTargets() []string {
 	}
 
 	for _, language := range targets {
-		if strings.HasSuffix(language, "v2") || inPriorityTargets(language) {
+		if strings.HasSuffix(language, "v2") || inPriorityTargets(language) || language == "docs" {
 			continue
 		}
 		filteredTargets = append(filteredTargets, language)
