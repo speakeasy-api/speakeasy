@@ -2,44 +2,15 @@ package integration_tests
 
 import (
 	"fmt"
-	"io"
-	"math/rand"
-	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/assert"
 )
-
-const (
-	tempDir     = "temp"
-	letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-)
-
-func TestMain(m *testing.M) {
-	// Create a temporary directory
-	if _, err := os.Stat(tempDir); err == nil {
-		if err := os.RemoveAll(tempDir); err != nil {
-			panic(err)
-		}
-	}
-
-	if err := os.Mkdir(tempDir, 0o755); err != nil {
-		panic(err)
-	}
-
-	// Defer the removal of the temp directory
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			panic(err)
-		}
-	}()
-
-	code := m.Run()
-	os.Exit(code)
-}
 
 func TestCodeSampleWorkflows(t *testing.T) {
 	tests := []struct {
@@ -57,14 +28,14 @@ func TestCodeSampleWorkflows(t *testing.T) {
 		},
 		{
 			name:       "codeSamples with local document",
-			targetType: "go",
-			outdir:     "go",
+			targetType: "typescript",
+			outdir:     "ts",
 			inputDoc:   "spec.yaml",
 		},
 		{
 			name:       "codeSamples with json output",
-			targetType: "go",
-			outdir:     "go",
+			targetType: "typescript",
+			outdir:     "ts",
 			inputDoc:   "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json",
 		},
 		{
@@ -77,9 +48,9 @@ func TestCodeSampleWorkflows(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temp, err := createTempDir()
-			assert.NoError(t, err)
+			temp := setupTestDir(t)
 
+			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
 				Version: workflow.WorkflowVersion,
 				Sources: make(map[string]workflow.Source),
@@ -106,60 +77,31 @@ func TestCodeSampleWorkflows(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			err = workflowFile.Validate(generate.GetSupportedLanguages())
+			// Execute commands from the temporary directory
+			os.Chdir(temp)
+			err := workflowFile.Validate(generate.GetSupportedLanguages())
 			assert.NoError(t, err)
-			err = os.MkdirAll(fmt.Sprintf("%s/.speakeasy", temp), 0o755)
+			err = os.MkdirAll(".speakeasy", 0o755)
 			assert.NoError(t, err)
-			workflow.Save("temp", workflowFile)
+			err = workflow.Save(".", workflowFile)
 			assert.NoError(t, err)
-			// cleanupTempDir(temp)
+			args := []string{"run", "-t", "all"}
+			if tt.withForce {
+				args = append(args, "--force", "true")
+			}
+			rootCmd.SetArgs(args)
+			cmdErr := rootCmd.Execute()
+			assert.NoError(t, cmdErr)
+
+			codeSamplesPath := filepath.Join(tt.outdir, "codeSamples.yaml")
+			content, err := os.ReadFile(codeSamplesPath)
+			assert.NoError(t, err, "No readable file %s exists", codeSamplesPath)
+
+			if !strings.Contains(string(content), "update") {
+				t.Errorf("Update actions do not exist in the codeSamples file")
+			}
+
+			checkForExpectedFiles(t, tt.outdir, expectedFilesByLanguage(tt.targetType))
 		})
 	}
-}
-
-func createTempDir() (string, error) {
-	temp := fmt.Sprintf("%s/%s", tempDir, randStringBytes(7))
-	if err := os.Mkdir(temp, 0o755); err != nil {
-		return "", err
-	}
-
-	return temp, nil
-}
-
-func isLocalFileReference(filePath string) bool {
-	u, err := url.Parse(filePath)
-	if err != nil {
-		return true
-	}
-
-	return u.Scheme == "" || u.Scheme == "file"
-}
-
-func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destinationFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destinationFile.Close()
-
-	_, err = io.Copy(destinationFile, sourceFile)
-	return err
-}
-
-func cleanupTempDir(temp string) error {
-	return os.RemoveAll(temp)
-}
-
-var randStringBytes = func(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }
