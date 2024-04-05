@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/transform"
+	"os"
 	"os/exec"
 	"runtime"
 
@@ -19,7 +21,54 @@ var openapiCmd = &model.CommandGroup{
 	Short:          "Validate and compare OpenAPI documents",
 	Long:           `The "openapi" command provides a set of commands for validating and comparing OpenAPI docs.`,
 	InteractiveMsg: "What do you want to do?",
-	Commands:       []model.Command{openapiValidateCmd, openapiDiffCmd},
+	Commands:       []model.Command{openapiValidateCmd, openapiDiffCmd, transformCmd},
+}
+
+
+var transformCmd = &model.CommandGroup{
+	Usage:   "transform",
+	Short: "Transform an OpenAPI spec using a well-defined function",
+	Commands: []model.Command{removeUnusedCmd},
+}
+
+type removeUnusedFlags struct {
+	Schema  string `json:"schema"`
+	Out     string `json:"out"`
+}
+
+var removeUnusedCmd = &model.ExecutableCommand[removeUnusedFlags]{
+	Usage: "remove-unused",
+	Short: "Given an OpenAPI file, remove all unused options",
+	Run:   runRemoveUnused,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "the schema to transform",
+			Required: true,
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
+		},
+		flag.StringFlag{
+			Name:        "out",
+			Shorthand:   "o",
+			Description: "write directly to a file instead of stdout",
+		},
+	},
+}
+
+
+func runRemoveUnused(ctx context.Context, flags removeUnusedFlags) error {
+	out := os.Stdout
+	if flags.Out != "" {
+		file, err := os.Create(flags.Out)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		out = file
+	}
+
+	return transform.RemoveUnused(ctx, flags.Schema, out)
 }
 
 var openapiValidateCmd = &model.ExecutableCommand[LintOpenapiFlags]{
