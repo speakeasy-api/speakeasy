@@ -40,4 +40,5 @@ speakeasy [flags]
 * [speakeasy quickstart](quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
 * [speakeasy run](run.md)	 - generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file
 * [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
+* [speakeasy transform](transform/README.md)	 - Transform an OpenAPI spec using a well-defined function
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
