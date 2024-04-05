@@ -2,11 +2,11 @@
 `speakeasy generate`  
 
 
-Generate client SDKs, docsites, and more  
+One off Generations for client SDKs, docsites, and more  
 
 ## Details
 
-The "generate" command provides a set of commands for generating client SDKs and Terraform providers
+The "generate" command provides a set of commands for one off generations of client SDKs and Terraform providers
 
 ## Usage
 

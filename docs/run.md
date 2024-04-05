@@ -2,7 +2,7 @@
 `speakeasy run`  
 
 
-run the workflow defined in your workflow.yaml file  
+generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file  
 
 ## Details
 
