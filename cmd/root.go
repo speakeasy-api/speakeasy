@@ -63,6 +63,7 @@ func Init(version, artifactArch string) {
 	authInit()
 	mergeInit()
 	addCommand(rootCmd, overlayCmd)
+	addCommand(rootCmd, transformCmd)
 	suggestInit()
 	updateInit(version, artifactArch)
 	proxyInit()
