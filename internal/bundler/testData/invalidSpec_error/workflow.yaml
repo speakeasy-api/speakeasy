@@ -3,5 +3,4 @@ sources:
   my-source:
     inputs:
       - location: ./openapi.yaml
-    overlays:
-      - location: ./openapi-overlay.yaml
+      - location: ./openapi-invalid.yaml

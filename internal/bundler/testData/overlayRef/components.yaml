@@ -1,0 +1,37 @@
+openapi: 3.1.0
+components:
+  schemas:
+    Products:
+      type: array
+      items:
+        $ref: '#/components/schemas/Product'
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - stock
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        price:
+          type: number
+          format: double
+        tags:
+          type: array
+          items:
+            type: string
+        stock:
+          type: integer
+        category:
+          $ref: ./.meta.yaml#/components/schemas/Category
+    UUIDResult:
+      type: object
+      required: [ uuid ]
+      properties:
+        uuid:
+          type: string

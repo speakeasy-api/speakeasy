@@ -1,0 +1,8 @@
+overlay: 1.0.0
+info:
+  title: Overlay internal/bundler/testData/overlayRef/ecommerce.yaml => internal/bundler/testData/overlayRef/ecommerce2.yaml
+  version: 0.0.0
+extends: file:///Users/robertcrumbaugh/code/speakeasy/internal/bundler/testData/overlayRef/ecommerce.yaml
+actions:
+  - target: $["paths"]["/uuid"]["get"]["operationId"]
+    update: generateUUID2

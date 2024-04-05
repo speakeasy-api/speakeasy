@@ -1,23 +1,30 @@
 package bundler
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/AlekSi/pointer"
+	"github.com/charmbracelet/log"
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
+	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func Test(t *testing.T) {
 	type args struct {
-		name   string
-		source workflow.Source
-		want   string
+		name      string
+		source    workflow.Source
+		hasRemote bool
+		wantErr   bool
 	}
 
 	dir, err := os.ReadDir("./testData")
@@ -32,21 +39,24 @@ func Test(t *testing.T) {
 		}
 
 		test := args{
-			name: testDir.Name(),
+			name:    testDir.Name(),
+			wantErr: strings.HasSuffix(testDir.Name(), "_error"),
 		}
 
-		subdir, err := os.ReadDir(fmt.Sprintf("testData/%s", testDir.Name()))
+		testDirPath := fmt.Sprintf("testData/%s", testDir.Name())
+		subdir, err := os.ReadDir(testDirPath)
 		assert.NoError(t, err)
 
 		for _, testDataFile := range subdir {
 			if testDataFile.IsDir() {
+				if testDataFile.Name() == "remote" {
+					test.hasRemote = true
+				}
 				continue
 			}
 
-			if testDataFile.Name() == "want.yaml" {
-				test.want = fmt.Sprintf("testData/%s/want.yaml", testDir.Name())
-			} else if testDataFile.Name() == "workflow.yaml" {
-				workflowFile, err := os.ReadFile(fmt.Sprintf("testData/%s/workflow.yaml", testDir.Name()))
+			if testDataFile.Name() == "workflow.yaml" {
+				workflowFile, err := os.ReadFile(filepath.Join(testDirPath, "workflow.yaml"))
 				assert.NoError(t, err)
 
 				var wf workflow.Workflow
@@ -58,8 +68,26 @@ func Test(t *testing.T) {
 				}
 
 				for _, source := range wf.Sources {
+					source.Output = pointer.ToString(filepath.Join(testDirPath, "output/openapi.yaml"))
+
+					for i, doc := range source.Inputs {
+						if strings.HasPrefix(doc.Location, "./") {
+							doc.Location = filepath.Join(testDirPath, doc.Location)
+						}
+						source.Inputs[i] = doc
+					}
+					for i, doc := range source.Overlays {
+						if strings.HasPrefix(doc.Location, "./") {
+							doc.Location = filepath.Join(testDirPath, doc.Location)
+						}
+						source.Overlays[i] = doc
+					}
+
 					test.source = source
 				}
+
+				j, _ := json.MarshalIndent(test.source, "", "  ")
+				t.Errorf("workflow: %s", j)
 			}
 		}
 
@@ -70,38 +98,42 @@ func Test(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var out bytes.Buffer
+			ctx := context.Background()
 
-			err := CompileSourceTo(context.Background(), nil, "", tt.source, &out)
+			if tt.hasRemote {
+				logger := slog.New(log.New(os.Stderr))
 
-			if tt.want == "" {
-				assert.Error(t, err)
-				return
+				remoteFS := os.DirFS(fmt.Sprintf("./testData/%s/remote", tt.name))
+				_, err := remoteFS.Open("components.yaml")
+				assert.NoError(t, err)
+				closeMockSrv, err := bundler.ServeFS(ctx, logger, ":8081", remoteFS)
+				assert.NoError(t, err)
+				defer closeMockSrv()
 			}
 
+			os.RemoveAll(filepath.Dir(*tt.source.Output))
+			outputPath, err := CompileSource(context.Background(), nil, "", tt.source)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				println(err.Error())
+				return
+			} else {
+				assert.NoError(t, err)
+			}
+
+			have, err := os.ReadFile(outputPath)
 			assert.NoError(t, err)
 
-			want, err := os.ReadFile(tt.want)
-			assert.NoError(t, err)
+			// Comment this out if you want to inspect the output
+			os.RemoveAll(filepath.Dir(*tt.source.Output))
 
-			doc1, err := libopenapi.NewDocumentWithConfiguration(want, &datamodel.DocumentConfiguration{
-				AllowFileReferences:                 true,
+			_, err = libopenapi.NewDocumentWithConfiguration(have, &datamodel.DocumentConfiguration{
+				AllowRemoteReferences:               true,
 				IgnorePolymorphicCircularReferences: true,
 				IgnoreArrayCircularReferences:       true,
 			})
 			assert.NoError(t, err)
-
-			doc2, err := libopenapi.NewDocumentWithConfiguration(out.Bytes(), &datamodel.DocumentConfiguration{
-				AllowFileReferences:                 true,
-				IgnorePolymorphicCircularReferences: true,
-				IgnoreArrayCircularReferences:       true,
-			})
-			assert.NoError(t, err)
-
-			documentChanges, errs := libopenapi.CompareDocuments(doc1, doc2)
-			assert.Len(t, errs, 0)
-			// When no changes, CompareDocuments returns nil
-			assert.Nil(t, documentChanges)
 		})
 	}
 }

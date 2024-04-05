@@ -1,0 +1,5 @@
+workflowVersion: 1.0.0
+sources:
+  my-source:
+    inputs:
+      - location: ./ecommerce.yaml

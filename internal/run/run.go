@@ -45,13 +45,13 @@ type Workflow struct {
 	FromQuickstart     bool
 }
 
-func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
+func NewWorkflow(ctx context.Context, name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
 
-	rootStep := workflowTracking.NewWorkflowStep(name, nil)
+	rootStep := workflowTracking.NewWorkflowStep(name, log.From(ctx), nil)
 
 	return &Workflow{
 		Target:           target,
@@ -95,7 +95,7 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	updatesChannel := make(chan workflowTracking.UpdateMsg)
-	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", updatesChannel)
+	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", log.From(ctx), updatesChannel)
 
 	var logs bytes.Buffer
 	warnings := make([]string, 0)
