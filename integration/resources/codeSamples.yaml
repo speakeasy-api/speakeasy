@@ -1,0 +1,619 @@
+overlay: 1.0.0
+info:
+  title: CodeSamples overlay for go target
+  version: 0.0.0
+actions:
+  - target: $["paths"]["/pet"]["put"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: updatePet
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+                ctx := context.Background()
+                res, err := s.UpdatePet(ctx, components.Pet{
+                    ID: openapi.Int64(10),
+                    Name: "doggie",
+                    PhotoUrls: []string{
+                        "<value>",
+                    },
+                })
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pet != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pet/{petId}"]["delete"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: deletePet
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var petID int64 = 441876
+
+                var apiKey *string = openapi.String("<value>")
+
+                ctx := context.Background()
+                res, err := s.DeletePet(ctx, petID, apiKey)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pet != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/store/order/{orderId}"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: getOrderById
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var orderID int64 = 614993
+
+                ctx := context.Background()
+                res, err := s.GetOrderByID(ctx, orderID)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Order != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/user/{username}"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: getUserByName
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var username string = "<value>"
+
+                ctx := context.Background()
+                res, err := s.GetUserByName(ctx, username)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.User != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pet/findByStatus"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: findPetsByStatus
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"openapi/models/operations"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var status *operations.Status = operations.StatusAvailable.ToPointer()
+
+                ctx := context.Background()
+                res, err := s.FindPetsByStatus(ctx, status)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pets != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pet/{petId}"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: getPetById
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var petID int64 = 504151
+
+                ctx := context.Background()
+                res, err := s.GetPetByID(ctx, petID)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pet != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/store/order"]["post"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: placeOrder
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+                ctx := context.Background()
+                res, err := s.PlaceOrder(ctx, &components.Order{
+                    ID: openapi.Int64(10),
+                    PetID: openapi.Int64(198772),
+                    Quantity: openapi.Int(7),
+                    Status: components.OrderStatusApproved.ToPointer(),
+                })
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Order != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/user/logout"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: logoutUser
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+                ctx := context.Background()
+                res, err := s.LogoutUser(ctx)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pet"]["post"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: addPet
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+                ctx := context.Background()
+                res, err := s.AddPet(ctx, components.Pet{
+                    ID: openapi.Int64(10),
+                    Name: "doggie",
+                    PhotoUrls: []string{
+                        "<value>",
+                    },
+                })
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pet != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pet/{petId}/uploadImage"]["post"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: uploadFile
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var petID int64 = 565380
+
+                var additionalMetadata *string = openapi.String("<value>")
+
+                var requestBody []byte = []byte("0x7cca7F47Dd")
+
+                ctx := context.Background()
+                res, err := s.UploadFile(ctx, petID, additionalMetadata, requestBody)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.APIResponse != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/store/inventory"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: getInventory
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+                ctx := context.Background()
+                res, err := s.GetInventory(ctx)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Object != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/user"]["post"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: createUser
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+                ctx := context.Background()
+                res, err := s.CreateUser(ctx, &components.User{
+                    ID: openapi.Int64(10),
+                    Username: openapi.String("theUser"),
+                    FirstName: openapi.String("John"),
+                    LastName: openapi.String("James"),
+                    Email: openapi.String("john@email.com"),
+                    Password: openapi.String("12345"),
+                    Phone: openapi.String("12345"),
+                    UserStatus: openapi.Int(1),
+                })
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.User != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/user/{username}"]["delete"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: deleteUser
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var username string = "<value>"
+
+                ctx := context.Background()
+                res, err := s.DeleteUser(ctx, username)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.User != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pet/findByTags"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: findPetsByTags
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                tags := []string{
+                    "<value>",
+                }
+
+                ctx := context.Background()
+                res, err := s.FindPetsByTags(ctx, tags)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pets != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/store/order/{orderId}"]["delete"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: deleteOrder
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var orderID int64 = 127902
+
+                ctx := context.Background()
+                res, err := s.DeleteOrder(ctx, orderID)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Order != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/user/createWithList"]["post"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: createUsersWithListInput
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+                ctx := context.Background()
+                res, err := s.CreateUsersWithListInput(ctx, []components.User{
+                    components.User{
+                        ID: openapi.Int64(10),
+                        Username: openapi.String("theUser"),
+                        FirstName: openapi.String("John"),
+                        LastName: openapi.String("James"),
+                        Email: openapi.String("john@email.com"),
+                        Password: openapi.String("12345"),
+                        Phone: openapi.String("12345"),
+                        UserStatus: openapi.Int(1),
+                    },
+                })
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.User != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/user/login"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: loginUser
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var username *string = openapi.String("<value>")
+
+                var password *string = openapi.String("<value>")
+
+                ctx := context.Background()
+                res, err := s.LoginUser(ctx, username, password)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.String != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/user/{username}"]["put"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: updateUser
+          source: |-
+            package main
+
+            import(
+            	"openapi/models/components"
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New(
+                    openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+                )
+
+
+                var username string = "<value>"
+
+                user := &components.User{
+                    ID: openapi.Int64(10),
+                    Username: openapi.String("theUser"),
+                    FirstName: openapi.String("John"),
+                    LastName: openapi.String("James"),
+                    Email: openapi.String("john@email.com"),
+                    Password: openapi.String("12345"),
+                    Phone: openapi.String("12345"),
+                    UserStatus: openapi.Int(1),
+                }
+
+                ctx := context.Background()
+                res, err := s.UpdateUser(ctx, username, user)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res != nil {
+                    // handle response
+                }
+            }
