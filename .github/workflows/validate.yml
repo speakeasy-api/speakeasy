@@ -86,3 +86,5 @@ jobs:
         run: |
           set -euo pipefail
           go test -json -v -p 1 -run ${{ matrix.test-pattern }} ./integration/... | gotestfmt
+        env:
+          SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
