@@ -12,7 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// All tests must be run as individual test functions in serial.
+// These integration tests MUST be run in serial because we deal with changing working directories during the test.
+// If running locally make sure you are running test functions individually TestGenerationWorkflows, TestSpecWorkflows, etc.
+// If all test groups are run at the same time you will see test failures.
 
 func TestGenerationWorkflows(t *testing.T) {
 	tests := []struct {
