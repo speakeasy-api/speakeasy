@@ -156,6 +156,16 @@ func TestSpecWorkflows(t *testing.T) {
 			},
 			out: "output.yaml",
 		},
+		{
+			name: "overlay with json document",
+			inputDocs: []string{
+				"https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json",
+			},
+			overlays: []string{
+				"codeSamples-JSON.yaml",
+			},
+			out: "output.json",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -211,7 +221,7 @@ func TestSpecWorkflows(t *testing.T) {
 			assert.NoError(t, err, "No readable file %s exists", tt.out)
 
 			if len(tt.overlays) > 0 {
-				if !strings.Contains(string(content), " x-codeSample") {
+				if !strings.Contains(string(content), "x-codeSamples") {
 					t.Errorf("overlay not successfully applied to output document")
 				}
 			}

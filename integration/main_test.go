@@ -50,6 +50,6 @@ func setupTestDir(t *testing.T) string {
 func registerCleanup(t *testing.T, workingDir string, temp string) {
 	t.Cleanup(func() {
 		os.Chdir(workingDir)
-		os.RemoveAll(temp)
+		// os.RemoveAll(temp)
 	})
 }
