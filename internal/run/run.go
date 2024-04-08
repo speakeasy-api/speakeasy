@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/bundler"
-	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
+	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,15 +16,20 @@ import (
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
+	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
+	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
 type Workflow struct {
@@ -37,7 +42,7 @@ type Workflow struct {
 	ShouldCompile    bool
 	ForceGeneration  bool
 
-	RootStep           *workflowTracking.WorkflowStep
+	RootStep           *WorkflowStep
 	workflow           *workflow.Workflow
 	projectDir         string
 	validatedDocuments []string
@@ -45,13 +50,13 @@ type Workflow struct {
 	FromQuickstart     bool
 }
 
-func NewWorkflow(ctx context.Context, name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
+func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
 
-	rootStep := workflowTracking.NewWorkflowStep(name, log.From(ctx), nil)
+	rootStep := NewWorkflowStep(name, nil)
 
 	return &Workflow{
 		Target:           target,
@@ -94,8 +99,8 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 }
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
-	updatesChannel := make(chan workflowTracking.UpdateMsg)
-	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", log.From(ctx), updatesChannel)
+	updatesChannel := make(chan UpdateMsg)
+	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
 
 	var logs bytes.Buffer
 	warnings := make([]string, 0)
@@ -144,7 +149,11 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		tOut := "the current directory"
+		workingDirectory, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		tOut := workingDirectory
 		if t.Output != nil && *t.Output != "" && *t.Output != "." {
 			tOut = *t.Output
 		}
@@ -203,7 +212,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, err := w.runWorkflowSource(ctx, w.RootStep, id, true)
+			_, err := w.runSource(ctx, w.RootStep, id, true)
 			if err != nil {
 				return err
 			}
@@ -222,7 +231,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := w.runWorkflowSource(ctx, w.RootStep, w.Source, true)
+		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
 			return err
 		}
@@ -244,7 +253,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
-	sourceID := t.Source
 
 	log.From(ctx).Infof("Running target %s (%s)...\n", target, t.Target)
 
@@ -253,17 +261,15 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		return err
 	}
 
-	// If the inputPath is supplied directly, construct a wrapper source for it
-	if source == nil {
-		sourceID = sourcePath
-		source = &workflow.Source{
-			Inputs: []workflow.Document{{Location: sourcePath}},
+	if source != nil {
+		sourcePath, err = w.runSource(ctx, rootStep, t.Source, false)
+		if err != nil {
+			return err
 		}
-	}
-
-	sourcePath, err = w.runSource(ctx, rootStep, sourceID, *source, false)
-	if err != nil {
-		return err
+	} else {
+		if err := w.validateDocument(ctx, rootStep, sourcePath, "", w.projectDir); err != nil {
+			return err
+		}
 	}
 
 	var outDir string
@@ -348,20 +354,111 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runWorkflowSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, id string, cleanUp bool) (string, error) {
-	source := w.workflow.Sources[id]
-	return w.runSource(ctx, parentStep, id, source, cleanUp)
-}
-
-func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, id string, source workflow.Source, cleanUp bool) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
+	source := w.workflow.Sources[id]
+
+	rulesetToUse := ""
+	if source.Ruleset != nil {
+		rulesetToUse = *source.Ruleset
+	}
+
 	logger := log.From(ctx)
 	logger.Infof("Running source %s...", id)
 
-	outputLocation, err := bundler.CompileSource(ctx, rootStep, id, source)
+	outputLocation, err := source.GetOutputLocation()
 	if err != nil {
 		return "", err
 	}
+
+	var currentDocument string
+
+	if len(source.Inputs) == 1 {
+		if source.Inputs[0].IsRemote() {
+			rootStep.NewSubstep("Downloading document")
+
+			downloadLocation := outputLocation
+			if len(source.Overlays) > 0 {
+				downloadLocation = source.Inputs[0].GetTempDownloadPath(workflow.GetTempDir())
+			}
+
+			currentDocument, err = resolveRemoteDocument(ctx, source.Inputs[0], downloadLocation)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			currentDocument = source.Inputs[0].Location
+		}
+	} else {
+		mergeStep := rootStep.NewSubstep("Merge documents")
+
+		mergeLocation := source.GetTempMergeLocation()
+		if len(source.Overlays) == 0 {
+			mergeLocation = outputLocation
+		}
+
+		logger.Infof("Merging %d schemas into %s...", len(source.Inputs), mergeLocation)
+
+		inSchemas := []string{}
+		for _, input := range source.Inputs {
+			if input.IsRemote() {
+				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
+
+				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
+				if err != nil {
+					return "", err
+				}
+
+				inSchemas = append(inSchemas, downloadedPath)
+			} else {
+				inSchemas = append(inSchemas, input.Location)
+			}
+		}
+
+		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
+
+		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.projectDir); err != nil {
+			return "", err
+		}
+
+		currentDocument = mergeLocation
+	}
+
+	if len(source.Overlays) > 0 {
+		overlayStep := rootStep.NewSubstep("Applying overlays")
+
+		overlayLocation := outputLocation
+
+		logger.Infof("Applying %d overlays into %s...", len(source.Overlays), overlayLocation)
+
+		overlaySchemas := []string{}
+		for _, overlay := range source.Overlays {
+			if overlay.IsRemote() {
+				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
+
+				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
+				if err != nil {
+					return "", err
+				}
+
+				overlaySchemas = append(overlaySchemas, downloadedPath)
+			} else {
+				overlaySchemas = append(overlaySchemas, overlay.Location)
+			}
+		}
+
+		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
+
+		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
+			return "", err
+		}
+	}
+
+	if err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir); err != nil {
+		return "", err
+	}
+
+	rootStep.SucceedWorkflow()
 
 	if cleanUp {
 		rootStep.NewSubstep("Cleaning up")
@@ -370,12 +467,10 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		os.RemoveAll(workflow.GetTempDir())
 	}
 
-	rootStep.SucceedWorkflow()
-
 	return outputLocation, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, schemaPath, defaultRuleset string) error {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset, projectDir string) error {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -388,9 +483,113 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 		MaxWarns:  1000,
 	}
 
-	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, w.projectDir)
+	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, projectDir)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
 	return res
+}
+
+func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
+	log.From(ctx).Infof("Downloading %s... to %s\n", d.Location, outPath)
+
+	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
+		return "", err
+	}
+
+	var token, header string
+	if d.Auth != nil {
+		header = d.Auth.Header
+		envVar := strings.TrimPrefix(d.Auth.Secret, "$")
+
+		// GitHub action secrets are prefixed with INPUT_
+		if env.IsGithubAction() {
+			envVar = "INPUT_" + envVar
+		}
+		token = os.Getenv(envVar)
+	}
+
+	if err := download.DownloadFile(d.Location, outPath, header, token); err != nil {
+		return "", err
+	}
+
+	return outPath, nil
+}
+
+func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string) error {
+	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
+		return err
+	}
+
+	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir); err != nil {
+		return err
+	}
+
+	log.From(ctx).Printf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
+
+	return nil
+}
+
+func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
+	currentBase := schema
+	if err := os.MkdirAll(workflow.GetTempDir(), os.ModePerm); err != nil {
+		return err
+	}
+
+	for _, overlayFile := range overlayFiles {
+		applyPath := getTempApplyPath(overlayFile)
+
+		tempOutFile, err := os.Create(applyPath)
+		if err != nil {
+			return err
+		}
+
+		if err := overlay.Apply(currentBase, overlayFile, tempOutFile); err != nil {
+			return err
+		}
+
+		if err := tempOutFile.Close(); err != nil {
+			return err
+		}
+
+		currentBase = applyPath
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
+		return err
+	}
+
+	finalTempFile, err := os.Open(currentBase)
+	if err != nil {
+		return err
+	}
+	defer finalTempFile.Close()
+
+	outFileWriter, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer outFileWriter.Close()
+
+	if _, err := io.Copy(outFileWriter, finalTempFile); err != nil {
+		return err
+	}
+
+	log.From(ctx).Successf("Successfully applied %d overlays into %s", len(overlayFiles), outFile)
+
+	return nil
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+var randStringBytes = func(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func getTempApplyPath(overlayFile string) string {
+	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
 }
