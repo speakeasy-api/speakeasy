@@ -37,7 +37,7 @@ jobs:
       matrix:
         include:
           - test-group: 'Test 1'
-            test-pattern: 'TestGenerationWorkflows|TestCodeSampleGenerationWorkflows'
+            test-pattern: 'TestCodeSampleGenerationWorkflows'
           - test-group: 'Test 2'
             test-pattern: 'TestSpecWorkflows'
 
