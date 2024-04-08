@@ -1,0 +1,93 @@
+overlay: 1.0.0
+info:
+  title: CodeSamples overlay for go target
+  version: 0.0.0
+actions:
+  - target: $["paths"]["/pets"]["get"]
+    update:
+      "x-codeSamples":
+        - "lang": "go"
+          "label": "listPets"
+          "source": |-
+            package main
+
+            import(
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New()
+
+
+                var limit *int = openapi.Int(21453)
+
+                ctx := context.Background()
+                res, err := s.ListPets(ctx, limit)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pets != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pets"]["post"]
+    update:
+      "x-codeSamples":
+        - "lang": "go"
+          "label": "createPets"
+          "source": |-
+            package main
+
+            import(
+            	"openapi"
+            	"context"
+            	"openapi/models/components"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New()
+
+                ctx := context.Background()
+                res, err := s.CreatePets(ctx, components.Pet{
+                    ID: 596804,
+                    Name: "<value>",
+                })
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res != nil {
+                    // handle response
+                }
+            }
+  - target: $["paths"]["/pets/{petId}"]["get"]
+    update:
+      "x-codeSamples":
+        - "lang": "go"
+          "label": "showPetById"
+          "source": |-
+            package main
+
+            import(
+            	"openapi"
+            	"context"
+            	"log"
+            )
+
+            func main() {
+                s := openapi.New()
+
+
+                var petID string = "<value>"
+
+                ctx := context.Background()
+                res, err := s.ShowPetByID(ctx, petID)
+                if err != nil {
+                    log.Fatal(err)
+                }
+                if res.Pet != nil {
+                    // handle response
+                }
+            }
