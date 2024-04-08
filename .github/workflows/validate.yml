@@ -36,9 +36,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - test-group: 'Test 1'
-            test-pattern: 'TestCodeSampleGenerationWorkflows'
-          - test-group: 'Test 2'
+          - test-group: 'Test Generations'
+            test-pattern: 'TestGenerationWorkflows'
+          - test-group: 'Test Spec Operations'
             test-pattern: 'TestSpecWorkflows'
 
     steps:
