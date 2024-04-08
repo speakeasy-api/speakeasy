@@ -72,7 +72,9 @@ func (m *SimpleInput) HandleKeypress(key string) tea.Cmd {
 		}
 	default:
 		if len(m.input.AutocompleteFileExtensions) > 0 {
-			if suggestions := charm_internal.SuggestionCallback(m.input.AutocompleteFileExtensions)(m.inputModel.Value()); len(suggestions) > 0 {
+			if suggestions := charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+				FileExtensions: m.input.AutocompleteFileExtensions,
+			})(m.inputModel.Value()); len(suggestions) > 0 {
 				m.inputModel.ShowSuggestions = true
 				m.inputModel.KeyMap.AcceptSuggestion.SetEnabled(true)
 				m.inputModel.SetSuggestions(suggestions)

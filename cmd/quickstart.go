@@ -150,6 +150,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
 		Title("What directory should the "+targetType+" files be written to?").
 		Description(description+"\n").
+		Suggestions(charm.DirsInCurrentDir(promptedDir)).
+		SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 		Validate(func(s string) error {
 			if targetType == "terraform" {
 				if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
