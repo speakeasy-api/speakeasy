@@ -141,10 +141,11 @@ func TestGenerationWorkflows(t *testing.T) {
 
 func TestSpecWorkflows(t *testing.T) {
 	tests := []struct {
-		name      string
-		inputDocs []string
-		overlays  []string
-		out       string
+		name          string
+		inputDocs     []string
+		overlays      []string
+		out           string
+		expectedPaths []string
 	}{
 		{
 			name: "overlay with local document",
@@ -165,6 +166,19 @@ func TestSpecWorkflows(t *testing.T) {
 				"codeSamples-JSON.yaml",
 			},
 			out: "output.json",
+		},
+		{
+			name: "test merging documents",
+			inputDocs: []string{
+				"part1.yaml",
+				"part2.yaml",
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet/findByStatus",
+				"/store/inventory",
+				"/user/login",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -223,6 +237,14 @@ func TestSpecWorkflows(t *testing.T) {
 			if len(tt.overlays) > 0 {
 				if !strings.Contains(string(content), "x-codeSamples") {
 					t.Errorf("overlay not successfully applied to output document")
+				}
+			}
+
+			if len(tt.expectedPaths) > 0 {
+				for _, path := range tt.expectedPaths {
+					if !strings.Contains(string(content), path) {
+						t.Errorf("Expected path %s not found in output document", path)
+					}
 				}
 			}
 		})
