@@ -122,7 +122,7 @@ func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 
 		return m.Focus(m.focusIndex)
 	default:
-		if len(m.inputs[m.focusIndex].AutocompleteFileExtensions) > 0 {
+		if len(m.inputs) > m.focusIndex && len(m.inputs[m.focusIndex].AutocompleteFileExtensions) > 0 {
 			if suggestions := charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 				FileExtensions: m.inputs[m.focusIndex].AutocompleteFileExtensions,
 			})(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {

@@ -360,12 +360,13 @@ speakeasy [flags]
 * [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy bump](docs/bump.md)	 - Bumps the version of a Speakeasy Generation Target
 * [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
-* [speakeasy generate](docs/generate/README.md)	 - Generate client SDKs, docsites, and more
+* [speakeasy generate](docs/generate/README.md)	 - One off Generations for client SDKs, docsites, and more
 * [speakeasy lint](docs/lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
 * [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy openapi](docs/openapi/README.md)	 - Validate and compare OpenAPI documents
 * [speakeasy overlay](docs/overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy quickstart](docs/quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
-* [speakeasy run](docs/run.md)	 - run the workflow defined in your workflow.yaml file
+* [speakeasy run](docs/run.md)	 - generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file
 * [speakeasy suggest](docs/suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
+* [speakeasy transform](docs/transform/README.md)	 - Transform an OpenAPI spec using a well-defined function
 * [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version
