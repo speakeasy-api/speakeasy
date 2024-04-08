@@ -50,6 +50,8 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 		groups = append(groups,
 			huh.NewGroup(charm.NewInput().
 				Title("What is a good output directory for your generation target?").
+				Suggestions(charm.DirsInCurrentDir(*outDir)).
+				SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 				Validate(func(s string) error {
 					var enforceNewDir bool
 					if newTarget {
@@ -173,6 +175,8 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 			if _, err := charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
 					Title(fmt.Sprintf("Provide an output directory for your %s generation target %s.", targetType, targetName)).
+					Suggestions(charm.DirsInCurrentDir(outDir)).
+					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 					Validate(func(s string) error {
 						if currentDir(s) {
 							return fmt.Errorf("the output dir must not be in the root folder")
