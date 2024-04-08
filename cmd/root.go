@@ -63,6 +63,7 @@ func Init(version, artifactArch string) {
 	authInit()
 	mergeInit()
 	addCommand(rootCmd, overlayCmd)
+	addCommand(rootCmd, transformCmd)
 	suggestInit()
 	updateInit(version, artifactArch)
 	proxyInit()
@@ -80,7 +81,23 @@ func addCommand(cmd *cobra.Command, command model.Command) {
 	cmd.AddCommand(c)
 }
 
+func CmdForTest(version, artifactArch string) *cobra.Command {
+	setupRootCmd(version, artifactArch)
+
+	return rootCmd
+}
+
 func Execute(version, artifactArch string) {
+	setupRootCmd(version, artifactArch)
+
+	if err := rootCmd.Execute(); err != nil {
+		l.Error("", zap.Error(err))
+		l.WithInteractiveOnly().PrintfStyled(styles.DimmedItalic, "Run '%s --help' for usage.\n", rootCmd.CommandPath())
+		os.Exit(1)
+	}
+}
+
+func setupRootCmd(version, artifactArch string) {
 	rootCmd.Version = version + "\n" + artifactArch
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
@@ -97,12 +114,7 @@ func Execute(version, artifactArch string) {
 	}
 
 	Init(version, artifactArch)
-
-	if err := rootCmd.Execute(); err != nil {
-		l.Error("", zap.Error(err))
-		l.WithInteractiveOnly().PrintfStyled(styles.DimmedItalic, "Run '%s --help' for usage.\n", rootCmd.CommandPath())
-		os.Exit(1)
-	}
+	return
 }
 
 func GetRootCommand() *cobra.Command {

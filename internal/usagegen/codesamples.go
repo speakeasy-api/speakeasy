@@ -15,6 +15,7 @@ import (
 
 func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool) error {
 	targetToCodeSamples := map[string][]UsageSnippet{}
+	isJSON := filepath.Ext(schema) == ".json"
 
 	for _, lang := range langs {
 		usageOutput := &bytes.Buffer{}
@@ -29,7 +30,7 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 			"",
 			"",
 			"",
-			configPath,
+			filepath.Join(configPath, "speakeasyusagegen"),
 			true,
 			usageOutput,
 		); err != nil {
@@ -58,11 +59,11 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 				&yaml.Node{
 					Kind: yaml.MappingNode,
 					Content: []*yaml.Node{
-						{Kind: yaml.ScalarNode, Value: "lang"},
-						{Kind: yaml.ScalarNode, Value: snippet.Language},
-						{Kind: yaml.ScalarNode, Value: "label"},
-						{Kind: yaml.ScalarNode, Value: snippet.OperationId},
-						{Kind: yaml.ScalarNode, Value: "source"},
+						{Kind: yaml.ScalarNode, Value: "lang", Style: styleForNode(isJSON)},
+						{Kind: yaml.ScalarNode, Value: snippet.Language, Style: styleForNode(isJSON)},
+						{Kind: yaml.ScalarNode, Value: "label", Style: styleForNode(isJSON)},
+						{Kind: yaml.ScalarNode, Value: snippet.OperationId, Style: styleForNode(isJSON)},
+						{Kind: yaml.ScalarNode, Value: "source", Style: styleForNode(isJSON)},
 						{Kind: yaml.ScalarNode, Value: snippet.Snippet},
 					},
 				})
@@ -73,7 +74,7 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 			Update: yaml.Node{
 				Kind: yaml.MappingNode,
 				Content: []*yaml.Node{
-					{Kind: yaml.ScalarNode, Value: "x-codeSamples"},
+					{Kind: yaml.ScalarNode, Value: "x-codeSamples", Style: styleForNode(isJSON)},
 					{
 						Kind:    yaml.SequenceNode,
 						Content: content,
@@ -127,4 +128,12 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 	}
 
 	return nil
+}
+
+func styleForNode(isJSON bool) yaml.Style {
+	if isJSON {
+		return yaml.DoubleQuotedStyle
+	}
+
+	return 0
 }

@@ -29,4 +29,4 @@ speakeasy generate version [flags]
 
 ### Parent Command
 
-* [speakeasy generate](README.md)	 - Generate client SDKs, docsites, and more
+* [speakeasy generate](README.md)	 - One off Generations for client SDKs, docsites, and more

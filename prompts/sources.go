@@ -35,7 +35,9 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 				Title("What is the location of your OpenAPI document?").
 				Placeholder("local file path or remote file reference.").
 				Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-				SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)).
+				SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+					FileExtensions: charm_internal.OpenAPIFileExtensions,
+				})).
 				Value(fileLocation),
 		)
 	}
@@ -98,7 +100,9 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader, auth
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
 				Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-				SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)).
+				SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+					FileExtensions: charm_internal.OpenAPIFileExtensions,
+				})).
 				Value(overlayLocation),
 		).WithHideFunc(func() bool {
 			return !*promptForOverlay
@@ -120,12 +124,37 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	}
 
-	if _, err := charm_internal.NewForm(huh.NewForm(
-		getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
-		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
-		ExecuteForm(); err != nil {
+	useSampleSpec := false
+	_, err := charm_internal.NewForm(huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[bool]().
+				Title("Do you have an existing OpenAPI spec?").
+				Description("You can provide a local file path or a remote file URL to your OpenAPI spec.").
+				Options(
+					huh.NewOption("Yes", false),
+					huh.NewOption("No, use a sample OpenAPI spec", true),
+				).
+				Value(&useSampleSpec),
+		),
+	)).ExecuteForm()
+	if err != nil {
 		return nil, err
+	}
+
+	if useSampleSpec {
+		quickstart.IsUsingSampleOpenAPISpec = true
+		// Other parts of the code make assumptions that the workflow has a valid source
+		// This is a hack to satisfy those assumptions, we will overwrite this with a proper
+		// file location when we have written the sample spec to disk when we know the SDK output directory
+		fileLocation = "https://example.com/OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
+	} else {
+		if _, err := charm_internal.NewForm(huh.NewForm(
+			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader, &authSecret)...),
+			"Let's setup a new source for your workflow.",
+			"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+			ExecuteForm(); err != nil {
+			return nil, err
+		}
 	}
 
 	document, err := formatDocument(fileLocation, authHeader, authSecret, false)
@@ -172,7 +201,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 					Title("What is the location of your OpenAPI document?\n").
 					Placeholder("local file path or remote file reference.").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)).
+					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+						FileExtensions: charm_internal.OpenAPIFileExtensions,
+					})).
 					Inline(false).
 					Value(&fileLocation),
 			),
@@ -210,7 +241,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 					Title("What is the location of your OpenAPI document?").
 					Placeholder("local file path or remote file reference.").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)).
+					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+						FileExtensions: charm_internal.OpenAPIFileExtensions,
+					})).
 					Value(&fileLocation),
 			),
 		}
@@ -270,7 +303,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 				charm_internal.NewInput().
 					Title("Optionally provide an output location for your build source file:").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)).
+					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+						FileExtensions: charm_internal.OpenAPIFileExtensions,
+					})).
 					Value(&outputLocation),
 			)),
 			fmt.Sprintf("Let's modify the source %s", name)).
@@ -304,7 +339,9 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.OpenAPIFileExtensions)).
+			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+				FileExtensions: charm_internal.OpenAPIFileExtensions,
+			})).
 			Value(&outputLocation),
 	).WithHideFunc(
 		func() bool {
