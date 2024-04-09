@@ -81,7 +81,9 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 		huh.NewGroup(
 			charm_internal.NewInput().
 				Title("What is the name of your authentication header?").
-				Description("The value for this header will be fetched from the secret OPENAPI_DOC_AUTH_TOKEN").
+				Description("The value for this header will be fetched from the secret $OPENAPI_DOC_AUTH_TOKEN\n").
+				Inline(false).
+				Prompt("").
 				Placeholder("x-auth-token").
 				Value(authHeader),
 		).WithHideFunc(func() bool {
