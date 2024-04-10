@@ -84,7 +84,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
-	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
+	fmt.Println(charm.FormatCommandDescription(
 		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
 			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
 

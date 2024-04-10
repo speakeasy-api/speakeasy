@@ -36,12 +36,9 @@ func NewSelectPrompt(title string, description string, options []huh.Option[stri
 	return group
 }
 
-func FormatCommandTitle(title string, description string) string {
-	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
+func FormatCommandDescription(description string) string {
 	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
-	header := titleStyle.Render(title)
-	header += "\n" + descriptionStyle.Render(description)
-	return header
+	return "\n" + descriptionStyle.Render(description)
 }
 
 func NewInput() *huh.Input {
