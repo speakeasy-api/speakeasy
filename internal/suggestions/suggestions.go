@@ -315,7 +315,7 @@ func (s *Suggestions) revalidate(ctx context.Context, printSummary bool) ([]erro
 }
 
 func validate(ctx context.Context, schema []byte, schemaPath string, level errors.Severity, isRemote, printSummary bool) ([]error, error) {
-	vErrs, vWarns, vInfo, err := validation.Validate(ctx, schema, schemaPath, nil, true, "", "")
+	vErrs, vWarns, vInfo, err := validation.Validate(ctx, log.From(ctx), schema, schemaPath, nil, isRemote, "speakeasy-recommended", "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate YAML: %v", err)
 	}

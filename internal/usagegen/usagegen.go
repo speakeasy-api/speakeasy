@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"regexp"
 	"strings"
@@ -56,7 +57,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
 		generate.WithCustomerID(customerID),
-		generate.WithFileFuncs(writeFileWithBuffer(tmpOutput), os.ReadFile),
+		generate.WithFileSystem(&fileSystem{buf: tmpOutput}),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithAllowRemoteReferences(),
@@ -107,18 +108,6 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 	}
 
 	return nil
-}
-
-func writeFileWithBuffer(buf *bytes.Buffer) func(outFileName string, data []byte, mode os.FileMode) error {
-	return func(outFileName string, data []byte, mode os.FileMode) error {
-		// Make this resilient to additional files being inadvertently written
-		if strings.Contains(string(data), "Usage snippet provided for") {
-			_, err := buf.Write(data)
-			return err
-		}
-
-		return nil
-	}
 }
 
 // writeFormattedDirectory: writes each OperationIDs usage snippet into its own directory with a single main file
@@ -254,4 +243,36 @@ func isDirectory(path string) bool {
 	}
 
 	return info.IsDir()
+}
+
+type fileSystem struct {
+	buf *bytes.Buffer
+}
+
+var _ generate.FileSystem = &fileSystem{}
+
+func (fs *fileSystem) ReadFile(fileName string) ([]byte, error) {
+	return os.ReadFile(fileName)
+}
+
+func (fs *fileSystem) WriteFile(outFileName string, data []byte, mode os.FileMode) error {
+	// Make this resilient to additional files being inadvertently written
+	if strings.Contains(string(data), "Usage snippet provided") {
+		_, err := fs.buf.Write(data)
+		return err
+	}
+
+	return nil
+}
+
+func (fs *fileSystem) MkdirAll(path string, mode os.FileMode) error {
+	return nil
+}
+
+func (fs *fileSystem) Open(name string) (fs.File, error) {
+	return os.Open(name)
+}
+
+func (fs *fileSystem) Stat(name string) (fs.FileInfo, error) {
+	return os.Stat(name)
 }

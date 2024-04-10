@@ -63,7 +63,7 @@ func validate(ctx context.Context, schemaPath string, schema []byte, defaultRule
 		MaxWarns: 10,
 	}
 
-	vErrs, vWarns, _, err := validation.Validate(ctx, schema, schemaPath, limits, false, defaultRuleset, workingDir)
+	vErrs, vWarns, _, err := validation.Validate(ctx, logger, schema, schemaPath, limits, false, defaultRuleset, workingDir)
 	if err != nil {
 		return err
 	}

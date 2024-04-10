@@ -114,7 +114,6 @@ func setupRootCmd(version, artifactArch string) {
 	}
 
 	Init(version, artifactArch)
-	return
 }
 
 func GetRootCommand() *cobra.Command {
@@ -122,8 +121,8 @@ func GetRootCommand() *cobra.Command {
 }
 
 func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
-	// Don't display if piping to a file for example
-	if !utils.IsInteractive() {
+	// Don't display if piping to a file for example or running locally during development
+	if !utils.IsInteractive() || os.Getenv("SPEAKEASY_ENVIRONMENT") == "local" {
 		return
 	}
 
