@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	config "github.com/speakeasy-api/sdk-gen-config"
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/access"
@@ -88,13 +89,6 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		generate.WithLogger(logger.WithFormatter(log.PrefixedFormatter)),
 		generate.WithCustomerID(customerID),
 		generate.WithWorkspaceID(workspaceID),
-		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
-			if err := utils.CreateDirectory(filename); err != nil {
-				return err
-			}
-
-			return os.WriteFile(filename, data, perm)
-		}, os.ReadFile),
 		generate.WithRunLocation(runLocation),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithInstallationURL(installationURL),
@@ -164,13 +158,18 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {
-	l := log.From(ctx).WithAssociatedFile("gen.yaml") // TODO if we want to associate annotations with this file we need to get the actual path
+	path := "gen.yaml"
+
+	res, err := config.FindConfigFile(outDir, nil)
+	if err == nil {
+		path = res.Path
+	}
+
+	l := log.From(ctx).WithAssociatedFile(path)
 
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(l),
-		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
-			return nil
-		}, os.ReadFile),
+		generate.WithDontWrite(),
 		generate.WithRunLocation("cli"),
 	}
 

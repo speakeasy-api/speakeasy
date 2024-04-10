@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
@@ -37,7 +39,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	vErrs, vWarns, vInfo, err := Validate(ctx, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	vErrs, vWarns, vInfo, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
 	if err != nil {
 		return err
 	}
@@ -93,7 +95,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 
 	hasWarnings := false
 
-	vErrs, vWarns, vInfo, err := Validate(ctx, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	vErrs, vWarns, vInfo, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
 	if err != nil {
 		return err
 	}
@@ -236,16 +238,13 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(ctx context.Context, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string) ([]error, []error, []error, error) {
-	// TODO: is this still true: Set to error because g.Validate sometimes logs all warnings for some reason
+func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string) ([]error, []error, []error, error) {
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
 	opts := []generate.GeneratorOptions{
-		generate.WithFileFuncs(
-			func(filename string, data []byte, perm os.FileMode) error { return nil },
-			os.ReadFile,
-		),
+		generate.WithDontWrite(),
 		generate.WithLogger(l),
+		generate.WithRunLocation("cli"),
 	}
 
 	if defaultRuleset != "" {
@@ -257,11 +256,15 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 		return nil, nil, nil, err
 	}
 
-	errs := g.Validate(context.Background(), schema, schemaPath, isRemote, workingDir)
+	res, err := g.Validate(ctx, schema, schemaPath, isRemote, workingDir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	var vErrs []error
 	var vWarns []error
 	var vInfo []error
 
+	errs := res.GetValidationErrors()
 	for _, err := range errs {
 		vErr := errors.GetValidationErr(err)
 		uErr := errors.GetUnsupportedErr(err)
@@ -272,7 +275,7 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 				vErrs = append(vErrs, vErr)
 			} else if vErr.Severity == errors.SeverityWarn {
 				vWarns = append(vWarns, vErr)
-			} else if vErr.Severity == errors.SeverityHint {
+			} else {
 				vInfo = append(vInfo, vErr)
 			}
 		case uErr != nil:
@@ -293,6 +296,38 @@ func Validate(ctx context.Context, schema []byte, schemaPath string, limits *Out
 		if limits.MaxErrors > 0 && len(vErrs) > limits.MaxErrors {
 			vErrs = append(vErrs, fmt.Errorf("and %d more errors", len(vWarns)-limits.MaxErrors+1))
 			vErrs = vErrs[:limits.MaxErrors]
+		}
+	}
+
+	searchDirs := map[string]bool{
+		workingDir: true,
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		searchDirs[homeDir] = false
+	}
+
+	outputDir := filepath.Join(os.TempDir(), "speakeasy")
+
+	for dir, allowRecursive := range searchDirs {
+		res, err := workspace.FindWorkspace(dir, workspace.FindWorkspaceOptions{
+			Recursive: allowRecursive,
+		})
+		if err != nil {
+			continue
+		}
+		outputDir = filepath.Join(res.Path, "temp")
+	}
+
+	_ = os.MkdirAll(outputDir, 0o755)
+
+	rf, err := os.CreateTemp(outputDir, "lint-report-*.html")
+	if err == nil {
+		defer rf.Close()
+
+		if _, err := rf.Write(res.GenerateReport()); err == nil {
+			outputLogger.Info(fmt.Sprintf("Validation report written to: %s", rf.Name()))
 		}
 	}
 

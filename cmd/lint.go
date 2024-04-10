@@ -3,13 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/exp/maps"
-	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -103,7 +105,12 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 		MaxErrors: flags.MaxValidationErrors,
 	}
 
-	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, "", ""); err != nil {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
@@ -122,7 +129,12 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 		MaxErrors: flags.MaxValidationErrors,
 	}
 
-	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, "", ""); err != nil {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd); err != nil {
 		return err
 	}
 
