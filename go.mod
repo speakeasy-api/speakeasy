@@ -22,7 +22,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-changes v1.0.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.301.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.302.0
 	github.com/speakeasy-api/openapi-overlay v0.4.0
 	github.com/speakeasy-api/sdk-gen-config v1.10.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.4.3
@@ -210,5 +210,3 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
-
-replace github.com/speakeasy-api/openapi-generation/v2 => github.com/speakeasy-api/openapi-generation/v2 v2.301.3-0.20240408180851-5e5879bd8c3d
