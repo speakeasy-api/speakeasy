@@ -529,7 +529,7 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 
 func defaultPublishingFile() *config.PublishWorkflow {
 	return &config.PublishWorkflow{
-		Name: "Publish",
+		Name: "SourcePublishing",
 		On: config.PublishOn{
 			Push: config.Push{
 				Paths: []string{

@@ -205,7 +205,7 @@ func askForTarget(title, description, confirmation string, targets []string, all
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(ctx, "Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(ctx, "ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
 	if err != nil {
 		return err
 	}

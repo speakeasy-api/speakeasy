@@ -7,6 +7,7 @@ import (
 	"fmt"
 	charmLog "github.com/charmbracelet/log"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -20,35 +21,43 @@ import (
 	"strings"
 )
 
-func CompileSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceId string, source workflow.Source) (string, error) {
+func BundleSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceId string, source workflow.Source) (string, error) {
 	outputLocation, err := source.GetOutputLocation()
 	if err != nil {
 		return "", err
 	}
-	//
-	//if err := os.MkdirAll(filepath.Dir(outputLocation), os.ModePerm); err != nil {
-	//	return "", err
-	//}
-	//
-	//dst, err := os.Create(outputLocation)
-	//if err != nil {
-	//	return "", fmt.Errorf("error creating output file: %w", err)
-	//}
-	//
-	//defer dst.Close()
-	return outputLocation, compileSource(ctx, rootStep, sourceId, source, outputOptions{mainDocOutputPath: outputLocation})
+
+	return outputLocation, bundleSource(ctx, rootStep, sourceId, source, outputOptions{mainDocOutputPath: outputLocation})
 }
 
-func CompileSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceId string, source workflow.Source, dst io.Writer) error {
-	return compileSource(ctx, rootStep, sourceId, source, outputOptions{mainDocDst: dst})
+func BundleSourceTo(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceId string, source workflow.Source, dst io.Writer) error {
+	return bundleSource(ctx, rootStep, sourceId, source, outputOptions{mainDocDst: dst})
+}
+
+func PublishSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceId string, source workflow.Source) error {
+	outputOptions := outputOptions{publish: &PublishOpts{}}
+	if source.Publish != nil {
+		outputOptions.publish.Location = source.Publish.Location
+		outputOptions.publish.Tags = source.Publish.Tags
+	}
+
+	if &outputOptions.publish.Location == nil {
+		if sourceId == "" {
+			return errors.New("sourceId is required for publishing if publish.location is not provided in the Source")
+		}
+		outputOptions.publish.NamespaceName = sourceId
+	}
+
+	return bundleSource(ctx, rootStep, sourceId, source, outputOptions)
 }
 
 type outputOptions struct {
-	mainDocOutputPath string    // Supporting documents will be written as siblings to this file
-	mainDocDst        io.Writer // Supporting documents will not be written. The output doc is not guaranteed to be valid
+	mainDocOutputPath string       // Supporting documents will be written as siblings to this file
+	mainDocDst        io.Writer    // Supporting documents will not be written. The output doc is not guaranteed to be valid
+	publish           *PublishOpts // Publish the final document to a registry
 }
 
-func compileSource(
+func bundleSource(
 	ctx context.Context,
 	rootStep *workflowTracking.WorkflowStep,
 	sourceId string,
@@ -76,9 +85,7 @@ func compileSource(
 	logger := log.From(ctx)
 	memFS := bundler.NewMemFS()
 	rwfs := bundler.NewReadWriteFS(memFS, memFS)
-	pipeline := bundler.NewPipeline(&bundler.PipelineOptions{
-		Logger: slog.New(charmLog.New(logger.GetWriter())),
-	})
+	pipeline := newPipeline(ctx)
 	pathToValidationResult := map[string]error{}
 
 	/*
@@ -248,6 +255,79 @@ func compileSource(
 		return err
 	}
 
+	/*
+	 * SourcePublishing final document
+	 */
+
+	if opts.publish != nil {
+		registryStep := rootStep.NewSubstep("Pushing image to the registry")
+
+		if err = publishImage(ctx, registryStep, pipeline, rwfs, *opts.publish); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func PublishImageToNamespace(
+	ctx context.Context,
+	rootStep *workflowTracking.WorkflowStep,
+	rwfs *bundler.ReadWriteFS,
+	namespaceName string,
+	tags []string,
+) error {
+	pipeline := newPipeline(ctx)
+	return publishImage(ctx, rootStep, pipeline, rwfs, PublishOpts{NamespaceName: namespaceName, Tags: tags})
+}
+
+type PublishOpts struct {
+	Location      workflow.Location
+	NamespaceName string
+	Tags          []string
+}
+
+func publishImage(
+	ctx context.Context,
+	rootStep *workflowTracking.WorkflowStep,
+	pipeline *bundler.Pipeline,
+	rwfs *bundler.ReadWriteFS,
+	opts PublishOpts,
+) error {
+	rootStep.NewSubstep("Building image")
+
+	buildOpts := &bundler.OCIBuildOptions{
+		Tags:        opts.Tags,
+		Annotations: bundler.OCIAnnotations{},
+	}
+	if err := pipeline.BuildOCIImage(ctx, rwfs, buildOpts); err != nil {
+		return fmt.Errorf("error building oci image: %w", err)
+	}
+
+	rootStep.NewSubstep("Pushing image")
+
+	if opts.Location == "" && opts.NamespaceName == "" {
+		return errors.New("publish location is missing")
+	} else if opts.NamespaceName == "" {
+		opts.NamespaceName = opts.Location.NamespaceName()
+	}
+
+	// TODO: PREFLIGHT(opts.NamespaceName)
+	preflightResultNamespace := "codat/oas/lending"
+	if opts.Location != "" && opts.Location.Namespace() != preflightResultNamespace {
+		return fmt.Errorf("publish location is not owned by the workspace. Expected %s", preflightResultNamespace)
+	}
+
+	pushOpts := &bundler.OCIPushOptions{
+		Registry:   auth.GetServerURL(),
+		Repository: preflightResultNamespace,
+		Tags:       opts.Tags,
+		Insecure:   true,
+	}
+	if err := pipeline.PushOCIImage(ctx, rwfs, pushOpts); err != nil {
+		return fmt.Errorf("error pushing oci image: %w", err)
+	}
+
 	return nil
 }
 
@@ -323,4 +403,10 @@ func getSchemaPathDisplay(pipeline *bundler.Pipeline, path string) string {
 		}
 	}
 	return fmt.Sprintf("%s%s", path, originalPath)
+}
+
+func newPipeline(ctx context.Context) *bundler.Pipeline {
+	return bundler.NewPipeline(&bundler.PipelineOptions{
+		Logger: slog.New(charmLog.New(log.From(ctx).GetWriter())),
+	})
 }

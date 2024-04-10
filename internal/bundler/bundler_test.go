@@ -112,7 +112,7 @@ func Test(t *testing.T) {
 			}
 
 			os.RemoveAll(filepath.Dir(*tt.source.Output))
-			outputPath, err := CompileSource(context.Background(), nil, "", tt.source)
+			outputPath, err := BundleSource(context.Background(), nil, "", tt.source)
 
 			if tt.wantErr {
 				assert.Error(t, err)

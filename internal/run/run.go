@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/bundler"
+	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"io"
 	"math/rand"
 	"os"
@@ -42,7 +44,7 @@ type Workflow struct {
 	ShouldCompile    bool
 	ForceGeneration  bool
 
-	RootStep           *WorkflowStep
+	RootStep           *workflowTracking.WorkflowStep
 	workflow           *workflow.Workflow
 	projectDir         string
 	validatedDocuments []string
@@ -50,13 +52,13 @@ type Workflow struct {
 	FromQuickstart     bool
 }
 
-func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
+func NewWorkflow(ctx context.Context, name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return nil, err
 	}
 
-	rootStep := NewWorkflowStep(name, nil)
+	rootStep := workflowTracking.NewWorkflowStep(name, log.From(ctx), nil)
 
 	return &Workflow{
 		Target:           target,
@@ -99,14 +101,15 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 }
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
-	updatesChannel := make(chan UpdateMsg)
-	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
+	logger := log.From(ctx)
+
+	updatesChannel := make(chan workflowTracking.UpdateMsg)
+	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", logger, updatesChannel)
 
 	var logs bytes.Buffer
 	warnings := make([]string, 0)
 
 	var err, runErr error
-	logger := log.From(ctx)
 
 	runFnCli := func() error {
 		l := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
@@ -354,7 +357,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	return nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, id string, cleanUp bool) (string, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
@@ -458,6 +461,19 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		return "", err
 	}
 
+	rootStep.NewSubstep("Push to registry")
+
+	// For now, construct a new source with the output location as the input
+	// This is a temporary solution until we use the bundler to do merge/overlay
+	newSource := workflow.Source{
+		Inputs:  []workflow.Document{{Location: outputLocation}},
+		Publish: source.Publish,
+	}
+
+	if err := bundler.PublishSource(ctx, rootStep, id, newSource); err != nil {
+		return "", err
+	}
+
 	rootStep.SucceedWorkflow()
 
 	if cleanUp {
@@ -470,7 +486,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	return outputLocation, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset, projectDir string) error {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, schemaPath, defaultRuleset, projectDir string) error {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
