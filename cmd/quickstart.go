@@ -137,7 +137,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	promptedDir := filepath.Join(workingDir, strcase.ToKebab(sdkClassName)+"-"+targetType)
+	promptedDir := setDefaultOutDir(workingDir, sdkClassName, targetType)
 	if outDir != workingDir {
 		promptedDir = outDir
 	}
@@ -256,4 +256,17 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	return nil
+}
+
+func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
+	subDirectory := strcase.ToKebab(sdkClassName) + "-" + targetType
+	if targetType == "terraform" {
+		if strings.HasPrefix(filepath.Base(workingDir), "terraform-provider") {
+			return "."
+		}
+
+		subDirectory = fmt.Sprintf("terraform-provider-%s", subDirectory)
+	}
+
+	return filepath.Join(workingDir, subDirectory)
 }
