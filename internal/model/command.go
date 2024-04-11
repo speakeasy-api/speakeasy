@@ -213,16 +213,41 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 // If the command is run from a workflow file, check if the desired version is different from the current version
 // If so, download the desired version and run the command with it as a subprocess
 func runWithVersionFromWorkflowFile(cmd *cobra.Command, args []string) error {
-	logger := log.From(cmd.Context())
+	ctx := cmd.Context()
+	logger := log.From(ctx)
 
 	wf, wfPath, err := utils.GetWorkflow()
 	if err != nil {
 		return fmt.Errorf("failed to load workflow file: %w", err)
 	}
 
-	if wf != nil && wf.SpeakeasyVersion != "" && wf.SpeakeasyVersion != "latest" {
-		artifactArch := cmd.Context().Value(updates.ArtifactArchContextKey).(string)
+	if wf == nil {
+		return nil
+	}
+
+	currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
+
+	// Try to migrate existing workflows
+	if wf.SpeakeasyVersion == "" {
+		if ghPinned := env.PinnedVersion(); ghPinned != "" {
+			wf.SpeakeasyVersion = workflow.Version(ghPinned)
+			wf.VersionLocked = true
+		} else {
+			wf.SpeakeasyVersion = workflow.Version(currentVersion)
+		}
+
+		_ = updateWorkflowFile(wf, wfPath)
+	}
+
+	if wf.SpeakeasyVersion != "" && wf.SpeakeasyVersion != "latest" {
+		artifactArch := ctx.Value(updates.ArtifactArchContextKey).(string)
 		desiredVersion := wf.SpeakeasyVersion.String()
+
+		// If the desired version is the same as the currently running version of the CLI, just run the command
+		// Caveat: this means we might not auto-upgrade in certain cases
+		if desiredVersion == currentVersion {
+			return nil
+		}
 
 		newerVersion, err := updates.GetNewerVersion(artifactArch, desiredVersion)
 		if err != nil {
@@ -238,18 +263,23 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command, args []string) error {
 
 			err = runWithVersion(cmd, artifactArch, newerVersion.String())
 			if err != nil {
-				//TODO alert
-				logger.PrintfStyled(styles.DimmedItalic, "Failed to auto-upgrade to version %s: %s\n", newerVersion.String(), err.Error())
-				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with older version %s\n", desiredVersion)
+				msg := fmt.Sprintf("Failed to auto-upgrade to version %s: %s\n", newerVersion.String(), err.Error())
+				if err = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil); err != nil {
+					logger.Errorf("Failed to send log to LogProxy: %v\n", err)
+				}
+
+				logger.PrintfStyled(styles.DimmedItalic, msg)
+				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with version defined in workflow.yaml: %s\n", desiredVersion)
 
 				if err := runWithVersion(cmd, artifactArch, desiredVersion); err != nil {
 					return err
 				}
 			} else {
-				logger.Successf("\nAuto-upgrade successful! Updating workflow.yaml/speakeasyVersion to %s\n", newerVersion.String())
-				if err := updateWorkflowFileVersion(wf, newerVersion.String(), wfPath); err != nil {
+				wf.SpeakeasyVersion = workflow.Version(newerVersion.String())
+				if err := updateWorkflowFile(wf, wfPath); err != nil {
 					return err
 				}
+				logger.Successf("\nAuto-upgrade successful! Updated workflow.yaml/speakeasyVersion to %s\n", newerVersion.String())
 			}
 		}
 
@@ -261,15 +291,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command, args []string) error {
 }
 
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
-	// TODO: enforce desired isn't less than when this feature was released
 	ctx := cmd.Context()
-
-	currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
-
-	if desiredVersion == currentVersion {
-		log.From(ctx).PrintfStyled(styles.DimmedItalic, "Running command %q using pinned Speakeasy version %s\n", cmd.Use, desiredVersion)
-		return nil
-	}
 
 	vLocation, err := updates.InstallVersion(ctx, desiredVersion, artifactArch, 30)
 	if err != nil {
@@ -292,9 +314,7 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 	return nil
 }
 
-func updateWorkflowFileVersion(wf *workflow.Workflow, newVersion, workflowFilepath string) error {
-	wf.SpeakeasyVersion = workflow.Version(newVersion)
-
+func updateWorkflowFile(wf *workflow.Workflow, workflowFilepath string) error {
 	f, err := os.OpenFile(workflowFilepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("error opening workflow file: %w", err)
