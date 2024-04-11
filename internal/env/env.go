@@ -9,3 +9,7 @@ func IsGithubAction() bool {
 func IsGithubDebugMode() bool {
 	return os.Getenv("RUNNER_DEBUG") == "true"
 }
+
+func GoArch() string {
+	return os.Getenv("GOARCH")
+}

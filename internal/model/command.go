@@ -4,7 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/updates"
+	"gopkg.in/yaml.v3"
+	"os"
+	"os/exec"
 	"slices"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -51,16 +59,15 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 // ExecutableCommand is a runnable "leaf" command that can be executed directly and has no subcommands
 // F is a struct type that represents the flags for the command. The json tags on the struct fields are used to map to the command line flags
 type ExecutableCommand[F interface{}] struct {
-	Usage, Short, Long   string
-	Flags                []flag.Flag
-	PreRun               func(ctx context.Context, flags *F) error
-	Run                  func(ctx context.Context, flags F) error
-	RunInteractive       func(ctx context.Context, flags F) error
-	Hidden, RequiresAuth bool
+	Usage, Short, Long                     string
+	Flags                                  []flag.Flag
+	PreRun                                 func(ctx context.Context, flags *F) error
+	Run                                    func(ctx context.Context, flags F) error
+	RunInteractive                         func(ctx context.Context, flags F) error
+	Hidden, RequiresAuth, UsesWorkflowFile bool
 
 	// Deprecated: try to avoid using this. It is only present for backwards compatibility with the old CLI
 	NonInteractiveSubcommands []Command
-	CLIVersion                string
 }
 
 func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
@@ -115,6 +122,16 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		PreRunE: interactivity.GetMissingFlagsPreRun,
 		RunE:    run,
 		Hidden:  c.Hidden,
+	}
+
+	if c.UsesWorkflowFile {
+		cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+			if err := runWithVersionFromWorkflowFile(cmd, args); err != nil {
+				return err
+			}
+
+			return interactivity.GetMissingFlagsPreRun(cmd, args)
+		}
 	}
 
 	for _, subcommand := range c.NonInteractiveSubcommands {
@@ -191,6 +208,110 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 	}
 
 	return &flagValues, nil
+}
+
+// If the command is run from a workflow file, check if the desired version is different from the current version
+// If so, download the desired version and run the command with it as a subprocess
+func runWithVersionFromWorkflowFile(cmd *cobra.Command, args []string) error {
+	logger := log.From(cmd.Context())
+
+	wf, wfPath, err := utils.GetWorkflow()
+	if err != nil {
+		return fmt.Errorf("failed to load workflow file: %w", err)
+	}
+
+	if wf != nil && wf.SpeakeasyVersion != "" && wf.SpeakeasyVersion != "latest" {
+		artifactArch := cmd.Context().Value(updates.ArtifactArchContextKey).(string)
+		desiredVersion := wf.SpeakeasyVersion.String()
+
+		newerVersion, err := updates.GetNewerVersion(artifactArch, desiredVersion)
+		if err != nil {
+			return err
+		}
+
+		if wf.VersionLocked || newerVersion == nil {
+			if err := runWithVersion(cmd, artifactArch, desiredVersion); err != nil {
+				return err
+			}
+		} else {
+			logger.PrintfStyled(styles.DimmedItalic, "Newer Speakeasy version found (%s => %s). Attempting auto-upgrade\n", desiredVersion, newerVersion.String())
+
+			err = runWithVersion(cmd, artifactArch, newerVersion.String())
+			if err != nil {
+				//TODO alert
+				logger.PrintfStyled(styles.DimmedItalic, "Failed to auto-upgrade to version %s: %s\n", newerVersion.String(), err.Error())
+				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with older version %s\n", desiredVersion)
+
+				if err := runWithVersion(cmd, artifactArch, desiredVersion); err != nil {
+					return err
+				}
+			} else {
+				logger.Successf("\nAuto-upgrade successful! Updating workflow.yaml/speakeasyVersion to %s\n", newerVersion.String())
+				if err := updateWorkflowFileVersion(wf, newerVersion.String(), wfPath); err != nil {
+					return err
+				}
+			}
+		}
+
+		// Exit here to prevent the command from running twice
+		os.Exit(0)
+	}
+
+	return nil
+}
+
+func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
+	// TODO: enforce desired isn't less than when this feature was released
+	ctx := cmd.Context()
+
+	currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
+
+	if desiredVersion == currentVersion {
+		log.From(ctx).PrintfStyled(styles.DimmedItalic, "Running command %q using pinned Speakeasy version %s\n", cmd.Use, desiredVersion)
+		return nil
+	}
+
+	vLocation, err := updates.InstallVersion(ctx, desiredVersion, artifactArch, 30)
+	if err != nil {
+		return err
+	}
+
+	cmdString := utils.GetFullCommandString(cmd)
+	cmdString = strings.TrimPrefix(cmdString, "speakeasy ")
+
+	newCmd := exec.Command(vLocation, cmdString)
+	newCmd.Stdin = os.Stdin
+	newCmd.Stdout = os.Stdout
+	newCmd.Stderr = os.Stderr
+
+	err = newCmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed to run with version %s: %w", desiredVersion, err)
+	}
+
+	return nil
+}
+
+func updateWorkflowFileVersion(wf *workflow.Workflow, newVersion, workflowFilepath string) error {
+	wf.SpeakeasyVersion = workflow.Version(newVersion)
+
+	f, err := os.OpenFile(workflowFilepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return fmt.Errorf("error opening workflow file: %w", err)
+	}
+	defer f.Close()
+
+	out, err := yaml.Marshal(wf)
+	if err != nil {
+		return fmt.Errorf("error marshalling workflow file: %w", err)
+	}
+
+	_, err = f.Write(out)
+	if err != nil {
+		return fmt.Errorf("error writing to workflow file: %w", err)
+	}
+
+	return nil
 }
 
 // Verify that the command types implement the Command interface

@@ -46,10 +46,11 @@ A full workflow is capable of running the following steps:
   - Compiling the generated SDKs
 
 ` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.",
-	PreRun:         getMissingFlagVals,
-	Run:            runFunc,
-	RunInteractive: runInteractive,
-	RequiresAuth:   true,
+	PreRun:           getMissingFlagVals,
+	Run:              runFunc,
+	RunInteractive:   runInteractive,
+	RequiresAuth:     true,
+	UsesWorkflowFile: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "target",

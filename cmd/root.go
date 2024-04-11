@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"slices"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
-	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
@@ -101,16 +101,16 @@ func setupRootCmd(version, artifactArch string) {
 	rootCmd.Version = version + "\n" + artifactArch
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
-	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		ctx := context.WithValue(cmd.Context(), updates.ArtifactArchContextKey, artifactArch)
+		ctx = events.SetSpeakeasyVersionInContext(ctx, version)
+		cmd.SetContext(ctx)
+
 		if !slices.Contains([]string{"update", "language-server"}, cmd.Name()) {
-			checkForUpdate(cmd, version, artifactArch)
+			checkForUpdate(ctx, version, artifactArch)
 		}
 
-		cmd.SetContext(events.SetSpeakeasyVersionInContext(cmd.Context(), version))
-
-		if err := setLogLevel(cmd); err != nil {
-			return
-		}
+		return setLogLevel(cmd)
 	}
 
 	Init(version, artifactArch)
@@ -120,37 +120,30 @@ func GetRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
+func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
 	// Don't display if piping to a file for example or running locally during development
 	if !utils.IsInteractive() || os.Getenv("SPEAKEASY_ENVIRONMENT") == "local" {
 		return
 	}
 
-	latestVersion, err := updates.GetLatestVersion(artifactArch)
+	newerVersion, err := updates.GetNewerVersion(artifactArch, currentVersion)
 	if err != nil {
 		return
 	}
 
-	if latestVersion == nil {
+	if newerVersion == nil {
 		return
 	}
 
-	curVer, err := version.NewVersion(currentVersion)
-	if err != nil {
-		return
-	}
+	versionString := fmt.Sprintf("A new version of the Speakeasy CLI is available: v%s", newerVersion.String())
+	updateString := "Run `speakeasy update` to update to the latest version"
 
-	if latestVersion.GreaterThan(curVer) {
-		versionString := fmt.Sprintf("A new version of the Speakeasy CLI is available: v%s", latestVersion.String())
-		updateString := "Run `speakeasy update` to update to the latest version"
+	l := log.From(ctx)
+	style := styles.Emphasized.Copy().Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary).Padding(1, 2)
+	l.PrintfStyled(style, "%s\n%s", versionString, updateString)
+	l.Println("\n")
 
-		l := log.From(cmd.Context())
-		style := styles.Emphasized.Copy().Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary).Padding(1, 2)
-		l.PrintfStyled(style, "%s\n%s", versionString, updateString)
-		l.Println("\n")
-
-		return
-	}
+	return
 }
 
 func setLogLevel(cmd *cobra.Command) error {

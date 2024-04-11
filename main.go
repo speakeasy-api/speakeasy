@@ -1,6 +1,9 @@
 package main
 
-import "github.com/speakeasy-api/speakeasy/cmd"
+import (
+	"github.com/speakeasy-api/speakeasy/cmd"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+)
 
 var (
 	version      = "0.0.1"
@@ -8,5 +11,8 @@ var (
 )
 
 func main() {
+	if env.GoArch() != "" {
+		artifactArch = env.GoArch()
+	}
 	cmd.Execute(version, artifactArch)
 }
