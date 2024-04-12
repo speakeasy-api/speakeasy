@@ -16,7 +16,10 @@ import (
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
+	"github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -451,6 +454,57 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
 			return "", err
+		}
+	}
+
+	if os.Getenv("SPEAKEASY_PUBLISH_ARTIFACT") == "1" {
+		registryStep := rootStep.NewSubstep("Publishing to registry")
+
+		registryStep.NewSubstep("Bundling OpenAPI artifacts")
+		memfs := fsextras.NewMemFS()
+		err = memfs.MkdirAll("/openapi/bundle")
+		if err != nil {
+			return "", fmt.Errorf("memfs: mkdirall: %w", err)
+		}
+
+		bs, err := os.ReadFile(filepath.Join(w.projectDir, outputLocation))
+		if err != nil {
+			return "", fmt.Errorf("failed to read output file: %w", err)
+		}
+
+		ext := filepath.Ext(outputLocation)
+		err = memfs.WriteBytes("/openapi/bundle/openapi"+ext, bs, 0644)
+		if err != nil {
+			return "", fmt.Errorf("memfs: writebytes: %w", err)
+		}
+
+		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
+		err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+			Tags: []string{"latest"},
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to create openapi bundle: %w", err)
+		}
+
+		serverURL := auth.GetServerURL()
+		insecurePublish := false
+		if strings.HasPrefix(serverURL, "http://") {
+			insecurePublish = true
+		}
+
+		reg := strings.TrimPrefix(serverURL, "http://")
+		reg = strings.TrimPrefix(reg, "https://")
+
+		registryStep.NewSubstep("Pushing OpenAPI artifacts")
+		err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+			Tags:     []string{"latest"},
+			Registry: reg,
+			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
+				Insecure: insecurePublish,
+			}),
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to publish openapi bundle to registry: %w", err)
 		}
 	}
 
