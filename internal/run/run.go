@@ -206,6 +206,8 @@ func (w *Workflow) Run(ctx context.Context) error {
 		return fmt.Errorf("cannot specify both a target and a source")
 	}
 
+	lockFile := workflow.LockFile{}
+
 	if w.Target == "all" {
 		for t := range w.workflow.Targets {
 			err := w.runTarget(ctx, t)
