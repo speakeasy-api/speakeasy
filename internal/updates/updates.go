@@ -127,7 +127,7 @@ func getVersionInstallLocation(v *version.Version) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".speakeasy", "binaries", v.String(), "speakeasy"), nil
+	return filepath.Join(homeDir, ".speakeasy", v.String(), "bin", "speakeasy"), nil
 }
 
 func install(artifactArch, downloadURL, installLocation string, timeout int) error {

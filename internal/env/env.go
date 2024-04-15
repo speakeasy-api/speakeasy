@@ -17,3 +17,7 @@ func PinnedVersion() string {
 func GoArch() string {
 	return os.Getenv("GOARCH")
 }
+
+func IsLocalDev() bool {
+	return os.Getenv("SPEAKEASY_ENVIRONMENT") == "local"
+}

@@ -221,7 +221,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load workflow file: %w", err)
 	}
 
-	if wf == nil {
+	// If the workflow file doesn't exist, or we're running locally, simply run the command normally with the existing version of the CLI
+	if wf == nil { // TODO: uncomment when done testing locally || env.IsLocalDev() {
 		return nil
 	}
 

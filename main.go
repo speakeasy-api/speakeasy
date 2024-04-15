@@ -6,16 +6,14 @@ import (
 	"runtime"
 )
 
-var (
-	version      = "0.0.1"
-	artifactArch = ""
-)
+const defaultVersion = "0.0.1"
 
 func main() {
+	artifactArch := ""
 	if env.GoArch() != "" {
 		artifactArch = env.GoArch()
 	} else if artifactArch == "" {
-		artifactArch = runtime.GOOS + "_" +runtime.GOARCH
+		artifactArch = runtime.GOOS + "_" + runtime.GOARCH
 	}
-	cmd.Execute(version, artifactArch)
+	cmd.Execute(defaultVersion, artifactArch)
 }

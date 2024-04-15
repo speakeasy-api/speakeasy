@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"os"
 	"slices"
 	"strings"
@@ -122,7 +123,7 @@ func GetRootCommand() *cobra.Command {
 
 func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
 	// Don't display if piping to a file for example or running locally during development
-	if !utils.IsInteractive() || os.Getenv("SPEAKEASY_ENVIRONMENT") == "local" {
+	if !utils.IsInteractive() || env.IsLocalDev() {
 		return
 	}
 
