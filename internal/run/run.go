@@ -458,9 +458,9 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	if os.Getenv("SPEAKEASY_PUBLISH_ARTIFACT") == "1" {
-		registryStep := rootStep.NewSubstep("Publishing to registry")
+		registryStep := rootStep.NewSubstep("Tracking OpenAPI Changes")
 
-		registryStep.NewSubstep("Bundling OpenAPI artifacts")
+		registryStep.NewSubstep("Snapshotting OpenAPI Revision")
 		memfs := fsextras.NewMemFS()
 		err = memfs.MkdirAll("/openapi/bundle")
 		if err != nil {
@@ -495,7 +495,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		reg := strings.TrimPrefix(serverURL, "http://")
 		reg = strings.TrimPrefix(reg, "https://")
 
-		registryStep.NewSubstep("Pushing OpenAPI artifacts")
+		registryStep.NewSubstep("Storing OpenAPI Revision")
 		err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 			Tags:     []string{"latest"},
 			Registry: reg,
