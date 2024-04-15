@@ -195,7 +195,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		}
 	}
 
-	return err
+	return errors.Join(err, runErr)
 }
 
 func (w *Workflow) Run(ctx context.Context) error {

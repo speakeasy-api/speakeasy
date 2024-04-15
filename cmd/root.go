@@ -93,7 +93,6 @@ func Execute(version, artifactArch string) {
 
 	if err := rootCmd.Execute(); err != nil {
 		l.Error("", zap.Error(err))
-		l.WithInteractiveOnly().PrintfStyled(styles.DimmedItalic, "Run '%s --help' for usage.\n", rootCmd.CommandPath())
 		os.Exit(1)
 	}
 }

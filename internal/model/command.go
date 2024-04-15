@@ -307,8 +307,7 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 	newCmd.Stdout = os.Stdout
 	newCmd.Stderr = os.Stderr
 
-	err = newCmd.Run()
-	if err != nil {
+	if err = newCmd.Run(); err != nil {
 		return fmt.Errorf("failed to run with version %s: %w", desiredVersion, err)
 	}
 
