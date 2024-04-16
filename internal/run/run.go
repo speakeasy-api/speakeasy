@@ -43,17 +43,30 @@ type Workflow struct {
 	ForceGeneration  bool
 
 	RootStep           *WorkflowStep
-	workflow           *workflow.Workflow
+	workflow           workflow.Workflow
 	projectDir         string
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
+	lockfile           workflow.LockFile
 }
 
-func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
+func NewWorkflow(
+	ctx context.Context,
+	name, target, source, repo string,
+	repoSubDirs, installationURLs map[string]string,
+	debug, shouldCompile, forceGeneration bool,
+) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
-	if err != nil {
-		return nil, err
+	if err != nil || wf == nil {
+		return nil, fmt.Errorf("failed to load workflow.yaml: %w", err)
+	}
+
+	lockfile := workflow.LockFile{
+		SpeakeasyVersion: events.GetSpeakeasyVersionFromContext(ctx),
+		Workflow:         *wf,
+		Sources:          make(map[string]workflow.SourceLock),
+		Targets:          make(map[string]workflow.TargetLock),
 	}
 
 	rootStep := NewWorkflowStep(name, nil)
@@ -66,10 +79,11 @@ func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURL
 		InstallationURLs: installationURLs,
 		Debug:            debug,
 		ShouldCompile:    shouldCompile,
-		workflow:         wf,
+		workflow:         *wf,
 		projectDir:       projectDir,
 		RootStep:         rootStep,
 		ForceGeneration:  forceGeneration,
+		lockfile:         lockfile,
 	}, nil
 }
 
@@ -237,7 +251,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return workflow.SaveLockfile(w.projectDir, &w.lockfile)
 }
 
 func getTarget(target string) (*workflow.Target, error) {
@@ -350,6 +364,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	os.RemoveAll(workflow.GetTempDir())
 
 	rootStep.SucceedWorkflow()
+
+	w.lockfile.Targets[target] = workflow.TargetLock{
+		Source:          t.Source,
+		GenLockLocation: genConfig.ConfigPath,
+	}
 
 	return nil
 }
@@ -465,6 +484,10 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		// Clean up temp files on success
 		os.RemoveAll(workflow.GetTempDir())
+	}
+
+	w.lockfile.Sources[id] = workflow.SourceLock{
+		// TODO: fill with registry info (namespace + revision digest)
 	}
 
 	return outputLocation, nil
