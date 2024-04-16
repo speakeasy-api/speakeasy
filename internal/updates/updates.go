@@ -107,7 +107,7 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 		return "", fmt.Errorf("failed to find release for version %s: %w", v.String(), err)
 	}
 
-	dst, err := getVersionInstallLocation(v)
+	dst, err := getVersionInstallLocation(artifactArch, v)
 	if err != nil {
 		return "", err
 	}
@@ -122,12 +122,20 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 	return dst, install(artifactArch, asset.GetBrowserDownloadURL(), dst, timeout)
 }
 
-func getVersionInstallLocation(v *version.Version) (string, error) {
+func getVersionInstallLocation(artifactArch string, v *version.Version) (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".speakeasy", v.String(), "bin", "speakeasy"), nil
+	return filepath.Join(homeDir, ".speakeasy", v.String(), "bin", getBinaryName(artifactArch)), nil
+}
+
+func getBinaryName(artifactArch string) string {
+	binaryName := "speakeasy"
+	if strings.Contains(artifactArch, "windows") {
+		binaryName += ".exe"
+	}
+	return binaryName
 }
 
 func install(artifactArch, downloadURL, installLocation string, timeout int) error {
@@ -150,10 +158,7 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 		return fmt.Errorf("failed to extract artifact: %w", err)
 	}
 
-	binaryName := "speakeasy"
-	if strings.Contains(artifactArch, "windows") {
-		binaryName += ".exe"
-	}
+	binaryName := getBinaryName(artifactArch)
 
 	// Get the current binary permissions so that we can set them on the new binary
 	currentExecPath, err := os.Executable()
