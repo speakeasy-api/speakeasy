@@ -4,16 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/updates"
-	"gopkg.in/yaml.v3"
-	"os"
-	"os/exec"
-	"slices"
-	"strings"
-
 	"github.com/fatih/structs"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -24,6 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"slices"
 )
 
 type Command interface {
@@ -61,7 +52,7 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 type ExecutableCommand[F interface{}] struct {
 	Usage, Short, Long                     string
 	Flags                                  []flag.Flag
-	PreRun                                 func(ctx context.Context, flags *F) error
+	PreRun                                 func(cmd *cobra.Command, flags *F) error
 	Run                                    func(ctx context.Context, flags F) error
 	RunInteractive                         func(ctx context.Context, flags F) error
 	Hidden, RequiresAuth, UsesWorkflowFile bool
@@ -87,7 +78,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		}
 
 		if c.PreRun != nil {
-			if err := c.PreRun(cmd.Context(), flags); err != nil {
+			if err := c.PreRun(cmd, flags); err != nil {
 				return err
 			}
 		}
@@ -122,16 +113,6 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		PreRunE: interactivity.GetMissingFlagsPreRun,
 		RunE:    run,
 		Hidden:  c.Hidden,
-	}
-
-	if c.UsesWorkflowFile {
-		cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-			if err := runWithVersionFromWorkflowFile(cmd, args); err != nil {
-				return err
-			}
-
-			return interactivity.GetMissingFlagsPreRun(cmd, args)
-		}
 	}
 
 	for _, subcommand := range c.NonInteractiveSubcommands {
@@ -208,130 +189,6 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 	}
 
 	return &flagValues, nil
-}
-
-// If the command is run from a workflow file, check if the desired version is different from the current version
-// If so, download the desired version and run the command with it as a subprocess
-func runWithVersionFromWorkflowFile(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	logger := log.From(ctx)
-
-	wf, wfPath, err := utils.GetWorkflow()
-	if err != nil {
-		return fmt.Errorf("failed to load workflow file: %w", err)
-	}
-
-	// If the workflow file doesn't exist, or we're running locally, simply run the command normally with the existing version of the CLI
-	if wf == nil { // TODO: uncomment when done testing locally || env.IsLocalDev() {
-		return nil
-	}
-
-	currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
-
-	// Try to migrate existing workflows
-	if wf.SpeakeasyVersion == "" {
-		if ghPinned := env.PinnedVersion(); ghPinned != "" {
-			wf.SpeakeasyVersion = workflow.Version(ghPinned)
-			wf.VersionLocked = true
-		} else {
-			wf.SpeakeasyVersion = workflow.Version(currentVersion)
-		}
-
-		_ = updateWorkflowFile(wf, wfPath)
-	}
-
-	if wf.SpeakeasyVersion != "" && wf.SpeakeasyVersion != "latest" {
-		artifactArch := ctx.Value(updates.ArtifactArchContextKey).(string)
-		desiredVersion := wf.SpeakeasyVersion.String()
-
-		// If the desired version is the same as the currently running version of the CLI, just run the command
-		// Caveat: this means we might not auto-upgrade in certain cases
-		if desiredVersion == currentVersion {
-			return nil
-		}
-
-		newerVersion, err := updates.GetNewerVersion(artifactArch, desiredVersion)
-		if err != nil {
-			return err
-		}
-
-		if wf.VersionLocked || newerVersion == nil {
-			if err := runWithVersion(cmd, artifactArch, desiredVersion); err != nil {
-				return err
-			}
-		} else {
-			logger.PrintfStyled(styles.DimmedItalic, "Newer Speakeasy version found (%s => %s). Attempting auto-upgrade\n", desiredVersion, newerVersion.String())
-
-			err = runWithVersion(cmd, artifactArch, newerVersion.String())
-			if err != nil {
-				msg := fmt.Sprintf("Failed to auto-upgrade to version %s: %s\n", newerVersion.String(), err.Error())
-				if err = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil); err != nil {
-					logger.Errorf("Failed to send log to LogProxy: %v\n", err)
-				}
-
-				logger.PrintfStyled(styles.DimmedItalic, msg)
-				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with version defined in workflow.yaml: %s\n", desiredVersion)
-
-				if err := runWithVersion(cmd, artifactArch, desiredVersion); err != nil {
-					return err
-				}
-			} else {
-				wf.SpeakeasyVersion = workflow.Version(newerVersion.String())
-				if err := updateWorkflowFile(wf, wfPath); err != nil {
-					return err
-				}
-				logger.Successf("\nAuto-upgrade successful! Updated workflow.yaml/speakeasyVersion to %s\n", newerVersion.String())
-			}
-		}
-
-		// Exit here to prevent the command from running twice
-		os.Exit(0)
-	}
-
-	return nil
-}
-
-func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
-	ctx := cmd.Context()
-
-	vLocation, err := updates.InstallVersion(ctx, desiredVersion, artifactArch, 30)
-	if err != nil {
-		return err
-	}
-
-	cmdString := utils.GetFullCommandString(cmd)
-	cmdString = strings.TrimPrefix(cmdString, "speakeasy ")
-
-	newCmd := exec.Command(vLocation, cmdString)
-	newCmd.Stdin = os.Stdin
-	newCmd.Stdout = os.Stdout
-	newCmd.Stderr = os.Stderr
-
-	if err = newCmd.Run(); err != nil {
-		return fmt.Errorf("failed to run with version %s: %w", desiredVersion, err)
-	}
-
-	return nil
-}
-
-func updateWorkflowFile(wf *workflow.Workflow, workflowFilepath string) error {
-	f, err := os.OpenFile(workflowFilepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		return fmt.Errorf("error opening workflow file: %w", err)
-	}
-	defer f.Close()
-
-	out, err := yaml.Marshal(wf)
-	if err != nil {
-		return fmt.Errorf("error marshalling workflow file: %w", err)
-	}
-
-	_, err = f.Write(out)
-	if err != nil {
-		return fmt.Errorf("error writing to workflow file: %w", err)
-	}
-
-	return nil
 }
 
 // Verify that the command types implement the Command interface
