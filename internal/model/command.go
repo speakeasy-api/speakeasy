@@ -50,12 +50,12 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 // ExecutableCommand is a runnable "leaf" command that can be executed directly and has no subcommands
 // F is a struct type that represents the flags for the command. The json tags on the struct fields are used to map to the command line flags
 type ExecutableCommand[F interface{}] struct {
-	Usage, Short, Long                     string
-	Flags                                  []flag.Flag
-	PreRun                                 func(cmd *cobra.Command, flags *F) error
-	Run                                    func(ctx context.Context, flags F) error
-	RunInteractive                         func(ctx context.Context, flags F) error
-	Hidden, RequiresAuth, UsesWorkflowFile bool
+	Usage, Short, Long   string
+	Flags                []flag.Flag
+	PreRun               func(cmd *cobra.Command, flags *F) error
+	Run                  func(ctx context.Context, flags F) error
+	RunInteractive       func(ctx context.Context, flags F) error
+	Hidden, RequiresAuth bool
 
 	// Deprecated: try to avoid using this. It is only present for backwards compatibility with the old CLI
 	NonInteractiveSubcommands []Command

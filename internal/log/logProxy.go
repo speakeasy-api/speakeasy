@@ -39,10 +39,10 @@ func SendToLogProxy(ctx context.Context, logLevel logProxyLevel, logMessage stri
 	request := logProxyEntry{
 		LogLevel: logLevel,
 		Message:  logMessage,
-		Source:   "gh_action",
 	}
 
 	if env.IsGithubAction() {
+		request.Source = "gh_action"
 		request.Tags = map[string]interface{}{
 			"gh_repository":     fmt.Sprintf("https://github.com/%s", os.Getenv("GITHUB_REPOSITORY")),
 			"gh_action_version": os.Getenv("GH_ACTION_VERSION"),
@@ -52,6 +52,7 @@ func SendToLogProxy(ctx context.Context, logLevel logProxyLevel, logMessage stri
 			"run_origin":        "gh_action",
 		}
 	} else {
+		request.Source = "local"
 		request.Tags = map[string]interface{}{
 			"run_origin": "local",
 		}
