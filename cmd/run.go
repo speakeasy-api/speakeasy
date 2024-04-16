@@ -115,7 +115,6 @@ A full workflow is capable of running the following steps:
 }
 
 // Gets missing flag values (ie source / target)
-// Then runs the command with the version from the workflow file
 func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
