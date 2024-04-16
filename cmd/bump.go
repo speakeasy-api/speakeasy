@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -21,14 +22,14 @@ const (
 var bumpCommand = &cobra.Command{
 	Use:   "bump [patch|minor|major]",
 	Short: "Bumps the version of a Speakeasy Generation Target",
-	Long: `Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.
+	Long: log.RenderMarkdown(`Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.
 
 Examples:
 
 - speakeasy bump patch - Bumps the target's version by one patch version
 - speakeasy bump -v 1.2.3 - Sets the target's version to 1.2.3
 - speakeasy bump major -t typescript - Bumps the typescript target's version by one major version
-`,
+`),
 	Args: cobra.RangeArgs(0, 1),
 }
 
@@ -58,10 +59,10 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 	}
 
 	if (bumpTyp != "" || specificVersion == "") && !slices.Contains([]string{"patch", "minor", "major"}, bumpTyp) {
-		return fmt.Errorf("bump type must be one of patch, minor, or major")
+		return fmt.Errorf(log.RenderError("bump type must be one of `patch`, `minor`, or `major`"))
 	} else if specificVersion != "" {
 		if _, err := version.NewVersion(specificVersion); err != nil {
-			return fmt.Errorf("specified version %s is not a valid semantic version: %w", specificVersion, err)
+			return fmt.Errorf("specified version `%s` is not a valid semantic version: %w", specificVersion, err)
 		}
 	}
 
