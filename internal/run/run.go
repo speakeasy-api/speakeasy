@@ -367,7 +367,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 	w.lockfile.Targets[target] = workflow.TargetLock{
 		Source:          t.Source,
-		GenLockLocation: genConfig.ConfigPath,
+		GenLockLocation: outDir,
 	}
 
 	return nil
