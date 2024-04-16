@@ -33,19 +33,33 @@ type RunFlags struct {
 	Output           string            `json:"output"`
 }
 
-var runCmd = &model.ExecutableCommand[RunFlags]{
-	Usage: "run",
-	Short: "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
-	Long: "run the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
-A workflow can consist of multiple targets that define a source OpenAPI document that can be downloaded from a URL, exist as a local file, or be created via merging multiple OpenAPI documents together and/or overlaying them with an OpenAPI overlay document.
-A full workflow is capable of running the following steps:
-  - Downloading source OpenAPI documents from a URL
-  - Merging multiple OpenAPI documents together
-  - Overlaying OpenAPI documents with an OpenAPI overlay document
-  - Generating one or many SDKs from the resulting OpenAPI document
-  - Compiling the generated SDKs
+var runLong = `# Run
 
-` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.",
+Run the workflow(s) defined in your ` + "`.speakeasy/workflow.yaml` file." + `
+
+A workflow can consist of multiple sources that define OpenAPI documents
+
+Source OpenAPI documents can be:
+- Local files
+- Downloaded from a URL
+- Merged from multiple other OpenAPI documents
+- Created by overlaying an OpenAPI document with an OpenAPI overlay.
+
+A workflow is capable of:
+- Downloading source OpenAPI documents from a URL
+- Merging multiple OpenAPI documents together
+- Overlaying OpenAPI documents with an OpenAPI overlay document
+- Generating & compiling SDKs
+- Generating web documentation
+- Generating Postman collections
+- and more!
+
+If ` + "`speakeasy run`" + `is run without any arguments it will either run the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.`
+
+var runCmd = &model.ExecutableCommand[RunFlags]{
+	Usage:          "run",
+	Short:          "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
+	Long:           log.RenderMarkdown(runLong),
 	PreRun:         getMissingFlagVals,
 	Run:            runFunc,
 	RunInteractive: runInteractive,
