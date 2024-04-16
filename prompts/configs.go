@@ -132,10 +132,12 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 		return nil, err
 	}
 
-	form = huh.NewForm(languageGroups...)
-	if _, err := charm.NewForm(form, formTitle, formSubtitle).
-		ExecuteForm(); err != nil {
-		return nil, err
+	if len(languageGroups) > 0 {
+		form = huh.NewForm(languageGroups...)
+		if _, err := charm.NewForm(form, formTitle, formSubtitle).
+			ExecuteForm(); err != nil {
+			return nil, err
+		}
 	}
 
 	output.Generation.SDKClassName = sdkClassName
