@@ -14,6 +14,7 @@ import (
 	"time"
 
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 
 	"github.com/speakeasy-api/speakeasy-core/auth"
@@ -457,7 +458,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		}
 	}
 
-	if os.Getenv("SPEAKEASY_PUBLISH_ARTIFACT") == "1" {
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	if hasSchemaRegistry {
 		registryStep := rootStep.NewSubstep("Tracking OpenAPI Changes")
 
 		registryStep.NewSubstep("Snapshotting OpenAPI Revision")
@@ -473,38 +475,40 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		}
 
 		ext := filepath.Ext(outputLocation)
-		err = memfs.WriteBytes("/openapi/bundle/openapi"+ext, bs, 0644)
+		err = memfs.WriteBytes("/openapi/bundle/openapi"+ext, bs, 0o644)
 		if err != nil {
 			return "", fmt.Errorf("memfs: writebytes: %w", err)
 		}
 
 		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
-		err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+		if err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
 			Tags: []string{"latest"},
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to create openapi bundle: %w", err)
-		}
+		}); err != nil {
+			// If the preflight error is caused by lack of feature flag we continue without error
+			if !errors.Is(err, bundler.ErrAccessGated) {
+				return "", fmt.Errorf("failed to create openapi bundle: %w", err)
+			}
+		} else {
+			serverURL := auth.GetServerURL()
+			insecurePublish := false
+			if strings.HasPrefix(serverURL, "http://") {
+				insecurePublish = true
+			}
 
-		serverURL := auth.GetServerURL()
-		insecurePublish := false
-		if strings.HasPrefix(serverURL, "http://") {
-			insecurePublish = true
-		}
+			reg := strings.TrimPrefix(serverURL, "http://")
+			reg = strings.TrimPrefix(reg, "https://")
 
-		reg := strings.TrimPrefix(serverURL, "http://")
-		reg = strings.TrimPrefix(reg, "https://")
-
-		registryStep.NewSubstep("Storing OpenAPI Revision")
-		err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
-			Tags:     []string{"latest"},
-			Registry: reg,
-			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
-				Insecure: insecurePublish,
-			}),
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to publish openapi bundle to registry: %w", err)
+			registryStep.NewSubstep("Storing OpenAPI Revision")
+			_, err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+				Tags:     []string{"latest"},
+				Registry: reg,
+				Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
+					Insecure: insecurePublish,
+				}),
+			})
+			if err != nil {
+				return "", fmt.Errorf("failed to publish openapi bundle to registry: %w", err)
+			}
 		}
 	}
 
