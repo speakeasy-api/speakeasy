@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/huh"
@@ -34,10 +35,15 @@ type QuickstartFlags struct {
 //go:embed sample_openapi.yaml
 var sampleSpec string
 
+var description = `Speakeasy Quickstart guides you through building a generation workflow for any combination of sources and targets.
+After completing these steps you will be ready to start customizing and generating your SDKs.
+
+`
+
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	Usage:        "quickstart",
 	Short:        "Guided setup to help you create a new SDK in minutes.",
-	Long:         `Guided setup to help you create a new SDK in minutes.`,
+	Long:         log.RenderMarkdown("# Quickstart \n" + description),
 	Run:          quickstartExec,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
@@ -64,6 +70,11 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	},
 }
 
+const HasExistingGenerationMessage = "You cannot run quickstart when a speakeasy workflow already exists. \n" +
+	"To create a brand new SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
+	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+	"To regenerate the current workflow: `speakeasy run`."
+
 func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -71,22 +82,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return fmt.Errorf(log.RenderMarkdown(HasExistingGenerationMessage))
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: cd .. and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return fmt.Errorf(log.RenderMarkdown(HasExistingGenerationMessage))
 	}
 
-	fmt.Println(charm.FormatCommandDescription(
-		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
-			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
+	fmt.Println(charm.FormatCommandDescription(description))
 
 	quickstartObj := prompts.Quickstart{
 		WorkflowFile: &workflow.Workflow{
