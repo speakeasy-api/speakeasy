@@ -292,7 +292,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// If the workflow file doesn't exist, or we're running locally, simply run the command normally with the existing version of the CLI
-	if wf == nil { // TODO: uncomment when done testing locally || env.IsLocalDev() {
+	if wf == nil || env.IsLocalDev() {
 		return nil
 	}
 
