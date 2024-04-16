@@ -1,12 +1,13 @@
 package utils
 
 import (
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 
 	"golang.org/x/term"
 )
