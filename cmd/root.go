@@ -18,23 +18,35 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/updates"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
+	_ "embed"
+
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
+//go:embed root_examples.md
+var examples string
+
+const rootLong = `# Speakeasy CLI
+
+A CLI tool for interacting with the [Speakeasy platform](https://www.speakeasyapi.dev/) and its various functions including:
+
+- Generating Client SDKs from OpenAPI specs
+	(go, python, typescript, java, php, c#, swift, ruby, terraform)
+- Validating OpenAPI specs
+- Interacting with the Speakeasy API to create and manage your API workspaces
+- Generating OpenAPI specs from your API traffic
+- Generating Postman collections from OpenAPI Specs
+`
+
 var rootCmd = &cobra.Command{
-	Use:   "speakeasy",
-	Short: "The speakeasy cli tool provides access to the speakeasyapi.dev toolchain",
-	Long: ` A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, c#, swift, ruby, terraform)
-	- Validating OpenAPI specs
-	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic
-	- Generating Postman collections from OpenAPI Specs
-`,
-	RunE: rootExec,
+	Use:     "speakeasy",
+	Short:   log.RenderMarkdown("The Speakeasy CLI provides access to the [Speakeasy](speakeasyapi.dev) toolchain"),
+	Long:    log.RenderMarkdown(rootLong),
+	Example: log.RenderMarkdown(examples),
+	RunE:    rootExec,
 }
 
 var l = log.New().WithLevel(log.LevelInfo)
