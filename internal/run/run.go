@@ -496,7 +496,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		reg = strings.TrimPrefix(reg, "https://")
 
 		registryStep.NewSubstep("Storing OpenAPI Revision")
-		err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+		_, err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 			Tags:     []string{"latest"},
 			Registry: reg,
 			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
