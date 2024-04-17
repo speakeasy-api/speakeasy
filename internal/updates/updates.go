@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"net/http"
@@ -123,11 +124,20 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 }
 
 func getVersionInstallLocation(artifactArch string, v *version.Version) (string, error) {
-	homeDir, err := os.UserHomeDir()
+	dir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".speakeasy", v.String(), "bin", getBinaryName(artifactArch)), nil
+
+	// If we are running in a GitHub action, we need to write to temp directory instead of home directory
+	if env.IsGithubAction() {
+		dir, err = os.MkdirTemp("", "speakeasy")
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return filepath.Join(dir, ".speakeasy", v.String(), "bin", getBinaryName(artifactArch)), nil
 }
 
 func getBinaryName(artifactArch string) string {
