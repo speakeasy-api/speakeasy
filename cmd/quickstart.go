@@ -84,7 +84,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
-	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
+	fmt.Println(charm.FormatCommandDescription(
 		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
 			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
 
@@ -137,7 +137,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
-	promptedDir := filepath.Join(workingDir, strcase.ToKebab(sdkClassName)+"-"+targetType)
+	promptedDir := setDefaultOutDir(workingDir, sdkClassName, targetType)
 	if outDir != workingDir {
 		promptedDir = outDir
 	}
@@ -267,4 +267,17 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	return nil
+}
+
+func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
+	subDirectory := strcase.ToKebab(sdkClassName) + "-" + targetType
+	if targetType == "terraform" {
+		if strings.HasPrefix(filepath.Base(workingDir), "terraform-provider") {
+			return "."
+		}
+
+		subDirectory = fmt.Sprintf("terraform-provider-%s", subDirectory)
+	}
+
+	return filepath.Join(workingDir, subDirectory)
 }
