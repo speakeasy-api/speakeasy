@@ -53,6 +53,11 @@ type Workflow struct {
 	FromQuickstart     bool
 }
 
+type sourceResult struct {
+	Source       string
+	ReportOutput string
+}
+
 func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
@@ -109,12 +114,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	warnings := make([]string, 0)
 
 	var err, runErr error
+	var sourceResults map[string]*sourceResult
 	logger := log.From(ctx)
 
 	runFnCli := func() error {
 		l := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
 		runCtx := log.With(ctx, l)
-		err = w.Run(runCtx)
+		sourceResults, err = w.Run(runCtx)
 
 		w.RootStep.Finalize(err == nil)
 
@@ -174,6 +180,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
 		}
 
+		for sourceID, sourceRes := range sourceResults {
+			parts := strings.SplitN(sourceRes.ReportOutput, ":", 2)
+
+			additionalLines = append(additionalLines, fmt.Sprintf("%s - %s:", sourceID, parts[0]))
+			additionalLines = append(additionalLines, parts[1])
+		}
+
 		if t.CodeSamples != nil {
 			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 		}
@@ -201,46 +214,56 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	return err
 }
 
-func (w *Workflow) Run(ctx context.Context) error {
+func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
 	if w.Source != "" && w.Target != "" {
-		return fmt.Errorf("cannot specify both a target and a source")
+		return nil, fmt.Errorf("cannot specify both a target and a source")
 	}
+
+	sourceResults := make(map[string]*sourceResult)
 
 	if w.Target == "all" {
 		for t := range w.workflow.Targets {
-			err := w.runTarget(ctx, t)
+			sourceRes, err := w.runTarget(ctx, t)
 			if err != nil {
-				return err
+				return nil, err
 			}
+
+			sourceResults[sourceRes.Source] = sourceRes
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, err := w.runSource(ctx, w.RootStep, id, true)
+			_, sourceRes, err := w.runSource(ctx, w.RootStep, id, true)
 			if err != nil {
-				return err
+				return nil, err
 			}
+
+			sourceResults[sourceRes.Source] = sourceRes
 		}
 	} else if w.Target != "" {
 		if _, ok := w.workflow.Targets[w.Target]; !ok {
-			return fmt.Errorf("target %s not found", w.Target)
+			return nil, fmt.Errorf("target %s not found", w.Target)
 		}
 
-		err := w.runTarget(ctx, w.Target)
+		sourceRes, err := w.runTarget(ctx, w.Target)
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		sourceResults[sourceRes.Source] = sourceRes
 	} else if w.Source != "" {
 		if _, ok := w.workflow.Sources[w.Source]; !ok {
-			return fmt.Errorf("source %s not found", w.Source)
+			return nil, fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, err := w.runSource(ctx, w.RootStep, w.Source, true)
+		_, sourceRes, err := w.runSource(ctx, w.RootStep, w.Source, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		sourceResults[sourceRes.Source] = sourceRes
 	}
 
-	return nil
+	return sourceResults, nil
 }
 
 func getTarget(target string) (*workflow.Target, error) {
@@ -252,7 +275,7 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func (w *Workflow) runTarget(ctx context.Context, target string) error {
+func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult, error) {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
@@ -261,17 +284,25 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 	source, sourcePath, err := w.workflow.GetTargetSource(target)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var sourceRes *sourceResult
+
 	if source != nil {
-		sourcePath, err = w.runSource(ctx, rootStep, t.Source, false)
+		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, false)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
-		if err := w.validateDocument(ctx, rootStep, sourcePath, "", w.projectDir); err != nil {
-			return err
+		reportOutput, err := w.validateDocument(ctx, rootStep, sourcePath, "", w.projectDir)
+		if err != nil {
+			return nil, err
+		}
+
+		sourceRes = &sourceResult{
+			Source:       t.Source,
+			ReportOutput: reportOutput,
 		}
 	}
 
@@ -288,7 +319,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 	genConfig, err := sdkGenConfig.Load(outDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published)
@@ -296,7 +327,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		if errors.Is(err, validation.NoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
 		} else {
-			return err
+			return nil, err
 		}
 	}
 
@@ -328,7 +359,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 		w.ForceGeneration,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	w.generationAccess = generationAccess
 
@@ -343,7 +374,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -354,10 +385,10 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 
 	rootStep.SucceedWorkflow()
 
-	return nil
+	return sourceRes, nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, *sourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
 	source := w.workflow.Sources[id]
 
@@ -371,7 +402,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 	outputLocation, err := source.GetOutputLocation()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	var currentDocument string
@@ -387,7 +418,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 			currentDocument, err = resolveRemoteDocument(ctx, source.Inputs[0], downloadLocation)
 			if err != nil {
-				return "", err
+				return "", nil, err
 			}
 		} else {
 			currentDocument = source.Inputs[0].Location
@@ -409,7 +440,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
 				if err != nil {
-					return "", err
+					return "", nil, err
 				}
 
 				inSchemas = append(inSchemas, downloadedPath)
@@ -421,7 +452,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
 
 		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.projectDir); err != nil {
-			return "", err
+			return "", nil, err
 		}
 
 		currentDocument = mergeLocation
@@ -441,7 +472,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
 				if err != nil {
-					return "", err
+					return "", nil, err
 				}
 
 				overlaySchemas = append(overlaySchemas, downloadedPath)
@@ -453,7 +484,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
 
 		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
 
@@ -464,18 +495,18 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		memfs := fsextras.NewMemFS()
 		err = memfs.MkdirAll("/openapi/bundle")
 		if err != nil {
-			return "", fmt.Errorf("memfs: mkdirall: %w", err)
+			return "", nil, fmt.Errorf("memfs: mkdirall: %w", err)
 		}
 
 		bs, err := os.ReadFile(filepath.Join(w.projectDir, outputLocation))
 		if err != nil {
-			return "", fmt.Errorf("failed to read output file: %w", err)
+			return "", nil, fmt.Errorf("failed to read output file: %w", err)
 		}
 
 		ext := filepath.Ext(outputLocation)
-		err = memfs.WriteBytes("/openapi/bundle/openapi"+ext, bs, 0644)
+		err = memfs.WriteBytes("/openapi/bundle/openapi"+ext, bs, 0o644)
 		if err != nil {
-			return "", fmt.Errorf("memfs: writebytes: %w", err)
+			return "", nil, fmt.Errorf("memfs: writebytes: %w", err)
 		}
 
 		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
@@ -483,7 +514,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			Tags: []string{"latest"},
 		})
 		if err != nil {
-			return "", fmt.Errorf("failed to create openapi bundle: %w", err)
+			return "", nil, fmt.Errorf("failed to create openapi bundle: %w", err)
 		}
 
 		serverURL := auth.GetServerURL()
@@ -504,12 +535,18 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			}),
 		})
 		if err != nil {
-			return "", fmt.Errorf("failed to publish openapi bundle to registry: %w", err)
+			return "", nil, fmt.Errorf("failed to publish openapi bundle to registry: %w", err)
 		}
 	}
 
-	if err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir); err != nil {
-		return "", err
+	reportOutput, err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir)
+	if err != nil {
+		return "", nil, err
+	}
+
+	sourceRes := &sourceResult{
+		Source:       id,
+		ReportOutput: reportOutput,
 	}
 
 	rootStep.SucceedWorkflow()
@@ -521,15 +558,15 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		os.RemoveAll(workflow.GetTempDir())
 	}
 
-	return outputLocation, nil
+	return outputLocation, sourceRes, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset, projectDir string) error {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset, projectDir string) (string, error) {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
 		step.Skip("already validated")
-		return nil
+		return "", nil
 	}
 
 	limits := &validation.OutputLimits{
@@ -537,11 +574,11 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 		MaxWarns:  1000,
 	}
 
-	res := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, projectDir)
+	reportOutput, err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, projectDir)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
-	return res
+	return reportOutput, err
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
