@@ -105,7 +105,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		if c.UsesWorkflowFile {
 			// If we're running locally or the --pinned flag is set simply run the command normally with the existing version of the CLI
 			pinned, _ := cmd.Flags().GetBool("pinned")
-			if !pinned && !env.IsLocalDev() {
+			if !pinned && !env.IsLocalDev() && os.Getenv("VERSION_PINNING") == "true" { // TODO: Remove feature flag when ready
 				return runWithVersionFromWorkflowFile(cmd)
 			}
 		}
