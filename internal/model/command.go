@@ -106,14 +106,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			// If we're running locally or the --pinned flag is set simply run the command normally with the existing version of the CLI
 			pinned, _ := cmd.Flags().GetBool("pinned")
 			if !pinned && !env.IsLocalDev() && os.Getenv("VERSION_PINNING") == "true" { // TODO: Remove feature flag when ready
-				wasRun, err := runWithVersionFromWorkflowFile(cmd)
-				if err != nil {
-					return err
-				}
-				// If it wasn't run, continue on so that it will be run
-				if wasRun {
-					return nil
-				}
+				return runWithVersionFromWorkflowFile(cmd)
 			}
 		}
 
@@ -233,17 +226,15 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 
 // If the command is run from a workflow file, check if the desired version is different from the current version
 // If so, download the desired version and run the command with it as a subprocess
-// Returns whether the command was executed (if false, it will still need to be run)
-func runWithVersionFromWorkflowFile(cmd *cobra.Command) (bool, error) {
+func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	ctx := cmd.Context()
 	logger := log.From(ctx)
 
 	wf, wfPath, err := utils.GetWorkflow()
 	if err != nil {
-		return false, fmt.Errorf("failed to load workflow file: %w", err)
+		return fmt.Errorf("failed to load workflow file: %w", err)
 	}
 
-	currentlyRunningVersion := events.GetSpeakeasyVersionFromContext(ctx)
 	artifactArch := ctx.Value(updates.ArtifactArchContextKey).(string)
 
 	// Try to migrate existing workflows
@@ -262,18 +253,13 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) (bool, error) {
 	if desiredVersion == "latest" {
 		latest, err := updates.GetLatestVersion(artifactArch)
 		if err != nil {
-			return false, err
+			return err
 		}
 		desiredVersion = latest.String()
 
 		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version: %s\n", desiredVersion)
 	} else {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion from workflow.yaml: %s\n", desiredVersion)
-	}
-
-	// If the desired version is the same as the currently running version of the CLI, just run the command
-	if desiredVersion == currentlyRunningVersion {
-		return false, nil
 	}
 
 	// Get lockfile version before running the command, in case it gets overwritten
@@ -290,17 +276,17 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) (bool, error) {
 				githubactions.AddStepSummary("# Speakeasy Version upgrade failure\n" + msg)
 			}
 
-			if lockfileVersion != "" {
+			if lockfileVersion != "" && lockfileVersion != desiredVersion {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version: %s\n", lockfileVersion)
-				return true, runWithVersion(cmd, artifactArch, lockfileVersion)
+				return runWithVersion(cmd, artifactArch, lockfileVersion)
 			}
 		}
 
 		// If the command failed to run with the pinned version, fail normally
-		return true, runErr
+		return runErr
 	}
 
-	return true, nil
+	return nil
 }
 
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
@@ -312,18 +298,9 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 	cmdString := utils.GetFullCommandString(cmd)
 	cmdString = strings.TrimPrefix(cmdString, "speakeasy ")
 
-	desiredV, err := version.NewVersion(desiredVersion)
-	if err != nil {
-		return err
-	}
-
-	// The pinned flag was introduced in 1.254.0
+	// The pinned flag was introduced in 1.256.0
 	// For earlier versions, it isn't necessary because we don't try auto-upgrading
-	minVersionForPinnedFlag, err := version.NewVersion("1.256.0")
-	if err != nil {
-		return err
-	}
-	if desiredV.GreaterThan(minVersionForPinnedFlag) {
+	if ok, _ := pinningWasReleased(desiredVersion); ok {
 		cmdString += " --pinned"
 	}
 
@@ -337,6 +314,20 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 	}
 
 	return nil
+}
+
+func pinningWasReleased(v string) (bool, error) {
+	desiredV, err := version.NewVersion(v)
+	if err != nil {
+		return false, err
+	}
+
+	minVersionForPinnedFlag, err := version.NewVersion("1.256.0")
+	if err != nil {
+		return false, err
+	}
+
+	return desiredV.GreaterThan(minVersionForPinnedFlag), nil
 }
 
 func getLockfileVersion() string {
