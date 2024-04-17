@@ -277,10 +277,10 @@ func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
 
 		sourceResults[sourceRes.Source] = sourceRes
 	}
-  
-  if err := workflow.SaveLockfile(w.projectDir, &w.lockfile); err != nil {
-			return nil, err
-		}
+
+	if err := workflow.SaveLockfile(w.projectDir, &w.lockfile); err != nil {
+		return nil, err
+	}
 
 	return sourceResults, nil
 }
@@ -403,7 +403,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	os.RemoveAll(workflow.GetTempDir())
 
 	rootStep.SucceedWorkflow()
-  
+
 	w.lockfile.Targets[target] = workflow.TargetLock{
 		// TODO: fill with registry info (namespace + revision digest)
 		Source:      t.Source,
@@ -576,7 +576,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		// Clean up temp files on success
 		os.RemoveAll(workflow.GetTempDir())
 	}
-  
+
 	w.lockfile.Sources[id] = workflow.SourceLock{
 		// TODO: fill with registry info (namespace + revision digest)
 	}
