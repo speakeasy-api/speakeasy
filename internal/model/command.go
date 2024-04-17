@@ -106,7 +106,14 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			// If we're running locally or the --pinned flag is set simply run the command normally with the existing version of the CLI
 			pinned, _ := cmd.Flags().GetBool("pinned")
 			if !pinned && !env.IsLocalDev() && os.Getenv("VERSION_PINNING") == "true" { // TODO: Remove feature flag when ready
-				return runWithVersionFromWorkflowFile(cmd)
+				wasRun, err := runWithVersionFromWorkflowFile(cmd)
+				if err != nil {
+					return err
+				}
+				// If it wasn't run, continue on so that it will be run
+				if wasRun {
+					return nil
+				}
 			}
 		}
 
@@ -226,13 +233,14 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 
 // If the command is run from a workflow file, check if the desired version is different from the current version
 // If so, download the desired version and run the command with it as a subprocess
-func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
+// Returns whether the command was executed (if false, it will still need to be run)
+func runWithVersionFromWorkflowFile(cmd *cobra.Command) (bool, error) {
 	ctx := cmd.Context()
 	logger := log.From(ctx)
 
 	wf, wfPath, err := utils.GetWorkflow()
 	if err != nil {
-		return fmt.Errorf("failed to load workflow file: %w", err)
+		return false, fmt.Errorf("failed to load workflow file: %w", err)
 	}
 
 	currentlyRunningVersion := events.GetSpeakeasyVersionFromContext(ctx)
@@ -254,7 +262,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	if desiredVersion == "latest" {
 		latest, err := updates.GetLatestVersion(artifactArch)
 		if err != nil {
-			return err
+			return false, err
 		}
 		desiredVersion = latest.String()
 
@@ -265,7 +273,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 	// If the desired version is the same as the currently running version of the CLI, just run the command
 	if desiredVersion == currentlyRunningVersion {
-		return nil
+		return false, nil
 	}
 
 	// Get lockfile version before running the command, in case it gets overwritten
@@ -284,15 +292,15 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 			if lockfileVersion != "" {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version: %s\n", lockfileVersion)
-				return runWithVersion(cmd, artifactArch, lockfileVersion)
+				return true, runWithVersion(cmd, artifactArch, lockfileVersion)
 			}
 		}
 
 		// If the command failed to run with the pinned version, fail normally
-		return runErr
+		return true, runErr
 	}
 
-	return nil
+	return true, nil
 }
 
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
