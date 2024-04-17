@@ -4,7 +4,6 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"math/rand"
 	"net/http"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy/internal/transform"
 
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
@@ -63,7 +64,7 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{}, "", "")
+	_, err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{}, "", "")
 	if len(os.Getenv("OPENAI_API_KEY")) == 0 {
 		return errors.NewValidationError("OPENAI_API_KEY is not set", -1, nil)
 	}
@@ -336,6 +337,3 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 func base64(key string) string {
 	return b64.StdEncoding.EncodeToString([]byte(key))
 }
-
-
-
