@@ -366,8 +366,9 @@ func (w *Workflow) runTarget(ctx context.Context, target string) error {
 	rootStep.SucceedWorkflow()
 
 	w.lockfile.Targets[target] = workflow.TargetLock{
-		Source:          t.Source,
-		GenLockLocation: outDir,
+		// TODO: fill with registry info (namespace + revision digest)
+		Source:      t.Source,
+		OutLocation: outDir,
 	}
 
 	return nil
