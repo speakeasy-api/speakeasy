@@ -2,10 +2,11 @@ package api
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
@@ -44,7 +45,7 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 		APIID:     apiID,
 		VersionID: versionID,
 		RequestBody: operations.RegisterSchemaRequestBody{
-			File: operations.File{
+			File: operations.RegisterSchemaFile{
 				Content:  data,
 				FileName: filepath.Base(schemaPath),
 			},
