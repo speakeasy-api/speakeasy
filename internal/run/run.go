@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/maps"
 	"io"
 	"math/rand"
 	"os"
@@ -169,61 +170,8 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 	// Display success message if the workflow succeeded
 	if err == nil && runErr == nil {
-		t, err := getTarget(w.Target)
-		if err != nil {
-			return err
-		}
-		workingDirectory, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		tOut := workingDirectory
-		if t.Output != nil && *t.Output != "" && *t.Output != "." {
-			tOut = *t.Output
-		}
-		if w.Target == "all" {
-			tOut = "the paths specified in workflow.yaml"
-		}
-
-		titleMsg := " SDK Generated Successfully"
-		additionalLines := []string{
-			"✎ Output written to " + tOut,
-			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
-		}
-
-		if w.FromQuickstart {
-			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
-		}
-
-		for sourceID, sourceRes := range sourceResults {
-			parts := strings.SplitN(sourceRes.ReportOutput, ":", 2)
-
-			additionalLines = append(additionalLines, fmt.Sprintf("%s - %s:", sourceID, parts[0]))
-			additionalLines = append(additionalLines, parts[1])
-		}
-
-		if t.CodeSamples != nil {
-			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
-		}
-
-		if len(criticalWarns) > 0 {
-			additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
-			titleMsg = " SDK Generated with Warnings"
-		}
-
-		msg := styles.RenderSuccessMessage(
-			t.Target+titleMsg,
-			additionalLines...,
-		)
-		logger.Println(msg)
-
-		if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
-			msg := styles.RenderInfoMessage(
-				"🚀 Time to Upgrade 🚀\n",
-				strings.Split(w.generationAccess.Message, "\n")...,
-			)
-			logger.Println("\n\n" + msg)
-		}
+		w.printSourceSuccessMessage(logger, sourceResults)
+		_ = w.printTargetSuccessMessage(logger, endDuration, len(criticalWarns) > 0)
 	}
 
 	return errors.Join(err, runErr)
@@ -556,6 +504,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
 			return "", nil, fmt.Errorf("error publishing openapi bundle to registry: %w", err)
 		}
+
+		registryStep.SucceedWorkflow()
 	}
 
 	reportOutput, err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir)
@@ -602,6 +552,91 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
 	return reportOutput, err
+}
+
+func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
+	t, err := getTarget(w.Target)
+	if err != nil {
+		return err
+	}
+	workingDirectory, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	tOut := workingDirectory
+	if t.Output != nil && *t.Output != "" && *t.Output != "." {
+		tOut = *t.Output
+	}
+	if w.Target == "all" {
+		tOut = "the paths specified in workflow.yaml"
+	}
+
+	titleMsg := " SDK Generated Successfully"
+	additionalLines := []string{
+		"✎ Output written to " + tOut,
+		fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+	}
+
+	if w.FromQuickstart {
+		additionalLines = append(additionalLines, "Execute `speakeasy run` to regenerate your SDK!")
+	}
+
+	if t.CodeSamples != nil {
+		additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+	}
+
+	if criticalWarnings {
+		additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
+		titleMsg = " SDK Generated with Warnings"
+	}
+
+	msg := styles.RenderSuccessMessage(
+		t.Target+titleMsg,
+		additionalLines...,
+	)
+	logger.Println(msg)
+
+	if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
+		msg := styles.RenderInfoMessage(
+			"🚀 Time to Upgrade 🚀\n",
+			strings.Split(w.generationAccess.Message, "\n")...,
+		)
+		logger.Println("\n\n" + msg)
+	}
+
+	return nil
+}
+
+func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults map[string]*sourceResult) {
+	if len(sourceResults) == 0 {
+		return
+	}
+
+	titleMsg := fmt.Sprintf("Source %s Compiled Successfully", maps.Keys(sourceResults)[0])
+	if len(sourceResults) > 1 {
+		titleMsg = "Sources Compiled Successfully"
+	}
+
+	var additionalLines []string
+
+	for sourceID, sourceRes := range sourceResults {
+		sourceLabel := ""
+		if len(sourceResults) > 1 {
+			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
+		}
+
+		parts := strings.SplitN(sourceRes.ReportOutput, ":", 2)
+
+		additionalLines = append(additionalLines, fmt.Sprintf("%s%s:", sourceLabel, styles.Dimmed.Render(parts[0])))
+		additionalLines = append(additionalLines, parts[1])
+	}
+
+	msg := styles.RenderSuccessMessage(
+		titleMsg,
+		additionalLines...,
+	)
+
+	logger.Println(msg)
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {

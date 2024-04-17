@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/structs"
+	"github.com/hashicorp/go-version"
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -87,10 +88,6 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			return err
 		}
 
-		if c.UsesWorkflowFile {
-			return runWithVersionFromWorkflowFile(cmd)
-		}
-
 		return nil
 	}
 
@@ -102,6 +99,15 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				return err
 			}
 			cmd.SetContext(authCtx)
+		}
+
+		// If the command uses a workflow file, run using the version specified in the workflow file
+		if c.UsesWorkflowFile {
+			// If we're running locally or the --pinned flag is set simply run the command normally with the existing version of the CLI
+			pinned, _ := cmd.Flags().GetBool("pinned")
+			if !pinned && !env.IsLocalDev() {
+				return runWithVersionFromWorkflowFile(cmd)
+			}
 		}
 
 		flags, err := c.GetFlagValues(cmd)
@@ -229,13 +235,6 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		return fmt.Errorf("failed to load workflow file: %w", err)
 	}
 
-	// If the workflow file doesn't exist, we're running locally, or the --pinned flag is set
-	// simply run the command normally with the existing version of the CLI
-	pinned, _ := cmd.Flags().GetBool("pinned")
-	if wf == nil || pinned || env.IsLocalDev() {
-		return nil
-	}
-
 	currentlyRunningVersion := events.GetSpeakeasyVersionFromContext(ctx)
 	artifactArch := ctx.Value(updates.ArtifactArchContextKey).(string)
 
@@ -285,11 +284,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 			if lockfileVersion != "" {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version: %s\n", lockfileVersion)
-				if err := runWithVersion(cmd, artifactArch, lockfileVersion); err != nil {
-					return err
-				} else {
-					os.Exit(0) // Exit to prevent the command from running twice
-				}
+				return runWithVersion(cmd, artifactArch, lockfileVersion)
 			}
 		}
 
@@ -297,8 +292,6 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		return runErr
 	}
 
-	// Exit to prevent the command from running twice
-	os.Exit(0)
 	return nil
 }
 
@@ -311,9 +304,18 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 	cmdString := utils.GetFullCommandString(cmd)
 	cmdString = strings.TrimPrefix(cmdString, "speakeasy ")
 
+	desiredV, err := version.NewVersion(desiredVersion)
+	if err != nil {
+		return err
+	}
+
 	// The pinned flag was introduced in 1.254.0
 	// For earlier versions, it isn't necessary because we don't try auto-upgrading
-	if desiredVersion > "1.256.0" {
+	minVersionForPinnedFlag, err := version.NewVersion("1.256.0")
+	if err != nil {
+		return err
+	}
+	if desiredV.GreaterThan(minVersionForPinnedFlag) {
 		cmdString += " --pinned"
 	}
 
