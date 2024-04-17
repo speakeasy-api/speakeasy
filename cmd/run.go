@@ -234,7 +234,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		return err
 	}
 
-	err = workflow.Run(ctx)
+	_, err = workflow.Run(ctx)
 
 	workflow.RootStep.Finalize(err == nil)
 
@@ -264,7 +264,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	case "summary":
 		return workflow.RunWithVisualization(ctx)
 	case "mermaid":
-		err = workflow.Run(ctx)
+		_, err = workflow.Run(ctx)
 		workflow.RootStep.Finalize(err == nil)
 		mermaid, err := workflow.RootStep.ToMermaidDiagram()
 		if err != nil {

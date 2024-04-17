@@ -2,6 +2,8 @@ package validation
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -10,12 +12,14 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/sdk-gen-config/workspace"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"go.uber.org/zap"
 )
 
@@ -28,7 +32,7 @@ type OutputLimits struct {
 	MaxWarns int
 }
 
-func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) error {
+func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (string, error) {
 	logger := log.From(ctx)
 	logger.Info("Validating OpenAPI spec...\n")
 
@@ -36,12 +40,12 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 
 	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to get schema contents: %w", err)
+		return "", fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	vErrs, vWarns, vInfo, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	vErrs, vWarns, vInfo, reportOutput, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if len(vErrs) == 0 && len(vWarns) == 0 && len(vInfo) == 0 {
@@ -51,7 +55,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 			fmt.Sprintf("Try %s %s", styles.HeavilyEmphasized.Render("speakeasy quickstart"), styles.Dimmed.Render("to generate an SDK")),
 		)
 		logger.Println(msg)
-		return nil
+		return reportOutput, nil
 	}
 
 	var tabs []interactivity.Tab
@@ -79,25 +83,25 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 
 	interactivity.RunTabs(tabs)
 
-	return nil
+	return reportOutput, nil
 }
 
-func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) error {
+func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (string, error) {
 	logger := log.From(ctx)
 	logger.Info("Validating OpenAPI spec...\n")
 
 	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to get schema contents: %w", err)
+		return "", fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
 	hasWarnings := false
 
-	vErrs, vWarns, vInfo, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	vErrs, vWarns, vInfo, reportOutput, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for _, hint := range vInfo {
@@ -116,7 +120,7 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 	if len(vErrs) > 0 {
 		status := "\nOpenAPI spec invalid ✖"
 		github.GenerateSummary(status, vErrs)
-		return fmt.Errorf(status)
+		return "", fmt.Errorf(status)
 	}
 
 	if hasWarnings {
@@ -129,13 +133,13 @@ func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limi
 
 		github.GenerateSummary("OpenAPI spec valid with warnings ⚠", vErrs)
 		logger.Warn("OpenAPI spec valid with warnings ⚠")
-		return nil
+		return reportOutput, nil
 	}
 
 	github.GenerateSummary("OpenAPI spec valid ✓", nil)
 	logger.Success("OpenAPI spec valid ✓")
 
-	return nil
+	return reportOutput, nil
 }
 
 func errorsToTabContents(schema []byte, errs []error) []interactivity.InspectableContent {
@@ -238,7 +242,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string) ([]error, []error, []error, error) {
+func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string) ([]error, []error, []error, string, error) {
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
 	opts := []generate.GeneratorOptions{
@@ -253,12 +257,12 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 
 	g, err := generate.New(opts...)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, "", err
 	}
 
 	res, err := g.Validate(ctx, schema, schemaPath, isRemote, workingDir)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, "", err
 	}
 	var vErrs []error
 	var vWarns []error
@@ -299,37 +303,71 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		}
 	}
 
-	searchDirs := map[string]bool{
-		workingDir: true,
-	}
+	reportOutput, err := generateReport(ctx, res)
 
-	homeDir, err := os.UserHomeDir()
 	if err == nil {
-		searchDirs[homeDir] = false
+		outputLogger.Info(reportOutput)
 	}
 
-	outputDir := filepath.Join(os.TempDir(), "speakeasy")
+	return vErrs, vWarns, vInfo, reportOutput, nil
+}
 
-	for dir, allowRecursive := range searchDirs {
-		res, err := workspace.FindWorkspace(dir, workspace.FindWorkspaceOptions{
-			Recursive: allowRecursive,
-		})
-		if err != nil {
-			continue
-		}
-		outputDir = filepath.Join(res.Path, "temp")
+type validationResult interface {
+	GenerateReport() []byte
+}
+
+func generateReport(ctx context.Context, res validationResult) (string, error) {
+	reportBytes := res.GenerateReport()
+
+	md5Hasher := md5.New()
+	if _, err := md5Hasher.Write(reportBytes); err != nil {
+		return writeLocally(reportBytes)
+	}
+	filename := hex.EncodeToString(md5Hasher.Sum(nil))
+
+	s, err := sdk.InitSDK("")
+	if err != nil {
+		return writeLocally(reportBytes)
 	}
 
-	_ = os.MkdirAll(outputDir, 0o755)
+	uploadRes, err := s.Reports.UploadReport(ctx, operations.UploadReportRequestBody{
+		Data: shared.Report{
+			Type: shared.TypeLinting.ToPointer(),
+		},
+		File: operations.File{
+			Content:  reportBytes,
+			FileName: filename + ".html",
+		},
+	})
+	if err != nil {
+		return writeLocally(reportBytes)
+	}
+
+	return fmt.Sprintf("Validation report available to view at: %s", uploadRes.UploadedReport.GetURL()), nil
+}
+
+func writeLocally(reportBytes []byte) (string, error) {
+	baseDir, err := os.UserHomeDir()
+	if err != nil {
+		baseDir = os.TempDir()
+	}
+
+	outputDir := filepath.Join(baseDir, ".speakeasy", "temp")
+
+	err = os.MkdirAll(outputDir, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
 
 	rf, err := os.CreateTemp(outputDir, "lint-report-*.html")
-	if err == nil {
-		defer rf.Close()
+	if err != nil {
+		return "", err
+	}
+	defer rf.Close()
 
-		if _, err := rf.Write(res.GenerateReport()); err == nil {
-			outputLogger.Info(fmt.Sprintf("Validation report written to: %s", rf.Name()))
-		}
+	if _, err := rf.Write(reportBytes); err != nil {
+		return "", err
 	}
 
-	return vErrs, vWarns, vInfo, nil
+	return fmt.Sprintf("Validation report written to: %s", rf.Name()), nil
 }
