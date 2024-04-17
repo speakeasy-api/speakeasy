@@ -1,15 +1,13 @@
 package utils
 
 import (
-	"fmt"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 
 	"golang.org/x/term"
 )
@@ -142,28 +140,4 @@ func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
 	}
 
 	return wf, projectDir, nil
-}
-
-func GetFullCommandString(cmd *cobra.Command) string {
-	return strings.Join(GetCommandParts(cmd), " ")
-}
-
-func GetCommandParts(cmd *cobra.Command) []string {
-	parts := strings.Split(cmd.CommandPath(), " ")
-	for _, f := range getSetFlags(cmd.Flags()) {
-		parts = append(parts, fmt.Sprintf("--%s=%s", f.Name, f.Value.String()))
-	}
-	return parts
-}
-
-func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
-	values := make([]*pflag.Flag, 0)
-
-	flags.VisitAll(func(flag *pflag.Flag) {
-		if flag.Changed {
-			values = append(values, flag)
-		}
-	})
-
-	return values
 }

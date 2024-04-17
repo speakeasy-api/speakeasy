@@ -3,9 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/spf13/cobra"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"go.uber.org/zap"
 
@@ -32,7 +32,6 @@ type RunFlags struct {
 	Force            bool              `json:"force"`
 	Output           string            `json:"output"`
 	Pinned           bool              `json:"pinned"`
-	RegistryTags     []string          `json:"registry-tags"`
 }
 
 var runLong = `# Run
@@ -126,13 +125,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Description: "Run using the current CLI version instead of the version specified in the workflow file",
 			Hidden:      true,
 		},
-		flag.StringSliceFlag{
-			Name:        "registry-tags",
-			Description: "tags to apply to the speakeasy registry bundle",
-		},
 	},
 }
 
+// Gets missing flag values (ie source / target)
+func preRun(cmd *cobra.Command, flags *RunFlags) error {
 // Gets missing flag values (ie source / target)
 func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	wf, _, err := utils.GetWorkflowAndDir()
@@ -160,6 +157,11 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 
 	if flags.Target == "all" && len(targets) == 1 {
 		flags.Target = targets[0]
+	}
+
+	// Needed later
+	if err := cmd.Flags().Set("target", flags.Target); err != nil {
+		return err
 	}
 
 	// Needed later
@@ -248,7 +250,6 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		flags.Debug,
 		!flags.SkipCompile,
 		flags.Force,
-		flags.RegistryTags,
 	)
 	if err != nil {
 		return err
@@ -275,7 +276,6 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		flags.Debug,
 		!flags.SkipCompile,
 		flags.Force,
-		flags.RegistryTags,
 	)
 	if err != nil {
 		return err
