@@ -273,10 +273,10 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	lockfileVersion := getLockfileVersion()
 
 	runErr := runWithVersion(cmd, artifactArch, desiredVersion)
-	if runErr == nil {
+	if runErr != nil {
 		// If the command failed to run with the latest version, try to run with the version from the lock file
 		if wf.SpeakeasyVersion == "latest" {
-			msg := fmt.Sprintf("Failed to run with Speakeasy version %s: %s\n", desiredVersion, "a") //TODO runErr.Error())
+			msg := fmt.Sprintf("Failed to run with Speakeasy version %s: %s\n", desiredVersion, runErr.Error())
 			_ = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil)
 			logger.PrintfStyled(styles.DimmedItalic, msg)
 			if env.IsGithubAction() {
@@ -313,7 +313,7 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 
 	// The pinned flag was introduced in 1.254.0
 	// For earlier versions, it isn't necessary because we don't try auto-upgrading
-	if desiredVersion > "1.254.0" {
+	if desiredVersion > "1.256.0" {
 		cmdString += " --pinned"
 	}
 
