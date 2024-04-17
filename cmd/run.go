@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/spf13/cobra"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
@@ -31,6 +31,7 @@ type RunFlags struct {
 	SkipCompile      bool              `json:"skip-compile"`
 	Force            bool              `json:"force"`
 	Output           string            `json:"output"`
+	Pinned           bool              `json:"pinned"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -46,10 +47,11 @@ A full workflow is capable of running the following steps:
   - Compiling the generated SDKs
 
 ` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.",
-	PreRun:         getMissingFlagVals,
-	Run:            runFunc,
-	RunInteractive: runInteractive,
-	RequiresAuth:   true,
+	PreRun:           preRun,
+	Run:              runFunc,
+	RunInteractive:   runInteractive,
+	RequiresAuth:     true,
+	UsesWorkflowFile: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "target",
@@ -104,10 +106,16 @@ A full workflow is capable of running the following steps:
 			AllowedValues: []string{"summary", "mermaid", "console"},
 			DefaultValue:  "summary",
 		},
+		flag.BooleanFlag{
+			Name:        "pinned",
+			Description: "Run using the current CLI version instead of the version specified in the workflow file",
+			Hidden:      true,
+		},
 	},
 }
 
-func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
+// Gets missing flag values (ie source / target)
+func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
@@ -133,6 +141,11 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 
 	if flags.Target == "all" && len(targets) == 1 {
 		flags.Target = targets[0]
+	}
+
+	// Needed later
+	if err := cmd.Flags().Set("target", flags.Target); err != nil {
+		return err
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
@@ -205,7 +218,18 @@ func askForTarget(title, description, confirmation string, targets []string, all
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(
+		ctx,
+		"Workflow",
+		flags.Target,
+		flags.Source,
+		flags.Repo,
+		flags.RepoSubdirs,
+		flags.InstallationURLs,
+		flags.Debug,
+		!flags.SkipCompile,
+		flags.Force,
+	)
 	if err != nil {
 		return err
 	}
@@ -220,7 +244,18 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(
+		ctx,
+		"ignored",
+		flags.Target,
+		flags.Source,
+		flags.Repo,
+		flags.RepoSubdirs,
+		flags.InstallationURLs,
+		flags.Debug,
+		!flags.SkipCompile,
+		flags.Force,
+	)
 	if err != nil {
 		return err
 	}

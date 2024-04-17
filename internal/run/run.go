@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/maps"
 	"io"
 	"math/rand"
 	"os"
@@ -47,11 +48,12 @@ type Workflow struct {
 	ForceGeneration  bool
 
 	RootStep           *WorkflowStep
-	workflow           *workflow.Workflow
+	workflow           workflow.Workflow
 	projectDir         string
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
+	lockfile           *workflow.LockFile
 }
 
 type sourceResult struct {
@@ -59,11 +61,27 @@ type sourceResult struct {
 	ReportOutput string
 }
 
-func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURLs map[string]string, debug, shouldCompile, forceGeneration bool) (*Workflow, error) {
+func NewWorkflow(
+	ctx context.Context,
+	name, target, source, repo string,
+	repoSubDirs, installationURLs map[string]string,
+	debug, shouldCompile, forceGeneration bool,
+) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
-	if err != nil {
-		return nil, err
+	if err != nil || wf == nil {
+		return nil, fmt.Errorf("failed to load workflow.yaml: %w", err)
 	}
+
+	// Load the current lockfile so that we don't overwrite all targets
+	lockfile, err := workflow.LoadLockfile(projectDir)
+	if err != nil || lockfile == nil {
+		lockfile = &workflow.LockFile{
+			Sources: make(map[string]workflow.SourceLock),
+			Targets: make(map[string]workflow.TargetLock),
+		}
+	}
+	lockfile.SpeakeasyVersion = events.GetSpeakeasyVersionFromContext(ctx)
+	lockfile.Workflow = *wf
 
 	rootStep := NewWorkflowStep(name, nil)
 
@@ -75,10 +93,11 @@ func NewWorkflow(name, target, source, repo string, repoSubDirs, installationURL
 		InstallationURLs: installationURLs,
 		Debug:            debug,
 		ShouldCompile:    shouldCompile,
-		workflow:         wf,
+		workflow:         *wf,
 		projectDir:       projectDir,
 		RootStep:         rootStep,
 		ForceGeneration:  forceGeneration,
+		lockfile:         lockfile,
 	}, nil
 }
 
@@ -155,64 +174,11 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 	// Display success message if the workflow succeeded
 	if err == nil && runErr == nil {
-		t, err := getTarget(w.Target)
-		if err != nil {
-			return err
-		}
-		workingDirectory, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		tOut := workingDirectory
-		if t.Output != nil && *t.Output != "" && *t.Output != "." {
-			tOut = *t.Output
-		}
-		if w.Target == "all" {
-			tOut = "the paths specified in workflow.yaml"
-		}
-
-		titleMsg := " SDK Generated Successfully"
-		additionalLines := []string{
-			"✎ Output written to " + tOut,
-			fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
-		}
-
-		if w.FromQuickstart {
-			additionalLines = append(additionalLines, "Execute speakeasy run to regenerate your SDK!")
-		}
-
-		for sourceID, sourceRes := range sourceResults {
-			parts := strings.SplitN(sourceRes.ReportOutput, ":", 2)
-
-			additionalLines = append(additionalLines, fmt.Sprintf("%s - %s:", sourceID, parts[0]))
-			additionalLines = append(additionalLines, parts[1])
-		}
-
-		if t.CodeSamples != nil {
-			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
-		}
-
-		if len(criticalWarns) > 0 {
-			additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
-			titleMsg = " SDK Generated with Warnings"
-		}
-
-		msg := styles.RenderSuccessMessage(
-			t.Target+titleMsg,
-			additionalLines...,
-		)
-		logger.Println(msg)
-
-		if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
-			msg := styles.RenderInfoMessage(
-				"🚀 Time to Upgrade 🚀\n",
-				strings.Split(w.generationAccess.Message, "\n")...,
-			)
-			logger.Println("\n\n" + msg)
-		}
+		w.printSourceSuccessMessage(logger, sourceResults)
+		_ = w.printTargetSuccessMessage(logger, endDuration, len(criticalWarns) > 0)
 	}
 
-	return err
+	return errors.Join(err, runErr)
 }
 
 func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
@@ -262,6 +228,10 @@ func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
 		}
 
 		sourceResults[sourceRes.Source] = sourceRes
+	}
+
+	if err := workflow.SaveLockfile(w.projectDir, w.lockfile); err != nil {
+		return nil, err
 	}
 
 	return sourceResults, nil
@@ -385,6 +355,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	os.RemoveAll(workflow.GetTempDir())
 
 	rootStep.SucceedWorkflow()
+
+	w.lockfile.Targets[target] = workflow.TargetLock{
+		// TODO: fill with registry info (namespace + revision digest)
+		Source:      t.Source,
+		OutLocation: outDir,
+	}
 
 	return sourceRes, nil
 }
@@ -532,6 +508,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
 			return "", nil, fmt.Errorf("error publishing openapi bundle to registry: %w", err)
 		}
+
+		registryStep.SucceedWorkflow()
 	}
 
 	reportOutput, err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir)
@@ -551,6 +529,10 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		// Clean up temp files on success
 		os.RemoveAll(workflow.GetTempDir())
+	}
+
+	w.lockfile.Sources[id] = workflow.SourceLock{
+		// TODO: fill with registry info (namespace + revision digest)
 	}
 
 	return outputLocation, sourceRes, nil
@@ -574,6 +556,91 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
 	return reportOutput, err
+}
+
+func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
+	t, err := getTarget(w.Target)
+	if err != nil {
+		return err
+	}
+	workingDirectory, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	tOut := workingDirectory
+	if t.Output != nil && *t.Output != "" && *t.Output != "." {
+		tOut = *t.Output
+	}
+	if w.Target == "all" {
+		tOut = "the paths specified in workflow.yaml"
+	}
+
+	titleMsg := " SDK Generated Successfully"
+	additionalLines := []string{
+		"✎ Output written to " + tOut,
+		fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+	}
+
+	if w.FromQuickstart {
+		additionalLines = append(additionalLines, "Execute `speakeasy run` to regenerate your SDK!")
+	}
+
+	if t.CodeSamples != nil {
+		additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+	}
+
+	if criticalWarnings {
+		additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
+		titleMsg = " SDK Generated with Warnings"
+	}
+
+	msg := styles.RenderSuccessMessage(
+		t.Target+titleMsg,
+		additionalLines...,
+	)
+	logger.Println(msg)
+
+	if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
+		msg := styles.RenderInfoMessage(
+			"🚀 Time to Upgrade 🚀\n",
+			strings.Split(w.generationAccess.Message, "\n")...,
+		)
+		logger.Println("\n\n" + msg)
+	}
+
+	return nil
+}
+
+func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults map[string]*sourceResult) {
+	if len(sourceResults) == 0 {
+		return
+	}
+
+	titleMsg := fmt.Sprintf("Source %s Compiled Successfully", maps.Keys(sourceResults)[0])
+	if len(sourceResults) > 1 {
+		titleMsg = "Sources Compiled Successfully"
+	}
+
+	var additionalLines []string
+
+	for sourceID, sourceRes := range sourceResults {
+		sourceLabel := ""
+		if len(sourceResults) > 1 {
+			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
+		}
+
+		parts := strings.SplitN(sourceRes.ReportOutput, ":", 2)
+
+		additionalLines = append(additionalLines, fmt.Sprintf("%s%s:", sourceLabel, styles.Dimmed.Render(parts[0])))
+		additionalLines = append(additionalLines, parts[1])
+	}
+
+	msg := styles.RenderSuccessMessage(
+		titleMsg,
+		additionalLines...,
+	)
+
+	logger.Println(msg)
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
