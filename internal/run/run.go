@@ -53,7 +53,7 @@ type Workflow struct {
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
-	lockfile           workflow.LockFile
+	lockfile           *workflow.LockFile
 }
 
 type sourceResult struct {
@@ -72,12 +72,16 @@ func NewWorkflow(
 		return nil, fmt.Errorf("failed to load workflow.yaml: %w", err)
 	}
 
-	lockfile := workflow.LockFile{
-		SpeakeasyVersion: events.GetSpeakeasyVersionFromContext(ctx),
-		Workflow:         *wf,
-		Sources:          make(map[string]workflow.SourceLock),
-		Targets:          make(map[string]workflow.TargetLock),
+	// Load the current lockfile so that we don't overwrite all targets
+	lockfile, err := workflow.LoadLockfile(projectDir)
+	if err != nil || lockfile == nil {
+		lockfile = &workflow.LockFile{
+			Sources: make(map[string]workflow.SourceLock),
+			Targets: make(map[string]workflow.TargetLock),
+		}
 	}
+	lockfile.SpeakeasyVersion = events.GetSpeakeasyVersionFromContext(ctx)
+	lockfile.Workflow = *wf
 
 	rootStep := NewWorkflowStep(name, nil)
 
@@ -226,7 +230,7 @@ func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
 		sourceResults[sourceRes.Source] = sourceRes
 	}
 
-	if err := workflow.SaveLockfile(w.projectDir, &w.lockfile); err != nil {
+	if err := workflow.SaveLockfile(w.projectDir, w.lockfile); err != nil {
 		return nil, err
 	}
 
