@@ -491,55 +491,46 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
 	if hasSchemaRegistry {
+		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
+		memfs := fsextras.NewMemFS()
+
 		registryStep := rootStep.NewSubstep("Tracking OpenAPI Changes")
 
 		registryStep.NewSubstep("Snapshotting OpenAPI Revision")
-		memfs := fsextras.NewMemFS()
-		err = memfs.MkdirAll("/openapi/bundle")
+
+		_, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
+			DocumentPath: filepath.Join(w.projectDir, outputLocation),
+		})
 		if err != nil {
-			return "", nil, fmt.Errorf("memfs: mkdirall: %w", err)
+			return "", nil, fmt.Errorf("error localizing openapi document: %w", err)
 		}
 
-		bs, err := os.ReadFile(filepath.Join(w.projectDir, outputLocation))
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to read output file: %w", err)
-		}
-
-		ext := filepath.Ext(outputLocation)
-		err = memfs.WriteBytes("/openapi/bundle/openapi"+ext, bs, 0o644)
-		if err != nil {
-			return "", nil, fmt.Errorf("memfs: writebytes: %w", err)
-		}
-
-		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
-		if err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+		err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
 			Tags: []string{"latest"},
-		}); err != nil {
-			// If the preflight error is caused by lack of feature flag we continue without error
-			if !errors.Is(err, bundler.ErrAccessGated) {
-				return "", nil, fmt.Errorf("failed to create openapi bundle: %w", err)
-			}
-		} else {
-			serverURL := auth.GetServerURL()
-			insecurePublish := false
-			if strings.HasPrefix(serverURL, "http://") {
-				insecurePublish = true
-			}
+		})
+		if err != nil {
+			return "", nil, fmt.Errorf("error bundling openapi artifact: %w", err)
+		}
 
-			reg := strings.TrimPrefix(serverURL, "http://")
-			reg = strings.TrimPrefix(reg, "https://")
+		serverURL := auth.GetServerURL()
+		insecurePublish := false
+		if strings.HasPrefix(serverURL, "http://") {
+			insecurePublish = true
+		}
 
-			registryStep.NewSubstep("Storing OpenAPI Revision")
-			_, err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
-				Tags:     []string{"latest"},
-				Registry: reg,
-				Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
-					Insecure: insecurePublish,
-				}),
-			})
-			if err != nil {
-				return "", nil, fmt.Errorf("failed to publish openapi bundle to registry: %w", err)
-			}
+		reg := strings.TrimPrefix(serverURL, "http://")
+		reg = strings.TrimPrefix(reg, "https://")
+
+		registryStep.NewSubstep("Storing OpenAPI Revision")
+		_, err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+			Tags:     []string{"latest"},
+			Registry: reg,
+			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
+				Insecure: insecurePublish,
+			}),
+		})
+		if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
+			return "", nil, fmt.Errorf("error publishing openapi bundle to registry: %w", err)
 		}
 	}
 
