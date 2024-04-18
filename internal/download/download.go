@@ -82,8 +82,8 @@ func DownloadFile(url, outPath, header, token string) error {
 	return nil
 }
 
-// DownloadRegistryBundle Returns a file path within the downloaded bundle or error
-func DownloadRegistryBundle(ctx context.Context, namespaceID, reference, outPath string) (string, error) {
+// DownloadRegistryOpenAPIBundle Returns a file path within the downloaded bundle or error
+func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, outPath string) (string, error) {
 	serverURL := auth.GetServerURL()
 	insecurePublish := false
 	if strings.HasPrefix(serverURL, "http://") {

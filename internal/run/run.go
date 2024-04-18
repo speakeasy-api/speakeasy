@@ -358,10 +358,16 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 
 	rootStep.SucceedWorkflow()
 
-	w.lockfile.Targets[target] = workflow.TargetLock{
-		// TODO: fill with registry info (namespace + revision digest)
-		Source:      t.Source,
-		OutLocation: outDir,
+	if sourceLock, ok := w.lockfile.Sources[t.Source]; ok {
+		w.lockfile.Targets[target] = workflow.TargetLock{
+			Source:               t.Source,
+			SourceNamespace:      sourceLock.SourceNamespace,
+			SourceRevisionDigest: sourceLock.SourceRevisionDigest,
+			SourceBlobDigest:     sourceLock.SourceBlobDigest,
+			OutLocation:          outDir,
+		}
+	} else {
+		return nil, fmt.Errorf("source %s must be run before target", t.Source)
 	}
 
 	return sourceRes, nil
@@ -516,11 +522,13 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		reg := strings.TrimPrefix(serverURL, "http://")
 		reg = strings.TrimPrefix(reg, "https://")
 
+		tags := []string{"latest"} // TODO: read from workflow.yaml
+
 		registryStep.NewSubstep("Storing OpenAPI Revision")
 		registryStep.NewSubstep(reg)
 		registryStep.NewSubstep(id)
 		pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
-			Tags:     []string{"latest"},
+			Tags:     tags,
 			Registry: reg,
 			Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, ocicommon.RepositoryAccessOptions{
 				Insecure: insecurePublish,
@@ -554,6 +562,12 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			cliEvent.SourceBlobDigest = blobDigest
 		}
 
+		w.lockfile.Sources[id] = workflow.SourceLock{
+			SourceNamespace:      id,
+			SourceRevisionDigest: *manifestDigest,
+			SourceBlobDigest:     *blobDigest,
+			Tags:                 tags,
+		}
 	}
 
 	res, err := w.validateDocument(ctx, rootStep, id, outputLocation, rulesetToUse, w.projectDir)
@@ -573,10 +587,6 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		// Clean up temp files on success
 		os.RemoveAll(workflow.GetTempDir())
-	}
-
-	w.lockfile.Sources[id] = workflow.SourceLock{
-		// TODO: fill with registry info (namespace + revision digest)
 	}
 
 	return outputLocation, sourceRes, nil
@@ -660,7 +670,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 		return
 	}
 
-	titleMsg := fmt.Sprintf("Source %s Compiled Successfully", maps.Keys(sourceResults)[0])
+	titleMsg := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(maps.Keys(sourceResults)[0]), styles.Success.Render("Compiled Successfully"))
 	if len(sourceResults) > 1 {
 		titleMsg = "Sources Compiled Successfully"
 	}
@@ -673,14 +683,12 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
 		}
 
-		additionalLines = append(additionalLines, sourceLabel+"Linting report available at:")
-		additionalLines = append(additionalLines, sourceRes.Result.ReportURL)
+		report := styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
+
+		additionalLines = append(additionalLines, sourceLabel+report)
 	}
 
-	msg := styles.RenderSuccessMessage(
-		titleMsg,
-		additionalLines...,
-	)
+	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(titleMsg), strings.Join(additionalLines, "\n"))
 
 	logger.Println(msg)
 }
@@ -701,7 +709,7 @@ func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
 	}
 
-	return download.DownloadRegistryBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
+	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
