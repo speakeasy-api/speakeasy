@@ -365,8 +365,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			SourceBlobDigest:     sourceLock.SourceBlobDigest,
 			OutLocation:          outDir,
 		}
-	} else {
-		return nil, fmt.Errorf("source %s must be run before target", t.Source)
 	}
 
 	return sourceRes, nil
