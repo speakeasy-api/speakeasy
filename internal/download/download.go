@@ -4,12 +4,12 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -116,10 +116,49 @@ func DownloadRegistryBundle(ctx context.Context, namespaceID, reference, outPath
 		return "", err
 	}
 
-	// Iterate through the files in the archive,
+	outputFileName := ""
 	for _, file := range zipReader.File {
-		fmt.Printf("File: %s\n", file.Name)
+		if strings.Contains(file.Name, "output") {
+			outputFileName = filepath.Join(outPath, file.Name)
+			break
+		}
 	}
 
-	return "", errors.New("not finished implementing")
+	if err := copyZipToOutDir(zipReader, outPath); err != nil {
+		return "", fmt.Errorf("failed to copy zip contents to outdir: %w", err)
+	}
+
+	return outputFileName, nil
+}
+
+func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
+	for _, file := range zipReader.File {
+		filePath := filepath.Join(outDir, file.Name)
+
+		if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+			return err
+		}
+
+		if file.FileInfo().IsDir() {
+			continue
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer fileReader.Close()
+
+		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+		defer targetFile.Close()
+
+		if _, err := io.Copy(targetFile, fileReader); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

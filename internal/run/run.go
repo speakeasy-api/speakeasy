@@ -390,6 +390,9 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		if source.Inputs[0].IsSpeakeasyRegistry() {
 			rootStep.NewSubstep("Downloading registry bundle")
 			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
+			if len(source.Overlays) == 0 {
+				outputLocation = currentDocument
+			}
 			if err != nil {
 				return "", nil, err
 			}
@@ -514,6 +517,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		reg = strings.TrimPrefix(reg, "https://")
 
 		registryStep.NewSubstep("Storing OpenAPI Revision")
+		registryStep.NewSubstep(reg)
+		registryStep.NewSubstep(id)
 		pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 			Tags:     []string{"latest"},
 			Registry: reg,
@@ -691,7 +696,7 @@ func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return "", err
 	}
 
-	registryBreakdown := d.ParseSpeakeasyRegistryReference()
+	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
 	if registryBreakdown == nil {
 		return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
 	}

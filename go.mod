@@ -216,4 +216,4 @@ require (
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
 
-replace github.com/speakeasy-api/sdk-gen-config => github.com/speakeasy-api/sdk-gen-config v1.11.2-0.20240418162133-8dfff6bd53d5
+replace github.com/speakeasy-api/sdk-gen-config => /Users/ryanalbert/sdk-gen-config
