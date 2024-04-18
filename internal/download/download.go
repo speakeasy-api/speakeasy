@@ -121,6 +121,9 @@ func DownloadRegistryBundle(ctx context.Context, namespaceID, reference, outPath
 		if strings.Contains(file.Name, "output") {
 			cleanName := filepath.Clean(file.Name)
 			outputFileName = filepath.Join(outPath, cleanName)
+			if !strings.HasPrefix(outputFileName, filepath.Clean(outPath)+string(os.PathSeparator)) {
+				return "", fmt.Errorf("illegal file path: %s", outputFileName)
+			}
 			break
 		}
 	}
@@ -136,6 +139,10 @@ func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
 	for _, file := range zipReader.File {
 		cleanName := filepath.Clean(file.Name)
 		filePath := filepath.Join(outDir, cleanName)
+
+		if !strings.HasPrefix(filePath, filepath.Clean(outDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", filePath)
+		}
 
 		if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
 			return err
