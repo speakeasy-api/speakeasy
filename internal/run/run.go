@@ -491,7 +491,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		registryStep.NewSubstep("Snapshotting OpenAPI Revision")
 
 		_, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
-			DocumentPath: filepath.Join(w.projectDir, outputLocation),
+			DocumentPath: outputLocation,
 		})
 		if err != nil {
 			return "", nil, fmt.Errorf("error localizing openapi document: %w", err)

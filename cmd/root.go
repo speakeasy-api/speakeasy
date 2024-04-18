@@ -128,8 +128,7 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
 
 	newerVersion, err := updates.GetNewerVersion(artifactArch, currentVersion)
 	if err != nil {
-		log.From(ctx).Errorf("Failed to check for updates: %v", err)
-		return
+		return // Don't display error to user
 	}
 
 	if newerVersion == nil {
