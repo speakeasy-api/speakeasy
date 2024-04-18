@@ -411,11 +411,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			downloadedPath, err := resolveDocument(ctx, input, nil, mergeStep)
+			resolvedPath, err := resolveDocument(ctx, input, nil, mergeStep)
 			if err != nil {
 				return "", nil, err
 			}
-			inSchemas = append(inSchemas, downloadedPath)
+			inSchemas = append(inSchemas, resolvedPath)
 		}
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
@@ -436,18 +436,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
-			if overlay.IsRemote() {
-				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				overlaySchemas = append(overlaySchemas, downloadedPath)
-			} else {
-				overlaySchemas = append(overlaySchemas, overlay.Location)
+			resolvedPath, err := resolveDocument(ctx, overlay, nil, overlayStep)
+			if err != nil {
+				return "", nil, err
 			}
+			overlaySchemas = append(overlaySchemas, resolvedPath)
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
