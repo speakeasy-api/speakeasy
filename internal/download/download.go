@@ -119,7 +119,8 @@ func DownloadRegistryBundle(ctx context.Context, namespaceID, reference, outPath
 	outputFileName := ""
 	for _, file := range zipReader.File {
 		if strings.Contains(file.Name, "output") {
-			outputFileName = filepath.Join(outPath, file.Name)
+			cleanName := filepath.Clean(file.Name)
+			outputFileName = filepath.Join(outPath, cleanName)
 			break
 		}
 	}
@@ -133,7 +134,8 @@ func DownloadRegistryBundle(ctx context.Context, namespaceID, reference, outPath
 
 func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
 	for _, file := range zipReader.File {
-		filePath := filepath.Join(outDir, file.Name)
+		cleanName := filepath.Clean(file.Name)
+		filePath := filepath.Join(outDir, cleanName)
 
 		if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
 			return err
