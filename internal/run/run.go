@@ -650,7 +650,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 		return
 	}
 
-	titleMsg := fmt.Sprintf("Source %s Compiled Successfully", maps.Keys(sourceResults)[0])
+	titleMsg := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(maps.Keys(sourceResults)[0]), styles.Success.Render("Compiled Successfully"))
 	if len(sourceResults) > 1 {
 		titleMsg = "Sources Compiled Successfully"
 	}
@@ -663,14 +663,12 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
 		}
 
-		additionalLines = append(additionalLines, sourceLabel+"Linting report available at:")
-		additionalLines = append(additionalLines, sourceRes.Result.ReportURL)
+		report := styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
+
+		additionalLines = append(additionalLines, sourceLabel+report)
 	}
 
-	msg := styles.RenderSuccessMessage(
-		titleMsg,
-		additionalLines...,
-	)
+	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(titleMsg), strings.Join(additionalLines, "\n"))
 
 	logger.Println(msg)
 }
