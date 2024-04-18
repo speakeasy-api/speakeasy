@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/iancoleman/strcase"
 	"io"
 	"math/rand"
 	"os"
@@ -55,6 +56,7 @@ type Workflow struct {
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
 	lockfile           *workflow.LockFile
+	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
 }
 
 type sourceResult struct {
@@ -75,6 +77,8 @@ func NewWorkflow(
 
 	// Load the current lockfile so that we don't overwrite all targets
 	lockfile, err := workflow.LoadLockfile(projectDir)
+	lockfileOld := lockfile
+
 	if err != nil || lockfile == nil {
 		lockfile = &workflow.LockFile{
 			Sources: make(map[string]workflow.SourceLock),
@@ -99,6 +103,7 @@ func NewWorkflow(
 		RootStep:         rootStep,
 		ForceGeneration:  forceGeneration,
 		lockfile:         lockfile,
+		lockfileOld:      lockfileOld,
 	}, nil
 }
 
@@ -372,9 +377,9 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	return sourceRes, nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id string, cleanUp bool) (string, *sourceResult, error) {
-	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", id))
-	source := w.workflow.Sources[id]
+func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sourceID string, cleanUp bool) (string, *sourceResult, error) {
+	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
+	source := w.workflow.Sources[sourceID]
 
 	rulesetToUse := ""
 	if source.Ruleset != nil {
@@ -382,7 +387,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	logger := log.From(ctx)
-	logger.Infof("Running source %s...", id)
+	logger.Infof("Running Source %s...", sourceID)
 
 	outputLocation, err := source.GetOutputLocation()
 	if err != nil {
@@ -393,7 +398,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 	if len(source.Inputs) == 1 {
 		if source.Inputs[0].IsRemote() {
-			rootStep.NewSubstep("Downloading document")
+			rootStep.NewSubstep("Downloading Document")
 
 			downloadLocation := outputLocation
 			if len(source.Overlays) > 0 {
@@ -408,7 +413,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			currentDocument = source.Inputs[0].Location
 		}
 	} else {
-		mergeStep := rootStep.NewSubstep("Merge documents")
+		mergeStep := rootStep.NewSubstep("Merge Documents")
 
 		mergeLocation := source.GetTempMergeLocation()
 		if len(source.Overlays) == 0 {
@@ -443,7 +448,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	if len(source.Overlays) > 0 {
-		overlayStep := rootStep.NewSubstep("Applying overlays")
+		overlayStep := rootStep.NewSubstep("Applying Overlays")
 
 		overlayLocation := outputLocation
 
@@ -474,96 +479,34 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
 	if hasSchemaRegistry {
-		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
-		memfs := fsextras.NewMemFS()
-
-		registryStep := rootStep.NewSubstep("Tracking OpenAPI Changes")
-
-		registryStep.NewSubstep("Snapshotting OpenAPI Revision")
-
-		_, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
-			DocumentPath: outputLocation,
-		})
-		if err != nil {
-			return "", nil, fmt.Errorf("error localizing openapi document: %w", err)
-		}
-
-		err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-			Tags: []string{"latest"},
-		})
-		if err != nil {
-			return "", nil, fmt.Errorf("error bundling openapi artifact: %w", err)
-		}
-
-		serverURL := auth.GetServerURL()
-		insecurePublish := false
-		if strings.HasPrefix(serverURL, "http://") {
-			insecurePublish = true
-		}
-
-		reg := strings.TrimPrefix(serverURL, "http://")
-		reg = strings.TrimPrefix(reg, "https://")
-
-		tags := []string{"latest"} // TODO: read from workflow.yaml
-
-		registryStep.NewSubstep("Storing OpenAPI Revision")
-		pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
-			Tags:     tags,
-			Registry: reg,
-			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
-				Insecure: insecurePublish,
-			}),
-		})
-		if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
-			return "", nil, fmt.Errorf("error publishing openapi bundle to registry: %w", err)
-		}
-
-		registryStep.SucceedWorkflow()
-
-		var manifestDigest *string
-		var blobDigest *string
-		if pushResult.References != nil && len(pushResult.References) > 0 {
-			manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
-			manifestDigest = &manifestDigestStr
-			manifestLayers := pushResult.References[0].Manifest.Layers
-			for _, layer := range manifestLayers {
-				if layer.MediaType == bundler.MediaTypeOpenAPIBundleV0 {
-					blobDigestStr := layer.Digest.String()
-					blobDigest = &blobDigestStr
-					break
-				}
-			}
-		}
-
-		cliEvent := events.GetTelemetryEventFromContext(ctx)
-		if cliEvent != nil {
-			cliEvent.SourceRevisionDigest = manifestDigest
-			cliEvent.SourceNamespaceName = &id
-			cliEvent.SourceBlobDigest = blobDigest
-		}
-
-		w.lockfile.Sources[id] = workflow.SourceLock{
-			SourceNamespace:      id,
-			SourceRevisionDigest: *manifestDigest,
-			SourceBlobDigest:     *blobDigest,
-			Tags:                 tags,
+		registryStep := rootStep.NewSubstep("Snapshotting Document")
+		if err := w.publishSource(ctx, registryStep, sourceID, outputLocation); err != nil {
+			return "", nil, err
 		}
 	}
 
-	res, err := w.validateDocument(ctx, rootStep, id, outputLocation, rulesetToUse, w.projectDir)
+	// If the source has a previous tracked revision, compute changes against it
+	if w.lockfileOld != nil {
+		if oldSourceLock, ok := w.lockfileOld.Sources[sourceID]; ok && oldSourceLock.SourceRevisionDigest != "" {
+			//changesStep := rootStep.NewSubstep("Computing Document Changes")
+			
+		}
+	}
+
+	res, err := w.validateDocument(ctx, rootStep, sourceID, outputLocation, rulesetToUse, w.projectDir)
 	if err != nil {
 		return "", nil, err
 	}
 
 	sourceRes := &sourceResult{
-		Source: id,
+		Source: sourceID,
 		Result: res,
 	}
 
 	rootStep.SucceedWorkflow()
 
 	if cleanUp {
-		rootStep.NewSubstep("Cleaning up")
+		rootStep.NewSubstep("Cleaning Up")
 
 		// Clean up temp files on success
 		os.RemoveAll(workflow.GetTempDir())
@@ -572,8 +515,86 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	return outputLocation, sourceRes, nil
 }
 
+func (w *Workflow) publishSource(ctx context.Context, rootStep *WorkflowStep, sourceID, outputLocation string) error {
+	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
+	memfs := fsextras.NewMemFS()
+
+	rootStep.NewSubstep("Snapshotting OpenAPI Revision")
+
+	_, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
+		DocumentPath: outputLocation,
+	})
+	if err != nil {
+		return fmt.Errorf("error localizing openapi document: %w", err)
+	}
+
+	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+		Tags: []string{"latest"},
+	})
+	if err != nil {
+		return fmt.Errorf("error bundling openapi artifact: %w", err)
+	}
+
+	serverURL := auth.GetServerURL()
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	tags := []string{"latest"} // TODO: read from workflow.yaml
+	namespaceName := strcase.ToKebab(sourceID)
+
+	rootStep.NewSubstep("Storing OpenAPI Revision")
+	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+		Tags:     tags,
+		Registry: reg,
+		Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, bundler.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		}),
+	})
+	if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
+		return fmt.Errorf("error publishing openapi bundle to registry: %w", err)
+	}
+
+	rootStep.SucceedWorkflow()
+
+	var manifestDigest *string
+	var blobDigest *string
+	if pushResult.References != nil && len(pushResult.References) > 0 {
+		manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
+		manifestDigest = &manifestDigestStr
+		manifestLayers := pushResult.References[0].Manifest.Layers
+		for _, layer := range manifestLayers {
+			if layer.MediaType == bundler.MediaTypeOpenAPIBundleV0 {
+				blobDigestStr := layer.Digest.String()
+				blobDigest = &blobDigestStr
+				break
+			}
+		}
+	}
+
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		cliEvent.SourceRevisionDigest = manifestDigest
+		cliEvent.SourceNamespaceName = &namespaceName
+		cliEvent.SourceBlobDigest = blobDigest
+	}
+
+	w.lockfile.Sources[sourceID] = workflow.SourceLock{
+		SourceNamespace:      namespaceName,
+		SourceRevisionDigest: *manifestDigest,
+		SourceBlobDigest:     *blobDigest,
+		Tags:                 tags,
+	}
+
+	return nil
+}
+
 func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, source, schemaPath, defaultRuleset, projectDir string) (*validation.ValidationResult, error) {
-	step := parentStep.NewSubstep("Validating document")
+	step := parentStep.NewSubstep("Validating Document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
 		step.Skip("already validated")

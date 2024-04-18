@@ -181,6 +181,7 @@ require (
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tliron/commonlog v0.2.10 // indirect
 	github.com/tliron/glsp v0.2.1 // indirect
