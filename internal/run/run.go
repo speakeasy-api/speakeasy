@@ -691,11 +691,12 @@ func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return "", err
 	}
 
-	if err := download.DownloadRegistryBundle(d.Location, outPath); err != nil {
-		return "", err
+	registryBreakdown := d.ParseSpeakeasyRegistryReference()
+	if registryBreakdown == nil {
+		return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
 	}
 
-	return outPath, nil
+	return download.DownloadRegistryBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {

@@ -1,12 +1,22 @@
 package download
 
 import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy-core/loader"
+	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 )
 
 const (
@@ -72,6 +82,44 @@ func DownloadFile(url, outPath, header, token string) error {
 	return nil
 }
 
-func DownloadRegistryBundle(url, outPath string) error {
-	return nil
+// DownloadRegistryBundle Returns a file path within the downloaded bundle or error
+func DownloadRegistryBundle(ctx context.Context, namespaceID, reference, outPath string) (string, error) {
+	serverURL := auth.GetServerURL()
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
+		Registry: reg,
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceID, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		}),
+	})
+
+	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, reference)
+	if err != nil {
+		return "", err
+	}
+
+	buf, err := io.ReadAll(bundleResult.Body)
+	if err != nil {
+		return "", err
+	}
+	defer bundleResult.Body.Close()
+
+	reader := bytes.NewReader(buf)
+	zipReader, err := zip.NewReader(reader, int64(len(buf)))
+	if err != nil {
+		return "", err
+	}
+
+	// Iterate through the files in the archive,
+	for _, file := range zipReader.File {
+		fmt.Printf("File: %s\n", file.Name)
+	}
+
+	return "", errors.New("not finished implementing")
 }
