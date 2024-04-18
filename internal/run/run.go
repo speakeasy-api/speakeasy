@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"golang.org/x/exp/maps"
 
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -386,7 +387,13 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	var currentDocument string
 
 	if len(source.Inputs) == 1 {
-		if source.Inputs[0].IsRemote() {
+		if source.Inputs[0].IsSpeakeasyRegistry() {
+			rootStep.NewSubstep("Downloading registry bundle")
+			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
+			if err != nil {
+				return "", nil, err
+			}
+		} else if source.Inputs[0].IsRemote() {
 			rootStep.NewSubstep("Downloading document")
 
 			downloadLocation := outputLocation
@@ -413,7 +420,15 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			if input.IsRemote() {
+			if input.IsSpeakeasyRegistry() {
+				mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", input.Location))
+				downloadedPath, err := resolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
+				if err != nil {
+					return "", nil, err
+				}
+
+				inSchemas = append(inSchemas, downloadedPath)
+			} else if input.IsRemote() {
 				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
 
 				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
@@ -502,11 +517,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 			Tags:     []string{"latest"},
 			Registry: reg,
-			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
+			Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, ocicommon.RepositoryAccessOptions{
 				Insecure: insecurePublish,
 			}),
 		})
-		if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
+		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			return "", nil, fmt.Errorf("error publishing openapi bundle to registry: %w", err)
 		}
 
@@ -519,7 +534,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			manifestDigest = &manifestDigestStr
 			manifestLayers := pushResult.References[0].Manifest.Layers
 			for _, layer := range manifestLayers {
-				if layer.MediaType == bundler.MediaTypeOpenAPIBundleV0 {
+				if layer.MediaType == ocicommon.MediaTypeOpenAPIBundleV0 {
 					blobDigestStr := layer.Digest.String()
 					blobDigest = &blobDigestStr
 					break
@@ -663,6 +678,24 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 	)
 
 	logger.Println(msg)
+}
+
+func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, outPath string) (string, error) {
+	log.From(ctx).Infof("Downloading bundle %s... to %s\n", d.Location, outPath)
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	if !hasSchemaRegistry {
+		return "", fmt.Errorf("schema registry is not enabled for this workspace")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
+		return "", err
+	}
+
+	if err := download.DownloadRegistryBundle(d.Location, outPath); err != nil {
+		return "", err
+	}
+
+	return outPath, nil
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {

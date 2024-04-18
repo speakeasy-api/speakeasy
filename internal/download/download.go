@@ -71,3 +71,7 @@ func DownloadFile(url, outPath, header, token string) error {
 
 	return nil
 }
+
+func DownloadRegistryBundle(url, outPath string) error {
+	return nil
+}

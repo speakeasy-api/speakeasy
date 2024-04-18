@@ -509,12 +509,12 @@ github.com/speakeasy-api/openapi-generation/v2 v2.310.0 h1:ugEZWdOP/dSIgNaX3249V
 github.com/speakeasy-api/openapi-generation/v2 v2.310.0/go.mod h1:hVRNUWDpajfgd+ZQHX0aGsSQb1a8dquWyb173dVihj8=
 github.com/speakeasy-api/openapi-overlay v0.4.0 h1:FKxopZDhlAIzPS2lKl2X7pfworNvlsxTYjaDwvlY+gw=
 github.com/speakeasy-api/openapi-overlay v0.4.0/go.mod h1:f5FloQrHA7MsxYg9djzMD5h6dxrHjVVByWKh7an8TRc=
-github.com/speakeasy-api/sdk-gen-config v1.11.1 h1:Me7L0SI42NXEfOAvqsXJF6pTvSvKgbN2nAUZ2cxsGTI=
-github.com/speakeasy-api/sdk-gen-config v1.11.1/go.mod h1:7FsPqdsh//6Z0OcO/jQPD66l6/m1YVvK5tmt0+KRpdo=
+github.com/speakeasy-api/sdk-gen-config v1.11.2-0.20240418162133-8dfff6bd53d5 h1:/NsCCCzOseh6M4Vw+ULtnXVudZP8CyZwqAoA8IAlvPk=
+github.com/speakeasy-api/sdk-gen-config v1.11.2-0.20240418162133-8dfff6bd53d5/go.mod h1:7FsPqdsh//6Z0OcO/jQPD66l6/m1YVvK5tmt0+KRpdo=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.7-beta h1:HvgkAJPxhyK7qBgZqsiT9J5DOJwm5xBPBZ19vwo9kvA=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.7-beta/go.mod h1:G9tcHa9/waEJXGLvCKQxp7Oj14OjWK3ErUcMR+bIpDQ=
-github.com/speakeasy-api/speakeasy-core v0.5.0 h1:wXdBQhwiT1UHwXNQN7em9BaUlPH9i4nprsGeAwof9Nc=
-github.com/speakeasy-api/speakeasy-core v0.5.0/go.mod h1:aFP0+btaZFuZo/hDdgzhde5AwohrjOh/zvI9DE1QFT0=
+github.com/speakeasy-api/speakeasy-core v0.5.1 h1:NfzPvSXjmHZA2A+/6YhC4rdEt7bcA55sekNhTkQbtZY=
+github.com/speakeasy-api/speakeasy-core v0.5.1/go.mod h1:aFP0+btaZFuZo/hDdgzhde5AwohrjOh/zvI9DE1QFT0=
 github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 h1:atzohw12oQ5ipaLb1q7ntTu4vvAgKDJsrvaUoOu6sw0=
 github.com/speakeasy-api/speakeasy-go-sdk v1.8.1/go.mod h1:XbzaM0sMjj8bGooz/uEtNkOh1FQiJK7RFuNG3LPBSAU=
 github.com/speakeasy-api/speakeasy-proxy v0.0.2 h1:u4rQ8lXvuYRCSxiLQGb5JxkZRwNIDlyh+pMFYD6OGjA=
