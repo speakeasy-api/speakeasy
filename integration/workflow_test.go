@@ -228,7 +228,7 @@ func TestSpecWorkflows(t *testing.T) {
 			assert.NoError(t, err)
 			err = workflow.Save(".", workflowFile)
 			assert.NoError(t, err)
-			args := []string{"run", "-s", "all"}
+			args := []string{"run", "-s", "all", "--pinned"}
 			rootCmd.SetArgs(args)
 			cmdErr := rootCmd.Execute()
 			assert.NoError(t, cmdErr)
