@@ -128,6 +128,10 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, 
 		}
 	}
 
+	if outputFileName == "" {
+		return "", fmt.Errorf("no root openapi file found in bundle")
+	}
+
 	if err := copyZipToOutDir(zipReader, outPath); err != nil {
 		return "", fmt.Errorf("failed to copy zip contents to outdir: %w", err)
 	}
