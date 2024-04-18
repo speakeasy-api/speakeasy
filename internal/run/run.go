@@ -485,7 +485,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if hasSchemaRegistry {
+	if hasSchemaRegistry && !isSingleRegistrySource(source) {
 		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
 		memfs := fsextras.NewMemFS()
 
@@ -742,6 +742,10 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRul
 	log.From(ctx).Printf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
 
 	return nil
+}
+
+func isSingleRegistrySource(source workflow.Source) bool {
+	return len(source.Inputs) == 1 && len(source.Overlays) == 0 && source.Inputs[0].IsSpeakeasyRegistry()
 }
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
