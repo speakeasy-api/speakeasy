@@ -391,29 +391,13 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	var currentDocument string
 
 	if len(source.Inputs) == 1 {
-		if source.Inputs[0].IsSpeakeasyRegistry() {
-			rootStep.NewSubstep("Downloading registry bundle")
-			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
-			if len(source.Overlays) == 0 {
-				outputLocation = currentDocument
-			}
-			if err != nil {
-				return "", nil, err
-			}
-		} else if source.Inputs[0].IsRemote() {
-			rootStep.NewSubstep("Downloading document")
-
-			downloadLocation := outputLocation
-			if len(source.Overlays) > 0 {
-				downloadLocation = source.Inputs[0].GetTempDownloadPath(workflow.GetTempDir())
-			}
-
-			currentDocument, err = resolveRemoteDocument(ctx, source.Inputs[0], downloadLocation)
-			if err != nil {
-				return "", nil, err
-			}
-		} else {
-			currentDocument = source.Inputs[0].Location
+		var providedLocation *string
+		if len(source.Overlays) == 0 {
+			providedLocation = &outputLocation
+		}
+		currentDocument, err = resolveDocument(ctx, source.Inputs[0], providedLocation, rootStep)
+		if err != nil {
+			return "", nil, err
 		}
 	} else {
 		mergeStep := rootStep.NewSubstep("Merge documents")
@@ -427,26 +411,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			if input.IsSpeakeasyRegistry() {
-				mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", input.Location))
-				downloadedPath, err := resolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				inSchemas = append(inSchemas, downloadedPath)
-			} else if input.IsRemote() {
-				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				inSchemas = append(inSchemas, downloadedPath)
-			} else {
-				inSchemas = append(inSchemas, input.Location)
+			downloadedPath, err := resolveDocument(ctx, input, nil, mergeStep)
+			if err != nil {
+				return "", nil, err
 			}
+			inSchemas = append(inSchemas, downloadedPath)
 		}
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
@@ -689,6 +658,37 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(titleMsg), strings.Join(additionalLines, "\n"))
 
 	logger.Println(msg)
+}
+
+func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *WorkflowStep) (string, error) {
+	if d.IsSpeakeasyRegistry() {
+		step.NewSubstep("Downloading registry bundle")
+		location := d.GetTempRegistryDir(workflow.GetTempDir())
+		if outputLocation != nil {
+			location = *outputLocation
+		}
+		documentOut, err := resolveSpeakeasyRegistryBundle(ctx, d, location)
+		if err != nil {
+			return "", err
+		}
+
+		return documentOut, nil
+	} else if d.IsRemote() {
+		step.NewSubstep("Downloading remote document")
+		location := d.GetTempDownloadPath(workflow.GetTempDir())
+		if outputLocation != nil {
+			location = *outputLocation
+		}
+
+		documentOut, err := resolveRemoteDocument(ctx, d, location)
+		if err != nil {
+			return "", err
+		}
+
+		return documentOut, nil
+	}
+
+	return d.Location, nil
 }
 
 func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, outPath string) (string, error) {
