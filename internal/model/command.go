@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"slices"
+	"strings"
+
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-version"
 	"github.com/sethvargo/go-githubactions"
@@ -21,10 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
-	"os"
-	"os/exec"
-	"slices"
-	"strings"
 )
 
 type Command interface {
@@ -72,7 +73,7 @@ type ExecutableCommand[F interface{}] struct {
 }
 
 func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
-	preRun := func(cmd *cobra.Command, args []string) error {
+	run := func(cmd *cobra.Command, args []string) error {
 		flags, err := c.GetFlagValues(cmd)
 		if err != nil {
 			return err
@@ -88,10 +89,6 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			return err
 		}
 
-		return nil
-	}
-
-	run := func(cmd *cobra.Command, args []string) error {
 		if c.RequiresAuth {
 			authCtx, err := auth.Authenticate(cmd.Context(), false)
 			if err != nil {
@@ -108,11 +105,6 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			if !pinned && !env.IsLocalDev() {
 				return runWithVersionFromWorkflowFile(cmd)
 			}
-		}
-
-		flags, err := c.GetFlagValues(cmd)
-		if err != nil {
-			return err
 		}
 
 		mustRunInteractive := c.RunInteractive != nil && utils.IsInteractive() && !env.IsGithubAction()
@@ -140,12 +132,11 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	}
 
 	cmd := &cobra.Command{
-		Use:     c.Usage,
-		Short:   c.Short,
-		Long:    c.Long,
-		PreRunE: preRun,
-		RunE:    run,
-		Hidden:  c.Hidden,
+		Use:    c.Usage,
+		Short:  c.Short,
+		Long:   c.Long,
+		RunE:   run,
+		Hidden: c.Hidden,
 	}
 
 	for _, subcommand := range c.NonInteractiveSubcommands {
