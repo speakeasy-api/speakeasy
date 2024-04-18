@@ -661,7 +661,12 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
 		}
 
-		report := styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
+		var report string
+		if sourceRes.Result.ReportURL != "" {
+			report = styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
+		} else {
+			report = styles.Dimmed.Render(sourceRes.Result.ReportOutput)
+		}
 
 		additionalLines = append(additionalLines, sourceLabel+report)
 	}
