@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"golang.org/x/exp/maps"
 	"io"
 	"math/rand"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/maps"
 
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -498,7 +499,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		reg = strings.TrimPrefix(reg, "https://")
 
 		registryStep.NewSubstep("Storing OpenAPI Revision")
-		_, err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+		pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 			Tags:     []string{"latest"},
 			Registry: reg,
 			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
@@ -510,6 +511,29 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		}
 
 		registryStep.SucceedWorkflow()
+
+		var manifestDigest *string
+		var blobDigest *string
+		if pushResult.References != nil && len(pushResult.References) > 0 {
+			manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
+			manifestDigest = &manifestDigestStr
+			manifestLayers := pushResult.References[0].Manifest.Layers
+			for _, layer := range manifestLayers {
+				if layer.MediaType == bundler.MediaTypeOpenAPIBundleV0 {
+					blobDigestStr := layer.Digest.String()
+					blobDigest = &blobDigestStr
+					break
+				}
+			}
+		}
+
+		cliEvent := events.GetTelemetryEventFromContext(ctx)
+		if cliEvent != nil {
+			cliEvent.SourceRevisionDigest = manifestDigest
+			cliEvent.SourceNamespaceName = &id
+			cliEvent.SourceBlobDigest = blobDigest
+		}
+
 	}
 
 	reportOutput, err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir)
