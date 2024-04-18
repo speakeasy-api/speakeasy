@@ -58,8 +58,8 @@ type Workflow struct {
 }
 
 type sourceResult struct {
-	Source       string
-	ReportOutput string
+	Source string
+	Result *validation.ValidationResult
 }
 
 func NewWorkflow(
@@ -267,14 +267,14 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			return nil, err
 		}
 	} else {
-		reportOutput, err := w.validateDocument(ctx, rootStep, sourcePath, "", w.projectDir)
+		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "", w.projectDir)
 		if err != nil {
 			return nil, err
 		}
 
 		sourceRes = &sourceResult{
-			Source:       t.Source,
-			ReportOutput: reportOutput,
+			Source: t.Source,
+			Result: res,
 		}
 	}
 
@@ -536,14 +536,14 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 	}
 
-	reportOutput, err := w.validateDocument(ctx, rootStep, outputLocation, rulesetToUse, w.projectDir)
+	res, err := w.validateDocument(ctx, rootStep, id, outputLocation, rulesetToUse, w.projectDir)
 	if err != nil {
 		return "", nil, err
 	}
 
 	sourceRes := &sourceResult{
-		Source:       id,
-		ReportOutput: reportOutput,
+		Source: id,
+		Result: res,
 	}
 
 	rootStep.SucceedWorkflow()
@@ -562,12 +562,12 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	return outputLocation, sourceRes, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, schemaPath, defaultRuleset, projectDir string) (string, error) {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, source, schemaPath, defaultRuleset, projectDir string) (*validation.ValidationResult, error) {
 	step := parentStep.NewSubstep("Validating document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
 		step.Skip("already validated")
-		return "", nil
+		return nil, nil
 	}
 
 	limits := &validation.OutputLimits{
@@ -575,11 +575,11 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 		MaxWarns:  1000,
 	}
 
-	reportOutput, err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", limits, defaultRuleset, projectDir)
+	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
-	return reportOutput, err
+	return res, err
 }
 
 func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
@@ -653,10 +653,8 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
 		}
 
-		parts := strings.SplitN(sourceRes.ReportOutput, ":", 2)
-
-		additionalLines = append(additionalLines, fmt.Sprintf("%s%s:", sourceLabel, styles.Dimmed.Render(parts[0])))
-		additionalLines = append(additionalLines, parts[1])
+		additionalLines = append(additionalLines, sourceLabel+"Linting report available at:")
+		additionalLines = append(additionalLines, sourceRes.Result.ReportURL)
 	}
 
 	msg := styles.RenderSuccessMessage(

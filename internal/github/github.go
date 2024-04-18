@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,11 +9,24 @@ import (
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/markdown"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
 
-func GenerateSummary(status string, errs []error) {
+type LintingSummary struct {
+	Source    string
+	Status    string
+	Errors    []error
+	ReportURL string
+}
+
+type WorkflowSummary interface {
+	ToMermaidDiagram() (string, error)
+}
+
+func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	defer func() {
 		if r := recover(); r != nil {
 			if env.IsGithubDebugMode() {
@@ -29,9 +43,9 @@ func GenerateSummary(status string, errs []error) {
 
 	contents = append(contents, []string{"Severity", "Type", "Error", "Line"})
 
-	SortErrors(errs)
+	SortErrors(summary.Errors)
 
-	for _, err := range errs {
+	for _, err := range summary.Errors {
 		vErr := errors.GetValidationErr(err)
 		if vErr != nil {
 			contents = append(contents, []string{strings.ToUpper(string(vErr.Severity)), "validation", vErr.Error(), strconv.Itoa(vErr.LineNumber)})
@@ -47,7 +61,43 @@ func GenerateSummary(status string, errs []error) {
 		contents = append(contents, []string{"UNKNOWN", "unknown", err.Error(), ""})
 	}
 
-	md := fmt.Sprintf("# Validation Summary\n\n%s\n\n%s", status, markdown.CreateMarkdownTable(contents))
+	var source string
+	if summary.Source != "" {
+		source = summary.Source + " "
+	}
+
+	md := fmt.Sprintf("# %sLinting Summary", source)
+	if summary.ReportURL != "" {
+		md += fmt.Sprintf("\n\nLinting report available at <%s>", summary.ReportURL)
+	}
+
+	md += fmt.Sprintf("\n\n%s\n\n%s", summary.Status, markdown.CreateMarkdownTable(contents))
+
+	githubactions.AddStepSummary(md)
+}
+
+func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {
+	defer func() {
+		if r := recover(); r != nil {
+			if env.IsGithubDebugMode() {
+				fmt.Printf("::debug::%v\n", r)
+			}
+		}
+	}()
+
+	if !env.IsGithubAction() {
+		return
+	}
+
+	logger := log.From(ctx)
+	md := ""
+	chart, err := summary.ToMermaidDiagram()
+	if err == nil {
+		md = fmt.Sprintf("# Generation Workflow Summary\n\n_This is a breakdown of the 'Generate Target' step above_\n%s", chart)
+	} else {
+		logger.Error("failed to generate github workflow summary", zap.Error(err))
+		md = "# Generation Workflow Summary\n\n:stop_sign: Failed to generate workflow summary. Please try again or [contact support](mailto:support@speakeasyapi.dev)."
+	}
 
 	githubactions.AddStepSummary(md)
 }
