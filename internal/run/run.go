@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/iancoleman/strcase"
 	"io"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -14,26 +15,28 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
-	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/download"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
@@ -370,8 +373,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			SourceBlobDigest:     sourceLock.SourceBlobDigest,
 			OutLocation:          outDir,
 		}
-	} else {
-		return nil, fmt.Errorf("source %s must be run before target", t.Source)
 	}
 
 	return sourceRes, nil
@@ -397,8 +398,24 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 	var currentDocument string
 
 	if len(source.Inputs) == 1 {
-		if source.Inputs[0].IsRemote() {
-			rootStep.NewSubstep("Downloading Document")
+		if source.Inputs[0].IsSpeakeasyRegistry() {
+			rootStep.NewSubstep("Downloading registry bundle")
+			downloadLocation := outputLocation
+			if len(source.Overlays) > 0 {
+				downloadLocation = source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir())
+			}
+
+			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], downloadLocation)
+			if err != nil {
+				return "", nil, err
+			}
+
+			// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
+			if len(source.Overlays) == 0 {
+				outputLocation = currentDocument
+			}
+		} else if source.Inputs[0].IsRemote() {
+			rootStep.NewSubstep("Downloading document")
 
 			downloadLocation := outputLocation
 			if len(source.Overlays) > 0 {
@@ -424,7 +441,15 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			if input.IsRemote() {
+			if input.IsSpeakeasyRegistry() {
+				mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", input.Location))
+				downloadedPath, err := resolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
+				if err != nil {
+					return "", nil, err
+				}
+
+				inSchemas = append(inSchemas, downloadedPath)
+			} else if input.IsRemote() {
 				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
 
 				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
@@ -477,10 +502,9 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 		}
 	}
 
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if hasSchemaRegistry {
-		registryStep := rootStep.NewSubstep("Snapshotting Document")
-		if err := w.publishSource(ctx, registryStep, sourceID, outputLocation); err != nil {
+	if !isSingleRegistrySource(source) {
+		err = w.snapshotSource(ctx, rootStep, sourceID, outputLocation)
+		if err != nil {
 			return "", nil, err
 		}
 	}
@@ -489,7 +513,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 	if w.lockfileOld != nil {
 		if oldSourceLock, ok := w.lockfileOld.Sources[sourceID]; ok && oldSourceLock.SourceRevisionDigest != "" {
 			//changesStep := rootStep.NewSubstep("Computing Document Changes")
-			
+
 		}
 	}
 
@@ -613,6 +637,120 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	return res, err
 }
 
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep, namespaceName string, documentPath string) error {
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	if !hasSchemaRegistry {
+		return nil
+	}
+
+	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
+	memfs := fsextras.NewMemFS()
+
+	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
+
+	registryStep.NewSubstep("Snapshotting OpenAPI Revision")
+
+	rootDocumentPath, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
+		DocumentPath: documentPath,
+	})
+	if err != nil {
+		return fmt.Errorf("error localizing openapi document: %w", err)
+	}
+
+	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	if err != nil {
+		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
+	}
+
+	rootDocument, err := memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))
+	if errors.Is(err, fs.ErrNotExist) {
+		rootDocument, err = memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.json"))
+	}
+	if err != nil {
+		return fmt.Errorf("error opening root document: %w", err)
+	}
+
+	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	if err != nil {
+		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
+	}
+
+	revision := ""
+	if gitRepo != nil {
+		revision, err = gitRepo.HeadHash()
+		if err != nil {
+			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
+		}
+	}
+	annotations.Revision = revision
+	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
+
+	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+		Tags:         []string{"latest"},
+		Reproducible: true,
+		Annotations:  annotations,
+	})
+	if err != nil {
+		return fmt.Errorf("error bundling openapi artifact: %w", err)
+	}
+
+	serverURL := auth.GetServerURL()
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	tags := []string{"latest"} // TODO: read from workflow.yaml
+
+	registryStep.NewSubstep("Storing OpenAPI Revision")
+	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+		Tags:     tags,
+		Registry: reg,
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		}),
+	})
+	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
+		return fmt.Errorf("error publishing openapi bundle to registry: %w", err)
+	}
+
+	registryStep.SucceedWorkflow()
+
+	var manifestDigest *string
+	var blobDigest *string
+	if pushResult.References != nil && len(pushResult.References) > 0 {
+		manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
+		manifestDigest = &manifestDigestStr
+		manifestLayers := pushResult.References[0].Manifest.Layers
+		for _, layer := range manifestLayers {
+			if layer.MediaType == ocicommon.MediaTypeOpenAPIBundleV0 {
+				blobDigestStr := layer.Digest.String()
+				blobDigest = &blobDigestStr
+				break
+			}
+		}
+	}
+
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		cliEvent.SourceRevisionDigest = manifestDigest
+		cliEvent.SourceNamespaceName = &namespaceName
+		cliEvent.SourceBlobDigest = blobDigest
+	}
+
+	w.lockfile.Sources[namespaceName] = workflow.SourceLock{
+		SourceNamespace:      namespaceName,
+		SourceRevisionDigest: *manifestDigest,
+		SourceBlobDigest:     *blobDigest,
+		Tags:                 tags,
+	}
+
+	return nil
+}
+
 func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
 	t, err := getTarget(w.Target)
 	if err != nil {
@@ -671,7 +809,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 		return
 	}
 
-	titleMsg := fmt.Sprintf("Source %s Compiled Successfully", maps.Keys(sourceResults)[0])
+	titleMsg := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(maps.Keys(sourceResults)[0]), styles.Success.Render("Compiled Successfully"))
 	if len(sourceResults) > 1 {
 		titleMsg = "Sources Compiled Successfully"
 	}
@@ -684,16 +822,38 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
 		}
 
-		additionalLines = append(additionalLines, sourceLabel+"Linting report available at:")
-		additionalLines = append(additionalLines, sourceRes.Result.ReportURL)
+		var report string
+		if sourceRes.Result.ReportURL != "" {
+			report = styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
+		} else {
+			report = styles.Dimmed.Render(sourceRes.Result.ReportOutput)
+		}
+
+		additionalLines = append(additionalLines, sourceLabel+report)
 	}
 
-	msg := styles.RenderSuccessMessage(
-		titleMsg,
-		additionalLines...,
-	)
+	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(titleMsg), strings.Join(additionalLines, "\n"))
 
 	logger.Println(msg)
+}
+
+func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, outPath string) (string, error) {
+	log.From(ctx).Infof("Downloading bundle %s... to %s\n", d.Location, outPath)
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	if !hasSchemaRegistry {
+		return "", fmt.Errorf("schema registry is not enabled for this workspace")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
+		return "", err
+	}
+
+	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
+	if registryBreakdown == nil {
+		return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
+	}
+
+	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
@@ -734,6 +894,10 @@ func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRul
 	log.From(ctx).Printf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
 
 	return nil
+}
+
+func isSingleRegistrySource(source workflow.Source) bool {
+	return len(source.Inputs) == 1 && len(source.Overlays) == 0 && source.Inputs[0].IsSpeakeasyRegistry()
 }
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {
