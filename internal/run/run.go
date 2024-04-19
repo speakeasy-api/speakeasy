@@ -393,12 +393,19 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	if len(source.Inputs) == 1 {
 		if source.Inputs[0].IsSpeakeasyRegistry() {
 			rootStep.NewSubstep("Downloading registry bundle")
-			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
-			if len(source.Overlays) == 0 {
-				outputLocation = currentDocument
+			downloadLocation := outputLocation
+			if len(source.Overlays) > 0 {
+				downloadLocation = source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir())
 			}
+
+			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], downloadLocation)
 			if err != nil {
 				return "", nil, err
+			}
+
+			// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
+			if len(source.Overlays) == 0 {
+				outputLocation = currentDocument
 			}
 		} else if source.Inputs[0].IsRemote() {
 			rootStep.NewSubstep("Downloading document")
