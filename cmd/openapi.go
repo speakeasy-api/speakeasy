@@ -3,16 +3,20 @@ package cmd
 import (
 	"context"
 	"fmt"
-	model2 "github.com/pb33f/openapi-changes/model"
-	"github.com/pb33f/openapi-changes/tui"
-	"github.com/pkg/errors"
-	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
-	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
+
+	model2 "github.com/pb33f/openapi-changes/model"
+	"github.com/pb33f/openapi-changes/tui"
+	"github.com/pkg/errors"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
+	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/transform"
+	"github.com/speakeasy-api/speakeasy/registry"
 
 	"github.com/speakeasy-api/speakeasy-core/changes"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -142,7 +146,7 @@ func runHTML(commits []*model2.Commit, flags OpenAPIDiffFlags, shouldOpen bool) 
 		flags.Output = "report.html"
 	}
 
-	err := os.WriteFile(flags.Output, bytes, 0644)
+	err := os.WriteFile(flags.Output, bytes, 0o644)
 	if err != nil {
 		return err
 	}
@@ -175,7 +179,17 @@ func runConsole(ctx context.Context, commits []*model2.Commit) error {
 }
 
 func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
-	commits, errs := changes.GetChanges(flags.OldSchema, flags.NewSchema, changes.SummaryOptions{})
+	hasRegistryBundle, oldSchema, newSchema, err := processRegistryBundles(ctx, flags)
+	if err != nil {
+		return err
+	}
+
+	if hasRegistryBundle {
+		// Cleanup temp dir if we had used a registry bundle
+		defer os.RemoveAll(workflow.GetTempDir())
+	}
+
+	commits, errs := changes.GetChanges(oldSchema, newSchema, changes.SummaryOptions{})
 	if len(errs) > 0 {
 		return errs[0]
 	}
@@ -188,6 +202,40 @@ func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 		return runConsole(ctx, commits)
 	}
 	return fmt.Errorf("invalid output type: %s", flags.Format)
+}
+
+func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, string, string, error) {
+	oldSchema := flags.OldSchema
+	newSchema := flags.NewSchema
+	hasRegistrySchema := false
+	var err error
+	if strings.Contains(oldSchema, "registry.speakeasyapi.dev/") {
+		oldSchema, err = processRegistryBundle(ctx, oldSchema)
+		if err != nil {
+			return false, "", "", err
+		}
+		hasRegistrySchema = true
+	}
+
+	if strings.Contains(newSchema, "registry.speakeasyapi.dev/") {
+		newSchema, err = processRegistryBundle(ctx, newSchema)
+		if err != nil {
+			return false, "", "", err
+		}
+		hasRegistrySchema = true
+	}
+
+	return hasRegistrySchema, oldSchema, newSchema, nil
+}
+
+func processRegistryBundle(ctx context.Context, schema string) (string, error) {
+	document := workflow.Document{
+		Location: schema,
+	}
+
+	output := document.GetTempRegistryDir(workflow.GetTempDir())
+
+	return registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 }
 
 func openInBrowser(path string) error {
