@@ -210,7 +210,12 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 	hasRegistrySchema := false
 	var err error
 	if strings.Contains(oldSchema, "registry.speakeasyapi.dev/") {
-		oldSchema, err = processRegistryBundle(ctx, oldSchema)
+		document := workflow.Document{
+			Location: oldSchema,
+		}
+
+		output := document.GetTempRegistryDir(workflow.GetTempDir())
+		oldSchema, err = registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 		if err != nil {
 			return false, "", "", err
 		}
@@ -218,7 +223,12 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 	}
 
 	if strings.Contains(newSchema, "registry.speakeasyapi.dev/") {
-		newSchema, err = processRegistryBundle(ctx, newSchema)
+		document := workflow.Document{
+			Location: newSchema,
+		}
+
+		output := document.GetTempRegistryDir(workflow.GetTempDir())
+		newSchema, err = registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 		if err != nil {
 			return false, "", "", err
 		}
@@ -226,16 +236,6 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 	}
 
 	return hasRegistrySchema, oldSchema, newSchema, nil
-}
-
-func processRegistryBundle(ctx context.Context, schema string) (string, error) {
-	document := workflow.Document{
-		Location: schema,
-	}
-
-	output := document.GetTempRegistryDir(workflow.GetTempDir())
-
-	return registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 }
 
 func openInBrowser(path string) error {
