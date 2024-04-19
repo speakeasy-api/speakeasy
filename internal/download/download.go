@@ -1,12 +1,22 @@
 package download
 
 import (
+	"archive/zip"
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy-core/loader"
+	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 )
 
 const (
@@ -67,6 +77,101 @@ func DownloadFile(url, outPath, header, token string) error {
 
 	if _, err := io.Copy(out, res.Body); err != nil {
 		return fmt.Errorf("failed to copy file to location: %w", err)
+	}
+
+	return nil
+}
+
+// DownloadRegistryOpenAPIBundle Returns a file path within the downloaded bundle or error
+func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, outPath string) (string, error) {
+	serverURL := auth.GetServerURL()
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
+		Registry: reg,
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceID, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		}),
+	})
+
+	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, reference)
+	if err != nil {
+		return "", err
+	}
+
+	defer bundleResult.Body.Close()
+
+	buf, err := io.ReadAll(bundleResult.Body)
+	if err != nil {
+		return "", err
+	}
+
+	reader := bytes.NewReader(buf)
+	zipReader, err := zip.NewReader(reader, int64(len(buf)))
+	if err != nil {
+		return "", err
+	}
+
+	outputFileName := ""
+	for _, file := range zipReader.File {
+		if strings.Contains(file.Name, ".yaml") { // TODO: this is not going to fly
+			cleanName := filepath.Clean(file.Name)
+			outputFileName = filepath.Join(outPath, cleanName)
+			if !strings.HasPrefix(outputFileName, filepath.Clean(outPath)+string(os.PathSeparator)) {
+				return "", fmt.Errorf("illegal file path: %s", outputFileName)
+			}
+			break
+		}
+	}
+
+	if outputFileName == "" {
+		return "", fmt.Errorf("no root openapi file found in bundle")
+	}
+
+	if err := copyZipToOutDir(zipReader, outPath); err != nil {
+		return "", fmt.Errorf("failed to copy zip contents to outdir: %w", err)
+	}
+
+	return outputFileName, nil
+}
+
+func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
+	for _, file := range zipReader.File {
+		cleanName := filepath.Clean(file.Name)
+		filePath := filepath.Join(outDir, cleanName)
+
+		if !strings.HasPrefix(filePath, filepath.Clean(outDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", filePath)
+		}
+
+		if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+			return err
+		}
+
+		if file.FileInfo().IsDir() {
+			continue
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer fileReader.Close()
+
+		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+		defer targetFile.Close()
+
+		if _, err := io.Copy(targetFile, fileReader); err != nil {
+			return err
+		}
 	}
 
 	return nil
