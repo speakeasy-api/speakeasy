@@ -245,7 +245,7 @@ func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
 	//
 	//title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])
 	//
-	o, err := overlay.Compare("LLM", originalFile, y1, *y2)
+	o, err := overlay.Compare("LLM", y1, *y2)
 	if err != nil {
 		return fmt.Errorf("failed to compare spec files %q and %q: %w", originalFile, adjustedFile, err)
 	}
