@@ -2,6 +2,7 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.21.5
 
+//
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.18.0
@@ -22,11 +23,11 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-changes v1.0.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.311.1
-	github.com/speakeasy-api/openapi-overlay v0.4.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.312.0
+	github.com/speakeasy-api/openapi-overlay v0.5.0
 	github.com/speakeasy-api/sdk-gen-config v1.11.4
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.7-beta
-	github.com/speakeasy-api/speakeasy-core v0.5.1
+	github.com/speakeasy-api/speakeasy-core v0.7.1
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0
@@ -39,6 +40,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+require github.com/pb33f/openapi-changes v0.0.61
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -91,7 +94,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gammban/numtow v0.0.2 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
-	github.com/gdamore/tcell/v2 v2.7.1 // indirect
+	github.com/gdamore/tcell/v2 v2.7.4 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -162,7 +165,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
 	github.com/pterm/pterm v0.12.79 // indirect
-	github.com/rivo/tview v0.0.0-20240204151237-861aa94d61c8 // indirect
+	github.com/rivo/tview v0.0.0-20240307173318-e804876934a1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
