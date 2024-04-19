@@ -402,7 +402,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			return "", nil, err
 		}
 		// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
-		if len(source.Overlays) == 0 {
+		if len(source.Overlays) == 0 && source.Inputs[0].IsSpeakeasyRegistry() {
 			outputLocation = currentDocument
 		}
 	} else {
