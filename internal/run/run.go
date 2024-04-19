@@ -392,42 +392,19 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	var currentDocument string
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
 	if len(source.Inputs) == 1 {
-		if source.Inputs[0].IsSpeakeasyRegistry() {
-			rootStep.NewSubstep("Downloading registry bundle")
-			downloadLocation := outputLocation
-			if len(source.Overlays) > 0 {
-				downloadLocation = source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir())
-			}
-
-			if !hasSchemaRegistry {
-				return "", nil, fmt.Errorf("schema registry is not enabled for this workspace")
-			}
-
-			currentDocument, err = registry.ResolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], downloadLocation)
-			if err != nil {
-				return "", nil, err
-			}
-
-			// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
-			if len(source.Overlays) == 0 {
-				outputLocation = currentDocument
-			}
-		} else if source.Inputs[0].IsRemote() {
-			rootStep.NewSubstep("Downloading document")
-
-			downloadLocation := outputLocation
-			if len(source.Overlays) > 0 {
-				downloadLocation = source.Inputs[0].GetTempDownloadPath(workflow.GetTempDir())
-			}
-
-			currentDocument, err = resolveRemoteDocument(ctx, source.Inputs[0], downloadLocation)
-			if err != nil {
-				return "", nil, err
-			}
-		} else {
-			currentDocument = source.Inputs[0].Location
+		var singleLocation *string
+		// The output location should be the resolved location
+		if len(source.Overlays) == 0 {
+			singleLocation = &outputLocation
+		}
+		currentDocument, err = resolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
+		if err != nil {
+			return "", nil, err
+		}
+		// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
+		if len(source.Overlays) == 0 && source.Inputs[0].IsSpeakeasyRegistry() {
+			outputLocation = currentDocument
 		}
 	} else {
 		mergeStep := rootStep.NewSubstep("Merge documents")
@@ -441,29 +418,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			if input.IsSpeakeasyRegistry() {
-				mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", input.Location))
-				if !hasSchemaRegistry {
-					return "", nil, fmt.Errorf("schema registry is not enabled for this workspace")
-				}
-				downloadedPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				inSchemas = append(inSchemas, downloadedPath)
-			} else if input.IsRemote() {
-				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				inSchemas = append(inSchemas, downloadedPath)
-			} else {
-				inSchemas = append(inSchemas, input.Location)
+			resolvedPath, err := resolveDocument(ctx, input, nil, mergeStep)
+			if err != nil {
+				return "", nil, err
 			}
+			inSchemas = append(inSchemas, resolvedPath)
 		}
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
@@ -484,18 +443,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
-			if overlay.IsRemote() {
-				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				overlaySchemas = append(overlaySchemas, downloadedPath)
-			} else {
-				overlaySchemas = append(overlaySchemas, overlay.Location)
+			resolvedPath, err := resolveDocument(ctx, overlay, nil, overlayStep)
+			if err != nil {
+				return "", nil, err
 			}
+			overlaySchemas = append(overlaySchemas, resolvedPath)
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
@@ -752,6 +704,42 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(titleMsg), strings.Join(additionalLines, "\n"))
 
 	logger.Println(msg)
+}
+
+func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *WorkflowStep) (string, error) {
+	if d.IsSpeakeasyRegistry() {
+		step.NewSubstep("Downloading registry bundle")
+		hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+		if !hasSchemaRegistry {
+			return "", fmt.Errorf("schema registry is not enabled for this workspace")
+		}
+
+		location := d.GetTempRegistryDir(workflow.GetTempDir())
+		if outputLocation != nil {
+			location = *outputLocation
+		}
+		documentOut, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, location)
+		if err != nil {
+			return "", err
+		}
+
+		return documentOut, nil
+	} else if d.IsRemote() {
+		step.NewSubstep("Downloading remote document")
+		location := d.GetTempDownloadPath(workflow.GetTempDir())
+		if outputLocation != nil {
+			location = *outputLocation
+		}
+
+		documentOut, err := resolveRemoteDocument(ctx, d, location)
+		if err != nil {
+			return "", err
+		}
+
+		return documentOut, nil
+	}
+
+	return d.Location, nil
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
