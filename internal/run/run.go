@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -532,7 +533,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep,
 
 	registryStep.NewSubstep("Snapshotting OpenAPI Revision")
 
-	_, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
+	rootDocumentPath, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
 		DocumentPath: documentPath,
 	})
 	if err != nil {
@@ -544,6 +545,19 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep,
 		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
 	}
 
+	rootDocument, err := memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))
+	if errors.Is(err, fs.ErrNotExist) {
+		rootDocument, err = memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.json"))
+	}
+	if err != nil {
+		return fmt.Errorf("error opening root document: %w", err)
+	}
+
+	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	if err != nil {
+		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
+	}
+
 	revision := ""
 	if gitRepo != nil {
 		revision, err = gitRepo.HeadHash()
@@ -551,13 +565,13 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep,
 			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
 		}
 	}
+	annotations.Revision = revision
+	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
 		Tags:         []string{"latest"},
 		Reproducible: true,
-		Annotations: ocicommon.Annotations{
-			Revision: revision,
-		},
+		Annotations:  annotations,
 	})
 	if err != nil {
 		return fmt.Errorf("error bundling openapi artifact: %w", err)
