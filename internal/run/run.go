@@ -392,13 +392,17 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	var currentDocument string
-
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
 	if len(source.Inputs) == 1 {
 		if source.Inputs[0].IsSpeakeasyRegistry() {
 			rootStep.NewSubstep("Downloading registry bundle")
 			downloadLocation := outputLocation
 			if len(source.Overlays) > 0 {
 				downloadLocation = source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir())
+			}
+
+			if !hasSchemaRegistry {
+				return "", nil, fmt.Errorf("schema registry is not enabled for this workspace")
 			}
 
 			currentDocument, err = registry.ResolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], downloadLocation)
@@ -439,6 +443,9 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		for _, input := range source.Inputs {
 			if input.IsSpeakeasyRegistry() {
 				mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", input.Location))
+				if !hasSchemaRegistry {
+					return "", nil, fmt.Errorf("schema registry is not enabled for this workspace")
+				}
 				downloadedPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
 				if err != nil {
 					return "", nil, err
