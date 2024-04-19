@@ -15,24 +15,24 @@ import (
 
 	"golang.org/x/exp/maps"
 
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
-	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/download"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
@@ -487,7 +487,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		}
 
 		err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-			Tags: []string{"latest"},
+			Tags:         []string{"latest"},
+			Reproducible: true,
 		})
 		if err != nil {
 			return "", nil, fmt.Errorf("error bundling openapi artifact: %w", err)
@@ -508,11 +509,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 			Tags:     tags,
 			Registry: reg,
-			Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, bundler.RepositoryAccessOptions{
+			Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, ocicommon.RepositoryAccessOptions{
 				Insecure: insecurePublish,
 			}),
 		})
-		if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
+		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			return "", nil, fmt.Errorf("error publishing openapi bundle to registry: %w", err)
 		}
 
@@ -525,7 +526,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 			manifestDigest = &manifestDigestStr
 			manifestLayers := pushResult.References[0].Manifest.Layers
 			for _, layer := range manifestLayers {
-				if layer.MediaType == bundler.MediaTypeOpenAPIBundleV0 {
+				if layer.MediaType == ocicommon.MediaTypeOpenAPIBundleV0 {
 					blobDigestStr := layer.Digest.String()
 					blobDigest = &blobDigestStr
 					break
