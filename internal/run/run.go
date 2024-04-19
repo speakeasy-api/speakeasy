@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
+	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"io"
 	"io/fs"
@@ -17,10 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/speakeasy-api/speakeasy/registry"
-	"go.uber.org/zap"
-	"golang.org/x/exp/maps"
-
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -30,6 +27,8 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	"github.com/speakeasy-api/speakeasy/registry"
+	"go.uber.org/zap"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -61,13 +60,15 @@ type Workflow struct {
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
+	sourceResults      map[string]*sourceResult
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
 }
 
 type sourceResult struct {
-	Source string
-	Result *validation.ValidationResult
+	Source       string
+	LintResult   *validation.ValidationResult
+	ChangeReport reports.ReportResult
 }
 
 func NewWorkflow(
@@ -108,6 +109,7 @@ func NewWorkflow(
 		projectDir:       projectDir,
 		RootStep:         rootStep,
 		ForceGeneration:  forceGeneration,
+		sourceResults:    make(map[string]*sourceResult),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
 	}, nil
@@ -140,7 +142,6 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	var err, runErr error
-	var sourceResults map[string]*sourceResult
 
 	logger := log.From(ctx)
 	var logs bytes.Buffer
@@ -152,7 +153,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 	runFnCli := func() error {
 		runCtx := log.With(ctx, logCapture)
-		sourceResults, err = w.Run(runCtx)
+		err = w.Run(runCtx)
 
 		w.RootStep.Finalize(err == nil)
 
@@ -186,67 +187,65 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 	// Display success message if the workflow succeeded
 	if err == nil && runErr == nil {
-		w.printSourceSuccessMessage(logger, sourceResults)
+		w.printSourceSuccessMessage(logger)
 		_ = w.printTargetSuccessMessage(logger, endDuration, len(criticalWarns) > 0)
 	}
 
 	return errors.Join(err, runErr)
 }
 
-func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
+func (w *Workflow) Run(ctx context.Context) error {
 	if w.Source != "" && w.Target != "" {
-		return nil, fmt.Errorf("cannot specify both a target and a source")
+		return fmt.Errorf("cannot specify both a target and a source")
 	}
-
-	sourceResults := make(map[string]*sourceResult)
 
 	if w.Target == "all" {
 		for t := range w.workflow.Targets {
 			sourceRes, err := w.runTarget(ctx, t)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			sourceResults[sourceRes.Source] = sourceRes
+			w.sourceResults[sourceRes.Source] = sourceRes
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
 			_, sourceRes, err := w.runSource(ctx, w.RootStep, id, "", true)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			sourceResults[sourceRes.Source] = sourceRes
+			w.sourceResults[sourceRes.Source] = sourceRes
 		}
 	} else if w.Target != "" {
 		if _, ok := w.workflow.Targets[w.Target]; !ok {
-			return nil, fmt.Errorf("target %s not found", w.Target)
+			return fmt.Errorf("target %s not found", w.Target)
 		}
 
 		sourceRes, err := w.runTarget(ctx, w.Target)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		sourceResults[sourceRes.Source] = sourceRes
+		w.sourceResults[sourceRes.Source] = sourceRes
 	} else if w.Source != "" {
 		if _, ok := w.workflow.Sources[w.Source]; !ok {
-			return nil, fmt.Errorf("source %s not found", w.Source)
+			return fmt.Errorf("source %s not found", w.Source)
 		}
 
 		_, sourceRes, err := w.runSource(ctx, w.RootStep, w.Source, "", true)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		sourceResults[sourceRes.Source] = sourceRes
+		w.sourceResults[sourceRes.Source] = sourceRes
 	}
 
 	if err := workflow.SaveLockfile(w.projectDir, w.lockfile); err != nil {
-		return nil, err
+		return err
 	}
 
-	return sourceResults, nil
+	return nil
 }
 
 func getTarget(target string) (*workflow.Target, error) {
@@ -284,8 +283,8 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		}
 
 		sourceRes = &sourceResult{
-			Source: t.Source,
-			Result: res,
+			Source:     t.Source,
+			LintResult: res,
 		}
 	}
 
@@ -384,6 +383,9 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *sourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
+	sourceRes := &sourceResult{
+		Source: sourceID,
+	}
 
 	rulesetToUse := ""
 	if source.Ruleset != nil {
@@ -474,20 +476,17 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok {
-			if err := computeChanges(ctx, rootStep, targetLockOld, outputLocation); err != nil {
+			sourceRes.ChangeReport, err = computeChanges(ctx, rootStep, targetLockOld, outputLocation)
+			if err != nil {
 				return "", nil, fmt.Errorf("failed to compute OpenAPI changes: %w", err)
 			}
+
 		}
 	}
 
-	res, err := w.validateDocument(ctx, rootStep, sourceID, outputLocation, rulesetToUse, w.projectDir)
+	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, outputLocation, rulesetToUse, w.projectDir)
 	if err != nil {
 		return "", nil, err
-	}
-
-	sourceRes := &sourceResult{
-		Source: sourceID,
-		Result: res,
 	}
 
 	rootStep.SucceedWorkflow()
@@ -500,7 +499,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	return outputLocation, sourceRes, nil
 }
 
-func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) error {
+func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r reports.ReportResult, err error) {
 	changesStep := rootStep.NewSubstep("Computing Document Changes")
 
 	oldRegistryLocation := ""
@@ -508,7 +507,7 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 		oldRegistryLocation = fmt.Sprintf("%s/%s@%s", "registry.speakeasyapi.dev", targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
 	} else {
 		changesStep.Skip("no previous revision found")
-		return nil
+		return
 	}
 
 	changesStep.NewSubstep("Downloading prior revision")
@@ -516,22 +515,26 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 	d := workflow.Document{Location: oldRegistryLocation}
 	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
 	if err != nil {
-		return err
+		return
 	}
 
 	changesStep.NewSubstep("Computing changes")
 
 	c, err := changes.GetChanges(oldDocPath, newDocPath)
 	if err != nil {
-		return fmt.Errorf("error computing changes: %w", err)
+		return r, fmt.Errorf("error computing changes: %w", err)
 	}
 
-	if err := c.WriteHTMLReport("changes.html"); err != nil {
-		return fmt.Errorf("error writing changes report: %w", err)
+	changesStep.NewSubstep("Uploading changes report")
+	r, err = reports.UploadReport(ctx, c.GetHTMLReport(), shared.TypeChanges)
+	if err != nil {
+		return r, fmt.Errorf("failed to persist report: %w", err)
 	}
+
+	log.From(ctx).Info(r.Message)
 
 	changesStep.SucceedWorkflow()
-	return nil
+	return
 }
 
 func (w *Workflow) publishSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceID, outputLocation string) error {
@@ -799,37 +802,26 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 	return nil
 }
 
-func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults map[string]*sourceResult) {
-	if len(sourceResults) == 0 {
+func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
+	if len(w.sourceResults) == 0 {
 		return
 	}
 
-	titleMsg := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(maps.Keys(sourceResults)[0]), styles.Success.Render("Compiled Successfully"))
-	if len(sourceResults) > 1 {
-		titleMsg = "Sources Compiled Successfully"
-	}
+	for sourceID, sourceRes := range w.sourceResults {
+		heading := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(sourceID), styles.Success.Render("Compiled Successfully"))
+		var additionalLines []string
 
-	var additionalLines []string
-
-	for sourceID, sourceRes := range sourceResults {
-		sourceLabel := ""
-		if len(sourceResults) > 1 {
-			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
+		if lintLocation := sourceRes.LintResult.Report.Location(); lintLocation != "" {
+			additionalLines = append(additionalLines, styles.Success.Render("└─Linting report: ")+styles.Dimmed.Render(lintLocation))
 		}
 
-		var report string
-		if sourceRes.Result.ReportURL != "" {
-			report = styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
-		} else {
-			report = styles.Dimmed.Render(sourceRes.Result.ReportOutput)
+		if changesLocation := sourceRes.ChangeReport.Location(); changesLocation != "" {
+			additionalLines = append(additionalLines, styles.Success.Render("└─OpenAPI changes report: ")+styles.Dimmed.Render(changesLocation))
 		}
 
-		additionalLines = append(additionalLines, sourceLabel+report)
+		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
+		logger.Println(msg)
 	}
-
-	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(titleMsg), strings.Join(additionalLines, "\n"))
-
-	logger.Println(msg)
 }
 
 func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *workflowTracking.WorkflowStep) (string, error) {

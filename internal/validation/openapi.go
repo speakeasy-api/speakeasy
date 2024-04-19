@@ -2,17 +2,13 @@ package validation
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -20,7 +16,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
-	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"go.uber.org/zap"
 )
 
@@ -34,13 +29,12 @@ type OutputLimits struct {
 }
 
 type ValidationResult struct {
-	AllErrors    []error
-	Errors       []error
-	Warnings     []error
-	Infos        []error
-	Status       string
-	ReportURL    string
-	ReportOutput string
+	AllErrors []error
+	Errors    []error
+	Warnings  []error
+	Infos     []error
+	Status    string
+	Report    reports.ReportResult
 }
 
 func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (*ValidationResult, error) {
@@ -129,7 +123,7 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 		Source:    source,
 		Status:    res.Status,
 		Errors:    res.AllErrors,
-		ReportURL: res.ReportURL,
+		ReportURL: res.Report.URL,
 	})
 
 	if len(res.Errors) > 0 {
@@ -314,9 +308,9 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		status = "OpenAPI document valid with warnings ⚠"
 	}
 
-	reportOutput, url, digest, err := generateReport(ctx, res)
-	if err == nil && reportOutput != "" {
-		outputLogger.Info(reportOutput)
+	report, err := generateReport(ctx, res)
+	if err == nil && report.Message != "" {
+		outputLogger.Info(report.Message)
 	}
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -327,17 +321,16 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		cliEvent.LintReportInfoCount = &infoCount
 		cliEvent.LintReportWarningCount = &warnCount
 		cliEvent.LintReportErrorCount = &errCount
-		cliEvent.LintReportDigest = &digest
+		cliEvent.LintReportDigest = &report.Digest
 	}
 
 	return &ValidationResult{
-		AllErrors:    errs,
-		Errors:       vErrs,
-		Warnings:     vWarns,
-		Infos:        vInfo,
-		Status:       status,
-		ReportURL:    url,
-		ReportOutput: reportOutput,
+		AllErrors: errs,
+		Errors:    vErrs,
+		Warnings:  vWarns,
+		Infos:     vInfo,
+		Status:    status,
+		Report:    report,
 	}, nil
 }
 
@@ -346,66 +339,7 @@ type validationResult interface {
 }
 
 // Returns (message, url, digest, error)
-func generateReport(ctx context.Context, res validationResult) (string, string, string, error) {
+func generateReport(ctx context.Context, res validationResult) (reports.ReportResult, error) {
 	reportBytes := res.GenerateReport()
-
-	md5Hasher := md5.New()
-	if _, err := md5Hasher.Write(reportBytes); err != nil {
-		return writeLocally("", reportBytes)
-	}
-	digest := hex.EncodeToString(md5Hasher.Sum(nil))
-
-	s, err := sdk.InitSDK("")
-	if err != nil {
-		return writeLocally(digest, reportBytes)
-	}
-
-	uploadRes, err := s.Reports.UploadReport(ctx, operations.UploadReportRequestBody{
-		Data: shared.Report{
-			Type: shared.TypeLinting.ToPointer(),
-		},
-		File: operations.File{
-			Content:  reportBytes,
-			FileName: digest + ".html",
-		},
-	})
-	if err != nil {
-		return writeLocally(digest, reportBytes)
-	}
-
-	url := uploadRes.UploadedReport.GetURL()
-
-	return fmt.Sprintf("Validation report available to view at: %s", url), url, digest, nil
-}
-
-// Returns (message, url, digest, error)
-func writeLocally(digest string, reportBytes []byte) (string, string, string, error) {
-	baseDir, err := os.UserHomeDir()
-	if err != nil {
-		baseDir = os.TempDir()
-	}
-
-	outputDir := filepath.Join(baseDir, ".speakeasy", "temp")
-
-	err = os.MkdirAll(outputDir, os.ModePerm)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	uniqueFilename := digest
-	if digest == "" {
-		// If we don't have a digest "*" is a os.CreateTemp feature which automatically generates a unique name
-		uniqueFilename = "*"
-	}
-	rf, err := os.CreateTemp(outputDir, "lint-report-"+uniqueFilename+".html")
-	if err != nil {
-		return "", "", "", err
-	}
-	defer rf.Close()
-
-	if _, err := rf.Write(reportBytes); err != nil {
-		return "", "", "", err
-	}
-
-	return fmt.Sprintf("Validation report written to: %s", rf.Name()), "", digest, nil
+	return reports.UploadReport(ctx, reportBytes, shared.TypeLinting)
 }

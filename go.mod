@@ -22,7 +22,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-changes v1.0.3
 	github.com/speakeasy-api/openapi-generation/v2 v2.312.0
 	github.com/speakeasy-api/openapi-overlay v0.5.0
 	github.com/speakeasy-api/sdk-gen-config v1.11.4
@@ -41,7 +40,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/pb33f/openapi-changes v0.0.61
+require (
+	github.com/pb33f/openapi-changes v0.0.61
+	github.com/stoewer/go-strcase v1.3.0
+)
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -218,5 +220,3 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
-
-replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
