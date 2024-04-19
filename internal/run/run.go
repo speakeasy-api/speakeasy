@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
@@ -708,11 +709,16 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *WorkflowStep) (string, error) {
 	if d.IsSpeakeasyRegistry() {
 		step.NewSubstep("Downloading registry bundle")
+		hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+		if !hasSchemaRegistry {
+			return "", fmt.Errorf("schema registry is not enabled for this workspace")
+		}
+
 		location := d.GetTempRegistryDir(workflow.GetTempDir())
 		if outputLocation != nil {
 			location = *outputLocation
 		}
-		documentOut, err := resolveSpeakeasyRegistryBundle(ctx, d, location)
+		documentOut, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, location)
 		if err != nil {
 			return "", err
 		}
@@ -734,25 +740,6 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 	}
 
 	return d.Location, nil
-}
-
-func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, outPath string) (string, error) {
-	log.From(ctx).Infof("Downloading bundle %s... to %s\n", d.Location, outPath)
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
-		return "", fmt.Errorf("schema registry is not enabled for this workspace")
-	}
-
-	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
-		return "", err
-	}
-
-	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
-	if registryBreakdown == nil {
-		return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
-	}
-
-	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
