@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/iancoleman/strcase"
+	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -511,10 +512,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
-		if oldSourceLock, ok := w.lockfileOld.Sources[sourceID]; ok && oldSourceLock.SourceRevisionDigest != "" {
-			//changesStep := rootStep.NewSubstep("Computing Document Changes")
 
-		}
 	}
 
 	res, err := w.validateDocument(ctx, rootStep, sourceID, outputLocation, rulesetToUse, w.projectDir)
@@ -531,12 +529,39 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 
 	if cleanUp {
 		rootStep.NewSubstep("Cleaning Up")
-
-		// Clean up temp files on success
 		os.RemoveAll(workflow.GetTempDir())
 	}
 
 	return outputLocation, sourceRes, nil
+}
+
+func (w *Workflow) computeChanges(ctx context.Context, rootStep *WorkflowStep, newDocPath, sourceID string) error {
+	changesStep := rootStep.NewSubstep("Computing Document Changes")
+
+	oldRegistryLocation := ""
+	if oldSourceLock, ok := w.lockfileOld.Sources[sourceID]; ok && oldSourceLock.SourceRevisionDigest != "" && oldSourceLock.SourceNamespace != "" {
+		oldRegistryLocation = fmt.Sprintf("%s/%s@%s", auth.GetServerURL(), oldSourceLock.SourceNamespace, oldSourceLock.SourceRevisionDigest)
+	} else {
+		changesStep.Skip("no previous revision found")
+		return nil
+	}
+
+	d := workflow.Document{Location: oldRegistryLocation}
+
+	changesStep.NewSubstep("Downloading prior revision")
+	oldDocPath, err := resolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
+	if err != nil {
+		return err
+	}
+
+	changesStep.NewSubstep("Computing changes")
+	changes.GetSummary()
+
+	mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", oldDocDigest))
+	downloadedPath, err := resolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
+	if err != nil {
+		return "", nil, err
+	}
 }
 
 func (w *Workflow) publishSource(ctx context.Context, rootStep *WorkflowStep, sourceID, outputLocation string) error {

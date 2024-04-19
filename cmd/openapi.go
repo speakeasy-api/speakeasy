@@ -3,18 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	model2 "github.com/pb33f/openapi-changes/model"
 	"github.com/pb33f/openapi-changes/tui"
 	"github.com/pkg/errors"
-	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"os"
 	"os/exec"
 	"runtime"
-	"time"
 
-	"github.com/speakeasy-api/speakeasy-core/changes"
+	"github.com/speakeasy-api/speakeasy/internal/changes"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -131,9 +128,8 @@ func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
 	return diffOpenapiInteractive(ctx, flags)
 }
 
-func runHTML(commits []*model2.Commit, flags OpenAPIDiffFlags, shouldOpen bool) error {
-	generator := html_report.NewHTMLReport(false, time.Now(), commits)
-	bytes := generator.GenerateReport(false, false, false)
+func runHTML(c changes.Changes, flags OpenAPIDiffFlags, shouldOpen bool) error {
+	bytes := c.GetHTMLReport()
 	if flags.Output == "-" {
 		fmt.Println(string(bytes))
 		return nil
@@ -153,8 +149,8 @@ func runHTML(commits []*model2.Commit, flags OpenAPIDiffFlags, shouldOpen bool) 
 	return nil
 }
 
-func runSummary(commits []*model2.Commit) error {
-	text, _, _, err := changes.GetSummaryDetails(commits)
+func runSummary(c changes.Changes) error {
+	text, _, err := c.GetSummary()
 	if err != nil {
 		return err
 	}
@@ -162,9 +158,9 @@ func runSummary(commits []*model2.Commit) error {
 	return nil
 }
 
-func runConsole(ctx context.Context, commits []*model2.Commit) error {
+func runConsole(ctx context.Context, c changes.Changes) error {
 	version := events.GetSpeakeasyVersionFromContext(ctx)
-	app := tui.BuildApplication(commits, version)
+	app := tui.BuildApplication(c, version)
 	if app == nil {
 		return errors.New("console is unable to start")
 	}
@@ -175,17 +171,17 @@ func runConsole(ctx context.Context, commits []*model2.Commit) error {
 }
 
 func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
-	commits, errs := changes.GetChanges(flags.OldSchema, flags.NewSchema, changes.SummaryOptions{})
-	if len(errs) > 0 {
-		return errs[0]
+	changes, err := changes.GetChanges(flags.OldSchema, flags.NewSchema)
+	if err != nil {
+		return err
 	}
 	switch flags.Format {
 	case "summary":
-		return runSummary(commits)
+		return runSummary(changes)
 	case "html":
-		return runHTML(commits, flags, true)
+		return runHTML(changes, flags, true)
 	case "console":
-		return runConsole(ctx, commits)
+		return runConsole(ctx, changes)
 	}
 	return fmt.Errorf("invalid output type: %s", flags.Format)
 }
