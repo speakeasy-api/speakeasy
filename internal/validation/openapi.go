@@ -33,12 +33,13 @@ type OutputLimits struct {
 }
 
 type ValidationResult struct {
-	AllErrors []error
-	Errors    []error
-	Warnings  []error
-	Infos     []error
-	Status    string
-	ReportURL string
+	AllErrors    []error
+	Errors       []error
+	Warnings     []error
+	Infos        []error
+	Status       string
+	ReportURL    string
+	ReportOutput string
 }
 
 func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (*ValidationResult, error) {
@@ -318,12 +319,13 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 	}
 
 	return &ValidationResult{
-		AllErrors: errs,
-		Errors:    vErrs,
-		Warnings:  vWarns,
-		Infos:     vInfo,
-		Status:    status,
-		ReportURL: url,
+		AllErrors:    errs,
+		Errors:       vErrs,
+		Warnings:     vWarns,
+		Infos:        vInfo,
+		Status:       status,
+		ReportURL:    url,
+		ReportOutput: reportOutput,
 	}, nil
 }
 
