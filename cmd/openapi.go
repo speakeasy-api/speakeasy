@@ -3,17 +3,21 @@ package cmd
 import (
 	"context"
 	"fmt"
+	model2 "github.com/pb33f/openapi-changes/model"
+	"github.com/pb33f/openapi-changes/tui"
+	"github.com/pkg/errors"
+	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"os"
 	"os/exec"
 	"runtime"
+	"time"
 
-	openapiChanges "github.com/speakeasy-api/openapi-changes/cmd"
-	"github.com/speakeasy-api/speakeasy/internal/changes"
+	"github.com/speakeasy-api/speakeasy-core/changes"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
-	"github.com/spf13/cobra"
 )
 
 var openapiCmd = &model.CommandGroup{
@@ -24,16 +28,15 @@ var openapiCmd = &model.CommandGroup{
 	Commands:       []model.Command{openapiValidateCmd, openapiDiffCmd, transformCmd},
 }
 
-
 var transformCmd = &model.CommandGroup{
-	Usage:   "transform",
-	Short: "Transform an OpenAPI spec using a well-defined function",
+	Usage:    "transform",
+	Short:    "Transform an OpenAPI spec using a well-defined function",
 	Commands: []model.Command{removeUnusedCmd},
 }
 
 type removeUnusedFlags struct {
-	Schema  string `json:"schema"`
-	Out     string `json:"out"`
+	Schema string `json:"schema"`
+	Out    string `json:"out"`
 }
 
 var removeUnusedCmd = &model.ExecutableCommand[removeUnusedFlags]{
@@ -45,7 +48,7 @@ var removeUnusedCmd = &model.ExecutableCommand[removeUnusedFlags]{
 			Name:                       "schema",
 			Shorthand:                  "s",
 			Description:                "the schema to transform",
-			Required: true,
+			Required:                   true,
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
@@ -55,7 +58,6 @@ var removeUnusedCmd = &model.ExecutableCommand[removeUnusedFlags]{
 		},
 	},
 }
-
 
 func runRemoveUnused(ctx context.Context, flags removeUnusedFlags) error {
 	out := os.Stdout
@@ -83,6 +85,7 @@ var openapiValidateCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 type OpenAPIDiffFlags struct {
 	OldSchema string `json:"old"`
 	NewSchema string `json:"new"`
+	Format    string `json:"format"`
 	Output    string `json:"output"`
 }
 
@@ -105,10 +108,16 @@ var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 			Required:                   true,
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
+		flag.StringFlag{
+			Name:         "output",
+			Shorthand:    "o",
+			DefaultValue: "-", // stdout
+			Description:  "output file",
+		},
 		flag.EnumFlag{
-			Name:          "output",
-			Shorthand:     "o",
-			Description:   "how to visualize the diff",
+			Name:          "format",
+			Shorthand:     "f",
+			Description:   "output format",
 			AllowedValues: []string{"summary", "console", "html"},
 			DefaultValue:  "summary",
 		},
@@ -116,46 +125,69 @@ var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 }
 
 func diffOpenapi(ctx context.Context, flags OpenAPIDiffFlags) error {
-	switch flags.Output {
-	case "summary":
-		return changes.RunSummary(flags.OldSchema, flags.NewSchema)
-	case "html":
-		return runHTMLReport(flags, false)
-	case "console":
+	if flags.Format == "console" {
 		return fmt.Errorf("console not supported outside of interactive terminals")
 	}
-
-	return fmt.Errorf("invalid output type: %s", flags.Output)
+	return diffOpenapiInteractive(ctx, flags)
 }
 
-func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
-	switch flags.Output {
-	case "summary":
-		return changes.RunSummary(flags.OldSchema, flags.NewSchema)
-	case "html":
-		return runHTMLReport(flags, true)
-	case "console":
-		return runCommand(openapiChanges.GetConsoleCommand(), flags)
+func runHTML(commits []*model2.Commit, flags OpenAPIDiffFlags, shouldOpen bool) error {
+	generator := html_report.NewHTMLReport(false, time.Now(), commits)
+	bytes := generator.GenerateReport(false, false, false)
+	if flags.Output == "-" {
+		fmt.Println(string(bytes))
+		return nil
+	}
+	if len(flags.Output) == 0 {
+		flags.Output = "report.html"
 	}
 
-	return fmt.Errorf("invalid output type: %s", flags.Output)
-}
-
-func runHTMLReport(flags OpenAPIDiffFlags, shouldOpen bool) error {
-	err := runCommand(openapiChanges.GetHTMLReportCommand(), flags)
+	err := os.WriteFile(flags.Output, bytes, 0644)
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("Report saved to %s\n", flags.Output)
 	if shouldOpen {
-		return openInBrowser("report.html")
+		return openInBrowser(flags.Output)
 	}
-
 	return nil
 }
 
-func runCommand(cmd *cobra.Command, flags OpenAPIDiffFlags) error {
-	return cmd.RunE(cmd, []string{flags.OldSchema, flags.NewSchema})
+func runSummary(commits []*model2.Commit) error {
+	text, _, _, err := changes.GetSummaryDetails(commits)
+	if err != nil {
+		return err
+	}
+	fmt.Println(text)
+	return nil
+}
+
+func runConsole(ctx context.Context, commits []*model2.Commit) error {
+	version := events.GetSpeakeasyVersionFromContext(ctx)
+	app := tui.BuildApplication(commits, version)
+	if app == nil {
+		return errors.New("console is unable to start")
+	}
+	if err := app.Run(); err != nil {
+		return fmt.Errorf("console is unable to start, are you running this inside a container?: %w", err)
+	}
+	return nil
+}
+
+func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
+	commits, errs := changes.GetChanges(flags.OldSchema, flags.NewSchema, changes.SummaryOptions{})
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	switch flags.Format {
+	case "summary":
+		return runSummary(commits)
+	case "html":
+		return runHTML(commits, flags, true)
+	case "console":
+		return runConsole(ctx, commits)
+	}
+	return fmt.Errorf("invalid output type: %s", flags.Format)
 }
 
 func openInBrowser(path string) error {

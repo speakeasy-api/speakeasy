@@ -555,7 +555,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep,
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
 		Tags:         []string{"latest"},
 		Reproducible: true,
-		Annotations: bundler.OCIAnnotations{
+		Annotations: ocicommon.Annotations{
 			Revision: revision,
 		},
 	})
