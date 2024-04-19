@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"github.com/pb33f/openapi-changes/tui"
 	"github.com/pkg/errors"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
+	"github.com/speakeasy-api/speakeasy/registry"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -138,7 +141,7 @@ func runHTML(c changes.Changes, flags OpenAPIDiffFlags, shouldOpen bool) error {
 		flags.Output = "report.html"
 	}
 
-	err := os.WriteFile(flags.Output, bytes, 0644)
+	err := os.WriteFile(flags.Output, bytes, 0o644)
 	if err != nil {
 		return err
 	}
@@ -171,7 +174,17 @@ func runConsole(ctx context.Context, c changes.Changes) error {
 }
 
 func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
-	changes, err := changes.GetChanges(flags.OldSchema, flags.NewSchema)
+	hasRegistryBundle, oldSchema, newSchema, err := processRegistryBundles(ctx, flags)
+	if err != nil {
+		return err
+	}
+
+	if hasRegistryBundle {
+		// Cleanup temp dir if we had used a registry bundle
+		defer os.RemoveAll(workflow.GetTempDir())
+	}
+
+	changes, err := changes.GetChanges(oldSchema, newSchema)
 	if err != nil {
 		return err
 	}
@@ -184,6 +197,40 @@ func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 		return runConsole(ctx, changes)
 	}
 	return fmt.Errorf("invalid output type: %s", flags.Format)
+}
+
+func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, string, string, error) {
+	oldSchema := flags.OldSchema
+	newSchema := flags.NewSchema
+	hasRegistrySchema := false
+	var err error
+	if strings.Contains(oldSchema, "registry.speakeasyapi.dev/") {
+		document := workflow.Document{
+			Location: oldSchema,
+		}
+
+		output := document.GetTempRegistryDir(workflow.GetTempDir())
+		oldSchema, err = registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
+		if err != nil {
+			return false, "", "", err
+		}
+		hasRegistrySchema = true
+	}
+
+	if strings.Contains(newSchema, "registry.speakeasyapi.dev/") {
+		document := workflow.Document{
+			Location: newSchema,
+		}
+
+		output := document.GetTempRegistryDir(workflow.GetTempDir())
+		newSchema, err = registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
+		if err != nil {
+			return false, "", "", err
+		}
+		hasRegistrySchema = true
+	}
+
+	return hasRegistrySchema, oldSchema, newSchema, nil
 }
 
 func openInBrowser(path string) error {

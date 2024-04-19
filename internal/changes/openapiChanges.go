@@ -5,6 +5,7 @@ import (
 	changesModel "github.com/pb33f/openapi-changes/model"
 	"github.com/speakeasy-api/speakeasy-core/changes"
 	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
+	"os"
 	"strings"
 	"time"
 )
@@ -27,6 +28,10 @@ func GetChanges(oldLocation, newLocation string) (Changes, error) {
 func (c Changes) GetHTMLReport() []byte {
 	generator := html_report.NewHTMLReport(false, time.Now(), c)
 	return generator.GenerateReport(false, false, false)
+}
+
+func (c Changes) WriteHTMLReport(out string) error {
+	return os.WriteFile(out, c.GetHTMLReport(), 0o644)
 }
 
 func (c Changes) GetSummary() (text string, bump VersionBump, err error) {

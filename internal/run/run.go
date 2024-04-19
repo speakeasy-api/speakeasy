@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
+	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
@@ -53,7 +55,7 @@ type Workflow struct {
 	ShouldCompile    bool
 	ForceGeneration  bool
 
-	RootStep           *WorkflowStep
+	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
 	projectDir         string
 	validatedDocuments []string
@@ -92,7 +94,7 @@ func NewWorkflow(
 	lockfile.SpeakeasyVersion = events.GetSpeakeasyVersionFromContext(ctx)
 	lockfile.Workflow = *wf
 
-	rootStep := NewWorkflowStep(name, nil)
+	rootStep := workflowTracking.NewWorkflowStep(name, log.From(ctx), nil)
 
 	return &Workflow{
 		Target:           target,
@@ -137,19 +139,19 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 }
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
-	updatesChannel := make(chan UpdateMsg)
-	w.RootStep = NewWorkflowStep("Workflow", updatesChannel)
+	var err, runErr error
+	var sourceResults map[string]*sourceResult
 
+	logger := log.From(ctx)
 	var logs bytes.Buffer
 	warnings := make([]string, 0)
 
-	var err, runErr error
-	var sourceResults map[string]*sourceResult
-	logger := log.From(ctx)
+	logCapture := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
+	updatesChannel := make(chan workflowTracking.UpdateMsg)
+	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", logCapture, updatesChannel)
 
 	runFnCli := func() error {
-		l := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
-		runCtx := log.With(ctx, l)
+		runCtx := log.With(ctx, logCapture)
 		sourceResults, err = w.Run(runCtx)
 
 		w.RootStep.Finalize(err == nil)
@@ -209,7 +211,7 @@ func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, sourceRes, err := w.runSource(ctx, w.RootStep, id, true)
+			_, sourceRes, err := w.runSource(ctx, w.RootStep, id, "", true)
 			if err != nil {
 				return nil, err
 			}
@@ -232,7 +234,7 @@ func (w *Workflow) Run(ctx context.Context) (map[string]*sourceResult, error) {
 			return nil, fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, sourceRes, err := w.runSource(ctx, w.RootStep, w.Source, true)
+		_, sourceRes, err := w.runSource(ctx, w.RootStep, w.Source, "", true)
 		if err != nil {
 			return nil, err
 		}
@@ -271,7 +273,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	var sourceRes *sourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, false)
+		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
 			return nil, err
 		}
@@ -379,7 +381,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	return sourceRes, nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sourceID string, cleanUp bool) (string, *sourceResult, error) {
+func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *sourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 
@@ -397,38 +399,19 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 	}
 
 	var currentDocument string
-
 	if len(source.Inputs) == 1 {
-		if source.Inputs[0].IsSpeakeasyRegistry() {
-			rootStep.NewSubstep("Downloading registry bundle")
-			downloadLocation := outputLocation
-			if len(source.Overlays) > 0 {
-				downloadLocation = source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir())
-			}
-
-			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], downloadLocation)
-			if err != nil {
-				return "", nil, err
-			}
-
-			// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
-			if len(source.Overlays) == 0 {
-				outputLocation = currentDocument
-			}
-		} else if source.Inputs[0].IsRemote() {
-			rootStep.NewSubstep("Downloading document")
-
-			downloadLocation := outputLocation
-			if len(source.Overlays) > 0 {
-				downloadLocation = source.Inputs[0].GetTempDownloadPath(workflow.GetTempDir())
-			}
-
-			currentDocument, err = resolveRemoteDocument(ctx, source.Inputs[0], downloadLocation)
-			if err != nil {
-				return "", nil, err
-			}
-		} else {
-			currentDocument = source.Inputs[0].Location
+		var singleLocation *string
+		// The output location should be the resolved location
+		if len(source.Overlays) == 0 {
+			singleLocation = &outputLocation
+		}
+		currentDocument, err = resolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
+		if err != nil {
+			return "", nil, err
+		}
+		// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
+		if len(source.Overlays) == 0 && source.Inputs[0].IsSpeakeasyRegistry() {
+			outputLocation = currentDocument
 		}
 	} else {
 		mergeStep := rootStep.NewSubstep("Merge Documents")
@@ -442,26 +425,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			if input.IsSpeakeasyRegistry() {
-				mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", input.Location))
-				downloadedPath, err := resolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				inSchemas = append(inSchemas, downloadedPath)
-			} else if input.IsRemote() {
-				mergeStep.NewSubstep(fmt.Sprintf("Download document from %s", input.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, input, input.GetTempDownloadPath(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				inSchemas = append(inSchemas, downloadedPath)
-			} else {
-				inSchemas = append(inSchemas, input.Location)
+			resolvedPath, err := resolveDocument(ctx, input, nil, mergeStep)
+			if err != nil {
+				return "", nil, err
 			}
+			inSchemas = append(inSchemas, resolvedPath)
 		}
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
@@ -482,18 +450,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
-			if overlay.IsRemote() {
-				overlayStep.NewSubstep(fmt.Sprintf("Download document from %s", overlay.Location))
-
-				downloadedPath, err := resolveRemoteDocument(ctx, overlay, overlay.GetTempDownloadPath(workflow.GetTempDir()))
-				if err != nil {
-					return "", nil, err
-				}
-
-				overlaySchemas = append(overlaySchemas, downloadedPath)
-			} else {
-				overlaySchemas = append(overlaySchemas, overlay.Location)
+			resolvedPath, err := resolveDocument(ctx, overlay, nil, overlayStep)
+			if err != nil {
+				return "", nil, err
 			}
+			overlaySchemas = append(overlaySchemas, resolvedPath)
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
@@ -512,7 +473,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
-
+		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok {
+			if err := computeChanges(ctx, rootStep, targetLockOld, outputLocation); err != nil {
+				return "", nil, fmt.Errorf("failed to compute OpenAPI changes: %w", err)
+			}
+		}
 	}
 
 	res, err := w.validateDocument(ctx, rootStep, sourceID, outputLocation, rulesetToUse, w.projectDir)
@@ -535,36 +500,41 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, sour
 	return outputLocation, sourceRes, nil
 }
 
-func (w *Workflow) computeChanges(ctx context.Context, rootStep *WorkflowStep, newDocPath, sourceID string) error {
+func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) error {
 	changesStep := rootStep.NewSubstep("Computing Document Changes")
 
 	oldRegistryLocation := ""
-	if oldSourceLock, ok := w.lockfileOld.Sources[sourceID]; ok && oldSourceLock.SourceRevisionDigest != "" && oldSourceLock.SourceNamespace != "" {
-		oldRegistryLocation = fmt.Sprintf("%s/%s@%s", auth.GetServerURL(), oldSourceLock.SourceNamespace, oldSourceLock.SourceRevisionDigest)
+	if targetLock.SourceRevisionDigest != "" && targetLock.SourceNamespace != "" {
+		oldRegistryLocation = fmt.Sprintf("%s/%s@%s", "registry.speakeasyapi.dev", targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
 	} else {
 		changesStep.Skip("no previous revision found")
 		return nil
 	}
 
-	d := workflow.Document{Location: oldRegistryLocation}
-
 	changesStep.NewSubstep("Downloading prior revision")
-	oldDocPath, err := resolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
+
+	d := workflow.Document{Location: oldRegistryLocation}
+	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
 	if err != nil {
 		return err
 	}
 
 	changesStep.NewSubstep("Computing changes")
-	changes.GetSummary()
 
-	mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", oldDocDigest))
-	downloadedPath, err := resolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
+	c, err := changes.GetChanges(oldDocPath, newDocPath)
 	if err != nil {
-		return "", nil, err
+		return fmt.Errorf("error computing changes: %w", err)
 	}
+
+	if err := c.WriteHTMLReport("changes.html"); err != nil {
+		return fmt.Errorf("error writing changes report: %w", err)
+	}
+
+	changesStep.SucceedWorkflow()
+	return nil
 }
 
-func (w *Workflow) publishSource(ctx context.Context, rootStep *WorkflowStep, sourceID, outputLocation string) error {
+func (w *Workflow) publishSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceID, outputLocation string) error {
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
 	memfs := fsextras.NewMemFS()
 
@@ -600,11 +570,11 @@ func (w *Workflow) publishSource(ctx context.Context, rootStep *WorkflowStep, so
 	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 		Tags:     tags,
 		Registry: reg,
-		Access: bundler.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, bundler.RepositoryAccessOptions{
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
 			Insecure: insecurePublish,
 		}),
 	})
-	if err != nil && !errors.Is(err, bundler.ErrAccessGated) {
+	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 		return fmt.Errorf("error publishing openapi bundle to registry: %w", err)
 	}
 
@@ -617,7 +587,7 @@ func (w *Workflow) publishSource(ctx context.Context, rootStep *WorkflowStep, so
 		manifestDigest = &manifestDigestStr
 		manifestLayers := pushResult.References[0].Manifest.Layers
 		for _, layer := range manifestLayers {
-			if layer.MediaType == bundler.MediaTypeOpenAPIBundleV0 {
+			if layer.MediaType == ocicommon.MediaTypeOpenAPIBundleV0 {
 				blobDigestStr := layer.Digest.String()
 				blobDigest = &blobDigestStr
 				break
@@ -642,7 +612,7 @@ func (w *Workflow) publishSource(ctx context.Context, rootStep *WorkflowStep, so
 	return nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowStep, source, schemaPath, defaultRuleset, projectDir string) (*validation.ValidationResult, error) {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, source, schemaPath, defaultRuleset, projectDir string) (*validation.ValidationResult, error) {
 	step := parentStep.NewSubstep("Validating Document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -662,7 +632,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	return res, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep, namespaceName string, documentPath string) error {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, namespaceName string, documentPath string) error {
 	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
 	if !hasSchemaRegistry {
 		return nil
@@ -862,23 +832,40 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 	logger.Println(msg)
 }
 
-func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, outPath string) (string, error) {
-	log.From(ctx).Infof("Downloading bundle %s... to %s\n", d.Location, outPath)
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
-		return "", fmt.Errorf("schema registry is not enabled for this workspace")
+func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *workflowTracking.WorkflowStep) (string, error) {
+	if d.IsSpeakeasyRegistry() {
+		step.NewSubstep("Downloading registry bundle")
+		hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+		if !hasSchemaRegistry {
+			return "", fmt.Errorf("schema registry is not enabled for this workspace")
+		}
+
+		location := d.GetTempRegistryDir(workflow.GetTempDir())
+		if outputLocation != nil {
+			location = *outputLocation
+		}
+		documentOut, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, location)
+		if err != nil {
+			return "", err
+		}
+
+		return documentOut, nil
+	} else if d.IsRemote() {
+		step.NewSubstep("Downloading remote document")
+		location := d.GetTempDownloadPath(workflow.GetTempDir())
+		if outputLocation != nil {
+			location = *outputLocation
+		}
+
+		documentOut, err := resolveRemoteDocument(ctx, d, location)
+		if err != nil {
+			return "", err
+		}
+
+		return documentOut, nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
-		return "", err
-	}
-
-	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
-	if registryBreakdown == nil {
-		return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
-	}
-
-	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
+	return d.Location, nil
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
