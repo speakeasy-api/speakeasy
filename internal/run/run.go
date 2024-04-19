@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -13,27 +14,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
-	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/download"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
@@ -389,15 +391,19 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	var currentDocument string
-
 	if len(source.Inputs) == 1 {
-		var providedLocation *string
+		var singleLocation *string
+		// The output location should be the resolved location
 		if len(source.Overlays) == 0 {
-			providedLocation = &outputLocation
+			singleLocation = &outputLocation
 		}
-		currentDocument, err = resolveDocument(ctx, source.Inputs[0], providedLocation, rootStep)
+		currentDocument, err = resolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
 		if err != nil {
 			return "", nil, err
+		}
+		// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
+		if len(source.Overlays) == 0 {
+			outputLocation = currentDocument
 		}
 	} else {
 		mergeStep := rootStep.NewSubstep("Merge documents")
@@ -450,83 +456,10 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		}
 	}
 
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if hasSchemaRegistry && !isSingleRegistrySource(source) {
-		pl := bundler.NewPipeline(&bundler.PipelineOptions{})
-		memfs := fsextras.NewMemFS()
-
-		registryStep := rootStep.NewSubstep("Tracking OpenAPI Changes")
-
-		registryStep.NewSubstep("Snapshotting OpenAPI Revision")
-
-		_, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
-			DocumentPath: outputLocation,
-		})
+	if !isSingleRegistrySource(source) {
+		err = w.snapshotSource(ctx, rootStep, id, outputLocation)
 		if err != nil {
-			return "", nil, fmt.Errorf("error localizing openapi document: %w", err)
-		}
-
-		err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-			Tags: []string{"latest"},
-		})
-		if err != nil {
-			return "", nil, fmt.Errorf("error bundling openapi artifact: %w", err)
-		}
-
-		serverURL := auth.GetServerURL()
-		insecurePublish := false
-		if strings.HasPrefix(serverURL, "http://") {
-			insecurePublish = true
-		}
-
-		reg := strings.TrimPrefix(serverURL, "http://")
-		reg = strings.TrimPrefix(reg, "https://")
-
-		tags := []string{"latest"} // TODO: read from workflow.yaml
-
-		registryStep.NewSubstep("Storing OpenAPI Revision")
-		registryStep.NewSubstep(reg)
-		registryStep.NewSubstep(id)
-		pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
-			Tags:     tags,
-			Registry: reg,
-			Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), id, ocicommon.RepositoryAccessOptions{
-				Insecure: insecurePublish,
-			}),
-		})
-		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
-			return "", nil, fmt.Errorf("error publishing openapi bundle to registry: %w", err)
-		}
-
-		registryStep.SucceedWorkflow()
-
-		var manifestDigest *string
-		var blobDigest *string
-		if pushResult.References != nil && len(pushResult.References) > 0 {
-			manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
-			manifestDigest = &manifestDigestStr
-			manifestLayers := pushResult.References[0].Manifest.Layers
-			for _, layer := range manifestLayers {
-				if layer.MediaType == ocicommon.MediaTypeOpenAPIBundleV0 {
-					blobDigestStr := layer.Digest.String()
-					blobDigest = &blobDigestStr
-					break
-				}
-			}
-		}
-
-		cliEvent := events.GetTelemetryEventFromContext(ctx)
-		if cliEvent != nil {
-			cliEvent.SourceRevisionDigest = manifestDigest
-			cliEvent.SourceNamespaceName = &id
-			cliEvent.SourceBlobDigest = blobDigest
-		}
-
-		w.lockfile.Sources[id] = workflow.SourceLock{
-			SourceNamespace:      id,
-			SourceRevisionDigest: *manifestDigest,
-			SourceBlobDigest:     *blobDigest,
-			Tags:                 tags,
+			return "", nil, err
 		}
 	}
 
@@ -570,6 +503,120 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
 	return res, err
+}
+
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep, namespaceName string, documentPath string) error {
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	if !hasSchemaRegistry {
+		return nil
+	}
+
+	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
+	memfs := fsextras.NewMemFS()
+
+	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
+
+	registryStep.NewSubstep("Snapshotting OpenAPI Revision")
+
+	rootDocumentPath, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
+		DocumentPath: documentPath,
+	})
+	if err != nil {
+		return fmt.Errorf("error localizing openapi document: %w", err)
+	}
+
+	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	if err != nil {
+		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
+	}
+
+	rootDocument, err := memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))
+	if errors.Is(err, fs.ErrNotExist) {
+		rootDocument, err = memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.json"))
+	}
+	if err != nil {
+		return fmt.Errorf("error opening root document: %w", err)
+	}
+
+	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	if err != nil {
+		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
+	}
+
+	revision := ""
+	if gitRepo != nil {
+		revision, err = gitRepo.HeadHash()
+		if err != nil {
+			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
+		}
+	}
+	annotations.Revision = revision
+	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
+
+	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+		Tags:         []string{"latest"},
+		Reproducible: true,
+		Annotations:  annotations,
+	})
+	if err != nil {
+		return fmt.Errorf("error bundling openapi artifact: %w", err)
+	}
+
+	serverURL := auth.GetServerURL()
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	tags := []string{"latest"} // TODO: read from workflow.yaml
+
+	registryStep.NewSubstep("Storing OpenAPI Revision")
+	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+		Tags:     tags,
+		Registry: reg,
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		}),
+	})
+	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
+		return fmt.Errorf("error publishing openapi bundle to registry: %w", err)
+	}
+
+	registryStep.SucceedWorkflow()
+
+	var manifestDigest *string
+	var blobDigest *string
+	if pushResult.References != nil && len(pushResult.References) > 0 {
+		manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
+		manifestDigest = &manifestDigestStr
+		manifestLayers := pushResult.References[0].Manifest.Layers
+		for _, layer := range manifestLayers {
+			if layer.MediaType == ocicommon.MediaTypeOpenAPIBundleV0 {
+				blobDigestStr := layer.Digest.String()
+				blobDigest = &blobDigestStr
+				break
+			}
+		}
+	}
+
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		cliEvent.SourceRevisionDigest = manifestDigest
+		cliEvent.SourceNamespaceName = &namespaceName
+		cliEvent.SourceBlobDigest = blobDigest
+	}
+
+	w.lockfile.Sources[namespaceName] = workflow.SourceLock{
+		SourceNamespace:      namespaceName,
+		SourceRevisionDigest: *manifestDigest,
+		SourceBlobDigest:     *blobDigest,
+		Tags:                 tags,
+	}
+
+	return nil
 }
 
 func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
@@ -643,7 +690,12 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
 		}
 
-		report := styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
+		var report string
+		if sourceRes.Result.ReportURL != "" {
+			report = styles.Dimmed.Render("Linting report available at " + sourceRes.Result.ReportURL)
+		} else {
+			report = styles.Dimmed.Render(sourceRes.Result.ReportOutput)
+		}
 
 		additionalLines = append(additionalLines, sourceLabel+report)
 	}

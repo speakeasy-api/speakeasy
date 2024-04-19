@@ -14,6 +14,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
@@ -33,12 +34,13 @@ type OutputLimits struct {
 }
 
 type ValidationResult struct {
-	AllErrors []error
-	Errors    []error
-	Warnings  []error
-	Infos     []error
-	Status    string
-	ReportURL string
+	AllErrors    []error
+	Errors       []error
+	Warnings     []error
+	Infos        []error
+	Status       string
+	ReportURL    string
+	ReportOutput string
 }
 
 func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (*ValidationResult, error) {
@@ -312,18 +314,30 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		status = "OpenAPI document valid with warnings ⚠"
 	}
 
-	reportOutput, url, err := generateReport(ctx, res)
+	reportOutput, url, digest, err := generateReport(ctx, res)
 	if err == nil && reportOutput != "" {
 		outputLogger.Info(reportOutput)
 	}
 
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		infoCount := int64(len(vInfo))
+		warnCount := int64(len(vWarns))
+		errCount := int64(len(vErrs))
+		cliEvent.LintReportInfoCount = &infoCount
+		cliEvent.LintReportWarningCount = &warnCount
+		cliEvent.LintReportErrorCount = &errCount
+		cliEvent.LintReportDigest = &digest
+	}
+
 	return &ValidationResult{
-		AllErrors: errs,
-		Errors:    vErrs,
-		Warnings:  vWarns,
-		Infos:     vInfo,
-		Status:    status,
-		ReportURL: url,
+		AllErrors:    errs,
+		Errors:       vErrs,
+		Warnings:     vWarns,
+		Infos:        vInfo,
+		Status:       status,
+		ReportURL:    url,
+		ReportOutput: reportOutput,
 	}, nil
 }
 
@@ -331,18 +345,19 @@ type validationResult interface {
 	GenerateReport() []byte
 }
 
-func generateReport(ctx context.Context, res validationResult) (string, string, error) {
+// Returns (message, url, digest, error)
+func generateReport(ctx context.Context, res validationResult) (string, string, string, error) {
 	reportBytes := res.GenerateReport()
 
 	md5Hasher := md5.New()
 	if _, err := md5Hasher.Write(reportBytes); err != nil {
-		return writeLocally(reportBytes)
+		return writeLocally("", reportBytes)
 	}
-	filename := hex.EncodeToString(md5Hasher.Sum(nil))
+	digest := hex.EncodeToString(md5Hasher.Sum(nil))
 
 	s, err := sdk.InitSDK("")
 	if err != nil {
-		return writeLocally(reportBytes)
+		return writeLocally(digest, reportBytes)
 	}
 
 	uploadRes, err := s.Reports.UploadReport(ctx, operations.UploadReportRequestBody{
@@ -351,19 +366,20 @@ func generateReport(ctx context.Context, res validationResult) (string, string, 
 		},
 		File: operations.File{
 			Content:  reportBytes,
-			FileName: filename + ".html",
+			FileName: digest + ".html",
 		},
 	})
 	if err != nil {
-		return writeLocally(reportBytes)
+		return writeLocally(digest, reportBytes)
 	}
 
 	url := uploadRes.UploadedReport.GetURL()
 
-	return fmt.Sprintf("Validation report available to view at: %s", url), url, nil
+	return fmt.Sprintf("Validation report available to view at: %s", url), url, digest, nil
 }
 
-func writeLocally(reportBytes []byte) (string, string, error) {
+// Returns (message, url, digest, error)
+func writeLocally(digest string, reportBytes []byte) (string, string, string, error) {
 	baseDir, err := os.UserHomeDir()
 	if err != nil {
 		baseDir = os.TempDir()
@@ -373,18 +389,23 @@ func writeLocally(reportBytes []byte) (string, string, error) {
 
 	err = os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	rf, err := os.CreateTemp(outputDir, "lint-report-*.html")
+	uniqueFilename := digest
+	if digest == "" {
+		// If we don't have a digest "*" is a os.CreateTemp feature which automatically generates a unique name
+		uniqueFilename = "*"
+	}
+	rf, err := os.CreateTemp(outputDir, "lint-report-"+uniqueFilename+".html")
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	defer rf.Close()
 
 	if _, err := rf.Write(reportBytes); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return fmt.Sprintf("Validation report written to: %s", rf.Name()), "", nil
+	return fmt.Sprintf("Validation report written to: %s", rf.Name()), "", digest, nil
 }

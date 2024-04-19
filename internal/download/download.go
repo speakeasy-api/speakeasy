@@ -104,11 +104,12 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, 
 		return "", err
 	}
 
+	defer bundleResult.Body.Close()
+
 	buf, err := io.ReadAll(bundleResult.Body)
 	if err != nil {
 		return "", err
 	}
-	defer bundleResult.Body.Close()
 
 	reader := bytes.NewReader(buf)
 	zipReader, err := zip.NewReader(reader, int64(len(buf)))

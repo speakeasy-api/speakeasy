@@ -560,7 +560,7 @@ func isEquivalent(a YAMLComparable, b YAMLComparable) error {
 
 	aNode := aInner.(*yaml.Node)
 	bNode := bInner.(*yaml.Node)
-	nodeOverlay, err := overlay.Compare("comparison between yaml nodes", "", aNode, *bNode)
+	nodeOverlay, err := overlay.Compare("comparison between yaml nodes", aNode, *bNode)
 	if err != nil {
 		return fmt.Errorf("error comparing %#v and %#v: %w", a, b, err)
 	}
