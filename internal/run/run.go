@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
@@ -391,7 +392,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	var currentDocument string
-
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
 	if len(source.Inputs) == 1 {
 		if source.Inputs[0].IsSpeakeasyRegistry() {
 			rootStep.NewSubstep("Downloading registry bundle")
@@ -400,7 +401,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 				downloadLocation = source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir())
 			}
 
-			currentDocument, err = resolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], downloadLocation)
+			if !hasSchemaRegistry {
+				return "", nil, fmt.Errorf("schema registry is not enabled for this workspace")
+			}
+
+			currentDocument, err = registry.ResolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], downloadLocation)
 			if err != nil {
 				return "", nil, err
 			}
@@ -438,7 +443,10 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 		for _, input := range source.Inputs {
 			if input.IsSpeakeasyRegistry() {
 				mergeStep.NewSubstep(fmt.Sprintf("Download registry bundle from %s", input.Location))
-				downloadedPath, err := resolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
+				if !hasSchemaRegistry {
+					return "", nil, fmt.Errorf("schema registry is not enabled for this workspace")
+				}
+				downloadedPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, input, source.Inputs[0].GetTempRegistryDir(workflow.GetTempDir()))
 				if err != nil {
 					return "", nil, err
 				}
@@ -744,25 +752,6 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(titleMsg), strings.Join(additionalLines, "\n"))
 
 	logger.Println(msg)
-}
-
-func resolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, outPath string) (string, error) {
-	log.From(ctx).Infof("Downloading bundle %s... to %s\n", d.Location, outPath)
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
-		return "", fmt.Errorf("schema registry is not enabled for this workspace")
-	}
-
-	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
-		return "", err
-	}
-
-	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
-	if registryBreakdown == nil {
-		return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
-	}
-
-	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
