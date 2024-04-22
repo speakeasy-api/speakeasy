@@ -4,11 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"slices"
-	"strings"
-
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-version"
 	"github.com/sethvargo/go-githubactions"
@@ -26,6 +21,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
+	"os"
+	"os/exec"
+	"slices"
 )
 
 type Command interface {
@@ -293,16 +291,18 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 		return err
 	}
 
-	cmdString := utils.GetFullCommandString(cmd)
-	cmdString = strings.TrimPrefix(cmdString, "speakeasy ")
+	cmdParts := utils.GetCommandParts(cmd)
+	if cmdParts[0] == "speakeasy" {
+		cmdParts = cmdParts[1:]
+	}
 
 	// The pinned flag was introduced in 1.256.0
 	// For earlier versions, it isn't necessary because we don't try auto-upgrading
 	if ok, _ := pinningWasReleased(desiredVersion); ok {
-		cmdString += " --pinned"
+		cmdParts = append(cmdParts, "--pinned")
 	}
 
-	newCmd := exec.Command(vLocation, strings.Split(cmdString, " ")...)
+	newCmd := exec.Command(vLocation, cmdParts...)
 	newCmd.Stdin = os.Stdin
 	newCmd.Stdout = os.Stdout
 	newCmd.Stderr = os.Stderr

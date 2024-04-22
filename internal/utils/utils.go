@@ -145,11 +145,15 @@ func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
 }
 
 func GetFullCommandString(cmd *cobra.Command) string {
-	flagString := ""
+	return strings.Join(GetCommandParts(cmd), " ")
+}
+
+func GetCommandParts(cmd *cobra.Command) []string {
+	parts := strings.Split(cmd.CommandPath(), " ")
 	for _, f := range getSetFlags(cmd.Flags()) {
-		flagString += fmt.Sprintf(" --%s=%s", f.Name, f.Value.String())
+		parts = append(parts, fmt.Sprintf("--%s=%s", f.Name, f.Value.String()))
 	}
-	return fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString)
+	return parts
 }
 
 func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
