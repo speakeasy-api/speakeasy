@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"strconv"
 	"strings"
 
@@ -72,6 +73,29 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	}
 
 	md += fmt.Sprintf("\n\n%s\n\n%s", summary.Status, markdown.CreateMarkdownTable(contents))
+
+	githubactions.AddStepSummary(md)
+}
+
+func GenerateChangesSummary(ctx context.Context, url string, summary changes.Summary) {
+	defer func() {
+		if r := recover(); r != nil {
+			if env.IsGithubDebugMode() {
+				fmt.Printf("::debug::%v\n", r)
+			}
+		}
+	}()
+
+	if !env.IsGithubAction() {
+		return
+	}
+
+	reportLink := ""
+	if url != "" {
+		reportLink = fmt.Sprintf("Changes report available at <%s>\n\n", url)
+	}
+
+	md := fmt.Sprintf("# API Changes Summary\n%s\n%s", reportLink, summary.Text)
 
 	githubactions.AddStepSummary(md)
 }
