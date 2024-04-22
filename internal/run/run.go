@@ -21,7 +21,6 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -458,7 +457,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	if !isSingleRegistrySource(source) {
-		err = w.snapshotSource(ctx, rootStep, id, outputLocation)
+		err = w.snapshotSource(ctx, rootStep, id, source, outputLocation)
 		if err != nil {
 			return "", nil, err
 		}
@@ -506,10 +505,39 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 	return res, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep, namespaceName string, documentPath string) error {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep, sourceID string, source workflow.Source, documentPath string) error {
+	if !registry.IsRegistryEnabled(ctx) {
 		return nil
+	}
+
+	namespaceName := sourceID
+	if source.Publish != nil && source.Publish.Location != "" {
+		orgSlug, workspaceSlug, name, err := parseRegistryLocation(source.Publish.Location)
+		if err != nil {
+			if env.IsGithubAction() {
+				return fmt.Errorf("error parsing registry location %s: %w", string(source.Publish.Location), err)
+			}
+
+			log.From(ctx).Warnf("error parsing registry location %s: %w", string(source.Publish.Location), zap.Error(err))
+		}
+
+		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
+			if env.IsGithubAction() {
+				return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+			}
+
+			log.From(ctx).Warnf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+		}
+
+		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+			if env.IsGithubAction() {
+				return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+			}
+
+			log.From(ctx).Warnf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+		}
+
+		namespaceName = name
 	}
 
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
@@ -713,8 +741,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *WorkflowStep) (string, error) {
 	if d.IsSpeakeasyRegistry() {
 		step.NewSubstep("Downloading registry bundle")
-		hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-		if !hasSchemaRegistry {
+		if !registry.IsRegistryEnabled(ctx) {
 			return "", fmt.Errorf("schema registry is not enabled for this workspace")
 		}
 
@@ -852,4 +879,18 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(overlayFile string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
+}
+
+func parseRegistryLocation(location workflow.SourcePublishLocation) (string, string, string, error) {
+	subParts := strings.Split(string(location), "registry.speakeasyapi.dev/")
+	if len(subParts) != 2 {
+		return "", "", "", fmt.Errorf("invalid registry location")
+	}
+
+	components := strings.Split(strings.TrimSuffix(subParts[1], "/"), "/")
+	if len(components) != 3 {
+		return "", "", "", fmt.Errorf("invalid registry location")
+	}
+
+	return components[0], components[1], components[2], nil
 }
