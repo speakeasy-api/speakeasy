@@ -502,8 +502,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 }
 
 func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+	if !registry.IsRegistryEnabled(ctx) {
 		return
 	}
 
@@ -656,8 +655,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 }
 
 func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) error {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+	if !registry.IsRegistryEnabled(ctx) {
 		return nil
 	}
 
