@@ -507,8 +507,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *WorkflowSte
 }
 
 func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep, namespaceName string, documentPath string) error {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+	if !speakeasyRegistryEnabled(ctx) {
 		return nil
 	}
 
@@ -710,11 +709,16 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 	logger.Println(msg)
 }
 
+func speakeasyRegistryEnabled(ctx context.Context) bool {
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	accountType := auth.GetAccountTypeFromContext(ctx)
+	return hasSchemaRegistry && accountType != nil && *accountType != shared.AccountTypeFree
+}
+
 func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *WorkflowStep) (string, error) {
 	if d.IsSpeakeasyRegistry() {
 		step.NewSubstep("Downloading registry bundle")
-		hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-		if !hasSchemaRegistry {
+		if !speakeasyRegistryEnabled(ctx) {
 			return "", fmt.Errorf("schema registry is not enabled for this workspace")
 		}
 
