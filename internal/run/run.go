@@ -686,6 +686,10 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger, sourceResults ma
 	var additionalLines []string
 
 	for sourceID, sourceRes := range sourceResults {
+		if sourceRes == nil || sourceRes.Result == nil {
+			continue
+		}
+
 		sourceLabel := ""
 		if len(sourceResults) > 1 {
 			sourceLabel = styles.Emphasized.Render(sourceID) + " - "
