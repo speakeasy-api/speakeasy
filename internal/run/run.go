@@ -766,7 +766,9 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		tOut = "the paths specified in workflow.yaml"
 	}
 
-	titleMsg := " SDK Generated Successfully"
+	title := utils.CapitalizeFirst(t.Target + " SDK")
+	titleMsg := "Generated Successfully"
+
 	additionalLines := []string{
 		"✎ Output written to " + tOut,
 		fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
@@ -782,11 +784,11 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 
 	if criticalWarnings {
 		additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
-		titleMsg = " SDK Generated with Warnings"
+		titleMsg = "Generated with Warnings"
 	}
 
 	msg := styles.RenderSuccessMessage(
-		t.Target+titleMsg,
+		fmt.Sprintf("%s %s", styles.HeavilyEmphasized.Render(title), styles.Success.Render(titleMsg)),
 		additionalLines...,
 	)
 	logger.Println(msg)
@@ -811,13 +813,14 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 		heading := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(sourceID), styles.Success.Render("Compiled Successfully"))
 		var additionalLines []string
 
-		if lintLocation := sourceRes.LintResult.Report.Location(); lintLocation != "" {
-			additionalLines = append(additionalLines, styles.Success.Render("└─Linting report: ")+styles.Dimmed.Render(lintLocation))
+		appendReportLocation := func(report reports.ReportResult) {
+			if location := report.Location(); location != "" {
+				additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s: ", report.Title())+styles.Dimmed.Render(location)))
+			}
 		}
 
-		if changesLocation := sourceRes.ChangeReport.Location(); changesLocation != "" {
-			additionalLines = append(additionalLines, styles.Success.Render("└─OpenAPI changes report: ")+styles.Dimmed.Render(changesLocation))
-		}
+		appendReportLocation(sourceRes.LintResult.Report)
+		appendReportLocation(sourceRes.ChangeReport)
 
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
 		logger.Println(msg)

@@ -19,6 +19,7 @@ type ReportResult struct {
 	URL       string
 	LocalPath string
 	Digest    string
+	Type      shared.Type
 }
 
 func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Type) (ReportResult, error) {
@@ -50,9 +51,10 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 	url := uploadRes.UploadedReport.GetURL()
 
 	return ReportResult{
-		Message: fmt.Sprintf("%s available to view at: %s", reportTitle(reportType), url),
+		Message: fmt.Sprintf("%s available to view at: %s", ReportTitle(reportType), url),
 		URL:     url,
 		Digest:  digest,
+		Type:    reportType,
 	}, nil
 }
 
@@ -75,7 +77,7 @@ func writeLocally(digest string, reportBytes []byte, reportType shared.Type) (r 
 		uniqueFilename = "*"
 	}
 
-	filenamePrefix := strcase.KebabCase(reportTitle(reportType))
+	filenamePrefix := strcase.KebabCase(ReportTitle(reportType))
 
 	rf, err := os.CreateTemp(outputDir, fmt.Sprintf("%s-%s.html", filenamePrefix, uniqueFilename))
 	if err != nil {
@@ -87,8 +89,10 @@ func writeLocally(digest string, reportBytes []byte, reportType shared.Type) (r 
 		return
 	}
 
-	r.Message = fmt.Sprintf("%s written to: %s", reportTitle(reportType), rf.Name())
+	r.Message = fmt.Sprintf("%s written to: %s", ReportTitle(reportType), rf.Name())
 	r.LocalPath = rf.Name()
+	r.Type = reportType
+
 	return
 }
 
@@ -100,12 +104,16 @@ func (r ReportResult) Location() string {
 	return r.LocalPath
 }
 
-func reportTitle(reportType shared.Type) string {
+func (r ReportResult) Title() string {
+	return ReportTitle(r.Type)
+}
+
+func ReportTitle(reportType shared.Type) string {
 	switch reportType {
 	case shared.TypeLinting:
 		return "Lint report"
 	case shared.TypeChanges:
-		return "OpenAPI changes report"
+		return "API Change report"
 	}
 
 	return "Report"
