@@ -2,7 +2,6 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.21.5
 
-//
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.18.0
@@ -26,7 +25,7 @@ require (
 	github.com/speakeasy-api/openapi-overlay v0.5.0
 	github.com/speakeasy-api/sdk-gen-config v1.11.4
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.7-beta
-	github.com/speakeasy-api/speakeasy-core v0.7.5
+	github.com/speakeasy-api/speakeasy-core v0.7.7
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0

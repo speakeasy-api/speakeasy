@@ -24,6 +24,14 @@ const (
 	baseDelay   = 1 * time.Second
 )
 
+type DownloadedRegistryOpenAPIBundle struct {
+	LocalFilePath     string
+	NamespaceName     string
+	ManifestReference string
+	ManifestDigest    string
+	BlobDigest        string
+}
+
 func DownloadFile(url, outPath, header, token string) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -83,7 +91,7 @@ func DownloadFile(url, outPath, header, token string) error {
 }
 
 // DownloadRegistryOpenAPIBundle Returns a file path within the downloaded bundle or error
-func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, outPath string) (string, error) {
+func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference, outPath string) (*DownloadedRegistryOpenAPIBundle, error) {
 	serverURL := auth.GetServerURL()
 	insecurePublish := false
 	if strings.HasPrefix(serverURL, "http://") {
@@ -94,27 +102,27 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, 
 
 	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
 		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceID, ocicommon.RepositoryAccessOptions{
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
 			Insecure: insecurePublish,
 		}),
 	})
 
 	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, reference)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer bundleResult.Body.Close()
 
 	buf, err := io.ReadAll(bundleResult.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	reader := bytes.NewReader(buf)
 	zipReader, err := zip.NewReader(reader, int64(len(buf)))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var outputFileName string
@@ -122,14 +130,20 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, 
 		cleanName := filepath.Clean(fileName)
 		outputFileName = filepath.Join(outPath, cleanName)
 	} else {
-		return "", fmt.Errorf("no root openapi file found in bundle")
+		return nil, fmt.Errorf("no root openapi file found in bundle")
 	}
 
 	if err := copyZipToOutDir(zipReader, outPath); err != nil {
-		return "", fmt.Errorf("failed to copy zip contents to outdir: %w", err)
+		return nil, fmt.Errorf("failed to copy zip contents to outdir: %w", err)
 	}
 
-	return outputFileName, nil
+	return &DownloadedRegistryOpenAPIBundle{
+		LocalFilePath:     outputFileName,
+		NamespaceName:     namespaceName,
+		ManifestReference: reference,
+		ManifestDigest:    bundleResult.ManifestDigest,
+		BlobDigest:        bundleResult.BlobDigest,
+	}, nil
 }
 
 func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
