@@ -193,6 +193,7 @@ func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 	if len(errs) > 0 {
 		return errs[0]
 	}
+
 	switch flags.Format {
 	case "summary":
 		return runSummary(commits)
@@ -208,17 +209,25 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 	oldSchema := flags.OldSchema
 	newSchema := flags.NewSchema
 	hasRegistrySchema := false
-	var err error
 	if strings.Contains(oldSchema, "registry.speakeasyapi.dev/") {
 		document := workflow.Document{
 			Location: oldSchema,
 		}
 
 		output := document.GetTempRegistryDir(workflow.GetTempDir())
-		oldSchema, err = registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
+		oldSchemaResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 		if err != nil {
 			return false, "", "", err
 		}
+		oldSchema = oldSchemaResult.LocalFilePath
+
+		cliEvent := events.GetTelemetryEventFromContext(ctx)
+		if cliEvent != nil {
+			cliEvent.OpenapiDiffBaseSourceRevisionDigest = &oldSchemaResult.ManifestDigest
+			cliEvent.OpenapiDiffBaseSourceNamespaceName = &oldSchemaResult.NamespaceName
+			cliEvent.OpenapiDiffBaseSourceBlobDigest = &oldSchemaResult.BlobDigest
+		}
+
 		hasRegistrySchema = true
 	}
 
@@ -228,10 +237,19 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 		}
 
 		output := document.GetTempRegistryDir(workflow.GetTempDir())
-		newSchema, err = registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
+		newSchemaResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 		if err != nil {
 			return false, "", "", err
 		}
+		newSchema = newSchemaResult.LocalFilePath
+
+		cliEvent := events.GetTelemetryEventFromContext(ctx)
+		if cliEvent != nil {
+			cliEvent.SourceRevisionDigest = &newSchemaResult.ManifestDigest
+			cliEvent.SourceNamespaceName = &newSchemaResult.NamespaceName
+			cliEvent.SourceBlobDigest = &newSchemaResult.BlobDigest
+		}
+
 		hasRegistrySchema = true
 	}
 

@@ -727,7 +727,7 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 			return "", err
 		}
 
-		return documentOut, nil
+		return documentOut.LocalFilePath, nil
 	} else if d.IsRemote() {
 		step.NewSubstep("Downloading remote document")
 		location := d.GetTempDownloadPath(workflow.GetTempDir())
