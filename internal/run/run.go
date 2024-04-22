@@ -532,7 +532,7 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 
 	changesStep.NewSubstep("Computing changes")
 
-	c, err := changes.GetChanges(oldDocPath, newDocPath)
+	c, err := changes.GetChanges(oldDocPath.LocalFilePath, newDocPath)
 	if err != nil {
 		return r, fmt.Errorf("error computing changes: %w", err)
 	}
