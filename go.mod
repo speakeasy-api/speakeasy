@@ -22,12 +22,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-changes v1.0.3
 	github.com/speakeasy-api/openapi-generation/v2 v2.312.1
 	github.com/speakeasy-api/openapi-overlay v0.5.0
 	github.com/speakeasy-api/sdk-gen-config v1.11.4
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.7-beta
-	github.com/speakeasy-api/speakeasy-core v0.7.4
+	github.com/speakeasy-api/speakeasy-core v0.7.5
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0
@@ -41,7 +40,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require github.com/pb33f/openapi-changes v0.0.61
+require (
+	github.com/pb33f/openapi-changes v0.0.61
+	github.com/stoewer/go-strcase v1.3.0
+)
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
