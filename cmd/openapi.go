@@ -194,8 +194,6 @@ func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 		return errs[0]
 	}
 
-	// TODO: Need to populate cliEvent.OpenapiDiffReportDigest
-
 	switch flags.Format {
 	case "summary":
 		return runSummary(commits)
