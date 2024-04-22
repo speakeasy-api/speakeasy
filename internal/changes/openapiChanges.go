@@ -13,6 +13,12 @@ import (
 type Changes []*changesModel.Commit
 type VersionBump string
 
+type Summary struct {
+	Bump  VersionBump
+	Text  string
+	Table [][]string
+}
+
 var (
 	Major VersionBump = "major"
 	Minor VersionBump = "minor"
@@ -34,13 +40,13 @@ func (c Changes) WriteHTMLReport(out string) error {
 	return os.WriteFile(out, c.GetHTMLReport(), 0o644)
 }
 
-func (c Changes) GetSummary() (text string, bump VersionBump, err error) {
-	text, _, hasBreakingChanges, err := changes.GetSummaryDetails(c)
+func (c Changes) GetSummary() (*Summary, error) {
+	text, table, hasBreakingChanges, err := changes.GetSummaryDetails(c)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	bump = None
+	bump := None
 
 	if hasBreakingChanges {
 		bump = Major
@@ -50,5 +56,9 @@ func (c Changes) GetSummary() (text string, bump VersionBump, err error) {
 		bump = Patch
 	}
 
-	return
+	return &Summary{
+		Bump:  bump,
+		Text:  text,
+		Table: table,
+	}, nil
 }

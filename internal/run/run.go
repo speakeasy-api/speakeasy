@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
+	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"io"
@@ -532,6 +533,12 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 	}
 
 	log.From(ctx).Info(r.Message)
+
+	summary, err := c.GetSummary()
+	if err != nil || summary == nil {
+		return r, fmt.Errorf("failed to get report summary: %w", err)
+	}
+	github.GenerateChangesSummary(ctx, *summary)
 
 	changesStep.SucceedWorkflow()
 	return

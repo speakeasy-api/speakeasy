@@ -153,11 +153,11 @@ func runHTML(c changes.Changes, flags OpenAPIDiffFlags, shouldOpen bool) error {
 }
 
 func runSummary(c changes.Changes) error {
-	text, _, err := c.GetSummary()
+	summary, err := c.GetSummary()
 	if err != nil {
 		return err
 	}
-	fmt.Println(text)
+	fmt.Println(summary.Text)
 	return nil
 }
 
