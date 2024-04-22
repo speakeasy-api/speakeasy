@@ -458,7 +458,12 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *WorkflowStep, id s
 	}
 
 	if !isSingleRegistrySource(source) {
-		err = w.snapshotSource(ctx, rootStep, id, outputLocation)
+		namespaceName := id
+		if source.Publish != nil && source.Publish.Location != "" {
+			namespaceName = string(source.Publish.Location)
+		}
+
+		err = w.snapshotSource(ctx, rootStep, namespaceName, outputLocation)
 		if err != nil {
 			return "", nil, err
 		}
