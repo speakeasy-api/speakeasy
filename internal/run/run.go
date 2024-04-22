@@ -538,7 +538,7 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 	if err != nil || summary == nil {
 		return r, fmt.Errorf("failed to get report summary: %w", err)
 	}
-	github.GenerateChangesSummary(ctx, *summary)
+	github.GenerateChangesSummary(ctx, r.URL, *summary)
 
 	changesStep.SucceedWorkflow()
 	return

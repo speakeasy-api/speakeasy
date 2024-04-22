@@ -77,7 +77,7 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	githubactions.AddStepSummary(md)
 }
 
-func GenerateChangesSummary(ctx context.Context, summary changes.Summary) {
+func GenerateChangesSummary(ctx context.Context, url string, summary changes.Summary) {
 	defer func() {
 		if r := recover(); r != nil {
 			if env.IsGithubDebugMode() {
@@ -90,7 +90,12 @@ func GenerateChangesSummary(ctx context.Context, summary changes.Summary) {
 		return
 	}
 
-	md := fmt.Sprintf("# API Changes Summary\n\n%s", summary.Text)
+	reportLink := ""
+	if url != "" {
+		reportLink = fmt.Sprintf("Changes report available at <%s>\n\n", url)
+	}
+
+	md := fmt.Sprintf("# API Changes Summary\n%s\n%s", reportLink, summary.Text)
 
 	githubactions.AddStepSummary(md)
 }
