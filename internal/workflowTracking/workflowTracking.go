@@ -1,4 +1,4 @@
-package run
+package workflowTracking
 
 import (
 	"fmt"
@@ -23,21 +23,25 @@ type WorkflowStep struct {
 	statusExplanation string
 	substeps          []*WorkflowStep
 	updates           chan<- UpdateMsg
+	logger            log.Logger
 }
 
-func NewWorkflowStep(name string, updatesListener chan<- UpdateMsg) *WorkflowStep {
+func NewWorkflowStep(name string, logger log.Logger, updatesListener chan<- UpdateMsg) *WorkflowStep {
 	return &WorkflowStep{
 		name:     name,
 		status:   StatusRunning,
 		substeps: []*WorkflowStep{},
 		updates:  updatesListener,
+		logger:   logger,
 	}
 }
 
 func (w *WorkflowStep) NewSubstep(name string) *WorkflowStep {
-	substep := NewWorkflowStep(name, w.updates)
+	substep := NewWorkflowStep(name, w.logger, w.updates)
 
 	w.AddSubstep(substep)
+
+	w.logger.PrintfStyled(styles.Dimmed, "\n» %s...\n", name)
 
 	return substep
 }
@@ -45,19 +49,24 @@ func (w *WorkflowStep) NewSubstep(name string) *WorkflowStep {
 func (w *WorkflowStep) AddSubstep(substep *WorkflowStep) {
 	if len(w.substeps) > 0 {
 		prev := w.substeps[len(w.substeps)-1]
-		if prev.status == StatusRunning {
-			prev.status = StatusSucceeded // If we go to the next substep, we're successful
-		}
+		prev.Succeed() // If we go to the next substep, we're successful
 	}
 	w.substeps = append(w.substeps, substep)
 
-	w.Notify()
+	w.notify()
 }
 
 func (w *WorkflowStep) Skip(reason string) {
 	w.status = StatusSkipped
 	w.statusExplanation = reason
-	w.Notify()
+	w.logger.Infof("\nStep skipped: %s (reason: %s)\n", w.name, reason)
+	w.notify()
+}
+
+func (w *WorkflowStep) Succeed() {
+	if w.status == StatusRunning {
+		w.status = StatusSucceeded
+	}
 }
 
 func (w *WorkflowStep) SucceedWorkflow() {
@@ -68,18 +77,23 @@ func (w *WorkflowStep) SucceedWorkflow() {
 		substep.SucceedWorkflow()
 	}
 
-	w.Notify()
+	w.notify()
 }
 
 func (w *WorkflowStep) FailWorkflow() {
 	w.FailWorkflowWithoutNotifying()
-	w.Notify()
+	w.notify()
+}
+
+func (w *WorkflowStep) Fail() {
+	if w.status == StatusRunning {
+		w.status = StatusFailed
+		w.logger.Errorf("\nStep Failed: %s\n", w.name)
+	}
 }
 
 func (w *WorkflowStep) FailWorkflowWithoutNotifying() {
-	if w.status == StatusRunning {
-		w.status = StatusFailed
-	}
+	w.Fail()
 	for _, substep := range w.substeps {
 		substep.FailWorkflowWithoutNotifying()
 	}
@@ -102,7 +116,7 @@ func (w *WorkflowStep) Finalize(succeeded bool) {
 	}
 }
 
-func (w *WorkflowStep) Notify() {
+func (w *WorkflowStep) notify() {
 	if w.updates != nil {
 		w.updates <- MsgUpdated
 	}

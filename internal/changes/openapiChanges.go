@@ -1,13 +1,23 @@
 package changes
 
 import (
-	"bytes"
-	changes "github.com/speakeasy-api/openapi-changes/cmd"
-	"io"
+	"errors"
+	changesModel "github.com/pb33f/openapi-changes/model"
+	"github.com/speakeasy-api/speakeasy-core/changes"
+	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
+	"os"
 	"strings"
+	"time"
 )
 
+type Changes []*changesModel.Commit
 type VersionBump string
+
+type Summary struct {
+	Bump  VersionBump
+	Text  string
+	Table [][]string
+}
 
 var (
 	Major VersionBump = "major"
@@ -16,58 +26,39 @@ var (
 	None  VersionBump = "none"
 )
 
-type ChangesSummary struct {
-	Bump    VersionBump
-	Summary string
+func GetChanges(oldLocation, newLocation string) (Changes, error) {
+	c, errs := changes.GetChanges(oldLocation, newLocation, changes.SummaryOptions{})
+	return c, errors.Join(errs...)
 }
 
-func GetSummary(left, right string) (ChangesSummary, error) {
-	bump := None
-	out := &bytes.Buffer{}
+func (c Changes) GetHTMLReport() []byte {
+	generator := html_report.NewHTMLReport(false, time.Now(), c)
+	return generator.GenerateReport(false, false, false)
+}
 
-	breaking, err := runSummaryInternal(left, right, out)
+func (c Changes) WriteHTMLReport(out string) error {
+	return os.WriteFile(out, c.GetHTMLReport(), 0o644)
+}
+
+func (c Changes) GetSummary() (*Summary, error) {
+	text, table, hasBreakingChanges, err := changes.GetSummaryDetails(c)
 	if err != nil {
-		return ChangesSummary{}, err
+		return nil, err
 	}
 
-	summary := out.String()
-	if breaking {
+	bump := None
+
+	if hasBreakingChanges {
 		bump = Major
-	} else if strings.Contains(summary, "Additions: ") {
+	} else if strings.Contains(text, "Additions: ") {
 		bump = Minor
-	} else if strings.Contains(summary, "Modifications: ") {
+	} else if strings.Contains(text, "Modifications: ") {
 		bump = Patch
 	}
 
-	return ChangesSummary{
-		Bump:    bump,
-		Summary: summary,
+	return &Summary{
+		Bump:  bump,
+		Text:  text,
+		Table: table,
 	}, nil
-}
-
-// RunSummary runs the summary command and prints the output to the terminal
-// The purpose of this utility is that it handles the "breaking changes discovered" error.
-// Instead, it only errors when there is a real error.
-func RunSummary(left, right string) error {
-	_, err := runSummaryInternal(left, right, nil)
-	return err
-}
-
-// First return value is whether there are breaking changes
-func runSummaryInternal(left, right string, outOverride io.Writer) (bool, error) {
-	cmd := changes.GetSummaryCommand()
-
-	if outOverride != nil {
-		cmd.SetOut(outOverride)
-	}
-
-	if err := cmd.RunE(cmd, []string{left, right}); err != nil {
-		if strings.Contains(err.Error(), "breaking changes discovered") {
-			return true, nil
-		} else {
-			return false, err
-		}
-	}
-
-	return false, nil
 }
