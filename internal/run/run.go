@@ -511,8 +511,8 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *WorkflowStep,
 	}
 
 	namespaceName := sourceID
-	if source.Publish != nil && source.Publish.Location != "" {
-		orgSlug, workspaceSlug, name, err := parseRegistryLocation(source.Publish.Location)
+	if source.Publish != nil {
+		orgSlug, workspaceSlug, name, err := source.Publish.ParseRegistryLocation()
 		if err != nil {
 			if env.IsGithubAction() {
 				return fmt.Errorf("error parsing registry location %s: %w", string(source.Publish.Location), err)
@@ -879,18 +879,4 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(overlayFile string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
-}
-
-func parseRegistryLocation(location workflow.SourcePublishLocation) (string, string, string, error) {
-	subParts := strings.Split(string(location), "registry.speakeasyapi.dev/")
-	if len(subParts) != 2 {
-		return "", "", "", fmt.Errorf("invalid registry location")
-	}
-
-	components := strings.Split(strings.TrimSuffix(subParts[1], "/"), "/")
-	if len(components) != 3 {
-		return "", "", "", fmt.Errorf("invalid registry location")
-	}
-
-	return components[0], components[1], components[2], nil
 }
