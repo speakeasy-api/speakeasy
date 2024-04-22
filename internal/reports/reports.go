@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/stoewer/go-strcase"
@@ -46,6 +47,11 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 	if err != nil {
 		log.From(ctx).Warnf("Failed to upload report to Speakeasy %s", err.Error())
 		return writeLocally(digest, reportBytes, reportType)
+	}
+
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		cliEvent.OpenapiDiffReportDigest = &digest
 	}
 
 	url := uploadRes.UploadedReport.GetURL()
