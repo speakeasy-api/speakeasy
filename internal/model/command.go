@@ -96,6 +96,13 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				return err
 			}
 			cmd.SetContext(authCtx)
+		} else {
+			authCtx, err := auth.UseExistingAPIKeyIfAvailable(cmd.Context())
+			if err != nil {
+				cmd.SilenceUsage = true
+				return err
+			}
+			cmd.SetContext(authCtx)
 		}
 
 		// If the command uses a workflow file, run using the version specified in the workflow file
