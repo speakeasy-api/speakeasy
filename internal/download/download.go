@@ -117,19 +117,11 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceID, reference, 
 		return "", err
 	}
 
-	outputFileName := ""
-	for _, file := range zipReader.File {
-		if strings.Contains(file.Name, ".yaml") { // TODO: this is not going to fly
-			cleanName := filepath.Clean(file.Name)
-			outputFileName = filepath.Join(outPath, cleanName)
-			if !strings.HasPrefix(outputFileName, filepath.Clean(outPath)+string(os.PathSeparator)) {
-				return "", fmt.Errorf("illegal file path: %s", outputFileName)
-			}
-			break
-		}
-	}
-
-	if outputFileName == "" {
+	var outputFileName string
+	if fileName, _ := bundleResult.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
+		cleanName := filepath.Clean(fileName)
+		outputFileName = filepath.Join(outPath, cleanName)
+	} else {
 		return "", fmt.Errorf("no root openapi file found in bundle")
 	}
 

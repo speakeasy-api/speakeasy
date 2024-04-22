@@ -826,7 +826,9 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 			}
 		}
 
-		appendReportLocation(sourceRes.LintResult.Report)
+		if sourceRes.LintResult != nil {
+			appendReportLocation(sourceRes.LintResult.Report)
+		}
 		appendReportLocation(sourceRes.ChangeReport)
 
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
