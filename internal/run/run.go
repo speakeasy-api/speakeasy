@@ -544,6 +544,7 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 			// cliEvent.OpenapiDiffBumpType = (*shared.OpenapiDiffBumpType)(&summary.Bump)
 			// cliEvent.OpenapiDiffBreakingChangesCount = &summary.Text
 			// TODO!!
+			// This is is also not the right place to do this!
 			cliEvent.OpenapiDiffBumpType = shared.OpenapiDiffBumpTypeMajor.ToPointer()
 			count := int64(len(summary.Table))
 			cliEvent.OpenapiDiffBreakingChangesCount = &count
