@@ -52,7 +52,12 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
 	if cliEvent != nil {
-		cliEvent.OpenapiDiffReportDigest = &digest
+		switch reportType {
+		case shared.TypeLinting:
+			cliEvent.OpenapiDiffReportDigest = &digest
+		case shared.TypeChanges:
+			cliEvent.LintReportDigest = &digest
+		}
 	}
 
 	url := uploadRes.UploadedReport.GetURL()
