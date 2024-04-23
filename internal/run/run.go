@@ -537,6 +537,19 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 		return r, fmt.Errorf("error computing changes: %w", err)
 	}
 
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		summary, err := c.GetSummary()
+		if err != nil {
+			// cliEvent.OpenapiDiffBumpType = (*shared.OpenapiDiffBumpType)(&summary.Bump)
+			// cliEvent.OpenapiDiffBreakingChangesCount = &summary.Text
+			// TODO!!
+			cliEvent.OpenapiDiffBumpType = shared.OpenapiDiffBumpTypeMajor.ToPointer()
+			count := int64(len(summary.Table))
+			cliEvent.OpenapiDiffBreakingChangesCount = &count
+		}
+	}
+
 	changesStep.NewSubstep("Uploading changes report")
 	report, err := reports.UploadReport(ctx, c.GetHTMLReport(), shared.TypeChanges)
 	if err != nil {
