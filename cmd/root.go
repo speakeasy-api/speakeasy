@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"os"
 	"slices"
 	"strings"
@@ -12,7 +14,6 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
-	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/updates"
@@ -56,13 +57,14 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
 	addCommand(rootCmd, generate.GenerateCmd)
-	addCommand(rootCmd, validateCmd)
+	addCommand(rootCmd, lintCmd)
 	addCommand(rootCmd, openapiCmd)
 	addCommand(rootCmd, migrateCmd)
 
 	authInit()
 	mergeInit()
 	addCommand(rootCmd, overlayCmd)
+	addCommand(rootCmd, transformCmd)
 	suggestInit()
 	updateInit(version, artifactArch)
 	proxyInit()
@@ -82,66 +84,68 @@ func addCommand(cmd *cobra.Command, command model.Command) {
 	cmd.AddCommand(c)
 }
 
+func CmdForTest(version, artifactArch string) *cobra.Command {
+	setupRootCmd(version, artifactArch)
+
+	return rootCmd
+}
+
 func Execute(version, artifactArch string) {
-	rootCmd.Version = version + "\n" + artifactArch
-	rootCmd.SilenceErrors = true
-	rootCmd.SilenceUsage = true
-	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		if !slices.Contains([]string{"update", "language-server"}, cmd.Name()) {
-			checkForUpdate(cmd, version, artifactArch)
-		}
-
-		cmd.SetContext(events.SetSpeakeasyVersionInContext(cmd.Context(), version))
-
-		if err := setLogLevel(cmd); err != nil {
-			return
-		}
-	}
-
-	Init(version, artifactArch)
+	setupRootCmd(version, artifactArch)
 
 	if err := rootCmd.Execute(); err != nil {
 		l.Error("", zap.Error(err))
-		l.WithInteractiveOnly().PrintfStyled(styles.DimmedItalic, "Run '%s --help' for usage.\n", rootCmd.CommandPath())
 		os.Exit(1)
 	}
+}
+
+func setupRootCmd(version, artifactArch string) {
+	rootCmd.Version = version + "\n" + artifactArch
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		ctx := context.WithValue(cmd.Context(), updates.ArtifactArchContextKey, artifactArch)
+		ctx = events.SetSpeakeasyVersionInContext(ctx, version)
+		cmd.SetContext(ctx)
+
+		if !slices.Contains([]string{"update", "language-server"}, cmd.Name()) {
+			checkForUpdate(ctx, version, artifactArch)
+		}
+
+		return setLogLevel(cmd)
+	}
+
+	Init(version, artifactArch)
 }
 
 func GetRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func checkForUpdate(cmd *cobra.Command, currentVersion, artifactArch string) {
-	// Don't display if piping to a file for example
-	if !utils.IsInteractive() {
+func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
+	// Don't display if piping to a file for example or running locally during development
+	if !utils.IsInteractive() || env.IsLocalDev() {
 		return
 	}
 
-	latestVersion, err := updates.GetLatestVersion(artifactArch)
+	newerVersion, err := updates.GetNewerVersion(artifactArch, currentVersion)
 	if err != nil {
+		return // Don't display error to user
+	}
+
+	if newerVersion == nil {
 		return
 	}
 
-	if latestVersion == nil {
-		return
-	}
+	versionString := fmt.Sprintf("A new version of the Speakeasy CLI is available: v%s", newerVersion.String())
+	updateString := "Run `speakeasy update` to update to the latest version"
 
-	curVer, err := version.NewVersion(currentVersion)
-	if err != nil {
-		return
-	}
+	l := log.From(ctx)
+	style := styles.Emphasized.Copy().Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary).Padding(1, 2)
+	l.PrintfStyled(style, "%s\n%s", versionString, updateString)
+	l.Println("\n")
 
-	if latestVersion.GreaterThan(curVer) {
-		versionString := fmt.Sprintf("A new version of the Speakeasy CLI is available: v%s", latestVersion.String())
-		updateString := "Run `speakeasy update` to update to the latest version"
-
-		l := log.From(cmd.Context())
-		style := styles.Emphasized.Copy().Background(styles.Colors.DimYellow).Foreground(styles.Colors.Brown).Padding(1, 2)
-		l.PrintfStyled(style, "%s\n%s", versionString, updateString)
-		l.Println("\n")
-
-		return
-	}
+	return
 }
 
 func setLogLevel(cmd *cobra.Command) error {

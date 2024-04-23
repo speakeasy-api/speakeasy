@@ -4,17 +4,18 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/github"
+	"github.com/spf13/cobra"
+
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
-	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/run"
-	"go.uber.org/zap"
 )
 
 type RunFlags struct {
@@ -28,11 +29,13 @@ type RunFlags struct {
 	RepoSubdirs      map[string]string `json:"repo-subdirs"`
 	SkipCompile      bool              `json:"skip-compile"`
 	Force            bool              `json:"force"`
+	Output           string            `json:"output"`
+	Pinned           bool              `json:"pinned"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
 	Usage: "run",
-	Short: "run the workflow defined in your workflow.yaml file",
+	Short: "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
 	Long: "run the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
 A workflow can consist of multiple targets that define a source OpenAPI document that can be downloaded from a URL, exist as a local file, or be created via merging multiple OpenAPI documents together and/or overlaying them with an OpenAPI overlay document.
 A full workflow is capable of running the following steps:
@@ -43,10 +46,11 @@ A full workflow is capable of running the following steps:
   - Compiling the generated SDKs
 
 ` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.",
-	PreRun:         getMissingFlagVals,
-	Run:            runFunc,
-	RunInteractive: runInteractive,
-	RequiresAuth:   true,
+	PreRun:           preRun,
+	Run:              runFunc,
+	RunInteractive:   runInteractive,
+	RequiresAuth:     true,
+	UsesWorkflowFile: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "target",
@@ -94,10 +98,23 @@ A full workflow is capable of running the following steps:
 			Name:        "force",
 			Description: "Force generation of SDKs even when no changes are present",
 		},
+		flag.EnumFlag{
+			Name:          "output",
+			Shorthand:     "o",
+			Description:   "What to output while running",
+			AllowedValues: []string{"summary", "mermaid", "console"},
+			DefaultValue:  "summary",
+		},
+		flag.BooleanFlag{
+			Name:        "pinned",
+			Description: "Run using the current CLI version instead of the version specified in the workflow file",
+			Hidden:      true,
+		},
 	},
 }
 
-func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
+// Gets missing flag values (ie source / target)
+func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
@@ -123,6 +140,11 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 
 	if flags.Target == "all" && len(targets) == 1 {
 		flags.Target = targets[0]
+	}
+
+	// Needed later
+	if err := cmd.Flags().Set("target", flags.Target); err != nil {
+		return err
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
@@ -195,7 +217,18 @@ func askForTarget(title, description, confirmation string, targets []string, all
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(
+		ctx,
+		"Workflow",
+		flags.Target,
+		flags.Source,
+		flags.Repo,
+		flags.RepoSubdirs,
+		flags.InstallationURLs,
+		flags.Debug,
+		!flags.SkipCompile,
+		flags.Force,
+	)
 	if err != nil {
 		return err
 	}
@@ -204,34 +237,42 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 
 	workflow.RootStep.Finalize(err == nil)
 
-	addGitHubSummary(ctx, workflow)
+	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
 	return err
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(
+		ctx,
+		"ignored",
+		flags.Target,
+		flags.Source,
+		flags.Repo,
+		flags.RepoSubdirs,
+		flags.InstallationURLs,
+		flags.Debug,
+		!flags.SkipCompile,
+		flags.Force,
+	)
 	if err != nil {
 		return err
 	}
 
-	return workflow.RunWithVisualization(ctx)
-}
-
-func addGitHubSummary(ctx context.Context, workflow *run.Workflow) {
-	if !env.IsGithubAction() {
-		return
+	switch flags.Output {
+	case "summary":
+		return workflow.RunWithVisualization(ctx)
+	case "mermaid":
+		err = workflow.Run(ctx)
+		workflow.RootStep.Finalize(err == nil)
+		mermaid, err := workflow.RootStep.ToMermaidDiagram()
+		if err != nil {
+			return err
+		}
+		log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
+	case "console":
+		return runFunc(ctx, flags)
 	}
 
-	logger := log.From(ctx)
-	md := ""
-	chart, err := workflow.RootStep.ToMermaidDiagram()
-	if err == nil {
-		md = fmt.Sprintf("# Generation Workflow Summary\n\n_This is a breakdown of the 'Generate Target' step above_\n%s", chart)
-	} else {
-		logger.Error("failed to generate github workflow summary", zap.Error(err))
-		md = "# Generation Workflow Summary\n\n:stop_sign: Failed to generate workflow summary. Please try again or [contact support](mailto:support@speakeasyapi.dev)."
-	}
-
-	githubactions.AddStepSummary(md)
+	return nil
 }

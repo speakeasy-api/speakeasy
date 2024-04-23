@@ -22,7 +22,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string) error {
+func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile, defaultRuleset, workingDir string) error {
 	inSchemas := make([][]byte, len(inFiles))
 
 	// TODO at some point we prob want to support remote schemas
@@ -32,8 +32,8 @@ func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string
 			return err
 		}
 
-		if err := validate(ctx, inFile, data); err != nil {
-			log.From(ctx).Errorf("failed validating spec %s", inFile, zap.Error(err))
+		if err := validate(ctx, inFile, data, defaultRuleset, workingDir); err != nil {
+			log.From(ctx).Error(fmt.Sprintf("failed validating spec %s", inFile), zap.Error(err))
 		}
 
 		inSchemas[i] = data
@@ -53,30 +53,29 @@ func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string
 	return nil
 }
 
-func validate(ctx context.Context, schemaPath string, schema []byte) error {
+func validate(ctx context.Context, schemaPath string, schema []byte, defaultRuleset, workingDir string) error {
 	logger := log.From(ctx)
 	logger.Info(fmt.Sprintf("Validating OpenAPI spec %s...\n", schemaPath))
 
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
 	limits := &validation.OutputLimits{
-		OutputHints: false,
-		MaxWarns:    10,
+		MaxWarns: 10,
 	}
 
-	vErrs, vWarns, _, err := validation.Validate(ctx, schema, schemaPath, limits, false)
+	res, err := validation.Validate(ctx, logger, schema, schemaPath, limits, false, defaultRuleset, workingDir)
 	if err != nil {
 		return err
 	}
 
-	for _, warn := range vWarns {
+	for _, warn := range res.Warnings {
 		prefixedLogger.Warn("", zap.Error(warn))
 	}
-	for _, err := range vErrs {
+	for _, err := range res.Errors {
 		prefixedLogger.Error("", zap.Error(err))
 	}
 
-	if len(vErrs) > 0 {
+	if len(res.Errors) > 0 {
 		status := "\nOpenAPI spec invalid ✖"
 		return fmt.Errorf(status)
 	}
@@ -561,7 +560,7 @@ func isEquivalent(a YAMLComparable, b YAMLComparable) error {
 
 	aNode := aInner.(*yaml.Node)
 	bNode := bInner.(*yaml.Node)
-	nodeOverlay, err := overlay.Compare("comparison between yaml nodes", "", aNode, *bNode)
+	nodeOverlay, err := overlay.Compare("comparison between yaml nodes", aNode, *bNode)
 	if err != nil {
 		return fmt.Errorf("error comparing %#v and %#v: %w", a, b, err)
 	}

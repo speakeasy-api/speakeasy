@@ -32,4 +32,5 @@ speakeasy openapi [flags]
 ### Sub Commands
 
 * [speakeasy openapi diff](diff.md)	 - Visualize the changes between two OpenAPI documents
-* [speakeasy openapi validate](validate.md)	 - Validate an OpenAPI document
+* [speakeasy openapi transform](transform/README.md)	 - Transform an OpenAPI spec using a well-defined function
+* [speakeasy openapi validate](validate.md)	 - Lint an OpenAPI document

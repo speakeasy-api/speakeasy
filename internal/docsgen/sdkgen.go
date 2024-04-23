@@ -14,7 +14,6 @@ import (
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -69,13 +68,6 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(logger),
 		generate.WithCustomerID(customerID),
-		generate.WithFileFuncs(func(filename string, data []byte, perm os.FileMode) error {
-			if err := utils.CreateDirectory(filename); err != nil {
-				return err
-			}
-
-			return os.WriteFile(filename, data, perm)
-		}, os.ReadFile),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithRepoDetails(repo, repoSubDir),

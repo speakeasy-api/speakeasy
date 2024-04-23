@@ -2,16 +2,19 @@ package cmd
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -27,6 +30,9 @@ type QuickstartFlags struct {
 	OutDir      string `json:"out-dir"`
 	TargetType  string `json:"target"`
 }
+
+//go:embed sample_openapi.yaml
+var sampleSpec string
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	Usage:        "quickstart",
@@ -65,14 +71,20 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
-		return fmt.Errorf("you cannot run quickstart when a speakeasy workflow already exists, try speakeasy configure instead")
+		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+			"To create a brand new SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
+			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("you cannot run quickstart when an existing sdk already exists, try speakeasy configure instead")
+		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+			"To create a brand new SDK directory: cd .. and then `speakeasy quickstart`. \n" +
+			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
-	fmt.Println(charm.FormatCommandTitle("Welcome to the Speakeasy!",
+	fmt.Println(charm.FormatCommandDescription(
 		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
 			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
 
@@ -96,7 +108,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	nextState := prompts.SourceBase
 	for nextState != prompts.Complete {
 		stateFunc := prompts.StateMapping[nextState]
-		state, err := stateFunc(&quickstartObj)
+		state, err := stateFunc(ctx, &quickstartObj)
 		if err != nil {
 			return err
 		}
@@ -111,53 +123,60 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if flags.OutDir != "" {
 		outDir = flags.OutDir
 	}
+
+	// Pull the target type and sdk class name from the first target
+	// Assume just one target possible during quickstart
 	var targetType string
+	var sdkClassName string
 	for _, target := range quickstartObj.WorkflowFile.Targets {
 		targetType = target.Target
 		break
 	}
-
-	var isUncleanDir bool
-	if entry, err := os.ReadDir(workingDir); err == nil {
-		for _, e := range entry {
-			if !strings.HasPrefix(e.Name(), ".") && !strings.HasSuffix(e.Name(), ".yaml") && !strings.HasSuffix(e.Name(), ".yml") && !strings.HasSuffix(e.Name(), ".json") {
-				isUncleanDir = true
-				break
-			}
-		}
+	for _, config := range quickstartObj.LanguageConfigs {
+		sdkClassName = config.Generation.SDKClassName
+		break
 	}
 
-	if (isUncleanDir && outDir == workingDir) || (targetType == "terraform" && !strings.HasPrefix(filepath.Base(outDir), "terraform-provider")) {
-		promptedDir, _ := filepath.Abs(workingDir)
-		if outDir != workingDir {
-			promptedDir = outDir
-		}
-		description := "The default option we have provided maps to the current root directory."
-		if targetType == "terraform" {
-			description = "Terraform providers must be placed in a directory structured in the following format terraform-provider-*."
-		}
+	promptedDir := setDefaultOutDir(workingDir, sdkClassName, targetType)
+	if outDir != workingDir {
+		promptedDir = outDir
+	}
+	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
+	if targetType == "terraform" {
+		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
+		outDir = "terraform-provider"
+	}
 
-		if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
-			Title("What directory should quickstart files be written too?").
-			Description(description+"\n").
-			Validate(func(s string) error {
-				if targetType == "terraform" {
-					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
-						return errors.New("a terraform provider directory must start with 'terraform-provider'")
-					}
+	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		Title("What directory should the "+targetType+" files be written to?").
+		Description(description+"\n").
+		Suggestions(charm.DirsInCurrentDir(promptedDir)).
+		SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
+		Validate(func(s string) error {
+			if targetType == "terraform" {
+				if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
+					return errors.New("a terraform provider directory must start with 'terraform-provider'")
 				}
-				return nil
-			}).
-			Inline(false).Prompt("").Value(&promptedDir))),
-			"Let's pick an output directory for your newly created files.").
-			ExecuteForm(); err != nil {
-			return err
-		}
-		if !filepath.IsAbs(promptedDir) {
-			promptedDir = filepath.Join(workingDir, promptedDir)
-		}
+			}
+			return nil
+		}).
+		Inline(false).Prompt("").Value(&promptedDir))),
+		"Pick an output directory for your newly created files.").
+		ExecuteForm(); err != nil {
+		return err
+	}
+	if !filepath.IsAbs(promptedDir) {
+		promptedDir = filepath.Join(workingDir, promptedDir)
+	}
 
-		outDir, err = filepath.Abs(promptedDir)
+	outDir, err = filepath.Abs(promptedDir)
+	if err != nil {
+		return err
+	}
+
+	speakeasyFolderPath := filepath.Join(outDir, ".speakeasy")
+	if _, err := os.Stat(speakeasyFolderPath); os.IsNotExist(err) {
+		err = os.MkdirAll(speakeasyFolderPath, 0o755)
 		if err != nil {
 			return err
 		}
@@ -184,12 +203,25 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
 	}
 
-	speakeasyFolderPath := outDir + "/" + ".speakeasy"
-	if _, err := os.Stat(speakeasyFolderPath); os.IsNotExist(err) {
-		err = os.MkdirAll(speakeasyFolderPath, 0o755)
+	if quickstartObj.IsUsingSampleOpenAPISpec {
+		absSchemaPath := filepath.Join(outDir, "openapi.yaml")
+		if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
+			return errors.Wrapf(err, "failed to write sample OpenAPI spec")
+		}
+
+		fmt.Println(
+			styles.RenderInfoMessage(
+				"The OpenAPI sample document will be used",
+				"It can be found here, you can edit it at anytime:",
+				absSchemaPath,
+			),
+		)
+
+		referencePath, err := filepath.Rel(outDir, absSchemaPath)
 		if err != nil {
 			return err
 		}
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
 	}
 
 	if err := workflow.Save(outDir, quickstartObj.WorkflowFile); err != nil {
@@ -213,7 +245,18 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
-	workflow, err := run.NewWorkflow("Workflow", initialTarget, "", "", nil, nil, false, !flags.SkipCompile, false)
+	workflow, err := run.NewWorkflow(
+		ctx,
+		"Workflow",
+		initialTarget,
+		"",
+		"",
+		nil,
+		nil,
+		false,
+		!flags.SkipCompile,
+		false,
+	)
 	if err != nil {
 		return err
 	}
@@ -224,4 +267,17 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	return nil
+}
+
+func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
+	subDirectory := strcase.ToKebab(sdkClassName) + "-" + targetType
+	if targetType == "terraform" {
+		if strings.HasPrefix(filepath.Base(workingDir), "terraform-provider") {
+			return "."
+		}
+
+		subDirectory = fmt.Sprintf("terraform-provider-%s", subDirectory)
+	}
+
+	return filepath.Join(workingDir, subDirectory)
 }

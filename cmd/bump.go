@@ -29,8 +29,7 @@ Examples:
 - speakeasy bump -v 1.2.3 - Sets the target's version to 1.2.3
 - speakeasy bump major -t typescript - Bumps the typescript target's version by one major version
 `,
-	Args:   cobra.RangeArgs(0, 1),
-	Hidden: true,
+	Args: cobra.RangeArgs(0, 1),
 }
 
 func bumpInit() {

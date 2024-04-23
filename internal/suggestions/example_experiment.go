@@ -4,10 +4,19 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
+	"math/rand"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/speakeasy-api/speakeasy/internal/transform"
+
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
@@ -16,13 +25,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	openai "github.com/speakeasy-sdks/openai-go-sdk/v4"
 	"github.com/speakeasy-sdks/openai-go-sdk/v4/pkg/models/shared"
-	"math/rand"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 )
 
 func system(content string) shared.ChatCompletionRequestMessage {
@@ -62,7 +64,10 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{})
+	_, err := validation.ValidateOpenAPI(ctx, "", schemaPath, "", "", &validation.OutputLimits{}, "", "")
+	if len(os.Getenv("OPENAI_API_KEY")) == 0 {
+		return errors.NewValidationError("OPENAI_API_KEY is not set", -1, nil)
+	}
 	if err != nil {
 		return err
 	}
@@ -90,7 +95,6 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 		go func(shard Shard, i int) {
 			<-semaphore // Release the token
 			defer wg.Done()
-			return
 			fmt.Printf("Processing shard %s (%v / %v)\n", shard.Key, i, len(splitSchema))
 			jitter := time.Duration(rand.Float32() * float32(time.Second) * 15)
 			time.Sleep(jitter)
@@ -148,7 +152,7 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(outputFile, []byte(combined), 0644)
+	return os.WriteFile(outputFile, []byte(combined), 0o644)
 }
 
 func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder string) error {
@@ -184,7 +188,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 		fmt.Printf("  %s chat-gpt invoke done\n", shard.Key)
 		if err != nil {
 			if subsequentErrors > 5 {
-				break
+				return fmt.Errorf("failed to get completion: %w", err)
 			}
 			subsequentErrors++
 			// jitter
@@ -217,7 +221,7 @@ func RunOnShard(ctx context.Context, sdk *openai.Gpt, shard Shard, cacheFolder s
 	contentWithoutDone := strings.Replace(content.String(), finishAt, "", -1)
 	contentWithoutBackticks := strings.Replace(contentWithoutDone, "```", "", -1)
 	// load the new result with libopenapi
-	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0644)
+	os.WriteFile(cacheFile, []byte(contentWithoutBackticks), 0o644)
 	return handleUpdate(ctx, cacheFolder, shard)
 }
 
@@ -241,7 +245,7 @@ func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
 	//
 	//title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])
 	//
-	o, err := overlay.Compare("LLM", originalFile, y1, *y2)
+	o, err := overlay.Compare("LLM", y1, *y2)
 	if err != nil {
 		return fmt.Errorf("failed to compare spec files %q and %q: %w", originalFile, adjustedFile, err)
 	}
@@ -251,7 +255,7 @@ func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
 	}
 
 	fmt.Printf("\n" + content + "\n")
-	os.WriteFile(overlayFilePath, []byte(content), 0644)
+	os.WriteFile(overlayFilePath, []byte(content), 0o644)
 	return nil
 }
 
@@ -314,7 +318,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 		v3Model.Model.Paths.PathItems = orderedmap.New[string, *v3.PathItem]()
 		v3Model.Model.Paths.PathItems.Set(pair.Key(), pair.Value())
 		// eliminate all the now-orphaned schemas
-		doc, v3Model, err = removeOrphans(doc, v3Model)
+		doc, v3Model, err = transform.RemoveOrphans(doc, v3Model)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +328,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 			return nil, errors.NewValidationError("failed to render document", -1, err)
 		}
 		// cache it
-		err = os.WriteFile(cacheFile, shard, 0644)
+		err = os.WriteFile(cacheFile, shard, 0o644)
 		shards = append(shards, Shard{Content: string(shard), Encoded: base64(pair.Key()), Key: pair.Key()})
 	}
 	return shards, nil
@@ -332,172 +336,4 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 
 func base64(key string) string {
 	return b64.StdEncoding.EncodeToString([]byte(key))
-}
-
-func removeOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document]) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	_, doc, model, errs := doc.RenderAndReload()
-	// remove nil errs
-	var nonNilErrs []error
-	for _, e := range errs {
-		if e != nil {
-			nonNilErrs = append(nonNilErrs, e)
-		}
-	}
-	if len(nonNilErrs) > 0 {
-		return nil, nil, fmt.Errorf("failed to render and reload document: %v", errs)
-	}
-
-	components := model.Model.Components
-	context := model
-	allRefs := context.Index.GetAllReferences()
-	schemasIdx := context.Index.GetAllComponentSchemas()
-	responsesIdx := context.Index.GetAllResponses()
-	parametersIdx := context.Index.GetAllParameters()
-	examplesIdx := context.Index.GetAllExamples()
-	requestBodiesIdx := context.Index.GetAllRequestBodies()
-	headersIdx := context.Index.GetAllHeaders()
-	securitySchemesIdx := context.Index.GetAllSecuritySchemes()
-	linksIdx := context.Index.GetAllLinks()
-	callbacksIdx := context.Index.GetAllCallbacks()
-	mappedRefs := context.Index.GetMappedReferences()
-
-	checkOpenAPISecurity := func(key string) bool {
-		if strings.Contains(key, "securitySchemes") {
-			segs := strings.Split(key, "/")
-			def := segs[len(segs)-1]
-			for r := range context.Index.GetSecurityRequirementReferences() {
-				if r == def {
-					return true
-				}
-			}
-		}
-		return false
-	}
-
-	// create poly maps.
-	oneOfRefs := make(map[string]*index.Reference)
-	allOfRefs := make(map[string]*index.Reference)
-	anyOfRefs := make(map[string]*index.Reference)
-
-	// include all polymorphic references.
-	for _, ref := range context.Index.GetPolyAllOfReferences() {
-		allOfRefs[ref.Definition] = ref
-	}
-	for _, ref := range context.Index.GetPolyOneOfReferences() {
-		oneOfRefs[ref.Definition] = ref
-	}
-	for _, ref := range context.Index.GetPolyAnyOfReferences() {
-		anyOfRefs[ref.Definition] = ref
-	}
-
-	notUsed := make(map[string]*index.Reference)
-	mapsToSearch := []map[string]*index.Reference{
-		schemasIdx,
-		responsesIdx,
-		parametersIdx,
-		examplesIdx,
-		requestBodiesIdx,
-		headersIdx,
-		securitySchemesIdx,
-		linksIdx,
-		callbacksIdx,
-	}
-
-	for _, resultMap := range mapsToSearch {
-		for key, ref := range resultMap {
-
-			u := strings.Split(key, "#/")
-			var keyAlt = key
-			if len(u) == 2 {
-				if u[0] == "" {
-					keyAlt = fmt.Sprintf("%s#/%s", context.Index.GetSpecAbsolutePath(), u[1])
-				}
-			}
-
-			if allRefs[key] == nil && allRefs[keyAlt] == nil {
-				found := false
-
-				if oneOfRefs[key] != nil || allOfRefs[key] != nil || anyOfRefs[key] != nil {
-					found = true
-				}
-
-				if mappedRefs[key] != nil || mappedRefs[keyAlt] != nil {
-					found = true
-				}
-
-				if !found {
-					found = checkOpenAPISecurity(key)
-				}
-
-				if !found {
-					notUsed[key] = ref
-				}
-			}
-		}
-	}
-
-	// let's start killing orphans
-	anyRemoved := false
-	schemas := components.Schemas
-	for pair := orderedmap.First(schemas); pair != nil; pair = pair.Next() {
-		// remove all schemas that are not referenced
-		if !isReferenced(pair.Key(), "schemas", notUsed) {
-			schemas.Delete(pair.Key())
-			fmt.Printf("dropped #/components/schemas/%s\n", pair.Key())
-			anyRemoved = true
-		}
-	}
-	responses := components.Responses
-	for pair := orderedmap.First(responses); pair != nil; pair = pair.Next() {
-		// remove all responses that are not referenced
-		if !isReferenced(pair.Key(), "responses", notUsed) {
-			responses.Delete(pair.Key())
-			fmt.Printf("dropped #/components/responses/%s\n", pair.Key())
-			anyRemoved = true
-		}
-	}
-	parameters := components.Parameters
-	for pair := orderedmap.First(parameters); pair != nil; pair = pair.Next() {
-		// remove all parameters that are not referenced
-		if !isReferenced(pair.Key(), "parameters", notUsed) {
-			parameters.Delete(pair.Key())
-			anyRemoved = true
-		}
-	}
-	examples := components.Examples
-	for pair := orderedmap.First(examples); pair != nil; pair = pair.Next() {
-		// remove all examples that are not referenced
-		if !isReferenced(pair.Key(), "examples", notUsed) {
-			examples.Delete(pair.Key())
-			anyRemoved = true
-		}
-	}
-	requestBodies := components.RequestBodies
-	for pair := orderedmap.First(requestBodies); pair != nil; pair = pair.Next() {
-		// remove all requestBodies that are not referenced
-		if !isReferenced(pair.Key(), "requestBodies", notUsed) {
-			requestBodies.Delete(pair.Key())
-			anyRemoved = true
-		}
-	}
-	headers := components.Headers
-	for pair := orderedmap.First(headers); pair != nil; pair = pair.Next() {
-		// remove all headers that are not referenced
-		if !isReferenced(pair.Key(), "headers", notUsed) {
-			headers.Delete(pair.Key())
-			anyRemoved = true
-		}
-	}
-	if anyRemoved {
-		return removeOrphans(doc, model)
-	}
-	return doc, model, nil
-}
-
-func isReferenced(key string, within string, notUsed map[string]*index.Reference) bool {
-	ref := fmt.Sprintf("#/components/%s/%s", within, key)
-	if notUsed[ref] != nil {
-		return false
-	}
-	return true
 }

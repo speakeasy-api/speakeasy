@@ -1,19 +1,22 @@
 package prompts
 
 import (
+	"context"
+
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 )
 
 type (
-	formFunction    func(quickstart *Quickstart) (*QuickstartState, error)
+	formFunction    func(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error)
 	QuickstartState int
 )
 
 type Quickstart struct {
-	WorkflowFile    *workflow.Workflow
-	LanguageConfigs map[string]*config.Configuration
-	Defaults        Defaults
+	WorkflowFile             *workflow.Workflow
+	LanguageConfigs          map[string]*config.Configuration
+	Defaults                 Defaults
+	IsUsingSampleOpenAPISpec bool
 }
 
 type Defaults struct {

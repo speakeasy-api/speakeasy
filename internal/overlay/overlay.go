@@ -2,11 +2,12 @@ package overlay
 
 import (
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"gopkg.in/yaml.v3"
-	"io"
-	"os"
 )
 
 func Validate(overlayFile string) error {
@@ -35,7 +36,7 @@ func Compare(schemas []string) error {
 
 	title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])
 
-	o, err := overlay.Compare(title, schemas[0], y1, *y2)
+	o, err := overlay.Compare(title, y1, *y2)
 	if err != nil {
 		return fmt.Errorf("failed to compare spec files %q and %q: %w", schemas[0], schemas[1], err)
 	}

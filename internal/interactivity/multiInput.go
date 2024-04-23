@@ -23,7 +23,7 @@ var (
 			BorderForeground(styles.Colors.DimYellow)
 
 	focusedPromptStyle = styles.Focused.Copy().Bold(true)
-	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(styles.Colors.White)
+	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(styles.Colors.WhiteBlackAdaptive)
 	placeholderStyle   = styles.Dimmed.Copy()
 )
 
@@ -122,8 +122,10 @@ func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 
 		return m.Focus(m.focusIndex)
 	default:
-		if len(m.inputs[m.focusIndex].AutocompleteFileExtensions) > 0 {
-			if suggestions := charm_internal.SuggestionCallback(m.inputs[m.focusIndex].AutocompleteFileExtensions)(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {
+		if len(m.inputs) > m.focusIndex && len(m.inputs[m.focusIndex].AutocompleteFileExtensions) > 0 {
+			if suggestions := charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+				FileExtensions: m.inputs[m.focusIndex].AutocompleteFileExtensions,
+			})(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {
 				m.inputModels[m.focusIndex].ShowSuggestions = true
 				m.inputModels[m.focusIndex].KeyMap.AcceptSuggestion.SetEnabled(true)
 				m.inputModels[m.focusIndex].SetSuggestions(suggestions)

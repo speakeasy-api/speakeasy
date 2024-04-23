@@ -36,12 +36,9 @@ func NewSelectPrompt(title string, description string, options []huh.Option[stri
 	return group
 }
 
-func FormatCommandTitle(title string, description string) string {
-	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
+func FormatCommandDescription(description string) string {
 	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
-	header := titleStyle.Render(title)
-	header += "\n" + descriptionStyle.Render(description)
-	return header
+	return "\n" + descriptionStyle.Render(description)
 }
 
 func NewInput() *huh.Input {
@@ -89,11 +86,51 @@ func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []stri
 	return validFiles
 }
 
-func SuggestionCallback(fileExtensions []string) func(val string) []string {
+func DirsInCurrentDir(relativeDir string) []string {
+	var validDirs []string
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return validDirs
+	}
+
+	targetDir := filepath.Join(workingDir, relativeDir)
+	if filepath.IsAbs(relativeDir) {
+		targetDir = relativeDir
+	}
+
+	files, err := os.ReadDir(targetDir)
+	if err != nil {
+		return validDirs
+	}
+
+	for _, file := range files {
+		if file.Type().IsDir() {
+			fileSuggestion := filepath.Join(relativeDir, file.Name())
+			// allows us to support current directory relative paths
+			if relativeDir == "./" {
+				fileSuggestion = relativeDir + file.Name()
+			}
+			validDirs = append(validDirs, fileSuggestion)
+		}
+	}
+
+	return validDirs
+}
+
+type SuggestionCallbackConfig struct {
+	FileExtensions []string
+	IsDirectories  bool
+}
+
+func SuggestionCallback(cfg SuggestionCallbackConfig) func(val string) []string {
 	return func(val string) []string {
 		var files []string
 		if info, err := os.Stat(val); err == nil && info.IsDir() {
-			files = SchemaFilesInCurrentDir(val, fileExtensions)
+			if len(cfg.FileExtensions) > 0 {
+				files = SchemaFilesInCurrentDir(val, cfg.FileExtensions)
+			} else if cfg.IsDirectories {
+				files = DirsInCurrentDir(val)
+			}
 		}
 
 		return files

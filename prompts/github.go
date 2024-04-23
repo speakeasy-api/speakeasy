@@ -243,7 +243,20 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 		)
 	}
 
-	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(fields...)),
+	var groups []*huh.Group
+	// group two secrets together on a screen
+	for i := 0; i < len(fields); i += 2 {
+		var groupedFields []huh.Field = []huh.Field{
+			fields[i],
+		}
+
+		if i+1 < len(fields) {
+			groupedFields = append(groupedFields, fields[i+1])
+		}
+		groups = append(groups, huh.NewGroup(groupedFields...))
+	}
+
+	if _, err := charm.NewForm(huh.NewForm(groups...),
 		fmt.Sprintf("Setup publishing variables for your %s target %s.", target.Target, name),
 		"These environment variables will be used to publish to package managers from your speakeasy workflow.").
 		ExecuteForm(); err != nil {

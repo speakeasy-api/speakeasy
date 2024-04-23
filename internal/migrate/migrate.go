@@ -321,7 +321,7 @@ func docLocationsToDocuments(docLocations []string, authHeader string, hasToken 
 	if hasToken {
 		auth = &workflow.Auth{
 			Header: authHeader,
-			Secret: "$OPENAPI_DOC_AUTH_TOKEN", // This is the name of the secret in the action, which is fixed
+			Secret: "$openapi_doc_auth_token", // This is the name of the secret in the action, which is fixed
 		}
 	}
 

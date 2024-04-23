@@ -6,6 +6,9 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"net/http"
 	"os"
@@ -15,6 +18,10 @@ import (
 
 	"github.com/google/go-github/v58/github"
 	"github.com/hashicorp/go-version"
+)
+
+const (
+	ArtifactArchContextKey = "cli-artifact-arch"
 )
 
 func GetLatestVersion(artifactArch string) (*version.Version, error) {
@@ -32,6 +39,29 @@ func GetLatestVersion(artifactArch string) (*version.Version, error) {
 	}
 
 	return ver, nil
+}
+
+// GetNewerVersion returns the latest version of the CLI if it is newer than the current version
+func GetNewerVersion(artifactArch, currentVersion string) (*version.Version, error) {
+	latestVersion, err := GetLatestVersion(artifactArch)
+	if err != nil {
+		return nil, err
+	}
+
+	if latestVersion == nil {
+		return nil, nil
+	}
+
+	curVer, err := version.NewVersion(currentVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	if latestVersion.GreaterThan(curVer) {
+		return latestVersion, nil
+	}
+
+	return nil, nil
 }
 
 func Update(currentVersion, artifactArch string, timeout int) (string, error) {
@@ -57,49 +87,113 @@ func Update(currentVersion, artifactArch string, timeout int) (string, error) {
 		return "", nil
 	}
 
-	dirName, err := os.MkdirTemp("", "speakeasy")
-	if err != nil {
-		return "", err
-	}
-
-	downloadedPath, err := downloadCLI(dirName, asset.GetBrowserDownloadURL(), timeout)
-	if err != nil {
-		return "", fmt.Errorf("failed to download artifact: %w", err)
-	}
-
-	extractDest := filepath.Join(dirName, "extracted")
-	if err := os.MkdirAll(extractDest, 0o755); err != nil {
-		return "", err
-	}
-
-	if err := extract(downloadedPath, extractDest); err != nil {
-		return "", fmt.Errorf("failed to extract artifact: %w", err)
-	}
-
 	exPath, err := os.Executable()
 	if err != nil {
 		return "", err
 	}
 
-	binaryName := "speakeasy"
-	if strings.Contains(artifactArch, "windows") {
-		binaryName += ".exe"
-	}
+	return release.GetTagName(), install(artifactArch, asset.GetBrowserDownloadURL(), exPath, timeout)
+}
 
-	info, err := os.Stat(exPath)
+// InstallVersion installs a specific version of the CLI
+// returns the path to the installed binary
+func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, timeout int) (string, error) {
+	v, err := version.NewVersion(desiredVersion)
 	if err != nil {
 		return "", err
 	}
 
-	if err := os.Rename(filepath.Join(extractDest, binaryName), exPath); err != nil {
-		return "", fmt.Errorf("failed to replace binary: %w", err)
+	release, asset, err := getReleaseForVersion(*v, artifactArch, 30*time.Second)
+	if err != nil || release == nil {
+		return "", fmt.Errorf("failed to find release for version %s: %w", v.String(), err)
 	}
 
-	if err := os.Chmod(exPath, info.Mode()); err != nil {
+	dst, err := getVersionInstallLocation(artifactArch, v)
+	if err != nil {
 		return "", err
 	}
 
-	return release.GetTagName(), nil
+	if _, err := os.Stat(dst); err == nil {
+		log.From(ctx).PrintfStyled(styles.DimmedItalic, "Found existing install for Speakeasy version %s\n", desiredVersion)
+		return dst, nil
+	}
+
+	log.From(ctx).PrintfStyled(styles.DimmedItalic, "Downloading Speakeasy version %s\n", desiredVersion)
+
+	return dst, install(artifactArch, asset.GetBrowserDownloadURL(), dst, timeout)
+}
+
+func getVersionInstallLocation(artifactArch string, v *version.Version) (string, error) {
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	// If we are running in a GitHub action, we need to write to temp directory instead of home directory
+	if env.IsGithubAction() {
+		dir, err = os.MkdirTemp("", "speakeasy")
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return filepath.Join(dir, ".speakeasy", v.String(), "bin", getBinaryName(artifactArch)), nil
+}
+
+func getBinaryName(artifactArch string) string {
+	binaryName := "speakeasy"
+	if strings.Contains(artifactArch, "windows") {
+		binaryName += ".exe"
+	}
+	return binaryName
+}
+
+func install(artifactArch, downloadURL, installLocation string, timeout int) error {
+	dirName, err := os.MkdirTemp("", "speakeasy")
+	if err != nil {
+		return err
+	}
+
+	downloadedPath, err := downloadCLI(dirName, downloadURL, timeout)
+	if err != nil {
+		return fmt.Errorf("failed to download artifact: %w", err)
+	}
+
+	tmpLocation := filepath.Join(dirName, "extracted")
+	if err := os.MkdirAll(tmpLocation, 0o755); err != nil {
+		return err
+	}
+
+	if err := extract(downloadedPath, tmpLocation); err != nil {
+		return fmt.Errorf("failed to extract artifact: %w", err)
+	}
+
+	binaryName := getBinaryName(artifactArch)
+
+	// Get the current binary permissions so that we can set them on the new binary
+	currentExecPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	currentExecInfo, err := os.Stat(currentExecPath)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(installLocation), 0o755); err != nil {
+		return err
+	}
+
+	if err := os.Rename(filepath.Join(tmpLocation, binaryName), installLocation); err != nil {
+		return fmt.Errorf("failed to replace binary: %w", err)
+	}
+
+	// Ensure the install is executable
+	if err := os.Chmod(installLocation, currentExecInfo.Mode()); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getLatestRelease(artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
@@ -121,6 +215,30 @@ func getLatestRelease(artifactArch string, timeout time.Duration) (*github.Repos
 			if strings.Contains(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)) {
 				return release, asset, nil
 			}
+		}
+	}
+
+	return nil, nil, nil
+}
+
+func getReleaseForVersion(version version.Version, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
+	client := github.NewClient(&http.Client{
+		Timeout: timeout,
+	})
+
+	tag := "v" + version.String()
+	release, _, err := client.Repositories.GetReleaseByTag(context.Background(), "speakeasy-api", "speakeasy", tag)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if release == nil {
+		return nil, nil, nil
+	}
+
+	for _, asset := range release.Assets {
+		if strings.Contains(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)) {
+			return release, asset, nil
 		}
 	}
 
