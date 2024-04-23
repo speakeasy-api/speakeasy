@@ -24,6 +24,9 @@ func Authenticate(ctx context.Context, force bool) (context.Context, error) {
 
 func UseExistingAPIKeyIfAvailable(ctx context.Context) (context.Context, error) {
 	existingApiKey := config.GetSpeakeasyAPIKey()
+	if existingApiKey == "" {
+		return ctx, nil
+	}
 	ctx, err := core.NewContextWithSDK(ctx, existingApiKey)
 	if err != nil {
 		return ctx, err
