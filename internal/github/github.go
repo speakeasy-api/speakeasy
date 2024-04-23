@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
+	"os"
 	"strconv"
 	"strings"
 
@@ -96,8 +97,28 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 	}
 
 	md := fmt.Sprintf("# API Changes Summary\n%s\n%s", reportLink, summary.Text)
-
 	githubactions.AddStepSummary(md)
+
+	if len(os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")) > 0 {
+		filepath := os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")
+		f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.From(ctx).Warnf("failed to open file %s: %s", filepath, err)
+			return
+		}
+
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.From(ctx).Warnf("failed to close file %s: %s", filepath, err)
+			}
+		}()
+
+		if _, err := f.Write([]byte(summary.Text)); err != nil {
+			log.From(ctx).Warnf("failed to write file %s: %s", filepath, err)
+			return
+		}
+		log.From(ctx).Infof("wrote changes summary to \"%s\"", filepath)
+	}
 }
 
 func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {
