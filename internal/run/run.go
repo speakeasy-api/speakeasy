@@ -6,8 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"io"
 	"io/fs"
 	"math/rand"
