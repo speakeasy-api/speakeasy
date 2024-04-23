@@ -468,7 +468,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if !isSingleRegistrySource(source) {
-		err = w.snapshotSource(ctx, rootStep, sourceID, currentDocument)
+		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
@@ -501,8 +501,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 }
 
 func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+	if !registry.IsRegistryEnabled(ctx) {
 		return
 	}
 
@@ -654,10 +653,39 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 	return res, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, namespaceName string, documentPath string) error {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) error {
+	if !registry.IsRegistryEnabled(ctx) {
 		return nil
+	}
+
+	namespaceName := sourceID
+	if source.Publish != nil {
+		orgSlug, workspaceSlug, name, err := source.Publish.ParseRegistryLocation()
+		if err != nil {
+			if env.IsGithubAction() {
+				return fmt.Errorf("error parsing registry location %s: %w", string(source.Publish.Location), err)
+			}
+
+			log.From(ctx).Warnf("error parsing registry location %s: %w", string(source.Publish.Location), zap.Error(err))
+		}
+
+		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
+			if env.IsGithubAction() {
+				return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+			}
+
+			log.From(ctx).Warnf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+		}
+
+		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+			if env.IsGithubAction() {
+				return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+			}
+
+			log.From(ctx).Warnf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+		}
+
+		namespaceName = name
 	}
 
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
@@ -853,8 +881,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *workflowTracking.WorkflowStep) (string, error) {
 	if d.IsSpeakeasyRegistry() {
 		step.NewSubstep("Downloading registry bundle")
-		hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-		if !hasSchemaRegistry {
+		if !registry.IsRegistryEnabled(ctx) {
 			return "", fmt.Errorf("schema registry is not enabled for this workspace")
 		}
 

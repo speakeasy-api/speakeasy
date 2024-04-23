@@ -1,6 +1,7 @@
 package prompts
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"slices"
@@ -148,7 +149,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	return output, nil
 }
 
-func configBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
+func configBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	for key, target := range quickstart.WorkflowFile.Targets {
 		output, err := PromptForTargetConfig(key, &target, nil, true)
 		if err != nil {
