@@ -152,6 +152,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 	logger := log.From(ctx)
 	scanner := bufio.NewScanner(os.Stdin)
 	logger.Info("Entering interactive chat session, type exit to quit.")
+    logger.PrintfStyled(styles.Dimmed, "Example: How do I override a method name in my OpenAPI document?")
 
 	if message != "" {
 		logger.Info("\nProcessing your question, this may take some time...")
@@ -177,6 +178,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 		}
 
 		var err error
+        logger.Info("Asking Speakeasy AI...")
 		sessionID, err = Ask(ctx, input, sessionID)
 		if err != nil {
 			logger.Errorf("An error occurred: %v\n", err)
