@@ -1,6 +1,7 @@
 package prompts
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -72,7 +73,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	return groups
 }
 
-func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
+func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	var targetName string
 	if len(quickstart.WorkflowFile.Targets) == 0 {
 		targetName = "my-first-target"

@@ -111,7 +111,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	nextState := prompts.SourceBase
 	for nextState != prompts.Complete {
 		stateFunc := prompts.StateMapping[nextState]
-		state, err := stateFunc(&quickstartObj)
+		state, err := stateFunc(ctx, &quickstartObj)
 		if err != nil {
 			return err
 		}
