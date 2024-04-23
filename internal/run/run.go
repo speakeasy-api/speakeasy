@@ -465,6 +465,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
 			return "", nil, err
 		}
+
+		currentDocument = overlayLocation
 	}
 
 	if !isSingleRegistrySource(source) {
