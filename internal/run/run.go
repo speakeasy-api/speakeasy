@@ -15,12 +15,15 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
+<<<<<<< HEAD
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 
+=======
+>>>>>>> 9400562845d64ccac96ebd817c5dfdd2b3c6173b
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -32,17 +35,21 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 
+	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/git"
+	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
+	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
+	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
@@ -469,7 +476,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if !isSingleRegistrySource(source) {
-		err = w.snapshotSource(ctx, rootStep, sourceID, source, outputLocation)
+		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
@@ -478,7 +485,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok {
-			sourceRes.ChangeReport, err = computeChanges(ctx, rootStep, targetLockOld, outputLocation)
+			sourceRes.ChangeReport, err = computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
 				// Don't fail the whole workflow if this fails
 				logger.Warnf("failed to compute OpenAPI changes: %s", err.Error())
@@ -486,7 +493,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, outputLocation, rulesetToUse, w.projectDir)
+	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
 	if err != nil {
 		return "", nil, err
 	}
@@ -498,7 +505,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		os.RemoveAll(workflow.GetTempDir())
 	}
 
-	return outputLocation, sourceRes, nil
+	return currentDocument, sourceRes, nil
 }
 
 func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
@@ -915,12 +922,6 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
-	log.From(ctx).Infof("Downloading %s... to %s\n", d.Location, outPath)
-
-	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
-		return "", err
-	}
-
 	var token, header string
 	if d.Auth != nil {
 		header = d.Auth.Header
@@ -933,9 +934,39 @@ func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 		token = os.Getenv(strings.ToUpper(envVar))
 	}
 
-	if err := download.DownloadFile(d.Location, outPath, header, token); err != nil {
+	res, err := download.Fetch(d.Location, header, token)
+	if err != nil {
 		return "", err
 	}
+	defer res.Body.Close()
+
+	ext := filepath.Ext(outPath)
+	if !slices.Contains([]string{".yaml", ".yml", ".json"}, ext) {
+		ext, err := download.SniffDocumentExtension(res)
+		if errors.Is(err, download.ErrUnknownDocumentType) {
+			ext = ".yaml"
+		} else if err != nil {
+			return "", err
+		}
+
+		outPath += ext
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
+		return "", err
+	}
+
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, res.Body); err != nil {
+		return "", fmt.Errorf("failed to save response to location: %w", err)
+	}
+
+	log.From(ctx).Infof("Downloaded %s to %s\n", d.Location, outPath)
 
 	return outPath, nil
 }
