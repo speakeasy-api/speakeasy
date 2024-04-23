@@ -29,6 +29,7 @@ speakeasy [flags]
 
 ### Sub Commands
 
+* [speakeasy ask](ask.md)	 - Starts a conversation with Speakeasy trained AI
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
 * [speakeasy bump](bump.md)	 - Bumps the version of a Speakeasy Generation Target
 * [speakeasy configure](configure/README.md)	 - Configure your Speakeasy SDK Setup.

@@ -1,12 +1,12 @@
-# update  
+# ask  
 `speakeasy ask`  
 
 
-Ask Speakeasy trained AI for assistance right from the CLI.
+Starts a conversation with Speakeasy trained AI  
 
 ## Details
 
-Begins a chat session with Speakeasy trained AI. 
+Starts a conversation with Speakeasy trained AI. Ask about OpenAPI, Speakeasy, configuring SDKs, or anything else you need help with.
 
 ## Usage
 
@@ -17,7 +17,8 @@ speakeasy ask [flags]
 ### Options
 
 ```
-  -m, --message          your message to the AI
+  -h, --help             help for ask
+  -m, --message string   Your question for AI.
 ```
 
 ### Options inherited from parent commands
