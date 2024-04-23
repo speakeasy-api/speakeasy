@@ -14,7 +14,7 @@ import (
 
 var (
 	docStyle  = styles.Margins.Copy()
-	maxHeight = 20
+	maxHeight = 22
 )
 
 type item struct {

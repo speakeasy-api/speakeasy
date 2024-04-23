@@ -1,6 +1,7 @@
 package run
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -13,7 +14,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -27,6 +27,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 
+  "github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -44,6 +45,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
+
 
 type Workflow struct {
 	Target           string
@@ -179,8 +181,9 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display error logs if the workflow failed
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
-
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
+		filteredLogs := filterLogs(ctx, &logs)
+		ask.OfferChatSessionOnError(ctx, filteredLogs)
 	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
 		s := strings.Join(criticalWarns, "\n")
 		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
@@ -245,7 +248,6 @@ func (w *Workflow) Run(ctx context.Context) error {
 	if err := workflow.SaveLockfile(w.projectDir, w.lockfile); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -1045,4 +1047,21 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(overlayFile string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
+}
+
+func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
+	logger := log.From(ctx)
+	var filteredLogs strings.Builder
+	scanner := bufio.NewScanner(logBuffer)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "ERROR") || strings.Contains(line, "WARN") {
+			filteredLogs.WriteString(line + "\n")
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Errorf("Failed to format question: %s", err)
+	}
+
+	return filteredLogs.String()
 }
