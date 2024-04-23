@@ -97,6 +97,7 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 	}
 
 	md := fmt.Sprintf("# API Changes Summary\n%s\n%s", reportLink, summary.Text)
+	githubactions.AddStepSummary(md)
 
 	if len(os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")) > 0 {
 		filepath := os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")
@@ -116,9 +117,8 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 			log.From(ctx).Warnf("failed to write file %s: %s", filepath, err)
 			return
 		}
+		log.From(ctx).Infof("wrote changes summary to \"%s\"", filepath)
 	}
-
-		githubactions.AddStepSummary(md)
 }
 
 func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {
