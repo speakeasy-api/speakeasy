@@ -2,25 +2,21 @@ package ask
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
 
-	aiapigo "github.com/inkeep/ai-api-go"
-	"github.com/inkeep/ai-api-go/models/components"
 	"github.com/inkeep/ai-api-go/models/sdkerrors"
 	"github.com/speakeasy-api/huh"
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-
-	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
-)
-
-const (
-	bearerToken   = ""
-	integrationID = ""
 )
 
 var (
@@ -29,55 +25,104 @@ var (
 	linkRegex   = regexp.MustCompile(`\[\(?(.*?)\)?\]\((https?:\/\/[^\s]+)\)`)
 )
 
-func Ask(ctx context.Context, message string, sessionID string) (string, error) {
-	logger := log.From(ctx)
-	s := aiapigo.New(aiapigo.WithSecurity(bearerToken))
-	if sessionID == "" {
-		res, err := s.ChatSession.Create(ctx, components.CreateChatSessionWithChatResultInput{
-			IntegrationID: integrationID,
-			ChatSession: components.ChatSessionInput{
-				Messages: []components.Message{{
-					UserMessage: &components.UserMessage{
-						Role:    "user",
-						Content: message,
-					},
-				}},
-			},
-		})
-		if err != nil {
-			handleError(logger, err)
-			return "", err
-		}
+type RequestPayload struct {
+	SessionID string `json:"session_id,omitempty"`
+	Message   string `json:"Message"`
+}
 
-		if res.ChatResult != nil {
-			sessionID = res.ChatResult.ChatSessionID
-			printWithFootnotes(ctx, res.ChatResult.Message.Content)
-		} else {
-			logger.Error("\nNo response received.")
-		}
-	} else {
-		res, err := s.ChatSession.Continue(ctx, sessionID, components.ContinueChatSessionWithChatResultInput{
-			IntegrationID: integrationID,
-			Message: components.Message{
-				AssistantMessage: &components.AssistantMessage{
-					Content: message,
-				},
-			},
-		})
-		if err != nil {
-			handleError(logger, err)
-			return "", err
-		}
+type ChatResponse struct {
+	SessionID string `json:"ChatSessionID"`
+	Message   string `json:"Message"`
+}
 
-		if res.ChatResult != nil {
-			sessionID = res.ChatResult.ChatSessionID
-			printWithFootnotes(ctx, res.ChatResult.Message.Content)
-		} else {
-			logger.Error("\nNo chat response received.")
-		}
+const ApiURL = "https://api.prod.speakeasyapi.dev"
+
+var baseURL = ApiURL
+
+func makeHTTPRequest(ctx context.Context, url string, payload RequestPayload) (ChatResponse, error) {
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return ChatResponse{}, err
 	}
 
-	return sessionID, nil
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return ChatResponse{}, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return ChatResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return ChatResponse{}, err
+	}
+
+	var chatResponse ChatResponse
+	err = json.Unmarshal(body, &chatResponse)
+	if err != nil {
+		return ChatResponse{}, err
+	}
+
+	return chatResponse, nil
+}
+
+func Ask(ctx context.Context, message string, sessionID string) (string, error) {
+	logger := log.From(ctx)
+	var endpoint string
+	payload := RequestPayload{
+		Message:   message,
+		SessionID: sessionID,
+	}
+
+	if sessionID == "" {
+		endpoint = baseURL + "/v1/inkeep/start-chat"
+	} else {
+		endpoint = baseURL + "/v1/inkeep/continue-chat"
+	}
+
+	chatResponse, err := makeHTTPRequest(ctx, endpoint, payload)
+	if err != nil {
+		logger.Errorf("An error occurred, ending chat: %v", err)
+		return "", err
+	}
+
+	printWithFootnotes(ctx, chatResponse.Message)
+	return chatResponse.SessionID, nil
+}
+
+func printWithFootnotes(ctx context.Context, text string) {
+	logger := log.From(ctx)
+	text = processMarkdown(text)
+	// Transform footnotes
+	matches := linkRegex.FindAllStringSubmatch(text, -1)
+	if len(matches) == 0 {
+		logger.Printf(text)
+		return
+	}
+
+	footnotes := make(map[string]string)
+	var orderedRefs []string
+
+	for _, match := range matches {
+		refName, url := match[1], match[2]
+		if _, exists := footnotes[refName]; !exists {
+			orderedRefs = append(orderedRefs, refName)
+		}
+		footnotes[refName] = url
+		text = strings.Replace(text, match[0], "["+refName+"]", 1)
+	}
+
+	logger.Printf("\n%s", text)
+	logger.PrintfStyled(styles.Focused, "\nReferences:")
+	for _, ref := range orderedRefs {
+		logger.PrintfStyled(styles.Dimmed, "[%s]: %s\n", ref, footnotes[ref])
+	}
 }
 
 func handleError(logger log.Logger, err error) {
@@ -101,38 +146,6 @@ func processMarkdown(text string) string {
 	})
 
 	return text
-}
-
-func printWithFootnotes(ctx context.Context, text string) {
-	logger := log.From(ctx)
-	text = processMarkdown(text)
-
-	// Transform footnotes
-	matches := linkRegex.FindAllStringSubmatch(text, -1)
-
-	if len(matches) == 0 {
-		logger.Printf(text)
-		return
-	}
-
-	footnotes := make(map[string]string)
-	var orderedRefs []string
-
-	for _, match := range matches {
-		refName, url := match[1], match[2]
-		if _, exists := footnotes[refName]; !exists {
-			orderedRefs = append(orderedRefs, refName)
-		}
-		footnotes[refName] = url
-		// Directly replace the markdown link with the reference name, removing parentheses in the process
-		text = strings.Replace(text, match[0], "["+refName+"]", 1)
-	}
-
-	logger.Printf("\n%s", text)
-	logger.PrintfStyled(styles.Focused, "\nReferences:")
-	for _, ref := range orderedRefs {
-		logger.PrintfStyled(styles.Dimmed, "[%s]: %s\n", ref, footnotes[ref])
-	}
 }
 
 func RunInteractiveChatSession(ctx context.Context, message string, sessionID string) error {
@@ -164,7 +177,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 		}
 
 		var err error
-		sessionID, err = Ask(ctx, message, sessionID)
+		sessionID, err = Ask(ctx, input, sessionID)
 		if err != nil {
 			logger.Errorf("An error occurred: %v\n", err)
 			break
