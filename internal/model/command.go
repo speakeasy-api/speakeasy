@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"strings"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-version"
 	"github.com/sethvargo/go-githubactions"
@@ -136,7 +138,11 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		return nil, err
 	}
 
+	short := strings.Trim(c.Short, " .")
+	short = utils.CapitalizeFirst(short)
+
 	cmd := &cobra.Command{
+
 		Use:    c.Usage,
 		Short:  c.Short,
 		Long:   c.Long,
