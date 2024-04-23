@@ -2,6 +2,9 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.21.5
 
+// point to local core
+replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
+
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.18.0
@@ -23,7 +26,7 @@ require (
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.312.1
 	github.com/speakeasy-api/openapi-overlay v0.5.0
-	github.com/speakeasy-api/sdk-gen-config v1.11.4
+	github.com/speakeasy-api/sdk-gen-config v1.12.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.9
 	github.com/speakeasy-api/speakeasy-core v0.7.9
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
