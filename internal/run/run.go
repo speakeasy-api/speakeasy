@@ -15,15 +15,6 @@ import (
 	"time"
 
 	"github.com/iancoleman/strcase"
-<<<<<<< HEAD
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy/internal/changes"
-	"github.com/speakeasy-api/speakeasy/internal/github"
-	"github.com/speakeasy-api/speakeasy/internal/reports"
-	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
-
-=======
->>>>>>> 9400562845d64ccac96ebd817c5dfdd2b3c6173b
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
