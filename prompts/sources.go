@@ -37,6 +37,9 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 			charm_internal.NewInput().
 				Title("What is a good name for this source document?").
 				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("a source name must be provided")
+					}
 					if _, ok := currentWorkflow.Sources[s]; ok {
 						return fmt.Errorf("a source with the name %s already exists", s)
 					}
