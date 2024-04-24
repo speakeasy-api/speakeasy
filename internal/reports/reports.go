@@ -54,9 +54,9 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 	if cliEvent != nil {
 		switch reportType {
 		case shared.TypeLinting:
-			cliEvent.OpenapiDiffReportDigest = &digest
-		case shared.TypeChanges:
 			cliEvent.LintReportDigest = &digest
+		case shared.TypeChanges:
+			cliEvent.OpenapiDiffReportDigest = &digest
 		}
 	}
 
