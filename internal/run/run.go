@@ -56,6 +56,7 @@ type Workflow struct {
 	Debug            bool
 	ShouldCompile    bool
 	ForceGeneration  bool
+	RegistryTags     []string
 
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
@@ -79,6 +80,7 @@ func NewWorkflow(
 	name, target, source, repo string,
 	repoSubDirs, installationURLs map[string]string,
 	debug, shouldCompile, forceGeneration bool,
+	registryTags []string,
 ) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil || wf == nil {
@@ -108,6 +110,7 @@ func NewWorkflow(
 		InstallationURLs: installationURLs,
 		Debug:            debug,
 		ShouldCompile:    shouldCompile,
+		RegistryTags:     registryTags,
 		workflow:         *wf,
 		projectDir:       projectDir,
 		RootStep:         rootStep,
@@ -696,6 +699,11 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		namespaceName = name
 	}
 
+	tags, err := w.getRegistryTags(ctx, sourceID)
+	if err != nil {
+		return err
+	}
+
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
 	memfs := fsextras.NewMemFS()
 
@@ -739,7 +747,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-		Tags:         []string{"latest"},
+		Tags:         tags,
 		Reproducible: true,
 		Annotations:  annotations,
 	})
@@ -755,8 +763,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
-
-	tags := []string{"latest"} // TODO: read from workflow.yaml
 
 	registryStep.NewSubstep("Storing OpenAPI Revision")
 	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
@@ -802,6 +808,35 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	return nil
+}
+
+func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {
+	tags := []string{"latest"}
+	for _, tag := range w.RegistryTags {
+		var parsedTag string
+		tag = strings.Trim(tag, " ")
+		if len(tag) > 0 {
+			// TODO: We could add more tag validation here
+			if strings.Count(tag, ":") > 1 {
+				return tags, fmt.Errorf("invalid tag format: %s", tag)
+			}
+
+			if strings.Contains(tag, ":") {
+				tagSplit := strings.Split(tag, ":")
+				if sourceID == tagSplit[0] {
+					parsedTag = strings.Trim(tagSplit[1], " ")
+				}
+			} else {
+				parsedTag = tag
+			}
+
+			if len(parsedTag) > 0 && !slices.Contains(tags, parsedTag) {
+				tags = append(tags, parsedTag)
+			}
+		}
+	}
+
+	return tags, nil
 }
 
 func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {

@@ -256,6 +256,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		false,
 		!flags.SkipCompile,
 		false,
+		[]string{},
 	)
 	if err != nil {
 		return err
