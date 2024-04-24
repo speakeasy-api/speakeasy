@@ -514,9 +514,13 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 		}
 	}()
 
+	orgSlug := auth.GetOrgSlugFromContext(ctx)
+	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+
 	oldRegistryLocation := ""
 	if targetLock.SourceRevisionDigest != "" && targetLock.SourceNamespace != "" {
-		oldRegistryLocation = fmt.Sprintf("%s/%s@%s", "registry.speakeasyapi.dev", targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
+		oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+			targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
 	} else {
 		changesStep.Skip("no previous revision found")
 		return
@@ -535,20 +539,6 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 	c, err := changes.GetChanges(oldDocPath.LocalFilePath, newDocPath)
 	if err != nil {
 		return r, fmt.Errorf("error computing changes: %w", err)
-	}
-
-	cliEvent := events.GetTelemetryEventFromContext(ctx)
-	if cliEvent != nil {
-		summary, err := c.GetSummary()
-		if err != nil {
-			// cliEvent.OpenapiDiffBumpType = (*shared.OpenapiDiffBumpType)(&summary.Bump)
-			// cliEvent.OpenapiDiffBreakingChangesCount = &summary.Text
-			// TODO!!
-			// This is is also not the right place to do this!
-			cliEvent.OpenapiDiffBumpType = shared.OpenapiDiffBumpTypeMajor.ToPointer()
-			count := int64(len(summary.Table))
-			cliEvent.OpenapiDiffBreakingChangesCount = &count
-		}
 	}
 
 	changesStep.NewSubstep("Uploading changes report")

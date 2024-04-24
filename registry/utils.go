@@ -38,5 +38,5 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return nil, fmt.Errorf("workspace mismatch: %s != %s", registryBreakdown.WorkspaceSlug, workspaceSlug)
 	}
 
-	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceID, registryBreakdown.Reference, outPath)
+	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceName, registryBreakdown.Reference, outPath)
 }
