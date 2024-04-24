@@ -5,14 +5,15 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/stoewer/go-strcase"
-	"os"
-	"path/filepath"
 )
 
 type ReportResult struct {
@@ -51,7 +52,12 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
 	if cliEvent != nil {
-		cliEvent.OpenapiDiffReportDigest = &digest
+		switch reportType {
+		case shared.TypeLinting:
+			cliEvent.OpenapiDiffReportDigest = &digest
+		case shared.TypeChanges:
+			cliEvent.LintReportDigest = &digest
+		}
 	}
 
 	url := uploadRes.UploadedReport.GetURL()

@@ -1,13 +1,15 @@
 package changes
 
 import (
+	"context"
 	"errors"
-	changesModel "github.com/pb33f/openapi-changes/model"
-	"github.com/speakeasy-api/speakeasy-core/changes"
-	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
 	"os"
 	"strings"
 	"time"
+
+	changesModel "github.com/pb33f/openapi-changes/model"
+	"github.com/speakeasy-api/speakeasy-core/changes"
+	html_report "github.com/speakeasy-api/speakeasy-core/changes/html-report"
 )
 
 type Changes []*changesModel.Commit
@@ -26,8 +28,8 @@ var (
 	None  VersionBump = "none"
 )
 
-func GetChanges(oldLocation, newLocation string) (Changes, error) {
-	c, errs := changes.GetChanges(oldLocation, newLocation, changes.SummaryOptions{})
+func GetChanges(ctx context.Context, oldLocation, newLocation string) (Changes, error) {
+	c, errs := changes.GetChanges(ctx, oldLocation, newLocation, changes.SummaryOptions{})
 	return c, errors.Join(errs...)
 }
 
