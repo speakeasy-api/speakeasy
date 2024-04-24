@@ -811,6 +811,7 @@ func (w *Workflow) getBundleTags(ctx context.Context, sourceID string) ([]string
 	for _, tag := range w.BundleTags {
 		tag = strings.Trim(tag, " ")
 		if len(tag) > 0 {
+			// TODO: We could add more tag validation here
 			if strings.Count(tag, ":") > 1 {
 				return tags, fmt.Errorf("invalid tag format: %s", tag)
 			}
