@@ -695,6 +695,11 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		namespaceName = name
 	}
 
+	tags, err := w.getBundleTags(ctx, sourceID)
+	if err != nil {
+		return err
+	}
+
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
 	memfs := fsextras.NewMemFS()
 
@@ -738,7 +743,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-		Tags:         []string{"latest"},
+		Tags:         tags,
 		Reproducible: true,
 		Annotations:  annotations,
 	})
@@ -754,8 +759,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
-
-	tags := []string{"latest"} // TODO: read from workflow.yaml
 
 	registryStep.NewSubstep("Storing OpenAPI Revision")
 	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
@@ -801,6 +804,30 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	return nil
+}
+
+func (w *Workflow) getBundleTags(ctx context.Context, sourceID string) ([]string, error) {
+	tags := []string{"latest"}
+	for _, tag := range w.BundleTags {
+		tag = strings.Trim(tag, " ")
+		if len(tag) > 0 {
+			if strings.Count(tag, ":") > 1 {
+				return tags, fmt.Errorf("invalid tag format: %s", tag)
+			}
+
+			if strings.Contains(tag, ":") {
+				tagSplit := strings.Split(tag, ":")
+				tagVal := strings.Trim(tagSplit[1], " ")
+				if len(tagVal) > 0 && sourceID == tagSplit[0] {
+					tags = append(tags, tagVal)
+				}
+			} else {
+				tags = append(tags, tag)
+			}
+		}
+	}
+
+	return tags, nil
 }
 
 func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
