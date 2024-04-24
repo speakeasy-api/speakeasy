@@ -1,6 +1,7 @@
 package run
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -13,7 +14,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -27,6 +27,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 
+  "github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -44,6 +45,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
+
 
 type Workflow struct {
 	Target           string
@@ -179,8 +181,9 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display error logs if the workflow failed
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
-
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
+		filteredLogs := filterLogs(ctx, &logs)
+		ask.OfferChatSessionOnError(ctx, filteredLogs)
 	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
 		s := strings.Join(criticalWarns, "\n")
 		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
@@ -245,7 +248,6 @@ func (w *Workflow) Run(ctx context.Context) error {
 	if err := workflow.SaveLockfile(w.projectDir, w.lockfile); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -465,10 +467,12 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		if err := overlayDocument(ctx, currentDocument, overlaySchemas, overlayLocation); err != nil {
 			return "", nil, err
 		}
+
+		currentDocument = overlayLocation
 	}
 
 	if !isSingleRegistrySource(source) {
-		err = w.snapshotSource(ctx, rootStep, sourceID, currentDocument)
+		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
@@ -501,8 +505,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 }
 
 func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+	if !registry.IsRegistryEnabled(ctx) {
 		return
 	}
 
@@ -658,10 +661,39 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 	return res, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, namespaceName string, documentPath string) error {
-	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-	if !hasSchemaRegistry {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) error {
+	if !registry.IsRegistryEnabled(ctx) {
 		return nil
+	}
+
+	namespaceName := sourceID
+	if source.Publish != nil {
+		orgSlug, workspaceSlug, name, err := source.Publish.ParseRegistryLocation()
+		if err != nil {
+			if env.IsGithubAction() {
+				return fmt.Errorf("error parsing registry location %s: %w", string(source.Publish.Location), err)
+			}
+
+			log.From(ctx).Warnf("error parsing registry location %s: %w", string(source.Publish.Location), zap.Error(err))
+		}
+
+		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
+			if env.IsGithubAction() {
+				return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+			}
+
+			log.From(ctx).Warnf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+		}
+
+		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+			if env.IsGithubAction() {
+				return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+			}
+
+			log.From(ctx).Warnf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+		}
+
+		namespaceName = name
 	}
 
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
@@ -857,8 +889,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *workflowTracking.WorkflowStep) (string, error) {
 	if d.IsSpeakeasyRegistry() {
 		step.NewSubstep("Downloading registry bundle")
-		hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
-		if !hasSchemaRegistry {
+		if !registry.IsRegistryEnabled(ctx) {
 			return "", fmt.Errorf("schema registry is not enabled for this workspace")
 		}
 
@@ -1020,4 +1051,21 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(overlayFile string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
+}
+
+func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
+	logger := log.From(ctx)
+	var filteredLogs strings.Builder
+	scanner := bufio.NewScanner(logBuffer)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "ERROR") || strings.Contains(line, "WARN") {
+			filteredLogs.WriteString(line + "\n")
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Errorf("Failed to format question: %s", err)
+	}
+
+	return filteredLogs.String()
 }

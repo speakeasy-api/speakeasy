@@ -1,33 +1,23 @@
 package prompts
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/registry"
 )
 
 func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLocation, authHeader *string) []*huh.Group {
 	var initialGroup []huh.Field
-
-	if sourceName == nil || *sourceName == "" {
-		initialGroup = append(initialGroup,
-			charm_internal.NewInput().
-				Title("What is a good name for this source?").
-				Validate(func(s string) error {
-					if _, ok := currentWorkflow.Sources[s]; ok {
-						return fmt.Errorf("a source with the name %s already exists", s)
-					}
-					return nil
-				}).
-				Value(sourceName),
-		)
-	}
 
 	if fileLocation == nil || *fileLocation == "" {
 		initialGroup = append(initialGroup,
@@ -39,6 +29,28 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 					FileExtensions: charm_internal.OpenAPIFileExtensions,
 				})).
 				Value(fileLocation),
+		)
+	}
+
+	if sourceName == nil || *sourceName == "" {
+		initialGroup = append(initialGroup,
+			charm_internal.NewInput().
+				Title("What is a good name for this source document?").
+				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("a source name must be provided")
+					}
+
+					if strings.Contains(s, " ") {
+						return fmt.Errorf("a source name must not contain spaces")
+					}
+
+					if _, ok := currentWorkflow.Sources[s]; ok {
+						return fmt.Errorf("a source with the name %s already exists", s)
+					}
+					return nil
+				}).
+				Value(sourceName),
 		)
 	}
 
@@ -112,12 +124,9 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *stri
 	return groups
 }
 
-func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
+func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	source := &workflow.Source{}
 	var sourceName, fileLocation, authHeader string
-	if len(quickstart.WorkflowFile.Sources) == 0 {
-		sourceName = "my-first-source"
-	}
 
 	if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
@@ -162,6 +171,14 @@ func sourceBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
 	}
 
 	source.Inputs = append(source.Inputs, *document)
+
+	if registry.IsRegistryEnabled(ctx) && auth.GetOrgSlugFromContext(ctx) != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
+		publishing := &workflow.SourcePublishing{}
+		if err := publishing.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
+			return nil, err
+		}
+		source.Publish = publishing
+	}
 
 	if err := source.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to validate source")

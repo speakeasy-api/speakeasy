@@ -7,7 +7,12 @@ import (
 	"path/filepath"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+<<<<<<< HEAD
 	core "github.com/speakeasy-api/speakeasy-core/auth"
+=======
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/auth"
+>>>>>>> 54f44f6cb65ffd499fa4b10534ae002c903fe56c
 	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
@@ -39,4 +44,9 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 	}
 
 	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceName, registryBreakdown.Reference, outPath)
+}
+
+func IsRegistryEnabled(ctx context.Context) bool {
+	hasSchemaRegistry, _ := auth.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	return hasSchemaRegistry
 }

@@ -71,6 +71,8 @@ func Init(version, artifactArch string) {
 	apiInit()
 	languageServerInit(version)
 	bumpInit()
+
+	addCommand(rootCmd, AskCmd)
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {

@@ -1,9 +1,11 @@
 package prompts
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
@@ -33,8 +35,16 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 			charm.NewInput().
 				Title("What is a good name for this target?").
 				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("a target name must be provided")
+					}
+
+					if strings.Contains(s, " ") {
+						return fmt.Errorf("a target name must not contain spaces")
+					}
+
 					if _, ok := currentWorkflow.Targets[s]; ok && s != originalTargetName {
-						return fmt.Errorf("a source with the name %s already exists", s)
+						return fmt.Errorf("a target with the name %s already exists", s)
 					}
 					return nil
 				}).
@@ -72,7 +82,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	return groups
 }
 
-func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
+func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	var targetName string
 	if len(quickstart.WorkflowFile.Targets) == 0 {
 		targetName = "my-first-target"
