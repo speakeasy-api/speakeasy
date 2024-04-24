@@ -669,7 +669,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return nil
 	}
 
-	namespaceName := sourceID
+	namespaceName := strcase.ToKebab(sourceID)
 	if source.Publish != nil {
 		orgSlug, workspaceSlug, name, err := source.Publish.ParseRegistryLocation()
 		if err != nil {
@@ -800,7 +800,20 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		cliEvent.SourceBlobDigest = blobDigest
 	}
 
-	w.lockfile.Sources[namespaceName] = workflow.SourceLock{
+	// automatically migrate speakeasy registry users to have a source publishing location
+	if source.Publish == nil {
+		publishing := &workflow.SourcePublishing{}
+		if err := publishing.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), namespaceName)); err != nil {
+			return err
+		}
+		source.Publish = publishing
+		w.workflow.Sources[sourceID] = source
+		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
+			return err
+		}
+	}
+
+	w.lockfile.Sources[sourceID] = workflow.SourceLock{
 		SourceNamespace:      namespaceName,
 		SourceRevisionDigest: *manifestDigest,
 		SourceBlobDigest:     *blobDigest,
