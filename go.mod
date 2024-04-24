@@ -2,9 +2,6 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.21.5
 
-// point to local core
-replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
-
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.18.0
