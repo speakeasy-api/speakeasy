@@ -517,9 +517,13 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 		}
 	}()
 
+	orgSlug := auth.GetOrgSlugFromContext(ctx)
+	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+
 	oldRegistryLocation := ""
 	if targetLock.SourceRevisionDigest != "" && targetLock.SourceNamespace != "" {
-		oldRegistryLocation = fmt.Sprintf("%s/%s@%s", "registry.speakeasyapi.dev", targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
+		oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+			targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
 	} else {
 		changesStep.Skip("no previous revision found")
 		return
