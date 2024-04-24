@@ -809,7 +809,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 func (w *Workflow) getBundleTags(ctx context.Context, sourceID string) ([]string, error) {
 	tags := []string{"latest"}
 	for _, tag := range w.RegistryTags {
-		var tagVal string
+		var parsedTag string
 		tag = strings.Trim(tag, " ")
 		if len(tag) > 0 {
 			// TODO: We could add more tag validation here
@@ -820,14 +820,14 @@ func (w *Workflow) getBundleTags(ctx context.Context, sourceID string) ([]string
 			if strings.Contains(tag, ":") {
 				tagSplit := strings.Split(tag, ":")
 				if sourceID == tagSplit[0] {
-					tagVal = strings.Trim(tagSplit[1], " ")
+					parsedTag = strings.Trim(tagSplit[1], " ")
 				}
 			} else {
-				tagVal = tag
+				parsedTag = tag
 			}
 
-			if len(tagVal) > 0 && !slices.Contains(tags, tagVal) {
-				tags = append(tags, tagVal)
+			if len(parsedTag) > 0 && !slices.Contains(tags, parsedTag) {
+				tags = append(tags, parsedTag)
 			}
 		}
 	}
