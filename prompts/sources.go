@@ -40,6 +40,11 @@ func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLo
 					if s == "" {
 						return fmt.Errorf("a source name must be provided")
 					}
+
+					if strings.Contains(s, " ") {
+						return fmt.Errorf("a source name must not contain spaces")
+					}
+
 					if _, ok := currentWorkflow.Sources[s]; ok {
 						return fmt.Errorf("a source with the name %s already exists", s)
 					}
