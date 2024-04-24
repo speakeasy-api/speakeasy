@@ -31,7 +31,7 @@ type RunFlags struct {
 	Force            bool              `json:"force"`
 	Output           string            `json:"output"`
 	Pinned           bool              `json:"pinned"`
-	BundleTag        []string          `json:"bundle-tag"`
+	RegistryTags     []string          `json:"registry-tags"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -112,7 +112,7 @@ A full workflow is capable of running the following steps:
 			Hidden:      true,
 		},
 		flag.StringSliceFlag{
-			Name:        "bundle-tag",
+			Name:        "registry-tags",
 			Description: "tags to apply to the speakeasy registry bundle",
 		},
 	},
@@ -233,7 +233,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		flags.Debug,
 		!flags.SkipCompile,
 		flags.Force,
-		flags.BundleTag,
+		flags.RegistryTags,
 	)
 	if err != nil {
 		return err
@@ -260,7 +260,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		flags.Debug,
 		!flags.SkipCompile,
 		flags.Force,
-		flags.BundleTag,
+		flags.RegistryTags,
 	)
 	if err != nil {
 		return err

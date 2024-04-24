@@ -56,7 +56,7 @@ type Workflow struct {
 	Debug            bool
 	ShouldCompile    bool
 	ForceGeneration  bool
-	BundleTags       []string
+	RegistryTags     []string
 
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
@@ -80,7 +80,7 @@ func NewWorkflow(
 	name, target, source, repo string,
 	repoSubDirs, installationURLs map[string]string,
 	debug, shouldCompile, forceGeneration bool,
-	bundleTags []string,
+	registryTags []string,
 ) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil || wf == nil {
@@ -110,7 +110,7 @@ func NewWorkflow(
 		InstallationURLs: installationURLs,
 		Debug:            debug,
 		ShouldCompile:    shouldCompile,
-		BundleTags:       bundleTags,
+		RegistryTags:     registryTags,
 		workflow:         *wf,
 		projectDir:       projectDir,
 		RootStep:         rootStep,
@@ -808,7 +808,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 
 func (w *Workflow) getBundleTags(ctx context.Context, sourceID string) ([]string, error) {
 	tags := []string{"latest"}
-	for _, tag := range w.BundleTags {
+	for _, tag := range w.RegistryTags {
 		tag = strings.Trim(tag, " ")
 		if len(tag) > 0 {
 			// TODO: We could add more tag validation here
