@@ -814,7 +814,10 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 	tags := []string{"latest"}
 	for _, tag := range w.RegistryTags {
 		var parsedTag string
-		tag = strings.Trim(tag, " ")
+		// Unclear why this happens but when a flag of type stringSlice is provided from our github runner environment we see these trailing [  ] appear on value read
+		// This happens even though the arg set itself is formatted correctly. This is a temporary workaround that will not cause side-effects.
+		tag = strings.Trim(tag, "[")
+		tag = strings.Trim(tag, "]")
 		if len(tag) > 0 {
 			// TODO: We could add more tag validation here
 			if strings.Count(tag, ":") > 1 {
