@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -27,7 +28,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 
-  "github.com/speakeasy-api/speakeasy/internal/ask"
+	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -46,7 +47,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
-
 type Workflow struct {
 	Target           string
 	Source           string
@@ -56,6 +56,7 @@ type Workflow struct {
 	Debug            bool
 	ShouldCompile    bool
 	ForceGeneration  bool
+	BundleTags       []string
 
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
@@ -79,6 +80,7 @@ func NewWorkflow(
 	name, target, source, repo string,
 	repoSubDirs, installationURLs map[string]string,
 	debug, shouldCompile, forceGeneration bool,
+	bundleTags []string,
 ) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil || wf == nil {
@@ -108,6 +110,7 @@ func NewWorkflow(
 		InstallationURLs: installationURLs,
 		Debug:            debug,
 		ShouldCompile:    shouldCompile,
+		BundleTags:       bundleTags,
 		workflow:         *wf,
 		projectDir:       projectDir,
 		RootStep:         rootStep,
