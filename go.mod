@@ -23,9 +23,9 @@ require (
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.312.1
 	github.com/speakeasy-api/openapi-overlay v0.5.0
-	github.com/speakeasy-api/sdk-gen-config v1.11.7
+	github.com/speakeasy-api/sdk-gen-config v1.12.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.9
-	github.com/speakeasy-api/speakeasy-core v0.7.9
+	github.com/speakeasy-api/speakeasy-core v0.7.10
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0
@@ -40,6 +40,7 @@ require (
 )
 
 require (
+	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/stoewer/go-strcase v1.3.0
 )
@@ -131,7 +132,6 @@ require (
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/inkeep/ai-api-go v0.3.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

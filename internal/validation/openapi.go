@@ -3,9 +3,10 @@ package validation
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"io"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/reports"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -321,7 +322,6 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		cliEvent.LintReportInfoCount = &infoCount
 		cliEvent.LintReportWarningCount = &warnCount
 		cliEvent.LintReportErrorCount = &errCount
-		cliEvent.LintReportDigest = &report.Digest
 	}
 
 	return &ValidationResult{

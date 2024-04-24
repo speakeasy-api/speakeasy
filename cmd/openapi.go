@@ -184,7 +184,7 @@ func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 		defer os.RemoveAll(workflow.GetTempDir())
 	}
 
-	changes, err := changes.GetChanges(oldSchema, newSchema)
+	changes, err := changes.GetChanges(ctx, oldSchema, newSchema)
 	if err != nil {
 		return err
 	}
