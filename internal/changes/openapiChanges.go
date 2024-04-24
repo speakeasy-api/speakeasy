@@ -35,7 +35,7 @@ func GetChanges(ctx context.Context, oldLocation, newLocation string) (Changes, 
 
 func (c Changes) GetHTMLReport() []byte {
 	generator := html_report.NewHTMLReport(false, time.Now(), c)
-	return generator.GenerateReport(false, false, false)
+	return generator.GenerateReport(false)
 }
 
 func (c Changes) WriteHTMLReport(out string) error {
