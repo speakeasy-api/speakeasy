@@ -695,7 +695,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		namespaceName = name
 	}
 
-	tags, err := w.getBundleTags(ctx, sourceID)
+	tags, err := w.getRegistryTags(ctx, sourceID)
 	if err != nil {
 		return err
 	}
@@ -806,7 +806,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	return nil
 }
 
-func (w *Workflow) getBundleTags(ctx context.Context, sourceID string) ([]string, error) {
+func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {
 	tags := []string{"latest"}
 	for _, tag := range w.RegistryTags {
 		var parsedTag string
