@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -27,7 +28,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 
-  "github.com/speakeasy-api/speakeasy/internal/ask"
+	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -45,7 +46,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
-
 
 type Workflow struct {
 	Target           string
@@ -539,7 +539,7 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 
 	changesStep.NewSubstep("Computing changes")
 
-	c, err := changes.GetChanges(oldDocPath.LocalFilePath, newDocPath)
+	c, err := changes.GetChanges(ctx, oldDocPath.LocalFilePath, newDocPath)
 	if err != nil {
 		return r, fmt.Errorf("error computing changes: %w", err)
 	}
