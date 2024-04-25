@@ -23,7 +23,7 @@ require (
 	github.com/speakeasy-api/huh v0.0.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.314.0
 	github.com/speakeasy-api/openapi-overlay v0.5.0
-	github.com/speakeasy-api/sdk-gen-config v1.12.0
+	github.com/speakeasy-api/sdk-gen-config v1.13.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.5.9
 	github.com/speakeasy-api/speakeasy-core v0.8.0
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
