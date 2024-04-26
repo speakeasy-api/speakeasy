@@ -38,6 +38,7 @@ var SupportedPublishingTargets = []string{
 	"ruby",
 	"php",
 	"java",
+	"go",
 }
 
 func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow) (*config.GenerateWorkflow, error) {
