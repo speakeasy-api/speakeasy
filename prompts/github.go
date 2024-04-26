@@ -530,6 +530,12 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 func defaultPublishingFile() *config.PublishWorkflow {
 	return &config.PublishWorkflow{
 		Name: "Publish",
+		Permissions: config.Permissions{
+			Checks:       config.GithubWritePermission,
+			Statuses:     config.GithubWritePermission,
+			Contents:     config.GithubWritePermission,
+			PullRequests: config.GithubWritePermission,
+		},
 		On: config.PublishOn{
 			Push: config.Push{
 				Paths: []string{
