@@ -173,11 +173,11 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	source.Inputs = append(source.Inputs, *document)
 
 	if registry.IsRegistryEnabled(ctx) && auth.GetOrgSlugFromContext(ctx) != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
-		publishing := &workflow.SourcePublishing{}
-		if err := publishing.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
+		registryEntry := &workflow.SourceRegistry{}
+		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
 			return nil, err
 		}
-		source.Publish = publishing
+		source.Registry = registryEntry
 	}
 
 	if err := source.Validate(); err != nil {
