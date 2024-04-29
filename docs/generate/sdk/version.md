@@ -29,4 +29,4 @@ speakeasy generate sdk version [flags]
 
 ### Parent Command
 
-* [speakeasy generate sdk](README.md)	 - Generating Client SDKs from OpenAPI specs (csharp, go, java, php, python, ruby, swift, terraform, typescript, unity)
+* [speakeasy generate sdk](README.md)	 - Generating Client SDKs from OpenAPI specs (csharp, go, java, php, postman, python, ruby, swift, terraform, typescript, unity)
