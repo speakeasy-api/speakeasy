@@ -36,10 +36,9 @@ speakeasy [flags]
 * [speakeasy generate](generate/README.md)	 - One off Generations for client SDKs, docsites, and more
 * [speakeasy lint](lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
-* [speakeasy openapi](openapi/README.md)	 - Validate and compare OpenAPI documents
+* [speakeasy openapi](openapi/README.md)	 - Utilities for working with OpenAPI documents
 * [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy quickstart](quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
 * [speakeasy run](run.md)	 - generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file
 * [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
-* [speakeasy transform](transform/README.md)	 - Transform an OpenAPI spec using a well-defined function
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
