@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
+	stdErrors "errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -22,6 +22,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
+	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
@@ -46,6 +47,15 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
+
+type LintingError struct {
+	Err      error
+	Document string
+}
+
+func (e *LintingError) Error() string {
+	return fmt.Sprintf("linting failed: %s - %w", e.Document, e.Err)
+}
 
 type Workflow struct {
 	Target           string
@@ -184,7 +194,16 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display error logs if the workflow failed
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
-		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
+
+		output := strings.TrimSpace(logs.String())
+
+		var lintErr *LintingError
+		if errors.As(runErr, &lintErr) {
+			output += fmt.Sprintf("\nRun `speakeasy lint openapi -s %s` to lint the OpenAPI document in isolation for ease of debugging.", lintErr.Document)
+		}
+
+		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", output, styles.Colors.Grey))
+
 		filteredLogs := filterLogs(ctx, &logs)
 		ask.OfferChatSessionOnError(ctx, filteredLogs)
 	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
@@ -198,7 +217,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		_ = w.printTargetSuccessMessage(logger, endDuration, len(criticalWarns) > 0)
 	}
 
-	return errors.Join(err, runErr)
+	return stdErrors.Join(err, runErr)
 }
 
 func (w *Workflow) Run(ctx context.Context) error {
@@ -494,7 +513,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
 	if err != nil {
-		return "", nil, err
+		return "", nil, &LintingError{Err: err, Document: currentDocument}
 	}
 
 	rootStep.SucceedWorkflow()
