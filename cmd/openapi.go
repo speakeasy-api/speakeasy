@@ -31,7 +31,7 @@ var openapiCmd = &model.CommandGroup{
 var transformCmd = &model.CommandGroup{
 	Usage:    "transform",
 	Short:    "Transform an OpenAPI spec using a well-defined function",
-	Commands: []model.Command{removeUnusedCmd},
+	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd},
 }
 
 type removeUnusedFlags struct {
@@ -59,6 +59,37 @@ var removeUnusedCmd = &model.ExecutableCommand[removeUnusedFlags]{
 	},
 }
 
+type filterOperationsFlags struct {
+	Schema       string   `json:"schema"`
+	Out          string   `json:"out"`
+	OperationIDs []string `json:"operations"`
+}
+
+var filterOperationsCmd = &model.ExecutableCommand[filterOperationsFlags]{
+	Usage: "filter-operations",
+	Short: "Given an OpenAPI file, filter down to just the given set of operations",
+	Run:   runFilterOperations,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "the schema to transform",
+			Required:                   true,
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
+		},
+		flag.StringFlag{
+			Name:        "out",
+			Shorthand:   "o",
+			Description: "write directly to a file instead of stdout",
+		},
+		flag.StringSliceFlag{
+			Name:        "operations",
+			Description: "list of operation IDs to retain",
+			Required:    true,
+		},
+	},
+}
+
 func runRemoveUnused(ctx context.Context, flags removeUnusedFlags) error {
 	out := os.Stdout
 	if flags.Out != "" {
@@ -71,6 +102,20 @@ func runRemoveUnused(ctx context.Context, flags removeUnusedFlags) error {
 	}
 
 	return transform.RemoveUnused(ctx, flags.Schema, out)
+}
+
+func runFilterOperations(ctx context.Context, flags filterOperationsFlags) error {
+	out := os.Stdout
+	if flags.Out != "" {
+		file, err := os.Create(flags.Out)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		out = file
+	}
+
+	return transform.FilterOperations(ctx, flags.Schema, flags.OperationIDs, out)
 }
 
 var openapiValidateCmd = &model.ExecutableCommand[LintOpenapiFlags]{

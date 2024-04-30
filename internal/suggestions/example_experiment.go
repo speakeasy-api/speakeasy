@@ -318,7 +318,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 		v3Model.Model.Paths.PathItems = orderedmap.New[string, *v3.PathItem]()
 		v3Model.Model.Paths.PathItems.Set(pair.Key(), pair.Value())
 		// eliminate all the now-orphaned schemas
-		doc, v3Model, err = transform.RemoveOrphans(doc, v3Model)
+		doc, v3Model, err = transform.RemoveOrphans(doc, v3Model, nil)
 		if err != nil {
 			return nil, err
 		}

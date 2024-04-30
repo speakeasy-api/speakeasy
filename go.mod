@@ -220,3 +220,5 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
+
+replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
