@@ -32,4 +32,4 @@ speakeasy openapi diff [flags]
 
 ### Parent Command
 
-* [speakeasy openapi](README.md)	 - Validate and compare OpenAPI documents
+* [speakeasy openapi](README.md)	 - Utilities for working with OpenAPI documents

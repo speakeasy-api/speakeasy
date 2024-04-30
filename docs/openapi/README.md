@@ -2,11 +2,11 @@
 `speakeasy openapi`  
 
 
-Validate and compare OpenAPI documents  
+Utilities for working with OpenAPI documents  
 
 ## Details
 
-The "openapi" command provides a set of commands for validating and comparing OpenAPI docs.
+The "openapi" command provides a set of commands for visualizing, linting and transforming OpenAPI documents.
 
 ## Usage
 
@@ -32,5 +32,5 @@ speakeasy openapi [flags]
 ### Sub Commands
 
 * [speakeasy openapi diff](diff.md)	 - Visualize the changes between two OpenAPI documents
+* [speakeasy openapi lint](lint.md)	 - Lint an OpenAPI document
 * [speakeasy openapi transform](transform/README.md)	 - Transform an OpenAPI spec using a well-defined function
-* [speakeasy openapi validate](validate.md)	 - Lint an OpenAPI document
