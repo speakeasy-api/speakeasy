@@ -214,5 +214,19 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 }
 
 func isHidden(cmd *cobra.Command) bool {
-	return cmd.Hidden || slices.Contains(HiddenCommands, cmd.Name())
+	if cmd.Hidden {
+		return true
+	}
+
+	qualifiedName := getFullyQualifiedName(cmd)
+
+	return slices.Contains(HiddenCommands, qualifiedName)
+}
+
+func getFullyQualifiedName(cmd *cobra.Command) string {
+	if cmd.HasParent() && cmd.Parent() != cmd.Root() {
+		return getFullyQualifiedName(cmd.Parent()) + "." + cmd.Name()
+	}
+
+	return cmd.Name()
 }
