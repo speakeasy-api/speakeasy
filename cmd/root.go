@@ -3,10 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/speakeasy/cmd/generate"
 
@@ -76,7 +77,6 @@ func Init(version, artifactArch string) {
 	authInit()
 	mergeInit()
 	addCommand(rootCmd, overlayCmd)
-	addCommand(rootCmd, transformCmd)
 	suggestInit()
 	updateInit(version, artifactArch)
 	proxyInit()
