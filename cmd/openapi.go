@@ -63,6 +63,7 @@ type filterOperationsFlags struct {
 	Schema       string   `json:"schema"`
 	Out          string   `json:"out"`
 	OperationIDs []string `json:"operations"`
+	Exclude      bool     `json:"exclude"`
 }
 
 var filterOperationsCmd = &model.ExecutableCommand[filterOperationsFlags]{
@@ -84,8 +85,14 @@ var filterOperationsCmd = &model.ExecutableCommand[filterOperationsFlags]{
 		},
 		flag.StringSliceFlag{
 			Name:        "operations",
-			Description: "list of operation IDs to retain",
+			Description: "list of operation IDs to include (or exclude)",
 			Required:    true,
+		},
+		flag.BooleanFlag{
+			Name:         "exclude",
+			Shorthand:    "x",
+			Description:  "exclude the given operationIDs, rather than including them",
+			DefaultValue: false,
 		},
 	},
 }
@@ -115,7 +122,7 @@ func runFilterOperations(ctx context.Context, flags filterOperationsFlags) error
 		out = file
 	}
 
-	return transform.FilterOperations(ctx, flags.Schema, flags.OperationIDs, out)
+	return transform.FilterOperations(ctx, flags.Schema, flags.OperationIDs, !flags.Exclude, out)
 }
 
 var openapiValidateCmd = &model.ExecutableCommand[LintOpenapiFlags]{

@@ -10,18 +10,24 @@ import (
 	"slices"
 )
 
-func FilterOperations(ctx context.Context, schemaPath string, operationIDs []string, w io.Writer) error {
-	return transformer[[]string]{
+type filterOpsArgs struct {
+	ops     []string
+	include bool
+}
+
+func FilterOperations(ctx context.Context, schemaPath string, includeOps []string, include bool, w io.Writer) error {
+	return transformer[filterOpsArgs]{
 		schemaPath:  schemaPath,
 		transformFn: filterOperations,
 		w:           w,
-		args:        operationIDs,
+		args:        filterOpsArgs{ops: includeOps, include: include},
 	}.Do(ctx)
-
 }
 
-func filterOperations(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], operationIDs []string) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+func filterOperations(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args filterOpsArgs) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	pathItems := model.Model.Paths.PathItems
+	var pathsToDelete []string
+
 	for pathPair := orderedmap.First(pathItems); pathPair != nil; pathPair = pathPair.Next() {
 		path := pathPair.Key()
 		pathVal := pathPair.Value()
@@ -32,11 +38,18 @@ func filterOperations(doc libopenapi.Document, model *libopenapi.DocumentModel[v
 			method := operationPair.Key()
 			operation := operationPair.Value()
 			operationID := operation.OperationId
+
 			if operationID == "" {
 				operationID = fmt.Sprintf("%s_%s", method, path)
 			}
-			if !slices.Contains(operationIDs, operationID) {
-				toDelete = append(toDelete, method)
+			if args.include {
+				if !slices.Contains(args.ops, operationID) {
+					toDelete = append(toDelete, method)
+				}
+			} else {
+				if slices.Contains(args.ops, operationID) {
+					toDelete = append(toDelete, method)
+				}
 			}
 		}
 
@@ -46,8 +59,12 @@ func filterOperations(doc libopenapi.Document, model *libopenapi.DocumentModel[v
 		}
 
 		if operations.Len() == 0 {
-			pathItems.Delete(path)
+			pathsToDelete = append(pathsToDelete, path)
 		}
+	}
+
+	for _, path := range pathsToDelete {
+		pathItems.Delete(path)
 	}
 
 	// Do some extra cleanup to remove anything now orphaned
