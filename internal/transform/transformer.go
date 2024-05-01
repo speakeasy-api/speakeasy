@@ -2,17 +2,18 @@ package transform
 
 import (
 	"context"
+	"io"
+
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
-	"io"
 )
 
 type transformer[Args interface{}] struct {
 	schemaPath  string
-	transformFn func(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args Args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error)
+	transformFn func(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args Args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error)
 	w           io.Writer
 	args        Args
 }
@@ -25,7 +26,7 @@ func (t transformer[Args]) Do(ctx context.Context) error {
 	}
 	v3Model, _ := doc.BuildV3Model()
 
-	_, v3Model, err = t.transformFn(doc, v3Model, t.args)
+	_, v3Model, err = t.transformFn(ctx, doc, v3Model, t.args)
 	if err != nil {
 		return err
 	}

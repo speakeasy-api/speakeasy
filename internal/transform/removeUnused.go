@@ -3,12 +3,14 @@ package transform
 import (
 	"context"
 	"fmt"
+	"io"
+	"strings"
+
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"io"
-	"strings"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
 func RemoveUnused(ctx context.Context, schemaPath string, w io.Writer) error {
@@ -19,7 +21,8 @@ func RemoveUnused(ctx context.Context, schemaPath string, w io.Writer) error {
 	}.Do(ctx)
 }
 
-func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+func RemoveOrphans(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+	logger := log.From(ctx)
 	_, doc, model, errs := doc.RenderAndReload()
 	// remove nil errs
 	var nonNilErrs []error
@@ -129,7 +132,7 @@ func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		// remove all schemas that are not referenced
 		if !isReferenced(pair.Key(), "schemas", notUsed) {
 			toDelete = append(toDelete, pair.Key())
-			fmt.Printf("dropped #/components/schemas/%s\n", pair.Key())
+			logger.Printf("dropped #/components/schemas/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
@@ -143,7 +146,7 @@ func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		// remove all responses that are not referenced
 		if !isReferenced(pair.Key(), "responses", notUsed) {
 			toDelete = append(toDelete, pair.Key())
-			fmt.Printf("dropped #/components/responses/%s\n", pair.Key())
+			logger.Printf("dropped #/components/responses/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
@@ -200,7 +203,7 @@ func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		headers.Delete(key)
 	}
 	if anyRemoved {
-		return RemoveOrphans(doc, model, nil)
+		return RemoveOrphans(ctx, doc, model, nil)
 	}
 	return doc, model, nil
 }

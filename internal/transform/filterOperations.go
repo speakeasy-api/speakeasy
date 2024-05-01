@@ -3,11 +3,12 @@ package transform
 import (
 	"context"
 	"fmt"
+	"io"
+	"slices"
+
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"io"
-	"slices"
 )
 
 type filterOpsArgs struct {
@@ -24,7 +25,7 @@ func FilterOperations(ctx context.Context, schemaPath string, includeOps []strin
 	}.Do(ctx)
 }
 
-func filterOperations(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args filterOpsArgs) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+func filterOperations(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args filterOpsArgs) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	pathItems := model.Model.Paths.PathItems
 	var pathsToDelete []string
 
@@ -68,7 +69,7 @@ func filterOperations(doc libopenapi.Document, model *libopenapi.DocumentModel[v
 	}
 
 	// Do some extra cleanup to remove anything now orphaned
-	return RemoveOrphans(doc, model, nil)
+	return RemoveOrphans(ctx, doc, model, nil)
 }
 
 func deleteOperation(pathVal *v3.PathItem, method string) {

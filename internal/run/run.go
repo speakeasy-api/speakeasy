@@ -853,22 +853,23 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		titleMsg = "Generated with Warnings"
 	}
 
+	if w.MinimumViableDocumentReplacement && w.FromQuickstart {
+		msg := styles.RenderWarningMessage(
+			"⚠ Validation issues detected in OpenAPI spec",
+			[]string{
+				"An SDK was generated with a subset of valid APIs.",
+				"✎ File written to `valid-subset.yaml`.",
+				"To fix validation issues use `speakeasy validate openapi`.",
+			}...,
+		)
+		logger.Println(msg + "\n\n")
+	}
+
 	msg := styles.RenderInstructionalMessage(
 		fmt.Sprintf("%s %s", styles.HeavilyEmphasized.Render(title), styles.Success.Render(titleMsg)),
 		additionalLines...,
 	)
 	logger.Println(msg)
-
-	if w.MinimumViableDocumentReplacement && w.FromQuickstart {
-		msg := styles.RenderWarningMessage(
-			"⚠ Your provided OpenAPI spec has some validation issues",
-			[]string{
-				"To get you a working SDK now we have generated a file with only valid API operations - `valid-subset.yaml`",
-				"To fix validation issues in your provided spec use `speakeasy validate openapi`",
-			}...,
-		)
-		logger.Println(msg)
-	}
 
 	if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
 		msg := styles.RenderInfoMessage(
@@ -944,7 +945,7 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 }
 
 func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *sourceResult, error) {
-	parentStep.NewSubstep("Retrying with valid API operations")
+	subStep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -965,7 +966,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	source.Inputs[0].Location = "valid-subset.yaml"
 	w.workflow.Sources[sourceID] = source
 
-	sourcePath, sourceRes, err := w.runSource(ctx, parentStep, sourceID, targetID, cleanUp)
+	sourcePath, sourceRes, err := w.runSource(ctx, subStep, sourceID, targetID, cleanUp)
 	if err != nil {
 		// Cleanup file and cleanup the workflow
 		source.Inputs[0].Location = formerLocation

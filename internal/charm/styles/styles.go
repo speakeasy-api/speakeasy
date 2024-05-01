@@ -110,12 +110,12 @@ func RenderErrorMessage(heading string, additionalLines ...string) string {
 }
 
 func RenderWarningMessage(heading string, additionalLines ...string) string {
-	s := lipgloss.NewStyle().Foreground(Colors.Yellow).Bold(true).Render(utils.CapitalizeFirst(heading))
+	s := Warning.Render(utils.CapitalizeFirst(heading + "\n"))
 	for _, line := range additionalLines {
-		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Yellow).Render(line)
+		s += "\n\n" + Warning.Render(line)
 	}
 
-	return MakeBoxed(s, Colors.Yellow, lipgloss.Center)
+	return MakeBoxed(s, Colors.Yellow, lipgloss.Left)
 }
 
 func RenderInstructionalMessage(heading string, additionalLines ...string) string {
