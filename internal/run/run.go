@@ -26,6 +26,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 
@@ -301,9 +302,17 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
-				rootStep.NewSubstep("Retrying with Minimum Viable Document")
-
+				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, true, sourceRes.LintResult.ValidOperations)
+				if retriedErr != nil {
+					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
+					// return the original error
+					return nil, err
+				}
+				sourcePath = retriedPath
+				sourceRes = retriedRes
 				w.MinimumViableDocumentReplacement = true
+			} else {
+				return nil, err
 			}
 		}
 	} else {
@@ -918,7 +927,12 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 	return d.Location, nil
 }
 
-func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, logger log.Logger, err error) error {
+func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *sourceResult, error) {
+	parentStep.NewSubstep("Retrying with valid API operations")
+	source := w.workflow.Sources[sourceID]
+	// This intended to only be used from quickstart right now, we take a singular input document
+	filteredOperations := transform.FilterOperations(ctx, source.Inputs[0].Location, viableOperations)
+	return nil
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {

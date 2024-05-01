@@ -21,7 +21,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 		targetFields = append(targetFields, huh.NewSelect[string]().
 			Title("Which target would you like to generate?").
 			Description("Choose from this list of supported generation targets. \n").
-			Options(huh.NewOptions(GetSupportedTargets()...)...).
+			Options(GetTargetOptions()...).
 			Value(targetType))
 	}
 

@@ -155,6 +155,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		// This is a hack to satisfy those assumptions, we will overwrite this with a proper
 		// file location when we have written the sample spec to disk when we know the SDK output directory
 		fileLocation = "https://example.com/OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
+		sourceName = "sample-source"
 	} else {
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader)...),
@@ -173,11 +174,11 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	source.Inputs = append(source.Inputs, *document)
 
 	if registry.IsRegistryEnabled(ctx) && auth.GetOrgSlugFromContext(ctx) != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
-		publishing := &workflow.SourcePublishing{}
-		if err := publishing.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
+		registryEntry := &workflow.SourceRegistry{}
+		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
 			return nil, err
 		}
-		source.Publish = publishing
+		source.Registry = registryEntry
 	}
 
 	if err := source.Validate(); err != nil {

@@ -3,16 +3,17 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+
 	"github.com/pb33f/openapi-changes/tui"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/registry"
-	"os"
-	"os/exec"
-	"runtime"
-	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -22,10 +23,10 @@ import (
 
 var openapiCmd = &model.CommandGroup{
 	Usage:          "openapi",
-	Short:          "Validate and compare OpenAPI documents",
-	Long:           `The "openapi" command provides a set of commands for validating and comparing OpenAPI docs.`,
+	Short:          "Utilities for working with OpenAPI documents",
+	Long:           `The "openapi" command provides a set of commands for visualizing, linting and transforming OpenAPI documents.`,
 	InteractiveMsg: "What do you want to do?",
-	Commands:       []model.Command{openapiValidateCmd, openapiDiffCmd, transformCmd},
+	Commands:       []model.Command{openapiLintCmd, openapiDiffCmd, transformCmd},
 }
 
 var transformCmd = &model.CommandGroup{
@@ -127,6 +128,16 @@ func runFilterOperations(ctx context.Context, flags filterOperationsFlags) error
 
 var openapiValidateCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "validate",
+	Short:          lintOpenapiCmd.Short,
+	Long:           lintOpenapiCmd.Long,
+	Run:            lintOpenapiCmd.Run,
+	RunInteractive: lintOpenapiCmd.RunInteractive,
+	Flags:          lintOpenapiCmd.Flags,
+}
+
+var openapiLintCmd = &model.ExecutableCommand[LintOpenapiFlags]{
+	Usage:          "lint",
+	Aliases:        []string{"validate"},
 	Short:          lintOpenapiCmd.Short,
 	Long:           lintOpenapiCmd.Long,
 	Run:            lintOpenapiCmd.Run,
