@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
+	stdErrors "errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -22,6 +22,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
+	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
@@ -47,6 +48,15 @@ import (
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
+type LintingError struct {
+	Err      error
+	Document string
+}
+
+func (e *LintingError) Error() string {
+	return fmt.Sprintf("linting failed: %s - %w", e.Document, e.Err)
+}
+
 type Workflow struct {
 	Target           string
 	Source           string
@@ -58,15 +68,16 @@ type Workflow struct {
 	ForceGeneration  bool
 	RegistryTags     []string
 
-	RootStep           *workflowTracking.WorkflowStep
-	workflow           workflow.Workflow
-	projectDir         string
-	validatedDocuments []string
-	generationAccess   *sdkgen.GenerationAccess
-	FromQuickstart     bool
-	sourceResults      map[string]*sourceResult
-	lockfile           *workflow.LockFile
-	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
+	RootStep                         *workflowTracking.WorkflowStep
+	workflow                         workflow.Workflow
+	projectDir                       string
+	validatedDocuments               []string
+	generationAccess                 *sdkgen.GenerationAccess
+	FromQuickstart                   bool
+	MinimumViableDocumentReplacement bool
+	sourceResults                    map[string]*sourceResult
+	lockfile                         *workflow.LockFile
+	lockfileOld                      *workflow.LockFile // the lockfile as it was before the current run
 }
 
 type sourceResult struct {
@@ -184,7 +195,16 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display error logs if the workflow failed
 	if runErr != nil {
 		logger.Errorf("Workflow failed with error: %s\n", runErr)
-		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", strings.TrimSpace(logs.String()), styles.Colors.Grey))
+
+		output := strings.TrimSpace(logs.String())
+
+		var lintErr *LintingError
+		if errors.As(runErr, &lintErr) {
+			output += fmt.Sprintf("\nRun `speakeasy lint openapi -s %s` to lint the OpenAPI document in isolation for ease of debugging.", lintErr.Document)
+		}
+
+		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", output, styles.Colors.Grey))
+
 		filteredLogs := filterLogs(ctx, &logs)
 		ask.OfferChatSessionOnError(ctx, filteredLogs)
 	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
@@ -198,7 +218,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		_ = w.printTargetSuccessMessage(logger, endDuration, len(criticalWarns) > 0)
 	}
 
-	return errors.Join(err, runErr)
+	return stdErrors.Join(err, runErr)
 }
 
 func (w *Workflow) Run(ctx context.Context) error {
@@ -280,7 +300,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	if source != nil {
 		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
-			return nil, err
+			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
+				rootStep.NewSubstep("Retrying with Minimum Viable Document")
+
+				w.MinimumViableDocumentReplacement = true
+			}
 		}
 	} else {
 		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "", w.projectDir)
@@ -494,7 +518,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
 	if err != nil {
-		return "", nil, err
+		return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 	}
 
 	rootStep.SucceedWorkflow()
@@ -566,84 +590,6 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 	return
 }
 
-func (w *Workflow) publishSource(ctx context.Context, rootStep *workflowTracking.WorkflowStep, sourceID, outputLocation string) error {
-	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
-	memfs := fsextras.NewMemFS()
-
-	rootStep.NewSubstep("Snapshotting OpenAPI Revision")
-
-	_, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
-		DocumentPath: outputLocation,
-	})
-	if err != nil {
-		return fmt.Errorf("error localizing openapi document: %w", err)
-	}
-
-	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-		Tags: []string{"latest"},
-	})
-	if err != nil {
-		return fmt.Errorf("error bundling openapi artifact: %w", err)
-	}
-
-	serverURL := auth.GetServerURL()
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
-
-	reg := strings.TrimPrefix(serverURL, "http://")
-	reg = strings.TrimPrefix(reg, "https://")
-
-	tags := []string{"latest"} // TODO: read from workflow.yaml
-	namespaceName := strcase.ToKebab(sourceID)
-
-	rootStep.NewSubstep("Storing OpenAPI Revision")
-	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
-		Tags:     tags,
-		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
-			Insecure: insecurePublish,
-		}),
-	})
-	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
-		return fmt.Errorf("error publishing openapi bundle to registry: %w", err)
-	}
-
-	rootStep.SucceedWorkflow()
-
-	var manifestDigest *string
-	var blobDigest *string
-	if pushResult.References != nil && len(pushResult.References) > 0 {
-		manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
-		manifestDigest = &manifestDigestStr
-		manifestLayers := pushResult.References[0].Manifest.Layers
-		for _, layer := range manifestLayers {
-			if layer.MediaType == ocicommon.MediaTypeOpenAPIBundleV0 {
-				blobDigestStr := layer.Digest.String()
-				blobDigest = &blobDigestStr
-				break
-			}
-		}
-	}
-
-	cliEvent := events.GetTelemetryEventFromContext(ctx)
-	if cliEvent != nil {
-		cliEvent.SourceRevisionDigest = manifestDigest
-		cliEvent.SourceNamespaceName = &namespaceName
-		cliEvent.SourceBlobDigest = blobDigest
-	}
-
-	w.lockfile.Sources[sourceID] = workflow.SourceLock{
-		SourceNamespace:      namespaceName,
-		SourceRevisionDigest: *manifestDigest,
-		SourceBlobDigest:     *blobDigest,
-		Tags:                 tags,
-	}
-
-	return nil
-}
-
 func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, source, schemaPath, defaultRuleset, projectDir string) (*validation.ValidationResult, error) {
 	step := parentStep.NewSubstep("Validating Document")
 
@@ -657,7 +603,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 		MaxWarns:  1000,
 	}
 
-	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir)
+	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
@@ -669,31 +615,31 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return nil
 	}
 
-	namespaceName := sourceID
-	if source.Publish != nil {
-		orgSlug, workspaceSlug, name, err := source.Publish.ParseRegistryLocation()
+	namespaceName := strcase.ToKebab(sourceID)
+	if source.Registry != nil {
+		orgSlug, workspaceSlug, name, err := source.Registry.ParseRegistryLocation()
 		if err != nil {
 			if env.IsGithubAction() {
-				return fmt.Errorf("error parsing registry location %s: %w", string(source.Publish.Location), err)
+				return fmt.Errorf("error parsing registry location %s: %w", string(source.Registry.Location), err)
 			}
 
-			log.From(ctx).Warnf("error parsing registry location %s: %w", string(source.Publish.Location), zap.Error(err))
+			log.From(ctx).Warnf("error parsing registry location %s: %w", string(source.Registry.Location), zap.Error(err))
 		}
 
 		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
 			if env.IsGithubAction() {
-				return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+				return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
 			}
 
-			log.From(ctx).Warnf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Publish.Location))
+			log.From(ctx).Warnf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
 		}
 
 		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
 			if env.IsGithubAction() {
-				return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+				return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
 			}
 
-			log.From(ctx).Warnf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Publish.Location))
+			log.From(ctx).Warnf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
 		}
 
 		namespaceName = name
@@ -800,7 +746,20 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		cliEvent.SourceBlobDigest = blobDigest
 	}
 
-	w.lockfile.Sources[namespaceName] = workflow.SourceLock{
+	// automatically migrate speakeasy registry users to have a source publishing location
+	if source.Registry == nil {
+		registryEntry := &workflow.SourceRegistry{}
+		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), namespaceName)); err != nil {
+			return err
+		}
+		source.Registry = registryEntry
+		w.workflow.Sources[sourceID] = source
+		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
+			return err
+		}
+	}
+
+	w.lockfile.Sources[sourceID] = workflow.SourceLock{
 		SourceNamespace:      namespaceName,
 		SourceRevisionDigest: *manifestDigest,
 		SourceBlobDigest:     *blobDigest,
@@ -957,6 +916,9 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 	}
 
 	return d.Location, nil
+}
+
+func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, logger log.Logger, err error) error {
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {

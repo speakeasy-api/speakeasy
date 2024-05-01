@@ -64,7 +64,7 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	_, err := validation.ValidateOpenAPI(ctx, "", schemaPath, "", "", &validation.OutputLimits{}, "", "")
+	_, err := validation.ValidateOpenAPI(ctx, "", schemaPath, "", "", &validation.OutputLimits{}, "", "", false)
 	if len(os.Getenv("OPENAI_API_KEY")) == 0 {
 		return errors.NewValidationError("OPENAI_API_KEY is not set", -1, nil)
 	}

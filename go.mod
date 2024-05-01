@@ -17,7 +17,7 @@ require (
 	github.com/iancoleman/orderedmap v0.3.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.15.15
+	github.com/pb33f/libopenapi v0.16.4
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
@@ -221,4 +221,4 @@ require (
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
 
-replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
+replace github.com/speakeasy-api/openapi-generation/v2 => /Users/ryanalbert/openapi-generation

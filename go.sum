@@ -426,6 +426,7 @@ github.com/pb33f/doctor v0.0.4 h1:+JVwBsVwwMR0Um13mODlQ/h/HpFpyNPKieQXk/sEf2c=
 github.com/pb33f/doctor v0.0.4/go.mod h1:yBs5hFHAoo/eeFvKN9sWwmHmgEPJ2SaotYOJc05GdMU=
 github.com/pb33f/libopenapi v0.15.15 h1:5pD+JaIoR34VWhyK1L0FxLE9I9pVVPFNPfxWAVRq89A=
 github.com/pb33f/libopenapi v0.15.15/go.mod h1:PEXNwvtT4KNdjrwudp5OYnD1ryqK6uJ68aMNyWvoMuc=
+github.com/pb33f/libopenapi v0.16.4/go.mod h1:PEXNwvtT4KNdjrwudp5OYnD1ryqK6uJ68aMNyWvoMuc=
 github.com/pb33f/libopenapi-validator v0.0.42 h1:bfwPWlxUFHtvPNi0PH+EVpQBU2kA3Db9rVdFkfmUVac=
 github.com/pb33f/libopenapi-validator v0.0.42/go.mod h1:kU1JYyXIRlpmsWx3NkL+drNNttLADMgdaNzJgXDhec0=
 github.com/pb33f/openapi-changes v0.0.61 h1:GGkvKfbZ5B6a1GmqfsxiUgyQekDC0RuLFw8MbTJTxFo=

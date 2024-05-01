@@ -51,7 +51,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 		return nil, fmt.Errorf("failed to get document contents: %w", err)
 	}
 
-	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, false)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 	return res, nil
 }
 
-func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (*ValidationResult, error) {
+func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string, isQuickstart bool) (*ValidationResult, error) {
 	logger := log.From(ctx)
 	logger.Info("Linting OpenAPI document...\n")
 
@@ -105,7 +105,7 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
-	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, isQuickstart)
 	if err != nil {
 		return nil, err
 	}
@@ -242,13 +242,17 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string) (*ValidationResult, error) {
+func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string, parseValidOperations bool) (*ValidationResult, error) {
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
 	opts := []generate.GeneratorOptions{
 		generate.WithDontWrite(),
 		generate.WithLogger(l),
 		generate.WithRunLocation("cli"),
+	}
+
+	if parseValidOperations {
+		opts = append(opts, generate.WithParseValidOperations())
 	}
 
 	if defaultRuleset != "" {
