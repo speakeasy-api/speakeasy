@@ -158,6 +158,10 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 	return sources, targets, nil
 }
 
+func (w *Workflow) GetWorkflowFile() *workflow.Workflow {
+	return &w.workflow
+}
+
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	var err, runErr error
 
@@ -308,6 +312,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 					// return the original error
 					return nil, err
 				}
+
 				sourcePath = retriedPath
 				sourceRes = retriedRes
 				w.MinimumViableDocumentReplacement = true
@@ -848,11 +853,22 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		titleMsg = "Generated with Warnings"
 	}
 
-	msg := styles.RenderSuccessMessage(
+	msg := styles.RenderInstructionalMessage(
 		fmt.Sprintf("%s %s", styles.HeavilyEmphasized.Render(title), styles.Success.Render(titleMsg)),
 		additionalLines...,
 	)
 	logger.Println(msg)
+
+	if w.MinimumViableDocumentReplacement && w.FromQuickstart {
+		msg := styles.RenderWarningMessage(
+			"⚠ Your provided OpenAPI spec has some validation issues",
+			[]string{
+				"To get you a working SDK now we have generated a file with only valid API operations - `valid-subset.yaml`",
+				"To fix validation issues in your provided spec use `speakeasy validate openapi`",
+			}...,
+		)
+		logger.Println(msg)
+	}
 
 	if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
 		msg := styles.RenderInfoMessage(
@@ -930,9 +946,35 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *sourceResult, error) {
 	parentStep.NewSubstep("Retrying with valid API operations")
 	source := w.workflow.Sources[sourceID]
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return "", nil, err
+	}
+
+	file, err := os.Create(filepath.Join(workingDir, "valid-subset.yaml"))
+	if err != nil {
+		return "", nil, err
+	}
+	defer file.Close()
 	// This intended to only be used from quickstart right now, we take a singular input document
-	filteredOperations := transform.FilterOperations(ctx, source.Inputs[0].Location, viableOperations)
-	return nil
+	formerLocation := source.Inputs[0].Location
+	if err := transform.FilterOperations(ctx, source.Inputs[0].Location, viableOperations, true, file); err != nil {
+		return "", nil, err
+	}
+
+	source.Inputs[0].Location = "valid-subset.yaml"
+	w.workflow.Sources[sourceID] = source
+
+	sourcePath, sourceRes, err := w.runSource(ctx, parentStep, sourceID, targetID, cleanUp)
+	if err != nil {
+		// Cleanup file and cleanup the workflow
+		source.Inputs[0].Location = formerLocation
+		w.workflow.Sources[sourceID] = source
+		os.Remove(filepath.Join(workingDir, "valid-subset.yaml"))
+		return "", nil, err
+	}
+
+	return sourcePath, sourceRes, err
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {

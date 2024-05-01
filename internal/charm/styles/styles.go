@@ -109,6 +109,15 @@ func RenderErrorMessage(heading string, additionalLines ...string) string {
 	return MakeBoxed(s, Colors.Red, lipgloss.Center)
 }
 
+func RenderWarningMessage(heading string, additionalLines ...string) string {
+	s := lipgloss.NewStyle().Foreground(Colors.Yellow).Bold(true).Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + lipgloss.NewStyle().Foreground(Colors.Yellow).Render(line)
+	}
+
+	return MakeBoxed(s, Colors.Yellow, lipgloss.Center)
+}
+
 func RenderInstructionalMessage(heading string, additionalLines ...string) string {
 	s := Info.Render(utils.CapitalizeFirst(heading + "\n"))
 	for _, line := range additionalLines {
