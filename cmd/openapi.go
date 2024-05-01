@@ -126,15 +126,6 @@ func runFilterOperations(ctx context.Context, flags filterOperationsFlags) error
 	return transform.FilterOperations(ctx, flags.Schema, flags.OperationIDs, !flags.Exclude, out)
 }
 
-var openapiValidateCmd = &model.ExecutableCommand[LintOpenapiFlags]{
-	Usage:          "validate",
-	Short:          lintOpenapiCmd.Short,
-	Long:           lintOpenapiCmd.Long,
-	Run:            lintOpenapiCmd.Run,
-	RunInteractive: lintOpenapiCmd.RunInteractive,
-	Flags:          lintOpenapiCmd.Flags,
-}
-
 var openapiLintCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "lint",
 	Aliases:        []string{"validate"},

@@ -49,6 +49,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
+const minimumViableFilePath = "valid-subset.yaml"
+
 type LintingError struct {
 	Err      error
 	Document string
@@ -69,16 +71,16 @@ type Workflow struct {
 	ForceGeneration  bool
 	RegistryTags     []string
 
-	RootStep                         *workflowTracking.WorkflowStep
-	workflow                         workflow.Workflow
-	projectDir                       string
-	validatedDocuments               []string
-	generationAccess                 *sdkgen.GenerationAccess
-	FromQuickstart                   bool
-	MinimumViableDocumentReplacement bool
-	sourceResults                    map[string]*sourceResult
-	lockfile                         *workflow.LockFile
-	lockfileOld                      *workflow.LockFile // the lockfile as it was before the current run
+	RootStep                      *workflowTracking.WorkflowStep
+	workflow                      workflow.Workflow
+	projectDir                    string
+	validatedDocuments            []string
+	generationAccess              *sdkgen.GenerationAccess
+	FromQuickstart                bool
+	MinimumViableDocumentReplaced bool
+	sourceResults                 map[string]*sourceResult
+	lockfile                      *workflow.LockFile
+	lockfileOld                   *workflow.LockFile // the lockfile as it was before the current run
 }
 
 type sourceResult struct {
@@ -315,7 +317,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 
 				sourcePath = retriedPath
 				sourceRes = retriedRes
-				w.MinimumViableDocumentReplacement = true
+				w.MinimumViableDocumentReplaced = true
 			} else {
 				return nil, err
 			}
@@ -853,12 +855,12 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		titleMsg = "Generated with Warnings"
 	}
 
-	if w.MinimumViableDocumentReplacement && w.FromQuickstart {
+	if w.MinimumViableDocumentReplaced && w.FromQuickstart {
 		msg := styles.RenderWarningMessage(
 			"⚠ Validation issues detected in OpenAPI spec",
 			[]string{
 				"An SDK was generated with a subset of valid APIs.",
-				"✎ File written to `valid-subset.yaml`.",
+				fmt.Sprintf("✎ File written to `%s`.", minimumViableFilePath),
 				"To fix validation issues use `speakeasy validate openapi`.",
 			}...,
 		)
@@ -952,26 +954,30 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 		return "", nil, err
 	}
 
-	file, err := os.Create(filepath.Join(workingDir, "valid-subset.yaml"))
+	file, err := os.Create(filepath.Join(workingDir, minimumViableFilePath))
 	if err != nil {
 		return "", nil, err
 	}
 	defer file.Close()
-	// This intended to only be used from quickstart right now, we take a singular input document
+	// This is intended to only be used from quickstart, we must assume a singular input document
+	if len(source.Inputs)+len(source.Overlays) > 1 {
+		return "", nil, errors.New("multiple inputs are not supported for minimum viable spec")
+	}
+
 	formerLocation := source.Inputs[0].Location
 	if err := transform.FilterOperations(ctx, source.Inputs[0].Location, viableOperations, true, file); err != nil {
 		return "", nil, err
 	}
 
-	source.Inputs[0].Location = "valid-subset.yaml"
+	source.Inputs[0].Location = minimumViableFilePath
 	w.workflow.Sources[sourceID] = source
 
 	sourcePath, sourceRes, err := w.runSource(ctx, subStep, sourceID, targetID, cleanUp)
 	if err != nil {
-		// Cleanup file and cleanup the workflow
+		// Cleanup file and cleanup the workflow changes
 		source.Inputs[0].Location = formerLocation
 		w.workflow.Sources[sourceID] = source
-		os.Remove(filepath.Join(workingDir, "valid-subset.yaml"))
+		os.Remove(filepath.Join(workingDir, minimumViableFilePath))
 		return "", nil, err
 	}
 

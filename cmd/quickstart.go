@@ -267,7 +267,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run generation workflow")
 	}
 
-	if wf.MinimumViableDocumentReplacement {
+	if wf.MinimumViableDocumentReplaced {
 		// If we have modified the workflow with a minimum viable spec we should make sure that is saved
 		if err := workflow.Save(outDir, wf.GetWorkflowFile()); err != nil {
 			return errors.Wrapf(err, "failed to save workflow file")
