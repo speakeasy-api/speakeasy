@@ -36,7 +36,7 @@ type LintOpenapiFlags struct {
 	Ruleset               string `json:"ruleset"`
 }
 
-var lintOpenapiCmd = model.ExecutableCommand[LintOpenapiFlags]{
+var lintOpenapiCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "openapi",
 	Short:          "Lint an OpenAPI document",
 	Long:           `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,

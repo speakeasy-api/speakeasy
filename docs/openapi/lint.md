@@ -1,5 +1,5 @@
-# validate  
-`speakeasy openapi validate`  
+# lint  
+`speakeasy openapi lint`  
 
 
 Lint an OpenAPI document  
@@ -11,14 +11,14 @@ Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI spe
 ## Usage
 
 ```
-speakeasy openapi validate [flags]
+speakeasy openapi lint [flags]
 ```
 
 ### Options
 
 ```
   -H, --header string                 header key to use if authentication is required for downloading schema from remote URL
-  -h, --help                          help for validate
+  -h, --help                          help for lint
       --max-validation-errors int     limit the number of errors to output (default 1000, 0 = no limit) (default 1000)
       --max-validation-warnings int   limit the number of warnings to output (default 1000, 0 = no limit) (default 1000)
   -r, --ruleset string                ruleset to use for linting (default "speakeasy-recommended")
@@ -34,4 +34,4 @@ speakeasy openapi validate [flags]
 
 ### Parent Command
 
-* [speakeasy openapi](README.md)	 - Validate and compare OpenAPI documents
+* [speakeasy openapi](README.md)	 - Utilities for working with OpenAPI documents

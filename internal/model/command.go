@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
+	"os"
+	"os/exec"
+	"slices"
 	"strings"
+
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-version"
 	"github.com/sethvargo/go-githubactions"
@@ -23,9 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
-	"os"
-	"os/exec"
-	"slices"
 )
 
 type Command interface {
@@ -62,6 +62,7 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 // F is a struct type that represents the flags for the command. The json tags on the struct fields are used to map to the command line flags
 type ExecutableCommand[F interface{}] struct {
 	Usage, Short, Long                     string
+	Aliases                                []string
 	Flags                                  []flag.Flag
 	PreRun                                 func(cmd *cobra.Command, flags *F) error
 	Run                                    func(ctx context.Context, flags F) error
@@ -142,12 +143,12 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	short = utils.CapitalizeFirst(short)
 
 	cmd := &cobra.Command{
-
-		Use:    c.Usage,
-		Short:  c.Short,
-		Long:   c.Long,
-		RunE:   run,
-		Hidden: c.Hidden,
+		Use:     c.Usage,
+		Short:   c.Short,
+		Long:    c.Long,
+		Aliases: c.Aliases,
+		RunE:    run,
+		Hidden:  c.Hidden,
 	}
 
 	for _, subcommand := range c.NonInteractiveSubcommands {

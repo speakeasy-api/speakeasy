@@ -424,8 +424,8 @@ github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQ
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
 github.com/pb33f/doctor v0.0.4 h1:+JVwBsVwwMR0Um13mODlQ/h/HpFpyNPKieQXk/sEf2c=
 github.com/pb33f/doctor v0.0.4/go.mod h1:yBs5hFHAoo/eeFvKN9sWwmHmgEPJ2SaotYOJc05GdMU=
-github.com/pb33f/libopenapi v0.15.15 h1:5pD+JaIoR34VWhyK1L0FxLE9I9pVVPFNPfxWAVRq89A=
-github.com/pb33f/libopenapi v0.15.15/go.mod h1:PEXNwvtT4KNdjrwudp5OYnD1ryqK6uJ68aMNyWvoMuc=
+github.com/pb33f/libopenapi v0.16.4 h1:mX81EkBS7cbJZeJiw2ovXchGGHCLvfj26gGs4jL1XDU=
+github.com/pb33f/libopenapi v0.16.4/go.mod h1:PEXNwvtT4KNdjrwudp5OYnD1ryqK6uJ68aMNyWvoMuc=
 github.com/pb33f/libopenapi-validator v0.0.42 h1:bfwPWlxUFHtvPNi0PH+EVpQBU2kA3Db9rVdFkfmUVac=
 github.com/pb33f/libopenapi-validator v0.0.42/go.mod h1:kU1JYyXIRlpmsWx3NkL+drNNttLADMgdaNzJgXDhec0=
 github.com/pb33f/openapi-changes v0.0.61 h1:GGkvKfbZ5B6a1GmqfsxiUgyQekDC0RuLFw8MbTJTxFo=
@@ -507,8 +507,8 @@ github.com/speakeasy-api/easytemplate v0.11.0 h1:B0DtyTwE6NTOLa020UNyATi1ebFVL5D
 github.com/speakeasy-api/easytemplate v0.11.0/go.mod h1:42jXuVIno2A24bQyVFK9K70kpG0tSufLEF4TiJ1kGvQ=
 github.com/speakeasy-api/huh v0.0.1 h1:zJuyql3bxkxkW8EN+xNuW6B6kmZZldtcKbLBx32SwwQ=
 github.com/speakeasy-api/huh v0.0.1/go.mod h1:JVIEq1tlJtFWZ4OACzN0Tj+I3+SdLiMznROo12ZJ1bQ=
-github.com/speakeasy-api/openapi-generation/v2 v2.317.0 h1:+M4paQhdlfqSdncnkKXPvYwibWF/cWg2UIVGIagRw9I=
-github.com/speakeasy-api/openapi-generation/v2 v2.317.0/go.mod h1:hVRNUWDpajfgd+ZQHX0aGsSQb1a8dquWyb173dVihj8=
+github.com/speakeasy-api/openapi-generation/v2 v2.319.10 h1:PnXbREKfoFhWUqa81YoQr3WCFI9EHyafPETUR5lqD6Q=
+github.com/speakeasy-api/openapi-generation/v2 v2.319.10/go.mod h1:htiAxsoZxbWEHXY/S6xoZWbw2z7kSNVg6/kNIavOnOs=
 github.com/speakeasy-api/openapi-overlay v0.5.0 h1:nPBDoTZga4IivSx9c+HzQkC9e0qYR7GUfNgGQyvekJk=
 github.com/speakeasy-api/openapi-overlay v0.5.0/go.mod h1:f5FloQrHA7MsxYg9djzMD5h6dxrHjVVByWKh7an8TRc=
 github.com/speakeasy-api/sdk-gen-config v1.14.0 h1:4k9mG09pwE0bsKGNCTyqD+JutscDyC/sKxLEkG82BCk=
