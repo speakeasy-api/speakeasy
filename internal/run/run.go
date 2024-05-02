@@ -28,6 +28,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
@@ -221,6 +222,14 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 }
 
 func (w *Workflow) Run(ctx context.Context) error {
+	err := w.RunInner(ctx)
+
+	enrichTelemetryWithCompletedWorkflow(ctx, w)
+
+	return err
+}
+
+func (w *Workflow) RunInner(ctx context.Context) error {
 	if w.Source != "" && w.Target != "" {
 		return fmt.Errorf("cannot specify both a target and a source")
 	}
@@ -1060,4 +1069,20 @@ func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
 	}
 
 	return filteredLogs.String()
+}
+
+func enrichTelemetryWithCompletedWorkflow(ctx context.Context, w *Workflow) {
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		mermaid, _ := w.RootStep.ToMermaidDiagram()
+		cliEvent.MermaidDiagram = &mermaid
+		lastStep := w.RootStep.LastStepToString()
+		cliEvent.LastStep = &lastStep
+		lockFileBytes, _ := yaml.Marshal(w.lockfile)
+		lockFileString := string(lockFileBytes)
+		cliEvent.WorkflowLockPostRaw = &lockFileString
+		lockFileOldBytes, _ := yaml.Marshal(w.lockfileOld)
+		lockFileOldString := string(lockFileOldBytes)
+		cliEvent.WorkflowLockPreRaw = &lockFileOldString
+	}
 }
