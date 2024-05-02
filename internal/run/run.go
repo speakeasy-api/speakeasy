@@ -864,13 +864,12 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 	if len(w.OperationsRemoved) > 0 && w.FromQuickstart {
 		lines := []string{
 			"To fix validation issues use `speakeasy validate openapi`.",
-			"An SDK was generated with a subset of valid APIs.",
-			fmt.Sprintf("`%s` removes the following operations:.", minimumViableFilePath),
+			"The generated SDK omits the following operations:",
 		}
 		lines = append(lines, groupInvalidOperations(w.OperationsRemoved)...)
 
 		msg := styles.RenderWarningMessage(
-			"⚠ Validation issues detected in OpenAPI spec",
+			"⚠ Validation issues detected in provided OpenAPI spec",
 			lines...,
 		)
 		logger.Println(msg + "\n\n")
@@ -1138,12 +1137,8 @@ func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
 
 func groupInvalidOperations(input []string) []string {
 	var result []string
-	for i := 0; i < len(input); i += 3 {
-		end := i + 3
-		if end > len(input) {
-			end = len(input)
-		}
-		joined := strings.Join(input[i:end], ",")
+	for _, op := range input {
+		joined := styles.DimmedItalic.Render(fmt.Sprintf("- %s", op))
 		result = append(result, joined)
 	}
 	return result
