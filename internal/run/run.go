@@ -556,7 +556,6 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 	d := workflow.Document{Location: oldRegistryLocation}
 	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
 	if err != nil {
-		changesStep.Skip("failed to download prior revision")
 		return
 	}
 
