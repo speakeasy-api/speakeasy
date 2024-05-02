@@ -71,16 +71,16 @@ type Workflow struct {
 	ForceGeneration  bool
 	RegistryTags     []string
 
-	RootStep                      *workflowTracking.WorkflowStep
-	workflow                      workflow.Workflow
-	projectDir                    string
-	validatedDocuments            []string
-	generationAccess              *sdkgen.GenerationAccess
-	FromQuickstart                bool
-	MinimumViableDocumentReplaced bool
-	sourceResults                 map[string]*sourceResult
-	lockfile                      *workflow.LockFile
-	lockfileOld                   *workflow.LockFile // the lockfile as it was before the current run
+	RootStep           *workflowTracking.WorkflowStep
+	workflow           workflow.Workflow
+	projectDir         string
+	validatedDocuments []string
+	generationAccess   *sdkgen.GenerationAccess
+	FromQuickstart     bool
+	OperationsRemoved  []string
+	sourceResults      map[string]*sourceResult
+	lockfile           *workflow.LockFile
+	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
 }
 
 type sourceResult struct {
@@ -317,7 +317,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 
 				sourcePath = retriedPath
 				sourceRes = retriedRes
-				w.MinimumViableDocumentReplaced = true
+				w.OperationsRemoved = sourceRes.LintResult.InvalidOperation
 			} else {
 				return nil, err
 			}
@@ -855,23 +855,26 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		titleMsg = "Generated with Warnings"
 	}
 
-	if w.MinimumViableDocumentReplaced && w.FromQuickstart {
-		msg := styles.RenderWarningMessage(
-			"⚠ Validation issues detected in OpenAPI spec",
-			[]string{
-				"An SDK was generated with a subset of valid APIs.",
-				fmt.Sprintf("✎ File written to `%s`.", minimumViableFilePath),
-				"To fix validation issues use `speakeasy validate openapi`.",
-			}...,
-		)
-		logger.Println(msg + "\n\n")
-	}
-
 	msg := styles.RenderInstructionalMessage(
 		fmt.Sprintf("%s %s", styles.HeavilyEmphasized.Render(title), styles.Success.Render(titleMsg)),
 		additionalLines...,
 	)
 	logger.Println(msg)
+
+	if len(w.OperationsRemoved) > 0 && w.FromQuickstart {
+		lines := []string{
+			"To fix validation issues use `speakeasy validate openapi`.",
+			"An SDK was generated with a subset of valid APIs.",
+			fmt.Sprintf("`%s` removes the following operations:.", minimumViableFilePath),
+		}
+		lines = append(lines, groupInvalidOperations(w.OperationsRemoved)...)
+
+		msg := styles.RenderWarningMessage(
+			"⚠ Validation issues detected in OpenAPI spec",
+			lines...,
+		)
+		logger.Println(msg + "\n\n")
+	}
 
 	if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
 		msg := styles.RenderInfoMessage(
@@ -1131,4 +1134,17 @@ func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
 	}
 
 	return filteredLogs.String()
+}
+
+func groupInvalidOperations(input []string) []string {
+	var result []string
+	for i := 0; i < len(input); i += 3 {
+		end := i + 3
+		if end > len(input) {
+			end = len(input)
+		}
+		joined := strings.Join(input[i:end], ",")
+		result = append(result, joined)
+	}
+	return result
 }
