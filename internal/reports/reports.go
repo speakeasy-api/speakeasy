@@ -54,9 +54,9 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 	if cliEvent != nil {
 		switch reportType {
 		case shared.TypeLinting:
-			cliEvent.LintReportDigest = &digest
-		case shared.TypeChanges:
 			cliEvent.OpenapiDiffReportDigest = &digest
+		case shared.TypeChanges:
+			cliEvent.LintReportDigest = &digest
 		}
 	}
 
@@ -84,14 +84,10 @@ func writeLocally(digest string, reportBytes []byte, reportType shared.Type) (r 
 	}
 
 	uniqueFilename := digest
-	if digest == "" {
-		// If we don't have a Digest "*" is a os.CreateTemp feature which automatically generates a unique name
-		uniqueFilename = "*"
-	}
-
 	filenamePrefix := strcase.KebabCase(ReportTitle(reportType))
 
-	rf, err := os.CreateTemp(outputDir, fmt.Sprintf("%s-%s.html", filenamePrefix, uniqueFilename))
+	// "*" will be replaced with a random string
+	rf, err := os.CreateTemp(outputDir, fmt.Sprintf("%s-%s-*.html", filenamePrefix, uniqueFilename))
 	if err != nil {
 		return
 	}
