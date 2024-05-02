@@ -315,9 +315,9 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 					return nil, err
 				}
 
+				w.OperationsRemoved = sourceRes.LintResult.InvalidOperation
 				sourcePath = retriedPath
 				sourceRes = retriedRes
-				w.OperationsRemoved = sourceRes.LintResult.InvalidOperation
 			} else {
 				return nil, err
 			}
