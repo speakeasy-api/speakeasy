@@ -49,7 +49,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
 
-const minimumViableFilePath = "valid-subset.yaml"
+const minimumViableOverlayPath = "valid-overlay.yaml"
 
 type LintingError struct {
 	Err      error
@@ -308,7 +308,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
-				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, true, sourceRes.LintResult.ValidOperations)
+				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, false, sourceRes.LintResult.ValidOperations)
 				if retriedErr != nil {
 					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
 					// return the original error
@@ -868,7 +868,7 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		}
 		lines = append(lines, groupInvalidOperations(w.OperationsRemoved)...)
 
-		msg := styles.RenderWarningMessage(
+		msg := styles.RenderInstructionalError(
 			"⚠ Validation issues detected in provided OpenAPI spec",
 			lines...,
 		)
@@ -951,35 +951,75 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *sourceResult, error) {
 	subStep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
+	baseLocation := source.Inputs[0].Location
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return "", nil, err
 	}
 
-	file, err := os.Create(filepath.Join(workingDir, minimumViableFilePath))
-	if err != nil {
-		return "", nil, err
-	}
-	defer file.Close()
 	// This is intended to only be used from quickstart, we must assume a singular input document
 	if len(source.Inputs)+len(source.Overlays) > 1 {
 		return "", nil, errors.New("multiple inputs are not supported for minimum viable spec")
 	}
 
-	formerLocation := source.Inputs[0].Location
+	tempOmitted := fmt.Sprintf("ommitted_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
+	tempBase := fmt.Sprintf("downloaded_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
+
+	if source.Inputs[0].IsRemote() {
+		outResolved, err := resolveRemoteDocument(ctx, source.Inputs[0], tempBase)
+		if err != nil {
+			return "", nil, err
+		}
+
+		baseLocation = outResolved
+	}
+
+	file, err := os.Create(filepath.Join(workingDir, tempOmitted))
+	if err != nil {
+		return "", nil, err
+	}
+	defer file.Close()
+
+	failedRetry := false
+	defer func() {
+		os.Remove(filepath.Join(workingDir, tempOmitted))
+		os.Remove(filepath.Join(workingDir, tempBase))
+		if failedRetry {
+			source.Overlays = []workflow.Document{}
+			w.workflow.Sources[sourceID] = source
+			os.Remove(filepath.Join(workingDir, minimumViableOverlayPath))
+		}
+	}()
+
 	if err := transform.FilterOperations(ctx, source.Inputs[0].Location, viableOperations, true, file); err != nil {
+		failedRetry = true
 		return "", nil, err
 	}
 
-	source.Inputs[0].Location = minimumViableFilePath
+	overlayFile, err := os.Create(filepath.Join(workingDir, minimumViableOverlayPath))
+	if err != nil {
+		return "", nil, err
+	}
+	defer overlayFile.Close()
+
+	if err := overlay.Compare([]string{
+		baseLocation,
+		tempOmitted,
+	}, overlayFile); err != nil {
+		failedRetry = true
+		return "", nil, err
+	}
+
+	source.Overlays = []workflow.Document{
+		{
+			Location: minimumViableOverlayPath,
+		},
+	}
 	w.workflow.Sources[sourceID] = source
 
 	sourcePath, sourceRes, err := w.runSource(ctx, subStep, sourceID, targetID, cleanUp)
 	if err != nil {
-		// Cleanup file and cleanup the workflow changes
-		source.Inputs[0].Location = formerLocation
-		w.workflow.Sources[sourceID] = source
-		os.Remove(filepath.Join(workingDir, minimumViableFilePath))
+		failedRetry = true
 		return "", nil, err
 	}
 
@@ -1137,9 +1177,14 @@ func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
 
 func groupInvalidOperations(input []string) []string {
 	var result []string
-	for _, op := range input {
+	for _, op := range input[0:7] {
 		joined := styles.DimmedItalic.Render(fmt.Sprintf("- %s", op))
 		result = append(result, joined)
 	}
+
+	if len(input) > 7 {
+		result = append(result, styles.DimmedItalic.Render(fmt.Sprintf("- ... see %s", minimumViableOverlayPath)))
+	}
+
 	return result
 }
