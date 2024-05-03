@@ -1078,11 +1078,15 @@ func enrichTelemetryWithCompletedWorkflow(ctx context.Context, w *Workflow) {
 		cliEvent.MermaidDiagram = &mermaid
 		lastStep := w.RootStep.LastStepToString()
 		cliEvent.LastStep = &lastStep
-		lockFileBytes, _ := yaml.Marshal(w.lockfile)
-		lockFileString := string(lockFileBytes)
-		cliEvent.WorkflowLockPostRaw = &lockFileString
-		lockFileOldBytes, _ := yaml.Marshal(w.lockfileOld)
-		lockFileOldString := string(lockFileOldBytes)
-		cliEvent.WorkflowLockPreRaw = &lockFileOldString
+		if w.lockfile != nil {
+			lockFileBytes, _ := yaml.Marshal(w.lockfile)
+			lockFileString := string(lockFileBytes)
+			cliEvent.WorkflowLockPostRaw = &lockFileString
+		}
+		if w.lockfileOld != nil {
+			lockFileOldBytes, _ := yaml.Marshal(w.lockfileOld)
+			lockFileOldString := string(lockFileOldBytes)
+			cliEvent.WorkflowLockPreRaw = &lockFileOldString
+		}
 	}
 }

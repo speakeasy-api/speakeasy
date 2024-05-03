@@ -147,9 +147,7 @@ func (w *WorkflowStep) LastStepToString() string {
 
 	for {
 		stringNames = append(stringNames, step.name)
-		if step.status == StatusFailed {
-			status = StatusFailed
-		}
+		status = step.status
 
 		if len(step.substeps) == 0 {
 			break
