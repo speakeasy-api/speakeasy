@@ -2,8 +2,9 @@ package workflowTracking
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
@@ -134,6 +135,27 @@ func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
 		w.NewSubstep(stepName)
 	}
 	w.ListenForSubsteps(c)
+}
+
+// Example output:
+//   - success: A -> B -> C
+//   - failure: A -> B -> C
+func (w *WorkflowStep) LastStepToString() string {
+	step := w
+	var status Status = StatusSucceeded
+	var stringNames = []string{}
+
+	for {
+		stringNames = append(stringNames, step.name)
+		status = step.status
+
+		if len(step.substeps) == 0 {
+			break
+		}
+		step = step.substeps[len(step.substeps)-1]
+	}
+
+	return fmt.Sprintf("%s: %s", status, strings.Join(stringNames, " -> "))
 }
 
 func (w *WorkflowStep) toString(parentIndent, indent int) string {
