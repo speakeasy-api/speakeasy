@@ -787,8 +787,8 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 		}
 
 		// trim to fit docker tag format
-		branch = strings.Trim(branch, " ")
-		branch = strings.Replace(branch, "/", "-", -1)
+		branch = strings.TrimSpace(branch)
+		branch = strings.ReplaceAll(branch, "/", "-")
 		if branch != "" {
 			tags = append(tags, branch)
 		}
