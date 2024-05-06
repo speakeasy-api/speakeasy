@@ -445,8 +445,8 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			return genWorkflow, "", errors.Wrapf(err, "failed to encode workflow file")
 		}
 
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			err = os.MkdirAll(filePath, 0o755)
+		if _, err := os.Stat(strings.TrimSuffix(filePath, "/sdk_publish.yaml")); os.IsNotExist(err) {
+			err = os.MkdirAll(strings.TrimSuffix(filePath, "/sdk_publish.yaml"), 0o755)
 			if err != nil {
 				return nil, "", err
 			}
@@ -470,8 +470,8 @@ func WriteGenerationFile(generationWorkflow *config.GenerateWorkflow, generation
 		return errors.Wrapf(err, "failed to encode workflow file")
 	}
 
-	if _, err := os.Stat(generationWorkflowFilePath); os.IsNotExist(err) {
-		err = os.MkdirAll(generationWorkflowFilePath, 0o755)
+	if _, err := os.Stat(strings.TrimSuffix(generationWorkflowFilePath, "/sdk_generation.yaml")); os.IsNotExist(err) {
+		err = os.MkdirAll(strings.TrimSuffix(generationWorkflowFilePath, "/sdk_generation.yaml"), 0o755)
 		if err != nil {
 			return err
 		}
