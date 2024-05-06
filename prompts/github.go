@@ -400,9 +400,13 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
-	for _, target := range workflowFile.Targets {
-		if target.Publishing != nil {
-			for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
+	for name, t := range workflowFile.Targets {
+		if target != nil && *target != name {
+			continue
+		}
+
+		if t.Publishing != nil {
+			for _, secret := range getSecretsValuesFromPublishing(*t.Publishing) {
 				secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 			}
 		}
