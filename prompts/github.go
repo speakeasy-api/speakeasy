@@ -418,7 +418,7 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	if mode == "pr" {
 		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
 		if target != nil {
-			filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_publish.yaml", *target))
+			filePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_publish.yaml", *target))
 		}
 		publishingFile := &config.PublishWorkflow{}
 		if err := readPublishingFile(publishingFile, filePath); err != nil {

@@ -457,16 +457,16 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	if len(publishPaths) > 0 {
 		status = append(status, "GitHub action (generate) written to:")
 		for _, path := range generationWorkflowFilePaths {
-			status = append(status, fmt.Sprintf("\t◦ %s", path))
+			status = append(status, fmt.Sprintf("\t- %s", path))
 		}
 		status = append(status, "GitHub action (publish) written to:")
 		for _, path := range publishPaths {
-			status = append(status, fmt.Sprintf("\t◦ %s", path))
+			status = append(status, fmt.Sprintf("\t- %s", path))
 		}
 	} else {
 		status = append(status, "GitHub action (generate+publish) written to:")
 		for _, path := range generationWorkflowFilePaths {
-			status = append(status, fmt.Sprintf("\t◦ %s", path))
+			status = append(status, fmt.Sprintf("\t- %s", path))
 		}
 	}
 
@@ -661,16 +661,16 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	if len(publishPaths) > 0 {
 		status = append(status, "GitHub action (generate) written to:")
 		for _, path := range generationWorkflowFilePaths {
-			status = append(status, fmt.Sprintf("\t◦ %s", path))
+			status = append(status, fmt.Sprintf("\t- %s", path))
 		}
 		status = append(status, "GitHub action (publish) written to:")
 		for _, path := range publishPaths {
-			status = append(status, fmt.Sprintf("\t◦ %s", path))
+			status = append(status, fmt.Sprintf("\t- %s", path))
 		}
 	} else {
 		status = append(status, "GitHub action (generate+publish) written to:")
 		for _, path := range generationWorkflowFilePaths {
-			status = append(status, fmt.Sprintf("\t◦ %s", path))
+			status = append(status, fmt.Sprintf("\t- %s", path))
 		}
 	}
 
