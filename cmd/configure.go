@@ -539,7 +539,11 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 			return errors.Wrapf(err, "failed to write github workflow file")
 		}
 	} else {
-		for name := range workflowFile.Targets {
+		for name, target := range workflowFile.Targets {
+			if target.Target == "postman" || target.Target == "docs" {
+				continue
+			}
+
 			generationWorkflowFilePath := filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_generation.yaml", name))
 			generationWorkflow := &config.GenerateWorkflow{}
 			prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
