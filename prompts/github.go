@@ -41,9 +41,13 @@ var SupportedPublishingTargets = []string{
 	"go",
 }
 
-func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow) (*config.GenerateWorkflow, error) {
+func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow, target *string) (*config.GenerateWorkflow, error) {
 	if githubWorkflow == nil || githubWorkflow.Jobs.Generate.Uses == "" {
 		githubWorkflow = defaultGenerationFile()
+	}
+
+	if target != nil {
+		githubWorkflow.Name = fmt.Sprintf("Generate %s", strings.ToUpper(*target))
 	}
 
 	secrets := githubWorkflow.Jobs.Generate.Secrets
@@ -59,6 +63,9 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 				secrets[formatGithubSecret(overlay.Auth.Secret)] = formatGithubSecretName(overlay.Auth.Secret)
 			}
 		}
+	}
+	if target != nil {
+		githubWorkflow.Jobs.Generate.With["target"] = *target
 	}
 	githubWorkflow.Jobs.Generate.Secrets = secrets
 	return githubWorkflow, nil
@@ -389,7 +396,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, string, error) {
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string, target, outputPath *string) (*config.GenerateWorkflow, string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
@@ -410,9 +417,20 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if mode == "pr" {
 		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
+		if target != nil {
+			filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_publish.yaml", *target))
+		}
 		publishingFile := &config.PublishWorkflow{}
 		if err := readPublishingFile(publishingFile, filePath); err != nil {
 			publishingFile = defaultPublishingFile()
+		}
+
+		if target != nil {
+			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*target))
+		}
+
+		if outputPath != nil {
+			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *outputPath)}
 		}
 
 		for name, value := range secrets {
@@ -425,6 +443,13 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		yamlEncoder.SetIndent(2)
 		if err := yamlEncoder.Encode(publishingFile); err != nil {
 			return genWorkflow, "", errors.Wrapf(err, "failed to encode workflow file")
+		}
+
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			err = os.MkdirAll(filePath, 0o755)
+			if err != nil {
+				return nil, "", err
+			}
 		}
 
 		if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
@@ -443,6 +468,13 @@ func WriteGenerationFile(generationWorkflow *config.GenerateWorkflow, generation
 	yamlEncoder.SetIndent(2)
 	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
 		return errors.Wrapf(err, "failed to encode workflow file")
+	}
+
+	if _, err := os.Stat(generationWorkflowFilePath); os.IsNotExist(err) {
+		err = os.MkdirAll(generationWorkflowFilePath, 0o755)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
