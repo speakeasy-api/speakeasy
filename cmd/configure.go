@@ -519,7 +519,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	secrets := make(map[string]string)
 	var generationWorkflowFilePaths []string
 
-	if numberOfLanguageTargets(workflowFile) <= 1 {
+	if len(workflowFile.Targets) <= 1 {
 		generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
 		generationWorkflow := &config.GenerateWorkflow{}
 		prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
@@ -539,11 +539,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 			return errors.Wrapf(err, "failed to write github workflow file")
 		}
 	} else {
-		for name, target := range workflowFile.Targets {
-			if target.Target == "postman" || target.Target == "docs" {
-				continue
-			}
-
+		for name := range workflowFile.Targets {
 			generationWorkflowFilePath := filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_generation.yaml", name))
 			generationWorkflow := &config.GenerateWorkflow{}
 			prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
@@ -752,15 +748,4 @@ func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) (
 	}
 
 	return []string{}, []huh.Option[string]{huh.NewOption(charm.FormatNewOption("New Target"), "new target")}
-}
-
-func numberOfLanguageTargets(wf *workflow.Workflow) int {
-	languageTargetCount := 0
-	for _, target := range wf.Targets {
-		if target.Target != "postman" && target.Target != "docs" {
-			languageTargetCount += 1
-		}
-	}
-
-	return languageTargetCount
 }
