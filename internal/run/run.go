@@ -774,7 +774,25 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 }
 
 func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {
-	tags := []string{"latest"}
+	var tags []string
+	if env.IsGithubAction() {
+		tags = append(tags, "latest")
+
+		// implicitly add branch tag
+		var branch string
+		if strings.Contains(os.Getenv("GITHUB_REF"), "refs/heads/") {
+			branch = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+		} else if strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull/") {
+			branch = strings.TrimPrefix(os.Getenv("GITHUB_HEAD_REF"), "refs/heads/")
+		}
+
+		// trim to fit docker tag format
+		branch = strings.TrimSpace(branch)
+		branch = strings.ReplaceAll(branch, "/", "-")
+		if branch != "" {
+			tags = append(tags, branch)
+		}
+	}
 	for _, tag := range w.RegistryTags {
 		var parsedTag string
 		// Unclear why this happens but when a flag of type stringSlice is provided from our github runner environment we see these trailing [  ] appear on value read
