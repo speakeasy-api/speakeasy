@@ -362,6 +362,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 
 	if len(publishingOptions) == 0 {
 		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
+		return nil
 	}
 
 	chosenTargets, err := prompts.SelectPublishingTargets(publishingOptions, true)
@@ -380,7 +381,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 
 	secrets := make(map[string]string)
 	var publishPaths, generationWorkflowFilePaths []string
-	if len(chosenTargets) == 1 {
+	if len(workflowFile.Targets) == 1 {
 		generationWorkflow, generationWorkflowFilePath, publishPath, err := writePublishingFile(workflowFile, workingDir, nil)
 		if err != nil {
 			return err
@@ -392,7 +393,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 
 		publishPaths = append(publishPaths, publishPath)
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
-	} else if len(chosenTargets) > 1 {
+	} else if len(workflowFile.Targets) > 1 {
 		for _, name := range chosenTargets {
 			generationWorkflow, generationWorkflowFilePath, publishPath, err := writePublishingFile(workflowFile, workingDir, &name)
 			if err != nil {
@@ -545,7 +546,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	}
 
 	var publishPaths []string
-	if len(chosenTargets) == 1 {
+	if len(chosenTargets) > 0 && len(workflowFile.Targets) == 1 {
 		generationWorkflow, _, publishPath, err := writePublishingFile(workflowFile, workingDir, nil)
 		if err != nil {
 			return err
@@ -556,7 +557,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 
 		publishPaths = append(publishPaths, publishPath)
-	} else if len(chosenTargets) > 1 {
+	} else if len(chosenTargets) > 0 && len(workflowFile.Targets) > 1 {
 		for _, name := range chosenTargets {
 			generationWorkflow, _, publishPath, err := writePublishingFile(workflowFile, workingDir, &name)
 			if err != nil {
@@ -663,7 +664,7 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, tar
 	generationWorkflow := &config.GenerateWorkflow{}
 	prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
 
-	generationWorkflow, err := prompts.ConfigureGithub(generationWorkflow, workflowFile, nil)
+	generationWorkflow, err := prompts.ConfigureGithub(generationWorkflow, workflowFile, target)
 	if err != nil {
 		return nil, "", err
 	}
@@ -678,7 +679,7 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, tar
 func writePublishingFile(workflowFile *workflow.Workflow, workingDir string, name *string) (*config.GenerateWorkflow, string, string, error) {
 	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
 	if name != nil {
-		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_generation.yaml", name))
+		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_generation.yaml", *name))
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
