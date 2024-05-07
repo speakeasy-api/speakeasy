@@ -15,12 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: webiny/action-conventional-commits@v1.1.0
-      - uses: aslafy-z/conventional-pr-title-action@v3
-        with:
-          success-state: Title follows the specification.
-          failure-state: Title does not follow the specification.
-          context-name: conventional-pr-title
-          preset: conventional-changelog-conventionalcommits@latest
+      - uses: amannn/action-semantic-pull-request@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-test:
