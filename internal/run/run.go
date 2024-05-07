@@ -774,10 +774,8 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 }
 
 func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {
-	var tags []string
+	tags := []string{"latest"}
 	if env.IsGithubAction() {
-		tags = append(tags, "latest")
-
 		// implicitly add branch tag
 		var branch string
 		if strings.Contains(os.Getenv("GITHUB_REF"), "refs/heads/") {
