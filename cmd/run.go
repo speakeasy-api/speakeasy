@@ -136,7 +136,7 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
 			flags.Source = sources[0]
 		} else {
-			flags.Target, err = askForTarget("What target would you like to run?", "You may choose an individual target or 'all'.", "Let's choose a target to run the generation workflow.", targets, true)
+			flags.Target, err = askForTarget("What target would you like to run?", "You may choose an individual target or 'all'.", "Let's configure a target for your workflow.", targets, true)
 			if err != nil {
 				return err
 			}
