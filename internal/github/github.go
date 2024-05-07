@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -26,6 +27,12 @@ type LintingSummary struct {
 
 type WorkflowSummary interface {
 	ToMermaidDiagram() (string, error)
+}
+
+func StripANSICodes(str string) string {
+	const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+	var re = regexp.MustCompile(ansi)
+	return re.ReplaceAllString(str, "")
 }
 
 func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
@@ -97,7 +104,8 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 	}
 
 	md := fmt.Sprintf("# API Changes Summary\n%s\n%s", reportLink, summary.Text)
-	githubactions.AddStepSummary(md)
+
+	githubactions.AddStepSummary(StripANSICodes(md))
 
 	if len(os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")) > 0 {
 		filepath := os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")
