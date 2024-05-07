@@ -71,6 +71,7 @@ func Init(version, artifactArch string) {
 	apiInit()
 	languageServerInit(version)
 	bumpInit()
+	addCommand(rootCmd, tagCmd)
 
 	addCommand(rootCmd, AskCmd)
 }
