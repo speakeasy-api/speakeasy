@@ -311,7 +311,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			return nil, err
 		}
 	} else {
-		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "", w.projectDir)
+		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.projectDir)
 		if err != nil {
 			return nil, err
 		}
@@ -421,7 +421,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		Source: sourceID,
 	}
 
-	rulesetToUse := ""
+	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
 		rulesetToUse = *source.Ruleset
 	}
