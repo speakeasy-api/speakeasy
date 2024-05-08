@@ -3,7 +3,6 @@ package overlay
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
@@ -19,7 +18,7 @@ func Validate(overlayFile string) error {
 	return o.Validate()
 }
 
-func Compare(schemas []string) error {
+func Compare(schemas []string, w io.Writer) error {
 	if len(schemas) != 2 {
 		return fmt.Errorf("Exactly two --schemas must be passed to perform a comparison.")
 	}
@@ -41,7 +40,7 @@ func Compare(schemas []string) error {
 		return fmt.Errorf("failed to compare spec files %q and %q: %w", schemas[0], schemas[1], err)
 	}
 
-	if err := o.Format(os.Stdout); err != nil {
+	if err := o.Format(w); err != nil {
 		return fmt.Errorf("failed to format overlay: %w", err)
 	}
 

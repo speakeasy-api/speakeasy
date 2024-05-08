@@ -248,7 +248,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
-	workflow, err := run.NewWorkflow(
+	wf, err := run.NewWorkflow(
 		ctx,
 		"Workflow",
 		initialTarget,
@@ -264,10 +264,17 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if err != nil {
 		return err
 	}
-	workflow.FromQuickstart = true
+	wf.FromQuickstart = true
 
-	if err = workflow.RunWithVisualization(ctx); err != nil {
+	if err = wf.RunWithVisualization(ctx); err != nil {
 		return errors.Wrapf(err, "failed to run generation workflow")
+	}
+
+	if len(wf.OperationsRemoved) > 0 {
+		// If we have modified the workflow with a minimum viable spec we should make sure that is saved
+		if err := workflow.Save(outDir, wf.GetWorkflowFile()); err != nil {
+			return errors.Wrapf(err, "failed to save workflow file")
+		}
 	}
 
 	return nil

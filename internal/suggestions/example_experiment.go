@@ -64,7 +64,7 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	_, err := validation.ValidateOpenAPI(ctx, "", schemaPath, "", "", &validation.OutputLimits{}, "", "")
+	_, err := validation.ValidateOpenAPI(ctx, "", schemaPath, "", "", &validation.OutputLimits{}, "", "", false)
 	if len(os.Getenv("OPENAI_API_KEY")) == 0 {
 		return errors.NewValidationError("OPENAI_API_KEY is not set", -1, nil)
 	}
@@ -318,7 +318,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 		v3Model.Model.Paths.PathItems = orderedmap.New[string, *v3.PathItem]()
 		v3Model.Model.Paths.PathItems.Set(pair.Key(), pair.Value())
 		// eliminate all the now-orphaned schemas
-		doc, v3Model, err = transform.RemoveOrphans(doc, v3Model)
+		doc, v3Model, err = transform.RemoveOrphans(context.Background(), doc, v3Model, nil)
 		if err != nil {
 			return nil, err
 		}
