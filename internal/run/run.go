@@ -332,7 +332,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			}
 		}
 	} else {
-		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "", w.projectDir)
+		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.projectDir)
 		if err != nil {
 			return nil, err
 		}
@@ -442,7 +442,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		Source: sourceID,
 	}
 
-	rulesetToUse := ""
+	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
 		rulesetToUse = *source.Ruleset
 	}
@@ -648,7 +648,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 				return fmt.Errorf("error parsing registry location %s: %w", string(source.Registry.Location), err)
 			}
 
-			log.From(ctx).Warnf("error parsing registry location %s: %w", string(source.Registry.Location), zap.Error(err))
+			log.From(ctx).Warnf("error parsing registry location %s: %v", string(source.Registry.Location), err)
 		}
 
 		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
