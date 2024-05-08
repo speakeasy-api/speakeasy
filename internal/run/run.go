@@ -26,6 +26,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
@@ -48,6 +49,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
+
+const minimumViableOverlayPath = "valid-overlay.yaml"
 
 type LintingError struct {
 	Err      error
@@ -75,6 +78,7 @@ type Workflow struct {
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
+	OperationsRemoved  []string
 	sourceResults      map[string]*sourceResult
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
@@ -155,6 +159,10 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 	slices.Sort(sources)
 
 	return sources, targets, nil
+}
+
+func (w *Workflow) GetWorkflowFile() *workflow.Workflow {
+	return &w.workflow
 }
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
@@ -308,7 +316,20 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	if source != nil {
 		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
-			return nil, err
+			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
+				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, false, sourceRes.LintResult.ValidOperations)
+				if retriedErr != nil {
+					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
+					// return the original error
+					return nil, err
+				}
+
+				w.OperationsRemoved = sourceRes.LintResult.InvalidOperation
+				sourcePath = retriedPath
+				sourceRes = retriedRes
+			} else {
+				return nil, err
+			}
 		}
 	} else {
 		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "", w.projectDir)
@@ -522,7 +543,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
 	if err != nil {
-		return "", nil, &LintingError{Err: err, Document: currentDocument}
+		return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 	}
 
 	rootStep.SucceedWorkflow()
@@ -607,7 +628,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 		MaxWarns:  1000,
 	}
 
-	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir)
+	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
@@ -859,11 +880,25 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		titleMsg = "Generated with Warnings"
 	}
 
-	msg := styles.RenderSuccessMessage(
+	msg := styles.RenderInstructionalMessage(
 		fmt.Sprintf("%s %s", styles.HeavilyEmphasized.Render(title), styles.Success.Render(titleMsg)),
 		additionalLines...,
 	)
 	logger.Println(msg)
+
+	if len(w.OperationsRemoved) > 0 && w.FromQuickstart {
+		lines := []string{
+			"To fix validation issues use `speakeasy validate openapi`.",
+			"The generated SDK omits the following operations:",
+		}
+		lines = append(lines, groupInvalidOperations(w.OperationsRemoved)...)
+
+		msg := styles.RenderInstructionalError(
+			"⚠ Validation issues detected in provided OpenAPI spec",
+			lines...,
+		)
+		logger.Println(msg + "\n\n")
+	}
 
 	if w.generationAccess != nil && !w.generationAccess.AccessAllowed {
 		msg := styles.RenderInfoMessage(
@@ -936,6 +971,84 @@ func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 	}
 
 	return d.Location, nil
+}
+
+func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *sourceResult, error) {
+	subStep := parentStep.NewSubstep("Retrying with minimum viable document")
+	source := w.workflow.Sources[sourceID]
+	baseLocation := source.Inputs[0].Location
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return "", nil, err
+	}
+
+	// This is intended to only be used from quickstart, we must assume a singular input document
+	if len(source.Inputs)+len(source.Overlays) > 1 {
+		return "", nil, errors.New("multiple inputs are not supported for minimum viable spec")
+	}
+
+	tempOmitted := fmt.Sprintf("ommitted_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
+	tempBase := fmt.Sprintf("downloaded_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
+
+	if source.Inputs[0].IsRemote() {
+		outResolved, err := resolveRemoteDocument(ctx, source.Inputs[0], tempBase)
+		if err != nil {
+			return "", nil, err
+		}
+
+		baseLocation = outResolved
+	}
+
+	file, err := os.Create(filepath.Join(workingDir, tempOmitted))
+	if err != nil {
+		return "", nil, err
+	}
+	defer file.Close()
+
+	failedRetry := false
+	defer func() {
+		os.Remove(filepath.Join(workingDir, tempOmitted))
+		os.Remove(filepath.Join(workingDir, tempBase))
+		if failedRetry {
+			source.Overlays = []workflow.Document{}
+			w.workflow.Sources[sourceID] = source
+			os.Remove(filepath.Join(workingDir, minimumViableOverlayPath))
+		}
+	}()
+
+	if err := transform.FilterOperations(ctx, source.Inputs[0].Location, viableOperations, true, file); err != nil {
+		failedRetry = true
+		return "", nil, err
+	}
+
+	overlayFile, err := os.Create(filepath.Join(workingDir, minimumViableOverlayPath))
+	if err != nil {
+		return "", nil, err
+	}
+	defer overlayFile.Close()
+
+	if err := overlay.Compare([]string{
+		baseLocation,
+		tempOmitted,
+	}, overlayFile); err != nil {
+		failedRetry = true
+		return "", nil, err
+	}
+
+	source.Overlays = []workflow.Document{
+		{
+			Location: minimumViableOverlayPath,
+		},
+	}
+	w.workflow.Sources[sourceID] = source
+
+	sourcePath, sourceRes, err := w.runSource(ctx, subStep, sourceID, targetID, cleanUp)
+	if err != nil {
+		failedRetry = true
+		return "", nil, err
+	}
+
+	return sourcePath, sourceRes, err
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
@@ -1085,6 +1198,20 @@ func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
 	}
 
 	return filteredLogs.String()
+}
+
+func groupInvalidOperations(input []string) []string {
+	var result []string
+	for _, op := range input[0:7] {
+		joined := styles.DimmedItalic.Render(fmt.Sprintf("- %s", op))
+		result = append(result, joined)
+	}
+
+	if len(input) > 7 {
+		result = append(result, styles.DimmedItalic.Render(fmt.Sprintf("- ... see %s", minimumViableOverlayPath)))
+	}
+
+	return result
 }
 
 func enrichTelemetryWithCompletedWorkflow(ctx context.Context, w *Workflow) {
