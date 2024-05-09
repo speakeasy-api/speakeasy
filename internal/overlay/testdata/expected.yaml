@@ -8,7 +8,10 @@ info:
         About our test document.
 paths:
     /anything/selectGlobalServer:
-        x-my-ignore: true
+        x-my-ignore:
+            servers:
+                - url: http://localhost:35123
+                  description: The default server.
         get:
             operationId: selectGlobalServer
             responses:
