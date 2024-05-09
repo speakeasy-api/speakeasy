@@ -658,7 +658,8 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, target *string) (*config.GenerateWorkflow, string, error) {
 	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
 	if target != nil {
-		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_generation.yaml", *target))
+		sanitizedName := strings.ReplaceAll(strings.ToLower(*target), "-", "_")
+		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
@@ -679,7 +680,8 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, tar
 func writePublishingFile(workflowFile *workflow.Workflow, workingDir string, name *string) (*config.GenerateWorkflow, string, string, error) {
 	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
 	if name != nil {
-		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/%s/sdk_generation.yaml", *name))
+		sanitizedName := strings.ReplaceAll(strings.ToLower(*name), "-", "_")
+		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
