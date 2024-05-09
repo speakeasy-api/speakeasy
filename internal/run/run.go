@@ -79,6 +79,7 @@ type Workflow struct {
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
 	OperationsRemoved  []string
+	computedChanges    map[string]bool
 	sourceResults      map[string]*sourceResult
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
@@ -131,6 +132,7 @@ func NewWorkflow(
 		RootStep:         rootStep,
 		ForceGeneration:  forceGeneration,
 		sourceResults:    make(map[string]*sourceResult),
+		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
 	}, nil
@@ -533,7 +535,9 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok {
-			sourceRes.ChangeReport, err = computeChanges(ctx, rootStep, targetLockOld, currentDocument)
+			fmt.Println("CURRENT DOCUMENT")
+			fmt.Println(currentDocument)
+			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
 				// Don't fail the whole workflow if this fails
 				logger.Warnf("failed to compute OpenAPI changes: %s", err.Error())
@@ -556,7 +560,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	return currentDocument, sourceRes, nil
 }
 
-func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
+func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
 	if !registry.IsRegistryEnabled(ctx) {
 		return
 	}
@@ -609,7 +613,14 @@ func computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep
 	if err != nil || summary == nil {
 		return r, fmt.Errorf("failed to get report summary: %w", err)
 	}
-	github.GenerateChangesSummary(ctx, r.URL, *summary)
+
+	// Do not write github action changes if we have already processed this source
+	// If we don't do this check we will see duplicate openapi changes summaries in the PR
+	if _, ok := w.computedChanges[targetLock.Source]; !ok {
+		github.GenerateChangesSummary(ctx, r.URL, *summary)
+	}
+
+	w.computedChanges[targetLock.Source] = true
 
 	changesStep.SucceedWorkflow()
 	return
