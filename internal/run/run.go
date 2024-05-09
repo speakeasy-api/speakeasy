@@ -535,8 +535,6 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok {
-			fmt.Println("CURRENT DOCUMENT")
-			fmt.Println(currentDocument)
 			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
 				// Don't fail the whole workflow if this fails
