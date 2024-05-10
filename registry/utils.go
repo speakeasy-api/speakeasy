@@ -43,6 +43,6 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 }
 
 func IsRegistryEnabled(ctx context.Context) bool {
-	hasSkipSchemaRegistry, _ := core.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSchemaRegistry)
+	hasSkipSchemaRegistry, _ := core.HasWorkspaceFeatureFlag(ctx, shared.FeatureFlagsSkipSchemaRegistry)
 	return !hasSkipSchemaRegistry
 }
