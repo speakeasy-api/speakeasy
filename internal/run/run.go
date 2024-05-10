@@ -319,6 +319,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
+				cliEvent := events.GetTelemetryEventFromContext(ctx)
+				if cliEvent != nil {
+					cliEvent.GenerateNumberOfOperationsIgnored = new(int64)
+					*cliEvent.GenerateNumberOfOperationsIgnored = int64(len(sourceRes.LintResult.InvalidOperation))
+				}
+
 				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, false, sourceRes.LintResult.ValidOperations)
 				if retriedErr != nil {
 					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
