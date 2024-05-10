@@ -3,50 +3,26 @@ package transform
 import (
 	"context"
 	"fmt"
-	"github.com/pb33f/libopenapi"
-	"github.com/pb33f/libopenapi/datamodel"
-	"github.com/pb33f/libopenapi/index"
-	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"io"
 	"strings"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 
+	"github.com/pb33f/libopenapi"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"github.com/pb33f/libopenapi/index"
+	"github.com/pb33f/libopenapi/orderedmap"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
 func RemoveUnused(ctx context.Context, schemaPath string, w io.Writer) error {
-	_, schemaContents, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	doc, err := libopenapi.NewDocumentWithConfiguration(schemaContents, getConfig())
-	if err != nil {
-		return errors.NewValidationError("failed to load document", -1, err)
-	}
-	v3Model, _ := doc.BuildV3Model()
-
-	_, v3Model, err = RemoveOrphans(doc, v3Model)
-	if err != nil {
-		return err
-	}
-	// render the document to our shard
-	bytes, err := v3Model.Model.Render()
-	if err != nil {
-		return errors.NewValidationError("failed to render document", -1, err)
-	}
-
-	w.Write(bytes)
-	return nil
+	return transformer[interface{}]{
+		schemaPath:  schemaPath,
+		transformFn: RemoveOrphans,
+		w:           w,
+	}.Do(ctx)
 }
 
-func getConfig() *datamodel.DocumentConfiguration {
-	return &datamodel.DocumentConfiguration{
-		AllowRemoteReferences:               true,
-		IgnorePolymorphicCircularReferences: true,
-		IgnoreArrayCircularReferences:       true,
-		ExtractRefsSequentially:             true,
-	}
-}
-
-func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document]) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+func RemoveOrphans(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+	logger := log.From(ctx)
 	_, doc, model, errs := doc.RenderAndReload()
 	// remove nil errs
 	var nonNilErrs []error
@@ -156,7 +132,7 @@ func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		// remove all schemas that are not referenced
 		if !isReferenced(pair.Key(), "schemas", notUsed) {
 			toDelete = append(toDelete, pair.Key())
-			fmt.Printf("dropped #/components/schemas/%s\n", pair.Key())
+			logger.Printf("dropped #/components/schemas/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
@@ -170,7 +146,7 @@ func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		// remove all responses that are not referenced
 		if !isReferenced(pair.Key(), "responses", notUsed) {
 			toDelete = append(toDelete, pair.Key())
-			fmt.Printf("dropped #/components/responses/%s\n", pair.Key())
+			logger.Printf("dropped #/components/responses/%s\n", pair.Key())
 			anyRemoved = true
 		}
 	}
@@ -227,7 +203,7 @@ func RemoveOrphans(doc libopenapi.Document, model *libopenapi.DocumentModel[v3.D
 		headers.Delete(key)
 	}
 	if anyRemoved {
-		return RemoveOrphans(doc, model)
+		return RemoveOrphans(ctx, doc, model, nil)
 	}
 	return doc, model, nil
 }

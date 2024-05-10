@@ -88,7 +88,7 @@ func runValidateOverlay(ctx context.Context, flags overlayValidateFlags) error {
 }
 
 func runCompare(ctx context.Context, flags overlayCompareFlags) error {
-	return overlay.Compare(flags.Schemas)
+	return overlay.Compare(flags.Schemas, os.Stdout)
 }
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
