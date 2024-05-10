@@ -254,7 +254,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	// Get the latest version, or use the pinned version
 	desiredVersion := wf.SpeakeasyVersion.String()
 	if desiredVersion == "latest" {
-		latest, err := updates.GetLatestVersion(artifactArch)
+		latest, err := updates.GetLatestVersion(ctx, artifactArch)
 		if err != nil {
 			return err
 		}

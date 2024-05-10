@@ -27,7 +27,7 @@ func update(version, artifactArch string) func(cmd *cobra.Command, args []string
 			return err
 		}
 
-		newVersion, err := updates.Update(version, artifactArch, timeout)
+		newVersion, err := updates.Update(cmd.Context(), version, artifactArch, timeout)
 		if err != nil {
 			return err
 		}
