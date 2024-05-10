@@ -109,7 +109,7 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 
 	if len(os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")) > 0 {
 		filepath := os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")
-		f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			log.From(ctx).Warnf("failed to open file %s: %s", filepath, err)
 			return
