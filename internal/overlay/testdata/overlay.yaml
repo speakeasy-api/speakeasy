@@ -1,0 +1,10 @@
+overlay: 1.0.0
+info:
+  title: Overlay
+  version: 0.0.0
+actions:
+  - target: $.paths.*.*[?(!@.servers)]
+    update:
+      servers:
+        - url: http://localhost:35123
+          description: The default server.
