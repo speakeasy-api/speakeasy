@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/cache"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -22,10 +23,16 @@ import (
 
 const (
 	ArtifactArchContextKey = "cli-artifact-arch"
+    GitHubReleaseRateLimitingLimit = time.Second * 60
 )
 
-func GetLatestVersion(artifactArch string) (*version.Version, error) {
-	release, _, err := getLatestRelease(artifactArch, 1*time.Second)
+type ReleaseCache struct {
+	Repo *github.RepositoryRelease
+	Release *github.ReleaseAsset
+}
+
+func GetLatestVersion(ctx context.Context, artifactArch string) (*version.Version, error) {
+	release, _, err := getLatestRelease(ctx, artifactArch, 1*time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +49,8 @@ func GetLatestVersion(artifactArch string) (*version.Version, error) {
 }
 
 // GetNewerVersion returns the latest version of the CLI if it is newer than the current version
-func GetNewerVersion(artifactArch, currentVersion string) (*version.Version, error) {
-	latestVersion, err := GetLatestVersion(artifactArch)
+func GetNewerVersion(ctx context.Context, artifactArch, currentVersion string) (*version.Version, error) {
+	latestVersion, err := GetLatestVersion(ctx, artifactArch)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +71,8 @@ func GetNewerVersion(artifactArch, currentVersion string) (*version.Version, err
 	return nil, nil
 }
 
-func Update(currentVersion, artifactArch string, timeout int) (string, error) {
-	release, asset, err := getLatestRelease(artifactArch, 30*time.Second)
+func Update(ctx context.Context, currentVersion, artifactArch string, timeout int) (string, error) {
+	release, asset, err := getLatestRelease(ctx, artifactArch, 30*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("failed to find latest release: %w", err)
 	}
@@ -103,7 +110,7 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 		return "", err
 	}
 
-	release, asset, err := getReleaseForVersion(*v, artifactArch, 30*time.Second)
+	release, asset, err := getReleaseForVersion(ctx, *v, artifactArch, 30*time.Second)
 	if err != nil || release == nil {
 		return "", fmt.Errorf("failed to find release for version %s: %w", v.String(), err)
 	}
@@ -196,10 +203,17 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 	return nil
 }
 
-func getLatestRelease(artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
+func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
 	client := github.NewClient(&http.Client{
 		Timeout: timeout,
 	})
+
+	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, "getLatestReleaseGitHub-" + artifactArch, GitHubReleaseRateLimitingLimit)
+
+	cached, err := releaseCache.Get()
+	if err == nil {
+		return cached.Repo, cached.Release, err
+	}
 
 	releases, _, err := client.Repositories.ListReleases(context.Background(), "speakeasy-api", "speakeasy", nil)
 	if err != nil {
@@ -213,6 +227,10 @@ func getLatestRelease(artifactArch string, timeout time.Duration) (*github.Repos
 	for _, release := range releases {
 		for _, asset := range release.Assets {
 			if strings.Contains(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)) {
+				_ = releaseCache.Store(&ReleaseCache{
+					Repo: release,
+					Release: asset,
+				})
 				return release, asset, nil
 			}
 		}
@@ -221,17 +239,24 @@ func getLatestRelease(artifactArch string, timeout time.Duration) (*github.Repos
 	return nil, nil, nil
 }
 
-func getReleaseForVersion(version version.Version, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
+func getReleaseForVersion(ctx context.Context, version version.Version, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
 	client := github.NewClient(&http.Client{
 		Timeout: timeout,
 	})
 
 	tag := "v" + version.String()
-	release, _, err := client.Repositories.GetReleaseByTag(context.Background(), "speakeasy-api", "speakeasy", tag)
-	if err != nil {
-		return nil, nil, err
-	}
 
+	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, "repository-release-" + tag, GitHubReleaseRateLimitingLimit)
+	var release *github.RepositoryRelease
+	if cachedRelease, err := cache.Get(); err == nil {
+		release = cachedRelease
+	} else {
+		release, _, err = client.Repositories.GetReleaseByTag(context.Background(), "speakeasy-api", "speakeasy", tag)
+		if err != nil {
+			return nil, nil, err
+		}
+		_ = cache.Store(release)
+	}
 	if release == nil {
 		return nil, nil, nil
 	}
