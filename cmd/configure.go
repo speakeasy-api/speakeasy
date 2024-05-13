@@ -662,6 +662,13 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, tar
 		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
 	}
 
+	if _, err := os.Stat(filepath.Join(workingDir, ".github/workflows")); os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Join(workingDir, ".github/workflows"), 0o755)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
 	generationWorkflow := &config.GenerateWorkflow{}
 	prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
 
@@ -682,6 +689,13 @@ func writePublishingFile(workflowFile *workflow.Workflow, workingDir string, nam
 	if name != nil {
 		sanitizedName := strings.ReplaceAll(strings.ToLower(*name), "-", "_")
 		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
+	}
+
+	if _, err := os.Stat(filepath.Join(workingDir, ".github/workflows")); os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Join(workingDir, ".github/workflows"), 0o755)
+		if err != nil {
+			return nil, "", "", err
+		}
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
