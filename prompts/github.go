@@ -450,13 +450,6 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			return genWorkflow, "", errors.Wrapf(err, "failed to encode workflow file")
 		}
 
-		if _, err := os.Stat(strings.TrimSuffix(filePath, "/sdk_publish.yaml")); os.IsNotExist(err) {
-			err = os.MkdirAll(strings.TrimSuffix(filePath, "/sdk_publish.yaml"), 0o755)
-			if err != nil {
-				return nil, "", err
-			}
-		}
-
 		if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
 			return genWorkflow, filePath, errors.Wrapf(err, "failed to write github publishing file")
 		}
@@ -473,13 +466,6 @@ func WriteGenerationFile(generationWorkflow *config.GenerateWorkflow, generation
 	yamlEncoder.SetIndent(2)
 	if err := yamlEncoder.Encode(generationWorkflow); err != nil {
 		return errors.Wrapf(err, "failed to encode workflow file")
-	}
-
-	if _, err := os.Stat(strings.TrimSuffix(generationWorkflowFilePath, "/sdk_generation.yaml")); os.IsNotExist(err) {
-		err = os.MkdirAll(strings.TrimSuffix(generationWorkflowFilePath, "/sdk_generation.yaml"), 0o755)
-		if err != nil {
-			return err
-		}
 	}
 
 	if err := os.WriteFile(generationWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
