@@ -184,11 +184,11 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 
 			if _, err := charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
-					Title(fmt.Sprintf("Provide an output directory for your %s generation target %s.", targetType, targetName)).
+					Title(fmt.Sprintf("Optionally provide an output directory to move your existing %s target %s to.", targetType, targetName)).
 					Suggestions(charm.DirsInCurrentDir(outDir)).
 					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 					Value(&outDir))),
-				"To setup multiple targets we recommend you select an output directory not in the root folder.").ExecuteForm(); err != nil {
+				"When setting up multiple targets we recommend you select an output directory not in the root folder.").ExecuteForm(); err != nil {
 				return err
 			}
 
