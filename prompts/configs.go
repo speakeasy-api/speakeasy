@@ -99,7 +99,7 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 	if !isQuickstart && output.Generation.BaseServerURL != "" {
 		baseServerURL = output.Generation.BaseServerURL
 	}
-	if !isQuickstart {
+	if !isQuickstart && target.Target != "postman" {
 		initialFields = append(initialFields, huh.NewInput().
 			Title("Provide a base server URL for your SDK to use:").
 			Placeholder("You must do this if a server URL is not defined in your OpenAPI spec").

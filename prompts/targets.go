@@ -187,23 +187,18 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 					Title(fmt.Sprintf("Provide an output directory for your %s generation target %s.", targetType, targetName)).
 					Suggestions(charm.DirsInCurrentDir(outDir)).
 					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
-					Validate(func(s string) error {
-						if currentDir(s) {
-							return fmt.Errorf("the output dir must not be in the root folder")
-						}
-
-						return nil
-					}).
 					Value(&outDir))),
-				"To setup multiple targets you must select an output directory not in the root folder.").ExecuteForm(); err != nil {
+				"To setup multiple targets we recommend you select an output directory not in the root folder.").ExecuteForm(); err != nil {
 				return err
 			}
 
-			target.Output = &outDir
-			currentWorkflow.Targets[targetName] = target
+			if outDir != "" {
+				target.Output = &outDir
+				currentWorkflow.Targets[targetName] = target
 
-			if err := moveOutDir(outDir, originalDir); err != nil {
-				return errors.Wrap(err, "failed to move out dir")
+				if err := moveOutDir(outDir, originalDir); err != nil {
+					return errors.Wrap(err, "failed to move out dir")
+				}
 			}
 		}
 	}
