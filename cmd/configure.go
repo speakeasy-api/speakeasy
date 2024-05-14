@@ -308,6 +308,13 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		outDir = *target.Output
 	}
 
+	if _, err := os.Stat(filepath.Join(outDir, ".speakeasy")); os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Join(outDir, ".speakeasy"), 0o755)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err := config.SaveConfig(outDir, targetConfig); err != nil {
 		return errors.Wrapf(err, "failed to save config file for target %s", targetName)
 	}
