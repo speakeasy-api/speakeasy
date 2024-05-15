@@ -267,6 +267,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	wf.FromQuickstart = true
 
 	if err = wf.RunWithVisualization(ctx); err != nil {
+		if strings.Contains(err.Error(), "document invalid") {
+			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
+				return errors.Wrapf(err, "failed to run generation workflow")
+			} else if retry {
+				return nil
+			}
+		}
+
 		return errors.Wrapf(err, "failed to run generation workflow")
 	}
 
@@ -278,6 +286,62 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	return nil
+}
+
+func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, initialTarget, outDir string, skipCompile bool) (bool, error) {
+	retrySampleSpec := true
+	_, err := charm.NewForm(huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[bool]().
+				Title("\n\nYour OpenAPI spec seems to have some validation issues.\nWould you like to retry with a sample spec?\n").
+				Options(
+					huh.NewOption("Yes", true),
+					huh.NewOption("No", false),
+				).
+				Value(&retrySampleSpec),
+		),
+	)).ExecuteForm()
+	if err != nil {
+		return false, err
+	}
+
+	if !retrySampleSpec {
+		return false, nil
+	}
+
+	absSchemaPath := filepath.Join(outDir, "openapi.yaml")
+	if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
+		return true, errors.Wrapf(err, "failed to write sample OpenAPI spec")
+	}
+
+	workflowFile.Sources[workflowFile.Targets[initialTarget].Source].Inputs[0].Location = "openapi.yaml"
+	if err := workflow.Save(outDir, workflowFile); err != nil {
+		return true, errors.Wrapf(err, "failed to save workflow file")
+	}
+
+	fmt.Println(
+		styles.RenderInfoMessage(
+			"The OpenAPI sample document will be used",
+			"It can be found here, you can edit it at anytime:",
+			absSchemaPath,
+		),
+	)
+
+	wf, err := run.NewWorkflow(
+		ctx,
+		"Workflow",
+		initialTarget,
+		"",
+		"",
+		nil,
+		nil,
+		false,
+		!skipCompile,
+		false,
+		[]string{},
+	)
+
+	return true, wf.RunWithVisualization(ctx)
 }
 
 func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
