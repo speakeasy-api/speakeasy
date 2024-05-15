@@ -218,7 +218,9 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", output, styles.Colors.Grey))
 
 		filteredLogs := filterLogs(ctx, &logs)
-		ask.OfferChatSessionOnError(ctx, filteredLogs)
+		if !w.FromQuickstart {
+			ask.OfferChatSessionOnError(ctx, filteredLogs)
+		}
 	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
 		s := strings.Join(criticalWarns, "\n")
 		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
