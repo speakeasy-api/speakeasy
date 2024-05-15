@@ -5,7 +5,9 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -282,6 +284,12 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
+	// There should only be one target after quickstart
+	if len(wf.SDKOverviewURLs) == 1 {
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		openURLInBrowser(overviewURL)
+	}
+
 	return nil
 }
 
@@ -338,7 +346,14 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		[]string{},
 	)
 
-	return true, wf.RunWithVisualization(ctx)
+	err = wf.RunWithVisualization(ctx)
+	// There should only be one target after quickstart
+	if err == nil && len(wf.SDKOverviewURLs) == 1 {
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		openURLInBrowser(overviewURL)
+	}
+
+	return true, err
 }
 
 func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
@@ -352,4 +367,22 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	}
 
 	return filepath.Join(workingDir, subDirectory)
+}
+
+func openURLInBrowser(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "linux":
+		cmd = exec.Command("xdg-open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return nil
 }
