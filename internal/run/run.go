@@ -67,6 +67,7 @@ type Workflow struct {
 	Repo             string
 	RepoSubDirs      map[string]string
 	InstallationURLs map[string]string
+	SDKOverviewURLs  map[string]string
 	Debug            bool
 	ShouldCompile    bool
 	ForceGeneration  bool
@@ -124,6 +125,7 @@ func NewWorkflow(
 		Repo:             repo,
 		RepoSubDirs:      repoSubDirs,
 		InstallationURLs: installationURLs,
+		SDKOverviewURLs:  make(map[string]string),
 		Debug:            debug,
 		ShouldCompile:    shouldCompile,
 		RegistryTags:     registryTags,
@@ -225,7 +227,8 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display success message if the workflow succeeded
 	if err == nil && runErr == nil {
 		w.printSourceSuccessMessage(logger)
-		_ = w.printTargetSuccessMessage(logger, endDuration, len(criticalWarns) > 0)
+		w.printTargetSuccessMessage(logger)
+		_ = w.printGenerationOverview(logger, endDuration, len(criticalWarns) > 0)
 	}
 
 	return stdErrors.Join(err, runErr)
@@ -438,6 +441,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			SourceBlobDigest:     sourceLock.SourceBlobDigest,
 			OutLocation:          outDir,
 		}
+	}
+
+	orgSlug := auth.GetOrgSlugFromContext(ctx)
+	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+	genLockID := sdkgen.GetGenLockID(outDir)
+	if orgSlug != "" && workspaceSlug != "" && genLockID != nil && *genLockID != "" {
+		w.SDKOverviewURLs[target] = fmt.Sprintf("https://app.speakeasyapi.dev/org/%s/%s/targets/%s", orgSlug, workspaceSlug, *genLockID)
 	}
 
 	return sourceRes, nil
@@ -857,7 +867,7 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 	return tags, nil
 }
 
-func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
+func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
 	t, err := getTarget(w.Target)
 	if err != nil {
 		return err
@@ -874,9 +884,6 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 		tOut = "the paths specified in workflow.yaml"
 	}
 
-	title := utils.CapitalizeFirst(t.Target + " SDK")
-	titleMsg := "Generated Successfully"
-
 	additionalLines := []string{
 		"✎ Output written to " + tOut,
 		fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
@@ -892,11 +899,10 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger, endDuration time
 
 	if criticalWarnings {
 		additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
-		titleMsg = "Generated with Warnings"
 	}
 
 	msg := styles.RenderInstructionalMessage(
-		fmt.Sprintf("%s %s", styles.HeavilyEmphasized.Render(title), styles.Success.Render(titleMsg)),
+		fmt.Sprintf("%s", styles.HeavilyEmphasized.Render("Generation Overview")),
 		additionalLines...,
 	)
 	logger.Println(msg)
@@ -951,6 +957,21 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
 		logger.Println(msg)
 	}
+}
+
+func (w *Workflow) printTargetSuccessMessage(logger log.Logger) {
+	if len(w.SDKOverviewURLs) == 0 {
+		return
+	}
+
+	heading := fmt.Sprintf("SDK Targets %s", styles.Success.Render("Generated Successfully"))
+	var additionalLines []string
+	for target, url := range w.SDKOverviewURLs {
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s overview: ", target)+styles.Dimmed.Render(url)))
+	}
+
+	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
+	logger.Println(msg)
 }
 
 func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *workflowTracking.WorkflowStep) (string, error) {
