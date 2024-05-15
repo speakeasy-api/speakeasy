@@ -58,7 +58,7 @@ type LintingError struct {
 }
 
 func (e *LintingError) Error() string {
-	return fmt.Sprintf("linting failed: %s - %w", e.Document, e.Err)
+	return fmt.Sprintf("linting failed: %s - %s", e.Document, e.Err.Error())
 }
 
 type Workflow struct {
