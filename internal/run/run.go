@@ -58,7 +58,7 @@ type LintingError struct {
 }
 
 func (e *LintingError) Error() string {
-	return fmt.Sprintf("linting failed: %s - %w", e.Document, e.Err)
+	return fmt.Sprintf("linting failed: %s - %s", e.Document, e.Err.Error())
 }
 
 type Workflow struct {
@@ -545,7 +545,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !isSingleRegistrySource(source) {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
-		if err != nil {
+		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			return "", nil, err
 		}
 	}
@@ -577,11 +577,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 }
 
 func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
+	changesStep := rootStep.NewSubstep("Computing Document Changes")
 	if !registry.IsRegistryEnabled(ctx) {
+		changesStep.Skip("API Registry not enabled")
 		return
 	}
-
-	changesStep := rootStep.NewSubstep("Computing Document Changes")
 
 	defer func() {
 		if err != nil {
@@ -663,8 +663,11 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 }
 
 func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) error {
+	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
+
 	if !registry.IsRegistryEnabled(ctx) {
-		return nil
+		registryStep.Skip("API Registry not enabled")
+		return ocicommon.ErrAccessGated
 	}
 
 	namespaceName := strcase.ToKebab(sourceID)
@@ -705,7 +708,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
 	memfs := fsextras.NewMemFS()
 
-	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
 
 	registryStep.NewSubstep("Snapshotting OpenAPI Revision")
 
@@ -762,7 +764,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
 
-	registryStep.NewSubstep("Storing OpenAPI Revision")
+	substepStore := registryStep.NewSubstep("Storing OpenAPI Revision")
 	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 		Tags:     tags,
 		Registry: reg,
@@ -772,6 +774,10 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	})
 	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 		return fmt.Errorf("error publishing openapi bundle to registry: %w", err)
+	} else if err != nil && errors.Is(err, ocicommon.ErrAccessGated) {
+		registryStep.Skip("API Registry not enabled")
+		substepStore.Skip("Registry not enabled")
+		return err
 	}
 
 	registryStep.SucceedWorkflow()
