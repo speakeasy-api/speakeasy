@@ -59,7 +59,7 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
 	}
 
-	log.From(ctx).Successf("Schema successfully registered for: %s - %s %s ✓", apiID, versionID)
+	log.From(ctx).Successf("Schema successfully registered for: %s - %s ✓", apiID, versionID)
 
 	return nil
 }
