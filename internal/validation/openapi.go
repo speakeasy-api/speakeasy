@@ -199,7 +199,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	sb.WriteString(err.Message)
 	sb.WriteString("\n\n")
 
-	if err.LineNumber == -1 || err.LineNumber > len(lines)-1 || err.LineNumber < 0 {
+	if err.LineNumber < 0 || err.LineNumber > len(lines)-1 {
 		sb.WriteString(styles.Dimmed.Render("This error does not apply to any specific line."))
 		return sb.String()
 	}
