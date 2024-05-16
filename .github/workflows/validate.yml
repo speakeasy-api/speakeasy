@@ -80,6 +80,6 @@ jobs:
       - name: ${{ matrix.test-group }}
         run: |
           set -euo pipefail
-          go test -json -v -p 1 -run ${{ matrix.test-pattern }} ./integration/... | gotestfmt
+          go test -json -v -p 1 -run ${{ matrix.test-pattern }} ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
