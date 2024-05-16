@@ -708,7 +708,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
 	memfs := fsextras.NewMemFS()
 
-
 	registryStep.NewSubstep("Snapshotting OpenAPI Revision")
 
 	rootDocumentPath, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
@@ -910,7 +909,7 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 	}
 
 	msg := styles.RenderInstructionalMessage(
-		fmt.Sprintf("%s", styles.HeavilyEmphasized.Render("Generation Overview")),
+		fmt.Sprintf("%s", "Generation Summary"),
 		additionalLines...,
 	)
 	logger.Println(msg)
@@ -975,7 +974,7 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger) {
 	heading := fmt.Sprintf("SDK Targets %s", styles.Success.Render("Generated Successfully"))
 	var additionalLines []string
 	for target, url := range w.SDKOverviewURLs {
-		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s overview: ", target)+styles.Dimmed.Render(url)))
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s overview: ", styles.HeavilyEmphasized.Render(target))+styles.Dimmed.Render(url)))
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
