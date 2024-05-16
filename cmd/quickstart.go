@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
@@ -282,6 +283,12 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
+	// There should only be one target after quickstart
+	if len(wf.SDKOverviewURLs) == 1 {
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		browser.OpenURL(overviewURL)
+	}
+
 	return nil
 }
 
@@ -338,7 +345,14 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		[]string{},
 	)
 
-	return true, wf.RunWithVisualization(ctx)
+	err = wf.RunWithVisualization(ctx)
+	// There should only be one target after quickstart
+	if err == nil && len(wf.SDKOverviewURLs) == 1 {
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		browser.OpenURL(overviewURL)
+	}
+
+	return true, err
 }
 
 func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
