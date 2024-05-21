@@ -516,7 +516,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 			_, err := charm.NewForm(huh.NewForm(
 				huh.NewGroup(
 					huh.NewSelect[bool]().
-						Title("\n\nSpeakeasy has a github app that can help you setup your repo for SDK generation.\nWould you like to continue after installing the Github App?\n").
+						Title("\n\nSpeakeasy has a Github app that can help you set up your SDK repo from speakeasy configure.\nWould you like to install it?\n").
 						Options(
 							huh.NewOption("Yes", true),
 							huh.NewOption("No", false),
