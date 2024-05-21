@@ -24,7 +24,7 @@ require (
 	github.com/speakeasy-api/openapi-generation/v2 v2.333.3
 	github.com/speakeasy-api/openapi-overlay v0.6.0
 	github.com/speakeasy-api/sdk-gen-config v1.14.2
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.7.3
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.1
 	github.com/speakeasy-api/speakeasy-core v0.8.5
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
@@ -42,6 +42,7 @@ require (
 require (
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/stoewer/go-strcase v1.3.0
 )
 
@@ -163,7 +164,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
-	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
 	github.com/pterm/pterm v0.12.79 // indirect

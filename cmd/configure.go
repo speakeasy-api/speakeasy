@@ -3,11 +3,14 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/pkg/browser"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 
@@ -32,6 +35,7 @@ const (
 	repositorySecretPath = "Settings > Secrets & Variables > Actions"
 	actionsPath          = "Actions > Generate"
 	githubSetupDocs      = "https://www.speakeasyapi.dev/docs/advanced-setup/github-setup"
+	appInstallURL        = "https://github.com/apps/speakeasy-github"
 )
 
 var configureCmd = &model.CommandGroup{
@@ -499,6 +503,39 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	ctx = events.SetTargetInContext(ctx, workingDir)
 
+	// check if the git repository is a github URI
+	event := shared.CliEvent{}
+	events.EnrichEventWithGitMetadata(ctx, &event)
+
+	// Installing the app is only relevant if we are in a remote linked github repository
+	hasAppAccess := false
+	if event.GitRemoteDefaultOwner != nil && *event.GitRemoteDefaultOwner != "" && event.GitRemoteDefaultRepo != nil && *event.GitRemoteDefaultRepo != "" {
+		hasAppAccess = checkGithubAppAccess(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
+		if !hasAppAccess {
+			continueAfterInstall := false
+			_, err := charm.NewForm(huh.NewForm(
+				huh.NewGroup(
+					huh.NewSelect[bool]().
+						Title("\n\nSpeakeasy has a Github app that can help you set up your SDK repo from speakeasy configure.\nWould you like to install it?\n").
+						Options(
+							huh.NewOption("Yes", true),
+							huh.NewOption("No", false),
+						).
+						Value(&continueAfterInstall),
+				),
+			)).ExecuteForm()
+			if err != nil {
+				return err
+			}
+
+			if continueAfterInstall {
+				browser.OpenURL(appInstallURL)
+				logger.Println(styles.Info.Render("Install the Github App then continue with `speakeasy configure github`!\n"))
+				return nil
+			}
+		}
+	}
+
 	secrets := make(map[string]string)
 	var generationWorkflowFilePaths []string
 
@@ -583,6 +620,11 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
+	autoConfigureRepoSuccess := false
+	if hasAppAccess {
+		autoConfigureRepoSuccess = configureGithubRepo(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
+	}
+
 	var remoteURL string
 	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
 		remoteURL = prompts.ParseGithubRemoteURL(repo)
@@ -618,10 +660,6 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	}
 
 	agenda := []string{}
-
-	// check if the git repository is a github URI
-	event := shared.CliEvent{}
-	events.EnrichEventWithGitMetadata(ctx, &event)
 	// This attribute is nil when not in a git repository
 	if event.GitRelativeCwd == nil {
 		agenda = append(agenda, fmt.Sprintf("• Initialize your Git Repository - https://github.com/git-guides/git-init"))
@@ -636,11 +674,16 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		actionPath = fmt.Sprintf("%s/actions", remoteURL)
 	}
 
-	agenda = append(agenda, fmt.Sprintf("• Setup a Speakeasy API Key as a GitHub Secret - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID))
-	agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the following repository secrets:", secretPath))
+	if !autoConfigureRepoSuccess {
+		agenda = append(agenda, fmt.Sprintf("• Setup a Speakeasy API Key as a GitHub Secret - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID))
+	}
+
+	if len(secrets) > 2 || !autoConfigureRepoSuccess {
+		agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the following repository secrets:", secretPath))
+	}
 
 	for key := range secrets {
-		if key != config.GithubAccessToken {
+		if key != config.GithubAccessToken && (key != config.SpeakeasyApiKey || !autoConfigureRepoSuccess) {
 			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
@@ -756,4 +799,38 @@ func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) (
 	}
 
 	return []string{}, []huh.Option[string]{huh.NewOption(charm.FormatNewOption("New Target"), "new target")}
+}
+
+func checkGithubAppAccess(ctx context.Context, org, repo string) bool {
+	s, err := core.GetSDKFromContext(ctx)
+	if err != nil {
+		return false
+	}
+
+	res, err := s.Github.GithubCheckAccess(ctx, operations.GithubCheckAccessRequest{
+		Org:  org,
+		Repo: repo,
+	})
+	if err != nil {
+		return false
+	}
+
+	return res.StatusCode == http.StatusOK
+}
+
+func configureGithubRepo(ctx context.Context, org, repo string) bool {
+	s, err := core.GetSDKFromContext(ctx)
+	if err != nil {
+		return false
+	}
+
+	res, err := s.Github.GithubConfigureTarget(ctx, shared.GithubConfigureTargetRequest{
+		Org:      org,
+		RepoName: repo,
+	})
+	if err != nil {
+		return false
+	}
+
+	return res.StatusCode == http.StatusOK
 }
