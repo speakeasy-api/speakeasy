@@ -14,7 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy/pkg/schema"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"

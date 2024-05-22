@@ -4,7 +4,7 @@ import (
 	"context"
 	goerr "errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy/pkg/schema"
 	"os"
 	"os/signal"
 	"strconv"

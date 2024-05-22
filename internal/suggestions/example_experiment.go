@@ -21,8 +21,8 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
+	"github.com/speakeasy-api/speakeasy/pkg/schema"
 	openai "github.com/speakeasy-sdks/openai-go-sdk/v4"
 	"github.com/speakeasy-sdks/openai-go-sdk/v4/pkg/models/shared"
 )

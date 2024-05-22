@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/pkg/schema"
 
 	"github.com/pkg/errors"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
