@@ -372,8 +372,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		return nil, err
 	}
 
-	log.From(ctx).Warnf("CONFIG PATH: %s", genConfig.ConfigPath)
-
 	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published)
 	if err != nil {
 		if errors.Is(err, validation.NoConfigFound) {
