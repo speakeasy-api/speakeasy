@@ -892,8 +892,8 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 	}
 
 	additionalLines := []string{
-		"✎ Output written to " + tOut,
 		fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+		"✎ Output written to " + tOut,
 	}
 
 	if w.FromQuickstart {
@@ -908,7 +908,7 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 		additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
 	}
 
-	msg := styles.RenderInstructionalMessage(
+	msg := styles.RenderSuccessMessage(
 		fmt.Sprintf("%s", "Generation Summary"),
 		additionalLines...,
 	)
@@ -944,6 +944,8 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 		return
 	}
 
+	logger.Println("") // Newline for better readability
+
 	for sourceID, sourceRes := range w.sourceResults {
 		heading := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(sourceID), styles.Success.Render("Compiled Successfully"))
 		var additionalLines []string
@@ -971,10 +973,10 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger) {
 		return
 	}
 
-	heading := fmt.Sprintf("SDK Targets %s", styles.Success.Render("Generated Successfully"))
+	heading := styles.Success.Render("SDKs Generated Successfully")
 	var additionalLines []string
 	for target, url := range w.SDKOverviewURLs {
-		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s overview: ", styles.HeavilyEmphasized.Render(target))+styles.Dimmed.Render(url)))
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s %s %s", styles.HeavilyEmphasized.Render(target), styles.Success.Render("overview:"), styles.Dimmed.Render(url))))
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
