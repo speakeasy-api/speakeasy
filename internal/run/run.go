@@ -944,7 +944,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 		return
 	}
 
-	logger.Println("")
+	logger.Println("") // Newline for better readability
 
 	for sourceID, sourceRes := range w.sourceResults {
 		heading := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(sourceID), styles.Success.Render("Compiled Successfully"))
