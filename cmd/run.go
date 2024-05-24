@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/spf13/cobra"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"go.uber.org/zap"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
@@ -61,9 +58,9 @@ A workflow is capable of:
 If ` + "`speakeasy run`" + `is run without any arguments it will either run the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.`
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
-	Usage:          "run",
-	Short:          "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
-	Long:           log.RenderMarkdown(runLong),
+	Usage:            "run",
+	Short:            "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
+	Long:             log.RenderMarkdown(runLong),
 	PreRun:           preRun,
 	Run:              runFunc,
 	RunInteractive:   runInteractive,
@@ -135,8 +132,6 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 	},
 }
 
-// Gets missing flag values (ie source / target)
-func preRun(cmd *cobra.Command, flags *RunFlags) error {
 // Gets missing flag values (ie source / target)
 func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	wf, _, err := utils.GetWorkflowAndDir()
