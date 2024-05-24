@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"go.uber.org/zap"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
-	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/run"
-	"go.uber.org/zap"
 )
 
 type RunFlags struct {
@@ -31,6 +31,8 @@ type RunFlags struct {
 	SkipCompile      bool              `json:"skip-compile"`
 	Force            bool              `json:"force"`
 	Output           string            `json:"output"`
+	Pinned           bool              `json:"pinned"`
+	RegistryTags     []string          `json:"registry-tags"`
 }
 
 var runLong = `# Run
@@ -60,10 +62,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 	Usage:          "run",
 	Short:          "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
 	Long:           log.RenderMarkdown(runLong),
-	PreRun:         getMissingFlagVals,
-	Run:            runFunc,
-	RunInteractive: runInteractive,
-	RequiresAuth:   true,
+	PreRun:           preRun,
+	Run:              runFunc,
+	RunInteractive:   runInteractive,
+	RequiresAuth:     true,
+	UsesWorkflowFile: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "target",
@@ -118,10 +121,20 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			AllowedValues: []string{"summary", "mermaid", "console"},
 			DefaultValue:  "summary",
 		},
+		flag.BooleanFlag{
+			Name:        "pinned",
+			Description: "Run using the current CLI version instead of the version specified in the workflow file",
+			Hidden:      true,
+		},
+		flag.StringSliceFlag{
+			Name:        "registry-tags",
+			Description: "tags to apply to the speakeasy registry bundle",
+		},
 	},
 }
 
-func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
+// Gets missing flag values (ie source / target)
+func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
@@ -138,7 +151,7 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
 			flags.Source = sources[0]
 		} else {
-			flags.Target, err = askForTarget("What target would you like to run?", "You may choose an individual target or 'all'.", "Let's configure a target for your workflow.", targets, true)
+			flags.Target, err = askForTarget("What target would you like to run?", "You may choose an individual target or 'all'.", "Let's choose a target to run the generation workflow.", targets, true)
 			if err != nil {
 				return err
 			}
@@ -147,6 +160,11 @@ func getMissingFlagVals(ctx context.Context, flags *RunFlags) error {
 
 	if flags.Target == "all" && len(targets) == 1 {
 		flags.Target = targets[0]
+	}
+
+	// Needed later
+	if err := cmd.Flags().Set("target", flags.Target); err != nil {
+		return err
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
@@ -219,7 +237,19 @@ func askForTarget(title, description, confirmation string, targets []string, all
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("Workflow", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(
+		ctx,
+		"Workflow",
+		flags.Target,
+		flags.Source,
+		flags.Repo,
+		flags.RepoSubdirs,
+		flags.InstallationURLs,
+		flags.Debug,
+		!flags.SkipCompile,
+		flags.Force,
+		flags.RegistryTags,
+	)
 	if err != nil {
 		return err
 	}
@@ -228,13 +258,25 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 
 	workflow.RootStep.Finalize(err == nil)
 
-	addGitHubSummary(ctx, workflow)
+	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
 	return err
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow("ignored", flags.Target, flags.Source, flags.Repo, flags.RepoSubdirs, flags.InstallationURLs, flags.Debug, !flags.SkipCompile, flags.Force)
+	workflow, err := run.NewWorkflow(
+		ctx,
+		"ignored",
+		flags.Target,
+		flags.Source,
+		flags.Repo,
+		flags.RepoSubdirs,
+		flags.InstallationURLs,
+		flags.Debug,
+		!flags.SkipCompile,
+		flags.Force,
+		flags.RegistryTags,
+	)
 	if err != nil {
 		return err
 	}
@@ -255,22 +297,4 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	}
 
 	return nil
-}
-
-func addGitHubSummary(ctx context.Context, workflow *run.Workflow) {
-	if !env.IsGithubAction() {
-		return
-	}
-
-	logger := log.From(ctx)
-	md := ""
-	chart, err := workflow.RootStep.ToMermaidDiagram()
-	if err == nil {
-		md = fmt.Sprintf("# Generation Workflow Summary\n\n_This is a breakdown of the 'Generate Target' step above_\n%s", chart)
-	} else {
-		logger.Error("failed to generate github workflow summary", zap.Error(err))
-		md = "# Generation Workflow Summary\n\n:stop_sign: Failed to generate workflow summary. Please try again or [contact support](mailto:support@speakeasyapi.dev)."
-	}
-
-	githubactions.AddStepSummary(md)
 }
