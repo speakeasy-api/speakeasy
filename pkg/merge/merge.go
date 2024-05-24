@@ -63,19 +63,19 @@ func validate(ctx context.Context, schemaPath string, schema []byte, defaultRule
 		MaxWarns: 10,
 	}
 
-	vErrs, vWarns, _, err := validation.Validate(ctx, logger, schema, schemaPath, limits, false, defaultRuleset, workingDir)
+	res, err := validation.Validate(ctx, logger, schema, schemaPath, limits, false, defaultRuleset, workingDir, false)
 	if err != nil {
 		return err
 	}
 
-	for _, warn := range vWarns {
+	for _, warn := range res.Warnings {
 		prefixedLogger.Warn("", zap.Error(warn))
 	}
-	for _, err := range vErrs {
+	for _, err := range res.Errors {
 		prefixedLogger.Error("", zap.Error(err))
 	}
 
-	if len(vErrs) > 0 {
+	if len(res.Errors) > 0 {
 		status := "\nOpenAPI spec invalid ✖"
 		return fmt.Errorf(status)
 	}
@@ -560,7 +560,7 @@ func isEquivalent(a YAMLComparable, b YAMLComparable) error {
 
 	aNode := aInner.(*yaml.Node)
 	bNode := bInner.(*yaml.Node)
-	nodeOverlay, err := overlay.Compare("comparison between yaml nodes", "", aNode, *bNode)
+	nodeOverlay, err := overlay.Compare("comparison between yaml nodes", aNode, *bNode)
 	if err != nil {
 		return fmt.Errorf("error comparing %#v and %#v: %w", a, b, err)
 	}

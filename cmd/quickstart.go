@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -111,7 +112,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	nextState := prompts.SourceBase
 	for nextState != prompts.Complete {
 		stateFunc := prompts.StateMapping[nextState]
-		state, err := stateFunc(&quickstartObj)
+		state, err := stateFunc(ctx, &quickstartObj)
 		if err != nil {
 			return err
 		}
@@ -248,17 +249,113 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run speakeasy generate")
 	}
 
-	workflow, err := run.NewWorkflow("Workflow", initialTarget, "", "", nil, nil, false, !flags.SkipCompile, false)
+	wf, err := run.NewWorkflow(
+		ctx,
+		"Workflow",
+		initialTarget,
+		"",
+		"",
+		nil,
+		nil,
+		false,
+		!flags.SkipCompile,
+		false,
+		[]string{},
+	)
 	if err != nil {
 		return err
 	}
-	workflow.FromQuickstart = true
+	wf.FromQuickstart = true
 
-	if err = workflow.RunWithVisualization(ctx); err != nil {
+	if err = wf.RunWithVisualization(ctx); err != nil {
+		if strings.Contains(err.Error(), "document invalid") {
+			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
+				return errors.Wrapf(err, "failed to run generation workflow")
+			} else if retry {
+				return nil
+			}
+		}
+
 		return errors.Wrapf(err, "failed to run generation workflow")
 	}
 
+	if len(wf.OperationsRemoved) > 0 {
+		// If we have modified the workflow with a minimum viable spec we should make sure that is saved
+		if err := workflow.Save(outDir, wf.GetWorkflowFile()); err != nil {
+			return errors.Wrapf(err, "failed to save workflow file")
+		}
+	}
+
+	// There should only be one target after quickstart
+	if len(wf.SDKOverviewURLs) == 1 {
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		browser.OpenURL(overviewURL)
+	}
+
 	return nil
+}
+
+func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, initialTarget, outDir string, skipCompile bool) (bool, error) {
+	retrySampleSpec := true
+	_, err := charm.NewForm(huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[bool]().
+				Title("\n\nYour OpenAPI spec seems to have some validation issues.\nWould you like to retry with a sample spec?\n").
+				Options(
+					huh.NewOption("Yes", true),
+					huh.NewOption("No", false),
+				).
+				Value(&retrySampleSpec),
+		),
+	)).ExecuteForm()
+	if err != nil {
+		return false, err
+	}
+
+	if !retrySampleSpec {
+		return false, nil
+	}
+
+	absSchemaPath := filepath.Join(outDir, "openapi.yaml")
+	if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
+		return true, errors.Wrapf(err, "failed to write sample OpenAPI spec")
+	}
+
+	workflowFile.Sources[workflowFile.Targets[initialTarget].Source].Inputs[0].Location = "openapi.yaml"
+	if err := workflow.Save(outDir, workflowFile); err != nil {
+		return true, errors.Wrapf(err, "failed to save workflow file")
+	}
+
+	fmt.Println(
+		styles.RenderInfoMessage(
+			"The OpenAPI sample document will be used",
+			"It can be found here, you can edit it at anytime:",
+			absSchemaPath,
+		),
+	)
+
+	wf, err := run.NewWorkflow(
+		ctx,
+		"Workflow",
+		initialTarget,
+		"",
+		"",
+		nil,
+		nil,
+		false,
+		!skipCompile,
+		false,
+		[]string{},
+	)
+
+	err = wf.RunWithVisualization(ctx)
+	// There should only be one target after quickstart
+	if err == nil && len(wf.SDKOverviewURLs) == 1 {
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		browser.OpenURL(overviewURL)
+	}
+
+	return true, err
 }
 
 func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {

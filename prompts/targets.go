@@ -1,9 +1,11 @@
 package prompts
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
@@ -19,7 +21,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 		targetFields = append(targetFields, huh.NewSelect[string]().
 			Title("Which target would you like to generate?").
 			Description("Choose from this list of supported generation targets. \n").
-			Options(huh.NewOptions(GetSupportedTargets()...)...).
+			Options(GetTargetOptions()...).
 			Value(targetType))
 	}
 
@@ -33,8 +35,16 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 			charm.NewInput().
 				Title("What is a good name for this target?").
 				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("a target name must be provided")
+					}
+
+					if strings.Contains(s, " ") {
+						return fmt.Errorf("a target name must not contain spaces")
+					}
+
 					if _, ok := currentWorkflow.Targets[s]; ok && s != originalTargetName {
-						return fmt.Errorf("a source with the name %s already exists", s)
+						return fmt.Errorf("a target with the name %s already exists", s)
 					}
 					return nil
 				}).
@@ -72,7 +82,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	return groups
 }
 
-func targetBaseForm(quickstart *Quickstart) (*QuickstartState, error) {
+func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	var targetName string
 	if len(quickstart.WorkflowFile.Targets) == 0 {
 		targetName = "my-first-target"
@@ -174,26 +184,21 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 
 			if _, err := charm.NewForm(huh.NewForm(
 				huh.NewGroup(charm.NewInput().
-					Title(fmt.Sprintf("Provide an output directory for your %s generation target %s.", targetType, targetName)).
+					Title(fmt.Sprintf("Optionally provide an output directory to move your existing %s target %s to.", targetType, targetName)).
 					Suggestions(charm.DirsInCurrentDir(outDir)).
 					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
-					Validate(func(s string) error {
-						if currentDir(s) {
-							return fmt.Errorf("the output dir must not be in the root folder")
-						}
-
-						return nil
-					}).
 					Value(&outDir))),
-				"To setup multiple targets you must select an output directory not in the root folder.").ExecuteForm(); err != nil {
+				"When setting up multiple targets we recommend you select an output directory not in the root folder.").ExecuteForm(); err != nil {
 				return err
 			}
 
-			target.Output = &outDir
-			currentWorkflow.Targets[targetName] = target
+			if outDir != "" {
+				target.Output = &outDir
+				currentWorkflow.Targets[targetName] = target
 
-			if err := moveOutDir(outDir, originalDir); err != nil {
-				return errors.Wrap(err, "failed to move out dir")
+				if err := moveOutDir(outDir, originalDir); err != nil {
+					return errors.Wrap(err, "failed to move out dir")
+				}
 			}
 		}
 	}

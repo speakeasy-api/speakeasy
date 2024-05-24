@@ -36,7 +36,7 @@ type LintOpenapiFlags struct {
 	Ruleset               string `json:"ruleset"`
 }
 
-var lintOpenapiCmd = model.ExecutableCommand[LintOpenapiFlags]{
+var lintOpenapiCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "openapi",
 	Short:          "Lint an OpenAPI document",
 	Long:           `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
@@ -110,7 +110,7 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 		return err
 	}
 
-	if err := validation.ValidateOpenAPI(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd); err != nil {
+	if _, err := validation.ValidateOpenAPI(ctx, "", flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
@@ -134,7 +134,7 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 		return err
 	}
 
-	if err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd); err != nil {
+	if _, err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd); err != nil {
 		return err
 	}
 

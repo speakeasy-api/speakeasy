@@ -17,16 +17,15 @@ require (
 	github.com/iancoleman/orderedmap v0.3.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/pb33f/libopenapi v0.15.14
+	github.com/pb33f/libopenapi v0.16.4
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-changes v1.0.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.306.3
-	github.com/speakeasy-api/openapi-overlay v0.4.0
-	github.com/speakeasy-api/sdk-gen-config v1.10.0
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.4.3
-	github.com/speakeasy-api/speakeasy-core v0.4.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.335.5
+	github.com/speakeasy-api/openapi-overlay v0.6.0
+	github.com/speakeasy-api/sdk-gen-config v1.14.2
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.1
+	github.com/speakeasy-api/speakeasy-core v0.8.6
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0
@@ -38,6 +37,13 @@ require (
 	golang.org/x/term v0.17.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
+)
+
+require (
+	github.com/inkeep/ai-api-go v0.3.1
+	github.com/pb33f/openapi-changes v0.0.61
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+	github.com/stoewer/go-strcase v1.3.0
 )
 
 require (
@@ -94,7 +100,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gammban/numtow v0.0.2 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
-	github.com/gdamore/tcell/v2 v2.7.1 // indirect
+	github.com/gdamore/tcell/v2 v2.7.4 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -164,11 +170,10 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
-	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/posthog/posthog-go v0.0.0-20220817142604-0b0bbf0f9c0f // indirect
 	github.com/pterm/pterm v0.12.79 // indirect
-	github.com/rivo/tview v0.0.0-20240204151237-861aa94d61c8 // indirect
+	github.com/rivo/tview v0.0.0-20240307173318-e804876934a1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
@@ -185,6 +190,7 @@ require (
 	github.com/speakeasy-api/easytemplate v0.11.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
+	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect

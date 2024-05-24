@@ -9,6 +9,5 @@ var HiddenCommands = []string{
 	"completion",
 	"help",
 	"migrate",
-	//"merge",
-	"openapi", // TODO unhide this and hide merge instead (to make room)
+	"merge",
 }

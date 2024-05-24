@@ -268,7 +268,13 @@ func buildNewPublishingWorkflow(pubWorkflow string) (*config.PublishWorkflow, er
 
 	newPublishingWorkflow := &config.PublishWorkflow{
 		Name: publishingWorkflow.Name,
-		On:   publishingWorkflow.On,
+		Permissions: config.Permissions{
+			Checks:       config.GithubWritePermission,
+			Statuses:     config.GithubWritePermission,
+			Contents:     config.GithubWritePermission,
+			PullRequests: config.GithubWritePermission,
+		},
+		On: publishingWorkflow.On,
 		Jobs: config.Jobs{
 			Publish: config.Job{
 				Uses:    "speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15",

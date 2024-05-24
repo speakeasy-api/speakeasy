@@ -21,7 +21,7 @@ speakeasy quickstart [flags]
   -o, --out-dir string   output directory for the quickstart command
   -s, --schema string    local filepath or URL for the OpenAPI schema
       --skip-compile     skip compilation during generation after setup
-  -t, --target string    language to generate sdk for (available options: [typescript, python, go, csharp, java, php, ruby, swift, terraform, unity])
+  -t, --target string    language to generate sdk for (available options: [typescript, python, go, java, terraform, csharp, unity, php, postman, ruby, swift])
 ```
 
 ### Options inherited from parent commands

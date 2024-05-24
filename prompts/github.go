@@ -38,11 +38,16 @@ var SupportedPublishingTargets = []string{
 	"ruby",
 	"php",
 	"java",
+	"go",
 }
 
-func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow) (*config.GenerateWorkflow, error) {
+func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow, target *string) (*config.GenerateWorkflow, error) {
 	if githubWorkflow == nil || githubWorkflow.Jobs.Generate.Uses == "" {
 		githubWorkflow = defaultGenerationFile()
+	}
+
+	if target != nil {
+		githubWorkflow.Name = fmt.Sprintf("Generate %s", strings.ToUpper(*target))
 	}
 
 	secrets := githubWorkflow.Jobs.Generate.Secrets
@@ -59,6 +64,9 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 			}
 		}
 	}
+	if target != nil {
+		githubWorkflow.Jobs.Generate.With["target"] = *target
+	}
 	githubWorkflow.Jobs.Generate.Secrets = secrets
 	return githubWorkflow, nil
 }
@@ -67,90 +75,35 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 	promptMap := make(map[publishingPrompt]*string)
 	switch target.Target {
 	case "typescript":
-		currentNpmToken := npmTokenDefault
-		if target.Publishing != nil && target.Publishing.NPM != nil {
-			currentNpmToken = target.Publishing.NPM.Token
-		}
-		npmTokenVal := &currentNpmToken
-		promptMap[publishingPrompt{
-			key:       "NPM Token",
-			entryType: publishingTypeSecret,
-		}] = npmTokenVal
-		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
-			return nil, err
-		}
 		target.Publishing = &workflow.Publishing{
 			NPM: &workflow.NPM{
-				Token: formatWorkflowSecret(*npmTokenVal),
+				Token: formatWorkflowSecret(npmTokenDefault),
 			},
 		}
 	case "python":
-		currentPyPIToken := pypiTokenDefault
-		if target.Publishing != nil && target.Publishing.PyPi != nil {
-			currentPyPIToken = target.Publishing.PyPi.Token
-		}
-		pypiTokenVal := &currentPyPIToken
-		promptMap[publishingPrompt{
-			key:       "PyPI Token",
-			entryType: publishingTypeSecret,
-		}] = pypiTokenVal
-		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
-			return nil, err
-		}
 		target.Publishing = &workflow.Publishing{
 			PyPi: &workflow.PyPi{
-				Token: formatWorkflowSecret(*pypiTokenVal),
+				Token: formatWorkflowSecret(pypiTokenDefault),
 			},
 		}
 	case "csharp":
-		currentNugetKey := nugetTokenDefault
-		if target.Publishing != nil && target.Publishing.Nuget != nil {
-			currentNugetKey = target.Publishing.Nuget.APIKey
-		}
-		nugetKeyVal := &currentNugetKey
-		promptMap[publishingPrompt{
-			key:       "Nuget API Key",
-			entryType: publishingTypeSecret,
-		}] = nugetKeyVal
-		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
-			return nil, err
-		}
 		target.Publishing = &workflow.Publishing{
 			Nuget: &workflow.Nuget{
-				APIKey: formatWorkflowSecret(*nugetKeyVal),
+				APIKey: formatWorkflowSecret(nugetTokenDefault),
 			},
 		}
 	case "ruby":
-		currentRubyGemsToken := rubyGemsTokenDefault
-		if target.Publishing != nil && target.Publishing.RubyGems != nil {
-			currentRubyGemsToken = target.Publishing.RubyGems.Token
-		}
-		rubyGemsTokenVal := &currentRubyGemsToken
-		promptMap[publishingPrompt{
-			key:       "Ruby Gems Auth Token",
-			entryType: publishingTypeSecret,
-		}] = rubyGemsTokenVal
-		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
-			return nil, err
-		}
 		target.Publishing = &workflow.Publishing{
 			RubyGems: &workflow.RubyGems{
-				Token: formatWorkflowSecret(*rubyGemsTokenVal),
+				Token: formatWorkflowSecret(rubyGemsTokenDefault),
 			},
 		}
 	case "php":
-		currentPackagistToken := packagistTokenDefault
 		currentPackagistUserName := ""
 		if target.Publishing != nil && target.Publishing.Packagist != nil {
-			currentPackagistToken = target.Publishing.Packagist.Token
 			currentPackagistUserName = target.Publishing.Packagist.Username
 		}
-		packagistToken := &currentPackagistToken
 		packagistUsername := &currentPackagistUserName
-		promptMap[publishingPrompt{
-			key:       "Packagist Token",
-			entryType: publishingTypeSecret,
-		}] = packagistToken
 		promptMap[publishingPrompt{
 			key:       "Packagist Username",
 			entryType: publishingTypeValue,
@@ -160,38 +113,17 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 		target.Publishing = &workflow.Publishing{
 			Packagist: &workflow.Packagist{
-				Token:    formatWorkflowSecret(*packagistToken),
+				Token:    formatWorkflowSecret(packagistTokenDefault),
 				Username: *packagistUsername,
 			},
 		}
 	case "java":
 		sonatypeLegacy := target.Publishing != nil && target.Publishing.Java != nil && target.Publishing.Java.UseSonatypeLegacy
-		currentGPGSecretKey := gpgSecretKeyDefault
-		currentGPGPassPhrase := gpgPassPhraseDefault
-		currentossrhPassword := ossrhPasswordDefault
 		currentossrhUsername := ""
 		if target.Publishing != nil && target.Publishing.Java != nil {
-			currentGPGSecretKey = target.Publishing.Java.GPGSecretKey
-			currentGPGPassPhrase = target.Publishing.Java.GPGPassPhrase
-			currentossrhPassword = target.Publishing.Java.OSSHRPassword
 			currentossrhUsername = target.Publishing.Java.OSSRHUsername
 		}
-		gpgSecretKey := &currentGPGSecretKey
-		gpgPassPhrase := &currentGPGPassPhrase
-		ossrhPassword := &currentossrhPassword
 		ossrhUsername := &currentossrhUsername
-		promptMap[publishingPrompt{
-			key:       "GPG Secret Key",
-			entryType: publishingTypeSecret,
-		}] = gpgSecretKey
-		promptMap[publishingPrompt{
-			key:       "GPG Pass Phrase",
-			entryType: publishingTypeSecret,
-		}] = gpgPassPhrase
-		promptMap[publishingPrompt{
-			key:       "OSSRH Password",
-			entryType: publishingTypeSecret,
-		}] = ossrhPassword
 		promptMap[publishingPrompt{
 			key:       "OSSRH Username",
 			entryType: publishingTypeValue,
@@ -201,9 +133,9 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 		target.Publishing = &workflow.Publishing{
 			Java: &workflow.Java{
-				GPGSecretKey:      formatWorkflowSecret(*gpgSecretKey),
-				GPGPassPhrase:     formatWorkflowSecret(*gpgPassPhrase),
-				OSSHRPassword:     formatWorkflowSecret(*ossrhPassword),
+				GPGSecretKey:      formatWorkflowSecret(gpgSecretKeyDefault),
+				GPGPassPhrase:     formatWorkflowSecret(gpgPassPhraseDefault),
+				OSSHRPassword:     formatWorkflowSecret(ossrhPasswordDefault),
 				OSSRHUsername:     *ossrhUsername,
 				UseSonatypeLegacy: sonatypeLegacy,
 			},
@@ -388,13 +320,17 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string) (*config.GenerateWorkflow, string, error) {
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string, target, outputPath *string) (*config.GenerateWorkflow, string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
-	for _, target := range workflowFile.Targets {
-		if target.Publishing != nil {
-			for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
+	for name, t := range workflowFile.Targets {
+		if target != nil && *target != name {
+			continue
+		}
+
+		if t.Publishing != nil {
+			for _, secret := range getSecretsValuesFromPublishing(*t.Publishing) {
 				secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 			}
 		}
@@ -409,9 +345,21 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if mode == "pr" {
 		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
+		if target != nil {
+			sanitizedName := strings.ReplaceAll(strings.ToLower(*target), "-", "_")
+			filePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_publish_%s.yaml", sanitizedName))
+		}
 		publishingFile := &config.PublishWorkflow{}
 		if err := readPublishingFile(publishingFile, filePath); err != nil {
 			publishingFile = defaultPublishingFile()
+		}
+
+		if target != nil {
+			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*target))
+		}
+
+		if outputPath != nil {
+			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *outputPath)}
 		}
 
 		for name, value := range secrets {
@@ -530,6 +478,12 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 func defaultPublishingFile() *config.PublishWorkflow {
 	return &config.PublishWorkflow{
 		Name: "Publish",
+		Permissions: config.Permissions{
+			Checks:       config.GithubWritePermission,
+			Statuses:     config.GithubWritePermission,
+			Contents:     config.GithubWritePermission,
+			PullRequests: config.GithubWritePermission,
+		},
 		On: config.PublishOn{
 			Push: config.Push{
 				Paths: []string{

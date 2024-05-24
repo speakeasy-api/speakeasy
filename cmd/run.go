@@ -8,6 +8,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"go.uber.org/zap"
+  "github.com/speakeasy-api/speakeasy/internal/github"
+	"github.com/spf13/cobra"
+
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 

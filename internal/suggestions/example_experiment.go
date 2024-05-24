@@ -4,7 +4,6 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"math/rand"
 	"net/http"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy/internal/transform"
 
 	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/datamodel"
@@ -63,7 +64,7 @@ func assistant(content string) shared.ChatCompletionRequestMessage {
 
 func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder string, outputFile string) error {
 	_, schema, _ := schema.GetSchemaContents(ctx, schemaPath, "", "")
-	err := validation.ValidateOpenAPI(ctx, schemaPath, "", "", &validation.OutputLimits{}, "", "")
+	_, err := validation.ValidateOpenAPI(ctx, "", schemaPath, "", "", &validation.OutputLimits{}, "", "", false)
 	if len(os.Getenv("OPENAI_API_KEY")) == 0 {
 		return errors.NewValidationError("OPENAI_API_KEY is not set", -1, nil)
 	}
@@ -244,7 +245,7 @@ func handleUpdate(ctx context.Context, cacheFolder string, shard Shard) error {
 	//
 	//title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])
 	//
-	o, err := overlay.Compare("LLM", originalFile, y1, *y2)
+	o, err := overlay.Compare("LLM", y1, *y2)
 	if err != nil {
 		return fmt.Errorf("failed to compare spec files %q and %q: %w", originalFile, adjustedFile, err)
 	}
@@ -317,7 +318,7 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 		v3Model.Model.Paths.PathItems = orderedmap.New[string, *v3.PathItem]()
 		v3Model.Model.Paths.PathItems.Set(pair.Key(), pair.Value())
 		// eliminate all the now-orphaned schemas
-		doc, v3Model, err = transform.RemoveOrphans(doc, v3Model)
+		doc, v3Model, err = transform.RemoveOrphans(context.Background(), doc, v3Model, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -336,6 +337,3 @@ func Split(doc libopenapi.Document, cacheFolder string) ([]Shard, error) {
 func base64(key string) string {
 	return b64.StdEncoding.EncodeToString([]byte(key))
 }
-
-
-

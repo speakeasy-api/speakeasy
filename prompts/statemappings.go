@@ -1,12 +1,14 @@
 package prompts
 
 import (
+	"context"
+
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 )
 
 type (
-	formFunction    func(quickstart *Quickstart) (*QuickstartState, error)
+	formFunction    func(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error)
 	QuickstartState int
 )
 

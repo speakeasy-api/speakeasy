@@ -92,13 +92,8 @@ func GetMissingFlags(cmd *cobra.Command) error {
 
 		// Only print if there were flags missing. This avoids printing when the full command was provided initially.
 		if len(modifiedFlags) > 0 {
-			flagString := ""
-			for _, flag := range getSetFlags(cmd.Flags()) {
-				flagString += fmt.Sprintf(" --%s=%s", flag.Name, flag.Value.String())
-			}
-
 			running := styles.DimmedItalic.Render("Running command")
-			command := styles.Info.Render(fmt.Sprintf(`%s%s`, cmd.CommandPath(), flagString))
+			command := styles.Info.Render(utils.GetFullCommandString(cmd))
 			log.From(cmd.Context()).Printf("\n%s %s\n", running, command)
 		}
 	}
@@ -204,18 +199,6 @@ func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[str
 	return multiInputPrompt.Run()
 }
 
-func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
-	values := make([]*pflag.Flag, 0)
-
-	flags.VisitAll(func(flag *pflag.Flag) {
-		if flag.Changed {
-			values = append(values, flag)
-		}
-	})
-
-	return values
-}
-
 func isCommandRunnable(cmd *cobra.Command) bool {
 	onlyHasHelpFlags := true
 
@@ -231,5 +214,19 @@ func isCommandRunnable(cmd *cobra.Command) bool {
 }
 
 func isHidden(cmd *cobra.Command) bool {
-	return cmd.Hidden || slices.Contains(HiddenCommands, cmd.Name())
+	if cmd.Hidden {
+		return true
+	}
+
+	qualifiedName := getFullyQualifiedName(cmd)
+
+	return slices.Contains(HiddenCommands, qualifiedName)
+}
+
+func getFullyQualifiedName(cmd *cobra.Command) string {
+	if cmd.HasParent() && cmd.Parent() != cmd.Root() {
+		return getFullyQualifiedName(cmd.Parent()) + "." + cmd.Name()
+	}
+
+	return cmd.Name()
 }

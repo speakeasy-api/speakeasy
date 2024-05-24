@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/reports"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/sdk-gen-config/workspace"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
@@ -28,114 +29,117 @@ type OutputLimits struct {
 	MaxWarns int
 }
 
-func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) error {
+type ValidationResult struct {
+	AllErrors        []error
+	Errors           []error
+	Warnings         []error
+	Infos            []error
+	Status           string
+	ValidOperations  []string
+	InvalidOperation []string
+	Report           reports.ReportResult
+}
+
+func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (*ValidationResult, error) {
 	logger := log.From(ctx)
-	logger.Info("Validating OpenAPI spec...\n")
+	logger.Info("Linting OpenAPI document...\n")
 
 	ctx = log.With(ctx, logger.WithWriter(io.Discard))
 
 	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to get schema contents: %w", err)
+		return nil, fmt.Errorf("failed to get document contents: %w", err)
 	}
 
-	vErrs, vWarns, vInfo, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if len(vErrs) == 0 && len(vWarns) == 0 && len(vInfo) == 0 {
+	if len(res.Errors) == 0 && len(res.Warnings) == 0 && len(res.Infos) == 0 {
 		msg := styles.RenderSuccessMessage(
 			"OpenAPI Document Valid",
 			"0 errors, 0 warnings, 0 hints",
 			fmt.Sprintf("Try %s %s", styles.HeavilyEmphasized.Render("speakeasy quickstart"), styles.Dimmed.Render("to generate an SDK")),
 		)
 		logger.Println(msg)
-		return nil
+		return res, nil
 	}
 
 	var tabs []interactivity.Tab
 	tabs = append(tabs, interactivity.Tab{
-		Title:       fmt.Sprintf("Errors (%d)", len(vErrs)),
-		Content:     errorsToTabContents(schema, vErrs),
+		Title:       fmt.Sprintf("Errors (%d)", len(res.Errors)),
+		Content:     errorsToTabContents(schema, res.Errors),
 		TitleColor:  styles.Colors.Red,
 		BorderColor: styles.Colors.Red,
-		Default:     len(vErrs) > 0,
+		Default:     len(res.Errors) > 0,
 	})
 	tabs = append(tabs, interactivity.Tab{
-		Title:       fmt.Sprintf("Warnings (%d)", len(vWarns)),
-		Content:     errorsToTabContents(schema, vWarns),
+		Title:       fmt.Sprintf("Warnings (%d)", len(res.Warnings)),
+		Content:     errorsToTabContents(schema, res.Warnings),
 		TitleColor:  styles.Colors.Yellow,
 		BorderColor: styles.Colors.Yellow,
-		Default:     len(vErrs) == 0 && len(vWarns) > 0,
+		Default:     len(res.Errors) == 0 && len(res.Warnings) > 0,
 	})
 	tabs = append(tabs, interactivity.Tab{
-		Title:       fmt.Sprintf("Hints (%d)", len(vInfo)),
-		Content:     errorsToTabContents(schema, vInfo),
+		Title:       fmt.Sprintf("Hints (%d)", len(res.Infos)),
+		Content:     errorsToTabContents(schema, res.Infos),
 		TitleColor:  styles.Colors.Blue,
 		BorderColor: styles.Colors.Blue,
-		Default:     len(vErrs) == 0 && len(vWarns) == 0 && len(vInfo) > 0,
+		Default:     len(res.Errors) == 0 && len(res.Warnings) == 0 && len(res.Infos) > 0,
 	})
 
 	interactivity.RunTabs(tabs)
 
-	return nil
+	return res, nil
 }
 
-func ValidateOpenAPI(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) error {
+func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string, isQuickstart bool) (*ValidationResult, error) {
 	logger := log.From(ctx)
-	logger.Info("Validating OpenAPI spec...\n")
+	logger.Info("Linting OpenAPI document...\n")
 
 	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
-		return fmt.Errorf("failed to get schema contents: %w", err)
+		return nil, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
-	hasWarnings := false
-
-	vErrs, vWarns, vInfo, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir)
+	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, isQuickstart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	for _, hint := range vInfo {
+	for _, hint := range res.Infos {
 		prefixedLogger.Info("", zap.Error(hint))
 	}
-	for _, warn := range vWarns {
-		hasWarnings = true
+	for _, warn := range res.Warnings {
 		prefixedLogger.Warn("", zap.Error(warn))
 	}
-	for _, err := range vErrs {
+	for _, err := range res.Errors {
 		prefixedLogger.Error("", zap.Error(err))
 	}
 
-	logger.Infof("\nOpenAPI spec validation complete. %d errors, %d warnings, %d hints\n", len(vErrs), len(vWarns), len(vInfo))
+	logger.Infof("\nOpenAPI document linting complete. %d errors, %d warnings, %d hints\n", len(res.Errors), len(res.Warnings), len(res.Infos))
 
-	if len(vErrs) > 0 {
-		status := "\nOpenAPI spec invalid ✖"
-		github.GenerateSummary(status, vErrs)
-		return fmt.Errorf(status)
+	github.GenerateLintingSummary(ctx, github.LintingSummary{
+		Source:    source,
+		Status:    res.Status,
+		Errors:    res.AllErrors,
+		ReportURL: res.Report.URL,
+	})
+
+	if len(res.Errors) > 0 {
+		return res, fmt.Errorf(res.Status)
 	}
 
-	if hasWarnings {
-		for _, warn := range vWarns {
-			if vErrs == nil {
-				vErrs = []error{}
-			}
-			vErrs = append(vErrs, warn)
-		}
-
-		github.GenerateSummary("OpenAPI spec valid with warnings ⚠", vErrs)
-		logger.Warn("OpenAPI spec valid with warnings ⚠")
-		return nil
+	if len(res.Warnings) > 0 {
+		logger.Warn(res.Status)
+		return res, nil
 	}
 
-	github.GenerateSummary("OpenAPI spec valid ✓", nil)
-	logger.Success("OpenAPI spec valid ✓")
-
-	return nil
+	logger.Success(res.Status)
+	return res, nil
 }
 
 func errorsToTabContents(schema []byte, errs []error) []interactivity.InspectableContent {
@@ -195,7 +199,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	sb.WriteString(err.Message)
 	sb.WriteString("\n\n")
 
-	if err.LineNumber == -1 {
+	if err.LineNumber < 0 || err.LineNumber > len(lines)-1 {
 		sb.WriteString(styles.Dimmed.Render("This error does not apply to any specific line."))
 		return sb.String()
 	}
@@ -209,8 +213,8 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	}
 
 	endLine := err.LineNumber + 3
-	if endLine > len(lines) {
-		endLine = len(lines)
+	if endLine > len(lines)-1 {
+		endLine = len(lines) - 1
 	}
 
 	shortestWhitespacePrefix := ""
@@ -238,7 +242,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string) ([]error, []error, []error, error) {
+func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string, parseValidOperations bool) (*ValidationResult, error) {
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
 	opts := []generate.GeneratorOptions{
@@ -247,22 +251,24 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		generate.WithRunLocation("cli"),
 	}
 
+	if parseValidOperations {
+		opts = append(opts, generate.WithParseValidOperations())
+	}
+
 	if defaultRuleset != "" {
 		opts = append(opts, generate.WithValidationRuleset(defaultRuleset))
 	}
 
 	g, err := generate.New(opts...)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	res, err := g.Validate(ctx, schema, schemaPath, isRemote, workingDir)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
-	var vErrs []error
-	var vWarns []error
-	var vInfo []error
+	var vErrs, vWarns, vInfo []error
 
 	errs := res.GetValidationErrors()
 	for _, err := range errs {
@@ -299,37 +305,47 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		}
 	}
 
-	searchDirs := map[string]bool{
-		workingDir: true,
+	status := "OpenAPI document valid ✓"
+
+	if len(vErrs) > 0 {
+		status = "OpenAPI document invalid ✖"
+	} else if len(vErrs) > 0 {
+		status = "OpenAPI document valid with warnings ⚠"
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		searchDirs[homeDir] = false
+	report, err := generateReport(ctx, res)
+	if err == nil && report.Message != "" {
+		outputLogger.Info(report.Message)
 	}
 
-	outputDir := filepath.Join(os.TempDir(), "speakeasy")
-
-	for dir, allowRecursive := range searchDirs {
-		res, err := workspace.FindWorkspace(dir, workspace.FindWorkspaceOptions{
-			Recursive: allowRecursive,
-		})
-		if err != nil {
-			continue
-		}
-		outputDir = filepath.Join(res.Path, "temp")
+	cliEvent := events.GetTelemetryEventFromContext(ctx)
+	if cliEvent != nil {
+		infoCount := int64(len(vInfo))
+		warnCount := int64(len(vWarns))
+		errCount := int64(len(vErrs))
+		cliEvent.LintReportInfoCount = &infoCount
+		cliEvent.LintReportWarningCount = &warnCount
+		cliEvent.LintReportErrorCount = &errCount
 	}
 
-	_ = os.MkdirAll(outputDir, 0o755)
+	return &ValidationResult{
+		AllErrors:        errs,
+		Errors:           vErrs,
+		Warnings:         vWarns,
+		Infos:            vInfo,
+		Status:           status,
+		ValidOperations:  res.GetValidOperations(),
+		InvalidOperation: res.GetInvalidOperations(),
+		Report:           report,
+	}, nil
+}
 
-	rf, err := os.CreateTemp(outputDir, "lint-report-*.html")
-	if err == nil {
-		defer rf.Close()
+type validationResult interface {
+	GenerateReport() []byte
+}
 
-		if _, err := rf.Write(res.GenerateReport()); err == nil {
-			outputLogger.Info(fmt.Sprintf("Validation report written to: %s", rf.Name()))
-		}
-	}
-
-	return vErrs, vWarns, vInfo, nil
+// Returns (message, url, digest, error)
+func generateReport(ctx context.Context, res validationResult) (reports.ReportResult, error) {
+	reportBytes := res.GenerateReport()
+	return reports.UploadReport(ctx, reportBytes, shared.TypeLinting)
 }

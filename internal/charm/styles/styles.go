@@ -40,7 +40,7 @@ var (
 	Colors = struct {
 		Yellow, DimYellow, SpeakeasyPrimary, SpeakeasySecondary, Red, DimRed, Green, DimGreen, BrightGrey, Grey, WhiteBlackAdaptive, DimGrey, Blue, DimBlue lipgloss.AdaptiveColor
 	}{
-		Yellow:             lipgloss.AdaptiveColor{Dark: "#FBE331", Light: "#D0B604"},
+		Yellow:             lipgloss.AdaptiveColor{Dark: "#FBE331", Light: "#C0A802"},
 		DimYellow:          lipgloss.AdaptiveColor{Dark: "#AF9A04", Light: "#AF9A04"},
 		SpeakeasyPrimary:   lipgloss.AdaptiveColor{Dark: "#FBE331", Light: "#212015"},
 		SpeakeasySecondary: lipgloss.AdaptiveColor{Dark: "#212015", Light: "#FBE331"},
@@ -107,6 +107,15 @@ func RenderErrorMessage(heading string, additionalLines ...string) string {
 	}
 
 	return MakeBoxed(s, Colors.Red, lipgloss.Center)
+}
+
+func RenderInstructionalError(heading string, additionalLines ...string) string {
+	s := Error.Render(utils.CapitalizeFirst(heading + "\n"))
+	for _, line := range additionalLines {
+		s += "\n\n" + Error.Render(line)
+	}
+
+	return MakeBoxed(s, Colors.Red, lipgloss.Left)
 }
 
 func RenderInstructionalMessage(heading string, additionalLines ...string) string {

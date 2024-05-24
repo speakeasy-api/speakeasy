@@ -9,3 +9,15 @@ func IsGithubAction() bool {
 func IsGithubDebugMode() bool {
 	return os.Getenv("RUNNER_DEBUG") == "true"
 }
+
+func PinnedVersion() string {
+	return os.Getenv("PINNED_VERSION")
+}
+
+func GoArch() string {
+	return os.Getenv("GOARCH")
+}
+
+func IsLocalDev() bool {
+	return os.Getenv("SPEAKEASY_ENVIRONMENT") == "local"
+}

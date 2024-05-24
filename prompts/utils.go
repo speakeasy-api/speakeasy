@@ -1,9 +1,11 @@
 package prompts
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 )
@@ -12,6 +14,10 @@ var priorityTargets = []string{
 	"typescript",
 	"python",
 	"go",
+	"java",
+	"terraform",
+	"csharp",
+	"unity",
 }
 
 func inPriorityTargets(target string) bool {
@@ -32,14 +38,37 @@ func getSourcesFromWorkflow(inputWorkflow *workflow.Workflow) []string {
 	return sources
 }
 
+func GetTargetOptions() []huh.Option[string] {
+	options := []huh.Option[string]{}
+
+	targets := generate.GetSupportedTargets()
+
+	// priority ordering
+	for _, target := range priorityTargets {
+		for _, supportedTarget := range targets {
+			if supportedTarget.Target == target {
+				options = append(options, huh.NewOption(fmt.Sprintf("%s (%s)", supportedTarget.Target, supportedTarget.Maturity), supportedTarget.Target))
+				break
+			}
+		}
+	}
+
+	for _, target := range targets {
+		if inPriorityTargets(target.Target) || target.Target == "docs" {
+			continue
+		}
+
+		options = append(options, huh.NewOption(fmt.Sprintf("%s (%s)", target.Target, target.Maturity), target.Target))
+	}
+
+	return options
+}
+
 func GetSupportedTargets() []string {
 	targets := generate.GetSupportedLanguages()
 	filteredTargets := []string{}
 
-	// priority ordering
-	for _, target := range priorityTargets {
-		filteredTargets = append(filteredTargets, target)
-	}
+	filteredTargets = append(filteredTargets, priorityTargets...)
 
 	for _, language := range targets {
 		if strings.HasSuffix(language, "v2") || inPriorityTargets(language) || language == "docs" {

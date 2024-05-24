@@ -39,7 +39,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	logger := log.From(ctx).WithAssociatedFile(schemaPath)
 
 	generationAccess, level, message, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
-		GenLockID:  getGenLockID(outDir),
+		GenLockID:  GetGenLockID(outDir),
 		TargetType: &lang,
 	})
 
@@ -185,7 +185,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 	return nil
 }
 
-func getGenLockID(outDir string) *string {
+func GetGenLockID(outDir string) *string {
 	if utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".speakeasy/gen.lock")) || utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".gen/gen.lock")) {
 		if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
 			return &cfg.LockFile.ID

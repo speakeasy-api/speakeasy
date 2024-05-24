@@ -24,7 +24,8 @@ speakeasy openapi transform [flags]
 
 ### Parent Command
 
-* [speakeasy openapi](../README.md)	 - Validate and compare OpenAPI documents
+* [speakeasy openapi](../README.md)	 - Utilities for working with OpenAPI documents
 ### Sub Commands
 
+* [speakeasy openapi transform filter-operations](filter-operations.md)	 - Given an OpenAPI file, filter down to just the given set of operations
 * [speakeasy openapi transform remove-unused](remove-unused.md)	 - Given an OpenAPI file, remove all unused options
