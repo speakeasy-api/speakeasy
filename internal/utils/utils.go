@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -8,6 +9,8 @@ import (
 	"unicode"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"golang.org/x/term"
 )
@@ -113,7 +116,7 @@ func SanitizeFilePath(path string) string {
 	return sanitizedPath
 }
 
-func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
+func GetWorkflow() (*workflow.Workflow, string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, "", err
@@ -124,11 +127,44 @@ func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
 		return nil, "", err
 	}
 
+	return wf, workflowFileLocation, nil
+}
+
+func GetWorkflowAndDir() (*workflow.Workflow, string, error) {
+	wf, wfFileLocation, err := GetWorkflow()
+	if err != nil {
+		return nil, "", err
+	}
+
 	// Get the project directory which is the parent of the .speakeasy folder the workflow file is in
-	projectDir := filepath.Dir(filepath.Dir(workflowFileLocation))
+	projectDir := filepath.Dir(filepath.Dir(wfFileLocation))
 	if err := os.Chdir(projectDir); err != nil {
 		return nil, "", err
 	}
 
 	return wf, projectDir, nil
+}
+
+func GetFullCommandString(cmd *cobra.Command) string {
+	return strings.Join(GetCommandParts(cmd), " ")
+}
+
+func GetCommandParts(cmd *cobra.Command) []string {
+	parts := strings.Split(cmd.CommandPath(), " ")
+	for _, f := range getSetFlags(cmd.Flags()) {
+		parts = append(parts, fmt.Sprintf("--%s=%s", f.Name, f.Value.String()))
+	}
+	return parts
+}
+
+func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
+	values := make([]*pflag.Flag, 0)
+
+	flags.VisitAll(func(flag *pflag.Flag) {
+		if flag.Changed {
+			values = append(values, flag)
+		}
+	})
+
+	return values
 }
