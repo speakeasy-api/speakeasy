@@ -3,9 +3,35 @@ package log
 import (
 	"context"
 	"encoding/json"
-	"github.com/spf13/cobra"
 	"reflect"
+
+	"github.com/charmbracelet/glamour"
+	"github.com/spf13/cobra"
 )
+
+var renderer *glamour.TermRenderer
+
+func init() {
+	renderer, _ = glamour.NewTermRenderer(
+		// detect background color and pick either the default dark or light theme
+		glamour.WithAutoStyle(),
+		// wrap output at specific width (default is 80)
+		glamour.WithWordWrap(80),
+	)
+}
+
+func RenderMarkdown(content string) string {
+	rendered, err := renderer.Render(content)
+	if err != nil {
+		return content
+	}
+
+	return rendered
+}
+
+func RenderError(content string) string {
+	return RenderMarkdown("_Error_:\n" + content)
+}
 
 func PrintArray[K any](cmd *cobra.Command, arr []K, fieldNameReplacements map[string]string) {
 	printJson, _ := cmd.Flags().GetBool("json")
