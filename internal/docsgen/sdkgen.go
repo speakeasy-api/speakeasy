@@ -71,7 +71,6 @@ func GenerateContent(ctx context.Context, inputLangs []string, customerID, schem
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithRepoDetails(repo, repoSubDir),
-		generate.WithAllowRemoteReferences(),
 		generate.WithSDKDocLanguages(langs...),
 	}
 

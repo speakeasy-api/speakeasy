@@ -94,7 +94,6 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		generate.WithInstallationURL(installationURL),
 		generate.WithPublished(published),
 		generate.WithRepoDetails(repo, repoSubDir),
-		generate.WithAllowRemoteReferences(),
 		generate.WithCLIVersion(cliVersion),
 	}
 
