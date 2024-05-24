@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool) error {
+func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool) (string, error) {
 	targetToCodeSamples := map[string][]UsageSnippet{}
 	isJSON := filepath.Ext(schema) == ".json"
 
@@ -34,14 +34,16 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 			true,
 			usageOutput,
 		); err != nil {
-			return err
+			return "", err
 		}
 
 		log.From(ctx).Infof("\nGenerated usage snippets for %s\n\n", lang)
 
+		fmt.Println("usageOutput.String()", usageOutput.String())
+
 		snippets, err := ParseUsageOutput(lang, usageOutput.String())
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		for _, snippet := range snippets {
@@ -110,7 +112,7 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 
 	overlayString, err := overlay.ToString()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if overlayFilename == "" {
@@ -118,16 +120,16 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 	} else {
 		f, err := os.Create(overlayFilename)
 		if err != nil {
-			return err
+			return overlayString, err
 		}
 		defer f.Close()
 
 		if _, err = f.WriteString(overlayString); err != nil {
-			return err
+			return overlayString, err
 		}
 	}
 
-	return nil
+	return overlayString, nil
 }
 
 func styleForNode(isJSON bool) yaml.Style {

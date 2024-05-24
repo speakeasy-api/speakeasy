@@ -414,7 +414,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	w.generationAccess = generationAccess
 
 	if t.CodeSamples != nil {
-		rootStep.NewSubstep("Generating Code Samples")
+		codeSamplesStep := rootStep.NewSubstep("Generating Code Samples")
 		configPath := "."
 		outputPath := t.CodeSamples.Output
 		if t.Output != nil {
@@ -422,10 +422,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			outputPath = filepath.Join(*t.Output, outputPath)
 		}
 
-		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
+		overlayString, err := usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
 		if err != nil {
 			return nil, err
 		}
+
+		w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
 	}
 
 	rootStep.NewSubstep("Cleaning up")
@@ -822,6 +824,105 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		SourceBlobDigest:     *blobDigest,
 		Tags:                 tags,
 	}
+
+	return nil
+}
+
+func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflowTracking.WorkflowStep, overlayString string, codeSampleConfig workflow.CodeSamples) error {
+	registryLocation := codeSampleConfig.Registry
+
+	if registryLocation == nil {
+		return nil
+	}
+
+	tags := []string{"latest"}
+	if env.IsGithubAction() {
+		// implicitly add branch tag
+		var branch string
+		if strings.Contains(os.Getenv("GITHUB_REF"), "refs/heads/") {
+			branch = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+		} else if strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull/") {
+			branch = strings.TrimPrefix(os.Getenv("GITHUB_HEAD_REF"), "refs/heads/")
+		}
+
+		// trim to fit docker tag format
+		branch = strings.TrimSpace(branch)
+		branch = strings.ReplaceAll(branch, "/", "-")
+		if branch != "" {
+			tags = append(tags, branch)
+		}
+	}
+
+	registryStep := parentStep.NewSubstep("Snapshotting Code Samples")
+
+	if !registry.IsRegistryEnabled(ctx) {
+		registryStep.Skip("API Registry not enabled")
+		return ocicommon.ErrAccessGated
+	}
+
+	orgSlug, workspaceSlug, name, err := registryLocation.ParseRegistryLocation()
+	if err != nil {
+		return fmt.Errorf("error parsing registry location %s: %w", string(registryLocation.Location), err)
+	}
+
+	if orgSlug != auth.GetOrgSlugFromContext(ctx) {
+		return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(registryLocation.Location))
+	}
+
+	if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+		return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(registryLocation.Location))
+	}
+
+	namespaceName := name
+
+	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
+
+	memfs := fsextras.NewMemFS()
+
+	// Create a file called overlay.yaml with the contents
+	overlayPath := "overlay.yaml"
+	memfs.WriteBytes(overlayPath, []byte(overlayString), 0644)
+
+	registryStep.NewSubstep("Snapshotting Code Samples")
+
+	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+		Tags:         tags,
+		Reproducible: true,
+		MediaType:    ocicommon.MediaTypeOpenAPIOverlayV0,
+	})
+
+	if err != nil {
+		return fmt.Errorf("error bundling code samples artifact: %w", err)
+	}
+
+	serverURL := auth.GetServerURL()
+
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	substepStore := registryStep.NewSubstep("Storing Code Samples")
+	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+		Tags:     tags,
+		Registry: reg,
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		}),
+	})
+	fmt.Println("pushResult", pushResult)
+	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
+		return fmt.Errorf("error publishing code samples bundle to registry: %w", err)
+	} else if err != nil && errors.Is(err, ocicommon.ErrAccessGated) {
+		registryStep.Skip("API Registry not enabled")
+		substepStore.Skip("Registry not enabled")
+		return err
+	}
+
+	registryStep.SucceedWorkflow()
 
 	return nil
 }
