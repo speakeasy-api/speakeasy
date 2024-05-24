@@ -1,6 +1,9 @@
 .PHONY: *
 SHELL = /usr/bin/env bash
 
+build:
+	go build -o speakeasy main.go
+
 upgrade:
 	./scripts/upgrade.bash
 
