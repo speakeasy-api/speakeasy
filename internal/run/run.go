@@ -751,6 +751,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		Tags:         tags,
 		Reproducible: true,
 		Annotations:  annotations,
+		MediaType: ocicommon.MediaTypeOpenAPIBundleV0
 	})
 	if err != nil {
 		return fmt.Errorf("error bundling openapi artifact: %w", err)
