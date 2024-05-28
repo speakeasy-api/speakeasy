@@ -751,7 +751,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		Tags:         tags,
 		Reproducible: true,
 		Annotations:  annotations,
-		MediaType: ocicommon.MediaTypeOpenAPIBundleV0
+		MediaType:    ocicommon.MediaTypeOpenAPIBundleV0,
 	})
 	if err != nil {
 		return fmt.Errorf("error bundling openapi artifact: %w", err)
@@ -836,22 +836,9 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return nil
 	}
 
-	tags := []string{"latest"}
-	if env.IsGithubAction() {
-		// implicitly add branch tag
-		var branch string
-		if strings.Contains(os.Getenv("GITHUB_REF"), "refs/heads/") {
-			branch = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
-		} else if strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull/") {
-			branch = strings.TrimPrefix(os.Getenv("GITHUB_HEAD_REF"), "refs/heads/")
-		}
-
-		// trim to fit docker tag format
-		branch = strings.TrimSpace(branch)
-		branch = strings.ReplaceAll(branch, "/", "-")
-		if branch != "" {
-			tags = append(tags, branch)
-		}
+	tags, err := w.getRegistryTags(ctx, "")
+	if err != nil {
+		return err
 	}
 
 	registryStep := parentStep.NewSubstep("Snapshotting Code Samples")
@@ -906,15 +893,15 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
 
-	substepStore := registryStep.NewSubstep("Storing Code Samples")
-	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+	substepStore := registryStep.NewSubstep("Uploading Code Samples")
+	_, err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 		Tags:     tags,
 		Registry: reg,
 		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
 			Insecure: insecurePublish,
 		}),
 	})
-	fmt.Println("pushResult", pushResult)
+
 	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 		return fmt.Errorf("error publishing code samples bundle to registry: %w", err)
 	} else if err != nil && errors.Is(err, ocicommon.ErrAccessGated) {
@@ -922,6 +909,8 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		substepStore.Skip("Registry not enabled")
 		return err
 	}
+
+	// TODO: Should we attach on the CLI event that the code samples were successfully published?
 
 	registryStep.SucceedWorkflow()
 

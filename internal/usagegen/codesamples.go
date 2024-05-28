@@ -39,8 +39,6 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 
 		log.From(ctx).Infof("\nGenerated usage snippets for %s\n\n", lang)
 
-		fmt.Println("usageOutput.String()", usageOutput.String())
-
 		snippets, err := ParseUsageOutput(lang, usageOutput.String())
 		if err != nil {
 			return "", err
