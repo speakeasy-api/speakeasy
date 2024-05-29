@@ -40,6 +40,6 @@ speakeasy [flags]
 * [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy quickstart](quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
 * [speakeasy run](run.md)	 - generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file
-* [speakeasy suggest](suggest.md)	 - Validate an OpenAPI document and get fixes suggested by ChatGPT
+* [speakeasy suggest](suggest/README.md)	 - Automatically improve your OpenAPI document with an LLM
 * [speakeasy tag](tag.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
