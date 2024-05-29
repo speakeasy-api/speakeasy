@@ -10,10 +10,11 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/config"
 )
 
-func InitSDK(apiKey string) (*speakeasy.Speakeasy, error) {
-	if apiKey == "" {
-		apiKey = config.GetSpeakeasyAPIKey()
-	}
+func InitSDK() (*speakeasy.Speakeasy, error) {
+	return InitSDKWithKey(config.GetSpeakeasyAPIKey())
+}
+
+func InitSDKWithKey(apiKey string) (*speakeasy.Speakeasy, error) {
 	if apiKey == "" {
 		return nil, errors.New("no api key available, please set SPEAKEASY_API_KEY or run 'speakeasy auth' to authenticate the CLI with the Speakeasy Platform")
 	}

@@ -10,4 +10,6 @@ var HiddenCommands = []string{
 	"help",
 	"migrate",
 	"merge",
+	"bump",
+	"tag",
 }

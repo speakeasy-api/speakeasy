@@ -2,13 +2,12 @@ package transform
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"io"
 
 	"github.com/pb33f/libopenapi"
-	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 )
 
 type transformer[Args interface{}] struct {
@@ -19,32 +18,21 @@ type transformer[Args interface{}] struct {
 }
 
 func (t transformer[Args]) Do(ctx context.Context) error {
-	_, schemaContents, _ := schema.GetSchemaContents(ctx, t.schemaPath, "", "")
-	doc, err := libopenapi.NewDocumentWithConfiguration(schemaContents, getConfig())
+	_, doc, model, err := schema.LoadDocument(ctx, t.schemaPath)
 	if err != nil {
-		return errors.NewValidationError("failed to load document", -1, err)
+		return err
 	}
-	v3Model, _ := doc.BuildV3Model()
 
-	_, v3Model, err = t.transformFn(ctx, doc, v3Model, t.args)
+	_, model, err = t.transformFn(ctx, *doc, model, t.args)
 	if err != nil {
 		return err
 	}
 	// render the document to our shard
-	bytes, err := v3Model.Model.Render()
+	bytes, err := model.Model.Render()
 	if err != nil {
 		return errors.NewValidationError("failed to render document", -1, err)
 	}
 
 	_, err = t.w.Write(bytes)
 	return err
-}
-
-func getConfig() *datamodel.DocumentConfiguration {
-	return &datamodel.DocumentConfiguration{
-		AllowRemoteReferences:               true,
-		IgnorePolymorphicCircularReferences: true,
-		IgnoreArrayCircularReferences:       true,
-		ExtractRefsSequentially:             true,
-	}
 }

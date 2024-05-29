@@ -24,7 +24,7 @@ func queryEventLog(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func getRequestFromEventLog(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}

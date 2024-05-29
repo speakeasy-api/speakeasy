@@ -58,7 +58,7 @@ func getAllAPIEndpointsForVersion(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func getApiEndpoint(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func findApiEndpoint(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func generateOpenAPISpecForAPIEndpoint(cmd *cobra.Command, args []string) error 
 
 	diff, _ := cmd.Flags().GetBool("diff")
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func generatePostmanCollectionForAPIEndpoint(cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
