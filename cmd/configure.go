@@ -319,6 +319,16 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		}
 	}
 
+	// If we are creating a new target we must make sure an empty gen.yaml file exists so SaveConfig writes in the correct place
+	if existingTarget == "" {
+		if _, err := os.Stat(filepath.Join(outDir, ".speakeasy/gen.yaml")); os.IsNotExist(err) {
+			err = os.WriteFile(filepath.Join(outDir, ".speakeasy/gen.yaml"), []byte{}, 0o644)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := config.SaveConfig(outDir, targetConfig); err != nil {
 		return errors.Wrapf(err, "failed to save config file for target %s", targetName)
 	}
