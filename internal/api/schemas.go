@@ -36,7 +36,7 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 		return err // TODO wrap
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func getSchemas(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func getSchemaRevision(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func getSchemaDiff(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func downloadLatestSchema(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func downloadSchemaRevision(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}

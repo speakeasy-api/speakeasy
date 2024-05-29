@@ -30,7 +30,7 @@ func Compare(schemas []string, w io.Writer) error {
 
 	y2, err := loader.LoadSpecification(schemas[1])
 	if err != nil {
-		return fmt.Errorf("failed to laod %q: %w", schemas[1], err)
+		return fmt.Errorf("failed to load %q: %w", schemas[1], err)
 	}
 
 	title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])

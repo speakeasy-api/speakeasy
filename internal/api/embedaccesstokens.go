@@ -11,7 +11,7 @@ import (
 func getValidEmbedAccessTokens(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}

@@ -20,11 +20,10 @@ type tagFlagsArgs struct {
 }
 
 var tagCmd = &model.ExecutableCommand[tagFlagsArgs]{
-	Usage:          "tag",
-	Short:          "Add tags to a given revision of your API. Specific to a registry namespace",
-	Run:            runTag,
-	RunInteractive: runTag,
-	RequiresAuth:   true,
+	Usage:        "tag",
+	Short:        "Add tags to a given revision of your API. Specific to a registry namespace",
+	Run:          runTag,
+	RequiresAuth: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "namespace-name",
