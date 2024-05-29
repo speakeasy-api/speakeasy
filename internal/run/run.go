@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -269,7 +270,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, sourceRes, err := w.runSource(ctx, w.RootStep, id, "", true)
+			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "", true)
 			if err != nil {
 				return err
 			}
@@ -292,7 +293,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, sourceRes, err := w.runSource(ctx, w.RootStep, w.Source, "", true)
+		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "", true)
 		if err != nil {
 			return err
 		}
@@ -331,7 +332,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	var sourceRes *sourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -490,7 +491,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	return sourceRes, nil
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *sourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *sourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &sourceResult{
@@ -1253,13 +1254,39 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	}
 	w.workflow.Sources[sourceID] = source
 
-	sourcePath, sourceRes, err := w.runSource(ctx, subStep, sourceID, targetID, cleanUp)
+	sourcePath, sourceRes, err := w.RunSource(ctx, subStep, sourceID, targetID, cleanUp)
 	if err != nil {
 		failedRetry = true
 		return "", nil, err
 	}
 
 	return sourcePath, sourceRes, err
+}
+
+func (w *Workflow) ValidateTarget() (*workflow.Target, error) {
+	if len(w.workflow.Targets) == 0 {
+		return nil, fmt.Errorf("no targets found in workflow")
+	}
+	if w.Target == "" && len(w.workflow.Targets) > 1 {
+		targetKeys := make([]string, 0, len(w.workflow.Targets))
+		for k := range w.workflow.Targets {
+			targetKeys = append(targetKeys, k)
+		}
+		sort.Strings(targetKeys)
+		return nil, fmt.Errorf("target is ambiguous as there are %v targets. Use --target %s to specify a target", len(w.workflow.Targets), strings.Join(targetKeys, "|"))
+	}
+	if w.Target == "" && len(w.workflow.Targets) == 1 {
+		for k := range w.workflow.Targets {
+			w.Target = k
+		}
+	}
+
+	target, err := getTarget(w.Target)
+	if err != nil {
+		return nil, err
+	}
+
+	return target, err
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
