@@ -24,11 +24,10 @@ type suggestOperationIDsFlags struct {
 }
 
 var suggestOperationIDsCmd = &model.ExecutableCommand[suggestOperationIDsFlags]{
-	Usage:          "operation-ids",
-	Short:          "Get suggestions to improve your OpenAPI document's operation IDs",
-	Run:            runSuggest,
-	RunInteractive: runSuggest,
-	RequiresAuth:   true,
+	Usage:        "operation-ids",
+	Short:        "Get suggestions to improve your OpenAPI document's operation IDs",
+	Run:          runSuggest,
+	RequiresAuth: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:                       "schema",
@@ -40,7 +39,8 @@ var suggestOperationIDsCmd = &model.ExecutableCommand[suggestOperationIDsFlags]{
 		flag.StringFlag{
 			Name:        "out",
 			Shorthand:   "o",
-			Description: "write the suggestion as an overlay to the specified path",
+			Description: "write the suggestion to the specified path",
+			Required:    true,
 		},
 		flag.BooleanFlag{
 			Name:         "overlay",

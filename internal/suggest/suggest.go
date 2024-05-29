@@ -54,14 +54,11 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	 * Write the new document or overlay
 	 */
 
-	out := os.Stdout
-	if outPath != "" {
-		out, err = os.Create(outPath)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		return err
 	}
+	defer outFile.Close()
 
 	finalBytes, err := newDoc.Render()
 	if err != nil {
@@ -83,11 +80,11 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 			return err
 		}
 
-		if err := o.Format(out); err != nil {
+		if err := o.Format(outFile); err != nil {
 			return err
 		}
 	} else {
-		if _, err = out.Write(finalBytes); err != nil {
+		if _, err = outFile.Write(finalBytes); err != nil {
 			return err
 		}
 	}
