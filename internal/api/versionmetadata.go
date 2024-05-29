@@ -22,7 +22,7 @@ func getVersionMetadata(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}

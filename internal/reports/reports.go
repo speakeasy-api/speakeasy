@@ -31,7 +31,7 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 	}
 	digest := hex.EncodeToString(md5Hasher.Sum(nil))
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return writeLocally(digest, reportBytes, reportType)
 	}

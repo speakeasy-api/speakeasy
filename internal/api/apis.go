@@ -16,7 +16,7 @@ import (
 func getApis(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func getApiVersions(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func generateOpenAPISpec(cmd *cobra.Command, args []string) error {
 
 	diff, _ := cmd.Flags().GetBool("diff")
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func generatePostmanCollection(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	s, err := sdk.InitSDK("")
+	s, err := sdk.InitSDK()
 	if err != nil {
 		return err
 	}
