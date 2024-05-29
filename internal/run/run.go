@@ -867,15 +867,44 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 
 	memfs := fsextras.NewMemFS()
 
-	// Create a file called overlay.yaml with the contents
+	// overlayPath := filepath.Join(bundler.BundleRoot.String(), "overlay.yaml")
 	overlayPath := "overlay.yaml"
-	memfs.WriteBytes(overlayPath, []byte(overlayString), 0644)
+	err = memfs.WriteBytes(overlayPath, []byte(overlayString), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing overlay to memfs: %w", err)
+	}
 
 	registryStep.NewSubstep("Snapshotting Code Samples")
+
+	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	if err != nil {
+		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
+	}
+
+	rootDocument, err := memfs.Open(overlayPath)
+	if err != nil {
+		return fmt.Errorf("error opening root document: %w", err)
+	}
+
+	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	if err != nil {
+		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
+	}
+
+	revision := ""
+	if gitRepo != nil {
+		revision, err = gitRepo.HeadHash()
+		if err != nil {
+			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
+		}
+	}
+	annotations.Revision = revision
+	annotations.BundleRoot = overlayPath
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
 		Tags:         tags,
 		Reproducible: true,
+		Annotations:  annotations,
 		MediaType:    ocicommon.MediaTypeOpenAPIOverlayV0,
 	})
 
@@ -909,8 +938,6 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		substepStore.Skip("Registry not enabled")
 		return err
 	}
-
-	// TODO: Should we attach on the CLI event that the code samples were successfully published?
 
 	registryStep.SucceedWorkflow()
 
