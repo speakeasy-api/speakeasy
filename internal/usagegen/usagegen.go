@@ -60,7 +60,6 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		generate.WithFileSystem(&fileSystem{buf: tmpOutput}),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
-		generate.WithAllowRemoteReferences(),
 		generate.WithForceGeneration(),
 	}
 

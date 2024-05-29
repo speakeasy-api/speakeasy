@@ -414,7 +414,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	w.generationAccess = generationAccess
 
 	if t.CodeSamples != nil {
-		rootStep.NewSubstep("Generating Code Samples")
+		codeSamplesStep := rootStep.NewSubstep("Generating Code Samples")
 		configPath := "."
 		outputPath := t.CodeSamples.Output
 		if t.Output != nil {
@@ -422,10 +422,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			outputPath = filepath.Join(*t.Output, outputPath)
 		}
 
-		err = usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
+		overlayString, err := usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
 		if err != nil {
 			return nil, err
 		}
+
+		w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
 	}
 
 	rootStep.NewSubstep("Cleaning up")
@@ -749,6 +751,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		Tags:         tags,
 		Reproducible: true,
 		Annotations:  annotations,
+		MediaType:    ocicommon.MediaTypeOpenAPIBundleV0,
 	})
 	if err != nil {
 		return fmt.Errorf("error bundling openapi artifact: %w", err)
@@ -822,6 +825,120 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		SourceBlobDigest:     *blobDigest,
 		Tags:                 tags,
 	}
+
+	return nil
+}
+
+func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflowTracking.WorkflowStep, overlayString string, codeSampleConfig workflow.CodeSamples) error {
+	registryLocation := codeSampleConfig.Registry
+
+	if registryLocation == nil {
+		return nil
+	}
+
+	tags, err := w.getRegistryTags(ctx, "")
+	if err != nil {
+		return err
+	}
+
+	registryStep := parentStep.NewSubstep("Snapshotting Code Samples")
+
+	if !registry.IsRegistryEnabled(ctx) {
+		registryStep.Skip("API Registry not enabled")
+		return ocicommon.ErrAccessGated
+	}
+
+	orgSlug, workspaceSlug, name, err := registryLocation.ParseRegistryLocation()
+	if err != nil {
+		return fmt.Errorf("error parsing registry location %s: %w", string(registryLocation.Location), err)
+	}
+
+	if orgSlug != auth.GetOrgSlugFromContext(ctx) {
+		return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(registryLocation.Location))
+	}
+
+	if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+		return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(registryLocation.Location))
+	}
+
+	namespaceName := name
+
+	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
+
+	memfs := fsextras.NewMemFS()
+
+	overlayPath := "overlay.yaml"
+	err = memfs.WriteBytes(overlayPath, []byte(overlayString), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing overlay to memfs: %w", err)
+	}
+
+	registryStep.NewSubstep("Snapshotting Code Samples")
+
+	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	if err != nil {
+		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
+	}
+
+	rootDocument, err := memfs.Open(overlayPath)
+	if err != nil {
+		return fmt.Errorf("error opening root document: %w", err)
+	}
+
+	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	if err != nil {
+		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
+	}
+
+	revision := ""
+	if gitRepo != nil {
+		revision, err = gitRepo.HeadHash()
+		if err != nil {
+			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
+		}
+	}
+	annotations.Revision = revision
+	annotations.BundleRoot = overlayPath
+
+	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+		Tags:         tags,
+		Reproducible: true,
+		Annotations:  annotations,
+		MediaType:    ocicommon.MediaTypeOpenAPIOverlayV0,
+	})
+
+	if err != nil {
+		return fmt.Errorf("error bundling code samples artifact: %w", err)
+	}
+
+	serverURL := auth.GetServerURL()
+
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	substepStore := registryStep.NewSubstep("Uploading Code Samples")
+	_, err = pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+		Tags:     tags,
+		Registry: reg,
+		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		}),
+	})
+
+	if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
+		return fmt.Errorf("error publishing code samples bundle to registry: %w", err)
+	} else if err != nil && errors.Is(err, ocicommon.ErrAccessGated) {
+		registryStep.Skip("API Registry not enabled")
+		substepStore.Skip("Registry not enabled")
+		return err
+	}
+
+	registryStep.SucceedWorkflow()
 
 	return nil
 }

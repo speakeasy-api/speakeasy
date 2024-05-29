@@ -21,11 +21,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.335.5
+	github.com/speakeasy-api/openapi-generation/v2 v2.338.1
 	github.com/speakeasy-api/openapi-overlay v0.6.0
-	github.com/speakeasy-api/sdk-gen-config v1.14.2
+	github.com/speakeasy-api/sdk-gen-config v1.14.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.1
-	github.com/speakeasy-api/speakeasy-core v0.8.6
+	github.com/speakeasy-api/speakeasy-core v0.8.8
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0
@@ -61,7 +61,6 @@ require (
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
-	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
