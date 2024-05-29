@@ -37,7 +37,9 @@ var quickstartScopedKeys = map[string][]string{
 		"groupID",
 		"artifactID",
 	},
-	"terraform": {},
+	"terraform": {
+		"packageName",
+	},
 	"csharp": {
 		"packageName",
 	},
@@ -250,6 +252,8 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 		case "python":
 			defaultValue = strcase.ToKebab(sdkClassName)
 			description = description + "\nTo install your SDK users will execute:\npip install " + defaultValue
+		case "terraform":
+			defaultValue = strcase.ToKebab(sdkClassName)
 		}
 	}
 
