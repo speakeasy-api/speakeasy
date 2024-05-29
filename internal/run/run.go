@@ -867,7 +867,6 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 
 	memfs := fsextras.NewMemFS()
 
-	// overlayPath := filepath.Join(bundler.BundleRoot.String(), "overlay.yaml")
 	overlayPath := "overlay.yaml"
 	err = memfs.WriteBytes(overlayPath, []byte(overlayString), 0644)
 	if err != nil {
