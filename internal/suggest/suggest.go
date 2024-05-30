@@ -11,6 +11,7 @@ import (
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
@@ -34,6 +35,8 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 		return err
 	}
 
+	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
+
 	/* Get suggestion */
 	res, err := client.Suggest.SuggestOperationIDs(ctx, operations.SuggestOperationIDsRequestBody{
 		// TODO add these as flags
@@ -49,6 +52,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	if err != nil || res.Suggestion == nil {
 		return err
 	}
+	stopSpinner()
 
 	/* Update operation IDS and tags/groups */
 	newDoc := v3.NewDocument(oldDoc.Model.GoLow()) // Need to keep the old document for overlay comparison

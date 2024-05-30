@@ -3,10 +3,10 @@ package workflowTracking
 import (
 	"fmt"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
@@ -93,13 +93,6 @@ func (m cliVisualizer) View() string {
 	return style.Render(summary)
 }
 
-func initSpinner() *spinner.Model {
-	s := spinner.New()
-	s.Spinner = spinner.Meter
-	s.Style = lipgloss.NewStyle().Foreground(styles.Colors.Yellow)
-	return &s
-}
-
 var _ charm_internal.InternalModel = &cliVisualizer{}
 
 func (w *WorkflowStep) RunWithVisualization(runFn func() error, updatesChannel chan UpdateMsg) error {
@@ -107,7 +100,7 @@ func (w *WorkflowStep) RunWithVisualization(runFn func() error, updatesChannel c
 		updates:  updatesChannel,
 		rootStep: w,
 		runFn:    runFn,
-		spinner:  initSpinner(),
+		spinner:  interactivity.InitSpinner(),
 	}
 
 	_, err := charm_internal.RunModel(&v)
