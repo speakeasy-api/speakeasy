@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/openapi-generation/v2/changelogs"
+	genConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/run"
@@ -80,7 +82,37 @@ func generateChangelog(ctx context.Context, flags generateChangelogFlags) error 
 	if err != nil {
 		return err
 	}
-	fmt.Printf("old: %s\nnew %s\n# Summary\n%s\n", result.OldRevision, result.NewRevision, summary.Text)
+	var outDir string
+	if target.Output != nil {
+		outDir = *target.Output
+	} else {
+		outDir = workflow.ProjectDir
+	}
+
+	fmt.Printf("Old: %s\nNew %s\n# Summary\n%s\n", result.OldRevision, result.NewRevision, summary.Text)
+
+	lang := target.Target
+
+	latestVersions, err := changelogs.GetLatestVersions(lang)
+	if err != nil {
+		return fmt.Errorf("failed to get latest versions for language %s: %w", lang, err)
+	}
+	lockFile, err := genConfig.Load(outDir)
+	if err != nil {
+		return err
+	}
+
+	features, ok := lockFile.LockFile.Features[lang]
+	if !ok {
+		features = nil
+	}
+
+	changelogStr, err := changelogs.GetChangeLog(lang, latestVersions, features)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf(changelogStr)
 
 	return nil
 }
