@@ -95,6 +95,9 @@ type sourceResult struct {
 	Source       string
 	LintResult   *validation.ValidationResult
 	ChangeReport *reports.ReportResult
+	OldRevision string
+	NewRevision string
+	Changes      changes.Changes
 }
 
 func NewWorkflow(
@@ -587,12 +590,16 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			return "", nil, err
 		}
+		if err != nil {
+			sourceRes.NewRevision = fmt.Sprintf("%s@%s", source.Registry.Location.String(), w.lockfile.Sources[sourceID].SourceRevisionDigest)
+		}
 	}
 
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
-			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
+			sourceRes.OldRevision = fmt.Sprintf("%s@%s", targetLockOld.Source, targetLockOld.SourceRevisionDigest)
+			sourceRes.ChangeReport, sourceRes.Changes, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
 				// Don't fail the whole workflow if this fails
 				logger.Warnf("failed to compute OpenAPI changes: %s", err.Error())
@@ -615,7 +622,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	return currentDocument, sourceRes, nil
 }
 
-func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
+func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, c changes.Changes, err error) {
 	changesStep := rootStep.NewSubstep("Computing Document Changes")
 	if !registry.IsRegistryEnabled(ctx) {
 		changesStep.Skip("API Registry not enabled")
@@ -650,15 +657,15 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 
 	changesStep.NewSubstep("Computing changes")
 
-	c, err := changes.GetChanges(ctx, oldDocPath.LocalFilePath, newDocPath)
+	c, err = changes.GetChanges(ctx, oldDocPath.LocalFilePath, newDocPath)
 	if err != nil {
-		return r, fmt.Errorf("error computing changes: %w", err)
+		return r, c, fmt.Errorf("error computing changes: %w", err)
 	}
 
 	changesStep.NewSubstep("Uploading changes report")
 	report, err := reports.UploadReport(ctx, c.GetHTMLReport(), shared.TypeChanges)
 	if err != nil {
-		return r, fmt.Errorf("failed to persist report: %w", err)
+		return r, c, fmt.Errorf("failed to persist report: %w", err)
 	}
 	r = &report
 
@@ -666,7 +673,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 
 	summary, err := c.GetSummary()
 	if err != nil || summary == nil {
-		return r, fmt.Errorf("failed to get report summary: %w", err)
+		return r, c, fmt.Errorf("failed to get report summary: %w", err)
 	}
 
 	// Do not write github action changes if we have already processed this source

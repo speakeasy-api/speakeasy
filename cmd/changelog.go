@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/run"
@@ -71,7 +72,15 @@ func generateChangelog(ctx context.Context, flags generateChangelogFlags) error 
 		return err
 	}
 
-	workflow.RunSource(ctx, workflow.RootStep, target.Source, target.Target, true)
+	_, result, err := workflow.RunSource(ctx, workflow.RootStep, target.Source, target.Target, true)
+	if err != nil {
+		return err
+	}
+	summary, err := result.Changes.GetSummary()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("old: %s\nnew %s\n# Summary\n%s\n", result.OldRevision, result.NewRevision, summary.Text)
 
-	return err
+	return nil
 }
