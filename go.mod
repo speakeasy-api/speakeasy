@@ -7,27 +7,23 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.10.0
-	github.com/evanphx/json-patch v0.5.2
 	github.com/fatih/structs v1.1.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/google/go-github/v58 v58.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
-	github.com/iancoleman/orderedmap v0.3.0
 	github.com/iancoleman/strcase v0.3.0
-	github.com/manifoldco/promptui v0.9.0
 	github.com/pb33f/libopenapi v0.16.4
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.338.6
+	github.com/speakeasy-api/openapi-generation/v2 v2.338.7
 	github.com/speakeasy-api/openapi-overlay v0.6.0
 	github.com/speakeasy-api/sdk-gen-config v1.14.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.2
 	github.com/speakeasy-api/speakeasy-core v0.8.8
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
-	github.com/speakeasy-sdks/openai-go-sdk/v4 v4.2.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
@@ -35,7 +31,7 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
 	golang.org/x/term v0.17.0
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -72,7 +68,6 @@ require (
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240304160204-3835fda67169 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89 // indirect
-	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
