@@ -312,7 +312,10 @@ func getTarget(target string) (*workflow.Target, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := wf.Targets[target]
+	t, ok := wf.Targets[target]
+	if !ok {
+		return nil, fmt.Errorf("target %s not found", target)
+	}
 	return &t, nil
 }
 
@@ -1042,33 +1045,34 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 }
 
 func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
-	t, err := getTarget(w.Target)
-	if err != nil {
-		return err
-	}
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 	tOut := workingDirectory
-	if t.Output != nil && *t.Output != "" && *t.Output != "." {
-		tOut = *t.Output
-	}
-	if w.Target == "all" {
-		tOut = "the paths specified in workflow.yaml"
-	}
-
 	additionalLines := []string{
 		fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
 		"✎ Output written to " + tOut,
 	}
 
-	if w.FromQuickstart {
-		additionalLines = append(additionalLines, "Execute `speakeasy run` to regenerate your SDK!")
+	if w.Target == "all" {
+		tOut = "the paths specified in workflow.yaml"
+	} else {
+		t, err := getTarget(w.Target)
+		if err != nil {
+			return err
+		}
+		if t.Output != nil && *t.Output != "" && *t.Output != "." {
+			tOut = *t.Output
+		}
+
+		if t.CodeSamples != nil {
+			additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+		}
 	}
 
-	if t.CodeSamples != nil {
-		additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+	if w.FromQuickstart {
+		additionalLines = append(additionalLines, "Execute `speakeasy run` to regenerate your SDK!")
 	}
 
 	if criticalWarnings {
@@ -1263,17 +1267,19 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	return sourcePath, sourceRes, err
 }
 
-func (w *Workflow) ValidateTarget() (*workflow.Target, error) {
+func (w *Workflow) ValidateSingleTarget() (*workflow.Target, error) {
 	if len(w.workflow.Targets) == 0 {
 		return nil, fmt.Errorf("no targets found in workflow")
 	}
+	targetKeys := make([]string, 0, len(w.workflow.Targets))
+	for k := range w.workflow.Targets {
+		targetKeys = append(targetKeys, k)
+	}
+	sort.Strings(targetKeys)
+	validTargets := strings.Join(targetKeys, "|")
+
 	if w.Target == "" && len(w.workflow.Targets) > 1 {
-		targetKeys := make([]string, 0, len(w.workflow.Targets))
-		for k := range w.workflow.Targets {
-			targetKeys = append(targetKeys, k)
-		}
-		sort.Strings(targetKeys)
-		return nil, fmt.Errorf("target is ambiguous as there are %v targets. Use --target %s to specify a target", len(w.workflow.Targets), strings.Join(targetKeys, "|"))
+		return nil, fmt.Errorf("target is ambiguous as there are %v targets. Use --target %s to specify a target", len(w.workflow.Targets), validTargets)
 	}
 	if w.Target == "" && len(w.workflow.Targets) == 1 {
 		for k := range w.workflow.Targets {
@@ -1283,10 +1289,10 @@ func (w *Workflow) ValidateTarget() (*workflow.Target, error) {
 
 	target, err := getTarget(w.Target)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w. Use --target %s to specify a target", err, validTargets)
 	}
 
-	return target, err
+	return target, nil
 }
 
 func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {

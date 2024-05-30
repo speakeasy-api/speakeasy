@@ -66,7 +66,7 @@ func generateChangelog(ctx context.Context, flags generateChangelogFlags) error 
 		return err
 	}
 
-	target, err := workflow.ValidateTarget()
+	target, err := workflow.ValidateSingleTarget()
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,7 @@ go 1.22
 toolchain go1.22.4
 
 replace (
-	github.com/speakeasy-api/speakeasy-core v0.8.6 => ../speakeasy-core
+	github.com/speakeasy-api/speakeasy-core v0.8.8 => ../speakeasy-core
 	github.com/speakeasy-api/openapi-generation/v2 v2.338.1 => ../openapi-generation
 )
 
