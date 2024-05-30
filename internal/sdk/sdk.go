@@ -10,18 +10,16 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/config"
 )
 
-func InitSDK() (*speakeasy.Speakeasy, error) {
-	return InitSDKWithKey(config.GetSpeakeasyAPIKey())
+func InitSDK(opts ...speakeasy.SDKOption) (*speakeasy.Speakeasy, error) {
+	return InitSDKWithKey(config.GetSpeakeasyAPIKey(), opts...)
 }
 
-func InitSDKWithKey(apiKey string) (*speakeasy.Speakeasy, error) {
+func InitSDKWithKey(apiKey string, opts ...speakeasy.SDKOption) (*speakeasy.Speakeasy, error) {
 	if apiKey == "" {
 		return nil, errors.New("no api key available, please set SPEAKEASY_API_KEY or run 'speakeasy auth' to authenticate the CLI with the Speakeasy Platform")
 	}
 
-	opts := []speakeasy.SDKOption{
-		speakeasy.WithSecurity(shared.Security{APIKey: &apiKey}),
-	}
+	opts = append(opts, speakeasy.WithSecurity(shared.Security{APIKey: &apiKey}))
 
 	serverURL := os.Getenv("SPEAKEASY_SERVER_URL")
 	if serverURL != "" {

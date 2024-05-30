@@ -1,0 +1,993 @@
+overlay: 1.0.0
+info:
+  title: Lending API
+  version: 0.0.0
+actions:
+  - target: $["paths"]["/companies"]["get"]
+    update:
+      x-speakeasy-group: companies
+  - target: $["paths"]["/companies"]["get"]
+    update:
+      x-speakeasy-name-override: list
+  - target: $["paths"]["/companies"]["post"]
+    update:
+      x-speakeasy-group: companies
+  - target: $["paths"]["/companies"]["post"]
+    update:
+      x-speakeasy-name-override: create
+  - target: $["paths"]["/companies/{companyId}"]["put"]
+    update:
+      x-speakeasy-group: companies
+  - target: $["paths"]["/companies/{companyId}"]["put"]
+    update:
+      x-speakeasy-name-override: update
+  - target: $["paths"]["/companies/{companyId}"]["delete"]
+    update:
+      x-speakeasy-group: companies
+  - target: $["paths"]["/companies/{companyId}"]["delete"]
+    update:
+      x-speakeasy-name-override: delete
+  - target: $["paths"]["/companies/{companyId}"]["get"]
+    update:
+      x-speakeasy-group: companies
+  - target: $["paths"]["/companies/{companyId}"]["get"]
+    update:
+      x-speakeasy-name-override: get
+  - target: $["paths"]["/companies/{companyId}/connections"]["get"]
+    update:
+      x-speakeasy-group: connections
+  - target: $["paths"]["/companies/{companyId}/connections"]["get"]
+    update:
+      x-speakeasy-name-override: list
+  - target: $["paths"]["/companies/{companyId}/connections"]["post"]
+    update:
+      x-speakeasy-group: connections
+  - target: $["paths"]["/companies/{companyId}/connections"]["post"]
+    update:
+      x-speakeasy-name-override: create
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}"]["get"]
+    update:
+      x-speakeasy-group: connections
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}"]["get"]
+    update:
+      x-speakeasy-name-override: get
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}"]["delete"]
+    update:
+      x-speakeasy-group: connections
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}"]["delete"]
+    update:
+      x-speakeasy-name-override: delete
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}"]["patch"]
+    update:
+      x-speakeasy-group: connections
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}"]["patch"]["requestBody"]["description"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/data/all"]["post"]["x-speakeasy-group"]
+    update: manageData
+  - target: $["paths"]["/companies/{companyId}/data/all"]["post"]["x-speakeasy-name-override"]
+    update: refreshAllData
+  - target: $["paths"]["/companies/{companyId}/dataStatus"]["get"]["x-speakeasy-group"]
+    update: manageData
+  - target: $["paths"]["/companies/{companyId}/dataStatus"]["get"]["x-speakeasy-name-override"]
+    update: getDataStatus
+  - target: $["paths"]["/companies/{companyId}/data/queue/{dataType}"]["post"]["x-speakeasy-group"]
+    update: manageData
+  - target: $["paths"]["/companies/{companyId}/data/queue/{dataType}"]["post"]["x-speakeasy-name-override"]
+    update: refreshDataType
+  - target: $["paths"]["/companies/{companyId}/data/history"]["get"]["x-speakeasy-group"]
+    update: manageData
+  - target: $["paths"]["/companies/{companyId}/data/history"]["get"]
+    update:
+      x-speakeasy-name-override: listPullOperations
+  - target: $["paths"]["/companies/{companyId}/data/history/{datasetId}"]["get"]["x-speakeasy-group"]
+    update: manageData
+  - target: $["paths"]["/companies/{companyId}/data/history/{datasetId}"]["get"]
+    update:
+      x-speakeasy-name-override: getPullOperation
+  - target: $["paths"]["/companies/{companyId}/data/history/{datasetId}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/data/companies/{companyId}/assess/dataTypes/{dataType}/dataIntegrity/status"]["get"]["x-speakeasy-name-override"]
+    update: getStatus
+  - target: $["paths"]["/data/companies/{companyId}/assess/dataTypes/{dataType}/dataIntegrity/status"]["get"]
+    update:
+      x-speakeasy-group: dataIntegrity
+  - target: $["paths"]["/data/companies/{companyId}/assess/dataTypes/{dataType}/dataIntegrity/summaries"]["get"]["x-speakeasy-name-override"]
+    update: getSummary
+  - target: $["paths"]["/data/companies/{companyId}/assess/dataTypes/{dataType}/dataIntegrity/summaries"]["get"]
+    update:
+      x-speakeasy-group: dataIntegrity
+  - target: $["paths"]["/data/companies/{companyId}/assess/dataTypes/{dataType}/dataIntegrity/details"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/data/companies/{companyId}/assess/dataTypes/{dataType}/dataIntegrity/details"]["get"]["x-speakeasy-name-override"]
+    update: listDetails
+  - target: $["paths"]["/data/companies/{companyId}/assess/dataTypes/{dataType}/dataIntegrity/details"]["get"]
+    update:
+      x-speakeasy-group: dataIntegrity
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedProfitAndLoss/accounts"]["get"]["x-speakeasy-name-override"]
+    update: getCategorizedProfitAndLoss
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedProfitAndLoss/accounts"]["get"]["x-speakeasy-group"]
+    update: financialStatements
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedBalanceSheet/accounts"]["get"]["x-speakeasy-name-override"]
+    update: getCategorizedBalanceSheet
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedBalanceSheet/accounts"]["get"]["x-speakeasy-group"]
+    update: financialStatements
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedCashFlow/transactions"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedCashFlow/transactions"]["get"]
+    update:
+      x-speakeasy-name-override: getCategorizedBankStatement
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedInvoices"]["get"]["x-speakeasy-name-override"]
+    update: listReconciledInvoices
+  - target: $["paths"]["/companies/{companyId}/reports/enhancedInvoices"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans/transactions"]["post"]["x-speakeasy-name-override"]
+    update: generateLoanTransactions
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans/transactions"]["post"]
+    update:
+      x-speakeasy-group: liabilities
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans/transactions"]["get"]["x-speakeasy-name-override"]
+    update: listLoanTransactions
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans/transactions"]["get"]
+    update:
+      x-speakeasy-group: liabilities
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans"]["post"]["x-speakeasy-name-override"]
+    update: generateLoanSummary
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans"]["post"]
+    update:
+      x-speakeasy-group: liabilities
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans"]["get"]["x-speakeasy-name-override"]
+    update: getLoanSummary
+  - target: $["paths"]["/companies/{companyId}/reports/liabilities/loans"]["get"]
+    update:
+      x-speakeasy-group: liabilities
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/revenue"]["get"]["x-speakeasy-name-override"]
+    update: getCommerceRevenueMetrics
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/revenue"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/orders"]["get"]["x-speakeasy-name-override"]
+    update: getCommerceOrdersReport
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/orders"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/refunds"]["get"]["x-speakeasy-name-override"]
+    update: getCommerceRefundsReport
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/refunds"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/customerRetention"]["get"]["x-speakeasy-name-override"]
+    update: getCommerceCustomerRetentionMetrics
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/customerRetention"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/lifetimeValue"]["get"]["x-speakeasy-name-override"]
+    update: getCommerceLifetimeValueMetrics
+  - target: $["paths"]["/data/companies/{companyId}/connections/{connectionId}/assess/commerceMetrics/lifetimeValue"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/data/companies/{companyId}/assess/excel"]["post"]
+    update:
+      x-speakeasy-group: excelReports
+  - target: $["paths"]["/data/companies/{companyId}/assess/excel"]["get"]["x-speakeasy-name-override"]
+    update: getStatus
+  - target: $["paths"]["/data/companies/{companyId}/assess/excel"]["get"]
+    update:
+      x-speakeasy-group: excelReports
+  - target: $["paths"]["/data/companies/{companyId}/assess/excel/download"]["get"]
+    update:
+      x-speakeasy-group: excelReports
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/accountTransactions"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/accountTransactions"]["get"]
+    update:
+      x-speakeasy-name-override: listAccountTransactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/accountTransactions/{accountTransactionId}"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/accountTransactions/{accountTransactionId}"]["get"]
+    update:
+      x-speakeasy-name-override: getAccountTransaction
+  - target: $["paths"]["/companies/{companyId}/data/accounts"]["get"]["x-speakeasy-group"]
+    update: financialStatements
+  - target: $["paths"]["/companies/{companyId}/data/accounts"]["get"]
+    update:
+      x-speakeasy-name-override: listAccounts
+  - target: $["paths"]["/companies/{companyId}/data/accounts/{accountId}"]["get"]["x-speakeasy-group"]
+    update: financialStatements
+  - target: $["paths"]["/companies/{companyId}/data/accounts/{accountId}"]["get"]
+    update:
+      x-speakeasy-name-override: getAccount
+  - target: $["paths"]["/companies/{companyId}/data/billCreditNotes"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/billCreditNotes"]["get"]
+    update:
+      x-speakeasy-name-override: listBillCreditNotes
+  - target: $["paths"]["/companies/{companyId}/data/billCreditNotes/{billCreditNoteId}"]["parameters"][1]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/data/billCreditNotes/{billCreditNoteId}"]["parameters"][1]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/data/billCreditNotes/{billCreditNoteId}"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/billCreditNotes/{billCreditNoteId}"]["get"]
+    update:
+      x-speakeasy-name-override: getBillCreditNote
+  - target: $["paths"]["/companies/{companyId}/data/billPayments"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/billPayments"]["get"]
+    update:
+      x-speakeasy-name-override: listBillPayments
+  - target: $["paths"]["/companies/{companyId}/data/billPayments/{billPaymentId}"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/billPayments/{billPaymentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getBillPayment
+  - target: $["paths"]["/companies/{companyId}/data/bills"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/bills"]["get"]
+    update:
+      x-speakeasy-name-override: listBills
+  - target: $["paths"]["/companies/{companyId}/data/bills/{billId}"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/bills/{billId}"]["get"]
+    update:
+      x-speakeasy-name-override: getBill
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments"]["get"]
+    update:
+      x-speakeasy-name-override: listBillAttachments
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments/{attachmentId}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments/{attachmentId}"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments/{attachmentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getBillAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments/{attachmentId}/download"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments/{attachmentId}/download"]["get"]
+    update:
+      x-speakeasy-name-override: downloadBillAttachment
+  - target: $["paths"]["/companies/{companyId}/data/creditNotes"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/creditNotes"]["get"]
+    update:
+      x-speakeasy-name-override: listCreditNotes
+  - target: $["paths"]["/companies/{companyId}/data/creditNotes/{creditNoteId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/creditNotes/{creditNoteId}"]["get"]
+    update:
+      x-speakeasy-name-override: getCreditNote
+  - target: $["paths"]["/companies/{companyId}/data/customers"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/customers"]["get"]
+    update:
+      x-speakeasy-name-override: listCustomers
+  - target: $["paths"]["/companies/{companyId}/data/customers/{customerId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/customers/{customerId}"]["get"]
+    update:
+      x-speakeasy-name-override: getCustomer
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments"]["get"]
+    update:
+      x-speakeasy-name-override: listCustomerAttachments
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments/{attachmentId}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments/{attachmentId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments/{attachmentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getCustomerAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments/{attachmentId}/download"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments/{attachmentId}/download"]["get"]
+    update:
+      x-speakeasy-name-override: downloadCustomerAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts"]["get"]
+    update:
+      x-speakeasy-name-override: listDirectCosts
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}"]["get"]
+    update:
+      x-speakeasy-name-override: getDirectCost
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments/{attachmentId}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments/{attachmentId}"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments/{attachmentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getDirectCostAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments/{attachmentId}/download"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments/{attachmentId}/download"]["get"]
+    update:
+      x-speakeasy-name-override: downloadDirectCostAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments"]["get"]
+    update:
+      x-speakeasy-name-override: listDirectCostAttachments
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes"]["get"]
+    update:
+      x-speakeasy-name-override: listDirectIncomes
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}"]["get"]
+    update:
+      x-speakeasy-name-override: getDirectIncome
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments/{attachmentId}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments/{attachmentId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments/{attachmentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getDirectIncomeAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments/{attachmentId}/download"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments/{attachmentId}/download"]["get"]
+    update:
+      x-speakeasy-name-override: downloadDirectIncomeAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments"]["get"]
+    update:
+      x-speakeasy-name-override: listDirectIncomeAttachments
+  - target: $["paths"]["/companies/{companyId}/data/info"]["get"]["x-speakeasy-name-override"]
+    update: getAccountingProfile
+  - target: $["paths"]["/companies/{companyId}/data/info"]["get"]
+    update:
+      x-speakeasy-group: companyInfo
+  - target: $["paths"]["/companies/{companyId}/data/invoices"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/invoices"]["get"]
+    update:
+      x-speakeasy-name-override: listInvoices
+  - target: $["paths"]["/companies/{companyId}/data/invoices/{invoiceId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/invoices/{invoiceId}"]["get"]
+    update:
+      x-speakeasy-name-override: getInvoice
+  - target: $["paths"]["/companies/{companyId}/data/invoices/{invoiceId}/pdf"]["get"]["x-speakeasy-name-override"]
+    update: downloadInvoicePdf
+  - target: $["paths"]["/companies/{companyId}/data/invoices/{invoiceId}/pdf"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments"]["get"]
+    update:
+      x-speakeasy-name-override: listInvoiceAttachments
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments/{attachmentId}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments/{attachmentId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments/{attachmentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getInvoiceAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments/{attachmentId}/download"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments/{attachmentId}/download"]["get"]
+    update:
+      x-speakeasy-name-override: downloadInvoiceAttachment
+  - target: $["paths"]["/companies/{companyId}/data/journalEntries"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/data/journalEntries"]["get"]
+    update:
+      x-speakeasy-name-override: listJournalEntries
+  - target: $["paths"]["/companies/{companyId}/data/journalEntries/{journalEntryId}"]["get"]["parameters"][0]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/data/journalEntries/{journalEntryId}"]["get"]["parameters"][0]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/data/journalEntries/{journalEntryId}"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/data/journalEntries/{journalEntryId}"]["get"]
+    update:
+      x-speakeasy-name-override: getJournalEntry
+  - target: $["paths"]["/companies/{companyId}/data/journals"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/data/journals"]["get"]
+    update:
+      x-speakeasy-name-override: listJournals
+  - target: $["paths"]["/companies/{companyId}/data/journals/{journalId}"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/data/journals/{journalId}"]["get"]
+    update:
+      x-speakeasy-name-override: getJournal
+  - target: $["paths"]["/companies/{companyId}/data/payments"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/payments"]["get"]
+    update:
+      x-speakeasy-name-override: listPayments
+  - target: $["paths"]["/companies/{companyId}/data/payments/{paymentId}"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/data/payments/{paymentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getPayment
+  - target: $["paths"]["/companies/{companyId}/data/suppliers"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/suppliers"]["get"]
+    update:
+      x-speakeasy-name-override: listSuppliers
+  - target: $["paths"]["/companies/{companyId}/data/suppliers/{supplierId}"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/suppliers/{supplierId}"]["get"]
+    update:
+      x-speakeasy-name-override: getSupplier
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments"]["get"]
+    update:
+      x-speakeasy-name-override: listSupplierAttachments
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments/{attachmentId}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments/{attachmentId}"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments/{attachmentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getSupplierAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments/{attachmentId}/download"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments/{attachmentId}/download"]["get"]
+    update:
+      x-speakeasy-name-override: downloadSupplierAttachment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/transfers"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/transfers"]["get"]
+    update:
+      x-speakeasy-name-override: listTransfers
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/transfers/{transferId}"]["parameters"][2]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/transfers/{transferId}"]["parameters"][2]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/transfers/{transferId}"]["get"]["x-speakeasy-group"]
+    update: transactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/transfers/{transferId}"]["get"]
+    update:
+      x-speakeasy-name-override: getTransfer
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bankAccounts"]["get"]["x-speakeasy-group"]
+    update: accountingBankData
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bankAccounts"]["get"]
+    update:
+      x-speakeasy-name-override: listBankAccounts
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bankAccounts/{accountId}"]["get"]["x-speakeasy-group"]
+    update: accountingBankData
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bankAccounts/{accountId}"]["get"]
+    update:
+      x-speakeasy-name-override: getBankAccount
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bankAccounts/{accountId}/bankTransactions"]["get"]["x-speakeasy-name-override"]
+    update: listBankAccountTransactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/bankAccounts/{accountId}/bankTransactions"]["get"]
+    update:
+      x-speakeasy-group: accountingBankData
+  - target: $["paths"]["/companies/{companyId}/reports/agedDebtor/available"]["get"]["x-speakeasy-name-override"]
+    update: isAgedDebtorsReportAvailable
+  - target: $["paths"]["/companies/{companyId}/reports/agedDebtor/available"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/reports/agedDebtor"]["get"]["x-speakeasy-name-override"]
+    update: getAgedDebtorsReport
+  - target: $["paths"]["/companies/{companyId}/reports/agedDebtor"]["get"]["x-speakeasy-group"]
+    update: accountsReceivable
+  - target: $["paths"]["/companies/{companyId}/reports/agedCreditor/available"]["get"]["x-speakeasy-name-override"]
+    update: isAgedCreditorsReportAvailable
+  - target: $["paths"]["/companies/{companyId}/reports/agedCreditor/available"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/reports/agedCreditor"]["get"]["x-speakeasy-name-override"]
+    update: getAgedCreditorsReport
+  - target: $["paths"]["/companies/{companyId}/reports/agedCreditor"]["get"]["x-speakeasy-group"]
+    update: accountsPayable
+  - target: $["paths"]["/companies/{companyId}/data/financials/balanceSheet"]["get"]["x-speakeasy-group"]
+    update: financialStatements
+  - target: $["paths"]["/companies/{companyId}/data/financials/balanceSheet"]["get"]
+    update:
+      x-speakeasy-name-override: getBalanceSheet
+  - target: $["paths"]["/companies/{companyId}/data/financials/profitAndLoss"]["get"]["x-speakeasy-group"]
+    update: financialStatements
+  - target: $["paths"]["/companies/{companyId}/data/financials/profitAndLoss"]["get"]
+    update:
+      x-speakeasy-name-override: getProfitAndLoss
+  - target: $["paths"]["/companies/{companyId}/data/financials/cashFlowStatement"]["get"]["x-speakeasy-group"]
+    update: financialStatements
+  - target: $["paths"]["/companies/{companyId}/data/financials/cashFlowStatement"]["get"]
+    update:
+      x-speakeasy-name-override: getCashFlowStatement
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-accountBalances"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-accountBalances"]["get"]
+    update:
+      x-speakeasy-name-override: listBalances
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-accounts"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-accounts"]["get"]
+    update:
+      x-speakeasy-name-override: listAccounts
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-accounts/{accountId}"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-accounts/{accountId}"]["get"]
+    update:
+      x-speakeasy-name-override: getAccount
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactions"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactions"]["get"]
+    update:
+      x-speakeasy-name-override: listTransactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactions/{transactionId}"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactions/{transactionId}"]["get"]
+    update:
+      x-speakeasy-name-override: getTransaction
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactionCategories"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactionCategories"]["get"]
+    update:
+      x-speakeasy-name-override: listTransactionCategories
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactionCategories/{transactionCategoryId}"]["get"]["x-speakeasy-group"]
+    update: bankStatements
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/banking-transactionCategories/{transactionCategoryId}"]["get"]
+    update:
+      x-speakeasy-name-override: getTransactionCategory
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-customers"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-customers"]["get"]
+    update:
+      x-speakeasy-name-override: listCustomers
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-customers/{customerId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-customers/{customerId}"]["get"]
+    update:
+      x-speakeasy-name-override: getCustomer
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-disputes"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-disputes"]["get"]
+    update:
+      x-speakeasy-name-override: listDisputes
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-disputes/{disputeId}"]["parameters"][2]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-disputes/{disputeId}"]["parameters"][2]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-disputes/{disputeId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-disputes/{disputeId}"]["get"]
+    update:
+      x-speakeasy-name-override: getDispute
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-info"]["get"]["x-speakeasy-name-override"]
+    update: getCommerceProfile
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-info"]["get"]
+    update:
+      x-speakeasy-group: companyInfo
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-locations"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-locations"]["get"]
+    update:
+      x-speakeasy-name-override: listLocations
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-locations/{locationId}"]["parameters"][2]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-locations/{locationId}"]["parameters"][2]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-locations/{locationId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-locations/{locationId}"]["get"]
+    update:
+      x-speakeasy-name-override: getLocation
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-orders"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-orders"]["get"]
+    update:
+      x-speakeasy-name-override: listOrders
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-orders/{orderId}"]["parameters"][2]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-orders/{orderId}"]["parameters"][2]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-orders/{orderId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-orders/{orderId}"]["get"]
+    update:
+      x-speakeasy-name-override: getOrder
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-paymentMethods"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-paymentMethods"]["get"]
+    update:
+      x-speakeasy-name-override: listPaymentMethods
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-paymentMethods/{paymentMethodId}"]["parameters"][2]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-paymentMethods/{paymentMethodId}"]["parameters"][2]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-paymentMethods/{paymentMethodId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-paymentMethods/{paymentMethodId}"]["get"]
+    update:
+      x-speakeasy-name-override: getPaymentMethod
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-payments"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-payments"]["get"]
+    update:
+      x-speakeasy-name-override: listPayments
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-payments/{paymentId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-payments/{paymentId}"]["get"]
+    update:
+      x-speakeasy-name-override: getPayment
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-productCategories"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-productCategories"]["get"]
+    update:
+      x-speakeasy-name-override: listProductCategories
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-productCategories/{productId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-productCategories/{productId}"]["get"]
+    update:
+      x-speakeasy-name-override: getProductCategory
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-products"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-products"]["get"]
+    update:
+      x-speakeasy-name-override: listProducts
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-products/{productId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-products/{productId}"]["get"]
+    update:
+      x-speakeasy-name-override: getProduct
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-transactions"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-transactions"]["get"]
+    update:
+      x-speakeasy-name-override: listTransactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-transactions/{transactionId}"]["parameters"][2]["schema"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-transactions/{transactionId}"]["parameters"][2]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-transactions/{transactionId}"]["get"]["x-speakeasy-group"]
+    update: sales
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/data/commerce-transactions/{transactionId}"]["get"]
+    update:
+      x-speakeasy-name-override: getTransaction
+  - target: $["paths"]["/companies/{companyId}/files"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/files"]["get"]["x-speakeasy-name-override"]
+    update: listFiles
+  - target: $["paths"]["/companies/{companyId}/files"]["get"]
+    update:
+      x-speakeasy-group: fileUpload
+  - target: $["paths"]["/companies/{companyId}/files/download"]["get"]["x-speakeasy-name-override"]
+    update: downloadFiles
+  - target: $["paths"]["/companies/{companyId}/files/download"]["get"]
+    update:
+      x-speakeasy-group: fileUpload
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/files"]["post"]["x-speakeasy-name-override"]
+    update: uploadFiles
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/files"]["post"]
+    update:
+      x-speakeasy-group: fileUpload
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/bankAccounts"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/bankAccounts"]["get"]
+    update:
+      x-speakeasy-name-override: getCreateUpdateBankAccountModel
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts"]["post"]["requestBody"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts"]["post"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts"]["post"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts"]["post"]
+    update:
+      x-speakeasy-name-override: createBankAccount
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/chartOfAccounts"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/chartOfAccounts"]["get"]
+    update:
+      x-speakeasy-name-override: getCreateAccountModel
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/accounts"]["post"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/accounts"]["post"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/accounts"]["post"]
+    update:
+      x-speakeasy-name-override: createAccount
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/suppliers"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/suppliers"]["get"]
+    update:
+      x-speakeasy-name-override: getCreateUpdateSupplierModel
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/suppliers"]["post"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/suppliers"]["post"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/suppliers"]["post"]
+    update:
+      x-speakeasy-name-override: createSupplier
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/transfers"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/transfers"]["get"]
+    update:
+      x-speakeasy-name-override: getCreateTransferModel
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/transfers"]["post"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/transfers"]["post"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/transfers"]["post"]
+    update:
+      x-speakeasy-name-override: createTransfer
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/bankAccounts/{accountId}/bankTransactions"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/bankAccounts/{accountId}/bankTransactions"]["get"]
+    update:
+      x-speakeasy-name-override: getCreateBankTransactionsModel
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/bankAccounts/{accountId}/bankTransactions"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts/{accountId}/bankTransactions"]["post"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts/{accountId}/bankTransactions"]["post"]
+    update:
+      x-speakeasy-name-override: createBankTransactions
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts/{accountId}/bankTransactions"]["post"]["requestBody"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/bankAccounts/{accountId}/bankTransactions"]["post"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/directCosts"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/directCosts"]["get"]
+    update:
+      x-speakeasy-name-override: getCreateDirectCostModel
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/directCosts"]["post"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/directCosts"]["post"]
+    update:
+      x-speakeasy-name-override: createDirectCost
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/payments"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/options/payments"]["get"]
+    update:
+      x-speakeasy-name-override: getCreatePaymentModel
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/payments"]["post"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/connections/{connectionId}/push/payments"]["post"]
+    update:
+      x-speakeasy-name-override: createPayment
+  - target: $["paths"]["/companies/{companyId}/push/{pushOperationKey}"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/push/{pushOperationKey}"]["get"]
+    update:
+      x-speakeasy-name-override: getCreateOperation
+  - target: $["paths"]["/companies/{companyId}/push/{pushOperationKey}"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["paths"]["/companies/{companyId}/push"]["get"]["x-speakeasy-group"]
+    update: loanWriteback
+  - target: $["paths"]["/companies/{companyId}/push"]["get"]
+    update:
+      x-speakeasy-name-override: listCreateOperations
+  - target: $["paths"]["/companies/{companyId}/push"]["get"]["responses"]["200"]["content"]["application/json"]["examples"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountCategoriesUpdatedWebhook"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingAccount"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingAccountTransaction"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingAddress"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingAgedCreditorReport"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingAgedDebtorReport"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingAttachment"]["examples"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingBalanceSheet"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingBankAccount"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingBankTransaction"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingBill"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingBillCreditNote"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingBillPayment"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingCashFlowStatement"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingCreateBankTransactions"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingCreditNote"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingCustomer"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingDirectCost"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingDirectIncome"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingInvoice"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingJournal"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingJournalEntry"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingPayment"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingPaymentAllocation"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingPaymentMethod"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingProfitAndLossReport"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingSupplier"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingTrackingCategory"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountingTransfer"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountsPayableTracking"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AccountsReceivableTracking"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["AgedCurrencyOutstanding"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["BankingAccount"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["BankingAccountBalance"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["BankingTransaction"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["BankingTransactionCategory"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["ClientRateLimitReachedWebhook"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["ClientRateLimitResetWebhook"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceAddress"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceCompanyInfo"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceCustomer"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceDispute"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceLocation"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceOrder"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommercePayment"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceProduct"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceRecordRef"]["description"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceReport"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceTaxComponent"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceTransaction"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["CommerceTransaction"]["examples"]
+    remove: true
+  - target: $["components"]["schemas"]["Company"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["Connection"]["properties"]["additionalProperties"]
+    update: {}
+  - target: $["components"]["schemas"]["Connection"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["DataIntegrityDetail"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["DataIntegrityStatus"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["DataIntegritySummary"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["EnhancedCashFlowTransactions"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["EnhancedFinancialReport"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["EnhancedInvoicesReport"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["ExcelStatus"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["ExcelStatus"]["examples"]
+    remove: true
+  - target: $["components"]["schemas"]["FileUpload"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["LoanSummary"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["LoanTransactions"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["PagingInfo"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["PhoneNumber"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["PushOperation"]["definitions"]
+    remove: true
+  - target: $["components"]["schemas"]["PushOption"]["definitions"]
+    remove: true
+  - target: $["components"]["parameters"]["accountingAccountId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["accountingAccountId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["accountingBillPaymentId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["accountingBillPaymentId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["accountingBillId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["accountingBillId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["accountingDirectCostId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["accountingDirectCostId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["accountingDirectIncomeId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["accountingDirectIncomeId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["accountingInvoiceId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["accountingInvoiceId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["accountingSupplierId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["accountingSupplierId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["customerId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["customerId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["paymentId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["paymentId"]["schema"]["examples"]
+    remove: true
+  - target: $["components"]["parameters"]["productId"]
+    update:
+      examples:
+        13d946f0-c5d5-42bc-b092-97ece17923ab: {}
+        "7110701885": {}
+  - target: $["components"]["parameters"]["productId"]["schema"]["examples"]
+    remove: true

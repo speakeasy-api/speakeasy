@@ -8,19 +8,23 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
-	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"gopkg.in/yaml.v3"
+	"net/http"
 	"os"
 	"slices"
 	"strings"
+	"time"
 )
 
 func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, style operations.Style, depthStyle operations.DepthStyle) error {
-	client, err := auth.GetSDKFromContext(ctx)
+	httpClient := &http.Client{Timeout: 5 * time.Minute}
+	client, err := sdk.InitSDK(speakeasy.WithClient(httpClient))
 	if err != nil {
 		return err
 	}
@@ -104,8 +108,10 @@ func applySuggestion(ctx context.Context, model *v3.Document, suggestion map[str
 		for operationPair := orderedmap.First(operations); operationPair != nil; operationPair = operationPair.Next() {
 			operation := operationPair.Value()
 			operationID := operation.OperationId
-			oldGroupID := operation.Tags[0]
-			if len(operation.Tags) > 1 {
+			oldGroupID := "<no_group>"
+			if len(operation.Tags) == 1 {
+				oldGroupID = operation.Tags[0]
+			} else if len(operation.Tags) > 1 {
 				oldGroupID = fmt.Sprintf("[%s]", strings.Join(operation.Tags, ", "))
 			}
 
