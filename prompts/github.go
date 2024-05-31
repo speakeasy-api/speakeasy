@@ -29,6 +29,8 @@ const (
 	ossrhPasswordDefault             = "OSSRH_PASSWORD"
 	gpgSecretKeyDefault              = "GPG_SECRET_KEY"
 	gpgPassPhraseDefault             = "GPG_PASS_PHRASE"
+	terraformGPGPrivateKeyDefault    = "TERRAFORM_GPG_PRIVATE_KEY"
+	terraformGPGPassPhraseDefault    = "TERRAFORM_GPG_PASSPHRASE"
 )
 
 var SupportedPublishingTargets = []string{
@@ -39,6 +41,7 @@ var SupportedPublishingTargets = []string{
 	"php",
 	"java",
 	"go",
+	"terraform",
 }
 
 func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow, target *string) (*config.GenerateWorkflow, error) {
@@ -138,6 +141,13 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 				OSSHRPassword:     formatWorkflowSecret(ossrhPasswordDefault),
 				OSSRHUsername:     *ossrhUsername,
 				UseSonatypeLegacy: sonatypeLegacy,
+			},
+		}
+	case "terraform":
+		target.Publishing = &workflow.Publishing{
+			Terraform: &workflow.Terraform{
+				GPGPrivateKey: formatWorkflowSecret(terraformGPGPrivateKeyDefault),
+				GPGPassPhrase: formatWorkflowSecret(terraformGPGPassPhraseDefault),
 			},
 		}
 	}
@@ -315,6 +325,11 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 		secrets = append(secrets, publishing.Java.GPGSecretKey)
 		secrets = append(secrets, publishing.Java.GPGPassPhrase)
 		secrets = append(secrets, publishing.Java.OSSHRPassword)
+	}
+
+	if publishing.Terraform != nil {
+		secrets = append(secrets, publishing.Terraform.GPGPrivateKey)
+		secrets = append(secrets, publishing.Terraform.GPGPassPhrase)
 	}
 
 	return secrets
