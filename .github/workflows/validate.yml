@@ -63,7 +63,15 @@ jobs:
       - name: Configure git for private modules
         env:
           GIT_AUTH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
-        run: git config --global url."https://speakeasybot:${GIT_AUTH_TOKEN}@github.com".insteadOf "https://github.com"
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+               git config --global url."https://speakeasybot:${GIT_AUTH_TOKEN}@github.com".insteadOf "https://github.com"
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+               git config --global url."https://speakeasybot:${env:GIT_AUTH_TOKEN}@github.com".insteadOf "https://github.com"
+          else
+               echo "$RUNNER_OS not supported"
+               exit 1
+          fi
 
       - uses: actions/cache@v3
         with:
