@@ -20,7 +20,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-test:
     name: Build & Test
-    runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.draft == false }}
     permissions:
       contents: read
@@ -30,11 +29,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [ ubuntu-latest, windows-latest ]
         include:
           - test-group: 'Test Generations'
             test-pattern: 'TestGenerationWorkflows'
           - test-group: 'Test Spec Operations'
             test-pattern: 'TestSpecWorkflows'
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
