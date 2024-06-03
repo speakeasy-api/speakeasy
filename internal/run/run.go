@@ -546,9 +546,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if !isSingleRegistrySource(source) {
-		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
-		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
-			return "", nil, err
+		if source.Registry != nil {
+			err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
+			if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
+				return "", nil, err
+			}
 		}
 	}
 
