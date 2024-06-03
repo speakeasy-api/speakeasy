@@ -546,11 +546,9 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if !isSingleRegistrySource(source) {
-		if source.Registry != nil {
-			err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
-			if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
-				return "", nil, err
-			}
+		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
+		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
+			return "", nil, err
 		}
 	}
 
@@ -808,19 +806,13 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		cliEvent.SourceBlobDigest = blobDigest
 	}
 
-	// Automatically migrate speakeasy registry users to have a source publishing location
-	if source.Registry == nil && registry.IsRegistryEnabled(ctx) {
+	// automatically migrate speakeasy registry users to have a source publishing location
+	if source.Registry == nil {
 		registryEntry := &workflow.SourceRegistry{}
 		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), namespaceName)); err != nil {
 			return err
 		}
 		source.Registry = registryEntry
-		w.workflow.Sources[sourceID] = source
-		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
-			return err
-		}
-	} else if source.Registry != nil && !registry.IsRegistryEnabled(ctx) { // Automatically remove source publishing location if registry is disabled
-		source.Registry = nil
 		w.workflow.Sources[sourceID] = source
 		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
 			return err
