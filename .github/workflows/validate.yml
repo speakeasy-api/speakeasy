@@ -20,7 +20,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-test:
     name: Build & Test
-    runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.draft == false }}
     permissions:
       contents: read
@@ -30,11 +29,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [ ubuntu-latest, windows-latest ]
         include:
           - test-group: 'Test Generations'
             test-pattern: 'TestGenerationWorkflows'
           - test-group: 'Test Spec Operations'
             test-pattern: 'TestSpecWorkflows'
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
@@ -58,10 +60,17 @@ jobs:
       - name: Set up gotestfmt
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
 
-      - name: Configure git for private modules
+      - name: Configure git for private modules (Linux)
+        if: runner.os == 'Linux'
         env:
           GIT_AUTH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
         run: git config --global url."https://speakeasybot:${GIT_AUTH_TOKEN}@github.com".insteadOf "https://github.com"
+
+      - name: Configure git for private modules (Windows)
+        if: runner.os == 'Windows'
+        env:
+          GIT_AUTH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
+        run: git config --global url."https://speakeasybot:${env:GIT_AUTH_TOKEN}@github.com".insteadOf "https://github.com"
 
       - uses: actions/cache@v3
         with:
@@ -78,8 +87,6 @@ jobs:
         run: go build ./...
 
       - name: ${{ matrix.test-group }}
-        run: |
-          set -euo pipefail
-          go test -json -v -p 1 -run ${{ matrix.test-pattern }} ./... | gotestfmt
+        run: go test -json -v -p 1 -run ${{ matrix.test-pattern }} ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
