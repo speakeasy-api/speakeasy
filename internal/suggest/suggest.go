@@ -4,6 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"time"
+
 	"github.com/charmbracelet/lipgloss"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
@@ -16,14 +23,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"gopkg.in/yaml.v3"
-	"net/http"
-	"os"
-	"slices"
-	"strings"
-	"time"
 )
 
 func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, style operations.Style, depthStyle operations.DepthStyle) error {
+	if asOverlay && !isYAML(outPath) {
+		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
+	}
+
 	httpClient := &http.Client{Timeout: 5 * time.Minute}
 	client, err := sdk.InitSDK(speakeasy.WithClient(httpClient))
 	if err != nil {
@@ -68,7 +74,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	}
 	defer outFile.Close()
 
-	finalBytes, err := newDoc.Render()
+	finalBytesYAML, err := newDoc.Render()
 	if err != nil {
 		return err
 	}
@@ -79,7 +85,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 		if err = yaml.NewDecoder(bytes.NewReader(schemaBytes)).Decode(&y1); err != nil {
 			return fmt.Errorf("failed to decode source schema bytes: %w", err)
 		}
-		if err = yaml.NewDecoder(bytes.NewReader(finalBytes)).Decode(&y2); err != nil {
+		if err = yaml.NewDecoder(bytes.NewReader(finalBytesYAML)).Decode(&y2); err != nil {
 			return fmt.Errorf("failed to decode updated schema bytes: %w", err)
 		}
 
@@ -92,12 +98,22 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 			return err
 		}
 	} else {
-		if _, err = outFile.Write(finalBytes); err != nil {
-			return err
+		// Output yaml if output path is yaml, json if output path is json
+		if isYAML(outPath) {
+			if _, err = outFile.Write(finalBytesYAML); err != nil {
+				return err
+			}
+		} else {
+			finalBytesJSON, err := newDoc.RenderJSON("  ")
+			if err != nil {
+				return err
+			}
+
+			if _, err = outFile.Write(finalBytesJSON); err != nil {
+				return err
+			}
 		}
 	}
-
-	/* Regex to override operation IDs ?? */
 
 	return nil
 }
@@ -194,4 +210,9 @@ func buildValueNode(value string) *yaml.Node {
 		Tag:   "!!str",
 		Value: value,
 	}
+}
+
+func isYAML(path string) bool {
+	ext := filepath.Ext(path)
+	return ext == ".yaml" || ext == ".yml"
 }
