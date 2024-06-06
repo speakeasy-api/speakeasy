@@ -1,4 +1,6 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 1
+
 before:
   hooks:
     # You may remove this if you don't use go modules.
@@ -29,7 +31,7 @@ changelog:
       - "^test:"
 brews:
   - name: speakeasy
-    tap:
+    repository:
       owner: speakeasy-api
       name: homebrew-tap
     homepage: https://www.speakeasyapi.dev
@@ -38,7 +40,7 @@ brews:
     test: |
       system "#{bin}/speakeasy --version"
   - name: speakeasy@{{ .Major }}.{{ .Minor }}.{{ .Patch }}
-    tap:
+    repository:
       owner: speakeasy-api
       name: homebrew-tap
     homepage: https://www.speakeasyapi.dev
