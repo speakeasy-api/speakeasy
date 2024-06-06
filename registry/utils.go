@@ -3,12 +3,13 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/download"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 	"os"
 	"path/filepath"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
-	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
@@ -38,7 +39,7 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return nil, fmt.Errorf("workspace mismatch: %s != %s", registryBreakdown.WorkspaceSlug, workspaceSlug)
 	}
 
-	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceName, registryBreakdown.Reference, outPath)
+	return download.DownloadRegistryOpenAPIBundle(ctx, config.GetSpeakeasyAPIKey(), registryBreakdown.NamespaceName, registryBreakdown.Reference, outPath)
 }
 
 func IsRegistryEnabled(ctx context.Context) bool {

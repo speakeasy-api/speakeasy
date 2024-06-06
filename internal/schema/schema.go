@@ -3,13 +3,12 @@ package schema
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/download"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"go.uber.org/zap"
 	"net/url"
 	"os"
 	"path/filepath"
-
-	"github.com/speakeasy-api/speakeasy/internal/download"
 )
 
 var outputFilePath = "openapi"
