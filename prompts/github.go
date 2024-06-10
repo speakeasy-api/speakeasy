@@ -347,6 +347,7 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
 	var targetType string
+	var terraformOutDir *string
 	for name, t := range workflowFile.Targets {
 		if target != nil && *target != name {
 			continue
@@ -357,6 +358,9 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 				secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 			}
 
+			if t.Target == "terraform" {
+				terraformOutDir = t.Output
+			}
 			targetType = t.Target
 		}
 	}
@@ -370,7 +374,11 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if targetType == "terraform" {
 		releaseActionPath := filepath.Join(workingDir, ".github/workflows/tf_provider_release.yaml")
-		goReleaserPath := filepath.Join(workingDir, ".goreleaser.yml")
+		goReleaserPath := workingDir
+		if terraformOutDir != nil {
+			goReleaserPath = filepath.Join(goReleaserPath, *terraformOutDir)
+		}
+		goReleaserPath = filepath.Join(goReleaserPath, ".goreleaser.yml")
 		releasePaths := []string{releaseActionPath, goReleaserPath}
 		if err := os.WriteFile(releaseActionPath, []byte(terraformReleaseAction), 0o644); err != nil {
 			return genWorkflow, releasePaths, errors.Wrapf(err, "failed to write terraform release github action release file %s", terraformReleaseAction)
