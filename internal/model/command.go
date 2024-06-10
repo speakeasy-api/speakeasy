@@ -75,10 +75,6 @@ type ExecutableCommand[F interface{}] struct {
 
 func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	run := func(cmd *cobra.Command, args []string) error {
-		if err := interactivity.GetMissingFlagsPreRun(cmd, args); err != nil {
-			return err
-		}
-
 		flags, err := c.GetFlagValues(cmd)
 		if err != nil {
 			return err
@@ -147,6 +143,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		Short:   c.Short,
 		Long:    c.Long,
 		Aliases: c.Aliases,
+		PreRunE: interactivity.GetMissingFlagsPreRun,
 		RunE:    run,
 		Hidden:  c.Hidden,
 	}
