@@ -182,6 +182,13 @@ func TestSpecWorkflows(t *testing.T) {
 				"/user/login",
 			},
 		},
+		{
+			name: "test remote input (caused an issue in Windows)",
+			inputDocs: []string{
+				"https://petstore3.swagger.io/api/v3/openapi.yaml",
+			},
+			out: "output.yaml",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
