@@ -41,5 +41,5 @@ speakeasy [flags]
 * [speakeasy quickstart](quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
 * [speakeasy run](run.md)	 - generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file
 * [speakeasy suggest](suggest/README.md)	 - Automatically improve your OpenAPI document with an LLM
-* [speakeasy tag](tag.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
+* [speakeasy tag](tag/README.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
 * [speakeasy update](update.md)	 - Update the Speakeasy CLI to the latest version
