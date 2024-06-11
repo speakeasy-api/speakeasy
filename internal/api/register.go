@@ -25,6 +25,8 @@ func RegisterAPICommands(root *cobra.Command) {
 		registerDownloadLatestSchema,
 		registerDownloadSchemaRevision,
 		registerGetVersionMetadata,
+		registerQueryEventLog,
+		registerGetRequestFromEventLog,
 		registerGetValidEmbedAccessTokens,
 	}
 
@@ -299,6 +301,29 @@ func registerGetVersionMetadata(root *cobra.Command) {
 	cmd.MarkFlagRequired("api-id")
 	cmd.Flags().String("version-id", "", "Version ID")
 	cmd.MarkFlagRequired("version-id")
+	registerPrintableApiCommand(root, cmd)
+}
+
+func registerQueryEventLog(root *cobra.Command) {
+	cmd := &cobra.Command{
+		Use:   "query-event-log",
+		Short: "Query event log",
+		Long:  `Query the event log to retrieve a list of requests`,
+		RunE:  authCommand(queryEventLog),
+	}
+	cmd.Flags().String("filters", "", "JSON string of filters")
+	registerPrintableApiCommand(root, cmd)
+}
+
+func registerGetRequestFromEventLog(root *cobra.Command) {
+	cmd := &cobra.Command{
+		Use:   "get-request-from-event-log",
+		Short: "Get request from event log",
+		Long:  `Get information about a particular request`,
+		RunE:  authCommand(getRequestFromEventLog),
+	}
+	cmd.Flags().String("request-id", "", "Request ID")
+	cmd.MarkFlagRequired("request-id")
 	registerPrintableApiCommand(root, cmd)
 }
 
