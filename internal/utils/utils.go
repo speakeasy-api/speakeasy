@@ -151,12 +151,7 @@ func GetFullCommandString(cmd *cobra.Command) string {
 func GetCommandParts(cmd *cobra.Command) []string {
 	parts := strings.Split(cmd.CommandPath(), " ")
 	for _, f := range getSetFlags(cmd.Flags()) {
-		fval := f.Value.String()
-		switch f.Value.Type() {
-		case "stringSlice":
-			fval = fval[1 : len(fval)-1] // Remove brackets
-		}
-		parts = append(parts, fmt.Sprintf("--%s=%q", f.Name, fval))
+		parts = append(parts, fmt.Sprintf("--%s=%s", f.Name, f.Value.String()))
 	}
 	return parts
 }
