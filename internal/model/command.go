@@ -75,11 +75,6 @@ type ExecutableCommand[F interface{}] struct {
 
 func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	run := func(cmd *cobra.Command, args []string) error {
-		// TODO: This is currently redundant, but seems to have some effect on later flag parsing...
-		if err := interactivity.GetMissingFlagsPreRun(cmd, args); err != nil {
-			return err
-		}
-
 		flags, err := c.GetFlagValues(cmd)
 		if err != nil {
 			return err
