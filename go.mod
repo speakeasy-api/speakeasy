@@ -14,11 +14,11 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/strcase v0.3.0
-	github.com/pb33f/libopenapi v0.16.4
+	github.com/pb33f/libopenapi v0.16.8
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.339.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.340.2
 	github.com/speakeasy-api/openapi-overlay v0.6.0
 	github.com/speakeasy-api/sdk-gen-config v1.14.6
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.2
@@ -29,8 +29,8 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
-	golang.org/x/term v0.17.0
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
+	golang.org/x/term v0.19.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -72,11 +72,11 @@ require (
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/daveshanley/vacuum v0.9.12 // indirect
+	github.com/daveshanley/vacuum v0.10.0 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
-	github.com/dop251/goja v0.0.0-20240220182346-e401ed450204 // indirect
-	github.com/dop251/goja_nodejs v0.0.0-20231122114759-e84d9a924c5c // indirect
+	github.com/dop251/goja v0.0.0-20240516125602-ccbae20bcec2 // indirect
+	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
@@ -153,8 +153,8 @@ require (
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/pb33f/doctor v0.0.4 // indirect
-	github.com/pb33f/libopenapi-validator v0.0.42 // indirect
+	github.com/pb33f/doctor v0.0.7 // indirect
+	github.com/pb33f/libopenapi-validator v0.0.56 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
@@ -183,7 +183,7 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tliron/commonlog v0.2.10 // indirect
-	github.com/tliron/glsp v0.2.1 // indirect
+	github.com/tliron/glsp v0.2.2 // indirect
 	github.com/tliron/kutil v0.3.14 // indirect
 	github.com/twinj/uuid v1.0.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
@@ -200,14 +200,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.19.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/image v0.10.0 // indirect
-	golang.org/x/mod v0.15.0 // indirect
-	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/net v0.24.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.18.0 // indirect
+	golang.org/x/tools v0.20.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/grpc v1.61.1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
