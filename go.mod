@@ -36,6 +36,7 @@ require (
 )
 
 require (
+	github.com/gertd/go-pluralize v0.2.1
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -92,7 +93,6 @@ require (
 	github.com/gammban/numtow v0.0.2 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell/v2 v2.7.4 // indirect
-	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.9.1 // indirect
