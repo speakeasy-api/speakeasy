@@ -138,7 +138,7 @@ speakeasy generate sdk [flags]
 
 ### Parent Command
 
-* [speakeasy generate](../README.md)	 - One off Generations for client SDKs, docsites, and more
+* [speakeasy generate](../README.md)	 - One off Generations for client SDKs and more
 ### Sub Commands
 
 * [speakeasy generate sdk changelog](changelog.md)	 - Prints information about changes to the SDK generator

@@ -2,7 +2,7 @@
 `speakeasy generate`  
 
 
-One off Generations for client SDKs, docsites, and more  
+One off Generations for client SDKs and more  
 
 ## Details
 
@@ -33,7 +33,6 @@ speakeasy generate [flags]
 
 * [speakeasy generate changelog](changelog.md)	 - Prints information about changes to the SDK generator
 * [speakeasy generate codeSamples](codeSamples.md)	 - Creates an overlay for a given spec containing x-codeSamples extensions for the given languages.
-* [speakeasy generate docs](docs.md)	 - Use this command to generate content for the SDK docs directory.
 * [speakeasy generate sdk](sdk/README.md)	 - Generating Client SDKs from OpenAPI specs (csharp, go, java, php, postman, python, ruby, swift, terraform, typescript, unity)
 * [speakeasy generate usage](usage.md)	 - Generate standalone usage snippets for SDKs in (go, typescript, python, java, php, swift, ruby, csharp, unity)
 * [speakeasy generate version](version.md)	 - Print the version number of the SDK generator

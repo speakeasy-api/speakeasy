@@ -33,7 +33,7 @@ speakeasy [flags]
 * [speakeasy auth](auth/README.md)	 - Authenticate the CLI
 * [speakeasy bump](bump.md)	 - Bumps the version of a Speakeasy Generation Target
 * [speakeasy configure](configure/README.md)	 - Configure your Speakeasy SDK Setup.
-* [speakeasy generate](generate/README.md)	 - One off Generations for client SDKs, docsites, and more
+* [speakeasy generate](generate/README.md)	 - One off Generations for client SDKs and more
 * [speakeasy lint](lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
 * [speakeasy merge](merge.md)	 - Merge multiple OpenAPI documents into a single document
 * [speakeasy openapi](openapi/README.md)	 - Utilities for working with OpenAPI documents
