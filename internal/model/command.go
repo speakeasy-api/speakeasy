@@ -148,7 +148,6 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		Short:   c.Short,
 		Long:    c.Long,
 		Aliases: c.Aliases,
-		PreRunE: interactivity.GetMissingFlagsPreRun,
 		RunE:    run,
 		Hidden:  c.Hidden,
 	}
