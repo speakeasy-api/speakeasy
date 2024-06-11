@@ -13,9 +13,10 @@ import (
 type bumpType string
 
 const (
-	bumpPatch bumpType = "patch"
-	bumpMinor bumpType = "minor"
-	bumpMajor bumpType = "major"
+	bumpPatch    bumpType = "patch"
+	bumpMinor    bumpType = "minor"
+	bumpMajor    bumpType = "major"
+	bumpGraduate bumpType = "graduate"
 )
 
 var bumpCommand = &cobra.Command{
@@ -28,6 +29,7 @@ Examples:
 - speakeasy bump patch - Bumps the target's version by one patch version
 - speakeasy bump -v 1.2.3 - Sets the target's version to 1.2.3
 - speakeasy bump major -t typescript - Bumps the typescript target's version by one major version
+- speakeasy bump graduate - Current version 1.2.3-alpha.1 sets the target's version to 1.2.3
 `,
 	Args: cobra.RangeArgs(0, 1),
 }
@@ -57,8 +59,8 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 		bumpTyp = args[0]
 	}
 
-	if (bumpTyp != "" || specificVersion == "") && !slices.Contains([]string{"patch", "minor", "major"}, bumpTyp) {
-		return fmt.Errorf("bump type must be one of patch, minor, or major")
+	if (bumpTyp != "" || specificVersion == "") && !slices.Contains([]string{"patch", "minor", "major", "graduate"}, bumpTyp) {
+		return fmt.Errorf("bump type must be one of patch, minor, major, or graduate")
 	} else if specificVersion != "" {
 		if _, err := version.NewVersion(specificVersion); err != nil {
 			return fmt.Errorf("specified version %s is not a valid semantic version: %w", specificVersion, err)
@@ -115,7 +117,11 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to parse version %s: %w", currentVersionString, err)
 		}
 
-		langCfg.Version = bump(v, bumpType(bumpTyp))
+		if newVersion, err := bump(v, bumpType(bumpTyp)); err != nil {
+			return err
+		} else {
+			langCfg.Version = newVersion
+		}
 	}
 
 	cfg.Config.Languages[target] = langCfg
@@ -133,10 +139,14 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func bump(v *version.Version, bumpType bumpType) string {
+func bump(v *version.Version, bumpType bumpType) (string, error) {
 	major := v.Segments()[0]
 	minor := v.Segments()[1]
 	patch := v.Segments()[2]
+
+	if v.Prerelease() != "" && bumpType != bumpGraduate {
+		return "", fmt.Errorf("cannot bump a set prerelease version with %s try `speakeasy bump graduate` or setting the version via `speakeasy bump -v` ", string(bumpType))
+	}
 
 	switch bumpType {
 	case bumpMajor:
@@ -150,5 +160,5 @@ func bump(v *version.Version, bumpType bumpType) string {
 		patch++
 	}
 
-	return fmt.Sprintf("%d.%d.%d", major, minor, patch)
+	return fmt.Sprintf("%d.%d.%d", major, minor, patch), nil
 }
