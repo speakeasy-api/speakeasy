@@ -99,59 +99,81 @@ func runTagPromote(ctx context.Context, flags tagPromoteFlagsArgs) error {
 
 	lockfile, err := workflow.LoadLockfile(projectDir)
 
-	if err = validateSourcesAndTargets(flags.Sources, flags.CodeSamples, wf, lockfile); err != nil {
+	revisions, err := getRevisions(ctx, flags.Sources, flags.CodeSamples, wf, lockfile)
+	if err != nil {
 		return err
 	}
 
-	for _, source := range flags.Sources {
-		namespace := lockfile.Sources[source].SourceNamespace
-		revisionDigest := lockfile.Sources[source].SourceRevisionDigest
-		err = registry.AddTags(ctx, namespace, revisionDigest, flags.Tags)
+	for _, revision := range revisions {
+		err = registry.AddTags(ctx, revision.namespace, revision.revisionDigest, flags.Tags)
 		if err != nil {
 			return err
 		}
-		printSuccessMsg(ctx, namespace, revisionDigest)
-	}
-
-	for _, target := range flags.CodeSamples {
-		namespace := lockfile.Targets[target].CodeSamplesNamespace
-		revisionDigest := lockfile.Targets[target].CodeSamplesRevisionDigest
-		err = registry.AddTags(ctx, namespace, revisionDigest, flags.Tags)
-		if err != nil {
-			return err
-		}
-		printSuccessMsg(ctx, namespace, revisionDigest)
+		printSuccessMsg(ctx, revision.namespace, revision.revisionDigest, revision.usedBy...)
 	}
 
 	return nil
 }
 
-func validateSourcesAndTargets(sources, targets []string, wf *workflow.Workflow, lf *workflow.LockFile) error {
+type revision struct {
+	namespace      string
+	revisionDigest string
+	usedBy         []string
+}
+
+func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.Workflow, lf *workflow.LockFile) ([]revision, error) {
 	if len(sources) == 0 && len(targets) == 0 {
-		return fmt.Errorf("please specify at least one source or target (codeSamples) to tag")
+		return nil, fmt.Errorf("please specify at least one source or target (codeSamples) to tag")
 	}
+
+	// Dedup revisions
+	revisions := make(map[string]revision)
 
 	opts := strings.Join(maps.Keys(wf.Sources), ", ")
 	for _, source := range sources {
 		if _, ok := wf.Sources[source]; !ok {
-			return fmt.Errorf("source %s not found in workflow.yaml. Options: %s", source, opts)
+			return nil, fmt.Errorf("source %s not found in workflow.yaml. Options: %s", source, opts)
 		}
 		if _, ok := lf.Sources[source]; !ok {
-			return fmt.Errorf("source %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", source, opts)
+			return nil, fmt.Errorf("source %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", source, opts)
 		}
+
+		namespace := lf.Sources[source].SourceNamespace
+		revisionDigest := lf.Sources[source].SourceRevisionDigest
+
+		addRevision(ctx, revisions, source, namespace, revisionDigest)
 	}
 
 	opts = strings.Join(maps.Keys(wf.Targets), ", ")
 	for _, target := range targets {
 		if _, ok := wf.Targets[target]; !ok {
-			return fmt.Errorf("target %s not found in workflow.yaml. Options: %s", target, opts)
+			return nil, fmt.Errorf("target %s not found in workflow.yaml. Options: %s", target, opts)
 		}
 		if _, ok := lf.Targets[target]; !ok {
-			return fmt.Errorf("target %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", target, opts)
+			return nil, fmt.Errorf("target %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", target, opts)
 		}
+
+		namespace := lf.Targets[target].CodeSamplesNamespace
+		revisionDigest := lf.Targets[target].CodeSamplesRevisionDigest
+
+		addRevision(ctx, revisions, target, namespace, revisionDigest)
 	}
 
-	return nil
+	return maps.Values(revisions), nil
+}
+
+func addRevision(ctx context.Context, revisions map[string]revision, owner, namespace, revisionDigest string) {
+	if namespace == "" || revisionDigest == "" {
+		log.From(ctx).Println(styles.DimmedItalic.Render(fmt.Sprintf("%s has no revision information in workflow.lock. Skipping tagging\n", owner)))
+	} else if cur, ok := revisions[namespace+revisionDigest]; ok {
+		cur.usedBy = append(cur.usedBy, owner)
+	} else {
+		revisions[namespace+revisionDigest] = revision{
+			namespace:      namespace,
+			revisionDigest: revisionDigest,
+			usedBy:         []string{owner},
+		}
+	}
 }
 
 func runTagApply(ctx context.Context, flags tagApplyFlagsArgs) error {
@@ -173,13 +195,18 @@ func runTagApply(ctx context.Context, flags tagApplyFlagsArgs) error {
 	return nil
 }
 
-func printSuccessMsg(ctx context.Context, namespaceName, revisionDigest string) {
+func printSuccessMsg(ctx context.Context, namespaceName, revisionDigest string, usedBy ...string) {
 	org := core.GetOrgSlugFromContext(ctx)
 	workspace := core.GetWorkspaceSlugFromContext(ctx)
+
+	msg := "Tags successfully added"
+	if len(usedBy) > 0 {
+		msg += fmt.Sprintf(" to %s", styles.HeavilyEmphasized.Render(strings.Join(usedBy, ", ")))
+	}
 
 	url := fmt.Sprintf("https://app.speakeasyapi.dev/org/%s/%s/apis/%s/%s", org, workspace, namespaceName, revisionDigest)
 
 	logger := log.From(ctx)
-	logger.Success("Tags successfully added")
+	logger.Success(msg)
 	logger.Println(styles.Dimmed.Render(url))
 }
