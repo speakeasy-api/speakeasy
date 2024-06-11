@@ -156,7 +156,7 @@ func GetCommandParts(cmd *cobra.Command) []string {
 		case "stringSlice":
 			fval = fval[1 : len(fval)-1] // Remove brackets
 		}
-		parts = append(parts, fmt.Sprintf("--%s=%q", f.Name, fval))
+		parts = append(parts, fmt.Sprintf("--%s=%s", f.Name, fval))
 	}
 	return parts
 }
