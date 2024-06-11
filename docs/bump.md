@@ -13,6 +13,7 @@ Examples:
 - speakeasy bump patch - Bumps the target's version by one patch version
 - speakeasy bump -v 1.2.3 - Sets the target's version to 1.2.3
 - speakeasy bump major -t typescript - Bumps the typescript target's version by one major version
+- speakeasy bump graduate - Current version 1.2.3-alpha.1 sets the target's version to 1.2.3
 
 
 ## Usage
