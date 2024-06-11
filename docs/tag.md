@@ -1,5 +1,5 @@
-# apply  
-`speakeasy tag apply`  
+# tag  
+`speakeasy tag`  
 
 
 Add tags to a given revision of your API. Specific to a registry namespace  
@@ -7,13 +7,13 @@ Add tags to a given revision of your API. Specific to a registry namespace
 ## Usage
 
 ```
-speakeasy tag apply [flags]
+speakeasy tag [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help                     help for apply
+  -h, --help                     help for tag
   -n, --namespace-name string    the revision to tag
   -r, --revision-digest string   the revision ID to tag
   -t, --tags strings             A list of tags to apply (comma-separated list)
@@ -27,4 +27,4 @@ speakeasy tag apply [flags]
 
 ### Parent Command
 
-* [speakeasy tag](README.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
+* [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
