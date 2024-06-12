@@ -26,6 +26,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
@@ -737,7 +738,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return fmt.Errorf("error opening root document: %w", err)
 	}
 
-	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	annotations, err := openapi.NewAnnotationsFromOpenAPI(rootDocument)
 	if err != nil {
 		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
 	}
@@ -894,7 +895,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return "", "", fmt.Errorf("error opening root document: %w", err)
 	}
 
-	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	annotations, err := openapi.NewAnnotationsFromOpenAPI(rootDocument)
 	if err != nil {
 		return "", "", fmt.Errorf("error extracting annotations from openapi document: %w", err)
 	}
