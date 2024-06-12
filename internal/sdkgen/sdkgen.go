@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -71,7 +71,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		outDir = wd
 	}
 
-	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
+	isRemote, schema, err := openapi.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,

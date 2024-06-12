@@ -6,6 +6,7 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -737,7 +738,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return fmt.Errorf("error opening root document: %w", err)
 	}
 
-	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	annotations, err := openapi.NewAnnotationsFromOpenAPI(rootDocument)
 	if err != nil {
 		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
 	}
@@ -894,7 +895,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return "", "", fmt.Errorf("error opening root document: %w", err)
 	}
 
-	annotations, err := ocicommon.NewAnnotationsFromOpenAPI(rootDocument)
+	annotations, err := openapi.NewAnnotationsFromOpenAPI(rootDocument)
 	if err != nil {
 		return "", "", fmt.Errorf("error extracting annotations from openapi document: %w", err)
 	}

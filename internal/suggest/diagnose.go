@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/gertd/go-pluralize"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"strings"
 )
 
@@ -33,7 +33,7 @@ func Diagnose(ctx context.Context, schemaPath string) (*Diagnosis, error) {
 }
 
 func (d diagnoser) diagnose(ctx context.Context, schemaPath string) (*Diagnosis, error) {
-	_, _, doc, err := schema.LoadDocument(ctx, schemaPath)
+	_, _, doc, err := openapi.LoadDocument(ctx, schemaPath)
 	if err != nil {
 		return nil, err
 	}
