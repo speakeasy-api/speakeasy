@@ -43,5 +43,6 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 
 func IsRegistryEnabled(ctx context.Context) bool {
 	hasSkipSchemaRegistry, _ := core.HasWorkspaceFeatureFlag(ctx, "skip_schema_registry")
-	return !hasSkipSchemaRegistry
+	telemetryDisabled := core.IsTelemetryDisabled(ctx)
+	return !hasSkipSchemaRegistry && !telemetryDisabled
 }
