@@ -28,8 +28,8 @@ const (
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
 	packagistTokenDefault            = "PACKAGIST_TOKEN"
 	ossrhPasswordDefault             = "OSSRH_PASSWORD"
-	gpgSecretKeyDefault              = "GPG_SECRET_KEY"
-	gpgPassPhraseDefault             = "GPG_PASS_PHRASE"
+	gpgSecretKeyDefault              = "JAVA_GPG_SECRET_KEY"
+	gpgPassPhraseDefault             = "JAVA_GPG_PASSPHRASE"
 	terraformGPGPrivateKeyDefault    = "TERRAFORM_GPG_PRIVATE_KEY"
 	terraformGPGPassPhraseDefault    = "TERRAFORM_GPG_PASSPHRASE"
 )
