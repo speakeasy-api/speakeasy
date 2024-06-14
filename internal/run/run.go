@@ -454,7 +454,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 	genLockID := sdkgen.GetGenLockID(outDir)
-	if orgSlug != "" && workspaceSlug != "" && genLockID != nil && *genLockID != "" {
+	if orgSlug != "" && workspaceSlug != "" && genLockID != nil && *genLockID != "" && !utils.IsZeroTelemetryOrganization(ctx) {
 		w.SDKOverviewURLs[target] = fmt.Sprintf("https://app.speakeasyapi.dev/org/%s/%s/targets/%s", orgSlug, workspaceSlug, *genLockID)
 	}
 
@@ -560,7 +560,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
-		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok {
+		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
 			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
 				// Don't fail the whole workflow if this fails
@@ -1087,8 +1087,8 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 			}
 		}
 
-		if sourceRes.LintResult != nil {
-			appendReportLocation(sourceRes.LintResult.Report)
+		if sourceRes.LintResult != nil && sourceRes.LintResult.Report != nil {
+			appendReportLocation(*sourceRes.LintResult.Report)
 		}
 		if sourceRes.ChangeReport != nil {
 			appendReportLocation(*sourceRes.ChangeReport)
