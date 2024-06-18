@@ -67,6 +67,7 @@ func Apply(schema string, overlayFile string, w io.Writer) error {
 	}
 
 	enc := yaml.NewEncoder(w)
+	enc.SetIndent(2)
 	if err := enc.Encode(ys); err != nil {
 		return fmt.Errorf("failed to encode spec file %q: %w", specFile, err)
 	}
