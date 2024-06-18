@@ -115,10 +115,10 @@ func (m *tabsModel) View() string {
 		var style lipgloss.Style
 		isFirst, isActive := i == 0, i == m.activeTab
 		if isActive {
-			style = activeTabStyle.Copy()
+			style = activeTabStyle
 			activeBorderColor = tab.BorderColor
 		} else {
-			style = inactiveTabStyle.Copy()
+			style = inactiveTabStyle
 		}
 		border, _, _, _, _ := style.GetBorder()
 		if isFirst && isActive {
@@ -128,10 +128,10 @@ func (m *tabsModel) View() string {
 		}
 
 		style = style.Border(border)
-		style.BorderForeground(tab.BorderColor)
-		style.BorderBottomForeground(activeTab.BorderColor)
+		style = style.BorderForeground(tab.BorderColor)
+		style = style.BorderBottomForeground(activeTab.BorderColor)
 
-		style.Foreground(tab.TitleColor)
+		style = style.Foreground(tab.TitleColor)
 
 		renderedTabs = append(renderedTabs, style.Render(tab.Title))
 	}

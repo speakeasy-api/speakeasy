@@ -52,9 +52,9 @@ func (b ButtonWithHelperText) View() string {
 		helperText = b.HelperText
 
 		if b.Disabled {
-			style.Foreground(styles.Colors.Red)
+			style = style.Foreground(styles.Colors.Red)
 		} else {
-			style.Foreground(styles.Colors.Green)
+			style = style.Foreground(styles.Colors.Green)
 		}
 	}
 

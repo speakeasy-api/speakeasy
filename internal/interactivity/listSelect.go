@@ -1,9 +1,10 @@
 package interactivity
 
 import (
+	"os"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"os"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -89,12 +90,12 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 	}
 
 	itemDelegate := list.NewDefaultDelegate()
-	itemDelegate.Styles.NormalTitle.Bold(true)
-	itemDelegate.Styles.SelectedTitle.
+	itemDelegate.Styles.NormalTitle = itemDelegate.Styles.NormalTitle.Bold(true)
+	itemDelegate.Styles.SelectedTitle = itemDelegate.Styles.SelectedTitle.
 		Bold(true).
 		Foreground(styles.Focused.GetForeground()).
 		BorderForeground(styles.Focused.GetForeground())
-	itemDelegate.Styles.SelectedDesc.
+	itemDelegate.Styles.SelectedDesc = itemDelegate.Styles.SelectedDesc.
 		Foreground(styles.FocusedDimmed.GetForeground()).
 		BorderForeground(styles.Focused.GetForeground())
 
