@@ -107,7 +107,7 @@ func (m *tabsModel) View() string {
 	var renderedTabs []string
 
 	activeTab := m.Tabs[m.activeTab]
-	windowStyle.BorderForeground(activeTab.BorderColor)
+	windowStyle = windowStyle.BorderForeground(activeTab.BorderColor)
 
 	var activeBorderColor lipgloss.AdaptiveColor
 
