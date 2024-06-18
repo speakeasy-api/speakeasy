@@ -155,7 +155,7 @@ func applySuggestion(ctx context.Context, model *v3.Document, suggestion map[str
 	printSuggestions(ctx, toPrint)
 }
 
-var changedStyle = styles.Dimmed.Copy().Strikethrough(true)
+var changedStyle = styles.Dimmed.Strikethrough(true)
 
 func printSuggestions(ctx context.Context, toPrint [][]string) {
 	logger := log.From(ctx)
@@ -193,7 +193,7 @@ func printSuggestions(ctx context.Context, toPrint [][]string) {
 		}
 	}
 
-	lhsHeading := styles.Info.Copy().Width(maxWidth).Underline(true).Render("Original")
+	lhsHeading := styles.Info.Width(maxWidth).Underline(true).Render("Original")
 	rhsHeading := styles.Success.Underline(true).Render("Suggested")
 	logger.Printf("%s    %s", lhsHeading, rhsHeading)
 

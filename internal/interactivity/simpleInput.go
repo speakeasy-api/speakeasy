@@ -98,7 +98,7 @@ func (m *SimpleInput) Validate() error {
 func (m *SimpleInput) View() string {
 	if m.done {
 		successMessage := fmt.Sprintf("✔ %s", m.inputModel.Value())
-		return styles.Success.Copy().
+		return styles.Success.
 			Margin(0, 2, 1, 2).
 			Render(successMessage)
 	}

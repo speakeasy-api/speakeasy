@@ -142,7 +142,7 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
 	updateString := "Run `speakeasy update` to update to the latest version"
 
 	l := log.From(ctx)
-	style := styles.Emphasized.Copy().Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary).Padding(1, 2)
+	style := styles.Emphasized.Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary).Padding(1, 2)
 	l.PrintfStyled(style, "%s\n%s", versionString, updateString)
 	l.Println("\n")
 

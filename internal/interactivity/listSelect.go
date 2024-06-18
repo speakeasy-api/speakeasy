@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	docStyle  = styles.Margins.Copy()
+	docStyle  = styles.Margins
 	maxHeight = 22
 )
 

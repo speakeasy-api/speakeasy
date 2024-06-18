@@ -7,11 +7,11 @@ import (
 
 var (
 	baseStyle    = lipgloss.NewStyle().Padding(0, 1).Bold(true)
-	blurredStyle = baseStyle.Copy().Foreground(styles.Colors.DimGrey).Background(styles.Colors.Grey)
-	validStyle   = baseStyle.Copy().Foreground(styles.Colors.DimGreen).Background(styles.Colors.Green)
-	invalidStyle = baseStyle.Copy().Foreground(styles.Colors.DimRed).Background(styles.Colors.Red)
+	blurredStyle = baseStyle.Foreground(styles.Colors.DimGrey).Background(styles.Colors.Grey)
+	validStyle   = baseStyle.Foreground(styles.Colors.DimGreen).Background(styles.Colors.Green)
+	invalidStyle = baseStyle.Foreground(styles.Colors.DimRed).Background(styles.Colors.Red)
 
-	helperTextStyle = styles.Help.Copy().MarginLeft(1)
+	helperTextStyle = styles.Help.MarginLeft(1)
 )
 
 type Button struct {
