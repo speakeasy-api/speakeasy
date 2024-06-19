@@ -691,7 +691,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			log.From(ctx).Warnf("error parsing registry location %s: %v", string(source.Registry.Location), err)
 		}
 
-		// If not match and
 		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
 			message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
 			if !env.IsGithubAction() {
