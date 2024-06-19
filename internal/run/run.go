@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -73,6 +74,7 @@ type Workflow struct {
 	ShouldCompile    bool
 	ForceGeneration  bool
 	RegistryTags     []string
+	Version          string
 
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
@@ -98,7 +100,7 @@ func NewWorkflow(
 	name, target, source, repo string,
 	repoSubDirs, installationURLs map[string]string,
 	debug, shouldCompile, forceGeneration bool,
-	registryTags []string,
+	registryTags []string, version string,
 ) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil || wf == nil {
@@ -138,6 +140,7 @@ func NewWorkflow(
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
+		Version:          version,
 	}, nil
 }
 
@@ -251,6 +254,10 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	}
 
 	if w.Target == "all" {
+		if w.Version != "" && len(w.workflow.Targets) > 1 {
+			return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
+		}
+
 		for t := range w.workflow.Targets {
 			sourceRes, err := w.runTarget(ctx, t)
 			if err != nil {
@@ -373,6 +380,24 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	genConfig, err := sdkGenConfig.Load(outDir)
 	if err != nil {
 		return nil, err
+	}
+
+	if w.Version != "" && genConfig.Config != nil {
+		appliedVersion := w.Version
+		if appliedVersion[0] == 'v' {
+			appliedVersion = appliedVersion[1:]
+		}
+		if langCfg, ok := genConfig.Config.Languages[t.Target]; ok {
+			if _, err := version.NewVersion(appliedVersion); err != nil {
+				return nil, fmt.Errorf("failed to parse version %s: %w", w.Version, err)
+			}
+
+			langCfg.Version = appliedVersion
+			genConfig.Config.Languages[t.Target] = langCfg
+			if err := sdkGenConfig.SaveConfig(outDir, genConfig.Config); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published)
