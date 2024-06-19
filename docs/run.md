@@ -39,6 +39,7 @@ speakeasy run [flags]
       --skip-compile              skip compilation when generating the SDK
   -s, --source string             source to run. specify 'all' to run all sources
   -t, --target string             target to run. specify 'all' to run all targets
+  -v, --version string            the manual version to apply to the generated SDK
 ```
 
 ### Options inherited from parent commands
