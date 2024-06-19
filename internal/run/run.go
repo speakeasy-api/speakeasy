@@ -690,19 +690,19 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		}
 
 		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
-			if env.IsGithubAction() {
-				return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
+			message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
+			if !env.IsGithubAction() {
+				message += " run `speakeasy auth logout`"
 			}
-
-			log.From(ctx).Warnf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
+			return fmt.Errorf(message)
 		}
 
 		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
-			if env.IsGithubAction() {
-				return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
+			message := fmt.Sprintf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
+			if !env.IsGithubAction() {
+				message += " run `speakeasy auth logout`"
 			}
-
-			log.From(ctx).Warnf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
+			return fmt.Errorf(message)
 		}
 
 		namespaceName = name
