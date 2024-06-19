@@ -53,6 +53,8 @@ import (
 
 const minimumViableOverlayPath = "valid-overlay.yaml"
 
+const speakeasySelf = "speakeasy-self"
+
 type LintingError struct {
 	Err      error
 	Document string
@@ -695,7 +697,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			if !env.IsGithubAction() {
 				message += " run `speakeasy auth logout`"
 			}
-			if "speakeasy-self" == auth.GetOrgSlugFromContext(ctx) && !env.IsGithubAction() {
+			if speakeasySelf == auth.GetOrgSlugFromContext(ctx) && !env.IsGithubAction() {
 				log.From(ctx).Warn(message)
 			} else {
 				return fmt.Errorf(message)
@@ -707,7 +709,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			if !env.IsGithubAction() {
 				message += " run `speakeasy auth logout`"
 			}
-			if "speakeasy-self" == auth.GetWorkspaceSlugFromContext(ctx) && !env.IsGithubAction() {
+			if speakeasySelf == auth.GetWorkspaceSlugFromContext(ctx) && !env.IsGithubAction() {
 				log.From(ctx).Warn(message)
 			} else {
 				return fmt.Errorf(message)
