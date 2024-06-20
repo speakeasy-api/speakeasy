@@ -61,6 +61,7 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 	logger = logger.WithFormatter(log.PrefixedFormatter)
 
 	err := events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
+		event.GenerateTargetName = &targetName
 		errs := ValidateConfig(target, cfg, publishingEnabled)
 		if len(errs) > 0 {
 			if errors.Is(errs[0], NoConfigFound) {
