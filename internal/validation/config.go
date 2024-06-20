@@ -3,6 +3,10 @@ package validation
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -10,9 +14,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"path/filepath"
-	"regexp"
-	"strings"
 )
 
 var NoConfigFound error = fmt.Errorf("no configuration found")
@@ -28,7 +29,7 @@ func GetAndValidateConfigs(ctx context.Context) (map[string]sdkGenConfig.Config,
 	targetToConfig := make(map[string]sdkGenConfig.Config)
 
 	err = nil
-	for _, target := range wf.Targets {
+	for targetName, target := range wf.Targets {
 		dir := wfDir
 		if target.Output != nil && *target.Output != "" {
 			dir = filepath.Join(wfDir, *target.Output)
@@ -41,7 +42,7 @@ func GetAndValidateConfigs(ctx context.Context) (map[string]sdkGenConfig.Config,
 
 		log.From(ctx).Infof("Found gen.yaml for target %s at %s\n", target.Target, genConfig.ConfigPath)
 
-		err = ValidateConfigAndPrintErrors(ctx, target.Target, genConfig, target.IsPublished())
+		err = ValidateConfigAndPrintErrors(ctx, target.Target, genConfig, target.IsPublished(), targetName)
 
 		targetToConfig[target.Target] = *genConfig
 	}
@@ -53,7 +54,7 @@ func GetAndValidateConfigs(ctx context.Context) (map[string]sdkGenConfig.Config,
 	return targetToConfig, nil
 }
 
-func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGenConfig.Config, publishingEnabled bool) error {
+func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGenConfig.Config, publishingEnabled bool, targetName string) error {
 	logger := log.From(ctx)
 	logger.Infof("\nValidating gen.yaml for target %s...\n", target)
 

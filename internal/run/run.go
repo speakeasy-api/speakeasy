@@ -402,7 +402,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		}
 	}
 
-	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published)
+	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published, target)
 	if err != nil {
 		if errors.Is(err, validation.NoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
@@ -437,6 +437,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		w.RepoSubDirs[target],
 		w.ShouldCompile,
 		w.ForceGeneration,
+		target,
 	)
 	if err != nil {
 		return nil, err
