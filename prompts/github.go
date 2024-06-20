@@ -61,7 +61,7 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 		githubWorkflow.Jobs.Generate.With["target"] = *target
 	}
 
-	if target == nil && len(workflow.Targets) > 0 {
+	if target == nil && len(workflow.Targets) > 1 {
 		githubWorkflow.On.WorkflowDispatch.Inputs.Target = &config.Target{
 			Description: "Optionally set a specific target to generate, default is all",
 			Type:        "string",
