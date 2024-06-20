@@ -32,7 +32,7 @@ type RunFlags struct {
 	Output           string            `json:"output"`
 	Pinned           bool              `json:"pinned"`
 	RegistryTags     []string          `json:"registry-tags"`
-	Version          string            `json:"version"`
+	SetVersion       string            `json:"set-version"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -117,8 +117,7 @@ A full workflow is capable of running the following steps:
 			Description: "tags to apply to the speakeasy registry bundle",
 		},
 		flag.StringFlag{
-			Name:        "version",
-			Shorthand:   "v",
+			Name:        "set-version",
 			Description: "the manual version to apply to the generated SDK",
 		},
 	},
@@ -240,7 +239,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		!flags.SkipCompile,
 		flags.Force,
 		flags.RegistryTags,
-		flags.Version,
+		flags.SetVersion,
 	)
 	if err != nil {
 		return err
@@ -268,7 +267,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		!flags.SkipCompile,
 		flags.Force,
 		flags.RegistryTags,
-		flags.Version,
+		flags.SetVersion,
 	)
 	if err != nil {
 		return err

@@ -76,7 +76,7 @@ type Workflow struct {
 	ShouldCompile    bool
 	ForceGeneration  bool
 	RegistryTags     []string
-	Version          string
+	SetVersion       string
 
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
@@ -102,7 +102,7 @@ func NewWorkflow(
 	name, target, source, repo string,
 	repoSubDirs, installationURLs map[string]string,
 	debug, shouldCompile, forceGeneration bool,
-	registryTags []string, version string,
+	registryTags []string, setVersion string,
 ) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil || wf == nil {
@@ -142,7 +142,7 @@ func NewWorkflow(
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
-		Version:          version,
+		SetVersion:       setVersion,
 	}, nil
 }
 
@@ -256,7 +256,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	}
 
 	if w.Target == "all" {
-		if w.Version != "" && len(w.workflow.Targets) > 1 {
+		if w.SetVersion != "" && len(w.workflow.Targets) > 1 {
 			return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
 		}
 
@@ -384,14 +384,14 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		return nil, err
 	}
 
-	if w.Version != "" && genConfig.Config != nil {
-		appliedVersion := w.Version
+	if w.SetVersion != "" && genConfig.Config != nil {
+		appliedVersion := w.SetVersion
 		if appliedVersion[0] == 'v' {
 			appliedVersion = appliedVersion[1:]
 		}
 		if langCfg, ok := genConfig.Config.Languages[t.Target]; ok {
 			if _, err := version.NewVersion(appliedVersion); err != nil {
-				return nil, fmt.Errorf("failed to parse version %s: %w", w.Version, err)
+				return nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
 			}
 
 			langCfg.Version = appliedVersion
