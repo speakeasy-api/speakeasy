@@ -140,6 +140,11 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 			flags.Target = targets[0]
 		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
 			flags.Source = sources[0]
+		} else if len(wf.Targets) == 0 && len(wf.Sources) > 1 {
+			flags.Source, err = askForSource(sources)
+			if err != nil {
+				return err
+			}
 		} else {
 			flags.Target, err = askForTarget("What target would you like to run?", "You may choose an individual target or 'all'.", "Let's choose a target to run the generation workflow.", targets, true)
 			if err != nil {
@@ -224,6 +229,25 @@ func askForTarget(title, description, confirmation string, targets []string, all
 	}
 
 	return target, nil
+}
+
+func askForSource(sources []string) (string, error) {
+	var sourceOptions []huh.Option[string]
+
+	for _, sourceName := range sources {
+		sourceOptions = append(sourceOptions, huh.NewOption(sourceName, sourceName))
+	}
+
+	sourceOptions = append(sourceOptions, huh.NewOption("✱ All", "all"))
+
+	source := ""
+
+	prompt := charm.NewSelectPrompt("What source would you like to run?", "You may choose an individual target or 'all'.", sourceOptions, &source)
+	if _, err := charm.NewForm(huh.NewForm(prompt), "Let's choose a target to run the generation workflow.").ExecuteForm(); err != nil {
+		return "", err
+	}
+
+	return source, nil
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
