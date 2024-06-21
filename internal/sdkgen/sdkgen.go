@@ -107,7 +107,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	// Enable outputting of internal tests for internal speakeasy use cases
 	if outputTests {
-		opts = append(opts, generate.WithOutputTests())
+		opts = append(opts, generate.WithOutputTestGroup("primary"))
 	}
 
 	g, err := generate.New(opts...)
