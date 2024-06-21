@@ -6,6 +6,7 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/suggest"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -95,6 +96,7 @@ type sourceResult struct {
 	Source       string
 	LintResult   *validation.ValidationResult
 	ChangeReport *reports.ReportResult
+	Diagnosis    *suggest.Diagnosis
 }
 
 func NewWorkflow(
@@ -234,7 +236,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 	// Display success message if the workflow succeeded
 	if err == nil && runErr == nil {
-		w.printSourceSuccessMessage(logger)
+		w.printSourceSuccessMessage(ctx, logger)
 		w.printTargetSuccessMessage(logger)
 		_ = w.printGenerationOverview(logger, endDuration, len(criticalWarns) > 0)
 	}
@@ -584,6 +586,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			return "", nil, err
 		}
+	}
+
+	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
+	if err != nil {
+		return "", sourceRes, err
 	}
 
 	// If the source has a previous tracked revision, compute changes against it
@@ -1106,7 +1113,7 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 	return nil
 }
 
-func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
+func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Logger) {
 	if len(w.sourceResults) == 0 {
 		return
 	}
@@ -1119,7 +1126,7 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 
 		appendReportLocation := func(report reports.ReportResult) {
 			if location := report.Location(); location != "" {
-				additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s: ", report.Title())+styles.Dimmed.Render(location)))
+				additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s: ", report.Title()))+styles.DimmedItalic.Render(location))
 			}
 		}
 
@@ -1128,6 +1135,13 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 		}
 		if sourceRes.ChangeReport != nil {
 			appendReportLocation(*sourceRes.ChangeReport)
+		}
+
+		if sourceRes.Diagnosis != nil && sourceRes.Diagnosis.ShouldSuggest() {
+			baseURL := auth.GetWorkspaceBaseURL(ctx)
+			link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
+			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(sourceRes.Diagnosis.Summarize()+"."), styles.DimmedItalic.Render(link))
+			additionalLines = append(additionalLines, styles.HeavilyEmphasized.Render(fmt.Sprintf("└─%s: ", "Improve with AI")+msg))
 		}
 
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
