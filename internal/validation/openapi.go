@@ -108,22 +108,6 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
-	// If it's YAML but starts with { and ends with }, we need to reformat it as otherwise libopenapi will sniff this as JSON and then fail validation
-	var runes = strings.Split(strings.TrimSpace(string(schema)), "")
-	if runes[0] == "{" && runes[len(runes)-1] == "}" {
-		var parsedJSON map[string]interface{}
-		if err := json.Unmarshal(schema, &parsedJSON); err != nil {
-			var parsedYAML map[string]interface{}
-			// If we manage to parse as YAML then prettify it
-			if err := yaml.Unmarshal(schema, &parsedYAML); err == nil {
-				schema, err = yaml.Marshal(parsedYAML)
-				if err != nil {
-					return nil, fmt.Errorf("failed to marshal YAML: %w", err)
-				}
-			}
-		}
-	}
-
 	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, isQuickstart)
 	if err != nil {
 		return nil, err
@@ -268,6 +252,12 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string, parseValidOperations bool) (*ValidationResult, error) {
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
+	// If the schema is a single-line YAML file which looks like JSON, we need to reformat it as otherwise libopenapi will sniff this as JSON and then fail validation
+	schema, err := formatOneLineYamlFilesIfNeeded(schema)
+	if err != nil {
+		return nil, err
+	}
+
 	opts := []generate.GeneratorOptions{
 		generate.WithDontWrite(),
 		generate.WithLogger(l),
@@ -375,4 +365,23 @@ type validationResult interface {
 func generateReport(ctx context.Context, res validationResult) (reports.ReportResult, error) {
 	reportBytes := res.GenerateReport()
 	return reports.UploadReport(ctx, reportBytes, shared.TypeLinting)
+}
+
+func formatOneLineYamlFilesIfNeeded(schema []byte) ([]byte, error) {
+	// If it's YAML but starts with { and ends with }, we need to reformat it as otherwise libopenapi will sniff this as JSON and then fail validation
+	var runes = strings.Split(strings.TrimSpace(string(schema)), "")
+	if runes[0] == "{" && runes[len(runes)-1] == "}" {
+		var parsedJSON map[string]interface{}
+		if err := json.Unmarshal(schema, &parsedJSON); err != nil {
+			var parsedYAML map[string]interface{}
+			// If we manage to parse as YAML then prettify it
+			if err := yaml.Unmarshal(schema, &parsedYAML); err == nil {
+				schema, err = yaml.Marshal(parsedYAML)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal YAML: %w", err)
+				}
+			}
+		}
+	}
+	return schema, nil
 }
