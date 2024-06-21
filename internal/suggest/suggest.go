@@ -1,9 +1,9 @@
 package suggest
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,7 +14,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -80,21 +79,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	}
 
 	if asOverlay {
-		// Note that newDoc.Index.GetRootNode() should work here, but doesn't
-		var y1, y2 yaml.Node
-		if err = yaml.NewDecoder(bytes.NewReader(schemaBytes)).Decode(&y1); err != nil {
-			return fmt.Errorf("failed to decode source schema bytes: %w", err)
-		}
-		if err = yaml.NewDecoder(bytes.NewReader(finalBytesYAML)).Decode(&y2); err != nil {
-			return fmt.Errorf("failed to decode updated schema bytes: %w", err)
-		}
-
-		o, err := overlay.Compare(oldDoc.Model.Info.Title, &y1, y2) // TODO this doesn't work for some reason
-		if err != nil {
-			return err
-		}
-
-		if err := o.Format(outFile); err != nil {
+		if err := openapi.WriteOverlay(schemaBytes, finalBytesYAML, outFile); err != nil {
 			return err
 		}
 	} else {

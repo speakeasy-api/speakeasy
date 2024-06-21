@@ -2,14 +2,12 @@ package validation
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"gopkg.in/yaml.v2"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -107,22 +105,6 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 	}
 
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
-
-	// If it's YAML but starts with { and ends with }, we need to reformat it as otherwise libopenapi will sniff this as JSON and then fail validation
-	var runes = strings.Split(strings.TrimSpace(string(schema)), "")
-	if runes[0] == "{" && runes[len(runes)-1] == "}" {
-		var parsedJSON map[string]interface{}
-		if err := json.Unmarshal(schema, &parsedJSON); err != nil {
-			var parsedYAML map[string]interface{}
-			// If we manage to parse as YAML then prettify it
-			if err := yaml.Unmarshal(schema, &parsedYAML); err == nil {
-				schema, err = yaml.Marshal(parsedYAML)
-				if err != nil {
-					return nil, fmt.Errorf("failed to marshal YAML: %w", err)
-				}
-			}
-		}
-	}
 
 	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, isQuickstart)
 	if err != nil {
