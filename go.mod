@@ -1,6 +1,6 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.21.5
+go 1.22
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
