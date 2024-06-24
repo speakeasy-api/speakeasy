@@ -3,6 +3,7 @@ package validation
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io"
 	"strings"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"go.uber.org/zap"
 )
 
@@ -47,7 +47,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 
 	ctx = log.With(ctx, logger.WithWriter(io.Discard))
 
-	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
+	isRemote, schema, err := openapi.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document contents: %w", err)
 	}
@@ -99,7 +99,7 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 	logger := log.From(ctx)
 	logger.Info("Linting OpenAPI document...\n")
 
-	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
+	isRemote, schema, err := openapi.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schema contents: %w", err)
 	}

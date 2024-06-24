@@ -1,28 +1,23 @@
 package suggest
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"gopkg.in/yaml.v3"
 )
 
 func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, style operations.Style, depthStyle operations.DepthStyle) error {
@@ -36,7 +31,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 		return err
 	}
 
-	schemaBytes, _, oldDoc, err := schema.LoadDocument(ctx, schemaPath)
+	schemaBytes, _, oldDoc, err := openapi.LoadDocument(ctx, schemaPath)
 	if err != nil {
 		return err
 	}
@@ -62,7 +57,9 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 
 	/* Update operation IDS and tags/groups */
 	newDoc := v3.NewDocument(oldDoc.Model.GoLow()) // Need to keep the old document for overlay comparison
-	applySuggestion(ctx, newDoc, res.Suggestion.OperationIds)
+	suggestion := suggestions.MakeOperationIDs(res.Suggestion.OperationIds)
+	updates := suggestion.Apply(newDoc)
+	printSuggestions(ctx, updates)
 
 	/*
 	 * Write the new document or overlay
@@ -80,21 +77,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	}
 
 	if asOverlay {
-		// Note that newDoc.Index.GetRootNode() should work here, but doesn't
-		var y1, y2 yaml.Node
-		if err = yaml.NewDecoder(bytes.NewReader(schemaBytes)).Decode(&y1); err != nil {
-			return fmt.Errorf("failed to decode source schema bytes: %w", err)
-		}
-		if err = yaml.NewDecoder(bytes.NewReader(finalBytesYAML)).Decode(&y2); err != nil {
-			return fmt.Errorf("failed to decode updated schema bytes: %w", err)
-		}
-
-		o, err := overlay.Compare(oldDoc.Model.Info.Title, &y1, y2) // TODO this doesn't work for some reason
-		if err != nil {
-			return err
-		}
-
-		if err := o.Format(outFile); err != nil {
+		if err = openapi.WriteOverlay(schemaBytes, finalBytesYAML, outFile); err != nil {
 			return err
 		}
 	} else {
@@ -118,46 +101,9 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	return nil
 }
 
-func applySuggestion(ctx context.Context, model *v3.Document, suggestion map[string][]string) {
-	pathItems := model.Paths.PathItems
-	var toPrint [][]string
-
-	for pathPair := orderedmap.First(pathItems); pathPair != nil; pathPair = pathPair.Next() {
-		operations := pathPair.Value().GetOperations()
-
-		for operationPair := orderedmap.First(operations); operationPair != nil; operationPair = operationPair.Next() {
-			operation := operationPair.Value()
-			operationID := operation.OperationId
-			oldGroupID := "<no_group>"
-			if len(operation.Tags) == 1 {
-				oldGroupID = operation.Tags[0]
-			} else if len(operation.Tags) > 1 {
-				oldGroupID = fmt.Sprintf("[%s]", strings.Join(operation.Tags, ", "))
-			}
-
-			if newOperationPath, ok := suggestion[operationID]; ok {
-				newGroupID := strings.Join(newOperationPath[:len(newOperationPath)-1], ".")
-				newOperationID := newOperationPath[len(newOperationPath)-1]
-
-				if !slices.Contains(operation.Tags, newGroupID) {
-					operation.Extensions.Set("x-speakeasy-group", buildValueNode(newGroupID))
-				}
-
-				if newOperationID != operationID {
-					operation.Extensions.Set("x-speakeasy-name-override", buildValueNode(newOperationID))
-				}
-
-				toPrint = append(toPrint, []string{oldGroupID, operationID, newGroupID, newOperationID})
-			}
-		}
-	}
-
-	printSuggestions(ctx, toPrint)
-}
-
 var changedStyle = styles.Dimmed.Copy().Strikethrough(true)
 
-func printSuggestions(ctx context.Context, toPrint [][]string) {
+func printSuggestions(ctx context.Context, updates []suggestions.OperationUpdate) {
 	logger := log.From(ctx)
 
 	maxWidth := 0
@@ -165,22 +111,20 @@ func printSuggestions(ctx context.Context, toPrint [][]string) {
 	var lhs []string
 	var rhs []string
 
-	for _, suggestion := range toPrint {
-		oldGroupID, oldOperationID, newGroupID, newOperationID := suggestion[0], suggestion[1], suggestion[2], suggestion[3]
+	for _, update := range updates {
+		oldGroupIDStr := styles.Info.Render(update.OldGroupID)
+		oldOperationIDStr := styles.Info.Render(update.OldOperationID)
+		newGroupIDStr := styles.DimmedItalic.Render(update.NewGroupID)
+		newOperationIDStr := styles.DimmedItalic.Render(update.NewOperationID)
 
-		oldGroupIDStr := styles.Info.Render(oldGroupID)
-		oldOperationIDStr := styles.Info.Render(oldOperationID)
-		newGroupIDStr := styles.DimmedItalic.Render(newGroupID)
-		newOperationIDStr := styles.DimmedItalic.Render(newOperationID)
-
-		if newGroupID != oldGroupID {
-			oldGroupIDStr = changedStyle.Render(oldGroupID)
-			newGroupIDStr = styles.Success.Render(newGroupID)
+		if update.NewGroupID != update.OldGroupID {
+			oldGroupIDStr = changedStyle.Render(update.OldGroupID)
+			newGroupIDStr = styles.Success.Render(update.NewGroupID)
 		}
 
-		if newOperationID != oldOperationID {
-			oldOperationIDStr = changedStyle.Render(oldOperationID)
-			newOperationIDStr = styles.Success.Render(newOperationID)
+		if update.NewOperationID != update.OldOperationID {
+			oldOperationIDStr = changedStyle.Render(update.OldOperationID)
+			newOperationIDStr = styles.Success.Render(update.NewOperationID)
 		}
 
 		l := fmt.Sprintf("%s.%s", oldGroupIDStr, oldOperationIDStr)
@@ -201,14 +145,6 @@ func printSuggestions(ctx context.Context, toPrint [][]string) {
 	for i := range lhs {
 		l := lipgloss.NewStyle().Width(maxWidth).Render(lhs[i])
 		logger.Printf("%s %s %s", l, arrow, rhs[i])
-	}
-}
-
-func buildValueNode(value string) *yaml.Node {
-	return &yaml.Node{
-		Kind:  yaml.ScalarNode,
-		Tag:   "!!str",
-		Value: value,
 	}
 }
 

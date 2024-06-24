@@ -6,6 +6,8 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
+	"github.com/hashicorp/go-version"
+	"gopkg.in/yaml.v3"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -15,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-version"
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
@@ -28,11 +29,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"github.com/speakeasy-api/speakeasy/internal/transform"
-	"github.com/speakeasy-api/speakeasy/registry"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
-
 	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -45,11 +41,14 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
+	"github.com/speakeasy-api/speakeasy/registry"
+	"go.uber.org/zap"
 )
 
 const minimumViableOverlayPath = "valid-overlay.yaml"
