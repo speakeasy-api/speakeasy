@@ -36,6 +36,7 @@ speakeasy run [flags]
   -r, --repo string               the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions
   -b, --repo-subdir string        the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation
       --repo-subdirs string       a map from target ID to the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation (default "null")
+      --set-version string        the manual version to apply to the generated SDK
       --skip-compile              skip compilation when generating the SDK
   -s, --source string             source to run. specify 'all' to run all sources
   -t, --target string             target to run. specify 'all' to run all targets

@@ -66,8 +66,14 @@ func Apply(schema string, overlayFile string, w io.Writer) error {
 		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
 	}
 
+	// Decode into an interface{} to avoid preserving the original formatting of the input file
+	// otherwise this can result in 1 line YAML files
+	var unformattedYaml interface{}
+	ys.Decode(&unformattedYaml)
+
 	enc := yaml.NewEncoder(w)
-	if err := enc.Encode(ys); err != nil {
+	enc.SetIndent(2)
+	if err := enc.Encode(unformattedYaml); err != nil {
 		return fmt.Errorf("failed to encode spec file %q: %w", specFile, err)
 	}
 

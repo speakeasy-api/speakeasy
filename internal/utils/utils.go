@@ -1,15 +1,18 @@
 package utils
 
 import (
+	"context"
 	"fmt"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"golang.org/x/term"
 )
@@ -171,4 +174,9 @@ func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
 	})
 
 	return values
+}
+
+// For these customers we limit callbacks to the speakeasy server outside of auth
+func IsZeroTelemetryOrganization(ctx context.Context) bool {
+	return core.IsTelemetryDisabled(ctx)
 }

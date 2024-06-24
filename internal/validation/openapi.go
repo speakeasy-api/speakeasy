@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/reports"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -37,7 +38,7 @@ type ValidationResult struct {
 	Status           string
 	ValidOperations  []string
 	InvalidOperation []string
-	Report           reports.ReportResult
+	Report           *reports.ReportResult
 }
 
 func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string) (*ValidationResult, error) {
@@ -122,11 +123,15 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 
 	logger.Infof("\nOpenAPI document linting complete. %d errors, %d warnings, %d hints\n", len(res.Errors), len(res.Warnings), len(res.Infos))
 
+	reportURL := ""
+	if res.Report != nil {
+		reportURL = res.Report.URL
+	}
 	github.GenerateLintingSummary(ctx, github.LintingSummary{
 		Source:    source,
 		Status:    res.Status,
 		Errors:    res.AllErrors,
-		ReportURL: res.Report.URL,
+		ReportURL: reportURL,
 	})
 
 	if len(res.Errors) > 0 {
@@ -313,9 +318,13 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		status = "OpenAPI document valid with warnings ⚠"
 	}
 
-	report, err := generateReport(ctx, res)
-	if err == nil && report.Message != "" {
-		outputLogger.Info(report.Message)
+	var report *reports.ReportResult
+	if !utils.IsZeroTelemetryOrganization(ctx) {
+		resultReport, err := generateReport(ctx, res)
+		if err == nil && resultReport.Message != "" {
+			outputLogger.Info(resultReport.Message)
+		}
+		report = &resultReport
 	}
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
