@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type FieldValidation = func(v any) error
+type FieldValidation = func(v any, template string) error
 type CustomTargetValidations = map[string]FieldValidation
 type CustomValidations = map[string]CustomTargetValidations
 
@@ -33,7 +33,7 @@ type pythonAdditionalDependencies struct {
 
 var validPrefixes = []string{"==", ">=", ">", "~=", "<", "<=", "!=", "==="}
 
-func pythonAdditionalDependenciesValidation(v any) error {
+func pythonAdditionalDependenciesValidation(v any, template string) error {
 	j, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -44,7 +44,8 @@ func pythonAdditionalDependenciesValidation(v any) error {
 		return err
 	}
 
-	if ad.Dependencies == nil || ad.ExtraDependencies == nil {
+	// This check does not apply to the pythonv2 template
+	if (ad.Dependencies == nil || ad.ExtraDependencies == nil) && template == "python" {
 		return fmt.Errorf("either dependencies or extraDependencies must be provided, or the entire field should be omitted")
 	}
 

@@ -149,7 +149,7 @@ func ValidateTarget(target string, config map[string]any, publishingEnabled bool
 
 		// Check custom validations
 		if validateFn := getValidation(t.Target, field.Name); validateFn != nil {
-			if err := validateFn(config[field.Name]); err != nil {
+			if err := validateFn(config[field.Name], t.Template); err != nil {
 				msg = fmt.Sprintf("field '%s' is invalid", field.Name)
 				msg += ": " + err.Error()
 			}
