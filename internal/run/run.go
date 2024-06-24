@@ -6,7 +6,8 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/hashicorp/go-version"
+	"gopkg.in/yaml.v3"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -27,11 +28,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
-	"github.com/speakeasy-api/speakeasy/internal/transform"
-	"github.com/speakeasy-api/speakeasy/registry"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
-
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -44,14 +41,19 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
+	"github.com/speakeasy-api/speakeasy/registry"
+	"go.uber.org/zap"
 )
 
 const minimumViableOverlayPath = "valid-overlay.yaml"
+
+const speakeasySelf = "speakeasy-self"
 
 type LintingError struct {
 	Err      error
@@ -73,6 +75,7 @@ type Workflow struct {
 	ShouldCompile    bool
 	ForceGeneration  bool
 	RegistryTags     []string
+	SetVersion       string
 
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
@@ -98,7 +101,7 @@ func NewWorkflow(
 	name, target, source, repo string,
 	repoSubDirs, installationURLs map[string]string,
 	debug, shouldCompile, forceGeneration bool,
-	registryTags []string,
+	registryTags []string, setVersion string,
 ) (*Workflow, error) {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil || wf == nil {
@@ -138,6 +141,7 @@ func NewWorkflow(
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
+		SetVersion:       setVersion,
 	}, nil
 }
 
@@ -251,6 +255,10 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	}
 
 	if w.Target == "all" {
+		if w.SetVersion != "" && len(w.workflow.Targets) > 1 {
+			return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
+		}
+
 		for t := range w.workflow.Targets {
 			sourceRes, err := w.runTarget(ctx, t)
 			if err != nil {
@@ -375,7 +383,25 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		return nil, err
 	}
 
-	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published)
+	if w.SetVersion != "" && genConfig.Config != nil {
+		appliedVersion := w.SetVersion
+		if appliedVersion[0] == 'v' {
+			appliedVersion = appliedVersion[1:]
+		}
+		if langCfg, ok := genConfig.Config.Languages[t.Target]; ok {
+			if _, err := version.NewVersion(appliedVersion); err != nil {
+				return nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
+			}
+
+			langCfg.Version = appliedVersion
+			genConfig.Config.Languages[t.Target] = langCfg
+			if err := sdkGenConfig.SaveConfig(outDir, genConfig.Config); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published, target)
 	if err != nil {
 		if errors.Is(err, validation.NoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
@@ -410,6 +436,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		w.RepoSubDirs[target],
 		w.ShouldCompile,
 		w.ForceGeneration,
+		target,
 	)
 	if err != nil {
 		return nil, err
@@ -454,7 +481,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 	genLockID := sdkgen.GetGenLockID(outDir)
-	if orgSlug != "" && workspaceSlug != "" && genLockID != nil && *genLockID != "" {
+	if orgSlug != "" && workspaceSlug != "" && genLockID != nil && *genLockID != "" && !utils.IsZeroTelemetryOrganization(ctx) {
 		w.SDKOverviewURLs[target] = fmt.Sprintf("https://app.speakeasyapi.dev/org/%s/%s/targets/%s", orgSlug, workspaceSlug, *genLockID)
 	}
 
@@ -560,7 +587,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil {
-		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok {
+		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
 			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
 				// Don't fail the whole workflow if this fails
@@ -690,19 +717,27 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		}
 
 		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
-			if env.IsGithubAction() {
-				return fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
+			message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
+			if !env.IsGithubAction() {
+				message += " run `speakeasy auth logout`"
 			}
-
-			log.From(ctx).Warnf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
+			if speakeasySelf == auth.GetOrgSlugFromContext(ctx) && !env.IsGithubAction() {
+				log.From(ctx).Warn(message)
+			} else {
+				return fmt.Errorf(message)
+			}
 		}
 
 		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
-			if env.IsGithubAction() {
-				return fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
+			message := fmt.Sprintf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
+			if !env.IsGithubAction() {
+				message += " run `speakeasy auth logout`"
 			}
-
-			log.From(ctx).Warnf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
+			if speakeasySelf == auth.GetWorkspaceSlugFromContext(ctx) && !env.IsGithubAction() {
+				log.From(ctx).Warn(message)
+			} else {
+				return fmt.Errorf(message)
+			}
 		}
 
 		namespaceName = name
@@ -1087,8 +1122,8 @@ func (w *Workflow) printSourceSuccessMessage(logger log.Logger) {
 			}
 		}
 
-		if sourceRes.LintResult != nil {
-			appendReportLocation(sourceRes.LintResult.Report)
+		if sourceRes.LintResult != nil && sourceRes.LintResult.Report != nil {
+			appendReportLocation(*sourceRes.LintResult.Report)
 		}
 		if sourceRes.ChangeReport != nil {
 			appendReportLocation(*sourceRes.ChangeReport)

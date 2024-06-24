@@ -94,6 +94,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		flags.RepoSubdir,
 		false,
 		flags.Force,
+		"",
 	)
 
 	return err

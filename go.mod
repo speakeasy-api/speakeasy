@@ -1,6 +1,8 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.21.5
+go 1.22
+
+toolchain go1.22.4
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -18,9 +20,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v0.0.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.340.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.352.0
 	github.com/speakeasy-api/openapi-overlay v0.6.0
-	github.com/speakeasy-api/sdk-gen-config v1.14.7
+	github.com/speakeasy-api/sdk-gen-config v1.15.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.8
 	github.com/speakeasy-api/speakeasy-core v0.9.7
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
