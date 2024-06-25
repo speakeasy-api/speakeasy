@@ -3,24 +3,25 @@ package suggest
 import (
 	"context"
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 )
 
-func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, style operations.Style, depthStyle operations.DepthStyle) error {
+func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool, style shared.Style, depthStyle shared.DepthStyle) error {
 	if asOverlay && !isYAML(outPath) {
 		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
 	}
@@ -31,7 +32,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 		return err
 	}
 
-	schemaBytes, _, oldDoc, err := openapi.LoadDocument(ctx, schemaPath)
+	schemaBytes, _, _, err := schema.LoadDocument(ctx, schemaLocation)
 	if err != nil {
 		return err
 	}
@@ -39,26 +40,32 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
 
 	/* Get suggestion */
-	res, err := client.Suggest.SuggestOperationIDs(ctx, operations.SuggestOperationIDsRequestBody{
-		// TODO add these as flags
-		Opts: &operations.Opts{
-			Style:      style.ToPointer(),
-			DepthStyle: depthStyle.ToPointer(),
-		},
-		Schema: operations.Schema{
-			FileName: schemaPath,
-			Content:  schemaBytes,
+	res, err := client.Suggest.SuggestOperationIDs(ctx, operations.SuggestOperationIDsRequest{
+		XSessionID: "unused",
+		RequestBody: operations.SuggestOperationIDsRequestBody{
+			Opts: &shared.SuggestOperationIDsOpts{
+				Style:      style.ToPointer(),
+				DepthStyle: depthStyle.ToPointer(),
+			},
+			Schema: operations.Schema{
+				FileName: schemaLocation,
+				Content:  schemaBytes,
+			},
 		},
 	})
-	if err != nil || res.Suggestion == nil {
+	if err != nil || res.SuggestedOperationIDs == nil {
 		return err
 	}
 	stopSpinner()
 
 	/* Update operation IDS and tags/groups */
-	newDoc := v3.NewDocument(oldDoc.Model.GoLow()) // Need to keep the old document for overlay comparison
-	suggestion := suggestions.MakeOperationIDs(res.Suggestion.OperationIds)
-	updates := suggestion.Apply(newDoc)
+	_, newDoc, err := openapi.Load(schemaBytes) // Need to keep the old document for overlay comparison
+	if err != nil {
+		return err
+	}
+
+	suggestion := suggestions.MakeOperationIDs(res.SuggestedOperationIDs.OperationIds)
+	updates := suggestion.Apply(newDoc.Model)
 	printSuggestions(ctx, updates)
 
 	/*
@@ -71,7 +78,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	}
 	defer outFile.Close()
 
-	finalBytesYAML, err := newDoc.Render()
+	finalBytesYAML, err := newDoc.Model.Render()
 	if err != nil {
 		return err
 	}
@@ -87,7 +94,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 				return err
 			}
 		} else {
-			finalBytesJSON, err := newDoc.RenderJSON("  ")
+			finalBytesJSON, err := newDoc.Model.RenderJSON("  ")
 			if err != nil {
 				return err
 			}
