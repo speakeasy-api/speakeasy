@@ -2,7 +2,7 @@ package transform
 
 import (
 	"context"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io"
 
 	"github.com/pb33f/libopenapi"
@@ -18,7 +18,7 @@ type transformer[Args interface{}] struct {
 }
 
 func (t transformer[Args]) Do(ctx context.Context) error {
-	_, doc, model, err := schema.LoadDocument(ctx, t.schemaPath)
+	_, doc, model, err := openapi.LoadDocument(ctx, t.schemaPath)
 	if err != nil {
 		return err
 	}

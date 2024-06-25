@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -43,7 +44,7 @@ type sourceResult struct {
 	Source       string
 	LintResult   *validation.ValidationResult
 	ChangeReport *reports.ReportResult
-	Diagnosis    *suggest.Diagnosis
+	Diagnosis    *suggestions.Diagnosis
 }
 
 func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *sourceResult, error) {
@@ -509,10 +510,10 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Log
 			appendReportLocation(*sourceRes.ChangeReport)
 		}
 
-		if sourceRes.Diagnosis != nil && sourceRes.Diagnosis.ShouldSuggest() {
+		if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(*sourceRes.Diagnosis) {
 			baseURL := auth.GetWorkspaceBaseURL(ctx)
 			link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
-			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(sourceRes.Diagnosis.Summarize()+"."), styles.DimmedItalic.Render(link))
+			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(suggest.Summarize(*sourceRes.Diagnosis)+"."), styles.DimmedItalic.Render(link))
 			additionalLines = append(additionalLines, styles.HeavilyEmphasized.Render(fmt.Sprintf("└─%s: ", "Improve with AI")+msg))
 		}
 
