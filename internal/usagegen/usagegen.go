@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io/fs"
 	"os"
 	"regexp"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/pkg/errors"
@@ -43,7 +43,7 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		return fmt.Errorf("language not supported: %s", lang)
 	}
 
-	isRemote, schema, err := schema.GetSchemaContents(ctx, schemaPath, header, token)
+	isRemote, schema, err := openapi.GetSchemaContents(ctx, schemaPath, header, token)
 	if err != nil {
 		return fmt.Errorf("failed to get schema contents: %w", err)
 	}

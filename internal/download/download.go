@@ -5,6 +5,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/download"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"math/rand"
 	"mime"
@@ -223,4 +228,54 @@ func SniffDocumentExtension(res *http.Response) (string, error) {
 	default:
 		return "", fmt.Errorf("%w: unsupported media type: %s", ErrUnknownDocumentType, mediaType)
 	}
+}
+
+func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
+	var token, header string
+	if d.Auth != nil {
+		header = d.Auth.Header
+		envVar := strings.TrimPrefix(d.Auth.Secret, "$")
+
+		// GitHub action secrets are prefixed with INPUT_
+		if env.IsGithubAction() {
+			envVar = "INPUT_" + envVar
+		}
+		token = os.Getenv(strings.ToUpper(envVar))
+	}
+
+	res, err := download.Fetch(d.Location, header, token)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	ext := filepath.Ext(outPath)
+	if !slices.Contains([]string{".yaml", ".yml", ".json"}, ext) {
+		ext, err := download.SniffDocumentExtension(res)
+		if errors.Is(err, download.ErrUnknownDocumentType) {
+			ext = ".yaml"
+		} else if err != nil {
+			return "", err
+		}
+
+		outPath += ext
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
+		return "", err
+	}
+
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, res.Body); err != nil {
+		return "", fmt.Errorf("failed to save response to location: %w", err)
+	}
+
+	log.From(ctx).Infof("Downloaded %s to %s\n", d.Location, outPath)
+
+	return outPath, nil
 }

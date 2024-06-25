@@ -1,6 +1,8 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.21.5
+go 1.22
+
+toolchain go1.22.4
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -18,11 +20,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.0.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.342.6
+	github.com/speakeasy-api/openapi-generation/v2 v2.352.0
 	github.com/speakeasy-api/openapi-overlay v0.6.0
-	github.com/speakeasy-api/sdk-gen-config v1.14.7
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.4
-	github.com/speakeasy-api/speakeasy-core v0.9.3
+	github.com/speakeasy-api/sdk-gen-config v1.15.0
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.9
+	github.com/speakeasy-api/speakeasy-core v0.9.8
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
@@ -36,7 +38,6 @@ require (
 )
 
 require (
-	github.com/gertd/go-pluralize v0.2.1
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -98,6 +99,7 @@ require (
 	github.com/gammban/numtow v0.0.2 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell/v2 v2.7.4 // indirect
+	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.9.1 // indirect

@@ -58,7 +58,22 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 
 	if target != nil {
 		githubWorkflow.Name = fmt.Sprintf("Generate %s", strings.ToUpper(*target))
+		githubWorkflow.Jobs.Generate.With["target"] = *target
 	}
+
+	if target == nil && len(workflow.Targets) > 1 {
+		githubWorkflow.On.WorkflowDispatch.Inputs.Target = &config.Target{
+			Description: "optionally: set a specific target to generate, default is all",
+			Type:        "string",
+		}
+		githubWorkflow.Jobs.Generate.With["target"] = "${{ github.event.inputs.target }}"
+	}
+
+	githubWorkflow.On.WorkflowDispatch.Inputs.SetVersion = &config.SetVersion{
+		Description: "optionally set a specific SDK version",
+		Type:        "string",
+	}
+	githubWorkflow.Jobs.Generate.With["set_version"] = "${{ github.event.inputs.set_version }}"
 
 	secrets := githubWorkflow.Jobs.Generate.Secrets
 	for _, source := range workflow.Sources {
@@ -73,9 +88,6 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 				secrets[formatGithubSecret(overlay.Auth.Secret)] = formatGithubSecretName(overlay.Auth.Secret)
 			}
 		}
-	}
-	if target != nil {
-		githubWorkflow.Jobs.Generate.With["target"] = *target
 	}
 	githubWorkflow.Jobs.Generate.Secrets = secrets
 	return githubWorkflow, nil

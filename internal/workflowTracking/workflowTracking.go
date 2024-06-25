@@ -38,6 +38,10 @@ func NewWorkflowStep(name string, logger log.Logger, updatesListener chan<- Upda
 }
 
 func (w *WorkflowStep) NewSubstep(name string) *WorkflowStep {
+	if w == nil {
+		return nil
+	}
+
 	substep := NewWorkflowStep(name, w.logger, w.updates)
 
 	w.AddSubstep(substep)
