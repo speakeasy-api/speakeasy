@@ -106,6 +106,19 @@ func ValidateTarget(target string, config map[string]any, publishingEnabled bool
 
 	var errs []error
 
+	template := t.Template
+	if template == "python" {
+		for _, field := range fields {
+			if field.Name == "templateVersion" {
+				if val, ok := config[field.Name]; ok {
+					if strVal, ok := val.(string); ok {
+						template += strVal
+					}
+				}
+			}
+		}
+	}
+
 	for _, field := range fields {
 		// Special case
 		if field.Name == "version" {
@@ -149,7 +162,7 @@ func ValidateTarget(target string, config map[string]any, publishingEnabled bool
 
 		// Check custom validations
 		if validateFn := getValidation(t.Target, field.Name); validateFn != nil {
-			if err := validateFn(config[field.Name], t.Template); err != nil {
+			if err := validateFn(config[field.Name], template); err != nil {
 				msg = fmt.Sprintf("field '%s' is invalid", field.Name)
 				msg += ": " + err.Error()
 			}
