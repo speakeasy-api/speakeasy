@@ -16,13 +16,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
-	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
+	"github.com/speakeasy-api/speakeasy/internal/schema"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -73,7 +73,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		if len(source.Overlays) == 0 {
 			singleLocation = &outputLocation
 		}
-		currentDocument, err = resolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
+		currentDocument, err = schema.ResolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
 		if err != nil {
 			return "", nil, err
 		}
@@ -93,7 +93,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			resolvedPath, err := resolveDocument(ctx, input, nil, mergeStep)
+			resolvedPath, err := schema.ResolveDocument(ctx, input, nil, mergeStep)
 			if err != nil {
 				return "", nil, err
 			}
@@ -118,7 +118,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
-			resolvedPath, err := resolveDocument(ctx, overlay, nil, overlayStep)
+			resolvedPath, err := schema.ResolveDocument(ctx, overlay, nil, overlayStep)
 			if err != nil {
 				return "", nil, err
 			}
@@ -519,91 +519,6 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Log
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
 		logger.Println(msg)
 	}
-}
-
-func resolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *workflowTracking.WorkflowStep) (string, error) {
-	if d.IsSpeakeasyRegistry() {
-		step.NewSubstep("Downloading registry bundle")
-		if !registry.IsRegistryEnabled(ctx) {
-			return "", fmt.Errorf("schema registry is not enabled for this workspace")
-		}
-
-		location := d.GetTempRegistryDir(workflow.GetTempDir())
-		if outputLocation != nil {
-			location = *outputLocation
-		}
-		documentOut, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, location)
-		if err != nil {
-			return "", err
-		}
-
-		return documentOut.LocalFilePath, nil
-	} else if d.IsRemote() {
-		step.NewSubstep("Downloading remote document")
-		location := d.GetTempDownloadPath(workflow.GetTempDir())
-		if outputLocation != nil {
-			location = *outputLocation
-		}
-
-		documentOut, err := resolveRemoteDocument(ctx, d, location)
-		if err != nil {
-			return "", err
-		}
-
-		return documentOut, nil
-	}
-
-	return d.Location, nil
-}
-
-func resolveRemoteDocument(ctx context.Context, d workflow.Document, outPath string) (string, error) {
-	var token, header string
-	if d.Auth != nil {
-		header = d.Auth.Header
-		envVar := strings.TrimPrefix(d.Auth.Secret, "$")
-
-		// GitHub action secrets are prefixed with INPUT_
-		if env.IsGithubAction() {
-			envVar = "INPUT_" + envVar
-		}
-		token = os.Getenv(strings.ToUpper(envVar))
-	}
-
-	res, err := download.Fetch(d.Location, header, token)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	ext := filepath.Ext(outPath)
-	if !slices.Contains([]string{".yaml", ".yml", ".json"}, ext) {
-		ext, err := download.SniffDocumentExtension(res)
-		if errors.Is(err, download.ErrUnknownDocumentType) {
-			ext = ".yaml"
-		} else if err != nil {
-			return "", err
-		}
-
-		outPath += ext
-	}
-
-	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
-		return "", err
-	}
-
-	outFile, err := os.Create(outPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to create output file: %w", err)
-	}
-	defer outFile.Close()
-
-	if _, err := io.Copy(outFile, res.Body); err != nil {
-		return "", fmt.Errorf("failed to save response to location: %w", err)
-	}
-
-	log.From(ctx).Infof("Downloaded %s to %s\n", d.Location, outPath)
-
-	return outPath, nil
 }
 
 func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string) error {

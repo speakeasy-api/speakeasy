@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	charminternal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -57,15 +57,15 @@ var suggestOperationIDsCmd = &model.ExecutableCommand[suggestOperationIDsFlags]{
 }
 
 func runSuggest(ctx context.Context, flags suggestOperationIDsFlags) error {
-	style := operations.StyleResource
-	depthStyle := operations.DepthStyleNested
+	style := shared.StyleResource
+	depthStyle := shared.DepthStyleNested
 	switch flags.Style {
 	case "standardize":
-		style = operations.StyleStandardize
-		depthStyle = operations.DepthStyleOriginal
+		style = shared.StyleStandardize
+		depthStyle = shared.DepthStyleOriginal
 	case "flatten":
-		style = operations.StyleStandardize
-		depthStyle = operations.DepthStyleFlat
+		style = shared.StyleStandardize
+		depthStyle = shared.DepthStyleFlat
 	}
 
 	return suggest.Suggest(ctx, flags.Schema, flags.Out, flags.Overlay, style, depthStyle)

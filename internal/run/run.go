@@ -6,6 +6,7 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/download"
 	"os"
 	"path/filepath"
 	"slices"
@@ -360,7 +361,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	tempBase := fmt.Sprintf("downloaded_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
 
 	if source.Inputs[0].IsRemote() {
-		outResolved, err := resolveRemoteDocument(ctx, source.Inputs[0], tempBase)
+		outResolved, err := download.ResolveRemoteDocument(ctx, source.Inputs[0], tempBase)
 		if err != nil {
 			return "", nil, err
 		}

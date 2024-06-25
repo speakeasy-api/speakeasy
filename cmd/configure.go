@@ -825,7 +825,7 @@ func checkGithubAppAccess(ctx context.Context, org, repo string) bool {
 		return false
 	}
 
-	res, err := s.Github.GithubCheckAccess(ctx, operations.GithubCheckAccessRequest{
+	res, err := s.Github.CheckAccess(ctx, operations.CheckAccessRequest{
 		Org:  org,
 		Repo: repo,
 	})
@@ -842,7 +842,7 @@ func configureGithubRepo(ctx context.Context, org, repo string) bool {
 		return false
 	}
 
-	res, err := s.Github.GithubConfigureTarget(ctx, shared.GithubConfigureTargetRequest{
+	res, err := s.Github.ConfigureTarget(ctx, shared.GithubConfigureTargetRequest{
 		Org:      org,
 		RepoName: repo,
 	})

@@ -3,6 +3,7 @@ package suggest
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"net/http"
 	"os"
@@ -24,7 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, style operations.Style, depthStyle operations.DepthStyle) error {
+func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool, style shared.Style, depthStyle shared.DepthStyle) error {
 	if asOverlay && !isYAML(outPath) {
 		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
 	}
@@ -35,7 +36,7 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 		return err
 	}
 
-	schemaBytes, _, oldDoc, err := schema.LoadDocument(ctx, schemaPath)
+	schemaBytes, _, oldDoc, err := schema.LoadDocument(ctx, schemaLocation)
 	if err != nil {
 		return err
 	}
@@ -43,25 +44,27 @@ func Suggest(ctx context.Context, schemaPath, outPath string, asOverlay bool, st
 	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
 
 	/* Get suggestion */
-	res, err := client.Suggest.SuggestOperationIDs(ctx, operations.SuggestOperationIDsRequestBody{
-		// TODO add these as flags
-		Opts: &operations.Opts{
-			Style:      style.ToPointer(),
-			DepthStyle: depthStyle.ToPointer(),
-		},
-		Schema: operations.Schema{
-			FileName: schemaPath,
-			Content:  schemaBytes,
+	res, err := client.Suggest.SuggestOperationIDs(ctx, operations.SuggestOperationIDsRequest{
+		XSessionID: "unused",
+		RequestBody: operations.SuggestOperationIDsRequestBody{
+			Opts: &shared.SuggestOperationIDsOpts{
+				Style:      style.ToPointer(),
+				DepthStyle: depthStyle.ToPointer(),
+			},
+			Schema: operations.Schema{
+				FileName: schemaLocation,
+				Content:  schemaBytes,
+			},
 		},
 	})
-	if err != nil || res.Suggestion == nil {
+	if err != nil || res.SuggestedOperationIDs == nil {
 		return err
 	}
 	stopSpinner()
 
 	/* Update operation IDS and tags/groups */
 	newDoc := v3.NewDocument(oldDoc.Model.GoLow()) // Need to keep the old document for overlay comparison
-	applySuggestion(ctx, newDoc, res.Suggestion.OperationIds)
+	applySuggestion(ctx, newDoc, res.SuggestedOperationIDs.OperationIds)
 
 	/*
 	 * Write the new document or overlay
