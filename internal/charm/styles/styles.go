@@ -19,22 +19,22 @@ var (
 				Foreground(Colors.Yellow).
 				Bold(true)
 
-	Emphasized = HeavilyEmphasized.Copy().Foreground(Colors.WhiteBlackAdaptive)
+	Emphasized = HeavilyEmphasized.Foreground(Colors.WhiteBlackAdaptive)
 
-	Info    = Emphasized.Copy().Foreground(Colors.Blue)
-	Warning = Emphasized.Copy().Foreground(Colors.Yellow)
-	Error   = Emphasized.Copy().Foreground(Colors.Red)
+	Info    = Emphasized.Foreground(Colors.Blue)
+	Warning = Emphasized.Foreground(Colors.Yellow)
+	Error   = Emphasized.Foreground(Colors.Red)
 
 	Focused       = lipgloss.NewStyle().Foreground(Colors.Yellow)
-	FocusedDimmed = Focused.Copy().Foreground(Colors.DimYellow)
+	FocusedDimmed = Focused.Foreground(Colors.DimYellow)
 
 	Dimmed       = lipgloss.NewStyle().Foreground(Colors.Grey)
-	DimmedItalic = Dimmed.Copy().Italic(true)
-	Help         = DimmedItalic.Copy()
+	DimmedItalic = Dimmed.Italic(true)
+	Help         = DimmedItalic
 
-	Success = Emphasized.Copy().Foreground(Colors.Green)
+	Success = Emphasized.Foreground(Colors.Green)
 
-	Cursor = FocusedDimmed.Copy()
+	Cursor = FocusedDimmed
 	None   = lipgloss.NewStyle()
 
 	Colors = struct {

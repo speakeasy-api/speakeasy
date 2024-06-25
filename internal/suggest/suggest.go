@@ -3,16 +3,17 @@ package suggest
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
-	"net/http"
-	"os"
-	"path/filepath"
-	"time"
 
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
@@ -108,7 +109,7 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 	return nil
 }
 
-var changedStyle = styles.Dimmed.Copy().Strikethrough(true)
+var changedStyle = styles.Dimmed.Strikethrough(true)
 
 func printSuggestions(ctx context.Context, updates []suggestions.OperationUpdate) {
 	logger := log.From(ctx)
@@ -144,7 +145,7 @@ func printSuggestions(ctx context.Context, updates []suggestions.OperationUpdate
 		}
 	}
 
-	lhsHeading := styles.Info.Copy().Width(maxWidth).Underline(true).Render("Original")
+	lhsHeading := styles.Info.Width(maxWidth).Underline(true).Render("Original")
 	rhsHeading := styles.Success.Underline(true).Render("Suggested")
 	logger.Printf("%s    %s", lhsHeading, rhsHeading)
 

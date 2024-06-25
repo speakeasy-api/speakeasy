@@ -14,17 +14,17 @@ import (
 )
 
 var (
-	titleStyle       = styles.HeavilyEmphasized.Copy().MarginLeft(2)
-	descriptionStyle = styles.Dimmed.Copy().MarginLeft(2).Foreground(styles.Colors.BrightGrey)
+	titleStyle       = styles.HeavilyEmphasized.MarginLeft(2)
+	descriptionStyle = styles.Dimmed.MarginLeft(2).Foreground(styles.Colors.BrightGrey)
 
-	inputBoxStyle = styles.Margins.Copy().
+	inputBoxStyle = styles.Margins.
 			PaddingLeft(2).
 			Border(lipgloss.NormalBorder(), false, false, false, true).
 			BorderForeground(styles.Colors.DimYellow)
 
-	focusedPromptStyle = styles.Focused.Copy().Bold(true)
-	blurredPromptStyle = focusedPromptStyle.Copy().Foreground(styles.Colors.WhiteBlackAdaptive)
-	placeholderStyle   = styles.Dimmed.Copy()
+	focusedPromptStyle = styles.Focused.Bold(true)
+	blurredPromptStyle = focusedPromptStyle.Foreground(styles.Colors.WhiteBlackAdaptive)
+	placeholderStyle   = styles.Dimmed
 )
 
 type MultiInput struct {
@@ -192,7 +192,7 @@ func (m *MultiInput) View() string {
 			fieldsString = "field has"
 		}
 		successMessage := fmt.Sprintf("Values for %d %s been supplied ✔\n", len(m.getFilledValues()), fieldsString)
-		return styles.Success.Copy().
+		return styles.Success.
 			Margin(0, 2, 1, 2).
 			Render(successMessage)
 	}

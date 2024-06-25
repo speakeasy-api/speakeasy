@@ -188,7 +188,7 @@ func (w *WorkflowStep) toString(parentIndent, indent int) string {
 		style = styles.Dimmed
 	}
 
-	statusStyle := style.Copy().Bold(false).Italic(true)
+	statusStyle := style.Bold(false).Italic(true)
 
 	builder.WriteString(style.Render(s))
 	builder.WriteString(statusStyle.Render(" -", string(w.status)))

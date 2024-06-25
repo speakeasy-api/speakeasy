@@ -96,9 +96,9 @@ var (
 	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
 	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
 	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
-	activeTabStyle    = inactiveTabStyle.Copy().Border(activeTabBorder, true)
+	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
 	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(1, 1, 0, 1).Border(lipgloss.NormalBorder()).UnsetBorderTop()
-	margins           = docStyle.Copy().Margin(1, 0)
+	margins           = docStyle.Margin(1, 0)
 )
 
 func (m *tabsModel) View() string {
@@ -107,7 +107,7 @@ func (m *tabsModel) View() string {
 	var renderedTabs []string
 
 	activeTab := m.Tabs[m.activeTab]
-	windowStyle.BorderForeground(activeTab.BorderColor)
+	windowStyle = windowStyle.BorderForeground(activeTab.BorderColor)
 
 	var activeBorderColor lipgloss.AdaptiveColor
 
@@ -115,10 +115,10 @@ func (m *tabsModel) View() string {
 		var style lipgloss.Style
 		isFirst, isActive := i == 0, i == m.activeTab
 		if isActive {
-			style = activeTabStyle.Copy()
+			style = activeTabStyle
 			activeBorderColor = tab.BorderColor
 		} else {
-			style = inactiveTabStyle.Copy()
+			style = inactiveTabStyle
 		}
 		border, _, _, _, _ := style.GetBorder()
 		if isFirst && isActive {
@@ -128,10 +128,10 @@ func (m *tabsModel) View() string {
 		}
 
 		style = style.Border(border)
-		style.BorderForeground(tab.BorderColor)
-		style.BorderBottomForeground(activeTab.BorderColor)
+		style = style.BorderForeground(tab.BorderColor)
+		style = style.BorderBottomForeground(activeTab.BorderColor)
 
-		style.Foreground(tab.TitleColor)
+		style = style.Foreground(tab.TitleColor)
 
 		renderedTabs = append(renderedTabs, style.Render(tab.Title))
 	}
