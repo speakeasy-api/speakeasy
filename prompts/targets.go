@@ -15,6 +15,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
+const TargetNameDefault = "my-first-target"
+
 func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outDir *string, newTarget bool) []*huh.Group {
 	targetFields := []huh.Field{}
 	if newTarget {
@@ -84,8 +86,9 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 
 func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	var targetName string
+	// This is a temporary value is will be overwritten by sdk class name later
 	if len(quickstart.WorkflowFile.Targets) == 0 {
-		targetName = "my-first-target"
+		targetName = TargetNameDefault
 	}
 
 	var targetType string
