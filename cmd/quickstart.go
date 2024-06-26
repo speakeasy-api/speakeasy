@@ -138,6 +138,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		break
 	}
 
+	// use the sdkClassName as an improved workflow target name
+	if sdkClassName != "" {
+		targetName := strcase.ToKebab(sdkClassName)
+		quickstartObj.WorkflowFile.Targets[targetName] = quickstartObj.WorkflowFile.Targets[prompts.TargetNameDefault]
+		delete(quickstartObj.WorkflowFile.Targets, prompts.TargetNameDefault)
+	}
+
 	promptedDir := setDefaultOutDir(workingDir, sdkClassName, targetType)
 	if outDir != workingDir {
 		promptedDir = outDir
