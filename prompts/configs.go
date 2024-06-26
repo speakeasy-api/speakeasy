@@ -60,7 +60,7 @@ var ignoredKeys = []string{
 	"version",
 }
 
-func PromptForTargetConfig(targetName string, target *workflow.Target, existingConfig *config.Configuration, isQuickstart bool) (*config.Configuration, error) {
+func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *workflow.Target, existingConfig *config.Configuration, isQuickstart bool) (*config.Configuration, error) {
 	var output *config.Configuration
 	if existingConfig != nil && len(existingConfig.Languages) > 0 {
 		output = existingConfig
@@ -148,12 +148,34 @@ func PromptForTargetConfig(targetName string, target *workflow.Target, existingC
 
 	saveLanguageConfigValues(target.Target, form, output, appliedKeys, defaultConfigs)
 
+	// default dev containers on for new SDKs
+	if isQuickstart {
+		setDevContainerDefaults(output, wf, target)
+	}
+
 	return output, nil
+}
+
+func setDevContainerDefaults(output *config.Configuration, wf *workflow.Workflow, target *workflow.Target) {
+	if target.Target == "go" || target.Target == "typescript" || target.Target == "python" {
+		if source, ok := wf.Sources[target.Source]; ok {
+			schemaPath := ""
+			if source.Output != nil {
+				schemaPath = *source.Output
+			} else {
+				schemaPath = source.Inputs[0].Location
+			}
+			output.Generation.DevContainers = &config.DevContainers{
+				Enabled:    true,
+				SchemaPath: schemaPath,
+			}
+		}
+	}
 }
 
 func configBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	for key, target := range quickstart.WorkflowFile.Targets {
-		output, err := PromptForTargetConfig(key, &target, nil, true)
+		output, err := PromptForTargetConfig(key, quickstart.WorkflowFile, &target, nil, true)
 		if err != nil {
 			return nil, err
 		}
