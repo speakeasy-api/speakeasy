@@ -87,13 +87,13 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 	semaphore := make(chan struct{}, parallelism)
 	i := 0
 
+	completedCount := 0
 	for _, shard := range splitSchema {
 		wg.Add(1)
 		semaphore <- struct{}{} // Acquire a token
 		i++
 
 		go func(shard Shard, i int) {
-			<-semaphore // Release the token
 			defer wg.Done()
 			fmt.Printf("Processing shard %s (%v / %v)\n", shard.Key, i, len(splitSchema))
 			jitter := time.Duration(rand.Float32() * float32(time.Second) * 15)
@@ -102,7 +102,8 @@ func StartExampleExperiment(ctx context.Context, schemaPath string, cacheFolder 
 			if errMessage != nil {
 				fmt.Println(errMessage)
 			}
-			fmt.Printf("Shard %s complete (%v / %v)\n", shard.Key, i, len(splitSchema))
+			completedCount++
+			fmt.Printf("Shard %s complete (%v / %v)\n", shard.Key, completedCount, len(splitSchema))
 			<-semaphore // Release the token
 		}(shard, i)
 	}
