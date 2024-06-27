@@ -505,10 +505,8 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	logger := log.From(ctx)
 
-	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
-	if err != nil {
-		return err
-	}
+	orgSlug := core.GetOrgSlugFromContext(ctx)
+	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
 
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
@@ -693,7 +691,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	}
 
 	if !autoConfigureRepoSuccess {
-		agenda = append(agenda, fmt.Sprintf("• Setup a Speakeasy API Key as a GitHub Secret - %s/workspaces/%s/apikeys", core.GetServerURL(), workspaceID))
+		agenda = append(agenda, fmt.Sprintf("• Setup a Speakeasy API Key as a GitHub Secret - %s/org/%s/%s/settings/api-keys", core.GetServerURL(), orgSlug, workspaceSlug))
 	}
 
 	if len(secrets) > 2 || !autoConfigureRepoSuccess {
