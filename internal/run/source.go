@@ -3,6 +3,14 @@ package run
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/fs"
+	"math/rand"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -31,13 +39,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
-	"io"
-	"io/fs"
-	"math/rand"
-	"os"
-	"path/filepath"
-	"slices"
-	"strings"
 )
 
 type sourceResult struct {
@@ -138,7 +139,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	if !isSingleRegistrySource(source) {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
-			return "", nil, err
+			logger.Warnf("failed to snapshot source: %s", err.Error())
 		}
 	}
 
@@ -259,13 +260,19 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 	return res, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) error {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) (err error) {
 	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
 
 	if !registry.IsRegistryEnabled(ctx) {
 		registryStep.Skip("API Registry not enabled")
 		return ocicommon.ErrAccessGated
 	}
+
+	defer func() {
+		if err != nil {
+			registryStep.Fail()
+		}
+	}()
 
 	namespaceName := strcase.ToKebab(sourceID)
 	if source.Registry != nil {
