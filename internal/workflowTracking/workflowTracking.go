@@ -91,9 +91,21 @@ func (w *WorkflowStep) FailWorkflow() {
 }
 
 func (w *WorkflowStep) Fail() {
+	w.failLastSubstep() // Otherwise the parent step might fail even though all the child steps say "success"
+
 	if w.status == StatusRunning {
 		w.status = StatusFailed
 		w.logger.Errorf("\nStep Failed: %s\n", w.name)
+	}
+}
+
+func (w *WorkflowStep) failLastSubstep() {
+	for i, substep := range w.substeps {
+		if len(substep.substeps) > 0 {
+			substep.failLastSubstep()
+		} else if i == len(w.substeps)-1 { // Fail the last substep only
+			substep.Fail()
+		}
 	}
 }
 
