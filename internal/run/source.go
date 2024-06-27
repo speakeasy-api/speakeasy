@@ -138,9 +138,8 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !isSingleRegistrySource(source) {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
-		if err != nil {
-			// Don't fail the whole workflow if this fails
-			logger.Warnf("failed to snapshot openapi source: %s", err.Error())
+		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
+			logger.Warnf("failed to snapshot source: %s", err.Error())
 		}
 	}
 
@@ -261,7 +260,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 	return res, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) error {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) (err error) {
 	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
 
 	if !registry.IsRegistryEnabled(ctx) {
@@ -269,7 +268,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return ocicommon.ErrAccessGated
 	}
 
-	var err error
 	defer func() {
 		if err != nil {
 			registryStep.Fail()
