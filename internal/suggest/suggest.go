@@ -60,7 +60,7 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 	stopSpinner()
 
 	/* Update operation IDS and tags/groups */
-	_, newDoc, err := openapi.Load(schemaBytes) // Need to keep the old document for overlay comparison
+	_, newDoc, err := openapi.Load(schemaBytes, "") // Need to keep the old document for overlay comparison
 	if err != nil {
 		return err
 	}

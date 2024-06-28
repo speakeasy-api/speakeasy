@@ -14,7 +14,7 @@ func Diagnose(ctx context.Context, schemaPath string) (*suggestions.Diagnosis, e
 	if err != nil {
 		return nil, err
 	}
-	summary, err := openapi.GetOASSummary(data)
+	summary, err := openapi.GetOASSummary(data, schemaPath)
 	if err != nil {
 		return nil, err
 	}
