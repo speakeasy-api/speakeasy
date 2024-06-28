@@ -488,10 +488,6 @@ github.com/speakeasy-api/easytemplate v0.11.0 h1:B0DtyTwE6NTOLa020UNyATi1ebFVL5D
 github.com/speakeasy-api/easytemplate v0.11.0/go.mod h1:42jXuVIno2A24bQyVFK9K70kpG0tSufLEF4TiJ1kGvQ=
 github.com/speakeasy-api/huh v1.0.0 h1:QXnwLB038QE/+t4NsrDFfaGqxL5B/+zwI6aY1MoRjYo=
 github.com/speakeasy-api/huh v1.0.0/go.mod h1:mK3NAgt1YiqhPhEgxWdQeRCv9KmeLqfz2+KNCpuJ+yU=
-github.com/speakeasy-api/openapi-generation/v2 v2.352.0 h1:UjhEa/xitPbCGYJs0PaFg9bueXj8XFqQ/tJIRYEwi+E=
-github.com/speakeasy-api/openapi-generation/v2 v2.352.0/go.mod h1:pzGdWe+TUotC14CIEDbmk66cJEQz8l7BluJ2P8WaBZ4=
-github.com/speakeasy-api/openapi-generation/v2 v2.354.1 h1:ceZVIb0Mlf+bNcQ0dkMUBXMIBGT2rGzlY3RjUFAHSW4=
-github.com/speakeasy-api/openapi-generation/v2 v2.354.1/go.mod h1:pzGdWe+TUotC14CIEDbmk66cJEQz8l7BluJ2P8WaBZ4=
 github.com/speakeasy-api/openapi-generation/v2 v2.354.2 h1:uQC0SV3k2oQQwqzquPgcrQj6ec0ztNhecP8GxXpzWs8=
 github.com/speakeasy-api/openapi-generation/v2 v2.354.2/go.mod h1:pzGdWe+TUotC14CIEDbmk66cJEQz8l7BluJ2P8WaBZ4=
 github.com/speakeasy-api/openapi-overlay v0.6.0 h1:LqJWrE2nBE16lgGVkIhN4OceXpMZI4qHymuIgXmDIno=
@@ -500,8 +496,6 @@ github.com/speakeasy-api/sdk-gen-config v1.15.0 h1:AjDjrfZktAmj84b/6fQKk0gWgUVnO
 github.com/speakeasy-api/sdk-gen-config v1.15.0/go.mod h1:7FsPqdsh//6Z0OcO/jQPD66l6/m1YVvK5tmt0+KRpdo=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.9 h1:PC86nHhH+wOYPc3MlzEjJ6xdKGX/NEr8S8dzs+Uy2XU=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.9/go.mod h1:b4fiZ1Wid0JHwwiYqhaPifDwjmC15uiN7A8Cmid+9kw=
-github.com/speakeasy-api/speakeasy-core v0.9.8 h1:bCY05BGVLxN1NMR7/UyBj2RkbgvIh1rsBSlW7xJeGuI=
-github.com/speakeasy-api/speakeasy-core v0.9.8/go.mod h1:HKDDNeACuUVCrWLPCvP/5hkJMvVB8BjE6Dlyj4Np5R4=
 github.com/speakeasy-api/speakeasy-core v0.10.0 h1:mWZvIk6x2cz1la0zO6W3h4VD8ku8BgiEG0UhGEhL4Mk=
 github.com/speakeasy-api/speakeasy-core v0.10.0/go.mod h1:HKDDNeACuUVCrWLPCvP/5hkJMvVB8BjE6Dlyj4Np5R4=
 github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 h1:atzohw12oQ5ipaLb1q7ntTu4vvAgKDJsrvaUoOu6sw0=
