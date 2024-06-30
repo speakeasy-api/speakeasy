@@ -1,0 +1,14 @@
+diff --git a/node_modules/@jsdevtools/ono/esm/index.js b/node_modules/@jsdevtools/ono/esm/index.js
+index 7e6b469..91685fe 100644
+--- a/node_modules/@jsdevtools/ono/esm/index.js
++++ b/node_modules/@jsdevtools/ono/esm/index.js
+@@ -5,7 +5,7 @@ export * from "./types";
+ export { ono };
+ export default ono;
+ // CommonJS default export hack
+-if (typeof module === "object" && typeof module.exports === "object") {
++if (typeof module === "object" && typeof module.exports === "object" && typeof module.exports.default == "object") {
+     module.exports = Object.assign(module.exports.default, module.exports);
+ }
+ //# sourceMappingURL=index.js.map
+\ No newline at end of file

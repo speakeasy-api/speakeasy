@@ -6,13 +6,14 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/download"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy/internal/download"
+	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -379,7 +380,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 		os.Remove(filepath.Join(workingDir, tempOmitted))
 		os.Remove(filepath.Join(workingDir, tempBase))
 		if failedRetry {
-			source.Overlays = []workflow.Document{}
+			source.Overlays = []workflow.Overlay{}
 			w.workflow.Sources[sourceID] = source
 			os.Remove(filepath.Join(workingDir, minimumViableOverlayPath))
 		}
@@ -404,11 +405,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 		return "", nil, err
 	}
 
-	source.Overlays = []workflow.Document{
-		{
-			Location: minimumViableOverlayPath,
-		},
-	}
+	source.Overlays = []workflow.Overlay{{Document: &workflow.Document{Location: minimumViableOverlayPath}}}
 	w.workflow.Sources[sourceID] = source
 
 	sourcePath, sourceRes, err := w.runSource(ctx, subStep, sourceID, targetID, cleanUp)

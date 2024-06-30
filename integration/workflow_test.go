@@ -211,14 +211,16 @@ func TestSpecWorkflows(t *testing.T) {
 					Location: inputDoc,
 				})
 			}
-			var overlays []workflow.Document
+			var overlays []workflow.Overlay
 			for _, overlay := range tt.overlays {
 				if isLocalFileReference(overlay) {
 					err := copyFile(fmt.Sprintf("resources/%s", overlay), fmt.Sprintf("%s/%s", temp, overlay))
 					assert.NoError(t, err)
 				}
-				overlays = append(overlays, workflow.Document{
-					Location: overlay,
+				overlays = append(overlays, workflow.Overlay{
+					Document: &workflow.Document{
+						Location: overlay,
+					},
 				})
 			}
 			workflowFile.Sources["first-source"] = workflow.Source{
@@ -258,4 +260,106 @@ func TestSpecWorkflows(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	spec := `{
+		"openapi": "3.0.0",
+		"info": {
+		"title": "Swagger Petstore",
+		"version": "1.0.0"
+		},
+		"paths": {
+		"/pets": {
+			"post": {
+			"requestBody": {
+				"content": {
+				"application/json": {
+					"schema": {
+					"type": "object",
+					"properties": {
+						"name": {
+						"type": "string"
+						},
+						"breed": {
+						"type": "string"
+						}
+					},
+					"example": {
+						"name": "doggie",
+						"breed": "labrador"
+					}
+					}
+				}
+				}
+			},
+			"responses": {
+				"200": {
+				"description": "pet created"
+				}
+			}
+			}
+		}
+		}
+	}`
+	// Write the spec to a temp file
+	temp := setupTestDir(t)
+	specPath := filepath.Join(temp, "spec.yaml")
+	err := os.WriteFile(specPath, []byte(spec), 0o644)
+	assert.NoError(t, err)
+
+	tempOutputFile := "./output.yaml"
+
+	// Create a workflow file, input is petstore, overlay is fallbackCodeSamples.yaml
+	workflowFile := &workflow.Workflow{
+		Version: workflow.WorkflowVersion,
+		Sources: map[string]workflow.Source{
+			"first-source": {
+				Inputs: []workflow.Document{{Location: specPath}},
+				Overlays: []workflow.Overlay{
+					{
+						FallbackCodeSamples: &workflow.FallbackCodeSamples{
+							FallbackCodeSamplesLanguage: "shell",
+						},
+					},
+				},
+				Output: &tempOutputFile,
+			},
+		},
+	}
+
+	// Now run the workflow
+	os.Chdir(temp)
+	err = workflowFile.Validate(generate.GetSupportedLanguages())
+	assert.NoError(t, err)
+	err = os.MkdirAll(".speakeasy", 0o755)
+	assert.NoError(t, err)
+	err = workflow.Save(".", workflowFile)
+	assert.NoError(t, err)
+
+	// Read the saved workflow file and print it for debugging
+	rawWorkflow, err := os.ReadFile(filepath.Join(".speakeasy", "workflow.yaml"))
+	assert.NoError(t, err)
+	fmt.Println(string(rawWorkflow))
+
+	args := []string{"run", "-s", "all", "--pinned"}
+	rootCmd.SetArgs(args)
+	cmdErr := rootCmd.Execute()
+	assert.NoError(t, cmdErr)
+
+	// List directory contents for debugging
+	files, err := os.ReadDir(".")
+	assert.NoError(t, err)
+	for _, file := range files {
+		fmt.Println(file.Name())
+	}
+
+	// Check that the output file contains the expected code samples
+	content, err := os.ReadFile(tempOutputFile)
+	assert.NoError(t, err, "No readable file %s exists", tempOutputFile)
+	fmt.Println(string(content))
+	assert.Contains(t, string(content), "curl")
+	// Check it contains the example
+	assert.Contains(t, string(content), "doggie")
+
 }
