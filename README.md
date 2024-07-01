@@ -360,6 +360,7 @@ speakeasy [flags]
 * [speakeasy ask](docs/ask.md)	 - Starts a conversation with Speakeasy trained AI
 * [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy bump](docs/bump.md)	 - Bumps the version of a Speakeasy Generation Target
+* [speakeasy clean](docs/clean.md)	 - Speakeasy clean can be used to clean up cache, stale temp folders, and old CLI binaries.
 * [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
 * [speakeasy generate](docs/generate/README.md)	 - One off Generations for client SDKs and more
 * [speakeasy lint](docs/lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
