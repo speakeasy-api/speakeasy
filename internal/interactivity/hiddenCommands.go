@@ -12,4 +12,5 @@ var HiddenCommands = []string{
 	"merge",
 	"bump",
 	"tag",
+	"clean",
 }

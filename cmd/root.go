@@ -72,6 +72,7 @@ func Init(version, artifactArch string) {
 	languageServerInit(version)
 	bumpInit()
 	addCommand(rootCmd, tagCmd)
+	addCommand(rootCmd, cleanCmd)
 
 	addCommand(rootCmd, AskCmd)
 }
