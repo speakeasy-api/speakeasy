@@ -41,7 +41,7 @@ func cleanExec(ctx context.Context, flags CleanFlags) error {
 
 	var cleanedFolder string
 	if workflowFile, path, _ := workflow.Load(workingDir); !flags.Global && workflowFile != nil && path != "" {
-		localPath := strings.Replace(path, "/workflow.yaml", "", 1)
+		localPath := strings.TrimSuffix(path, "/workflow.yaml")
 		cleanedFolder = localPath
 		if _, err := os.Stat(filepath.Join(localPath, "temp")); err == nil {
 			err = os.RemoveAll(filepath.Join(localPath, "temp"))
