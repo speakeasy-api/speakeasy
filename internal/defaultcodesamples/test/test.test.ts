@@ -501,5 +501,4 @@ test("auth example", async () => {
 
 test.todo("union example");
 test.todo("inline example for ref");
-test.todo("generated example");
 test.todo("media types");
