@@ -52,6 +52,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   read -p "Commit Message (please summarize changes above): " SUMMARY
 
   go get -v "github.com/speakeasy-api/openapi-generation/v2@v${NEXT_OPENAPI_GENERATION_VERSION}"
+  go mod tidy
 
   echo "$ git add go.mod go.sum"
   git add go.mod go.sum
