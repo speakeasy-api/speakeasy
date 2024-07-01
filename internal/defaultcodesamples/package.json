@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npx esbuild ./src/main.ts --bundle --platform=node  --outfile=out/defaultcodesamples.js --main-fields=module,main",
+    "start": "npm run build && node out/defaultcodesamples.js",
     "start:petstore": "npm run build && node out/defaultcodesamples.js -s https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml -l shell ",
     "test": "vitest",
     "postinstall": "patch-package"
