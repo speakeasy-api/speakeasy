@@ -584,54 +584,6 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	var chosenTargets []string
-	if len(publishingOptions) > 0 {
-		chosenTargets, err = prompts.SelectPublishingTargets(publishingOptions, false)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, name := range chosenTargets {
-		target := workflowFile.Targets[name]
-		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
-		if err != nil {
-			return err
-		}
-		workflowFile.Targets[name] = *modifiedTarget
-	}
-
-	var publishPaths []string
-	if len(chosenTargets) > 0 && len(workflowFile.Targets) == 1 {
-		generationWorkflow, _, newPaths, err := writePublishingFile(workflowFile, workingDir, nil)
-		if err != nil {
-			return err
-		}
-
-		for key, val := range generationWorkflow.Jobs.Generate.Secrets {
-			secrets[key] = val
-		}
-
-		if len(newPaths) > 0 {
-			publishPaths = append(publishPaths, newPaths...)
-		}
-	} else if len(chosenTargets) > 0 && len(workflowFile.Targets) > 1 {
-		for _, name := range chosenTargets {
-			generationWorkflow, _, newPaths, err := writePublishingFile(workflowFile, workingDir, &name)
-			if err != nil {
-				return err
-			}
-
-			for key, val := range generationWorkflow.Jobs.Generate.Secrets {
-				secrets[key] = val
-			}
-
-			if len(newPaths) > 0 {
-				publishPaths = append(publishPaths, newPaths...)
-			}
-		}
-	}
-
 	if err := workflow.Save(workingDir, workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
@@ -659,20 +611,9 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	status := []string{
 		fmt.Sprintf("Speakeasy workflow written to - %s", workflowFilePath),
 	}
-	if len(publishPaths) > 0 {
-		status = append(status, "GitHub action (generate) written to:")
-		for _, path := range generationWorkflowFilePaths {
-			status = append(status, fmt.Sprintf("\t- %s", path))
-		}
-		status = append(status, "GitHub action (publish) written to:")
-		for _, path := range publishPaths {
-			status = append(status, fmt.Sprintf("\t- %s", path))
-		}
-	} else {
-		status = append(status, "GitHub action (generate+publish) written to:")
-		for _, path := range generationWorkflowFilePaths {
-			status = append(status, fmt.Sprintf("\t- %s", path))
-		}
+	status = append(status, "GitHub action (generate+publish) written to:")
+	for _, path := range generationWorkflowFilePaths {
+		status = append(status, fmt.Sprintf("\t- %s", path))
 	}
 
 	agenda := []string{}
