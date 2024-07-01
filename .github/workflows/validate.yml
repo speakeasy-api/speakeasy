@@ -29,12 +29,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ubuntu-latest, windows-latest]
         include:
-          - test-group: 'Test Generations'
-            test-pattern: 'TestGenerationWorkflows'
-          - test-group: 'Test Spec Operations'
-            test-pattern: 'TestSpecWorkflows'
+          - test-group: "Test Generations"
+            test-pattern: "TestGenerationWorkflows"
+          - test-group: "Test Spec Operations"
+            test-pattern: "TestSpecWorkflows"
+          - test-group: "Test Fallback Code Samples Workflow"
+            test-pattern: "TestFallbackCodeSamplesWorkflow"
 
     runs-on: ${{ matrix.os }}
 
