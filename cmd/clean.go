@@ -77,6 +77,21 @@ func cleanExec(ctx context.Context, flags CleanFlags) error {
 				return err
 			}
 		}
+
+		// remove stale CLI binaries
+		files, err := os.ReadDir(cfgDir)
+		if err != nil {
+			return err
+		}
+
+		for _, file := range files {
+			if file.IsDir() && strings.HasPrefix(file.Name(), "1.") {
+				err = os.RemoveAll(filepath.Join(cfgDir, file.Name()))
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	fmt.Println(
