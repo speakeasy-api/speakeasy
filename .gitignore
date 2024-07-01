@@ -6,3 +6,4 @@ bin/
 summary.md
 .speakeasy/
 integration/temp
+.DS_Store

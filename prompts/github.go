@@ -84,8 +84,8 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 		}
 
 		for _, overlay := range source.Overlays {
-			if overlay.Auth != nil {
-				secrets[formatGithubSecret(overlay.Auth.Secret)] = formatGithubSecretName(overlay.Auth.Secret)
+			if overlay.Document != nil && overlay.Document.Auth != nil {
+				secrets[formatGithubSecret(overlay.Document.Auth.Secret)] = formatGithubSecretName(overlay.Document.Auth.Secret)
 			}
 		}
 	}
