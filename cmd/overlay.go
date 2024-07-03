@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -93,6 +94,8 @@ func runCompare(ctx context.Context, flags overlayCompareFlags) error {
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
 	out := os.Stdout
+	yamlOut := true
+
 	if flags.Out != "" {
 		file, err := os.Create(flags.Out)
 		if err != nil {
@@ -100,7 +103,11 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		}
 		defer file.Close()
 		out = file
+
+		if filepath.Ext(flags.Out) == ".json" {
+			yamlOut = false
+		}
 	}
 
-	return overlay.Apply(flags.Schema, flags.Overlay, out)
+	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out)
 }

@@ -1,4 +1,3 @@
-
 package overlay
 
 import (
@@ -10,18 +9,40 @@ import (
 )
 
 const (
-	schemaFile    = "testdata/base.yaml"
-	overlayFile   = "testdata/overlay.yaml"
-	expectedFile  = "testdata/expected.yaml"
+	schemaFile               = "testdata/base.yaml"
+	schemaJSON               = "testdata/base.json"
+	overlayFile              = "testdata/overlay.yaml"
+	expectedFile             = "testdata/expected.yaml"
+	expectedFileJSON         = "testdata/expected.json"
+	expectedFileYAMLFromJSON = "testdata/expectedWrapped.yaml"
 )
 
+func TestApply_inYAML_outYAML(t *testing.T) {
+	test(t, schemaFile, expectedFile, true)
+}
 
-func TestApply(t *testing.T) {
-	tmpFile, err := os.CreateTemp("", "output.yaml")
+func TestApply_inJSON_outJSON(t *testing.T) {
+	test(t, schemaJSON, expectedFileJSON, false)
+}
+
+func TestApply_inYAML_outJSON(t *testing.T) {
+	test(t, schemaFile, expectedFileJSON, false)
+}
+
+func TestApply_inJSON_outYAML(t *testing.T) {
+	test(t, schemaJSON, expectedFileYAMLFromJSON, true)
+}
+
+func test(t *testing.T, schemaFile string, expectedFile string, yamlOut bool) {
+	ext := "json"
+	if yamlOut {
+		ext = "yaml"
+	}
+	tmpFile, err := os.CreateTemp("", "output."+ext)
 	require.NoError(t, err)
 	defer tmpFile.Close()
 
-	err = Apply(schemaFile, overlayFile, tmpFile)
+	err = Apply(schemaFile, overlayFile, yamlOut, tmpFile)
 	assert.NoError(t, err)
 
 	expectedContent, err := os.ReadFile(expectedFile)

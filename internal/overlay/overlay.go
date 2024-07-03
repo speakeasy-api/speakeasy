@@ -1,12 +1,16 @@
 package overlay
 
 import (
+	"bytes"
 	"fmt"
-	"io"
-
+	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi/json"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"gopkg.in/yaml.v3"
+	"io"
+	"path/filepath"
+	"slices"
 )
 
 func Validate(overlayFile string) error {
@@ -47,7 +51,7 @@ func Compare(schemas []string, w io.Writer) error {
 	return nil
 }
 
-func Apply(schema string, overlayFile string, w io.Writer) error {
+func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 	o, err := loader.LoadOverlay(overlayFile)
 	if err != nil {
 		return err
@@ -66,16 +70,58 @@ func Apply(schema string, overlayFile string, w io.Writer) error {
 		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
 	}
 
-	// Decode into an interface{} to avoid preserving the original formatting of the input file
-	// otherwise this can result in 1 line YAML files
-	var unformattedYaml interface{}
-	ys.Decode(&unformattedYaml)
+	bytes, err := render(ys, isYAML(schema), yamlOut)
+	if err != nil {
+		return fmt.Errorf("failed to render document: %w", err)
+	}
 
-	enc := yaml.NewEncoder(w)
-	enc.SetIndent(2)
-	if err := enc.Encode(unformattedYaml); err != nil {
-		return fmt.Errorf("failed to encode spec file %q: %w", specFile, err)
+	if _, err := w.Write(bytes); err != nil {
+		return fmt.Errorf("failed to write to output: %w", err)
 	}
 
 	return nil
+}
+
+var yamlExtensions = []string{".yaml", ".yml"}
+
+func isYAML(path string) bool {
+	return slices.Contains(yamlExtensions, filepath.Ext(path))
+}
+
+func render(y *yaml.Node, yamlIn bool, yamlOut bool) ([]byte, error) {
+	if yamlIn && yamlOut {
+		var res bytes.Buffer
+		if err := yaml.NewEncoder(&res).Encode(y); err != nil {
+			return nil, fmt.Errorf("failed to encode YAML: %w", err)
+		}
+		return res.Bytes(), nil
+	}
+
+	// Preserves key ordering
+	specBytes, err := json.YAMLNodeToJSON(y, "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert YAML to JSON: %w", err)
+	}
+
+	if yamlOut {
+		// Use libopenapi to convert JSON to YAML to preserve key ordering
+		doc, err := libopenapi.NewDocument(specBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert JSON to YAML: %w", err)
+		}
+
+		model, errs := doc.BuildV3Model()
+		if len(errs) > 0 {
+			return nil, fmt.Errorf("failed to build V3 model: %v", errs)
+		}
+
+		yamlBytes, err := model.Model.Render()
+		if err != nil {
+			return nil, fmt.Errorf("failed to render YAML: %w", err)
+		}
+
+		return yamlBytes, nil
+	} else {
+		return specBytes, nil
+	}
 }
