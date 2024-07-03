@@ -184,6 +184,6 @@ func IsZeroTelemetryOrganization(ctx context.Context) bool {
 
 var yamlExtensions = []string{".yaml", ".yml"}
 
-func FileIsYAML(path string) bool {
+func HasYAMLExt(path string) bool {
 	return slices.Contains(yamlExtensions, filepath.Ext(path))
 }

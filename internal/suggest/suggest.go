@@ -23,7 +23,7 @@ import (
 )
 
 func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool, style shared.Style, depthStyle shared.DepthStyle) error {
-	if asOverlay && !utils.FileIsYAML(outPath) {
+	if asOverlay && !utils.HasYAMLExt(outPath) {
 		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
 	}
 
@@ -90,7 +90,7 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 		}
 	} else {
 		// Output yaml if output path is yaml, json if output path is json
-		if utils.FileIsYAML(outPath) {
+		if utils.HasYAMLExt(outPath) {
 			if _, err = outFile.Write(finalBytesYAML); err != nil {
 				return err
 			}

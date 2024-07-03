@@ -103,7 +103,7 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		defer file.Close()
 		out = file
 
-		yamlOut = utils.FileIsYAML(flags.Out)
+		yamlOut = utils.HasYAMLExt(flags.Out)
 	}
 
 	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out)

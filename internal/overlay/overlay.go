@@ -69,7 +69,7 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
 	}
 
-	bytes, err := render(ys, utils.FileIsYAML(schema), yamlOut)
+	bytes, err := render(ys, utils.HasYAMLExt(schema), yamlOut)
 	if err != nil {
 		return fmt.Errorf("failed to render document: %w", err)
 	}
