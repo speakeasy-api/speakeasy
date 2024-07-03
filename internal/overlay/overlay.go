@@ -7,10 +7,9 @@ import (
 	"github.com/pb33f/libopenapi/json"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 	"io"
-	"path/filepath"
-	"slices"
 )
 
 func Validate(overlayFile string) error {
@@ -70,7 +69,7 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
 	}
 
-	bytes, err := render(ys, isYAML(schema), yamlOut)
+	bytes, err := render(ys, utils.FileIsYAML(schema), yamlOut)
 	if err != nil {
 		return fmt.Errorf("failed to render document: %w", err)
 	}
@@ -80,12 +79,6 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 	}
 
 	return nil
-}
-
-var yamlExtensions = []string{".yaml", ".yml"}
-
-func isYAML(path string) bool {
-	return slices.Contains(yamlExtensions, filepath.Ext(path))
 }
 
 func render(y *yaml.Node, yamlIn bool, yamlOut bool) ([]byte, error) {

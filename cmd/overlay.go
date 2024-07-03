@@ -2,14 +2,13 @@ package cmd
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"os"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -104,9 +103,7 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		defer file.Close()
 		out = file
 
-		if filepath.Ext(flags.Out) == ".json" {
-			yamlOut = false
-		}
+		yamlOut = utils.FileIsYAML(flags.Out)
 	}
 
 	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out)

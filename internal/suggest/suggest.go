@@ -3,9 +3,9 @@ package suggest
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -23,7 +23,7 @@ import (
 )
 
 func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool, style shared.Style, depthStyle shared.DepthStyle) error {
-	if asOverlay && !isYAML(outPath) {
+	if asOverlay && !utils.FileIsYAML(outPath) {
 		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
 	}
 
@@ -90,7 +90,7 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 		}
 	} else {
 		// Output yaml if output path is yaml, json if output path is json
-		if isYAML(outPath) {
+		if utils.FileIsYAML(outPath) {
 			if _, err = outFile.Write(finalBytesYAML); err != nil {
 				return err
 			}
@@ -154,9 +154,4 @@ func printSuggestions(ctx context.Context, updates []suggestions.OperationUpdate
 		l := lipgloss.NewStyle().Width(maxWidth).Render(lhs[i])
 		logger.Printf("%s %s %s", l, arrow, rhs[i])
 	}
-}
-
-func isYAML(path string) bool {
-	ext := filepath.Ext(path)
-	return ext == ".yaml" || ext == ".yml"
 }
