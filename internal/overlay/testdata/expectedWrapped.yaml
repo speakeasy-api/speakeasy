@@ -16,6 +16,11 @@ paths:
                         "X-Optional-Header":
                             schema:
                                 type: "string"
+                "404":
+                    description: "Not found"
+                    content:
+                        "application/json":
+                            schema: {"$ref": "./components.yaml#/components/schemas/Products"}
             servers:
                 - url: "http://localhost:35123"
                   description: "The default server."

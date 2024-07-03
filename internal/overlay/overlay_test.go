@@ -51,5 +51,7 @@ func test(t *testing.T, schemaFile string, expectedFile string, yamlOut bool) {
 	actualContent, err := os.ReadFile(tmpFile.Name())
 	assert.NoError(t, err)
 
+	println(string(actualContent))
+
 	assert.Equal(t, string(expectedContent), string(actualContent))
 }

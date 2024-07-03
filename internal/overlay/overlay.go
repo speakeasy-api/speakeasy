@@ -3,10 +3,10 @@ package overlay
 import (
 	"bytes"
 	"fmt"
-	"github.com/pb33f/libopenapi"
 	"github.com/pb33f/libopenapi/json"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 	"io"
@@ -69,7 +69,7 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
 	}
 
-	bytes, err := render(ys, utils.HasYAMLExt(schema), yamlOut)
+	bytes, err := render(ys, schema, yamlOut)
 	if err != nil {
 		return fmt.Errorf("failed to render document: %w", err)
 	}
@@ -81,7 +81,9 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 	return nil
 }
 
-func render(y *yaml.Node, yamlIn bool, yamlOut bool) ([]byte, error) {
+func render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
+	yamlIn := utils.HasYAMLExt(schemaPath)
+
 	if yamlIn && yamlOut {
 		var res bytes.Buffer
 		if err := yaml.NewEncoder(&res).Encode(y); err != nil {
@@ -98,15 +100,7 @@ func render(y *yaml.Node, yamlIn bool, yamlOut bool) ([]byte, error) {
 
 	if yamlOut {
 		// Use libopenapi to convert JSON to YAML to preserve key ordering
-		doc, err := libopenapi.NewDocument(specBytes)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert JSON to YAML: %w", err)
-		}
-
-		model, errs := doc.BuildV3Model()
-		if len(errs) > 0 {
-			return nil, fmt.Errorf("failed to build V3 model: %v", errs)
-		}
+		_, model, err := openapi.Load(specBytes, schemaPath)
 
 		yamlBytes, err := model.Model.Render()
 		if err != nil {
