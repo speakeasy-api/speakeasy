@@ -48,7 +48,7 @@ var SupportedPublishingTargets = []string{
 //go:embed terraform_release.yaml
 var terraformReleaseAction string
 
-//go:embed terraform_release.yaml
+//go:embed terraform_releaser.yaml
 var goReleaser string
 
 func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow, target *string) (*config.GenerateWorkflow, error) {
@@ -397,7 +397,7 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		}
 
 		if err := os.WriteFile(goReleaserPath, []byte(goReleaser), 0o644); err != nil {
-			return genWorkflow, releasePaths, errors.Wrapf(err, "failed to write terraform gorelease file %s", goReleaserPath)
+			return genWorkflow, releasePaths, errors.Wrapf(err, "failed to write terraform goreleaser file %s", goReleaserPath)
 		}
 
 		return genWorkflow, releasePaths, nil
