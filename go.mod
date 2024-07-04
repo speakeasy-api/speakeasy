@@ -41,6 +41,7 @@ require (
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+	github.com/speakeasy-api/versioning-reports v0.2.1
 	github.com/stoewer/go-strcase v1.3.0
 )
 
@@ -186,7 +187,6 @@ require (
 	github.com/speakeasy-api/jsonpath v0.1.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
-	github.com/speakeasy-api/versioning-reports v0.2.0 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
