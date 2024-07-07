@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -179,4 +180,10 @@ func getSetFlags(flags *pflag.FlagSet) []*pflag.Flag {
 // For these customers we limit callbacks to the speakeasy server outside of auth
 func IsZeroTelemetryOrganization(ctx context.Context) bool {
 	return core.IsTelemetryDisabled(ctx)
+}
+
+var yamlExtensions = []string{".yaml", ".yml"}
+
+func HasYAMLExt(path string) bool {
+	return slices.Contains(yamlExtensions, filepath.Ext(path))
 }

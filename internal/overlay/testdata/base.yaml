@@ -18,3 +18,9 @@ paths:
             X-Optional-Header:
               schema:
                 type: string
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/Products"

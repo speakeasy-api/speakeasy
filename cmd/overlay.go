@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"context"
-	"os"
-
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"os"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -93,6 +93,8 @@ func runCompare(ctx context.Context, flags overlayCompareFlags) error {
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
 	out := os.Stdout
+	yamlOut := true
+
 	if flags.Out != "" {
 		file, err := os.Create(flags.Out)
 		if err != nil {
@@ -100,7 +102,9 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		}
 		defer file.Close()
 		out = file
+
+		yamlOut = utils.HasYAMLExt(flags.Out)
 	}
 
-	return overlay.Apply(flags.Schema, flags.Overlay, out)
+	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out)
 }
