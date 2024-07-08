@@ -38,6 +38,7 @@ func TestMain(m *testing.M) {
 }
 
 func setupTestDir(t *testing.T) string {
+	t.Helper()
 	workingDir, err := os.Getwd()
 	assert.NoError(t, err)
 	temp, err := createTempDir()
@@ -48,6 +49,7 @@ func setupTestDir(t *testing.T) string {
 }
 
 func registerCleanup(t *testing.T, workingDir string, temp string) {
+	t.Helper()
 	t.Cleanup(func() {
 		os.Chdir(workingDir)
 		os.RemoveAll(temp)

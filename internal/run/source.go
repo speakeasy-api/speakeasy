@@ -130,6 +130,10 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 			} else if overlay.FallbackCodeSamples != nil {
 				// Make temp file for the overlay output
 				overlayFileName := filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
+				if err := os.MkdirAll(filepath.Dir(overlayFileName), 0o755); err != nil {
+					return "", nil, err
+				}
+
 				err = defaultcodesamples.DefaultCodeSamples(ctx, defaultcodesamples.DefaultCodeSamplesFlags{
 					SchemaPath: currentDocument,
 					Language:   overlay.FallbackCodeSamples.FallbackCodeSamplesLanguage,
