@@ -4,12 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/speakeasy-api/speakeasy/cmd"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
-
-var rootCmd *cobra.Command
 
 // Entrypoint for CLI integration tests
 func TestMain(m *testing.M) {
@@ -30,8 +26,6 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}()
-
-	rootCmd = cmd.CmdForTest(version, artifactArch)
 
 	code := m.Run()
 	os.Exit(code)

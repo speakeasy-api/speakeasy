@@ -3,7 +3,9 @@ package integration_tests
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -73,6 +75,7 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			temp := setupTestDir(t)
 
 			// Create workflow file and associated resources
@@ -120,8 +123,8 @@ func TestGenerationWorkflows(t *testing.T) {
 			if tt.withForce {
 				args = append(args, "--force", "true")
 			}
-			rootCmd.SetArgs(args)
-			cmdErr := rootCmd.Execute()
+
+			cmdErr := execute(t, args...)
 			require.NoError(t, cmdErr)
 
 			if tt.withCodeSamples {
@@ -139,6 +142,21 @@ func TestGenerationWorkflows(t *testing.T) {
 			}
 		})
 	}
+}
+
+func execute(t *testing.T, args ...string) error {
+	t.Helper()
+	_, filename, _, _ := runtime.Caller(0)
+	baseFolder := filepath.Join(filepath.Dir(filename), "..")
+	mainGo := filepath.Join(baseFolder, "main.go")
+	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
+	cmd.Env = os.Environ()
+	curWd, err := os.Getwd()
+	require.NoError(t, err)
+	cmd.Dir = curWd
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func TestSpecWorkflows(t *testing.T) {
@@ -192,8 +210,8 @@ func TestSpecWorkflows(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			temp := setupTestDir(t)
-
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
 				Version: workflow.WorkflowVersion,
@@ -238,8 +256,7 @@ func TestSpecWorkflows(t *testing.T) {
 			err = workflow.Save(".", workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned"}
-			rootCmd.SetArgs(args)
-			cmdErr := rootCmd.Execute()
+			cmdErr := execute(t, args...)
 			require.NoError(t, cmdErr)
 
 			content, err := os.ReadFile(tt.out)
@@ -263,12 +280,18 @@ func TestSpecWorkflows(t *testing.T) {
 }
 
 func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	t.Parallel()
 	spec := `{
 		"openapi": "3.0.0",
 		"info": {
 		"title": "Swagger Petstore",
 		"version": "1.0.0"
 		},
+		"servers": [
+			{
+				"url": "http://petstore.swagger.io/v1"
+			}
+		],
 		"paths": {
 		"/pets": {
 			"post": {
@@ -309,13 +332,14 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	require.NoError(t, err)
 
 	tempOutputFile := "./output.yaml"
-
+	relFilePath, err := filepath.Rel(temp, specPath)
+	require.NoError(t, err)
 	// Create a workflow file, input is petstore, overlay is fallbackCodeSamples.yaml
 	workflowFile := &workflow.Workflow{
 		Version: workflow.WorkflowVersion,
 		Sources: map[string]workflow.Source{
 			"first-source": {
-				Inputs: []workflow.Document{{Location: specPath}},
+				Inputs: []workflow.Document{{Location: relFilePath}},
 				Overlays: []workflow.Overlay{
 					{
 						FallbackCodeSamples: &workflow.FallbackCodeSamples{
@@ -343,8 +367,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	fmt.Println(string(rawWorkflow))
 
 	args := []string{"run", "-s", "all", "--pinned"}
-	rootCmd.SetArgs(args)
-	cmdErr := rootCmd.Execute()
+	cmdErr := execute(t, args...)
 	require.NoError(t, cmdErr)
 
 	// List directory contents for debugging
