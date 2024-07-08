@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
 )
@@ -19,6 +18,7 @@ import (
 // If all test groups are run at the same time you will see test failures.
 
 func TestGenerationWorkflows(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		targetTypes     []string
@@ -75,8 +75,8 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			temp := setupTestDir(t)
+			t.Parallel()
 
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
@@ -111,24 +111,20 @@ func TestGenerationWorkflows(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			// Execute commands from the temporary directory
-			os.Chdir(temp)
-			err := workflowFile.Validate(generate.GetSupportedLanguages())
+			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
 			require.NoError(t, err)
-			err = os.MkdirAll(".speakeasy", 0o755)
-			require.NoError(t, err)
-			err = workflow.Save(".", workflowFile)
+			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-t", "all", "--pinned"}
 			if tt.withForce {
 				args = append(args, "--force", "true")
 			}
 
-			cmdErr := execute(t, args...)
+			cmdErr := execute(t, temp, args...)
 			require.NoError(t, cmdErr)
 
 			if tt.withCodeSamples {
-				codeSamplesPath := filepath.Join(tt.outdirs[0], "codeSamples.yaml")
+				codeSamplesPath := filepath.Join(temp, tt.outdirs[0], "codeSamples.yaml")
 				content, err := os.ReadFile(codeSamplesPath)
 				require.NoError(t, err, "No readable file %s exists", codeSamplesPath)
 
@@ -138,22 +134,20 @@ func TestGenerationWorkflows(t *testing.T) {
 			}
 
 			for i, targetType := range tt.targetTypes {
-				checkForExpectedFiles(t, tt.outdirs[i], expectedFilesByLanguage(targetType))
+				checkForExpectedFiles(t, filepath.Join(temp, tt.outdirs[i]), expectedFilesByLanguage(targetType))
 			}
 		})
 	}
 }
 
-func execute(t *testing.T, args ...string) error {
+func execute(t *testing.T, wd string, args ...string) error {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
 	mainGo := filepath.Join(baseFolder, "main.go")
 	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
 	cmd.Env = os.Environ()
-	curWd, err := os.Getwd()
-	require.NoError(t, err)
-	cmd.Dir = curWd
+	cmd.Dir = wd
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -247,19 +241,15 @@ func TestSpecWorkflows(t *testing.T) {
 				Output:   &tt.out,
 			}
 
-			// Execute commands from the temporary directory
-			os.Chdir(temp)
-			err := workflowFile.Validate(generate.GetSupportedLanguages())
+			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
 			require.NoError(t, err)
-			err = os.MkdirAll(".speakeasy", 0o755)
-			require.NoError(t, err)
-			err = workflow.Save(".", workflowFile)
+			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned"}
-			cmdErr := execute(t, args...)
+			cmdErr := execute(t, temp, args...)
 			require.NoError(t, cmdErr)
 
-			content, err := os.ReadFile(tt.out)
+			content, err := os.ReadFile(filepath.Join(temp, tt.out))
 			require.NoError(t, err, "No readable file %s exists", tt.out)
 
 			if len(tt.overlays) > 0 {
@@ -353,32 +343,29 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	}
 
 	// Now run the workflow
-	os.Chdir(temp)
-	err = workflowFile.Validate(generate.GetSupportedLanguages())
+	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
 	require.NoError(t, err)
-	err = os.MkdirAll(".speakeasy", 0o755)
-	require.NoError(t, err)
-	err = workflow.Save(".", workflowFile)
+	err = workflow.Save(temp, workflowFile)
 	require.NoError(t, err)
 
 	// Read the saved workflow file and print it for debugging
-	rawWorkflow, err := os.ReadFile(filepath.Join(".speakeasy", "workflow.yaml"))
+	rawWorkflow, err := os.ReadFile(filepath.Join(temp, ".speakeasy", "workflow.yaml"))
 	require.NoError(t, err)
 	fmt.Println(string(rawWorkflow))
 
 	args := []string{"run", "-s", "all", "--pinned"}
-	cmdErr := execute(t, args...)
+	cmdErr := execute(t, temp, args...)
 	require.NoError(t, cmdErr)
 
 	// List directory contents for debugging
-	files, err := os.ReadDir(".")
+	files, err := os.ReadDir(temp)
 	require.NoError(t, err)
 	for _, file := range files {
 		fmt.Println(file.Name())
 	}
 
 	// Check that the output file contains the expected code samples
-	content, err := os.ReadFile(tempOutputFile)
+	content, err := os.ReadFile(filepath.Join(temp, tempOutputFile))
 	require.NoError(t, err, "No readable file %s exists", tempOutputFile)
 	fmt.Println(string(content))
 	require.Contains(t, string(content), "curl")

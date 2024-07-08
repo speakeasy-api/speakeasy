@@ -2,6 +2,7 @@ package integration_tests
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,6 @@ func setupTestDir(t *testing.T) string {
 func registerCleanup(t *testing.T, workingDir string, temp string) {
 	t.Helper()
 	t.Cleanup(func() {
-		os.Chdir(workingDir)
-		os.RemoveAll(temp)
+		os.RemoveAll(filepath.Join(workingDir, temp))
 	})
 }
