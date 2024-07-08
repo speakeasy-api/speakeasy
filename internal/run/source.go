@@ -25,6 +25,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/defaultcodesamples"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/github"
@@ -120,11 +121,30 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
-			resolvedPath, err := schema.ResolveDocument(ctx, overlay, nil, overlayStep)
-			if err != nil {
-				return "", nil, err
+			if overlay.Document != nil {
+				resolvedPath, err := schema.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
+				if err != nil {
+					return "", nil, err
+				}
+				overlaySchemas = append(overlaySchemas, resolvedPath)
+			} else if overlay.FallbackCodeSamples != nil {
+				// Make temp file for the overlay output
+				overlayFileName := filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
+				if err := os.MkdirAll(filepath.Dir(overlayFileName), 0o755); err != nil {
+					return "", nil, err
+				}
+
+				err = defaultcodesamples.DefaultCodeSamples(ctx, defaultcodesamples.DefaultCodeSamplesFlags{
+					SchemaPath: currentDocument,
+					Language:   overlay.FallbackCodeSamples.FallbackCodeSamplesLanguage,
+					Out:        overlayFileName,
+				})
+				if err != nil {
+					logger.Errorf("failed to generate default code samples: %s", err.Error())
+					return "", nil, err
+				}
+				overlaySchemas = append(overlaySchemas, overlayFileName)
 			}
-			overlaySchemas = append(overlaySchemas, resolvedPath)
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
