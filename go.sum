@@ -488,12 +488,14 @@ github.com/speakeasy-api/easytemplate v0.11.0 h1:B0DtyTwE6NTOLa020UNyATi1ebFVL5D
 github.com/speakeasy-api/easytemplate v0.11.0/go.mod h1:42jXuVIno2A24bQyVFK9K70kpG0tSufLEF4TiJ1kGvQ=
 github.com/speakeasy-api/huh v1.0.0 h1:QXnwLB038QE/+t4NsrDFfaGqxL5B/+zwI6aY1MoRjYo=
 github.com/speakeasy-api/huh v1.0.0/go.mod h1:mK3NAgt1YiqhPhEgxWdQeRCv9KmeLqfz2+KNCpuJ+yU=
-github.com/speakeasy-api/openapi-generation/v2 v2.361.10 h1:io1fX/8ZGDNahlflaTRYJsbIbJWaC03vx3J3KEMeboU=
-github.com/speakeasy-api/openapi-generation/v2 v2.361.10/go.mod h1:O6kTX6rw4JSE5w6HT3re8hZqhisEkZVtJmI9har+n9Y=
+github.com/speakeasy-api/jsonpath v0.1.0 h1:bzdbTty5bfMWSd1ZTlmWoldVyBsGC6mqvwerwWM4dqQ=
+github.com/speakeasy-api/jsonpath v0.1.0/go.mod h1:Py01TnxRUMhC0/FT954KBiaDY2/kaZv3QMc8JxQaVys=
+github.com/speakeasy-api/openapi-generation/v2 v2.365.0 h1:ROY1cCV6dge4fuXLDbopNDztYuTZfQiJDmjkTPTiFrg=
+github.com/speakeasy-api/openapi-generation/v2 v2.365.0/go.mod h1:UbZunE41YIEY/pnaP9aDt0Tyrhc2s+YP+VFrLnYIY94=
 github.com/speakeasy-api/openapi-overlay v0.6.0 h1:LqJWrE2nBE16lgGVkIhN4OceXpMZI4qHymuIgXmDIno=
 github.com/speakeasy-api/openapi-overlay v0.6.0/go.mod h1:f5FloQrHA7MsxYg9djzMD5h6dxrHjVVByWKh7an8TRc=
-github.com/speakeasy-api/sdk-gen-config v1.16.0 h1:Vn+/TvS9yqdROUxb4UI4U1MfnFZrtjTYEBcRIt6FTnE=
-github.com/speakeasy-api/sdk-gen-config v1.16.0/go.mod h1:7FsPqdsh//6Z0OcO/jQPD66l6/m1YVvK5tmt0+KRpdo=
+github.com/speakeasy-api/sdk-gen-config v1.16.1 h1:/+Rr7LjrfviA92/NBDMSnvp0ltPTAlOtKsrpL7rBlYc=
+github.com/speakeasy-api/sdk-gen-config v1.16.1/go.mod h1:7FsPqdsh//6Z0OcO/jQPD66l6/m1YVvK5tmt0+KRpdo=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.9 h1:PC86nHhH+wOYPc3MlzEjJ6xdKGX/NEr8S8dzs+Uy2XU=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.9/go.mod h1:b4fiZ1Wid0JHwwiYqhaPifDwjmC15uiN7A8Cmid+9kw=
 github.com/speakeasy-api/speakeasy-core v0.10.0 h1:mWZvIk6x2cz1la0zO6W3h4VD8ku8BgiEG0UhGEhL4Mk=
@@ -504,6 +506,8 @@ github.com/speakeasy-api/speakeasy-proxy v0.0.2 h1:u4rQ8lXvuYRCSxiLQGb5JxkZRwNID
 github.com/speakeasy-api/speakeasy-proxy v0.0.2/go.mod h1:cvMxdIEPYAvXS5mpYMU6CuJRPQnhq4gRXKE7xeCP/V0=
 github.com/speakeasy-api/speakeasy-schemas v1.3.0 h1:7Arm2d0/K9owEBQPmNon1KPERmf58g0Eg/NmPgXaEY0=
 github.com/speakeasy-api/speakeasy-schemas v1.3.0/go.mod h1:g6NfrOjYLCJZp81ZLY2ksF7afC9BW9bL4Bg1V1oAFlw=
+github.com/speakeasy-api/versioning-reports v0.2.0 h1:ha0B8q8rY+KD6ETTOKXkfs/p3Tb3xIN3l9/LUoG34rY=
+github.com/speakeasy-api/versioning-reports v0.2.0/go.mod h1:e3cvYTwPB3RJdgAPbf7Gc6BDfBM63bF3V+In2yKbHWs=
 github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd h1:csraKifkLpqDClUIbFTetjtraueL1KUhKBm6okL+ug4=
 github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd/go.mod h1:cyGycBxnlCATLUv5jtPwaHnkiYomNWzXQougLmaCTzU=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
