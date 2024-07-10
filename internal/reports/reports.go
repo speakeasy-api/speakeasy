@@ -5,15 +5,15 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy-core/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/stoewer/go-strcase"
-	"os"
-	"path/filepath"
 )
 
 type ReportResult struct {
@@ -61,7 +61,6 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 	}
 
 	url := uploadRes.UploadedReport.GetURL()
-	url = links.Shorten(ctx, url)
 
 	return ReportResult{
 		Message: fmt.Sprintf("%s available to view at: %s", ReportTitle(reportType), url),

@@ -11,7 +11,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
-	"github.com/speakeasy-api/speakeasy-core/links"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -330,7 +329,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 	return
 }
 
-func (w *Workflow) printTargetSuccessMessage(ctx context.Context, logger log.Logger) {
+func (w *Workflow) printTargetSuccessMessage(logger log.Logger) {
 	if len(w.SDKOverviewURLs) == 0 {
 		return
 	}
@@ -338,8 +337,7 @@ func (w *Workflow) printTargetSuccessMessage(ctx context.Context, logger log.Log
 	heading := styles.Success.Render("SDKs Generated Successfully")
 	var additionalLines []string
 	for target, url := range w.SDKOverviewURLs {
-		link := links.Shorten(ctx, url)
-		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s %s %s", styles.HeavilyEmphasized.Render(target), styles.Success.Render("overview:"), styles.Dimmed.Render(link))))
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s %s %s", styles.HeavilyEmphasized.Render(target), styles.Success.Render("overview:"), styles.Dimmed.Render(url))))
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
