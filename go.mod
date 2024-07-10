@@ -1,6 +1,8 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.22.4
+go 1.22
+
+toolchain go1.22.4
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -18,11 +20,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.0.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.364.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.361.10
 	github.com/speakeasy-api/openapi-overlay v0.6.0
-	github.com/speakeasy-api/sdk-gen-config v1.16.1
+	github.com/speakeasy-api/sdk-gen-config v1.16.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.8.9
-	github.com/speakeasy-api/speakeasy-core v0.11.0
+	github.com/speakeasy-api/speakeasy-core v0.10.0
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
@@ -82,7 +84,6 @@ require (
 	github.com/dop251/goja v0.0.0-20240516125602-ccbae20bcec2 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
-	github.com/dubinc/dub-go v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -182,10 +183,8 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.11.0 // indirect
-	github.com/speakeasy-api/jsonpath v0.1.0 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
-	github.com/speakeasy-api/versioning-reports v0.2.0 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect

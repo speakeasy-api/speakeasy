@@ -206,7 +206,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	// Display success message if the workflow succeeded
 	if err == nil && runErr == nil {
 		w.printSourceSuccessMessage(ctx, logger)
-		w.printTargetSuccessMessage(ctx, logger)
+		w.printTargetSuccessMessage(logger)
 		_ = w.printGenerationOverview(logger, endDuration, len(criticalWarns) > 0)
 	}
 
