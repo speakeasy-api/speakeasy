@@ -1,0 +1,33 @@
+{
+  "name": "defaultcodesamples",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx esbuild ./src/main.ts --bundle --platform=node  --outfile=out/defaultcodesamples.js --main-fields=module,main",
+    "start:petstore": "npm run build && node out/defaultcodesamples.js -s https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml -l shell ",
+    "test": "vitest",
+    "postinstall": "patch-package"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@readme/oas-to-har": "^23.2.18",
+    "@readme/oas-to-snippet": "^25.2.11",
+    "@readme/openapi-parser": "^2.6.0",
+    "@readme/postman-to-openapi": "^4.1.0",
+    "command-line-args": "^5.2.1",
+    "oas": "^24.5.0",
+    "patch-package": "^8.0.0",
+    "swagger2openapi": "^7.0.8",
+    "yaml": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/command-line-args": "^5.2.3",
+    "@types/node": "^20.14.9",
+    "esbuild": "0.21.5",
+    "typescript": "^5.5.2",
+    "vitest": "^1.6.0"
+  }
+}

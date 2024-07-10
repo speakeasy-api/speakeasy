@@ -35,6 +35,8 @@ jobs:
             test-pattern: "TestGenerationWorkflows"
           - test-group: "Test Spec Operations"
             test-pattern: "TestSpecWorkflows"
+          - test-group: "Test Fallback Code Samples Workflow"
+            test-pattern: "TestFallbackCodeSamplesWorkflow"
 
     runs-on: ${{ matrix.os }}
 

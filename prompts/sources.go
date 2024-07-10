@@ -305,7 +305,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 			return nil, err
 		}
 
-		currentSource.Overlays = append(currentSource.Overlays, *document)
+		currentSource.Overlays = append(currentSource.Overlays, workflow.Overlay{
+			Document: document,
+		})
 	}
 
 	if len(currentSource.Inputs)+len(currentSource.Overlays) > 1 {
@@ -386,7 +388,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			return "", nil, err
 		}
 
-		source.Overlays = append(source.Overlays, *document)
+		source.Overlays = append(source.Overlays, workflow.Overlay{Document: document})
 	}
 
 	if outputLocation != "" {

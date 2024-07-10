@@ -3,13 +3,14 @@ package integration_tests
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // These integration tests MUST be run in serial because we deal with changing working directories during the test.
@@ -17,6 +18,7 @@ import (
 // If all test groups are run at the same time you will see test failures.
 
 func TestGenerationWorkflows(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		targetTypes     []string
@@ -74,6 +76,7 @@ func TestGenerationWorkflows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			temp := setupTestDir(t)
+			t.Parallel()
 
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
@@ -105,29 +108,25 @@ func TestGenerationWorkflows(t *testing.T) {
 
 			if isLocalFileReference(tt.inputDoc) {
 				err := copyFile("resources/spec.yaml", fmt.Sprintf("%s/%s", temp, tt.inputDoc))
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
-			// Execute commands from the temporary directory
-			os.Chdir(temp)
-			err := workflowFile.Validate(generate.GetSupportedLanguages())
-			assert.NoError(t, err)
-			err = os.MkdirAll(".speakeasy", 0o755)
-			assert.NoError(t, err)
-			err = workflow.Save(".", workflowFile)
-			assert.NoError(t, err)
+			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+			require.NoError(t, err)
+			err = workflow.Save(temp, workflowFile)
+			require.NoError(t, err)
 			args := []string{"run", "-t", "all", "--pinned"}
 			if tt.withForce {
 				args = append(args, "--force", "true")
 			}
-			rootCmd.SetArgs(args)
-			cmdErr := rootCmd.Execute()
-			assert.NoError(t, cmdErr)
+
+			cmdErr := execute(t, temp, args...)
+			require.NoError(t, cmdErr)
 
 			if tt.withCodeSamples {
-				codeSamplesPath := filepath.Join(tt.outdirs[0], "codeSamples.yaml")
+				codeSamplesPath := filepath.Join(temp, tt.outdirs[0], "codeSamples.yaml")
 				content, err := os.ReadFile(codeSamplesPath)
-				assert.NoError(t, err, "No readable file %s exists", codeSamplesPath)
+				require.NoError(t, err, "No readable file %s exists", codeSamplesPath)
 
 				if !strings.Contains(string(content), "update") {
 					t.Errorf("Update actions do not exist in the codeSamples file")
@@ -135,10 +134,23 @@ func TestGenerationWorkflows(t *testing.T) {
 			}
 
 			for i, targetType := range tt.targetTypes {
-				checkForExpectedFiles(t, tt.outdirs[i], expectedFilesByLanguage(targetType))
+				checkForExpectedFiles(t, filepath.Join(temp, tt.outdirs[i]), expectedFilesByLanguage(targetType))
 			}
 		})
 	}
+}
+
+func execute(t *testing.T, wd string, args ...string) error {
+	t.Helper()
+	_, filename, _, _ := runtime.Caller(0)
+	baseFolder := filepath.Join(filepath.Dir(filename), "..")
+	mainGo := filepath.Join(baseFolder, "main.go")
+	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
+	cmd.Env = os.Environ()
+	cmd.Dir = wd
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func TestSpecWorkflows(t *testing.T) {
@@ -192,8 +204,8 @@ func TestSpecWorkflows(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			temp := setupTestDir(t)
-
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
 				Version: workflow.WorkflowVersion,
@@ -205,20 +217,22 @@ func TestSpecWorkflows(t *testing.T) {
 			for _, inputDoc := range tt.inputDocs {
 				if isLocalFileReference(inputDoc) {
 					err := copyFile(fmt.Sprintf("resources/%s", inputDoc), fmt.Sprintf("%s/%s", temp, inputDoc))
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
 				inputs = append(inputs, workflow.Document{
 					Location: inputDoc,
 				})
 			}
-			var overlays []workflow.Document
+			var overlays []workflow.Overlay
 			for _, overlay := range tt.overlays {
 				if isLocalFileReference(overlay) {
 					err := copyFile(fmt.Sprintf("resources/%s", overlay), fmt.Sprintf("%s/%s", temp, overlay))
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
-				overlays = append(overlays, workflow.Document{
-					Location: overlay,
+				overlays = append(overlays, workflow.Overlay{
+					Document: &workflow.Document{
+						Location: overlay,
+					},
 				})
 			}
 			workflowFile.Sources["first-source"] = workflow.Source{
@@ -227,21 +241,16 @@ func TestSpecWorkflows(t *testing.T) {
 				Output:   &tt.out,
 			}
 
-			// Execute commands from the temporary directory
-			os.Chdir(temp)
-			err := workflowFile.Validate(generate.GetSupportedLanguages())
-			assert.NoError(t, err)
-			err = os.MkdirAll(".speakeasy", 0o755)
-			assert.NoError(t, err)
-			err = workflow.Save(".", workflowFile)
-			assert.NoError(t, err)
+			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+			require.NoError(t, err)
+			err = workflow.Save(temp, workflowFile)
+			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned"}
-			rootCmd.SetArgs(args)
-			cmdErr := rootCmd.Execute()
-			assert.NoError(t, cmdErr)
+			cmdErr := execute(t, temp, args...)
+			require.NoError(t, cmdErr)
 
-			content, err := os.ReadFile(tt.out)
-			assert.NoError(t, err, "No readable file %s exists", tt.out)
+			content, err := os.ReadFile(filepath.Join(temp, tt.out))
+			require.NoError(t, err, "No readable file %s exists", tt.out)
 
 			if len(tt.overlays) > 0 {
 				if !strings.Contains(string(content), "x-codeSamples") {
@@ -258,4 +267,109 @@ func TestSpecWorkflows(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	t.Parallel()
+	spec := `{
+		"openapi": "3.0.0",
+		"info": {
+		"title": "Swagger Petstore",
+		"version": "1.0.0"
+		},
+		"servers": [
+			{
+				"url": "http://petstore.swagger.io/v1"
+			}
+		],
+		"paths": {
+		"/pets": {
+			"post": {
+			"requestBody": {
+				"content": {
+				"application/json": {
+					"schema": {
+					"type": "object",
+					"properties": {
+						"name": {
+						"type": "string"
+						},
+						"breed": {
+						"type": "string"
+						}
+					},
+					"example": {
+						"name": "doggie",
+						"breed": "labrador"
+					}
+					}
+				}
+				}
+			},
+			"responses": {
+				"200": {
+				"description": "pet created"
+				}
+			}
+			}
+		}
+		}
+	}`
+	// Write the spec to a temp file
+	temp := setupTestDir(t)
+	specPath := filepath.Join(temp, "spec.yaml")
+	err := os.WriteFile(specPath, []byte(spec), 0o644)
+	require.NoError(t, err)
+
+	tempOutputFile := "./output.yaml"
+	relFilePath, err := filepath.Rel(temp, specPath)
+	require.NoError(t, err)
+	// Create a workflow file, input is petstore, overlay is fallbackCodeSamples.yaml
+	workflowFile := &workflow.Workflow{
+		Version: workflow.WorkflowVersion,
+		Sources: map[string]workflow.Source{
+			"first-source": {
+				Inputs: []workflow.Document{{Location: relFilePath}},
+				Overlays: []workflow.Overlay{
+					{
+						FallbackCodeSamples: &workflow.FallbackCodeSamples{
+							FallbackCodeSamplesLanguage: "shell",
+						},
+					},
+				},
+				Output: &tempOutputFile,
+			},
+		},
+	}
+
+	// Now run the workflow
+	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+	require.NoError(t, err)
+	err = workflow.Save(temp, workflowFile)
+	require.NoError(t, err)
+
+	// Read the saved workflow file and print it for debugging
+	rawWorkflow, err := os.ReadFile(filepath.Join(temp, ".speakeasy", "workflow.yaml"))
+	require.NoError(t, err)
+	fmt.Println(string(rawWorkflow))
+
+	args := []string{"run", "-s", "all", "--pinned"}
+	cmdErr := execute(t, temp, args...)
+	require.NoError(t, cmdErr)
+
+	// List directory contents for debugging
+	files, err := os.ReadDir(temp)
+	require.NoError(t, err)
+	for _, file := range files {
+		fmt.Println(file.Name())
+	}
+
+	// Check that the output file contains the expected code samples
+	content, err := os.ReadFile(filepath.Join(temp, tempOutputFile))
+	require.NoError(t, err, "No readable file %s exists", tempOutputFile)
+	fmt.Println(string(content))
+	require.Contains(t, string(content), "curl")
+	// Check it contains the example
+	require.Contains(t, string(content), "doggie")
+
 }

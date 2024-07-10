@@ -1,0 +1,52 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Test",
+    "version": "0.1.0",
+    "summary": "Test Summary",
+    "description": "Some test description.\nAbout our test document."
+  },
+  "paths": {
+    "/anything/selectGlobalServer": {
+      "x-my-ignore": {
+        "servers": [
+          {
+            "url": "http://localhost:35123",
+            "description": "The default server."
+          }
+        ]
+      },
+      "get": {
+        "operationId": "selectGlobalServer",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Optional-Header": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./components.yaml#/components/schemas/Products"
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:35123",
+            "description": "The default server."
+          }
+        ]
+      }
+    }
+  }
+}

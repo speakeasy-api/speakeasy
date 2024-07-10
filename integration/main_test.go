@@ -2,14 +2,11 @@ package integration_tests
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/speakeasy-api/speakeasy/cmd"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
-
-var rootCmd *cobra.Command
 
 // Entrypoint for CLI integration tests
 func TestMain(m *testing.M) {
@@ -31,13 +28,12 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	rootCmd = cmd.CmdForTest(version, artifactArch)
-
 	code := m.Run()
 	os.Exit(code)
 }
 
 func setupTestDir(t *testing.T) string {
+	t.Helper()
 	workingDir, err := os.Getwd()
 	assert.NoError(t, err)
 	temp, err := createTempDir()
@@ -48,8 +44,8 @@ func setupTestDir(t *testing.T) string {
 }
 
 func registerCleanup(t *testing.T, workingDir string, temp string) {
+	t.Helper()
 	t.Cleanup(func() {
-		os.Chdir(workingDir)
-		os.RemoveAll(temp)
+		os.RemoveAll(filepath.Join(workingDir, temp))
 	})
 }
