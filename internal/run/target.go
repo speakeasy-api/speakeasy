@@ -14,11 +14,11 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/codesamples"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
@@ -175,7 +175,15 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			outputPath = filepath.Join(*t.Output, outputPath)
 		}
 
-		overlayString, err := usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
+		style := codesamples.Default
+		if t.CodeSamples.Style != nil {
+			switch *t.CodeSamples.Style {
+			case "readme":
+				style = codesamples.ReadMe
+			}
+		}
+
+		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, style)
 		if err != nil {
 			return nil, err
 		}
