@@ -121,6 +121,9 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				} else if !errors.Is(err, ErrDownloadFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
 					return err
 				}
+				logger := log.From(cmd.Context())
+				logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version")
+				logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
 			}
 		}
 
@@ -261,16 +264,11 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		_ = updateWorkflowFile(wf, wfPath)
 	}
 
-	// Get lockfile version before running the command, in case it gets overwritten
-	lockfileVersion := getSpeakeasyVersionFromLockfile()
-
 	// Get the latest version, or use the pinned version
 	desiredVersion := wf.SpeakeasyVersion.String()
 	if desiredVersion == "latest" {
 		latest, err := updates.GetLatestVersion(ctx, artifactArch)
 		if err != nil {
-			logger.PrintfStyled(styles.DimmedItalic, "Failed to get latest Speakeasy version: %s", err.Error())
-			logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments")
 			return ErrDownloadFailed
 		}
 		desiredVersion = latest.String()
@@ -279,6 +277,9 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	} else {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion from workflow.yaml: %s\n", desiredVersion)
 	}
+
+	// Get lockfile version before running the command, in case it gets overwritten
+	lockfileVersion := getSpeakeasyVersionFromLockfile()
 
 	runErr := runWithVersion(cmd, artifactArch, desiredVersion)
 	if runErr != nil {
