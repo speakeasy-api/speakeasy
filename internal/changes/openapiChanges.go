@@ -54,7 +54,7 @@ func (c Changes) GetSummary() (*Summary, error) {
 		bump = Major
 	} else if strings.Contains(text, "Additions: ") {
 		bump = Minor
-	} else if strings.Contains(text, "Modifications: ") {
+	} else if len(table) > 0 {
 		bump = Patch
 	}
 
