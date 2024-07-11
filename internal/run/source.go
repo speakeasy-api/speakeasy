@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/versioning-reports/versioning"
 	"io"
 	"io/fs"
