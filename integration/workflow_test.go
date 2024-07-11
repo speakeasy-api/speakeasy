@@ -126,7 +126,8 @@ func TestGenerationWorkflows(t *testing.T) {
 				cmdErr := execute(t, temp, args...)
 				return cmdErr == nil, cmdErr
 			})
-			require.Len(t, report.Reports, 1)
+			require.Len(t, report.Reports, 2)
+			require.Truef(t, report.MustGenerate(), "no prior gen.lock -- should always generate")
 			require.NoError(t, cmdErr)
 
 			if tt.withCodeSamples {
