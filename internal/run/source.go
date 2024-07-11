@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -216,6 +217,12 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 			targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
 	} else {
 		changesStep.Skip("no previous revision found")
+
+		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+			MustGenerate: true,
+			Key:          "openapi_change_summary",
+			Priority:     5,
+		})
 		return
 	}
 
