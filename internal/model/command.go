@@ -116,8 +116,9 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			pinned, _ := cmd.Flags().GetBool("pinned")
 			if !pinned && !env.IsLocalDev() {
 				err := runWithVersionFromWorkflowFile(cmd)
-				// Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
-				if err != nil && !errors.Is(err, ErrDownloadFailed) {
+				if err == nil {
+					return nil
+				} else if !errors.Is(err, ErrDownloadFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
 					return err
 				}
 			}
