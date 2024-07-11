@@ -550,6 +550,8 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Log
 		if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(*sourceRes.Diagnosis) {
 			baseURL := auth.GetWorkspaceBaseURL(ctx)
 			link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
+			link = links.Shorten(ctx, link)
+
 			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(suggest.Summarize(*sourceRes.Diagnosis)+"."), styles.DimmedItalic.Render(link))
 			additionalLines = append(additionalLines, styles.HeavilyEmphasized.Render(fmt.Sprintf("└─%s: ", "Improve with AI")+msg))
 		}
