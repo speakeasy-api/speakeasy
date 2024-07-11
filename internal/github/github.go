@@ -133,7 +133,7 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
 		MustGenerate: summary.Bump != changes.None,
 		Key:          "openapi_change_summary",
-		PRReport:     summary.Text,
+		PRReport:     "## OpenAPI Change Summary\n" + summary.Text + "\n",
 		Priority:     5, // High priority -- place at top
 	})
 }
