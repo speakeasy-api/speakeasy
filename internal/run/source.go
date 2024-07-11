@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -178,6 +179,14 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 		}
 	}
+	if sourceRes.ChangeReport == nil {
+		// If we failed to compute changes, always generate the SDK
+		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+			MustGenerate: true,
+			Key:          "openapi_change_summary",
+			Priority:     5,
+		})
+	}
 
 	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
 	if err != nil {
@@ -216,6 +225,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 			targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
 	} else {
 		changesStep.Skip("no previous revision found")
+
 		return
 	}
 

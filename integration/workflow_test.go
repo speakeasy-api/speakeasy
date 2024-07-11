@@ -1,7 +1,9 @@
 package integration_tests
 
 import (
+	"context"
 	"fmt"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -120,7 +122,12 @@ func TestGenerationWorkflows(t *testing.T) {
 				args = append(args, "--force", "true")
 			}
 
-			cmdErr := execute(t, temp, args...)
+			report, _, cmdErr := versioning.WithVersionReportCapture[bool](context.Background(), func(ctx context.Context) (bool, error) {
+				cmdErr := execute(t, temp, args...)
+				return cmdErr == nil, cmdErr
+			})
+			require.Len(t, report.Reports, 2)
+			require.Truef(t, report.MustGenerate(), "no prior gen.lock -- should always generate")
 			require.NoError(t, cmdErr)
 
 			if tt.withCodeSamples {
