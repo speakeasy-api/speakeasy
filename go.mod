@@ -18,7 +18,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.0.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.366.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.369.0
 	github.com/speakeasy-api/openapi-overlay v0.6.0
 	github.com/speakeasy-api/sdk-gen-config v1.16.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.9.0
@@ -83,7 +83,6 @@ require (
 	github.com/dop251/goja v0.0.0-20240516125602-ccbae20bcec2 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf // indirect
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936 // indirect
-	github.com/dubinc/dub-go v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
