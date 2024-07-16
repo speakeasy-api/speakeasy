@@ -68,9 +68,9 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict 
 	}
 
 	if strict {
-		err, warnings := o.ApplyToStrict(ys);
+		err, warnings := o.ApplyToStrict(ys)
 		for _, warning := range warnings {
-			log.From(context.Background()).Warnf(warning)
+			log.From(context.Background()).Warnf("WARN: %s", warning)
 		}
 		if err != nil {
 			return fmt.Errorf("failed to apply overlay to spec file (strict) %q: %w", specFile, err)
