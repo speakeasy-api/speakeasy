@@ -17,6 +17,7 @@ type Quickstart struct {
 	LanguageConfigs          map[string]*config.Configuration
 	Defaults                 Defaults
 	IsUsingSampleOpenAPISpec bool
+	SDKName                  string
 }
 
 type Defaults struct {
@@ -34,7 +35,7 @@ const (
 
 // TODO: Add Github Configuration Next
 var StateMapping map[QuickstartState]formFunction = map[QuickstartState]formFunction{
-	SourceBase: sourceBaseForm,
+	SourceBase: quickstartBaseForm,
 	TargetBase: targetBaseForm,
 	ConfigBase: configBaseForm,
 }
