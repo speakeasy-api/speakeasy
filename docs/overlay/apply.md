@@ -17,6 +17,7 @@ speakeasy overlay apply [flags]
       --out string       write directly to a file instead of stdout
   -o, --overlay string   the overlay file to use
   -s, --schema string    the schema to extend
+      --strict           fail if the overlay has any action target expressions which match no nodes, and produce warnings if any overlay actions do nothing
 ```
 
 ### Options inherited from parent commands
