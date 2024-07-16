@@ -275,7 +275,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 
 		workflowFile.Targets[targetName] = *target
 
-		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, nil, false)
+		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -301,7 +301,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 			existingConfig = cfg.Config
 		}
 
-		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, existingConfig, false)
+		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, existingConfig, nil)
 		if err != nil {
 			return err
 		}

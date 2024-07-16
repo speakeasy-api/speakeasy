@@ -4,6 +4,8 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,9 +87,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
-	fmt.Println(charm.FormatCommandDescription(
-		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
-			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
+	log.From(ctx).PrintfStyled(styles.DimmedItalic, "\nYour first SDK is a few short questions away...\n")
 
 	quickstartObj := prompts.Quickstart{
 		WorkflowFile: &workflow.Workflow{
@@ -155,22 +155,28 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		outDir = "terraform-provider"
 	}
 
-	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
-		Title("What directory should the "+targetType+" files be written to?").
-		Description(description+"\n").
-		Suggestions(charm.DirsInCurrentDir(promptedDir)).
-		SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
-		Validate(func(s string) error {
-			if targetType == "terraform" {
-				if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
-					return errors.New("a terraform provider directory must start with 'terraform-provider'")
+	if !currentDirectoryEmpty() {
+		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+			Title("What directory should the "+targetType+" files be written to?").
+			Description(description+"\n").
+			Suggestions(charm.DirsInCurrentDir(promptedDir)).
+			SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
+			Validate(func(s string) error {
+				if targetType == "terraform" {
+					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
+						return errors.New("a terraform provider directory must start with 'terraform-provider'")
+					}
 				}
-			}
-			return nil
-		}).
-		Inline(false).Prompt("").Value(&promptedDir))),
-		"Pick an output directory for your newly created files.").
-		ExecuteForm(); err != nil {
+				return nil
+			}).
+			Value(&promptedDir))),
+			"Pick an output directory for your newly created files.").
+			ExecuteForm()
+	} else {
+		promptedDir = "."
+	}
+
+	if err != nil {
 		return err
 	}
 	if !filepath.IsAbs(promptedDir) {
@@ -217,13 +223,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			return errors.Wrapf(err, "failed to write sample OpenAPI spec")
 		}
 
-		fmt.Println(
-			styles.RenderInfoMessage(
-				"The OpenAPI sample document will be used",
-				"It can be found here, you can edit it at anytime:",
-				absSchemaPath,
-			),
-		)
+		printSampleSpecMessage(absSchemaPath)
 
 		referencePath, err := filepath.Rel(outDir, absSchemaPath)
 		if err != nil {
@@ -331,13 +331,7 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		return true, errors.Wrapf(err, "failed to save workflow file")
 	}
 
-	fmt.Println(
-		styles.RenderInfoMessage(
-			"The OpenAPI sample document will be used",
-			"It can be found here, you can edit it at anytime:",
-			absSchemaPath,
-		),
-	)
+	printSampleSpecMessage(absSchemaPath)
 
 	wf, err := run.NewWorkflow(
 		ctx,
@@ -364,6 +358,16 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
+func printSampleSpecMessage(absSchemaPath string) {
+	fmt.Println(
+		styles.RenderInfoMessage(
+			"A sample OpenAPI document will be used",
+			"You can edit it anytime here:",
+			absSchemaPath,
+		) + "\n",
+	)
+}
+
 func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
 	subDirectory := strcase.ToKebab(sdkClassName) + "-" + targetType
 	if targetType == "terraform" {
@@ -375,4 +379,16 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	}
 
 	return filepath.Join(workingDir, subDirectory)
+}
+
+func currentDirectoryEmpty() bool {
+	dir, err := os.Open(".")
+	if err != nil {
+		fmt.Println("Error opening directory:", err)
+		return false
+	}
+	defer dir.Close()
+
+	_, err = dir.Readdirnames(1)
+	return err == io.EOF
 }

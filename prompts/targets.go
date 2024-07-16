@@ -21,8 +21,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	targetFields := []huh.Field{}
 	if newTarget {
 		targetFields = append(targetFields, huh.NewSelect[string]().
-			Title("Which target would you like to generate?").
-			Description("Choose from this list of supported generation targets. \n").
+			Title("Which language would you like to generate?").
 			Options(GetTargetOptions()...).
 			Value(targetType))
 	}
@@ -34,7 +33,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 		}
 
 		targetFields = append(targetFields,
-			charm.NewInput().
+			charm.NewInlineInput().
 				Title("What is a good name for this target?").
 				Validate(func(s string) error {
 					if s == "" {
@@ -60,7 +59,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	}
 	if len(currentWorkflow.Targets) > 0 {
 		groups = append(groups,
-			huh.NewGroup(charm.NewInput().
+			huh.NewGroup(charm.NewInlineInput().
 				Title("What is a good output directory for your generation target?").
 				Suggestions(charm.DirsInCurrentDir(*outDir)).
 				SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
@@ -116,8 +115,8 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
 	if _, err := charm.NewForm(huh.NewForm(prompts...),
-		"Let's setup a new target for your workflow.",
-		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").
+		"Let's set up a new target for your workflow.",
+		"A target defines what language to generate and how.").
 		ExecuteForm(); err != nil {
 		return "", nil, err
 	}
@@ -149,7 +148,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
 	if _, err := charm.NewForm(huh.NewForm(prompts...),
-		"Let's setup a new target for your workflow.",
+		"Let's set up a new target for your workflow.",
 		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").ExecuteForm(); err != nil {
 		return "", nil, err
 	}
@@ -186,7 +185,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 			originalDir := outDir
 
 			if _, err := charm.NewForm(huh.NewForm(
-				huh.NewGroup(charm.NewInput().
+				huh.NewGroup(charm.NewInlineInput().
 					Title(fmt.Sprintf("Optionally provide an output directory to move your existing %s target %s to.", targetType, targetName)).
 					Suggestions(charm.DirsInCurrentDir(outDir)).
 					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
