@@ -2,11 +2,13 @@ package overlay
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/pb33f/libopenapi/json"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 	"io"
@@ -50,7 +52,7 @@ func Compare(schemas []string, w io.Writer) error {
 	return nil
 }
 
-func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
+func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict bool, warn bool) error {
 	o, err := loader.LoadOverlay(overlayFile)
 	if err != nil {
 		return err
@@ -65,8 +67,18 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 		return err
 	}
 
-	if err := o.ApplyTo(ys); err != nil {
-		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
+	if strict {
+		err, warnings := o.ApplyToStrict(ys);
+		for _, warning := range warnings {
+			log.From(context.Background()).Warnf(warning)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to apply overlay to spec file (strict) %q: %w", specFile, err)
+		}
+	} else {
+		if err := o.ApplyTo(ys); err != nil {
+			return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
+		}
 	}
 
 	bytes, err := render(ys, schema, yamlOut)

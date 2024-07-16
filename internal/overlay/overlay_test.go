@@ -42,7 +42,7 @@ func test(t *testing.T, schemaFile string, expectedFile string, yamlOut bool) {
 	require.NoError(t, err)
 	defer tmpFile.Close()
 
-	err = Apply(schemaFile, overlayFile, yamlOut, tmpFile)
+	err = Apply(schemaFile, overlayFile, yamlOut, tmpFile, true, false)
 	assert.NoError(t, err)
 
 	expectedContent, err := os.ReadFile(expectedFile)
