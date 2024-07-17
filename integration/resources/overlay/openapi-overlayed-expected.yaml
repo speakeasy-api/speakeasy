@@ -1,0 +1,440 @@
+openapi: 3.1.0
+info:
+  title: The Speakeasy Bar
+  version: 1.0.0
+  summary: A bar that serves drinks.
+  description: A secret underground bar that serves drinks to those in the know.
+  contact:
+    name: Speakeasy Support
+    url: https://support.speakeasy.bar
+    email: support@speakeasy.bar
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: https://speakeasy.bar/terms
+externalDocs:
+  url: https://docs.speakeasy.bar
+  description: The Speakeasy Bar Documentation.
+servers:
+  - url: https://speakeasy.bar
+    description: The production server.
+    x-speakeasy-server-id: prod
+  - url: https://staging.speakeasy.bar
+    description: The staging server.
+    x-speakeasy-server-id: staging
+  - url: https://{organization}.{environment}.speakeasy.bar
+    description: A per-organization and per-environment API.
+    x-speakeasy-server-id: customer
+    variables:
+      organization:
+        description: The organization name. Defaults to a generic organization.
+        default: api
+      environment:
+        description: The environment name. Defaults to the production environment.
+        default: prod
+        enum:
+          - prod
+          - staging
+          - dev
+security:
+  - apiKey: []
+tags:
+  - name: drinks
+    description: The drinks endpoints.
+  - name: ingredients
+    description: The ingredients endpoints.
+  - name: orders
+    description: The orders endpoints.
+  - name: authentication
+    description: The authentication endpoints.
+  - name: config
+  - name: Testing
+    description: just a description
+paths:
+  x-speakeasy-errors:
+    statusCodes: # Defines status codes to handle as errors for all operations
+      - 4XX # Wildcard to handle all status codes in the 400-499 range
+      - 5XX
+  /anything/selectGlobalServer:
+    x-my-ignore:
+      servers:
+        - url: http://localhost:35123
+          description: The default server.
+    get:
+      operationId: selectGlobalServer
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Optional-Header:
+              schema:
+                type: string
+  /authenticate:
+    post:
+      operationId: authenticate
+      summary: Authenticate with the API by providing a username and password.
+      security: []
+      tags:
+        - authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: The api key to use for authenticated endpoints.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "401":
+          description: Invalid credentials provided.
+        "5XX":
+          $ref: "#/components/responses/APIError"
+        default:
+          $ref: "#/components/responses/UnknownError"
+  /drinks:
+    x-speakeasy-note:
+      "$ref": "./removeNote.yaml"
+  /drink/{name}: # Example comment -- should be maintained
+    get:
+      operationId: getDrink
+      summary: Get a drink.
+      description: |
+        A long description
+        to validate that we handle indentation properly
+
+        With a second paragraph
+      tags:
+        - drinks
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - x-parameter-extension: foo
+          name: test
+          description: Test parameter
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Test response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Drink"
+                type: string
+          x-response-extension: foo
+        "5XX":
+          $ref: "#/components/responses/APIError"
+        default:
+          $ref: "#/components/responses/UnknownError"
+  /ingredients:
+    get:
+      operationId: listIngredients
+      summary: Get a list of ingredients.
+      description: Get a list of ingredients, if authenticated this will include stock levels and product codes otherwise it will only include public information.
+      tags:
+        - ingredients
+      parameters:
+        - name: ingredients
+          in: query
+          description: A list of ingredients to filter by. If not provided all ingredients will be returned.
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        "200":
+          description: A list of ingredients.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ingredient"
+        "5XX":
+          $ref: "#/components/responses/APIError"
+        default:
+          $ref: "#/components/responses/UnknownError"
+  /order:
+    post:
+      operationId: createOrder
+      summary: Create an order.
+      description: Create an order for a drink.
+      tags:
+        - orders
+      parameters:
+        - name: callback_url
+          in: query
+          description: The url to call when the order is updated.
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/Order"
+      responses:
+        "200":
+          description: The order was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "5XX":
+          $ref: "#/components/responses/APIError"
+        default:
+          $ref: "#/components/responses/UnknownError"
+      callbacks:
+        orderUpdate:
+          "{$request.query.callback_url}":
+            post:
+              summary: Receive order updates.
+              description: Receive order updates from the supplier, this will be called whenever the status of an order changes.
+              tags:
+                - orders
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        order:
+                          $ref: "#/components/schemas/Order"
+              responses:
+                "200":
+                  description: The order update was received successfully.
+                "5XX":
+                  $ref: "#/components/responses/APIError"
+                default:
+                  $ref: "#/components/responses/UnknownError"
+  /webhooks/subscribe:
+    post:
+      operationId: subscribeToWebhooks
+      summary: Subscribe to webhooks.
+      description: Subscribe to webhooks.
+      tags:
+        - config
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  url:
+                    type: string
+                  webhook:
+                    type: string
+                    enum:
+                      - stockUpdate
+      responses:
+        "200":
+          description: The webhook was subscribed to successfully.
+        "5XX":
+          $ref: "#/components/responses/APIError"
+        default:
+          $ref: "#/components/responses/UnknownError"
+webhooks:
+  stockUpdate:
+    post:
+      summary: Receive stock updates.
+      description: Receive stock updates from the bar, this will be called whenever the stock levels of a drink or ingredient changes.
+      tags:
+        - drinks
+        - ingredients
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                drink:
+                  $ref: "#/components/schemas/Drink"
+                ingredient:
+                  $ref: "#/components/schemas/Ingredient"
+      responses:
+        "200":
+          description: The stock update was received successfully.
+        "5XX":
+          $ref: "#/components/responses/APIError"
+        default:
+          $ref: "#/components/responses/UnknownError"
+components:
+  schemas:
+    APIError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    Drink:
+      type: object
+      properties:
+        name:
+          description: The name of the drink.
+          type: string
+          examples:
+            - Old Fashioned
+            - Manhattan
+            - Negroni
+        type:
+          $ref: "#/components/schemas/DrinkType"
+        price:
+          description: The price of one unit of the drink in US cents.
+          type: number
+          examples:
+            - 1000 # $10.00
+            - 1200 # $12.00
+            - 1500 # $15.00
+        stock:
+          description: The number of units of the drink in stock, only available when authenticated.
+          type: integer
+          readOnly: true
+        productCode:
+          description: The product code of the drink, only available when authenticated.
+          type: string
+          examples:
+            - "AC-A2DF3"
+            - "NAC-3F2D1"
+            - "APM-1F2D3"
+      required:
+        - name
+        - price
+    DrinkType:
+      description: The type of drink.
+      type: string
+      enum:
+        - cocktail
+        - non-alcoholic
+        - beer
+        - wine
+        - spirit
+        - other
+    Ingredient:
+      type: object
+      properties:
+        name:
+          description: The name of the ingredient.
+          type: string
+          examples:
+            - Sugar Syrup
+            - Angostura Bitters
+            - Orange Peel
+        type:
+          $ref: "#/components/schemas/IngredientType"
+        stock:
+          description: The number of units of the ingredient in stock, only available when authenticated.
+          type: integer
+          examples:
+            - 10
+            - 5
+            - 0
+          readOnly: true
+        productCode:
+          description: The product code of the ingredient, only available when authenticated.
+          type: string
+          examples:
+            - "AC-A2DF3"
+            - "NAC-3F2D1"
+            - "APM-1F2D3"
+      required:
+        - name
+        - type
+    IngredientType:
+      description: The type of ingredient.
+      type: string
+      enum:
+        - fresh
+        - long-life
+        - packaged
+    Order:
+      description: An order for a drink or ingredient.
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/OrderType"
+        productCode:
+          description: The product code of the drink or ingredient.
+          type: string
+          examples:
+            - "AC-A2DF3"
+            - "NAC-3F2D1"
+            - "APM-1F2D3"
+        quantity:
+          description: The number of units of the drink or ingredient to order.
+          type: integer
+          minimum: 1
+        status:
+          description: The status of the order.
+          type: string
+          enum:
+            - pending
+            - processing
+            - complete
+          readOnly: true
+      required:
+        - type
+        - productCode
+        - quantity
+        - status
+    OrderType:
+      description: The type of order.
+      type: string
+      enum:
+        - drink
+        - ingredient
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: Authorization
+      in: header
+  responses:
+    APIError:
+      description: An error occurred interacting with the API.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    UnknownError:
+      description: An unknown error occurred interacting with the API.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
