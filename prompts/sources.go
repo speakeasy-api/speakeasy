@@ -122,6 +122,7 @@ func getSDKName(sdkName *string, placeholder string) error {
 				Title("Give your SDK a name").
 				Description("Your users will access your SDK using `myCompany.DoThing()`\n").
 				Placeholder(placeholder).
+				Suggestions([]string{placeholder}).
 				Value(sdkName),
 		)
 	}
