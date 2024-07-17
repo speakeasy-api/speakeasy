@@ -18,9 +18,9 @@ const (
 	artifactArch = "linux_amd64"
 )
 
-func createTempDir() (string, error) {
+func createTempDir(wd string) (string, error) {
 	temp := fmt.Sprintf("%s/%s", tempDir, randStringBytes(7))
-	if err := os.Mkdir(temp, 0o755); err != nil {
+	if err := os.Mkdir(filepath.Join(wd, temp), 0o755); err != nil {
 		return "", err
 	}
 

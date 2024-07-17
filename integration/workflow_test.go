@@ -128,7 +128,10 @@ func TestGenerationWorkflows(t *testing.T) {
 			envVarLock.Lock()
 			report, _, cmdErr := versioning.WithVersionReportCapture[bool](context.Background(), func(ctx context.Context) (bool, error) {
 				env := os.Getenv(versioning.ENV_VAR_PREFIX)
-				cmdErr := execute(t, temp, args...)
+
+				cmd := execute(t, temp, args...)
+				envVarLock.Unlock()
+				cmdErr := cmd.Run()
 				envVarLock.Lock()
 				os.Setenv(versioning.ENV_VAR_PREFIX, env)
 				return cmdErr == nil, cmdErr
@@ -156,19 +159,17 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 }
 
-func execute(t *testing.T, wd string, args ...string) error {
+func execute(t *testing.T, wd string, args ...string) *exec.Cmd {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
 	mainGo := filepath.Join(baseFolder, "main.go")
 	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
-	_ = envVarLock.TryLock()
 	cmd.Env = os.Environ()
 	cmd.Dir = wd
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	envVarLock.Unlock()
-	return cmd.Run()
+	return cmd
 }
 
 func TestSpecWorkflows(t *testing.T) {
@@ -264,7 +265,7 @@ func TestSpecWorkflows(t *testing.T) {
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned"}
-			cmdErr := execute(t, temp, args...)
+			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
 
 			content, err := os.ReadFile(filepath.Join(temp, tt.out))
@@ -372,7 +373,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	fmt.Println(string(rawWorkflow))
 
 	args := []string{"run", "-s", "all", "--pinned"}
-	cmdErr := execute(t, temp, args...)
+	cmdErr := execute(t, temp, args...).Run()
 	require.NoError(t, cmdErr)
 
 	// List directory contents for debugging
