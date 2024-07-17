@@ -357,7 +357,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 		return "", nil, errors.New("multiple inputs are not supported for minimum viable spec")
 	}
 
-	tempOmitted := fmt.Sprintf("ommitted_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
+	tempOmitted := fmt.Sprintf("omitted_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
 	tempBase := fmt.Sprintf("downloaded_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
 
 	if source.Inputs[0].IsRemote() {
