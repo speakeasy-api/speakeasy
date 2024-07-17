@@ -10,7 +10,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
-	"github.com/speakeasy-api/huh"
+	"github.com/charmbracelet/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"

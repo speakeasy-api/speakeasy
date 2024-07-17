@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/inkeep/ai-api-go/models/sdkerrors"
-	"github.com/speakeasy-api/huh"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -152,7 +152,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 	logger := log.From(ctx)
 	scanner := bufio.NewScanner(os.Stdin)
 	logger.Info("Entering interactive chat session, type exit or use ctrl + c to close.")
-    logger.PrintfStyled(styles.Dimmed, "Example: How do I override a method name in my OpenAPI document?")
+	logger.PrintfStyled(styles.Dimmed, "Example: How do I override a method name in my OpenAPI document?")
 
 	if message != "" {
 		logger.Info("\nProcessing your question, this may take a minute...")
@@ -178,7 +178,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 		}
 
 		var err error
-        logger.Info("Processing your question, this may take a minute...")
+		logger.Info("Processing your question, this may take a minute...")
 		sessionID, err = Ask(ctx, input, sessionID)
 		if err != nil {
 			logger.Errorf("An error occurred: %v\n", err)

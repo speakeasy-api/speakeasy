@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/charmbracelet/huh"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
-	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -41,9 +42,9 @@ func oasLocationPrompt(fileLocation *string) *huh.Input {
 			Title("OpenAPI Document Location").
 			Placeholder("local file path or remote file reference").
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+			SuggestionsFunc(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 				FileExtensions: charm_internal.OpenAPIFileExtensions,
-			})).
+			}, fileLocation)).
 			Prompt("").
 			Value(fileLocation)
 	}
@@ -116,18 +117,49 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 }
 
 func getSDKName(sdkName *string, placeholder string) error {
-	if sdkName == nil || *sdkName == "" {
-		return charm_internal.Execute(
-			charm_internal.NewInput().
-				Title("Give your SDK a name").
-				Description("This will be used to inform things such as package name, and can always been changed later.\n").
-				Placeholder(placeholder).
-				Value(sdkName),
-		)
+	count := 0
+	go func() {
+		for {
+			count++
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
+	descriptionFunc := func() string {
+		return fmt.Sprintf("The count is: %d", count)
 	}
 
-	return nil
+	err := huh.NewForm(huh.NewGroup(
+		charm_internal.NewInput().
+			Title("Fill in the input").
+			DescriptionFunc(descriptionFunc, &count),
+		charm_internal.NewInput().
+			Title("Fill in the input").
+			DescriptionFunc(descriptionFunc, &count),
+	)).Run()
 
+	//if sdkName == nil || *sdkName == "" {
+	//	v2 := "asdjasdlfjadf"
+	//
+	//	descriptionFunc := func() string {
+	//		return fmt.Sprintf("Your users will access your SDK with `%d.doThing()`\n", count)
+	//	}
+	//
+	//	return charm_internal.Execute(
+	//		charm_internal.NewInput().
+	//			Title("Give your SDK a name").
+	//			DescriptionFunc(descriptionFunc, &count).
+	//			Placeholder(placeholder).
+	//			Value(sdkName),
+	//		charm_internal.NewInput().
+	//			Title("Give your SDK a name").
+	//			DescriptionFunc(descriptionFunc, &count).
+	//			Placeholder(placeholder).
+	//			Value(&placeholder),
+	//	)
+	//}
+
+	return nil
 }
 
 func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *string) []*huh.Group {
@@ -137,9 +169,9 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *stri
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
 				Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-				SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+				SuggestionsFunc(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 					FileExtensions: charm_internal.OpenAPIFileExtensions,
-				})).
+				}, overlayLocation)).
 				Value(overlayLocation),
 		).WithHideFunc(func() bool {
 			return !*promptForOverlay
@@ -235,9 +267,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 					Title("What is the location of your OpenAPI document?\n").
 					Placeholder("local file path or remote file reference.").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+					SuggestionsFunc(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 						FileExtensions: charm_internal.OpenAPIFileExtensions,
-					})).
+					}, &fileLocation)).
 					Value(&fileLocation),
 			),
 		}
@@ -329,9 +361,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 				charm_internal.NewInlineInput().
 					Title("Optionally provide an output location for your build source file:").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+					SuggestionsFunc(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 						FileExtensions: charm_internal.OpenAPIFileExtensions,
-					})).
+					}, &outputLocation)).
 					Value(&outputLocation),
 			)),
 			fmt.Sprintf("Let's modify the source %s", name)).
@@ -373,9 +405,9 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+			SuggestionsFunc(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 				FileExtensions: charm_internal.OpenAPIFileExtensions,
-			})).
+			}, &outputLocation)).
 			Value(&outputLocation),
 	).WithHideFunc(
 		func() bool {

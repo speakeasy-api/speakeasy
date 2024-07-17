@@ -14,7 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
-	"github.com/speakeasy-api/huh"
+	"github.com/charmbracelet/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/iancoleman/strcase"
@@ -87,7 +87,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			"To regenerate the current workflow: `speakeasy run`.")
 	}
 
-	log.From(ctx).PrintfStyled(styles.DimmedItalic, "\nYour first SDK is a few short questions away...\n")
+	log.From(ctx).PrintfStyled(styles.DimmedItalic, "\nYou're on your way to your first SDK...\n")
 
 	quickstartObj := prompts.Quickstart{
 		WorkflowFile: &workflow.Workflow{
@@ -160,7 +160,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			Title("What directory should the "+targetType+" files be written to?").
 			Description(description+"\n").
 			Suggestions(charm.DirsInCurrentDir(promptedDir)).
-			SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
+			SuggestionsFunc(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true}, &promptedDir)).
 			Validate(func(s string) error {
 				if targetType == "terraform" {
 					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {

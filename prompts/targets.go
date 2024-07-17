@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
-	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -62,7 +62,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 			huh.NewGroup(charm.NewInlineInput().
 				Title("What is a good output directory for your generation target?").
 				Suggestions(charm.DirsInCurrentDir(*outDir)).
-				SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
+				SuggestionsFunc(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true}, outDir)).
 				Validate(func(s string) error {
 					var enforceNewDir bool
 					if newTarget {
@@ -188,7 +188,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 				huh.NewGroup(charm.NewInlineInput().
 					Title(fmt.Sprintf("Optionally provide an output directory to move your existing %s target %s to.", targetType, targetName)).
 					Suggestions(charm.DirsInCurrentDir(outDir)).
-					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
+					SuggestionsFunc(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true}, &outDir)).
 					Value(&outDir))),
 				"When setting up multiple targets we recommend you select an output directory not in the root folder.").ExecuteForm(); err != nil {
 				return err

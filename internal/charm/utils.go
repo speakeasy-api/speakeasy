@@ -2,12 +2,12 @@ package charm
 
 import (
 	"fmt"
+	"github.com/charmbracelet/huh"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
@@ -126,17 +126,21 @@ type SuggestionCallbackConfig struct {
 	IsDirectories  bool
 }
 
-func SuggestionCallback(cfg SuggestionCallbackConfig) func(val string) []string {
-	return func(val string) []string {
-		var files []string
-		if info, err := os.Stat(val); err == nil && info.IsDir() {
-			if len(cfg.FileExtensions) > 0 {
-				files = SchemaFilesInCurrentDir(val, cfg.FileExtensions)
-			} else if cfg.IsDirectories {
-				files = DirsInCurrentDir(val)
-			}
-		}
+func SuggestionCallback(cfg SuggestionCallbackConfig, val *string) (func() []string, any) {
+	return func() []string {
+		return GetFiles(*val, cfg.FileExtensions, cfg.IsDirectories)
+	}, val
+}
 
-		return files
+func GetFiles(prefix string, extensions []string, isDirectories bool) []string {
+	var files []string
+	if info, err := os.Stat(prefix); err == nil && info.IsDir() {
+		if len(extensions) > 0 {
+			files = SchemaFilesInCurrentDir(prefix, extensions)
+		} else if isDirectories {
+			files = DirsInCurrentDir(prefix)
+		}
 	}
+
+	return files
 }

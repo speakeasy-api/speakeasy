@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/speakeasy-api/huh"
+	"github.com/charmbracelet/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 )
