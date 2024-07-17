@@ -231,7 +231,7 @@ func languageSpecificForms(
 					key:          field.Name,
 					defaultValue: defaultValue,
 				})
-				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, &description, isQuickstart))
+				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, &description))
 			}
 		}
 	}
@@ -307,7 +307,7 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 	return true, defaultValue, validationRegex, validationMessage, description
 }
 
-func addPromptForField(key, defaultValue, validateRegex, validateMessage string, description *string, isQuickstart bool) *huh.Group {
+func addPromptForField(key, defaultValue, validateRegex, validateMessage string, description *string) *huh.Group {
 	input := charm.NewInlineInput().
 		Key(key).
 		Title(fmt.Sprintf("Provide a value for your %s config", key)).
@@ -332,8 +332,7 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 		input = input.Value(&defaultValue)
 	}
 
-	// Skip prompts we have a default value for in quickstart to reduce the number of steps
-	return huh.NewGroup(input).WithHideFunc(func() bool { return isQuickstart && defaultValue != "" })
+	return huh.NewGroup(input)
 }
 
 func saveLanguageConfigValues(
