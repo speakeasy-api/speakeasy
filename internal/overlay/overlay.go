@@ -98,7 +98,11 @@ func render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
 
 	if yamlIn && yamlOut {
 		var res bytes.Buffer
-		if err := yaml.NewEncoder(&res).Encode(y); err != nil {
+		encoder := yaml.NewEncoder(&res)
+		// Note: would love to make this generic but the indentation information isn't in go-yaml nodes
+		// https://github.com/go-yaml/yaml/issues/899
+		encoder.SetIndent(2)
+		if err := encoder.Encode(y); err != nil {
 			return nil, fmt.Errorf("failed to encode YAML: %w", err)
 		}
 		return res.Bytes(), nil

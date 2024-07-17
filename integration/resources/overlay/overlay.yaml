@@ -1,0 +1,50 @@
+overlay: 1.0.0
+info:
+  title: Drinks Overlay
+  version: 1.2.3
+  x-info-extension: 42
+actions:
+  - target: $.paths["/drink/{name}"].get
+    description: Test update
+    update:
+      parameters:
+        - x-parameter-extension: foo
+          name: test
+          description: Test parameter
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          x-response-extension: foo
+          description: Test response
+          content:
+            application/json:
+              schema:
+                type: string
+    x-action-extension: foo
+  - target: $.paths["/drinks"].get
+    description: Test remove
+    remove: true
+    x-action-extension: bar
+  - target: $.paths["/drinks"]
+    update:
+      x-speakeasy-note:
+        "$ref": "./removeNote.yaml"
+  - target: $.tags
+    update:
+      - name: Testing
+        description: just a description
+  - target: $.paths["/anything/selectGlobalServer"].x-my-ignore
+    update:
+      servers:
+        - url: http://localhost:35123
+          description: The default server.
+  - target: $.paths["/drink/{name}"].get
+    update:
+      description: |
+        A long description
+        to validate that we handle indentation properly
+
+        With a second paragraph
+x-top-level-extension: true
