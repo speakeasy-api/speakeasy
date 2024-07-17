@@ -1,7 +1,6 @@
 package integration_tests
 
 import (
-	"fmt"
 	"io"
 	"math/rand"
 	"net/url"
@@ -18,13 +17,13 @@ const (
 	artifactArch = "linux_amd64"
 )
 
-func createTempDir() (string, error) {
-	temp := fmt.Sprintf("%s/%s", tempDir, randStringBytes(7))
-	if err := os.Mkdir(temp, 0o755); err != nil {
+func createTempDir(wd string) (string, error) {
+	target := filepath.Join(wd, tempDir, randStringBytes(7))
+	if err := os.Mkdir(target, 0o755); err != nil {
 		return "", err
 	}
 
-	return temp, nil
+	return target, nil
 }
 
 func isLocalFileReference(filePath string) bool {

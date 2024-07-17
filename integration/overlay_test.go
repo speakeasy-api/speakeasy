@@ -24,7 +24,7 @@ func TestOverlayMatchesSnapshot(t *testing.T) {
 	require.NoError(t, err)
 
 	args := []string{"overlay", "apply", "--schema", schemaFilePath, "--overlay", overlayFilePath, "--out", outputPath}
-	cmdErr := execute(t, temp, args...)
+	cmdErr := execute(t, temp, args...).Run()
 	require.NoError(t, cmdErr)
 	readBytes, err := os.ReadFile(outputPath)
 	require.NoError(t, err)

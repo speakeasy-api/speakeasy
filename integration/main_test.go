@@ -37,7 +37,7 @@ func setupTestDir(t *testing.T) string {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)
 	workingDir := filepath.Dir(filename)
-	temp, err := createTempDir()
+	temp, err := createTempDir(workingDir)
 	assert.NoError(t, err)
 	registerCleanup(t, workingDir, temp)
 
