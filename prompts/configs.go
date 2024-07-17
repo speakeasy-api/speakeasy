@@ -288,6 +288,9 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 		Title(fmt.Sprintf("Provide a value for your %s config", key)).
 		Validate(func(s string) error {
 			if validateRegex != "" {
+				s = strings.TrimSpace(s)
+				s = strings.Trim(s, "\n")
+				s = strings.Trim(s, "\t")
 				r, err := regexp.Compile(validateRegex)
 				if err != nil {
 					return err
