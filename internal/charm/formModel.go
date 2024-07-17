@@ -15,6 +15,15 @@ type FormModel struct {
 	signalExit  bool
 }
 
+func Execute(fields ...huh.Field) error {
+	_, err := NewForm(
+		huh.NewForm(
+			huh.NewGroup(fields...),
+		),
+	).ExecuteForm()
+	return err
+}
+
 func NewForm(form *huh.Form, args ...string) FormModel {
 	keyMap := huh.NewDefaultKeyMap()
 	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab", "right"), key.WithHelp("tab", "complete"), key.WithHelp("right", "complete"))
