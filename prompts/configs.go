@@ -85,7 +85,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	initialFields := []huh.Field{}
 
-	if quickstart.SDKName == "" {
+	if quickstart == nil || quickstart.SDKName == "" {
 		initialFields = append(initialFields,
 			huh.NewInput().
 				Title("Name your SDK").
