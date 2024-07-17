@@ -56,6 +56,7 @@ var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 type overlayApplyFlags struct {
 	Overlay string `json:"overlay"`
 	Schema  string `json:"schema"`
+	Strict  bool `json:"strict"`
 	Out     string `json:"out"`
 }
 
@@ -70,6 +71,10 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 			Shorthand:                  "s",
 			Description:                "the schema to extend",
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
+		},
+		flag.BooleanFlag{
+			Name:                       "strict",
+			Description:                "fail if the overlay has any action target expressions which match no nodes, and produce warnings if any overlay actions do nothing",
 		},
 		flag.StringFlag{
 			Name:        "out",
@@ -106,5 +111,5 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		yamlOut = utils.HasYAMLExt(flags.Out)
 	}
 
-	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out)
+	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out, flags.Strict, len(flags.Out) > 0 && flags.Strict)
 }

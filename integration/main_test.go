@@ -3,6 +3,7 @@ package integration_tests
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,9 +35,9 @@ func TestMain(m *testing.M) {
 
 func setupTestDir(t *testing.T) string {
 	t.Helper()
-	workingDir, err := os.Getwd()
-	assert.NoError(t, err)
-	temp, err := createTempDir()
+	_, filename, _, _ := runtime.Caller(0)
+	workingDir := filepath.Dir(filename)
+	temp, err := createTempDir(workingDir)
 	assert.NoError(t, err)
 	registerCleanup(t, workingDir, temp)
 

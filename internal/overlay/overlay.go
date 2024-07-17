@@ -2,11 +2,13 @@ package overlay
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/pb33f/libopenapi/json"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 	"io"
@@ -50,7 +52,7 @@ func Compare(schemas []string, w io.Writer) error {
 	return nil
 }
 
-func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
+func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict bool, warn bool) error {
 	o, err := loader.LoadOverlay(overlayFile)
 	if err != nil {
 		return err
@@ -65,8 +67,18 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer) error {
 		return err
 	}
 
-	if err := o.ApplyTo(ys); err != nil {
-		return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
+	if strict {
+		err, warnings := o.ApplyToStrict(ys)
+		for _, warning := range warnings {
+			log.From(context.Background()).Warnf("WARN: %s", warning)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to apply overlay to spec file (strict) %q: %w", specFile, err)
+		}
+	} else {
+		if err := o.ApplyTo(ys); err != nil {
+			return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
+		}
 	}
 
 	bytes, err := render(ys, schema, yamlOut)
@@ -86,7 +98,11 @@ func render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
 
 	if yamlIn && yamlOut {
 		var res bytes.Buffer
-		if err := yaml.NewEncoder(&res).Encode(y); err != nil {
+		encoder := yaml.NewEncoder(&res)
+		// Note: would love to make this generic but the indentation information isn't in go-yaml nodes
+		// https://github.com/go-yaml/yaml/issues/899
+		encoder.SetIndent(2)
+		if err := encoder.Encode(y); err != nil {
 			return nil, fmt.Errorf("failed to encode YAML: %w", err)
 		}
 		return res.Bytes(), nil

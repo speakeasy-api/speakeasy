@@ -594,7 +594,7 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 			return err
 		}
 
-		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(applyPath), tempOutFile); err != nil {
+		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(applyPath), tempOutFile, false, false); err != nil {
 			return err
 		}
 
