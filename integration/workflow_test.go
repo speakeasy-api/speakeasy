@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -19,8 +18,6 @@ import (
 // These integration tests MUST be run in serial because we deal with changing working directories during the test.
 // If running locally make sure you are running test functions individually TestGenerationWorkflows, TestSpecWorkflows, etc.
 // If all test groups are run at the same time you will see test failures.
-
-var envVarLock sync.Mutex
 
 func TestGenerationWorkflows(t *testing.T) {
 	t.Parallel()
@@ -80,8 +77,8 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temp := setupTestDir(t)
 			t.Parallel()
+			temp := setupTestDir(t)
 
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
@@ -125,22 +122,8 @@ func TestGenerationWorkflows(t *testing.T) {
 				args = append(args, "--force", "true")
 			}
 
-			envVarLock.Lock()
-			report, _, cmdErr := versioning.WithVersionReportCapture[bool](context.Background(), func(ctx context.Context) (bool, error) {
-				env := os.Getenv(versioning.ENV_VAR_PREFIX)
-
-				cmd := execute(t, temp, args...)
-				envVarLock.Unlock()
-				cmdErr := cmd.Run()
-				envVarLock.Lock()
-				os.Setenv(versioning.ENV_VAR_PREFIX, env)
-				return cmdErr == nil, cmdErr
-			})
-			envVarLock.Unlock()
+			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
-			require.NotNil(t, report)
-			require.Len(t, report.Reports, 2)
-			require.Truef(t, report.MustGenerate(), "no prior gen.lock -- should always generate")
 
 			if tt.withCodeSamples {
 				codeSamplesPath := filepath.Join(temp, tt.outdirs[0], "codeSamples.yaml")
@@ -373,7 +356,14 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	fmt.Println(string(rawWorkflow))
 
 	args := []string{"run", "-s", "all", "--pinned"}
-	cmdErr := execute(t, temp, args...).Run()
+	reports, _, cmdErr := versioning.WithVersionReportCapture[bool](context.Background(), func(ctx context.Context) (bool, error) {
+		err := execute(t, temp, args...).Run()
+		return true, err
+	})
+	require.NotNil(t, reports)
+	require.Len(t, reports.Reports, 1)
+	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
+
 	require.NoError(t, cmdErr)
 
 	// List directory contents for debugging
@@ -390,5 +380,4 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	require.Contains(t, string(content), "curl")
 	// Check it contains the example
 	require.Contains(t, string(content), "doggie")
-
 }
