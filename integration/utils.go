@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -36,7 +37,10 @@ func isLocalFileReference(filePath string) bool {
 }
 
 func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
+	_, filename, _, _ := runtime.Caller(0)
+	targetSrc := filepath.Join(filepath.Dir(filename), src)
+
+	sourceFile, err := os.Open(targetSrc)
 	if err != nil {
 		return err
 	}

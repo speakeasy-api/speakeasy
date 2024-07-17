@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -18,6 +19,8 @@ import (
 // These integration tests MUST be run in serial because we deal with changing working directories during the test.
 // If running locally make sure you are running test functions individually TestGenerationWorkflows, TestSpecWorkflows, etc.
 // If all test groups are run at the same time you will see test failures.
+
+var envVarLock sync.Mutex
 
 func TestGenerationWorkflows(t *testing.T) {
 	t.Parallel()
@@ -122,13 +125,19 @@ func TestGenerationWorkflows(t *testing.T) {
 				args = append(args, "--force", "true")
 			}
 
+			envVarLock.Lock()
 			report, _, cmdErr := versioning.WithVersionReportCapture[bool](context.Background(), func(ctx context.Context) (bool, error) {
+				env := os.Getenv(versioning.ENV_VAR_PREFIX)
 				cmdErr := execute(t, temp, args...)
+				envVarLock.Lock()
+				os.Setenv(versioning.ENV_VAR_PREFIX, env)
 				return cmdErr == nil, cmdErr
 			})
+			envVarLock.Unlock()
+			require.NoError(t, cmdErr)
+			require.NotNil(t, report)
 			require.Len(t, report.Reports, 2)
 			require.Truef(t, report.MustGenerate(), "no prior gen.lock -- should always generate")
-			require.NoError(t, cmdErr)
 
 			if tt.withCodeSamples {
 				codeSamplesPath := filepath.Join(temp, tt.outdirs[0], "codeSamples.yaml")
@@ -153,10 +162,12 @@ func execute(t *testing.T, wd string, args ...string) error {
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
 	mainGo := filepath.Join(baseFolder, "main.go")
 	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
+	_ = envVarLock.TryLock()
 	cmd.Env = os.Environ()
 	cmd.Dir = wd
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	envVarLock.Unlock()
 	return cmd.Run()
 }
 
