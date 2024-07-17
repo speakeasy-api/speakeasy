@@ -120,7 +120,7 @@ func getSDKName(sdkName *string, placeholder string) error {
 		return charm_internal.Execute(
 			charm_internal.NewInput().
 				Title("Give your SDK a name").
-				Description("This will be used to inform things such as package name, and can always been changed later.\n").
+				Description("Your users will access your SDK using `myCompany.DoThing()`\n").
 				Placeholder(placeholder).
 				Value(sdkName),
 		)
@@ -176,7 +176,7 @@ func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*Quickstar
 		quickstart.SDKName = "Petstore"
 	} else {
 		// No need to prompt for SDK name if we are using a sample spec
-		if err := getSDKName(&quickstart.SDKName, orgSlug); err != nil {
+		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
 		sourceName = quickstart.SDKName + "-OAS"
