@@ -3,6 +3,7 @@ package prompts
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"net/http"
 	"net/url"
 	"strings"
@@ -122,7 +123,7 @@ func getSDKName(sdkName *string, placeholder string) error {
 			if sdkName != nil && *sdkName != "" {
 				v = *sdkName
 			}
-			return fmt.Sprintf("Your users will access your SDK using `%s.DoThing()`\n", v)
+			return "Your users will access your SDK using " + styles.Emphasized.Render(fmt.Sprintf("%s.DoThing()\n", v))
 		}
 
 		return charm_internal.Execute(
