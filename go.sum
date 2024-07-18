@@ -488,8 +488,8 @@ github.com/sourcegraph/jsonrpc2 v0.2.0 h1:KjN/dC4fP6aN9030MZCJs9WQbTOjWHhrtKVpzz
 github.com/sourcegraph/jsonrpc2 v0.2.0/go.mod h1:ZafdZgk/axhT1cvZAPOhw+95nz2I/Ra5qMlU4gTRwIo=
 github.com/speakeasy-api/easytemplate v0.11.0 h1:B0DtyTwE6NTOLa020UNyATi1ebFVL5DTGf+2IVNgAkY=
 github.com/speakeasy-api/easytemplate v0.11.0/go.mod h1:42jXuVIno2A24bQyVFK9K70kpG0tSufLEF4TiJ1kGvQ=
-github.com/speakeasy-api/huh v1.1.0 h1:SOiqfc2BKZAOi3crHxoo9B7TbeKaa8OmMtDT8KRe6qs=
-github.com/speakeasy-api/huh v1.1.0/go.mod h1:iBavR3Ieq/4upEcdq+VXQyeShcoC9cOhsQbhc/cMuLU=
+github.com/speakeasy-api/huh v1.1.1 h1:tSBHezk8MRHBwtWqjMB/fepU6HcFWu9esyZxAKw/XAY=
+github.com/speakeasy-api/huh v1.1.1/go.mod h1:iBavR3Ieq/4upEcdq+VXQyeShcoC9cOhsQbhc/cMuLU=
 github.com/speakeasy-api/jsonpath v0.1.1 h1:79gtq+zHYPe9dR1urEwl/PPsvP9nMRTGG1xHR62pM24=
 github.com/speakeasy-api/jsonpath v0.1.1/go.mod h1:Py01TnxRUMhC0/FT954KBiaDY2/kaZv3QMc8JxQaVys=
 github.com/speakeasy-api/openapi-generation/v2 v2.376.0 h1:U1ztoeBmjHOxr7jEqRDOGOj/c0obAQNZOLKIzpXkEVk=
