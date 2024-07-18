@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strings"
 	"time"
 
 	changesModel "github.com/pb33f/openapi-changes/model"
@@ -43,18 +42,15 @@ func (c Changes) WriteHTMLReport(out string) error {
 }
 
 func (c Changes) GetSummary() (*Summary, error) {
-	text, table, hasBreakingChanges, err := changes.GetSummaryDetails(c)
+	text, table, _, err := changes.GetSummaryDetails(c)
 	if err != nil {
 		return nil, err
 	}
 
 	bump := None
 
-	if hasBreakingChanges {
-		bump = Major
-	} else if strings.Contains(text, "Additions: ") {
-		bump = Minor
-	} else if len(table) > 0 {
+	// NB: for now, we just bump patch when we see any changes to the document
+	if len(table) > 0 {
 		bump = Patch
 	}
 
