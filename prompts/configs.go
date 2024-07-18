@@ -302,13 +302,13 @@ func getValuesForField(
 		switch language {
 		case "go":
 			defaultValue = "github.com/my-company/" + strcase.ToKebab(sdkClassName)
-			description = description + "\nTo install your SDK, users will execute: " + styles.Emphasized.Render("go get %s")
+			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("go get %s")
 		case "typescript":
 			defaultValue = strcase.ToKebab(sdkClassName)
-			description = description + "\nTo install your SDK, users will execute: " + styles.Emphasized.Render("npm install %s")
+			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("npm install %s")
 		case "python":
 			defaultValue = strcase.ToKebab(sdkClassName)
-			description = description + "\nTo install your SDK, users will execute: " + styles.Emphasized.Render("pip install %s")
+			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("pip install %s")
 		case "terraform":
 			defaultValue = strcase.ToKebab(sdkClassName)
 		}
