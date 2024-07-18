@@ -357,26 +357,29 @@ func saveLanguageConfigValues(
 		}
 		if field != nil {
 			var val any
-
+			formValue := form.GetString(key)
+			formValue = strings.TrimSpace(formValue)
+			formValue = strings.Trim(formValue, "\n")
+			formValue = strings.Trim(formValue, "\t")
 			if field.DefaultValue != nil {
 				// Use the default value if the actual value is unset
-				if form.GetString(key) == "" {
+				if formValue == "" {
 					val = formField.defaultValue
 				} else {
 					// We need to map values back to their native type since the form only can produce a string
 					switch (*field.DefaultValue).(type) {
 					case int:
-						val, _ = strconv.Atoi(form.GetString(key))
+						val, _ = strconv.Atoi(formValue)
 					case int64:
-						val, _ = strconv.Atoi(form.GetString(key))
+						val, _ = strconv.Atoi(formValue)
 					case bool:
-						val, _ = strconv.ParseBool(form.GetString(key))
+						val, _ = strconv.ParseBool(formValue)
 					case string:
-						val = form.GetString(key)
+						val = formValue
 					}
 				}
 			} else {
-				val = form.GetString(key)
+				val = formValue
 			}
 
 			configuration.Languages[language].Cfg[key] = val
