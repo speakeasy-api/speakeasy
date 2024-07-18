@@ -3,6 +3,7 @@ package prompts
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"net/http"
 	"net/url"
 	"strings"
@@ -117,10 +118,18 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 
 func getSDKName(sdkName *string, placeholder string) error {
 	if sdkName == nil || *sdkName == "" {
+		descriptionFn := func() string {
+			v := placeholder
+			if sdkName != nil && *sdkName != "" {
+				v = *sdkName
+			}
+			return "Your users will access your SDK using " + styles.Emphasized.Render(fmt.Sprintf("%s.DoThing()\n", v))
+		}
+
 		return charm_internal.Execute(
 			charm_internal.NewInput().
 				Title("Give your SDK a name").
-				Description("Your users will access your SDK using `myCompany.DoThing()`\n").
+				DescriptionFunc(descriptionFn, sdkName).
 				Placeholder(placeholder).
 				Suggestions([]string{placeholder}).
 				Value(sdkName),

@@ -3,6 +3,7 @@ package prompts
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"regexp"
 	"slices"
 	"strconv"
@@ -223,7 +224,7 @@ func languageSpecificForms(
 			continue
 		}
 
-		valid, defaultValue, validateRegex, validateMessage, description := getValuesForField(field, langConfig, language, sdkClassName, isQuickstart)
+		valid, defaultValue, validateRegex, validateMessage, descriptionFn := getValuesForField(field, langConfig, language, sdkClassName, isQuickstart)
 
 		if valid {
 			if lang, ok := quickstartScopedKeys[language]; (ok && slices.Contains(lang, field.Name)) || (!isQuickstart && slices.Contains(additionalRelevantConfigs, field.Name)) {
@@ -231,7 +232,7 @@ func languageSpecificForms(
 					key:          field.Name,
 					defaultValue: defaultValue,
 				})
-				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, &description))
+				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
 			}
 		}
 	}
@@ -239,8 +240,19 @@ func languageSpecificForms(
 	return groups, fields, nil
 }
 
-func getValuesForField(field config.SDKGenConfigField, langConfig config.LanguageConfig, language string, sdkClassName string, isQuickstart bool) (bool, string, string, string, string) {
-	defaultValue := ""
+func getValuesForField(
+	field config.SDKGenConfigField,
+	langConfig config.LanguageConfig,
+	language string,
+	sdkClassName string,
+	isQuickstart bool,
+) (
+	valid bool,
+	defaultValue string,
+	validationRegex string,
+	validationMessage string,
+	descriptionFn func(v string) string,
+) {
 	if field.Name == "maxMethodParams" {
 	}
 	if field.DefaultValue != nil {
@@ -255,7 +267,7 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 		case bool:
 			defaultValue = strconv.FormatBool(val)
 		default:
-			return false, "", "", "", ""
+			return false, "", "", "", nil
 		}
 	}
 
@@ -273,13 +285,11 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 		}
 	}
 
-	validationRegex := ""
 	if field.ValidationRegex != nil {
 		validationRegex = *field.ValidationRegex
 		validationRegex = strings.Replace(validationRegex, `\u002f`, `/`, -1)
 	}
 
-	validationMessage := ""
 	if field.ValidationRegex != nil {
 		validationMessage = *field.ValidationMessage
 	}
@@ -292,25 +302,34 @@ func getValuesForField(field config.SDKGenConfigField, langConfig config.Languag
 		switch language {
 		case "go":
 			defaultValue = "github.com/my-company/" + strcase.ToKebab(sdkClassName)
-			description = description + "\nTo install your SDK users will execute:\ngo get " + defaultValue
+			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("go get %s")
 		case "typescript":
 			defaultValue = strcase.ToKebab(sdkClassName)
-			description = description + "\nTo install your SDK users will execute:\nnpm install " + defaultValue
+			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("npm install %s")
 		case "python":
 			defaultValue = strcase.ToKebab(sdkClassName)
-			description = description + "\nTo install your SDK users will execute:\npip install " + defaultValue
+			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("pip install %s")
 		case "terraform":
 			defaultValue = strcase.ToKebab(sdkClassName)
 		}
 	}
 
-	return true, defaultValue, validationRegex, validationMessage, description
+	descriptionFn = func(v string) string {
+		if strings.Contains(description, "%s") {
+			return fmt.Sprintf(description, v)
+		} else {
+			return description
+		}
+	}
+
+	valid = true
+	return
 }
 
-func addPromptForField(key, defaultValue, validateRegex, validateMessage string, description *string) *huh.Group {
+func addPromptForField(key, defaultValue, validateRegex, validateMessage string, descriptionFn func(v string) string) *huh.Group {
 	input := charm.NewInlineInput().
 		Key(key).
-		Title(fmt.Sprintf("Provide a value for your %s config", key)).
+		Title(fmt.Sprintf("Choose a %s", key)).
 		Validate(func(s string) error {
 			if validateRegex != "" {
 				s = strings.TrimSpace(s)
@@ -327,12 +346,14 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 			return nil
 		})
 
-	if description != nil {
-		input = input.Description(*description + "\n").Inline(false).Prompt("")
-	}
+	value := defaultValue
+	input = input.Value(&value)
 
-	if defaultValue != "" {
-		input = input.Value(&defaultValue)
+	if descriptionFn != nil {
+		fn := func() string {
+			return descriptionFn(value)
+		}
+		input = input.DescriptionFunc(fn, &value).Inline(false).Prompt("")
 	}
 
 	return huh.NewGroup(input)
