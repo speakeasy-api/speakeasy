@@ -18,10 +18,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.377.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.378.0
 	github.com/speakeasy-api/openapi-overlay v0.8.0
 	github.com/speakeasy-api/sdk-gen-config v1.16.2
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.9.0
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.10.0
 	github.com/speakeasy-api/speakeasy-core v0.12.0
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.1
@@ -39,7 +39,7 @@ require (
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/speakeasy-api/versioning-reports v0.3.1
+	github.com/speakeasy-api/versioning-reports v0.6.0
 	github.com/stoewer/go-strcase v1.3.0
 )
 
@@ -64,7 +64,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/charmbracelet/huh v0.5.1 // indirect
 	github.com/charmbracelet/x/ansi v0.1.2 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240617190524-788ec55faed1 // indirect
@@ -86,7 +86,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/ericlagergren/decimal v0.0.0-20240305081647-93d586550569 // indirect
+	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/evanw/esbuild v0.19.11 // indirect
