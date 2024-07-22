@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-	"github.com/speakeasy-api/speakeasy/internal/yamlutil"
 	"os"
 	"path/filepath"
 
@@ -54,7 +54,7 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 		}
 
 		for _, snippet := range snippets {
-			target := fmt.Sprintf(`$["paths"]["%s"]["%s"]`, snippet.Path, snippet.Method)
+			target := overlay.NewTargetSelector(snippet.Path, snippet.Method)
 
 			targetToCodeSamples[target] = append(targetToCodeSamples[target], snippet)
 		}
