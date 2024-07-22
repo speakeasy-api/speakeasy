@@ -74,11 +74,6 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 	}
 	defer outFile.Close()
 
-	//finalBytesYAML, err := newDoc.Model.Render()
-	//if err != nil {
-	//	return err
-	//}
-
 	if asOverlay {
 		if err := overlay.Format(outFile); err != nil {
 			return err
@@ -97,21 +92,6 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 		if _, err = outFile.Write(finalBytes); err != nil {
 			return err
 		}
-		//// Output yaml if output path is yaml, json if output path is json
-		//if utils.HasYAMLExt(outPath) {
-		//	if _, err = outFile.Write(finalBytesYAML); err != nil {
-		//		return err
-		//	}
-		//} else {
-		//	finalBytesJSON, err := newDoc.Model.RenderJSON("  ")
-		//	if err != nil {
-		//		return err
-		//	}
-		//
-		//	if _, err = outFile.Write(finalBytesJSON); err != nil {
-		//		return err
-		//	}
-		//}
 	}
 
 	return nil
