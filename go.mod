@@ -18,7 +18,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.378.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.378.1
 	github.com/speakeasy-api/openapi-overlay v0.8.0
 	github.com/speakeasy-api/sdk-gen-config v1.16.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.10.0
