@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
+	"github.com/speakeasy-api/speakeasy/internal/yamlutil"
 	"os"
 	"path/filepath"
 
@@ -63,7 +64,7 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	for target, snippets := range targetToCodeSamples {
 		actions = append(actions, overlay.Action{
 			Target: target,
-			Update: rootCodeSampleNode(snippets, style, isJSON),
+			Update: *rootCodeSampleNode(snippets, style, isJSON),
 		})
 	}
 
@@ -113,84 +114,30 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	return overlayString, nil
 }
 
-func rootCodeSampleNode(snippets []usagegen.UsageSnippet, style CodeSamplesStyle, isJSON bool) yaml.Node {
+func rootCodeSampleNode(snippets []usagegen.UsageSnippet, style CodeSamplesStyle, isJSON bool) *yaml.Node {
+	builder := yamlutil.NewBuilder(isJSON)
+
 	var content []*yaml.Node
 	for _, snippet := range snippets {
-		content = append(content, singleCodeSampleNode(snippet, style, isJSON))
+		content = append(content, singleCodeSampleNode(snippet, style, builder))
 	}
 
 	switch style {
 	case Default:
-		return yaml.Node{
-			Kind: yaml.MappingNode,
-			Content: []*yaml.Node{
-				{
-					Kind:  yaml.ScalarNode,
-					Value: "x-codeSamples",
-					Style: styleForNode(isJSON),
-				},
-				{
-					Kind:    yaml.SequenceNode,
-					Content: content,
-				},
-			},
-		}
+		return builder.NewListNode("x-codeSamples", content)
 	case ReadMe:
-		return yaml.Node{
-			Kind: yaml.MappingNode,
-			Content: []*yaml.Node{
-				{
-					Kind:  yaml.ScalarNode,
-					Value: "x-readme",
-					Style: styleForNode(isJSON),
-				},
-				{
-					Kind: yaml.MappingNode,
-					Content: []*yaml.Node{
-						{
-							Kind:  yaml.ScalarNode,
-							Value: "code-samples",
-							Style: styleForNode(isJSON),
-						},
-						{
-							Kind:    yaml.SequenceNode,
-							Content: content,
-						},
-					},
-				},
-			},
-		}
+		return builder.NewNode("x-readme", builder.NewListNode("code-samples", content))
 	}
 
 	panic("unrecognized style")
 }
 
-func singleCodeSampleNode(snippet usagegen.UsageSnippet, style CodeSamplesStyle, isJSON bool) *yaml.Node {
+func singleCodeSampleNode(snippet usagegen.UsageSnippet, style CodeSamplesStyle, builder *yamlutil.Builder) *yaml.Node {
 	switch style {
 	case Default:
-		return &yaml.Node{
-			Kind: yaml.MappingNode,
-			Content: []*yaml.Node{
-				{Kind: yaml.ScalarNode, Value: "lang", Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: snippet.Language, Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: "label", Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: snippet.OperationId, Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: "source", Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: snippet.Snippet},
-			},
-		}
+		return builder.NewMultinode("lang", snippet.Language, "label", snippet.OperationId, "source", snippet.Snippet)
 	case ReadMe:
-		return &yaml.Node{
-			Kind: yaml.MappingNode,
-			Content: []*yaml.Node{
-				{Kind: yaml.ScalarNode, Value: "name", Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: snippet.OperationId, Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: "language", Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: snippet.Language, Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: "code", Style: styleForNode(isJSON)},
-				{Kind: yaml.ScalarNode, Value: snippet.Snippet},
-			},
-		}
+		return builder.NewMultinode("name", snippet.OperationId, "language", snippet.Language, "code", snippet.Snippet)
 	}
 
 	panic("unrecognized style")
