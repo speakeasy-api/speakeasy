@@ -10,9 +10,9 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	overlayUtil "github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
 
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
@@ -33,7 +33,7 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 		return err
 	}
 
-	schemaBytes, _, _, err := schema.LoadDocument(ctx, schemaLocation)
+	schemaBytes, _, model, err := schema.LoadDocument(ctx, schemaLocation)
 	if err != nil {
 		return err
 	}
@@ -60,13 +60,8 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 	stopSpinner()
 
 	/* Update operation IDS and tags/groups */
-	_, newDoc, err := openapi.Load(schemaBytes, schemaLocation) // Need to keep the old document for overlay comparison
-	if err != nil {
-		return err
-	}
-
 	suggestion := suggestions.MakeOperationIDs(res.SuggestedOperationIDs.OperationIds)
-	updates := suggestion.Apply(newDoc.Model)
+	updates, overlay := suggestion.AsOverlay(model.Model)
 	printSuggestions(ctx, updates)
 
 	/*
@@ -79,30 +74,23 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 	}
 	defer outFile.Close()
 
-	finalBytesYAML, err := newDoc.Model.Render()
-	if err != nil {
-		return err
-	}
-
 	if asOverlay {
-		if err = openapi.WriteOverlay(schemaBytes, finalBytesYAML, outFile); err != nil {
+		if err := overlay.Format(outFile); err != nil {
 			return err
 		}
 	} else {
-		// Output yaml if output path is yaml, json if output path is json
-		if utils.HasYAMLExt(outPath) {
-			if _, err = outFile.Write(finalBytesYAML); err != nil {
-				return err
-			}
-		} else {
-			finalBytesJSON, err := newDoc.Model.RenderJSON("  ")
-			if err != nil {
-				return err
-			}
+		root := model.Index.GetRootNode()
+		if err := overlay.ApplyTo(root); err != nil {
+			return err
+		}
 
-			if _, err = outFile.Write(finalBytesJSON); err != nil {
-				return err
-			}
+		finalBytes, err := overlayUtil.Render(root, schemaLocation, utils.HasYAMLExt(outPath))
+		if err != nil {
+			return err
+		}
+
+		if _, err = outFile.Write(finalBytes); err != nil {
+			return err
 		}
 	}
 
