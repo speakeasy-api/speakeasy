@@ -301,7 +301,8 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 	}
 
 	if w.FromQuickstart {
-		additionalLines = append(additionalLines, "Execute `speakeasy run` to regenerate your SDK!")
+		additionalLines = append(additionalLines, "Regenerate your target with `speakeasy run`!")
+		additionalLines = append(additionalLines, "Review all targets with `speakeasy status`.")
 	}
 
 	if t.CodeSamples != nil {
