@@ -61,61 +61,190 @@ var (
 )
 
 type statusModel struct {
-	accountType  *string
 	organization statusOrganizationModel
 	workspace    statusWorkspaceModel
 }
 
 func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy) (statusModel, error) {
-	var model statusModel
-
-	if accountType := core.GetAccountTypeFromContext(ctx); accountType != nil {
-		v := string(*accountType)
-		model.accountType = &v
-	}
+	var result statusModel
 
 	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
 
 	if err != nil {
-		return model, err
+		return result, err
 	}
 
-	model.workspace.id = workspaceID
-
-	model.organization.slug = core.GetOrgSlugFromContext(ctx)
-	model.workspace.slug = core.GetWorkspaceSlugFromContext(ctx)
-
-	req := operations.GetWorkspaceTargetsRequest{
-		WorkspaceID: &model.workspace.id,
+	wsReq := operations.GetWorkspaceRequest{
+		WorkspaceID: &workspaceID,
 	}
 
-	res, err := client.Events.GetWorkspaceTargets(ctx, req)
+	wsRes, err := client.Workspaces.GetWorkspace(ctx, wsReq)
 
 	if err != nil {
-		return model, fmt.Errorf("error getting Speakeasy workspace targets: %w", err)
+		return result, fmt.Errorf("error getting Speakeasy workspace: %w", err)
 	}
 
-	if res.StatusCode != 200 {
-		return model, fmt.Errorf("unexpected status code getting Speakeasy workspace targets: %d", res.StatusCode)
+	if wsRes.StatusCode != 200 {
+		return result, fmt.Errorf("unexpected status code getting Speakeasy workspace: %d", wsRes.StatusCode)
 	}
 
-	model.workspace.targets, err = newStatusWorkspaceTargetsModel(ctx, client, model.organization, model.workspace, res.TargetSDKList)
+	if wsRes.Workspace == nil {
+		return result, fmt.Errorf("unexpected missing workspace response")
+	}
 
-	return model, err
+	orgReq := operations.GetOrganizationRequest{
+		OrganizationID: wsRes.Workspace.OrganizationID,
+	}
+
+	orgRes, err := client.Organizations.GetOrganization(ctx, orgReq)
+
+	if err != nil {
+		return result, fmt.Errorf("error getting Speakeasy organization: %w", err)
+	}
+
+	if orgRes.StatusCode != 200 {
+		return result, fmt.Errorf("unexpected status code getting Speakeasy organization: %d", orgRes.StatusCode)
+	}
+
+	if orgRes.Organization == nil {
+		return result, fmt.Errorf("unexpected missing organization response")
+	}
+
+	organization, err := newStatusOrganizationModel(ctx, client, *orgRes.Organization)
+
+	if err != nil {
+		return result, err
+	}
+
+	result.organization = organization
+
+	workspace, err := newStatusWorkspaceModel(ctx, client, result.organization, *wsRes.Workspace)
+
+	if err != nil {
+		return result, err
+	}
+
+	result.workspace = workspace
+
+	return result, nil
 }
 
 func (m statusModel) Print(ctx context.Context) {
+	logger := log.From(ctx)
+
+	var overviewLines []string
+
+	overviewLines = append(overviewLines, fmt.Sprintf("Workspace: %s/%s", m.organization.Name(), m.workspace.Name()))
+
+	var accountTypeLine strings.Builder
+
+	accountTypeLine.WriteString("Account Type: ")
+	accountTypeLine.WriteString(m.organization.accountType)
+
+	if m.organization.freeTrialExpiry != nil {
+		expiryDiff := time.Until(*m.organization.freeTrialExpiry)
+		expiryHours := int64(expiryDiff.Hours()) % 24
+		expiryDays := int64(expiryDiff.Hours() / 24)
+
+		accountTypeLine.WriteString(" (Free Trial Expire")
+
+		if expiryHours > 0 {
+			accountTypeLine.WriteString("s: ")
+			accountTypeLine.WriteString(strconv.Itoa(int(expiryDays)))
+			accountTypeLine.WriteString(" days ")
+			accountTypeLine.WriteString(strconv.Itoa(int(expiryHours)))
+			accountTypeLine.WriteString(" hours")
+		} else {
+			accountTypeLine.WriteString("d")
+		}
+		accountTypeLine.WriteString(")")
+	}
+
+	overviewLines = append(overviewLines, accountTypeLine.String())
+
+	logger.Println(renderOverviewBox(overviewLines...))
+
 	m.workspace.targets.Print(ctx)
 }
 
 type statusOrganizationModel struct {
-	slug string
+	accountType     string
+	freeTrialExpiry *time.Time
+	name            string
+	slug            string
+}
+
+func newStatusOrganizationModel(ctx context.Context, _ *speakeasyclientsdkgo.Speakeasy, organization shared.Organization) (statusOrganizationModel, error) {
+	result := statusOrganizationModel{
+		accountType:     string(organization.AccountType),
+		freeTrialExpiry: organization.FreeTrialExpiry,
+		name:            organization.Name,
+	}
+
+	if organization.Slug != nil {
+		result.slug = *organization.Slug
+	} else {
+		result.slug = core.GetOrgSlugFromContext(ctx)
+	}
+
+	return result, nil
+}
+
+func (m statusOrganizationModel) Name() string {
+	if m.name != "" {
+		return m.name
+	}
+
+	return m.slug
 }
 
 type statusWorkspaceModel struct {
-	id      string
-	slug    string
-	targets statusWorkspaceTargetsModel
+	name           string
+	id             string
+	slug           string
+	organizationID string
+	targets        statusWorkspaceTargetsModel
+}
+
+func newStatusWorkspaceModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, org statusOrganizationModel, workspace shared.Workspace) (statusWorkspaceModel, error) {
+	result := statusWorkspaceModel{
+		id:             workspace.ID,
+		name:           workspace.Name,
+		organizationID: workspace.OrganizationID,
+		slug:           workspace.Slug,
+	}
+
+	wsTargetsreq := operations.GetWorkspaceTargetsRequest{
+		WorkspaceID: &workspace.ID,
+	}
+
+	wsTargetsRes, err := client.Events.GetWorkspaceTargets(ctx, wsTargetsreq)
+
+	if err != nil {
+		return result, fmt.Errorf("error getting Speakeasy workspace targets: %w", err)
+	}
+
+	if wsTargetsRes.StatusCode != 200 {
+		return result, fmt.Errorf("unexpected status code getting Speakeasy workspace targets: %d", wsTargetsRes.StatusCode)
+	}
+
+	targets, err := newStatusWorkspaceTargetsModel(ctx, client, org, result, wsTargetsRes.TargetSDKList)
+
+	if err != nil {
+		return result, err
+	}
+
+	result.targets = targets
+
+	return result, nil
+}
+
+func (m statusWorkspaceModel) Name() string {
+	if m.name != "" {
+		return m.name
+	}
+
+	return m.slug
 }
 
 type statusWorkspaceTargetsModel struct {
@@ -707,6 +836,25 @@ func renderConfiguredTargetBox(width int, heading string, additionalLines ...str
 
 func renderUnconfiguredTargetBox(width int, heading string, additionalLines ...string) string {
 	return renderTargetBox(width, styles.Colors.Blue, heading, additionalLines...)
+}
+
+func renderOverviewBox(lines ...string) string {
+	s := lipgloss.NewStyle().Foreground(styles.Colors.SpeakeasyPrimary).Bold(true).Render("// SPEAKEASY")
+
+	for _, line := range lines {
+		s += "\n" + lipgloss.NewStyle().Foreground(styles.Colors.WhiteBlackAdaptive).Bold(true).Render(line)
+	}
+
+	// Leave room for padding (if the terminal is too small to fit, we need to wrap)
+	width := min(lipgloss.Width(s)+2, styles.TerminalWidth()-2)
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(styles.Colors.WhiteBlackAdaptive).
+		Padding(0, 1).
+		AlignHorizontal(lipgloss.Left).
+		Width(width).
+		Render(s)
 }
 
 func renderTargetBox(width int, color lipgloss.AdaptiveColor, heading string, additionalLines ...string) string {
