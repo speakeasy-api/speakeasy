@@ -573,71 +573,71 @@ func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
 	if lastPublishEvent != nil && !lastPublishEvent.success {
 		var message strings.Builder
 
-		message.WriteString("✖ Last Publish Failed")
+		message.WriteString(renderAlertErrorText("✖ Last Publish Failed"))
 
 		if lastPublishEvent.ghActionRunLink != nil {
-			message.WriteString(": ")
-			message.WriteString(links.Shorten(ctx, *lastPublishEvent.ghActionRunLink))
+			message.WriteString(renderAlertErrorText(": "))
+			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *lastPublishEvent.ghActionRunLink)))
 		}
 
-		result = append(result, styles.None.Foreground(styles.Colors.Red).Italic(true).Render(message.String()))
+		result = append(result, message.String())
 	}
 
 	if lastGenerateEvent != nil && !lastGenerateEvent.success {
 		var message strings.Builder
 
-		message.WriteString("✖ Last Generate Failed")
+		message.WriteString(renderAlertErrorText("✖ Last Generate Failed"))
 
 		if lastGenerateEvent.ghActionRunLink != nil {
-			message.WriteString(": ")
-			message.WriteString(links.Shorten(ctx, *lastGenerateEvent.ghActionRunLink))
+			message.WriteString(renderAlertErrorText(": "))
+			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *lastGenerateEvent.ghActionRunLink)))
 		}
 
-		result = append(result, styles.None.Foreground(styles.Colors.Red).Italic(true).Render(message.String()))
+		result = append(result, message.String())
 	}
 
 	if m.upgradeDocumentationURL != nil {
-		result = append(result, styles.None.Foreground(styles.Colors.Yellow).Italic(true).Render("⚠ Target Upgrade Available: "+*m.upgradeDocumentationURL))
+		result = append(result, renderAlertWarningText("⚠ Target Upgrade Available: ")+renderAlertWarningURL(*m.upgradeDocumentationURL))
 	}
 
 	if lastPublishSuccessEvent != nil && lastPublishSuccessEvent.publishPackageURL != nil {
-		result = append(result, styles.Dimmed.Render("Publish URL: "+*lastPublishSuccessEvent.publishPackageURL))
+		result = append(result, renderInfoText("Publish URL: ")+renderInfoURL(*lastPublishSuccessEvent.publishPackageURL))
 	}
 
 	if m.RepositoryURL() != "" {
-		result = append(result, styles.Dimmed.Render("Repository URL: "+m.RepositoryURL()))
+		result = append(result, renderInfoText("Repository URL: "+renderInfoURL(m.RepositoryURL())))
 	}
 
-	result = append(result, styles.Dimmed.Render("Speakeasy URL: "+m.speakeasyURL))
+	result = append(result, renderInfoText("Speakeasy URL: "+renderInfoURL(m.speakeasyURL)))
 
 	if lastPublishEvent != nil {
 		if !lastPublishEvent.success {
-			result = append(result, styles.Dimmed.Render("Last Publish Attempt: "+lastPublishEvent.PublishInfo()))
+			result = append(result, renderInfoText("Last Publish Attempt: "+lastPublishEvent.PublishInfo()))
 
 			if lastPublishSuccessEvent != nil {
-				result = append(result, styles.Dimmed.Render("Last Publish Success: "+lastPublishSuccessEvent.GenerateInfo()))
+				result = append(result, renderInfoText("Last Publish Success: "+lastPublishSuccessEvent.GenerateInfo()))
 			} else {
-				result = append(result, styles.Dimmed.Render("Last Publish Success: Unknown"))
+				result = append(result, renderInfoText("Last Publish Success: Unknown"))
 			}
 		} else {
-			result = append(result, styles.Dimmed.Render("Last Publish: "+lastPublishEvent.PublishInfo()))
+			result = append(result, renderInfoText("Last Publish: "+lastPublishEvent.PublishInfo()))
 		}
 	}
 
 	if lastGenerateEvent != nil {
 		if !lastGenerateEvent.success {
-			result = append(result, styles.Dimmed.Render("Last Generate Attempt: "+lastGenerateEvent.GenerateInfo()))
+			result = append(result, renderInfoText("Last Generate Attempt: "+lastGenerateEvent.GenerateInfo()))
 
 			if lastGenerateSuccessEvent != nil {
-				result = append(result, styles.Dimmed.Render("Last Generate Success: "+lastGenerateSuccessEvent.GenerateInfo()))
+				result = append(result, renderInfoText("Last Generate Success: "+lastGenerateSuccessEvent.GenerateInfo()))
 			} else {
-				result = append(result, styles.Dimmed.Render("Last Generate Success: Unknown"))
+				result = append(result, renderInfoText("Last Generate Success: Unknown"))
 			}
 		} else {
-			result = append(result, styles.Dimmed.Render("Last Generate: "+lastGenerateEvent.GenerateInfo()))
+			result = append(result, renderInfoText("Last Generate: "+lastGenerateEvent.GenerateInfo()))
 		}
 	} else {
-		result = append(result, styles.Dimmed.Render("Last Generate: "+m.GenerateInfo()))
+		result = append(result, renderInfoText("Last Generate: "+m.GenerateInfo()))
 	}
 
 	return result
@@ -667,6 +667,30 @@ func (m statusWorkspaceTargetModel) TargetName() string {
 	}
 
 	return result.String()
+}
+
+func renderAlertErrorText(s string) string {
+	return styles.None.Foreground(styles.Colors.Red).Italic(true).Render(s)
+}
+
+func renderAlertErrorURL(s string) string {
+	return styles.None.Foreground(styles.Colors.Red).Italic(true).Underline(true).Render(s)
+}
+
+func renderAlertWarningText(s string) string {
+	return styles.None.Foreground(styles.Colors.Yellow).Italic(true).Render(s)
+}
+
+func renderAlertWarningURL(s string) string {
+	return styles.None.Foreground(styles.Colors.Yellow).Italic(true).Underline(true).Render(s)
+}
+
+func renderInfoText(s string) string {
+	return styles.Dimmed.Render(s)
+}
+
+func renderInfoURL(s string) string {
+	return styles.None.Foreground(styles.Colors.BrightGrey).Underline(true).Render(s)
 }
 
 func renderPublishedSuccessTargetBox(width int, heading string, additionalLines ...string) string {
