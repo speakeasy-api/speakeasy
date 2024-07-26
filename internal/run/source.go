@@ -587,14 +587,15 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 	}
 
 	for _, overlayFile := range overlayFiles {
-		applyPath := getTempApplyPath(overlayFile)
+		applyPath := getTempApplyPath(outFile)
 
 		tempOutFile, err := os.Create(applyPath)
 		if err != nil {
 			return err
 		}
 
-		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(applyPath), tempOutFile, false, false); err != nil {
+		// YamlOut param needs to be based on the eventual output file
+		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil {
 			return err
 		}
 
@@ -640,6 +641,6 @@ var randStringBytes = func(n int) string {
 	return string(b)
 }
 
-func getTempApplyPath(overlayFile string) string {
-	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(overlayFile)))
+func getTempApplyPath(path string) string {
+	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(path)))
 }
