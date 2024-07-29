@@ -46,11 +46,13 @@ You can run the Speakeasy CLI locally or in your CI/CD pipeline to validate your
 
 Here are a few key functions of the CLI:
 
-* `generate` - Generate idiomatic client SDKs from your API specs.
+* `quickstart` - Create an idiomatic client SDK or target, such as a Terraform Provider, from your API specs.
+* `run` - Regenerate existing SDK/target from your API specs.
 * `validate` - Validate the correctness of your API specs. The CLI has a built-in command to validate your spec for SDK readiness and post helpful error messages.
 * `suggest` - Use an LLM to autocorrect your spec validation failures. 
 * `merge` - Work with your existing documentation workflows by merging your API specs into a single spec. 
 * `auth` - Authenticate with the platform and manage API keys. 
+* `status` - Review all SDK/targets in current workspace.
 
 For a complete list of commands check out our [reference](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) or type `speakeasy` and our interactive mode will take you through the available functions. 
 
@@ -369,6 +371,7 @@ speakeasy [flags]
 * [speakeasy overlay](docs/overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy quickstart](docs/quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
 * [speakeasy run](docs/run.md)	 - generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file
+* [speakeasy status](docs/status.md)	 - Review status of current workspace
 * [speakeasy suggest](docs/suggest/README.md)	 - Automatically improve your OpenAPI document with an LLM
 * [speakeasy tag](docs/tag/README.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
 * [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version

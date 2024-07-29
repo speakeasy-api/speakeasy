@@ -49,6 +49,11 @@ func loginExec(cmd *cobra.Command, args []string) error {
 	log.From(cmd.Context()).
 		WithInteractiveOnly().
 		Successf("Authenticated with workspace successfully - %s/workspaces/%s\n", core.GetServerURL(), workspaceID)
+
+	log.From(cmd.Context()).
+		WithInteractiveOnly().
+		Infof("Review the workspace with `speakeasy status` or create a new target with `speakeasy quickstart`.")
+
 	return nil
 }
 

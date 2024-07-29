@@ -54,6 +54,7 @@ func Init(version, artifactArch string) {
 	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
 
 	// TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
+	addCommand(rootCmd, statusCmd)
 	addCommand(rootCmd, quickstartCmd)
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
