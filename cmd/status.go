@@ -257,6 +257,11 @@ func newStatusWorkspaceTargetsModel(ctx context.Context, client *speakeasyclient
 	var result statusWorkspaceTargetsModel
 
 	for _, target := range targets {
+		// Archived
+		if target.LastEventInteractionType == shared.InteractionTypeTombstone {
+			continue
+		}
+
 		targetModel, err := newStatusWorkspaceTargetModel(ctx, client, org, workspace, target)
 
 		if err != nil {
@@ -272,11 +277,6 @@ func newStatusWorkspaceTargetsModel(ctx context.Context, client *speakeasyclient
 		if target.GhActionOrganization != nil && target.GhActionRepository != nil {
 			result.configured = append(result.configured, targetModel)
 
-			continue
-		}
-
-		if target.GenerateConfigPostVersion == nil {
-			// Archived
 			continue
 		}
 
