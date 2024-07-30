@@ -187,3 +187,12 @@ var yamlExtensions = []string{".yaml", ".yml"}
 func HasYAMLExt(path string) bool {
 	return slices.Contains(yamlExtensions, filepath.Ext(path))
 }
+
+func ReadFileToString(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}

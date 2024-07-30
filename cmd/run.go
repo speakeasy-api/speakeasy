@@ -33,6 +33,7 @@ type RunFlags struct {
 	Pinned           bool              `json:"pinned"`
 	RegistryTags     []string          `json:"registry-tags"`
 	SetVersion       string            `json:"set-version"`
+	LaunchStudio     bool              `json:"launch-studio"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -119,6 +120,10 @@ A full workflow is capable of running the following steps:
 		flag.StringFlag{
 			Name:        "set-version",
 			Description: "the manual version to apply to the generated SDK",
+		},
+		flag.BooleanFlag{
+			Name:        "launch-studio",
+			Description: "launch the web studio for iterating on the generated SDK",
 		},
 	},
 }
@@ -295,6 +300,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	if flags.LaunchStudio {
+		return run.LaunchStudio(ctx, workflow)
 	}
 
 	switch flags.Output {
