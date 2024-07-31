@@ -91,7 +91,9 @@ func (self *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWri
 	return nil
 }
 
-// ====  Helpers ====
+// ========================================
+// Helper functions
+// ========================================
 
 func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {
 	// 1. Marshal to JSON
