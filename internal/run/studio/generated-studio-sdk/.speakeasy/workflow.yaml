@@ -1,0 +1,11 @@
+workflowVersion: 1.0.0
+sources:
+    SpeakeasyStudio-OAS:
+        inputs:
+            - location: ../oas_studio.yaml
+        registry:
+            location: registry.speakeasyapi.dev/mistral-dev/mistral-dev/speakeasy-studio-oas
+targets:
+    speakeasy-studio:
+        target: go
+        source: SpeakeasyStudio-OAS
