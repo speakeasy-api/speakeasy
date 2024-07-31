@@ -1,4 +1,4 @@
-package run
+package studio
 
 import (
 	"context"
@@ -16,10 +16,11 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
 )
 
-func LaunchStudio(ctx context.Context, workflow *Workflow) error {
+func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	secret := generateSecret()
 
 	if workflow == nil {

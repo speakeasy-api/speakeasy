@@ -6,6 +6,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio"
 	"github.com/spf13/cobra"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -303,7 +304,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	}
 
 	if flags.LaunchStudio {
-		return run.LaunchStudio(ctx, workflow)
+		return studio.LaunchStudio(ctx, workflow)
 	}
 
 	switch flags.Output {

@@ -1,4 +1,4 @@
-package run
+package studio
 
 import (
 	"context"
@@ -10,17 +10,18 @@ import (
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
 type StudioHandlers struct {
-	Workflow Workflow
+	Workflow run.Workflow
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
-	workflow, err := convertWorkflowToComponentsWorkflow(h.Workflow.workflow)
+	workflow, err := convertWorkflowToComponentsWorkflow(*h.Workflow.GetWorkflowFile())
 	if err != nil {
 		return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
 	}
@@ -42,6 +43,7 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	var err error
 
 	workflow := h.Workflow
+	workflowFile := workflow.GetWorkflowFile()
 
 	sourceID, err := findWorkflowSourceIDBasedOnTarget(workflow, workflow.Target)
 	if err != nil {
@@ -51,7 +53,7 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 		return errors.New("unable to find source")
 	}
 
-	outputDocument, runSourceResult, err := workflow.runSource(ctx, workflow.RootStep, sourceID, "", true)
+	outputDocument, runSourceResult, err := workflow.RunSource(ctx, workflow.RootStep, sourceID, "", true)
 
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error running source: %w", err))
@@ -62,7 +64,7 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error reading output document: %w", err))
 	}
 
-	source := workflow.workflow.Sources[sourceID]
+	source := workflowFile.Sources[sourceID]
 	overlayContents := ""
 	for _, overlay := range source.Overlays {
 		contents, _ := isStudioModificationsOverlay(overlay)
@@ -109,7 +111,7 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workfl
 	return c, nil
 }
 
-func findWorkflowSourceIDBasedOnTarget(workflow Workflow, targetID string) (string, error) {
+func findWorkflowSourceIDBasedOnTarget(workflow run.Workflow, targetID string) (string, error) {
 	if workflow.Source != "" {
 		return workflow.Source, nil
 	}
@@ -118,17 +120,22 @@ func findWorkflowSourceIDBasedOnTarget(workflow Workflow, targetID string) (stri
 		return "", errors.ErrBadRequest.Wrap(fmt.Errorf("no source or target provided"))
 	}
 
+	workflowFile := workflow.GetWorkflowFile()
+
 	if targetID == "all" {
 		// If we're running multiple targets that's fine as long as they all have the same source
-		for _, t := range workflow.workflow.Targets {
-			if t.Source == "" {
-				return "", errors.ErrBadRequest.Wrap(fmt.Errorf("all targets must have the same source"))
+		source := ""
+		for _, t := range workflowFile.Targets {
+			if source == "" {
+				source = t.Source
+			} else if source != t.Source {
+				return "", errors.ErrBadRequest.Wrap(fmt.Errorf("multiple targets with different sources"))
 			}
 		}
-		return workflow.workflow.Targets[targetID].Source, nil
+		return source, nil
 	}
 
-	t, ok := workflow.workflow.Targets[targetID]
+	t, ok := workflowFile.Targets[targetID]
 	if !ok {
 		return "", errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", targetID))
 	}
