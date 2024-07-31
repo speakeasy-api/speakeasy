@@ -660,7 +660,7 @@ func getTempApplyPath(path string) string {
 }
 
 func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
-	isLocalFile := overlay.Document != nil && !strings.HasPrefix(overlay.Document.Location, "https://") && !strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
+	isLocalFile := overlay.Document != nil && !strings.HasPrefix(overlay.Document.Location, "https://") && !strings.HasPrefix(overlay.Document.Location, "http://") && !strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
 	if !isLocalFile {
 		return "", nil
 	}
