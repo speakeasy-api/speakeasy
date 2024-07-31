@@ -42,15 +42,15 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 
 	workflow := h.Workflow
 
-	source, err := findWorkflowSourceBasedOnTarget(workflow, workflow.Target)
+	sourceID, err := findWorkflowSourceIDBasedOnTarget(workflow, workflow.Target)
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error finding source: %w", err))
 	}
-	if source == "" {
+	if sourceID == "" {
 		return errors.New("unable to find source")
 	}
 
-	outputDocument, runSourceResult, err := workflow.runSource(ctx, workflow.RootStep, source, "", true)
+	outputDocument, runSourceResult, err := workflow.runSource(ctx, workflow.RootStep, sourceID, "", true)
 
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error running source: %w", err))
@@ -62,7 +62,7 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	}
 
 	ret := components.SourceResponse{
-		SourceID: source,
+		SourceID: sourceID,
 		Input:    runSourceResult.InputSpec,
 		Overlay:  runSourceResult.StudioModificationsOverlayContents,
 		Output:   outputDocumentString,
@@ -98,7 +98,7 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workfl
 	return c, nil
 }
 
-func findWorkflowSourceBasedOnTarget(workflow Workflow, targetID string) (string, error) {
+func findWorkflowSourceIDBasedOnTarget(workflow Workflow, targetID string) (string, error) {
 	if workflow.Source != "" {
 		return workflow.Source, nil
 	}
