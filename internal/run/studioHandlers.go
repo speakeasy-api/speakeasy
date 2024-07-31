@@ -60,14 +60,14 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 
 	workflow := h.Workflow
 
+	// Determine the source to run
 	source := workflow.Source
-
 	if source == "" {
 		if workflow.Target == "" {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("no source or target provided"))
 		}
 		if workflow.Target == "all" {
-			// Ensure all targets have the same source
+			// If we're running multiple targets that's fine as long as they all have the same source
 			for _, t := range workflow.workflow.Targets {
 				fmt.Println(source, t.Source)
 				if source != "" && t.Source != source {
@@ -83,7 +83,6 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 			source = t.Source
 		}
 	}
-
 	if source == "" {
 		return errors.New("unable to find source")
 	}
