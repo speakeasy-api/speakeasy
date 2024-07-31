@@ -4,7 +4,7 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
 )
 

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/retry"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"net/http"
 	"net/url"
 	"strconv"

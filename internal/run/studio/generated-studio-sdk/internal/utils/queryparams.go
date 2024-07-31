@@ -14,7 +14,7 @@ import (
 
 	"github.com/ericlagergren/decimal"
 
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/types"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/types"
 )
 
 func PopulateQueryParams(_ context.Context, req *http.Request, queryParams interface{}, globals interface{}) error {

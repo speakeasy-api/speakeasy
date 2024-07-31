@@ -7,12 +7,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/internal/hooks"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/internal/utils"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/components"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/operations"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/sdkerrors"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/retry"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/internal/hooks"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/internal/utils"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/sdkerrors"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"io"
 	"net/http"
 	"net/url"
@@ -71,22 +71,22 @@ func (c *sdkConfiguration) GetServerDetails() (string, map[string]string) {
 	return ServerList[c.ServerIndex], c.ServerDefaults[c.ServerIndex]
 }
 
-type SpeakeasyStudio struct {
+type SpekaeasyStudio struct {
 	sdkConfiguration sdkConfiguration
 }
 
-type SDKOption func(*SpeakeasyStudio)
+type SDKOption func(*SpekaeasyStudio)
 
 // WithServerURL allows the overriding of the default server URL
 func WithServerURL(serverURL string) SDKOption {
-	return func(sdk *SpeakeasyStudio) {
+	return func(sdk *SpekaeasyStudio) {
 		sdk.sdkConfiguration.ServerURL = serverURL
 	}
 }
 
 // WithTemplatedServerURL allows the overriding of the default server URL with a templated URL populated with the provided parameters
 func WithTemplatedServerURL(serverURL string, params map[string]string) SDKOption {
-	return func(sdk *SpeakeasyStudio) {
+	return func(sdk *SpekaeasyStudio) {
 		if params != nil {
 			serverURL = utils.ReplaceParameters(serverURL, params)
 		}
@@ -97,7 +97,7 @@ func WithTemplatedServerURL(serverURL string, params map[string]string) SDKOptio
 
 // WithServerIndex allows the overriding of the default server by index
 func WithServerIndex(serverIndex int) SDKOption {
-	return func(sdk *SpeakeasyStudio) {
+	return func(sdk *SpekaeasyStudio) {
 		if serverIndex < 0 || serverIndex >= len(ServerList) {
 			panic(fmt.Errorf("server index %d out of range", serverIndex))
 		}
@@ -108,7 +108,7 @@ func WithServerIndex(serverIndex int) SDKOption {
 
 // WithPort allows setting the port variable for url substitution
 func WithPort(port string) SDKOption {
-	return func(sdk *SpeakeasyStudio) {
+	return func(sdk *SpekaeasyStudio) {
 		for idx := range sdk.sdkConfiguration.ServerDefaults {
 			if _, ok := sdk.sdkConfiguration.ServerDefaults[idx]["port"]; !ok {
 				continue
@@ -121,33 +121,33 @@ func WithPort(port string) SDKOption {
 
 // WithClient allows the overriding of the default HTTP client used by the SDK
 func WithClient(client HTTPClient) SDKOption {
-	return func(sdk *SpeakeasyStudio) {
+	return func(sdk *SpekaeasyStudio) {
 		sdk.sdkConfiguration.Client = client
 	}
 }
 
 func WithRetryConfig(retryConfig retry.Config) SDKOption {
-	return func(sdk *SpeakeasyStudio) {
+	return func(sdk *SpekaeasyStudio) {
 		sdk.sdkConfiguration.RetryConfig = &retryConfig
 	}
 }
 
 // WithTimeout Optional request timeout applied to each operation
 func WithTimeout(timeout time.Duration) SDKOption {
-	return func(sdk *SpeakeasyStudio) {
+	return func(sdk *SpekaeasyStudio) {
 		sdk.sdkConfiguration.Timeout = &timeout
 	}
 }
 
 // New creates a new instance of the SDK with the provided options
-func New(opts ...SDKOption) *SpeakeasyStudio {
-	sdk := &SpeakeasyStudio{
+func New(opts ...SDKOption) *SpekaeasyStudio {
+	sdk := &SpekaeasyStudio{
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.1.7",
+			SDKVersion:        "0.0.1",
 			GenVersion:        "2.375.9",
-			UserAgent:         "speakeasy-sdk/go 0.1.7 2.375.9 1.0.0 github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk",
+			UserAgent:         "speakeasy-sdk/go 0.0.1 2.375.9 1.0.0 github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -177,7 +177,7 @@ func New(opts ...SDKOption) *SpeakeasyStudio {
 
 // CheckHealth - Health Check
 // Check the CLI health and return relevant information.
-func (s *SpeakeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Option) (*operations.CheckHealthResponse, error) {
+func (s *SpekaeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Option) (*operations.CheckHealthResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "checkHealth",
@@ -347,7 +347,7 @@ func (s *SpeakeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Op
 
 // Run
 // Regenerate the currently selected targets.
-func (s *SpeakeasyStudio) Run(ctx context.Context, opts ...operations.Option) (*operations.RunResponse, error) {
+func (s *SpekaeasyStudio) Run(ctx context.Context, opts ...operations.Option) (*operations.RunResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "run",
@@ -517,7 +517,7 @@ func (s *SpeakeasyStudio) Run(ctx context.Context, opts ...operations.Option) (*
 
 // GetSource - Get Source
 // Retrieve the source information from the workflow file, before and after applying the studio modifications overlay.
-func (s *SpeakeasyStudio) GetSource(ctx context.Context, opts ...operations.Option) (*operations.GetSourceResponse, error) {
+func (s *SpekaeasyStudio) GetSource(ctx context.Context, opts ...operations.Option) (*operations.GetSourceResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "getSource",
@@ -687,7 +687,7 @@ func (s *SpeakeasyStudio) GetSource(ctx context.Context, opts ...operations.Opti
 
 // UpdateSource - Update Source
 // Update the source with studio modifications overlay contents. This will re-run the source in the workflow.
-func (s *SpeakeasyStudio) UpdateSource(ctx context.Context, request operations.UpdateSourceRequestBody, opts ...operations.Option) (*operations.UpdateSourceResponse, error) {
+func (s *SpekaeasyStudio) UpdateSource(ctx context.Context, request operations.UpdateSourceRequestBody, opts ...operations.Option) (*operations.UpdateSourceResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "updateSource",
@@ -863,7 +863,7 @@ func (s *SpeakeasyStudio) UpdateSource(ctx context.Context, request operations.U
 
 // FileChanges - File Changes
 // SSE endpoint to send changes detected on the local file system.
-func (s *SpeakeasyStudio) FileChanges(ctx context.Context, opts ...operations.Option) (*operations.FileChangesResponse, error) {
+func (s *SpekaeasyStudio) FileChanges(ctx context.Context, opts ...operations.Option) (*operations.FileChangesResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "fileChanges",

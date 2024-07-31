@@ -1,4 +1,4 @@
-# github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk
+# github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk
 
 <div align="left">
     <a href="https://speakeasyapi.dev/"><img src="https://custom-icon-badges.demolab.com/badge/-Built%20By%20Speakeasy-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
@@ -20,7 +20,7 @@ It has been generated successfully based on your OpenAPI spec. However, it is no
 ## SDK Installation
 
 ```bash
-go get github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk
+go get github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk
 ```
 <!-- End SDK Installation [installation] -->
 
@@ -34,7 +34,7 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
 )
 
@@ -57,13 +57,13 @@ func main() {
 <!-- Start Available Resources and Operations [operations] -->
 ## Available Resources and Operations
 
-### [SpeakeasyStudio SDK](docs/sdks/speakeasystudio/README.md)
+### [SpekaeasyStudio SDK](docs/sdks/spekaeasystudio/README.md)
 
-* [CheckHealth](docs/sdks/speakeasystudio/README.md#checkhealth) - Health Check
-* [Run](docs/sdks/speakeasystudio/README.md#run) - Run
-* [GetSource](docs/sdks/speakeasystudio/README.md#getsource) - Get Source
-* [UpdateSource](docs/sdks/speakeasystudio/README.md#updatesource) - Update Source
-* [FileChanges](docs/sdks/speakeasystudio/README.md#filechanges) - File Changes
+* [CheckHealth](docs/sdks/spekaeasystudio/README.md#checkhealth) - Health Check
+* [Run](docs/sdks/spekaeasystudio/README.md#run) - Run
+* [GetSource](docs/sdks/spekaeasystudio/README.md#getsource) - Get Source
+* [UpdateSource](docs/sdks/spekaeasystudio/README.md#updatesource) - Update Source
+* [FileChanges](docs/sdks/spekaeasystudio/README.md#filechanges) - File Changes
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->
@@ -77,8 +77,8 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/retry"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"log"
 	"models/operations"
 )
@@ -114,8 +114,8 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/retry"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"log"
 )
 
@@ -164,8 +164,8 @@ package main
 import (
 	"context"
 	"errors"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/sdkerrors"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/sdkerrors"
 	"log"
 )
 
@@ -205,7 +205,7 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
 )
 
@@ -239,7 +239,7 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
 )
 

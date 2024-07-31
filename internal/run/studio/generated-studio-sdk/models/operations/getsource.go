@@ -3,7 +3,7 @@
 package operations
 
 import (
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
 )
 
 type GetSourceResponse struct {

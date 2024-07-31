@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
-id: 4f3b64ea-b821-420f-9b7a-bdf74a42ff3c
+id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
   docChecksum: 3c8c3b820091e88dae88fe709eb15be9
   docVersion: 1.0.0
   speakeasyVersion: 1.340.1
   generationVersion: 2.375.9
-  releaseVersion: 0.1.7
-  configChecksum: 4c31265026c28d2ef394915333947fed
+  releaseVersion: 0.0.1
+  configChecksum: b6290ac422e93656ffc4fb3311e5c4c4
 features:
   go:
     additionalDependencies: 0.1.0
@@ -21,7 +21,8 @@ features:
     retries: 2.83.0
     sdkHooks: 0.1.0
 generatedFiles:
-  - speakeasystudio.go
+  - spekaeasystudio.go
+  - go.mod
   - models/sdkerrors/sdkerror.go
   - retry/config.go
   - types/bigint.go
@@ -79,9 +80,10 @@ generatedFiles:
   - docs/models/components/runresponse.md
   - docs/models/components/sourceresponse.md
   - docs/models/operations/option.md
-  - docs/sdks/speakeasystudio/README.md
+  - docs/sdks/spekaeasystudio/README.md
   - USAGE.md
   - models/operations/options.go
+  - .gitattributes
   - .devcontainer/README.md
   - .devcontainer/devcontainer.json
   - .devcontainer/setup.sh

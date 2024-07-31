@@ -11,7 +11,7 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 

@@ -1,4 +1,4 @@
-# SpeakeasyStudio SDK
+# SpekaeasyStudio SDK
 
 
 ## Overview
@@ -21,7 +21,7 @@ Check the CLI health and return relevant information.
 package main
 
 import(
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )
@@ -65,7 +65,7 @@ Regenerate the currently selected targets.
 package main
 
 import(
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )
@@ -109,7 +109,7 @@ Retrieve the source information from the workflow file, before and after applyin
 package main
 
 import(
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )
@@ -153,8 +153,8 @@ Update the source with studio modifications overlay contents. This will re-run t
 package main
 
 import(
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/models/operations"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/operations"
 	"context"
 	"log"
 )
@@ -201,7 +201,7 @@ SSE endpoint to send changes detected on the local file system.
 package main
 
 import(
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )

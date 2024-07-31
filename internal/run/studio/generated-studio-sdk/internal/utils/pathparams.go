@@ -13,7 +13,7 @@ import (
 
 	"github.com/ericlagergren/decimal"
 
-	"github.com/speakeasy-api/speakeasy/internal/run/generated-studio-sdk/types"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/types"
 )
 
 func GenerateURL(_ context.Context, serverURL, path string, pathParams interface{}, globals interface{}) (string, error) {
