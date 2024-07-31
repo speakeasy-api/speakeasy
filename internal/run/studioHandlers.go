@@ -37,51 +37,14 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 	return nil
 }
 
-func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {
-	// 1. Marshal to JSON
-	// 2. Unmarshal to components.Workflow
-
-	jsonBytes, err := json.Marshal(w)
-	if err != nil {
-		return components.Workflow{}, err
-	}
-
-	var c components.Workflow
-	err = json.Unmarshal(jsonBytes, &c)
-	if err != nil {
-		return components.Workflow{}, err
-	}
-
-	return c, nil
-}
-
 func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var err error
 
 	workflow := h.Workflow
 
-	// Determine the source to run
-	source := workflow.Source
-	if source == "" {
-		if workflow.Target == "" {
-			return errors.ErrBadRequest.Wrap(fmt.Errorf("no source or target provided"))
-		}
-		if workflow.Target == "all" {
-			// If we're running multiple targets that's fine as long as they all have the same source
-			for _, t := range workflow.workflow.Targets {
-				fmt.Println(source, t.Source)
-				if source != "" && t.Source != source {
-					return errors.ErrBadRequest.Wrap(fmt.Errorf("all targets must have the same source"))
-				}
-				source = t.Source
-			}
-		} else {
-			t, ok := workflow.workflow.Targets[workflow.Target]
-			if !ok {
-				return errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", workflow.Target))
-			}
-			source = t.Source
-		}
+	source, err := findWorkflowSourceBasedOnTarget(workflow, workflow.Target)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error finding source: %w", err))
 	}
 	if source == "" {
 		return errors.New("unable to find source")
@@ -113,4 +76,51 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 func (self *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	// TODO: Implement this
 	return nil
+}
+
+// ====  Helpers ====
+
+func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {
+	// 1. Marshal to JSON
+	// 2. Unmarshal to components.Workflow
+
+	jsonBytes, err := json.Marshal(w)
+	if err != nil {
+		return components.Workflow{}, err
+	}
+
+	var c components.Workflow
+	err = json.Unmarshal(jsonBytes, &c)
+	if err != nil {
+		return components.Workflow{}, err
+	}
+
+	return c, nil
+}
+
+func findWorkflowSourceBasedOnTarget(workflow Workflow, targetID string) (string, error) {
+	if workflow.Source != "" {
+		return workflow.Source, nil
+	}
+
+	if targetID == "" {
+		return "", errors.ErrBadRequest.Wrap(fmt.Errorf("no source or target provided"))
+	}
+
+	if targetID == "all" {
+		// If we're running multiple targets that's fine as long as they all have the same source
+		for _, t := range workflow.workflow.Targets {
+			if t.Source == "" {
+				return "", errors.ErrBadRequest.Wrap(fmt.Errorf("all targets must have the same source"))
+			}
+		}
+		return workflow.workflow.Targets[targetID].Source, nil
+	}
+
+	t, ok := workflow.workflow.Targets[targetID]
+	if !ok {
+		return "", errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", targetID))
+	}
+
+	return t.Source, nil
 }
