@@ -46,13 +46,11 @@ import (
 )
 
 type SourceResult struct {
-	Source                             string
-	InputSpec                          string
-	StudioModificationsOverlayLocation string
-	StudioModificationsOverlayContents string
-	LintResult                         *validation.ValidationResult
-	ChangeReport                       *reports.ReportResult
-	Diagnosis                          *suggestions.Diagnosis
+	Source       string
+	InputSpec    string
+	LintResult   *validation.ValidationResult
+	ChangeReport *reports.ReportResult
+	Diagnosis    *suggestions.Diagnosis
 }
 
 func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *SourceResult, error) {
@@ -157,10 +155,6 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 			overlaySchemas = append(overlaySchemas, overlayFilePath)
 
-			if overlayContents, err := isStudioModificationsOverlay(overlay); overlayContents != "" && err == nil {
-				sourceRes.StudioModificationsOverlayLocation = overlay.Document.Location
-				sourceRes.StudioModificationsOverlayContents = overlayContents
-			}
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
@@ -657,24 +651,4 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(path)))
-}
-
-func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
-	isLocalFile := overlay.Document != nil && !strings.HasPrefix(overlay.Document.Location, "https://") && !strings.HasPrefix(overlay.Document.Location, "http://") && !strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
-	if !isLocalFile {
-		return "", nil
-	}
-
-	asString, err := utils.ReadFileToString(overlay.Document.Location)
-
-	if err != nil {
-		return "", err
-	}
-
-	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-modification")
-	if !looksLikeStudioModifications {
-		return "", nil
-	}
-
-	return asString, nil
 }

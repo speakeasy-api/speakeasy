@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
@@ -61,10 +62,20 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error reading output document: %w", err))
 	}
 
+	source := workflow.workflow.Sources[sourceID]
+	overlayContents := ""
+	for _, overlay := range source.Overlays {
+		contents, _ := isStudioModificationsOverlay(overlay)
+		if contents != "" {
+			overlayContents = contents
+			break
+		}
+	}
+
 	ret := components.SourceResponse{
 		SourceID: sourceID,
 		Input:    runSourceResult.InputSpec,
-		Overlay:  runSourceResult.StudioModificationsOverlayContents,
+		Overlay:  overlayContents,
 		Output:   outputDocumentString,
 	}
 
@@ -123,4 +134,24 @@ func findWorkflowSourceIDBasedOnTarget(workflow Workflow, targetID string) (stri
 	}
 
 	return t.Source, nil
+}
+
+func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
+	isLocalFile := overlay.Document != nil && !strings.HasPrefix(overlay.Document.Location, "https://") && !strings.HasPrefix(overlay.Document.Location, "http://") && !strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
+	if !isLocalFile {
+		return "", nil
+	}
+
+	asString, err := utils.ReadFileToString(overlay.Document.Location)
+
+	if err != nil {
+		return "", err
+	}
+
+	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-modification")
+	if !looksLikeStudioModifications {
+		return "", nil
+	}
+
+	return asString, nil
 }
