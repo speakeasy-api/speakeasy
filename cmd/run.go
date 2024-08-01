@@ -259,17 +259,16 @@ func askForSource(sources []string) (string, error) {
 func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		flags.Target,
-		flags.Source,
-		flags.Repo,
-		flags.RepoSubdirs,
-		flags.InstallationURLs,
-		flags.Debug,
-		!flags.SkipCompile,
-		flags.Force,
-		flags.RegistryTags,
-		flags.SetVersion,
+		run.WithTarget(flags.Target),
+		run.WithSource(flags.Source),
+		run.WithRepo(flags.Repo),
+		run.WithRepoSubDirs(flags.RepoSubdirs),
+		run.WithInstallationURLs(flags.InstallationURLs),
+		run.WithDebug(flags.Debug),
+		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithForceGeneration(flags.Force),
+		run.WithRegistryTags(flags.RegistryTags),
+		run.WithSetVersion(flags.SetVersion),
 	)
 	if err != nil {
 		return err
@@ -287,17 +286,16 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 func runInteractive(ctx context.Context, flags RunFlags) error {
 	workflow, err := run.NewWorkflow(
 		ctx,
-		"ignored",
-		flags.Target,
-		flags.Source,
-		flags.Repo,
-		flags.RepoSubdirs,
-		flags.InstallationURLs,
-		flags.Debug,
-		!flags.SkipCompile,
-		flags.Force,
-		flags.RegistryTags,
-		flags.SetVersion,
+		run.WithTarget(flags.Target),
+		run.WithSource(flags.Source),
+		run.WithRepo(flags.Repo),
+		run.WithRepoSubDirs(flags.RepoSubdirs),
+		run.WithInstallationURLs(flags.InstallationURLs),
+		run.WithDebug(flags.Debug),
+		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithForceGeneration(flags.Force),
+		run.WithRegistryTags(flags.RegistryTags),
+		run.WithSetVersion(flags.SetVersion),
 	)
 	if err != nil {
 		return err

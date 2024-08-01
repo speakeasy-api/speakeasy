@@ -255,17 +255,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	wf, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		initialTarget,
-		"",
-		"",
-		nil,
-		nil,
-		false,
-		!flags.SkipCompile,
-		false,
-		[]string{},
-		"",
+		run.WithTarget(initialTarget),
+		run.WithShouldCompile(!flags.SkipCompile),
 	)
 	if err != nil {
 		return err
@@ -335,17 +326,8 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 
 	wf, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		initialTarget,
-		"",
-		"",
-		nil,
-		nil,
-		false,
-		!skipCompile,
-		false,
-		[]string{},
-		"",
+		run.WithTarget(initialTarget),
+		run.WithShouldCompile(!skipCompile),
 	)
 
 	err = wf.RunWithVisualization(ctx)

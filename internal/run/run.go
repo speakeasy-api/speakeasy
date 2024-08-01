@@ -23,7 +23,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
-	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
@@ -32,90 +31,6 @@ import (
 const minimumViableOverlayPath = "valid-overlay.yaml"
 
 const speakeasySelf = "speakeasy-self"
-
-type LintingError struct {
-	Err      error
-	Document string
-}
-
-func (e *LintingError) Error() string {
-	return fmt.Sprintf("linting failed: %s - %s", e.Document, e.Err.Error())
-}
-
-type Workflow struct {
-	Target           string
-	Source           string
-	Repo             string
-	RepoSubDirs      map[string]string
-	InstallationURLs map[string]string
-	SDKOverviewURLs  map[string]string
-	Debug            bool
-	ShouldCompile    bool
-	ForceGeneration  bool
-	RegistryTags     []string
-	SetVersion       string
-
-	RootStep           *workflowTracking.WorkflowStep
-	workflow           workflow.Workflow
-	projectDir         string
-	validatedDocuments []string
-	generationAccess   *sdkgen.GenerationAccess
-	FromQuickstart     bool
-	OperationsRemoved  []string
-	computedChanges    map[string]bool
-	sourceResults      map[string]*SourceResult
-	lockfile           *workflow.LockFile
-	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
-}
-
-func NewWorkflow(
-	ctx context.Context,
-	name, target, source, repo string,
-	repoSubDirs, installationURLs map[string]string,
-	debug, shouldCompile, forceGeneration bool,
-	registryTags []string, setVersion string,
-) (*Workflow, error) {
-	wf, projectDir, err := utils.GetWorkflowAndDir()
-	if err != nil || wf == nil {
-		return nil, fmt.Errorf("failed to load workflow.yaml: %w", err)
-	}
-
-	// Load the current lockfile so that we don't overwrite all targets
-	lockfile, err := workflow.LoadLockfile(projectDir)
-	lockfileOld := lockfile
-
-	if err != nil || lockfile == nil {
-		lockfile = &workflow.LockFile{
-			Sources: make(map[string]workflow.SourceLock),
-			Targets: make(map[string]workflow.TargetLock),
-		}
-	}
-	lockfile.SpeakeasyVersion = events.GetSpeakeasyVersionFromContext(ctx)
-	lockfile.Workflow = *wf
-
-	rootStep := workflowTracking.NewWorkflowStep(name, log.From(ctx), nil)
-
-	return &Workflow{
-		Target:           target,
-		Source:           source,
-		Repo:             repo,
-		RepoSubDirs:      repoSubDirs,
-		InstallationURLs: installationURLs,
-		SDKOverviewURLs:  make(map[string]string),
-		Debug:            debug,
-		ShouldCompile:    shouldCompile,
-		RegistryTags:     registryTags,
-		workflow:         *wf,
-		projectDir:       projectDir,
-		RootStep:         rootStep,
-		ForceGeneration:  forceGeneration,
-		sourceResults:    make(map[string]*SourceResult),
-		computedChanges:  make(map[string]bool),
-		lockfile:         lockfile,
-		lockfileOld:      lockfileOld,
-		SetVersion:       setVersion,
-	}, nil
-}
 
 func ParseSourcesAndTargets() ([]string, []string, error) {
 	wf, _, err := utils.GetWorkflowAndDir()
