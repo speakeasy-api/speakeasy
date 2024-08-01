@@ -65,7 +65,10 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	sourceID := h.SourceID
 
+	prevSkipLinting := workflowRunner.SkipLinting
+	workflowRunner.SkipLinting = true
 	outputDocument, runSourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", false)
+	workflowRunner.SkipLinting = prevSkipLinting
 
 	if err != nil {
 		return fmt.Errorf("error running source: %w", err)
