@@ -3,6 +3,10 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/hashicorp/go-version"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -25,9 +29,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 func getTarget(target string) (*workflow.Target, error) {
@@ -39,7 +40,7 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult, error) {
+func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult, error) {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
@@ -52,10 +53,10 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		return nil, err
 	}
 
-	var sourceRes *sourceResult
+	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, false)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -84,7 +85,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			return nil, err
 		}
 
-		sourceRes = &sourceResult{
+		sourceRes = &SourceResult{
 			Source:     t.Source,
 			LintResult: res,
 		}

@@ -1,0 +1,27 @@
+speakeasyVersion: 1.340.1
+sources:
+    SpekaeasyStudio-OAS:
+        sourceNamespace: spekaeasy-studio-oas
+        sourceRevisionDigest: sha256:c02b7ba23f7bbb4dfee98a9543d959ca3bd14e33a60016797e180d2c5aec54ce
+        sourceBlobDigest: sha256:a9dc46a7388884c61c4f914843e16a874e03d645c340e6ed908329679d52944e
+        tags:
+            - latest
+targets:
+    spekaeasy-studio:
+        source: SpekaeasyStudio-OAS
+        sourceNamespace: spekaeasy-studio-oas
+        sourceRevisionDigest: sha256:c02b7ba23f7bbb4dfee98a9543d959ca3bd14e33a60016797e180d2c5aec54ce
+        sourceBlobDigest: sha256:a9dc46a7388884c61c4f914843e16a874e03d645c340e6ed908329679d52944e
+        outLocation: /Users/da/code/speakeasy-cli/internal/run/studio/speakeasy-generated-sdk
+workflow:
+    workflowVersion: 1.0.0
+    sources:
+        SpekaeasyStudio-OAS:
+            inputs:
+                - location: ../oas_studio.yaml
+            registry:
+                location: registry.speakeasyapi.dev/mistral-dev/mistral-dev/spekaeasy-studio-oas
+    targets:
+        spekaeasy-studio:
+            target: go
+            source: SpekaeasyStudio-OAS

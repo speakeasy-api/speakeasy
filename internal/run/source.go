@@ -3,8 +3,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/links"
-	"github.com/speakeasy-api/versioning-reports/versioning"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -12,6 +10,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/links"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -44,17 +45,18 @@ import (
 	"go.uber.org/zap"
 )
 
-type sourceResult struct {
+type SourceResult struct {
 	Source       string
+	InputSpec    string
 	LintResult   *validation.ValidationResult
 	ChangeReport *reports.ReportResult
 	Diagnosis    *suggestions.Diagnosis
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *sourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
-	sourceRes := &sourceResult{
+	sourceRes := &SourceResult{
 		Source: sourceID,
 	}
 
@@ -114,6 +116,11 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = mergeLocation
 	}
 
+	sourceRes.InputSpec, err = utils.ReadFileToString(currentDocument)
+	if err != nil {
+		return "", nil, err
+	}
+
 	if len(source.Overlays) > 0 {
 		overlayStep := rootStep.NewSubstep("Applying Overlays")
 
@@ -123,30 +130,31 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
+			overlayFilePath := ""
 			if overlay.Document != nil {
-				resolvedPath, err := schema.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
+				overlayFilePath, err = schema.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
 				if err != nil {
 					return "", nil, err
 				}
-				overlaySchemas = append(overlaySchemas, resolvedPath)
 			} else if overlay.FallbackCodeSamples != nil {
 				// Make temp file for the overlay output
-				overlayFileName := filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
-				if err := os.MkdirAll(filepath.Dir(overlayFileName), 0o755); err != nil {
+				overlayFilePath := filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
+				if err := os.MkdirAll(filepath.Dir(overlayFilePath), 0o755); err != nil {
 					return "", nil, err
 				}
 
 				err = defaultcodesamples.DefaultCodeSamples(ctx, defaultcodesamples.DefaultCodeSamplesFlags{
 					SchemaPath: currentDocument,
 					Language:   overlay.FallbackCodeSamples.FallbackCodeSamplesLanguage,
-					Out:        overlayFileName,
+					Out:        overlayFilePath,
 				})
 				if err != nil {
 					logger.Errorf("failed to generate default code samples: %s", err.Error())
 					return "", nil, err
 				}
-				overlaySchemas = append(overlaySchemas, overlayFileName)
 			}
+			overlaySchemas = append(overlaySchemas, overlayFilePath)
+
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))

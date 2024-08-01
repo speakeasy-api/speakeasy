@@ -63,7 +63,7 @@ type Workflow struct {
 	FromQuickstart     bool
 	OperationsRemoved  []string
 	computedChanges    map[string]bool
-	sourceResults      map[string]*sourceResult
+	sourceResults      map[string]*SourceResult
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
 }
@@ -109,7 +109,7 @@ func NewWorkflow(
 		projectDir:       projectDir,
 		RootStep:         rootStep,
 		ForceGeneration:  forceGeneration,
-		sourceResults:    make(map[string]*sourceResult),
+		sourceResults:    make(map[string]*SourceResult),
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
@@ -241,7 +241,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, sourceRes, err := w.runSource(ctx, w.RootStep, id, "", true)
+			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "", true)
 			if err != nil {
 				return err
 			}
@@ -264,7 +264,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, sourceRes, err := w.runSource(ctx, w.RootStep, w.Source, "", true)
+		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "", true)
 		if err != nil {
 			return err
 		}
@@ -344,7 +344,7 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 	return nil
 }
 
-func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *sourceResult, error) {
+func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *SourceResult, error) {
 	subStep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
 	baseLocation := source.Inputs[0].Location
@@ -409,7 +409,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	source.Overlays = []workflow.Overlay{{Document: &workflow.Document{Location: minimumViableOverlayPath}}}
 	w.workflow.Sources[sourceID] = source
 
-	sourcePath, sourceRes, err := w.runSource(ctx, subStep, sourceID, targetID, cleanUp)
+	sourcePath, sourceRes, err := w.RunSource(ctx, subStep, sourceID, targetID, cleanUp)
 	if err != nil {
 		failedRetry = true
 		return "", nil, err
