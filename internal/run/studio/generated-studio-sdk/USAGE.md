@@ -6,10 +6,13 @@ import (
 	"context"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"os"
 )
 
 func main() {
-	s := generatedstudiosdk.New()
+	s := generatedstudiosdk.New(
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+	)
 
 	ctx := context.Background()
 	res, err := s.CheckHealth(ctx)

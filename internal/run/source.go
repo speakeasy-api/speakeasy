@@ -109,7 +109,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
 
-		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.projectDir); err != nil {
+		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.ProjectDir); err != nil {
 			return "", nil, err
 		}
 
@@ -197,10 +197,10 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		})
 	}
 
-	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
-	if err != nil {
-		return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
-	}
+	// sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
+	// if err != nil {
+	// 	return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
+	// }
 
 	rootStep.SucceedWorkflow()
 
@@ -368,7 +368,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return fmt.Errorf("error localizing openapi document: %w", err)
 	}
 
-	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	gitRepo, err := git.NewLocalRepository(w.ProjectDir)
 	if err != nil {
 		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
 	}
@@ -463,13 +463,13 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		}
 		source.Registry = registryEntry
 		w.workflow.Sources[sourceID] = source
-		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
+		if err := workflow.Save(w.ProjectDir, &w.workflow); err != nil {
 			return err
 		}
 	} else if source.Registry != nil && !registry.IsRegistryEnabled(ctx) { // Automatically remove source publishing location if registry is disabled
 		source.Registry = nil
 		w.workflow.Sources[sourceID] = source
-		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
+		if err := workflow.Save(w.ProjectDir, &w.workflow); err != nil {
 			return err
 		}
 	}

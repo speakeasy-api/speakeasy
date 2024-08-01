@@ -52,6 +52,15 @@ func GetWorkspaceID() string {
 	return vCfg.GetString("speakeasy_workspace_id")
 }
 
+func GetStudioSecret() string {
+	return vCfg.GetString("speakeasy_studio_secret")
+}
+
+func SetStudioSecret(secret string) error {
+	vCfg.Set("speakeasy_studio_secret", secret)
+	return save()
+}
+
 func SetSpeakeasyAuthInfo(info core.SpeakeasyAuthInfo) error {
 	vCfg.Set("speakeasy_api_key", info.APIKey)
 	vCfg.Set("speakeasy_workspace_id", info.WorkspaceID)
@@ -63,6 +72,7 @@ func ClearSpeakeasyAuthInfo() error {
 	vCfg.Set("speakeasy_api_key", "")
 	vCfg.Set("speakeasy_workspace_id", "")
 	vCfg.Set("speakeasy_customer_id", "")
+	vCfg.Set("speakeasy_studio_secret", "")
 	return save()
 }
 

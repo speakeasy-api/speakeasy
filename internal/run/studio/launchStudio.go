@@ -15,19 +15,26 @@ import (
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
 )
 
 func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
-	secret := generateSecret()
+	secret, err := getOrCreateSecret()
+	if err != nil {
+		return fmt.Errorf("error creating studio secret key: %w", err)
+	}
 
 	if workflow == nil {
 		return errors.New("unable to launch studio without a workflow")
 	}
 
-	handlers := StudioHandlers{Workflow: *workflow}
+	handlers, err := NewStudioHandlers(workflow)
+	if err != nil {
+		return fmt.Errorf("error creating studio handlers: %w", err)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handler(handlers.health))
@@ -53,7 +60,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		Handler: corsMiddleware(authMiddleware(secret, mux)),
 	}
 
-	serverURL := auth.GetServerURL()
+	serverURL := auth.GetWorkspaceBaseURL(ctx)
 
 	url := fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
 
@@ -99,6 +106,7 @@ func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) 
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		if err := h(ctx, w, r); err != nil {
+			log.From(ctx).Error("error handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.Error(err))
 			respondJSONError(ctx, w, err)
 		}
 	}
@@ -113,13 +121,14 @@ func startServer(ctx context.Context, server *http.Server) error {
 	go func() {
 		<-quit
 		// Attempt to gracefully shutdown the server
+		// TODO: Clean up temp dir
 		if err := server.Shutdown(ctx); err != nil {
 			log.From(ctx).Error("Server forced to shutdown", zap.Error(err))
 		}
 	}()
 
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		return fmt.Errorf("Error starting server: %w", err)
+		return fmt.Errorf("error starting server: %w", err)
 	}
 
 	return nil
@@ -134,6 +143,17 @@ func searchForAvailablePort() (int, error) {
 		}
 	}
 	return 0, errors.New("no available port found")
+}
+
+func getOrCreateSecret() (string, error) {
+	secret := config.GetStudioSecret()
+	if secret == "" {
+		secret = generateSecret()
+		if err := config.SetStudioSecret(secret); err != nil {
+			return "", fmt.Errorf("error saving studio secret: %w", err)
+		}
+	}
+	return secret, nil
 }
 
 func generateSecret() string {

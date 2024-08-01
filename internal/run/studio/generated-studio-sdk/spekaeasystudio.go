@@ -48,8 +48,8 @@ func Float32(f float32) *float32 { return &f }
 func Float64(f float64) *float64 { return &f }
 
 type sdkConfiguration struct {
-	Client HTTPClient
-
+	Client            HTTPClient
+	Security          func(context.Context) (interface{}, error)
 	ServerURL         string
 	ServerIndex       int
 	ServerDefaults    []map[string]string
@@ -126,6 +126,23 @@ func WithClient(client HTTPClient) SDKOption {
 	}
 }
 
+// WithSecurity configures the SDK to use the provided security details
+func WithSecurity(secret string) SDKOption {
+	return func(sdk *SpekaeasyStudio) {
+		security := components.Security{Secret: secret}
+		sdk.sdkConfiguration.Security = utils.AsSecuritySource(&security)
+	}
+}
+
+// WithSecuritySource configures the SDK to invoke the Security Source function on each method call to determine authentication
+func WithSecuritySource(security func(context.Context) (components.Security, error)) SDKOption {
+	return func(sdk *SpekaeasyStudio) {
+		sdk.sdkConfiguration.Security = func(ctx context.Context) (interface{}, error) {
+			return security(ctx)
+		}
+	}
+}
+
 func WithRetryConfig(retryConfig retry.Config) SDKOption {
 	return func(sdk *SpekaeasyStudio) {
 		sdk.sdkConfiguration.RetryConfig = &retryConfig
@@ -145,9 +162,9 @@ func New(opts ...SDKOption) *SpekaeasyStudio {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.0.1",
+			SDKVersion:        "0.1.0",
 			GenVersion:        "2.375.9",
-			UserAgent:         "speakeasy-sdk/go 0.0.1 2.375.9 1.0.0 github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk",
+			UserAgent:         "speakeasy-sdk/go 0.1.0 2.375.9 1.0.0 github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -182,7 +199,7 @@ func (s *SpekaeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Op
 		Context:        ctx,
 		OperationID:    "checkHealth",
 		OAuth2Scopes:   []string{},
-		SecuritySource: nil,
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	o := operations.Options{}
@@ -220,6 +237,10 @@ func (s *SpekaeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Op
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", s.sdkConfiguration.UserAgent)
+
+	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
+		return nil, err
+	}
 
 	globalRetryConfig := s.sdkConfiguration.RetryConfig
 	retryConfig := o.Retries
@@ -352,7 +373,7 @@ func (s *SpekaeasyStudio) Run(ctx context.Context, opts ...operations.Option) (*
 		Context:        ctx,
 		OperationID:    "run",
 		OAuth2Scopes:   []string{},
-		SecuritySource: nil,
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	o := operations.Options{}
@@ -390,6 +411,10 @@ func (s *SpekaeasyStudio) Run(ctx context.Context, opts ...operations.Option) (*
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", s.sdkConfiguration.UserAgent)
+
+	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
+		return nil, err
+	}
 
 	globalRetryConfig := s.sdkConfiguration.RetryConfig
 	retryConfig := o.Retries
@@ -522,7 +547,7 @@ func (s *SpekaeasyStudio) GetSource(ctx context.Context, opts ...operations.Opti
 		Context:        ctx,
 		OperationID:    "getSource",
 		OAuth2Scopes:   []string{},
-		SecuritySource: nil,
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	o := operations.Options{}
@@ -560,6 +585,10 @@ func (s *SpekaeasyStudio) GetSource(ctx context.Context, opts ...operations.Opti
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", s.sdkConfiguration.UserAgent)
+
+	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
+		return nil, err
+	}
 
 	globalRetryConfig := s.sdkConfiguration.RetryConfig
 	retryConfig := o.Retries
@@ -692,7 +721,7 @@ func (s *SpekaeasyStudio) UpdateSource(ctx context.Context, request operations.U
 		Context:        ctx,
 		OperationID:    "updateSource",
 		OAuth2Scopes:   []string{},
-		SecuritySource: nil,
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	o := operations.Options{}
@@ -736,6 +765,10 @@ func (s *SpekaeasyStudio) UpdateSource(ctx context.Context, request operations.U
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", s.sdkConfiguration.UserAgent)
 	req.Header.Set("Content-Type", reqContentType)
+
+	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
+		return nil, err
+	}
 
 	globalRetryConfig := s.sdkConfiguration.RetryConfig
 	retryConfig := o.Retries
@@ -868,7 +901,7 @@ func (s *SpekaeasyStudio) FileChanges(ctx context.Context, opts ...operations.Op
 		Context:        ctx,
 		OperationID:    "fileChanges",
 		OAuth2Scopes:   []string{},
-		SecuritySource: nil,
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	o := operations.Options{}
@@ -906,6 +939,10 @@ func (s *SpekaeasyStudio) FileChanges(ctx context.Context, opts ...operations.Op
 	}
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("User-Agent", s.sdkConfiguration.UserAgent)
+
+	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
+		return nil, err
+	}
 
 	globalRetryConfig := s.sdkConfiguration.RetryConfig
 	retryConfig := o.Retries

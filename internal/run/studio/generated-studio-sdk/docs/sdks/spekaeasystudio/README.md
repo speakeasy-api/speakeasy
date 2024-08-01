@@ -21,13 +21,16 @@ Check the CLI health and return relevant information.
 package main
 
 import(
+	"os"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New()
+    s := generatedstudiosdk.New(
+        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    )
 
     ctx := context.Background()
     res, err := s.CheckHealth(ctx)
@@ -65,13 +68,16 @@ Regenerate the currently selected targets.
 package main
 
 import(
+	"os"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New()
+    s := generatedstudiosdk.New(
+        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    )
 
     ctx := context.Background()
     res, err := s.Run(ctx)
@@ -109,13 +115,16 @@ Retrieve the source information from the workflow file, before and after applyin
 package main
 
 import(
+	"os"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New()
+    s := generatedstudiosdk.New(
+        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    )
 
     ctx := context.Background()
     res, err := s.GetSource(ctx)
@@ -153,6 +162,7 @@ Update the source with studio modifications overlay contents. This will re-run t
 package main
 
 import(
+	"os"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/operations"
 	"context"
@@ -160,7 +170,9 @@ import(
 )
 
 func main() {
-    s := generatedstudiosdk.New()
+    s := generatedstudiosdk.New(
+        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    )
     request := operations.UpdateSourceRequestBody{
         Overlay: "<value>",
     }
@@ -201,13 +213,16 @@ SSE endpoint to send changes detected on the local file system.
 package main
 
 import(
+	"os"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New()
+    s := generatedstudiosdk.New(
+        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    )
 
     ctx := context.Background()
     res, err := s.FileChanges(ctx)

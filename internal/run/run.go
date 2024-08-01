@@ -57,7 +57,7 @@ type Workflow struct {
 
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
-	projectDir         string
+	ProjectDir         string
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	FromQuickstart     bool
@@ -106,7 +106,7 @@ func NewWorkflow(
 		ShouldCompile:    shouldCompile,
 		RegistryTags:     registryTags,
 		workflow:         *wf,
-		projectDir:       projectDir,
+		ProjectDir:       projectDir,
 		RootStep:         rootStep,
 		ForceGeneration:  forceGeneration,
 		sourceResults:    make(map[string]*SourceResult),
@@ -272,7 +272,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		w.sourceResults[sourceRes.Source] = sourceRes
 	}
 
-	if err := workflow.SaveLockfile(w.projectDir, w.lockfile); err != nil {
+	if err := workflow.SaveLockfile(w.ProjectDir, w.lockfile); err != nil {
 		return err
 	}
 	return nil
