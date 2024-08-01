@@ -53,6 +53,15 @@ type SourceResult struct {
 	Diagnosis    *suggestions.Diagnosis
 }
 
+type LintingError struct {
+	Err      error
+	Document string
+}
+
+func (e *LintingError) Error() string {
+	return fmt.Sprintf("linting failed: %s - %s", e.Document, e.Err.Error())
+}
+
 func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
@@ -166,7 +175,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = overlayLocation
 	}
 
-	if !isSingleRegistrySource(source) {
+	if !isSingleRegistrySource(source) && !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			logger.Warnf("failed to snapshot source: %s", err.Error())
@@ -179,7 +188,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	// If the source has a previous tracked revision, compute changes against it
-	if w.lockfileOld != nil {
+	if w.lockfileOld != nil && !w.SkipChangeReport {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
 			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
@@ -197,9 +206,11 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		})
 	}
 
-	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
-	if err != nil {
-		return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
+	if !w.SkipLinting {
+		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
+		if err != nil {
+			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
+		}
 	}
 
 	rootStep.SucceedWorkflow()
