@@ -164,7 +164,8 @@ func generateSecret() string {
 		panic(err)
 	}
 
-	return hex.EncodeToString(b)
+	// Short for studio - the prefix allows us to easily identify the secret and version it if needed in the future
+	return "stu-" + hex.EncodeToString(b)
 }
 
 func respondJSONError(ctx context.Context, w http.ResponseWriter, err error) {
