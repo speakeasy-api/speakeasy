@@ -80,7 +80,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			}
 		}
 	} else {
-		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.projectDir)
+		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +95,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	if t.Output != nil {
 		outDir = *t.Output
 	} else {
-		outDir = w.projectDir
+		outDir = w.ProjectDir
 	}
 	targetLock.OutLocation = outDir
 
@@ -267,7 +267,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 
 	registryStep.NewSubstep("Snapshotting Code Samples")
 
-	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	gitRepo, err := git.NewLocalRepository(w.ProjectDir)
 	if err != nil {
 		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
 	}

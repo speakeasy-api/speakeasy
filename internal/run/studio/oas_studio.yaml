@@ -272,3 +272,11 @@ components:
         - authSecret
     Publishing:
       type: object
+  securitySchemes:
+    secret:
+      type: apiKey
+      name: x-secret-key
+      in: header
+security:
+  - secret: []
+  

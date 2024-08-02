@@ -8,27 +8,46 @@ import (
 	"os"
 	"strings"
 
+	"github.com/speakeasy-api/jsonpath/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"gopkg.in/yaml.v2"
 )
 
 type StudioHandlers struct {
-	Workflow run.Workflow
+	WorkflowRunner run.Workflow
+	SourceID       string
+	OverlayPath    string
+}
+
+func NewStudioHandlers(workflow *run.Workflow) (StudioHandlers, error) {
+	ret := StudioHandlers{WorkflowRunner: *workflow}
+
+	sourceID, err := findWorkflowSourceIDBasedOnTarget(*workflow, workflow.Target)
+	if err != nil {
+		return ret, fmt.Errorf("error finding source: %w", err)
+	}
+	if sourceID == "" {
+		return ret, errors.New("unable to find source")
+	}
+	ret.SourceID = sourceID
+
+	return ret, nil
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
-	workflow, err := convertWorkflowToComponentsWorkflow(*h.Workflow.GetWorkflowFile())
+	workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
 	if err != nil {
 		return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
 	}
 
 	ret := components.HealthResponse{
 		Workflow:         workflow,
-		TargetID:         h.Workflow.Target,
+		TargetID:         h.WorkflowRunner.Target,
 		WorkingDirectory: os.Getenv("PWD"),
 	}
 	err = json.NewEncoder(w).Encode(ret)
@@ -42,29 +61,25 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var err error
 
-	workflow := h.Workflow
-	workflowFile := workflow.GetWorkflowFile()
+	workflowRunner := h.WorkflowRunner
+	workflowConfig := workflowRunner.GetWorkflowFile()
+	sourceID := h.SourceID
 
-	sourceID, err := findWorkflowSourceIDBasedOnTarget(workflow, workflow.Target)
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error finding source: %w", err))
-	}
-	if sourceID == "" {
-		return errors.New("unable to find source")
-	}
-
-	outputDocument, runSourceResult, err := workflow.RunSource(ctx, workflow.RootStep, sourceID, "", true)
+	prevSkipLinting := workflowRunner.SkipLinting
+	workflowRunner.SkipLinting = true
+	outputDocument, runSourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", false)
+	workflowRunner.SkipLinting = prevSkipLinting
 
 	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error running source: %w", err))
+		return fmt.Errorf("error running source: %w", err)
 	}
 
 	outputDocumentString, err := utils.ReadFileToString(outputDocument)
 	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error reading output document: %w", err))
+		return fmt.Errorf("error reading output document: %w", err)
 	}
 
-	source := workflowFile.Sources[sourceID]
+	source := workflowConfig.Sources[sourceID]
 	overlayContents := ""
 	for _, overlay := range source.Overlays {
 		contents, _ := isStudioModificationsOverlay(overlay)
@@ -86,14 +101,74 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	return nil
 }
 
-func (self *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	// TODO: Implement this
-	return nil
+func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	var err error
+
+	// Destructure the request body which is a json object with a single key "overlay" which is a string
+	var reqBody struct {
+		Overlay string `json:"overlay"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&reqBody)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
+	}
+
+	// Verify this is a valid overlay
+	var overlay overlay.Overlay
+	dec := yaml.NewDecoder(strings.NewReader(reqBody.Overlay))
+	err = dec.Decode(&overlay)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding overlay: %w", err))
+	}
+
+	// Write the overlay to a file
+	err = h.getOrCreateOverlayPath()
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
+	}
+	err = utils.WriteStringToFile(h.OverlayPath, reqBody.Overlay)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing overlay to file: %w", err))
+	}
+
+	return h.getSource(ctx, w, r)
 }
 
 // ========================================
 // Helper functions
 // ========================================
+
+func (h *StudioHandlers) getOrCreateOverlayPath() error {
+	if h.OverlayPath != "" {
+		return nil
+	}
+
+	for i := 0; i < 100; i++ {
+		x := ""
+		if i > 0 {
+			x = fmt.Sprintf("-%d", i)
+		}
+		path := "./speakeasy-modifications-overlay" + x + ".yaml"
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			h.OverlayPath = path
+			workflowConfig := h.WorkflowRunner.GetWorkflowFile()
+
+			source := workflowConfig.Sources[h.SourceID]
+
+			source.Overlays = append(source.Overlays, workflow.Overlay{
+				Document: &workflow.Document{
+					Location: path,
+				},
+			})
+			workflowConfig.Sources[h.SourceID] = source
+			workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
+			return nil
+		}
+	}
+
+	return errors.New("unable to create overlay file")
+}
 
 func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {
 	// 1. Marshal to JSON

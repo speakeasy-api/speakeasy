@@ -196,3 +196,11 @@ func ReadFileToString(path string) (string, error) {
 
 	return string(data), nil
 }
+
+func WriteStringToFile(path, content string) error {
+	if err := CreateDirectory(path); err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, []byte(content), 0o644)
+}

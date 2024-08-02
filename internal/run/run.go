@@ -187,7 +187,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		w.sourceResults[sourceRes.Source] = sourceRes
 	}
 
-	if err := workflow.SaveLockfile(w.projectDir, w.lockfile); err != nil {
+	if err := workflow.SaveLockfile(w.ProjectDir, w.lockfile); err != nil {
 		return err
 	}
 	return nil

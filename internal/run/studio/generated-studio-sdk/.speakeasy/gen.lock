@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 3c8c3b820091e88dae88fe709eb15be9
+  docChecksum: 24e73e2859aa1aa218d926079be9611e
   docVersion: 1.0.0
   speakeasyVersion: 1.340.1
   generationVersion: 2.375.9
-  releaseVersion: 0.0.1
-  configChecksum: b6290ac422e93656ffc4fb3311e5c4c4
+  releaseVersion: 0.1.0
+  configChecksum: f0a5b738f0a8f2aa2b5d10a4ef1431ab
 features:
   go:
     additionalDependencies: 0.1.0
@@ -14,7 +14,9 @@ features:
     defaultEnabledRetries: 0.2.0
     devContainers: 2.90.0
     envVarSecurityUsage: 0.2.0
+    globalSecurity: 2.82.9
     globalSecurityCallbacks: 0.1.0
+    globalSecurityFlattening: 0.1.0
     globalServerURLs: 2.82.2
     intellisenseMarkdownSupport: 0.1.0
     responseFormat: 0.1.2
@@ -22,7 +24,6 @@ features:
     sdkHooks: 0.1.0
 generatedFiles:
   - spekaeasystudio.go
-  - go.mod
   - models/sdkerrors/sdkerror.go
   - retry/config.go
   - types/bigint.go
@@ -59,6 +60,7 @@ generatedFiles:
   - /models/components/httpmetadata.go
   - /models/components/runresponse.go
   - /models/components/sourceresponse.go
+  - /models/components/security.go
   - docs/models/operations/checkhealthresponse.md
   - docs/models/operations/runresponse.md
   - docs/models/operations/getsourceresponse.md
@@ -79,11 +81,11 @@ generatedFiles:
   - docs/models/components/httpmetadata.md
   - docs/models/components/runresponse.md
   - docs/models/components/sourceresponse.md
+  - docs/models/components/security.md
   - docs/models/operations/option.md
   - docs/sdks/spekaeasystudio/README.md
   - USAGE.md
   - models/operations/options.go
-  - .gitattributes
   - .devcontainer/README.md
   - .devcontainer/devcontainer.json
   - .devcontainer/setup.sh

@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -33,7 +34,7 @@ type Workflow struct {
 	SDKOverviewURLs    map[string]string
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
-	projectDir         string
+	ProjectDir         string
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	OperationsRemoved  []string
@@ -76,7 +77,7 @@ func NewWorkflow(
 		Debug:            false,
 		ShouldCompile:    true,
 		workflow:         *wf,
-		projectDir:       projectDir,
+		ProjectDir:       projectDir,
 		ForceGeneration:  false,
 		sourceResults:    make(map[string]*SourceResult),
 		computedChanges:  make(map[string]bool),

@@ -36,10 +36,13 @@ import (
 	"context"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"os"
 )
 
 func main() {
-	s := generatedstudiosdk.New()
+	s := generatedstudiosdk.New(
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+	)
 
 	ctx := context.Background()
 	res, err := s.CheckHealth(ctx)
@@ -81,10 +84,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"log"
 	"models/operations"
+	"os"
 )
 
 func main() {
-	s := generatedstudiosdk.New()
+	s := generatedstudiosdk.New(
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+	)
 
 	ctx := context.Background()
 	res, err := s.CheckHealth(ctx, operations.WithRetries(
@@ -117,6 +123,7 @@ import (
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"log"
+	"os"
 )
 
 func main() {
@@ -132,6 +139,7 @@ func main() {
 				},
 				RetryConnectionErrors: false,
 			}),
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
 	)
 
 	ctx := context.Background()
@@ -167,10 +175,13 @@ import (
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/sdkerrors"
 	"log"
+	"os"
 )
 
 func main() {
-	s := generatedstudiosdk.New()
+	s := generatedstudiosdk.New(
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+	)
 
 	ctx := context.Background()
 	res, err := s.CheckHealth(ctx)
@@ -207,11 +218,13 @@ import (
 	"context"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"os"
 )
 
 func main() {
 	s := generatedstudiosdk.New(
 		generatedstudiosdk.WithServerIndex(0),
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
 	)
 
 	ctx := context.Background()
@@ -241,11 +254,13 @@ import (
 	"context"
 	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"os"
 )
 
 func main() {
 	s := generatedstudiosdk.New(
 		generatedstudiosdk.WithServerURL("http://localhost:{port}"),
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
 	)
 
 	ctx := context.Background()
@@ -295,6 +310,46 @@ This can be a convenient way to configure timeouts, cookies, proxies, custom hea
 
 
 <!-- End Special Types [types] -->
+
+<!-- Start Authentication [security] -->
+## Authentication
+
+### Per-Client Security Schemes
+
+This SDK supports the following security scheme globally:
+
+| Name     | Type     | Scheme   |
+| -------- | -------- | -------- |
+| `Secret` | apiKey   | API key  |
+
+You can configure it using the `WithSecurity` option when initializing the SDK client instance. For example:
+```go
+package main
+
+import (
+	"context"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"log"
+	"os"
+)
+
+func main() {
+	s := generatedstudiosdk.New(
+		generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+	)
+
+	ctx := context.Background()
+	res, err := s.CheckHealth(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if res.HealthResponse != nil {
+		// handle response
+	}
+}
+
+```
+<!-- End Authentication [security] -->
 
 <!-- Placeholder for Future Speakeasy SDK Sections -->
 
