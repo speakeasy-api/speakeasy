@@ -31,6 +31,11 @@ import (
 	"go.uber.org/zap"
 )
 
+type TargetResult struct {
+	OutputPath  string
+	GenYamlPath string
+}
+
 func getTarget(target string) (*workflow.Target, error) {
 	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
@@ -40,7 +45,7 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult, error) {
+func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult, *TargetResult, error) {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
@@ -50,7 +55,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	source, sourcePath, err := w.workflow.GetTargetSource(target)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var sourceRes *SourceResult
@@ -69,20 +74,20 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 				if retriedErr != nil {
 					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
 					// return the original error
-					return nil, err
+					return nil, nil, err
 				}
 
 				w.OperationsRemoved = sourceRes.LintResult.InvalidOperation
 				sourcePath = retriedPath
 				sourceRes = retriedRes
 			} else {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	} else {
 		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		sourceRes = &SourceResult{
@@ -105,7 +110,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	genConfig, err := sdkGenConfig.Load(outDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if w.SetVersion != "" && genConfig.Config != nil {
@@ -115,13 +120,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}
 		if langCfg, ok := genConfig.Config.Languages[t.Target]; ok {
 			if _, err := version.NewVersion(appliedVersion); err != nil {
-				return nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
+				return nil, nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
 			}
 
 			langCfg.Version = appliedVersion
 			genConfig.Config.Languages[t.Target] = langCfg
 			if err := sdkGenConfig.SaveConfig(outDir, genConfig.Config); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
@@ -131,7 +136,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		if errors.Is(err, validation.NoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -164,7 +169,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		target,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	w.generationAccess = generationAccess
 
@@ -187,12 +192,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, style)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		namespaceName, digest, err := w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		targetLock.CodeSamplesNamespace = namespaceName
 		targetLock.CodeSamplesRevisionDigest = digest
@@ -220,7 +225,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	w.lockfile.Targets[target] = targetLock
 
-	return sourceRes, nil
+	targetResult := TargetResult{
+		OutputPath:  outDir,
+		GenYamlPath: genConfig.ConfigPath,
+	}
+
+	return sourceRes, &targetResult, nil
 }
 
 func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflowTracking.WorkflowStep, overlayString string, codeSampleConfig workflow.CodeSamples) (namespaceName string, digest string, err error) {

@@ -301,13 +301,9 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		return err
 	}
 
-	if flags.LaunchStudio {
-		return studio.LaunchStudio(ctx, workflow)
-	}
-
 	switch flags.Output {
 	case "summary":
-		return workflow.RunWithVisualization(ctx)
+		err = workflow.RunWithVisualization(ctx)
 	case "mermaid":
 		err = workflow.Run(ctx)
 		workflow.RootStep.Finalize(err == nil)
@@ -317,7 +313,17 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		}
 		log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
 	case "console":
-		return runFunc(ctx, flags)
+		err = runFunc(ctx, flags)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Pass initial results to launch studio
+
+	if flags.LaunchStudio {
+		return studio.LaunchStudio(ctx, workflow)
 	}
 
 	return nil

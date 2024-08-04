@@ -63,6 +63,7 @@ func main() {
 ### [SpekaeasyStudio SDK](docs/sdks/spekaeasystudio/README.md)
 
 * [CheckHealth](docs/sdks/spekaeasystudio/README.md#checkhealth) - Health Check
+* [GetRun](docs/sdks/spekaeasystudio/README.md#getrun) - Run
 * [Run](docs/sdks/spekaeasystudio/README.md#run) - Run
 * [GetSource](docs/sdks/spekaeasystudio/README.md#getsource) - Get Source
 * [UpdateSource](docs/sdks/spekaeasystudio/README.md#updatesource) - Update Source

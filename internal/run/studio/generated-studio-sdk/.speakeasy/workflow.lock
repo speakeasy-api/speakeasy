@@ -1,17 +1,17 @@
-speakeasyVersion: 1.340.1
+speakeasyVersion: 0.0.1
 sources:
     SpekaeasyStudio-OAS:
         sourceNamespace: spekaeasy-studio-oas
-        sourceRevisionDigest: sha256:10c7040cf3935fdd6b4705e274f7f87cf9f6418f5eae65046acc73d8e89a35a7
-        sourceBlobDigest: sha256:740a7eef8366b54ee9b7fe0acfce7143b52b12ced7ca3c8243cf6669d1ba9373
+        sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
+        sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
         tags:
             - latest
 targets:
     spekaeasy-studio:
         source: SpekaeasyStudio-OAS
         sourceNamespace: spekaeasy-studio-oas
-        sourceRevisionDigest: sha256:10c7040cf3935fdd6b4705e274f7f87cf9f6418f5eae65046acc73d8e89a35a7
-        sourceBlobDigest: sha256:740a7eef8366b54ee9b7fe0acfce7143b52b12ced7ca3c8243cf6669d1ba9373
+        sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
+        sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
         outLocation: /Users/da/code/speakeasy-cli/internal/run/studio/generated-studio-sdk
 workflow:
     workflowVersion: 1.0.0

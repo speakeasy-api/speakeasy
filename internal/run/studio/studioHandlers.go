@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/speakeasy-api/jsonpath/pkg/overlay"
@@ -38,6 +39,63 @@ func NewStudioHandlers(workflow *run.Workflow) (StudioHandlers, error) {
 	return ret, nil
 }
 
+func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	// TODO: ret := components.RunResponse{}
+	ret := make(map[string]interface{})
+
+	lastTargetID := ""
+
+	for k, v := range h.WorkflowRunner.TargetResults {
+		lastTargetID = k
+		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
+		if err != nil {
+			return fmt.Errorf("error reading gen.yaml: %w", err)
+		}
+		readMePath := filepath.Join(v.OutputPath, "README.md")
+		readMeContents, err := utils.ReadFileToString(readMePath)
+		if err != nil {
+			return fmt.Errorf("error reading gen.yaml: %w", err)
+		}
+		x := make(map[string]string)
+		x["gen_yaml"] = genYamlContents
+		x["readme"] = readMeContents
+		ret[k] = x
+	}
+
+	ret["source_id"] = h.SourceID
+
+	if len(h.WorkflowRunner.TargetResults) == 1 {
+		ret["target_id"] = lastTargetID
+	}
+
+	if len(h.WorkflowRunner.SourceResults) != 1 {
+		return errors.New("unexpected just one source")
+	}
+
+	sourceResult := h.WorkflowRunner.SourceResults[h.SourceID]
+	sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, *h.WorkflowRunner.GetWorkflowFile())
+	if err != nil {
+		return fmt.Errorf("error converting source result to source response: %w", err)
+	}
+	ret["source_result"] = sourceResponse
+
+	workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
+	if err != nil {
+		return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+	}
+	ret["workflow"] = workflow
+	return nil
+}
+
+func (h *StudioHandlers) postRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	err := h.WorkflowRunner.Run(ctx)
+	if err != nil {
+		return fmt.Errorf("error running workflow: %w", err)
+	}
+
+	return h.getRun(ctx, w, r)
+}
+
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
 	workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
@@ -65,35 +123,20 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	sourceID := h.SourceID
 
-	prevSkipLinting := workflowRunner.SkipLinting
-	workflowRunner.SkipLinting = true
-	outputDocument, runSourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", false)
-	workflowRunner.SkipLinting = prevSkipLinting
+	workflowRunnerPtr, err := workflowRunner.Clone(ctx, run.WithSkipLinting())
+	if err != nil {
+		return fmt.Errorf("error cloning workflow runner: %w", err)
+	}
+	workflowRunner = *workflowRunnerPtr
 
+	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", false)
 	if err != nil {
 		return fmt.Errorf("error running source: %w", err)
 	}
 
-	outputDocumentString, err := utils.ReadFileToString(outputDocument)
+	ret, err := convertSourceResultIntoSourceResponse(sourceID, *sourceResult, *workflowConfig)
 	if err != nil {
-		return fmt.Errorf("error reading output document: %w", err)
-	}
-
-	source := workflowConfig.Sources[sourceID]
-	overlayContents := ""
-	for _, overlay := range source.Overlays {
-		contents, _ := isStudioModificationsOverlay(overlay)
-		if contents != "" {
-			overlayContents = contents
-			break
-		}
-	}
-
-	ret := components.SourceResponse{
-		SourceID: sourceID,
-		Input:    runSourceResult.InputSpec,
-		Overlay:  overlayContents,
-		Output:   outputDocumentString,
+		return fmt.Errorf("error converting source result to source response: %w", err)
 	}
 
 	_ = json.NewEncoder(w).Encode(ret)
@@ -137,6 +180,32 @@ func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter
 // ========================================
 // Helper functions
 // ========================================
+
+func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult, workflowConfig workflow.Workflow) (components.SourceResponse, error) {
+	sourceConfig := workflowConfig.Sources[sourceID]
+	overlayContents := ""
+	for _, overlay := range sourceConfig.Overlays {
+		// If there are multiple modifications overlays - we take the last one
+		contents, _ := isStudioModificationsOverlay(overlay)
+		if contents != "" {
+			overlayContents = contents
+		}
+	}
+
+	outputDocumentString, err := utils.ReadFileToString(sourceResult.OutputPath)
+	if err != nil {
+		return components.SourceResponse{}, fmt.Errorf("error reading output document: %w", err)
+	}
+
+	ret := components.SourceResponse{
+		SourceID: sourceID,
+		Input:    sourceResult.InputSpec,
+		Overlay:  overlayContents,
+		Output:   outputDocumentString,
+	}
+
+	return ret, nil
+}
 
 func (h *StudioHandlers) getOrCreateOverlayPath() error {
 	if h.OverlayPath != "" {

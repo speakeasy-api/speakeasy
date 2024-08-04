@@ -1,19 +1,19 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 24e73e2859aa1aa218d926079be9611e
+  docChecksum: fd1d119c52cc2748445f61a1f688e32d
   docVersion: 1.0.0
-  speakeasyVersion: 1.340.1
-  generationVersion: 2.375.9
-  releaseVersion: 0.1.0
-  configChecksum: f0a5b738f0a8f2aa2b5d10a4ef1431ab
+  speakeasyVersion: 0.0.1
+  generationVersion: 2.384.4
+  releaseVersion: 0.1.2
+  configChecksum: dc325cc42d3a81ea98fe9135ec0fd6d5
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.5.0
+    core: 3.5.3
     defaultEnabledRetries: 0.2.0
     devContainers: 2.90.0
-    envVarSecurityUsage: 0.2.0
+    envVarSecurityUsage: 0.2.1
     globalSecurity: 2.82.9
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
@@ -42,6 +42,7 @@ generatedFiles:
   - internal/utils/security.go
   - internal/utils/utils.go
   - /models/operations/checkhealth.go
+  - /models/operations/getrun.go
   - /models/operations/run.go
   - /models/operations/getsource.go
   - /models/operations/updatesource.go
@@ -62,6 +63,7 @@ generatedFiles:
   - /models/components/sourceresponse.go
   - /models/components/security.go
   - docs/models/operations/checkhealthresponse.md
+  - docs/models/operations/getrunresponse.md
   - docs/models/operations/runresponse.md
   - docs/models/operations/getsourceresponse.md
   - docs/models/operations/updatesourcerequestbody.md
@@ -79,6 +81,7 @@ generatedFiles:
   - docs/models/components/auth.md
   - docs/models/components/fallbackcodesamples.md
   - docs/models/components/httpmetadata.md
+  - docs/models/components/additionalproperties.md
   - docs/models/components/runresponse.md
   - docs/models/components/sourceresponse.md
   - docs/models/components/security.md

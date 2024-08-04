@@ -51,6 +51,7 @@ type SourceResult struct {
 	LintResult   *validation.ValidationResult
 	ChangeReport *reports.ReportResult
 	Diagnosis    *suggestions.Diagnosis
+	OutputPath   string
 }
 
 type LintingError struct {
@@ -220,6 +221,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		os.RemoveAll(workflow.GetTempDir())
 	}
 
+	sourceRes.OutputPath = currentDocument
 	return currentDocument, sourceRes, nil
 }
 
@@ -544,13 +546,13 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 }
 
 func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Logger) {
-	if len(w.sourceResults) == 0 {
+	if len(w.SourceResults) == 0 {
 		return
 	}
 
 	logger.Println("") // Newline for better readability
 
-	for sourceID, sourceRes := range w.sourceResults {
+	for sourceID, sourceRes := range w.SourceResults {
 		heading := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(sourceID), styles.Success.Render("Compiled Successfully"))
 		var additionalLines []string
 

@@ -22,6 +22,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
   /run:
+    get:
+      summary: Run
+      description: Get the output of the last run.
+      operationId: getRun
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResponse'
     post:
       summary: Run
       description: Regenerate the currently selected targets.
@@ -102,6 +113,32 @@ components:
     RunResponse:
       type: object
       properties:
+        additionalProperties: 
+          type: object
+          properties:
+            readme:
+              type: string
+              description: Contents of the README file for this target
+            gen_yaml:
+              type: string
+              description: Contents of the gen.yaml file for this target
+            output_directory:
+              type: string
+              description: Output directory for this target
+            language:
+              type: string
+              description: Language for this target
+          required:
+            - readme
+            - gen_yaml
+            - output_directory
+            - language
+        sourceID:
+          type: string
+          description: Source ID in the workflow file
+        targetID:
+          type: string
+          description: Target ID in the workflow file
         errors:
           type: array
           items:
@@ -129,6 +166,10 @@ components:
         lintingInfoCount:
           type: integer
           description: Count of linting informational messages
+        sourceResult:
+          $ref: '#/components/schemas/SourceResponse'
+      required:
+        - sourceID
     SourceResponse:
       type: object
       properties:

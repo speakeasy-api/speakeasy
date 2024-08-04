@@ -6,20 +6,20 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
 )
 
-type RunResponse struct {
+type GetRunResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
 	RunResponse *components.RunResponse
 }
 
-func (o *RunResponse) GetHTTPMeta() components.HTTPMetadata {
+func (o *GetRunResponse) GetHTTPMeta() components.HTTPMetadata {
 	if o == nil {
 		return components.HTTPMetadata{}
 	}
 	return o.HTTPMeta
 }
 
-func (o *RunResponse) GetRunResponse() *components.RunResponse {
+func (o *GetRunResponse) GetRunResponse() *components.RunResponse {
 	if o == nil {
 		return nil
 	}
