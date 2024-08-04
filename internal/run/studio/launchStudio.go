@@ -50,6 +50,17 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		}
 	})
 
+	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handler(handlers.updateRun)(w, r)
+		case http.MethodGet:
+			handler(handlers.getRun)(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	port, err := searchForAvailablePort()
 	if err != nil {
 		return err

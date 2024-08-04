@@ -87,7 +87,7 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 	return nil
 }
 
-func (h *StudioHandlers) postRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *StudioHandlers) updateRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	err := h.WorkflowRunner.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("error running workflow: %w", err)
