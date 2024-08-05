@@ -30,12 +30,15 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return nil, fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
 	}
 
-	if registryBreakdown.OrganizationSlug != organizationSlug {
-		return nil, fmt.Errorf("organization mismatch: %s != %s", registryBreakdown.OrganizationSlug, organizationSlug)
-	}
+	// Allow speakeasy-self to bypass this check for downloading only
+	if organizationSlug != "speakeasy-self" {
+		if registryBreakdown.OrganizationSlug != organizationSlug {
+			return nil, fmt.Errorf("organization mismatch: %s != %s", registryBreakdown.OrganizationSlug, organizationSlug)
+		}
 
-	if registryBreakdown.WorkspaceSlug != workspaceSlug {
-		return nil, fmt.Errorf("workspace mismatch: %s != %s", registryBreakdown.WorkspaceSlug, workspaceSlug)
+		if registryBreakdown.WorkspaceSlug != workspaceSlug {
+			return nil, fmt.Errorf("workspace mismatch: %s != %s", registryBreakdown.WorkspaceSlug, workspaceSlug)
+		}
 	}
 
 	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceName, registryBreakdown.Reference, outPath)

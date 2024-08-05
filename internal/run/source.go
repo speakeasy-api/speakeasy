@@ -335,7 +335,14 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			log.From(ctx).Warnf("error parsing registry location %s: %v", string(source.Registry.Location), err)
 		}
 
-		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
+		authenticatedOrg := auth.GetOrgSlugFromContext(ctx)
+		if orgSlug != authenticatedOrg {
+			// If the user is authenticated with speakeasy-self, just skip snapshotting rather than failing
+			if authenticatedOrg == "speakeasy-self" {
+				registryStep.Skip("you are authenticated with speakeasy-self")
+				return nil
+			}
+
 			message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
 			if !env.IsGithubAction() {
 				message += " run `speakeasy auth logout`"
