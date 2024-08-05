@@ -127,7 +127,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 
 	apiKey := config.GetWorkspaceAPIKey(document.OrganizationSlug, document.WorkspaceSlug)
 	if apiKey == "" {
-		return nil, fmt.Errorf("no API key found for workspace %s/%s. Run `speakeasy auth login` to authenticate with the correct workspace", document.OrganizationSlug, document.WorkspaceSlug)
+		apiKey = config.GetSpeakeasyAPIKey()
 	}
 
 	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
