@@ -3,11 +3,11 @@ package config
 import (
 	"context"
 	"fmt"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"golang.org/x/exp/maps"
 	"os"
 	"path/filepath"
-
-	core "github.com/speakeasy-api/speakeasy-core/auth"
 
 	"github.com/spf13/viper"
 )
@@ -74,11 +74,9 @@ func GetWorkspaceAPIKey(orgSlug, workspaceSlug string) string {
 }
 
 func SetWorkspaceAPIKey(orgSlug, workspaceSlug, key string) error {
-	keys := map[string]interface{}{}
-
-	keysVal := vCfg.Get(workspaceKeysKey)
-	if keysVal != nil {
-		keys = keysVal.(map[string]interface{})
+	keys := vCfg.GetStringMapString(workspaceKeysKey)
+	if keys == nil {
+		keys = make(map[string]string)
 	}
 
 	keys[getWorkspaceKey(orgSlug, workspaceSlug)] = key
@@ -86,6 +84,10 @@ func SetWorkspaceAPIKey(orgSlug, workspaceSlug, key string) error {
 	vCfg.Set(workspaceKeysKey, keys)
 
 	return save()
+}
+
+func GetAuthenticatedWorkspaces() []string {
+	return maps.Keys(vCfg.GetStringMapString(workspaceKeysKey))
 }
 
 func getWorkspaceKey(orgSlug, workspaceSlug string) string {
@@ -103,7 +105,7 @@ func SetSpeakeasyAuthInfo(ctx context.Context, info core.SpeakeasyAuthInfo) erro
 		vCfg.Set("speakeasy_api_key", info.APIKey)
 		vCfg.Set("speakeasy_workspace_id", info.WorkspaceID)
 		vCfg.Set("speakeasy_customer_id", info.CustomerID)
-	} else {
+	} else if info.WorkspaceID != "self" {
 		println(styles.DimmedItalic.Render("Keeping speakeasy-self as default workspace. New workspace will still be usable as a registry source. Logout first if you want to change default workspaces\n"))
 	}
 
@@ -112,6 +114,11 @@ func SetSpeakeasyAuthInfo(ctx context.Context, info core.SpeakeasyAuthInfo) erro
 
 	// SetWorkspaceAPIKey executes save()
 	return SetWorkspaceAPIKey(orgSlug, workspaceSlug, info.APIKey)
+}
+
+func SetSpeakeasyAPIKey(apiKey string) error {
+	vCfg.Set("speakeasy_api_key", apiKey)
+	return save()
 }
 
 func ClearSpeakeasyAuthInfo() error {
