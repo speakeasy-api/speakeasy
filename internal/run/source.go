@@ -338,7 +338,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		authenticatedOrg := auth.GetOrgSlugFromContext(ctx)
 		if orgSlug != authenticatedOrg {
 			// If the user is authenticated with speakeasy-self, just skip snapshotting rather than failing
-			if authenticatedOrg == "speakeasy-self" {
+			if authenticatedOrg == speakeasySelf && !env.IsGithubAction() {
 				registryStep.Skip("you are authenticated with speakeasy-self")
 				return nil
 			}
@@ -347,11 +347,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			if !env.IsGithubAction() {
 				message += " run `speakeasy auth logout`"
 			}
-			if speakeasySelf == auth.GetOrgSlugFromContext(ctx) && !env.IsGithubAction() {
-				log.From(ctx).Warn(message)
-			} else {
-				return fmt.Errorf(message)
-			}
+			return fmt.Errorf(message)
 		}
 
 		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
@@ -359,11 +355,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			if !env.IsGithubAction() {
 				message += " run `speakeasy auth logout`"
 			}
-			if speakeasySelf == auth.GetWorkspaceSlugFromContext(ctx) && !env.IsGithubAction() {
-				log.From(ctx).Warn(message)
-			} else {
-				return fmt.Errorf(message)
-			}
+			return fmt.Errorf(message)
 		}
 
 		namespaceName = name
