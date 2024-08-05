@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 	"os"
 	"path/filepath"
 
@@ -30,8 +31,8 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return nil, fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
 	}
 
-	// Allow speakeasy-self to bypass this check for downloading only
-	if organizationSlug != "speakeasy-self" {
+	keyForWorkspace := config.GetWorkspaceAPIKey(organizationSlug, workspaceSlug)
+	if keyForWorkspace == "" {
 		if registryBreakdown.OrganizationSlug != organizationSlug {
 			return nil, fmt.Errorf("organization mismatch: %s != %s", registryBreakdown.OrganizationSlug, organizationSlug)
 		}
@@ -41,7 +42,7 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		}
 	}
 
-	return download.DownloadRegistryOpenAPIBundle(ctx, registryBreakdown.NamespaceName, registryBreakdown.Reference, outPath)
+	return download.DownloadRegistryOpenAPIBundle(ctx, *registryBreakdown, outPath)
 }
 
 func IsRegistryEnabled(ctx context.Context) bool {
