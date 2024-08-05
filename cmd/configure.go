@@ -374,24 +374,14 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
 	}
 
-	var publishingOptions []huh.Option[string]
+	var targets []string
 	for name, target := range workflowFile.Targets {
 		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
-			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
+			targets = append(targets, name)
 		}
 	}
 
-	if len(publishingOptions) == 0 {
-		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
-		return nil
-	}
-
-	chosenTargets, err := prompts.SelectPublishingTargets(publishingOptions, true)
-	if err != nil {
-		return err
-	}
-
-	for _, name := range chosenTargets {
+	for _, name := range targets {
 		target := workflowFile.Targets[name]
 		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
 		if err != nil {
@@ -417,7 +407,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		}
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
 	} else if len(workflowFile.Targets) > 1 {
-		for _, name := range chosenTargets {
+		for _, name := range targets {
 			generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workingDir, &name)
 			if err != nil {
 				return err

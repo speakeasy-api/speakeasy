@@ -561,25 +561,3 @@ func defaultPublishingFile() *config.PublishWorkflow {
 		},
 	}
 }
-
-func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect bool) ([]string, error) {
-	chosenTargets := make([]string, 0)
-	if autoSelect {
-		for _, option := range publishingOptions {
-			chosenTargets = append(chosenTargets, option.Value)
-		}
-	}
-	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(
-		huh.NewMultiSelect[string]().
-			Title("Select targets to configure publishing configs for.").
-			Description("Setup variables to configure publishing directly from Speakeasy.\n").
-			Options(publishingOptions...).
-			Value(&chosenTargets),
-	)),
-		"Would you like to configure publishing for any existing targets?").
-		ExecuteForm(); err != nil {
-		return nil, err
-	}
-
-	return chosenTargets, nil
-}
