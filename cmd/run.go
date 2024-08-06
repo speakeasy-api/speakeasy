@@ -230,7 +230,7 @@ func askForTarget(title, description, confirmation string, targets []string, all
 	target := ""
 
 	prompt := charm.NewSelectPrompt(title, description, targetOptions, &target)
-	if _, err := charm.NewForm(huh.NewForm(prompt), confirmation).ExecuteForm(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt), charm.WithTitle(confirmation)).ExecuteForm(); err != nil {
 		return "", err
 	}
 
@@ -249,7 +249,7 @@ func askForSource(sources []string) (string, error) {
 	source := ""
 
 	prompt := charm.NewSelectPrompt("What source would you like to run?", "You may choose an individual target or 'all'.", sourceOptions, &source)
-	if _, err := charm.NewForm(huh.NewForm(prompt), "Let's choose a target to run the generation workflow.").ExecuteForm(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt), charm.WithTitle("Let's choose a target to run the generation workflow.")).ExecuteForm(); err != nil {
 		return "", err
 	}
 

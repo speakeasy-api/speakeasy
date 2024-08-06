@@ -115,8 +115,8 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
 	if _, err := charm.NewForm(huh.NewForm(prompts...),
-		"Let's set up a new target for your workflow.",
-		"A target defines what language to generate and how.").
+		charm.WithTitle("Let's set up a new target for your workflow."),
+		charm.WithDescription("A target defines what language to generate and how.")).
 		ExecuteForm(); err != nil {
 		return "", nil, err
 	}
@@ -148,8 +148,8 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 
 	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
 	if _, err := charm.NewForm(huh.NewForm(prompts...),
-		"Let's set up a new target for your workflow.",
-		"A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.").ExecuteForm(); err != nil {
+		charm.WithTitle("Let's set up a new target for your workflow."),
+		charm.WithDescription("A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).ExecuteForm(); err != nil {
 		return "", nil, err
 	}
 
@@ -190,7 +190,7 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 					Suggestions(charm.DirsInCurrentDir(outDir)).
 					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 					Value(&outDir))),
-				"When setting up multiple targets we recommend you select an output directory not in the root folder.").ExecuteForm(); err != nil {
+				charm.WithTitle("When setting up multiple targets we recommend you select an output directory not in the root folder.")).ExecuteForm(); err != nil {
 				return err
 			}
 

@@ -90,7 +90,7 @@ func (m *SimpleInput) SetWidth(width int) {}
 
 func (m *SimpleInput) Validate() error {
 	if m.inputModel.Value() == "" {
-		return fmt.Errorf("please supply a value")
+		return fmt.Errorf("please supply a Value")
 	}
 	return m.validate(m.inputModel.Value())
 }
@@ -115,7 +115,7 @@ func (m *SimpleInput) View() string {
 
 func (m *SimpleInput) OnUserExit() {}
 
-// Run returns a map from input name to the input value
+// Run returns a map from input name to the input Value
 func (m *SimpleInput) Run() string {
 	newM, err := charm_internal.RunModel(m)
 	if err != nil {

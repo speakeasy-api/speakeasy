@@ -30,7 +30,7 @@ func getOASLocation(location, authHeader *string, allowSample bool) error {
 
 	_, err := charm_internal.NewForm(huh.NewForm(
 		getRemoteAuthenticationPrompts(location, authHeader)...),
-		"Looks like your document requires authentication").
+		charm_internal.WithTitle("Looks like your document requires authentication")).
 		ExecuteForm()
 
 	return err
@@ -229,7 +229,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	prompt := charm_internal.NewSelectPrompt("Would you like to modify the location of an existing OpenAPI document or add a new one?", "", inputOptions, &selectedDoc)
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		prompt),
-		fmt.Sprintf("Let's modify the source %s", name)).
+		charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader)...)
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's modify the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -300,7 +300,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	addOverlayFile := false
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
-		fmt.Sprintf("Let's add to the source %s", name)).
+		charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -344,7 +344,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 					})).
 					Value(&outputLocation),
 			)),
-			fmt.Sprintf("Let's modify the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -394,8 +394,8 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		groups...),
-		"Let's set up a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+		charm_internal.WithTitle("Let's set up a new source for your workflow."),
+		charm_internal.WithDescription("A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
 		ExecuteForm(); err != nil {
 		return "", nil, err
 	}

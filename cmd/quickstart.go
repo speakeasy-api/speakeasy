@@ -170,7 +170,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 				return nil
 			}).
 			Value(&promptedDir))),
-			"Pick an output directory for your newly created files.").
+			charm.WithTitle("Pick an output directory for your newly created files.")).
 			ExecuteForm()
 	} else {
 		promptedDir = "."

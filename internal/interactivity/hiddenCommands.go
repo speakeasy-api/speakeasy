@@ -13,4 +13,5 @@ var HiddenCommands = []string{
 	"bump",
 	"tag",
 	"clean",
+	"generate",
 }

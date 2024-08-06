@@ -8,11 +8,17 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
+type Key struct {
+	Key   string
+	Label string
+}
+
 type FormModel struct {
 	title       string
 	description string
 	form        *huh.Form // huh.Form is just a tea.Model
 	signalExit  bool
+	keys        []Key
 }
 
 func Execute(fields ...huh.Field) error {
@@ -24,18 +30,22 @@ func Execute(fields ...huh.Field) error {
 	return err
 }
 
-func NewForm(form *huh.Form, args ...string) FormModel {
+type FormOpt func(*FormModel)
+
+func NewForm(form *huh.Form, opts ...FormOpt) FormModel {
 	keyMap := huh.NewDefaultKeyMap()
 	keyMap.Input.AcceptSuggestion = key.NewBinding(key.WithKeys("tab", "right"), key.WithHelp("tab", "complete"), key.WithHelp("right", "complete"))
+
 	model := FormModel{
 		form: form.WithTheme(formTheme).WithKeyMap(keyMap).WithShowHelp(false),
+		keys: []Key{
+			{Key: "tab/↵", Label: "next"},
+			{Key: "esc", Label: "quit"},
+		},
 	}
 
-	if len(args) > 0 {
-		model.title = args[0]
-		if len(args) > 1 {
-			model.description = args[1]
-		}
+	for _, opt := range opts {
+		opt(&model)
 	}
 
 	return model
@@ -77,7 +87,14 @@ func (m FormModel) View() string {
 	titleStyle := lipgloss.NewStyle().Foreground(styles.Focused.GetForeground()).Bold(true)
 	descriptionStyle := lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground()).Italic(true)
 
-	legend := styles.RenderKeymapLegend([]string{"tab/↵", "esc"}, []string{"next", "quit"})
+	keys := make([]string, len(m.keys))
+	labels := make([]string, len(m.keys))
+	for i, k := range m.keys {
+		keys[i] = k.Key
+		labels[i] = k.Label
+	}
+	legend := styles.RenderKeymapLegend(keys, labels)
+
 	content := m.form.View() + "\n" + legend + "\n"
 
 	if m.title != "" {
@@ -100,4 +117,26 @@ func (m FormModel) ExecuteForm(opts ...tea.ProgramOption) (tea.Model, error) {
 	}
 
 	return mResult, nil
+}
+
+/*
+ * OPTIONS
+ */
+
+func WithTitle(title string) FormOpt {
+	return func(m *FormModel) {
+		m.title = title
+	}
+}
+
+func WithDescription(description string) FormOpt {
+	return func(m *FormModel) {
+		m.description = description
+	}
+}
+
+func WithKey(key, label string) FormOpt {
+	return func(m *FormModel) {
+		m.keys = append([]Key{{Key: key, Label: label}}, m.keys...)
+	}
 }
