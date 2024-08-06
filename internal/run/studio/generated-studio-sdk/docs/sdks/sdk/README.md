@@ -1,4 +1,4 @@
-# SpekaeasyStudio SDK
+# SDK
 
 
 ## Overview
@@ -23,14 +23,14 @@ package main
 
 import(
 	"os"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"openapi"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New(
-        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    s := openapi.New(
+        openapi.WithSecurity(os.Getenv("SECRET")),
     )
 
     ctx := context.Background()
@@ -70,14 +70,14 @@ package main
 
 import(
 	"os"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"openapi"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New(
-        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    s := openapi.New(
+        openapi.WithSecurity(os.Getenv("SECRET")),
     )
 
     ctx := context.Background()
@@ -117,14 +117,14 @@ package main
 
 import(
 	"os"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"openapi"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New(
-        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    s := openapi.New(
+        openapi.WithSecurity(os.Getenv("SECRET")),
     )
 
     ctx := context.Background()
@@ -164,14 +164,14 @@ package main
 
 import(
 	"os"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"openapi"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New(
-        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    s := openapi.New(
+        openapi.WithSecurity(os.Getenv("SECRET")),
     )
 
     ctx := context.Background()
@@ -211,15 +211,15 @@ package main
 
 import(
 	"os"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/operations"
+	"openapi"
+	"openapi/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New(
-        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    s := openapi.New(
+        openapi.WithSecurity(os.Getenv("SECRET")),
     )
     request := operations.UpdateSourceRequestBody{
         Overlay: "<value>",
@@ -262,14 +262,14 @@ package main
 
 import(
 	"os"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"openapi"
 	"context"
 	"log"
 )
 
 func main() {
-    s := generatedstudiosdk.New(
-        generatedstudiosdk.WithSecurity(os.Getenv("SECRET")),
+    s := openapi.New(
+        openapi.WithSecurity(os.Getenv("SECRET")),
     )
 
     ctx := context.Background()

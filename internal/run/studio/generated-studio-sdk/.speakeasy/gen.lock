@@ -1,19 +1,18 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: fd1d119c52cc2748445f61a1f688e32d
+  docChecksum: a4d3bd495fce448395865a70b9d5dc38
   docVersion: 1.0.0
-  speakeasyVersion: 0.0.1
-  generationVersion: 2.384.4
-  releaseVersion: 0.1.2
-  configChecksum: dc325cc42d3a81ea98fe9135ec0fd6d5
+  speakeasyVersion: 1.345.4
+  generationVersion: 2.378.3
+  releaseVersion: 0.2.1
+  configChecksum: 78300fa1327f0c7da2d7a53185703315
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.5.3
+    core: 3.5.1
     defaultEnabledRetries: 0.2.0
-    devContainers: 2.90.0
-    envVarSecurityUsage: 0.2.1
+    envVarSecurityUsage: 0.2.0
     globalSecurity: 2.82.9
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
@@ -23,7 +22,7 @@ features:
     retries: 2.83.0
     sdkHooks: 0.1.0
 generatedFiles:
-  - spekaeasystudio.go
+  - sdk.go
   - models/sdkerrors/sdkerror.go
   - retry/config.go
   - types/bigint.go
@@ -60,6 +59,7 @@ generatedFiles:
   - /models/components/fallbackcodesamples.go
   - /models/components/httpmetadata.go
   - /models/components/runresponse.go
+  - /models/components/targetrunsummary.go
   - /models/components/sourceresponse.go
   - /models/components/security.go
   - docs/models/operations/checkhealthresponse.md
@@ -81,16 +81,13 @@ generatedFiles:
   - docs/models/components/auth.md
   - docs/models/components/fallbackcodesamples.md
   - docs/models/components/httpmetadata.md
-  - docs/models/components/additionalproperties.md
   - docs/models/components/runresponse.md
+  - docs/models/components/targetrunsummary.md
   - docs/models/components/sourceresponse.md
   - docs/models/components/security.md
   - docs/models/operations/option.md
-  - docs/sdks/spekaeasystudio/README.md
+  - docs/sdks/sdk/README.md
   - USAGE.md
   - models/operations/options.go
-  - .devcontainer/README.md
-  - .devcontainer/devcontainer.json
-  - .devcontainer/setup.sh
   - internal/hooks/hooks.go
   - CONTRIBUTING.md

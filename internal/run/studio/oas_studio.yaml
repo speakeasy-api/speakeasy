@@ -112,33 +112,8 @@ components:
         - workingDirectory
     RunResponse:
       type: object
+      description: Map of target run summaries
       properties:
-        additionalProperties: 
-          type: object
-          properties:
-            readme:
-              type: string
-              description: Contents of the README file for this target
-            gen_yaml:
-              type: string
-              description: Contents of the gen.yaml file for this target
-            output_directory:
-              type: string
-              description: Output directory for this target
-            language:
-              type: string
-              description: Language for this target
-          required:
-            - readme
-            - gen_yaml
-            - output_directory
-            - language
-        sourceID:
-          type: string
-          description: Source ID in the workflow file
-        targetID:
-          type: string
-          description: Target ID in the workflow file
         errors:
           type: array
           items:
@@ -168,8 +143,45 @@ components:
           description: Count of linting informational messages
         sourceResult:
           $ref: '#/components/schemas/SourceResponse'
+        targetResults:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TargetRunSummary'
+          description: Map of target results
+        workflow:
+          $ref: '#/components/schemas/Workflow'
       required:
+        - sourceResult
+        - targetResults
+        - workflow
+    TargetRunSummary:
+      type: object
+      properties:
+        readme:
+          type: string
+          description: Contents of the README file for this target
+        gen_yaml:
+          type: string
+          description: Contents of the gen.yaml file for this target
+        output_directory:
+          type: string
+          description: Output directory for this target
+        language:
+          type: string
+          description: Language for this target
+        sourceID:
+          type: string
+          description: Source ID in the workflow file
+        targetID:
+          type: string
+          description: Target ID in the workflow file
+      required:
+        - targetID
         - sourceID
+        - readme
+        - gen_yaml
+        - output_directory
+        - language
     SourceResponse:
       type: object
       properties:
@@ -319,5 +331,5 @@ components:
       name: x-secret-key
       in: header
 security:
-  - secret: []
+  - secret: [ ]
   

@@ -40,13 +40,9 @@ func NewStudioHandlers(workflow *run.Workflow) (StudioHandlers, error) {
 }
 
 func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	// TODO: ret := components.RunResponse{}
-	ret := make(map[string]interface{})
-
-	lastTargetID := ""
+	res := components.RunResponse{}
 
 	for k, v := range h.WorkflowRunner.TargetResults {
-		lastTargetID = k
 		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
 		if err != nil {
 			return fmt.Errorf("error reading gen.yaml: %w", err)
@@ -56,20 +52,16 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 		if err != nil {
 			return fmt.Errorf("error reading gen.yaml: %w", err)
 		}
-		x := make(map[string]string)
-		x["gen_yaml"] = genYamlContents
-		x["readme"] = readMeContents
-		ret[k] = x
-	}
-
-	ret["source_id"] = h.SourceID
-
-	if len(h.WorkflowRunner.TargetResults) == 1 {
-		ret["target_id"] = lastTargetID
+		res.TargetResults[k] = components.TargetRunSummary{
+			TargetID: k,
+			SourceID: h.SourceID,
+			Readme:   readMeContents,
+			GenYaml:  genYamlContents,
+		}
 	}
 
 	if len(h.WorkflowRunner.SourceResults) != 1 {
-		return errors.New("unexpected just one source")
+		return errors.New("expected just one source")
 	}
 
 	sourceResult := h.WorkflowRunner.SourceResults[h.SourceID]
@@ -77,13 +69,19 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 	if err != nil {
 		return fmt.Errorf("error converting source result to source response: %w", err)
 	}
-	ret["source_result"] = sourceResponse
+	res.SourceResult = sourceResponse
 
-	workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
+	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
 	if err != nil {
 		return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
 	}
-	ret["workflow"] = workflow
+	res.Workflow = wf
+
+	err = json.NewEncoder(w).Encode(res)
+	if err != nil {
+		return fmt.Errorf("error encoding health response: %w", err)
+	}
+
 	return nil
 }
 
@@ -97,7 +95,6 @@ func (h *StudioHandlers) updateRun(ctx context.Context, w http.ResponseWriter, r
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-
 	workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
 	if err != nil {
 		return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
