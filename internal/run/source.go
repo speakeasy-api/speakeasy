@@ -325,6 +325,8 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}()
 
 	namespaceName := strcase.ToKebab(sourceID)
+	apiKey := config.GetSpeakeasyAPIKey()
+
 	if source.Registry != nil {
 		orgSlug, workspaceSlug, name, err := source.Registry.ParseRegistryLocation()
 		if err != nil {
@@ -335,31 +337,19 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			log.From(ctx).Warnf("error parsing registry location %s: %v", string(source.Registry.Location), err)
 		}
 
-		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
-			message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
-			if !env.IsGithubAction() {
-				message += " run `speakeasy auth logout`"
-			}
-			if speakeasySelf == auth.GetOrgSlugFromContext(ctx) && !env.IsGithubAction() {
-				log.From(ctx).Warn(message)
-			} else {
-				return fmt.Errorf(message)
-			}
+		skip, key, err := getAndValidateAPIKey(ctx, orgSlug, workspaceSlug, string(source.Registry.Location))
+
+		if skip {
+			registryStep.Skip("you are authenticated with speakeasy-self")
+			return nil
 		}
 
-		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
-			message := fmt.Sprintf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
-			if !env.IsGithubAction() {
-				message += " run `speakeasy auth logout`"
-			}
-			if speakeasySelf == auth.GetWorkspaceSlugFromContext(ctx) && !env.IsGithubAction() {
-				log.From(ctx).Warn(message)
-			} else {
-				return fmt.Errorf(message)
-			}
+		if err != nil {
+			return err
 		}
 
 		namespaceName = name
+		apiKey = key
 	}
 
 	tags, err := w.getRegistryTags(ctx, sourceID)
@@ -430,7 +420,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 		Tags:     tags,
 		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
+		Access: ocicommon.NewRepositoryAccess(apiKey, namespaceName, ocicommon.RepositoryAccessOptions{
 			Insecure: insecurePublish,
 		}),
 	})
@@ -493,6 +483,41 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	return nil
+}
+
+func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryLocation string) (skip bool, key string, err error) {
+	if key = config.GetWorkspaceAPIKey(orgSlug, workspaceSlug); key != "" {
+		return
+	}
+
+	authenticatedOrg := auth.GetOrgSlugFromContext(ctx)
+	if orgSlug != authenticatedOrg {
+		// If the user is authenticated with speakeasy-self, just skip snapshotting rather than failing
+		if authenticatedOrg == speakeasySelf && !env.IsGithubAction() {
+			skip = true
+			return
+		}
+
+		message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), registryLocation)
+		if !env.IsGithubAction() {
+			message += " run `speakeasy auth logout`"
+		}
+		err = fmt.Errorf(message)
+		return
+	}
+
+	if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+		message := fmt.Sprintf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), registryLocation)
+		if !env.IsGithubAction() {
+			message += " run `speakeasy auth logout`"
+		}
+		err = fmt.Errorf(message)
+		return
+	}
+
+	key = config.GetSpeakeasyAPIKey()
+
+	return
 }
 
 func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {

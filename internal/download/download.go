@@ -116,7 +116,7 @@ func DownloadFile(url, outPath, header, token string) error {
 }
 
 // DownloadRegistryOpenAPIBundle Returns a file path within the downloaded bundle or error
-func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference, outPath string) (*DownloadedRegistryOpenAPIBundle, error) {
+func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.SpeakeasyRegistryDocument, outPath string) (*DownloadedRegistryOpenAPIBundle, error) {
 	serverURL := auth.GetServerURL()
 	insecurePublish := false
 	if strings.HasPrefix(serverURL, "http://") {
@@ -125,14 +125,19 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
 
+	apiKey := config.GetWorkspaceAPIKey(document.OrganizationSlug, document.WorkspaceSlug)
+	if apiKey == "" {
+		apiKey = config.GetSpeakeasyAPIKey()
+	}
+
 	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
 		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
+		Access: ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
 			Insecure: insecurePublish,
 		}),
 	})
 
-	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, reference)
+	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, document.Reference)
 	if err != nil {
 		return nil, err
 	}
@@ -164,8 +169,8 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference
 
 	return &DownloadedRegistryOpenAPIBundle{
 		LocalFilePath:     outputFileName,
-		NamespaceName:     namespaceName,
-		ManifestReference: reference,
+		NamespaceName:     document.NamespaceName,
+		ManifestReference: document.Reference,
 		ManifestDigest:    bundleResult.ManifestDigest,
 		BlobDigest:        bundleResult.BlobDigest,
 	}, nil
