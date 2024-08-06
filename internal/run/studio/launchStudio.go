@@ -13,7 +13,6 @@ import (
 	"syscall"
 
 	"github.com/pkg/browser"
-	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -71,7 +70,9 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		Handler: corsMiddleware(authMiddleware(secret, mux)),
 	}
 
-	serverURL := auth.GetWorkspaceBaseURL(ctx)
+	//TODO
+	//serverURL := auth.GetWorkspaceBaseURL(ctx)
+	serverURL := "http://localhost:35291/org/dub/dub"
 
 	url := fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
 
