@@ -13,7 +13,7 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
-	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/studio/generated-studio-sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v2"
 )
@@ -40,7 +40,9 @@ func NewStudioHandlers(workflow *run.Workflow) (StudioHandlers, error) {
 }
 
 func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	res := components.RunResponse{}
+	res := components.RunResponse{
+		TargetResults: make(map[string]components.TargetRunSummary),
+	}
 
 	for k, v := range h.WorkflowRunner.TargetResults {
 		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
@@ -79,7 +81,7 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
-		return fmt.Errorf("error encoding health response: %w", err)
+		return fmt.Errorf("error encoding getRun response: %w", err)
 	}
 
 	return nil
@@ -120,13 +122,13 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	sourceID := h.SourceID
 
-	workflowRunnerPtr, err := workflowRunner.Clone(ctx, run.WithSkipLinting())
+	workflowRunnerPtr, err := workflowRunner.Clone(ctx, run.WithSkipLinting(), run.WithSkipCleanup())
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
 	workflowRunner = *workflowRunnerPtr
 
-	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", false)
+	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "")
 	if err != nil {
 		return fmt.Errorf("error running source: %w", err)
 	}

@@ -24,6 +24,7 @@ type Workflow struct {
 	SkipLinting      bool
 	SkipChangeReport bool
 	SkipSnapshot     bool
+	SkipCleanup      bool
 	FromQuickstart   bool
 	RepoSubDirs      map[string]string
 	InstallationURLs map[string]string
@@ -159,6 +160,12 @@ func WithForceGeneration(forceGeneration bool) Opt {
 func WithSkipLinting() Opt {
 	return func(w *Workflow) {
 		w.SkipLinting = true
+	}
+}
+
+func WithSkipCleanup() Opt {
+	return func(w *Workflow) {
+		w.SkipCleanup = true
 	}
 }
 

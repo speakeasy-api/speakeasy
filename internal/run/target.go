@@ -3,7 +3,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -61,7 +60,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, false)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -70,7 +69,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 					*cliEvent.GenerateNumberOfOperationsIgnored = int64(len(sourceRes.LintResult.InvalidOperation))
 				}
 
-				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, false, sourceRes.LintResult.ValidOperations)
+				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, sourceRes.LintResult.ValidOperations)
 				if retriedErr != nil {
 					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
 					// return the original error
@@ -202,11 +201,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		targetLock.CodeSamplesNamespace = namespaceName
 		targetLock.CodeSamplesRevisionDigest = digest
 	}
-
-	rootStep.NewSubstep("Cleaning up")
-
-	// Clean up temp files on success
-	os.RemoveAll(workflow.GetTempDir())
 
 	rootStep.SucceedWorkflow()
 
