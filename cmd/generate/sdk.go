@@ -40,7 +40,6 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 			Name:          "lang",
 			Shorthand:     "l",
 			Required:      true,
-			DefaultValue:  "typescript",
 			AllowedValues: SDKSupportedLanguageTargets(),
 			Description:   fmt.Sprintf("language to generate"),
 		},
