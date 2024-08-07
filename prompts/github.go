@@ -416,8 +416,13 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*target))
 		}
 
+		var releaseDirectory string
 		if outputPath != nil {
-			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *outputPath)}
+			releaseDirectory = strings.TrimPrefix(*outputPath, "./")
+		}
+		
+		if releaseDirectory != "" {
+			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", releaseDirectory)}
 		}
 
 		for name, value := range secrets {
