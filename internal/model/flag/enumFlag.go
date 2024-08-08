@@ -2,6 +2,7 @@ package flag
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/spf13/cobra"
 	"slices"
 	"strings"
@@ -18,13 +19,12 @@ func (f EnumFlag) Init(cmd *cobra.Command) error {
 	if len(f.AllowedValues) == 0 {
 		return fmt.Errorf("allowed values must not be empty")
 	}
+	if !slices.Contains(f.AllowedValues, f.DefaultValue) {
+		return fmt.Errorf("default value %s is not in the list of allowed values", f.DefaultValue)
+	}
 
 	defaultString := ""
 	if !f.Required {
-		if !slices.Contains(f.AllowedValues, f.DefaultValue) {
-			return fmt.Errorf("default value %s is not in the list of allowed values", f.DefaultValue)
-		}
-
 		if f.DefaultValue == "" {
 			return fmt.Errorf("default value must not be empty if the flag is not required")
 		}
@@ -34,6 +34,9 @@ func (f EnumFlag) Init(cmd *cobra.Command) error {
 
 	cmd.Flags().StringP(f.Name, f.Shorthand, f.DefaultValue, fullDescription)
 	if err := setRequiredAndHidden(cmd, f.Name, f.Required, f.Hidden); err != nil {
+		return err
+	}
+	if err := cmd.Flags().SetAnnotation(f.Name, charm.AutoCompleteAnnotation, f.AllowedValues); err != nil {
 		return err
 	}
 
