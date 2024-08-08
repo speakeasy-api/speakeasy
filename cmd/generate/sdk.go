@@ -41,7 +41,7 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 			Shorthand:     "l",
 			Required:      true,
 			AllowedValues: SDKSupportedLanguageTargets(),
-			Description:   fmt.Sprintf("language to generate"),
+			Description:   fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
 		},
 		schemaFlag,
 		outFlag,
