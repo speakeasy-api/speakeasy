@@ -20,6 +20,7 @@ var suportedTargetsCmd = &model.ExecutableCommand[supportedTargetsFlags]{
 }
 
 func runSupportedTargets(ctx context.Context, flags supportedTargetsFlags) error {
+	// Do not change this output structure, the sdk-generation-action depends on it
 	fmt.Println(strings.Join(SDKSupportedLanguageTargets(), ","))
 	return nil
 }
