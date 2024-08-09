@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"net"
 	"net/http"
 	"os"
@@ -70,8 +71,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		Handler: corsMiddleware(authMiddleware(secret, mux)),
 	}
 
-	//serverURL := auth.GetWorkspaceBaseURL(ctx)
-	serverURL := "http://localhost:35291/org/dub/dub"
+	serverURL := auth.GetWorkspaceBaseURL(ctx)
 
 	url := fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
 
