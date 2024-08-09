@@ -14,21 +14,23 @@ import (
 
 type Workflow struct {
 	// Opts
-	Target           string
-	Source           string
-	Repo             string
-	SetVersion       string
-	Debug            bool
-	ShouldCompile    bool
-	ForceGeneration  bool
-	SkipLinting      bool
-	SkipChangeReport bool
-	SkipSnapshot     bool
+	Target             string
+	Source             string
+	Repo               string
+	SetVersion         string
+	Debug              bool
+	ShouldCompile      bool
+	ForceGeneration    bool
+	FrozenWorkflowLock bool
+	SkipVersioning     bool
+	SkipLinting        bool
+	SkipChangeReport   bool
+	SkipSnapshot       bool
 	SkipCleanup      bool
-	FromQuickstart   bool
-	RepoSubDirs      map[string]string
-	InstallationURLs map[string]string
-	RegistryTags     []string
+	FromQuickstart     bool
+	RepoSubDirs        map[string]string
+	InstallationURLs   map[string]string
+	RegistryTags       []string
 
 	// Internal
 	workflowName       string
@@ -106,6 +108,28 @@ func WithWorkflowName(name string) Opt {
 func WithSource(source string) Opt {
 	return func(w *Workflow) {
 		w.Source = source
+	}
+}
+
+func WithFrozenWorkflowLock(frozen bool) Opt {
+	return func(w *Workflow) {
+		w.FrozenWorkflowLock = frozen
+		if frozen {
+			// Implies force generation -- workflow.lock being unchanged should mean we skip generation
+			w.ForceGeneration = true
+			// Implies No auto versioning -- workflow.lock being unchanged should mean we skip versioning
+			w.SkipVersioning = true
+			// Implies no snapshot
+			w.SkipSnapshot = true
+			// Implies no change report
+			w.SkipChangeReport = true
+		}
+	}
+}
+
+func WithSkipVersioning(skipVersioning bool) Opt {
+	return func(w *Workflow) {
+		w.SkipVersioning = skipVersioning
 	}
 }
 

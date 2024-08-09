@@ -20,21 +20,23 @@ import (
 )
 
 type RunFlags struct {
-	Target           string            `json:"target"`
-	Source           string            `json:"source"`
-	InstallationURL  string            `json:"installationURL"`
-	InstallationURLs map[string]string `json:"installationURLs"`
-	Debug            bool              `json:"debug"`
-	Repo             string            `json:"repo"`
-	RepoSubdir       string            `json:"repo-subdir"`
-	RepoSubdirs      map[string]string `json:"repo-subdirs"`
-	SkipCompile      bool              `json:"skip-compile"`
-	Force            bool              `json:"force"`
-	Output           string            `json:"output"`
-	Pinned           bool              `json:"pinned"`
-	RegistryTags     []string          `json:"registry-tags"`
-	SetVersion       string            `json:"set-version"`
-	LaunchStudio     bool              `json:"launch-studio"`
+	Target             string            `json:"target"`
+	Source             string            `json:"source"`
+	InstallationURL    string            `json:"installationURL"`
+	InstallationURLs   map[string]string `json:"installationURLs"`
+	Debug              bool              `json:"debug"`
+	Repo               string            `json:"repo"`
+	RepoSubdir         string            `json:"repo-subdir"`
+	RepoSubdirs        map[string]string `json:"repo-subdirs"`
+	SkipCompile        bool              `json:"skip-compile"`
+	SkipVersioning     bool              `json:"skip-versioning"`
+	FrozenWorkflowLock bool              `json:"frozen-workflow-lock"`
+	Force              bool              `json:"force"`
+	Output             string            `json:"output"`
+	Pinned             bool              `json:"pinned"`
+	RegistryTags       []string          `json:"registry-tags"`
+	SetVersion         string            `json:"set-version"`
+	LaunchStudio       bool              `json:"launch-studio"`
 	GitHub           bool              `json:"github"`
 }
 
@@ -98,6 +100,17 @@ A full workflow is capable of running the following steps:
 		flag.BooleanFlag{
 			Name:        "skip-compile",
 			Description: "skip compilation when generating the SDK",
+		},
+		flag.BooleanFlag{
+			Name:         "skip-versioning",
+			Description:  "skip automatic SDK version increments",
+			DefaultValue: false,
+		},
+		flag.BooleanFlag{
+			Name:         "frozen-workflow-lock",
+			Description:  "executes using the stored inputs from the workflow.lock, such that no OAS change occurs",
+			DefaultValue: false,
+			Hidden:       true, // we are unaware of any use cases for this flag outside of upgrade regression testing, which we execute internally
 		},
 		flag.BooleanFlag{
 			Name:        "force",
@@ -275,6 +288,8 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		run.WithInstallationURLs(flags.InstallationURLs),
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+		run.WithSkipVersioning(flags.SkipVersioning),
 		run.WithForceGeneration(flags.Force),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
@@ -300,6 +315,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	opts := []run.Opt{
 		run.WithTarget(flags.Target),
 		run.WithSource(flags.Source),
+		run.WithSkipVersioning(flags.SkipVersioning),
 		run.WithRepo(flags.Repo),
 		run.WithRepoSubDirs(flags.RepoSubdirs),
 		run.WithInstallationURLs(flags.InstallationURLs),
@@ -308,6 +324,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithForceGeneration(flags.Force),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
+		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 	}
 
 	// Don't cleanup if we're launching studio, we need the temp output

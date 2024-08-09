@@ -3,12 +3,15 @@ package integration_tests
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/versioning-reports/versioning"
+	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -142,7 +145,10 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 }
 
-func execute(t *testing.T, wd string, args ...string) *exec.Cmd {
+type Runnable interface {
+	Run() error
+}
+func execute(t *testing.T, wd string, args ...string) Runnable {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
@@ -153,6 +159,35 @@ func execute(t *testing.T, wd string, args ...string) *exec.Cmd {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd
+}
+
+// executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
+var mutex sync.Mutex
+var rootCmd = cmd.CmdForTest(version, artifactArch)
+func executeI(t *testing.T, wd string, args ...string) Runnable {
+	mutex.Lock()
+	t.Helper()
+	rootCmd.SetArgs(args)
+	oldWD, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(wd))
+
+	return &cmdRunner{
+		rootCmd: rootCmd,
+		cleanup: func() {
+			require.NoError(t, os.Chdir(oldWD))
+			mutex.Unlock()
+		},
+	}
+}
+type cmdRunner struct {
+	rootCmd *cobra.Command
+	cleanup func()
+}
+
+func (c *cmdRunner) Run() error {
+	defer c.cleanup()
+	return c.rootCmd.Execute()
 }
 
 func TestSpecWorkflows(t *testing.T) {

@@ -84,7 +84,41 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	var currentDocument string
-	if len(source.Inputs) == 1 {
+	if w.FrozenWorkflowLock {
+		mergeStep := rootStep.NewSubstep("Download OAS from lockfile")
+
+		// Check it exists, produce an error if not
+		if w.lockfileOld == nil {
+			return "", nil, fmt.Errorf("workflow lacks a prior lock file: can't use this on first run")
+		}
+		lockSource, ok := w.lockfileOld.Sources[sourceID]
+		if !ok {
+			return "", nil, fmt.Errorf("workflow lockfile lacks a reference to source %s: can't use this on first run", sourceID)
+		}
+		if !registry.IsRegistryEnabled(ctx) {
+			return "", nil, fmt.Errorf("registry is not enabled for this workspace")
+		}
+		if lockSource.SourceBlobDigest == "" || lockSource.SourceRevisionDigest == "" || lockSource.SourceNamespace == "" {
+			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace = %s blobDigest = %s revisionDigest = %s", lockSource.SourceNamespace, lockSource.SourceBlobDigest, lockSource.SourceRevisionDigest)
+		}
+		orgSlug, workspaceSlug, registryNamespace, err := w.workflow.Sources[sourceID].Registry.ParseRegistryLocation()
+		if err != nil {
+			return "", nil, fmt.Errorf("error parsing registry location %s: %w", string(w.workflow.Sources[sourceID].Registry.Location), err)
+		}
+		if lockSource.SourceNamespace != registryNamespace {
+			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace %s != %s", lockSource.SourceNamespace, registryNamespace)
+		}
+		registryLocation := fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+			lockSource.SourceNamespace, lockSource.SourceRevisionDigest)
+		d := workflow.Document{Location: registryLocation}
+		docPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
+		if err != nil {
+			return "", nil, fmt.Errorf("error resolving registry bundle from %s: %w", registryLocation, err)
+		}
+		currentDocument = docPath.LocalFilePath
+		mergeStep.Succeed()
+
+	} else if len(source.Inputs) == 1 {
 		var singleLocation *string
 		// The output location should be the resolved location
 		if len(source.Overlays) == 0 {
@@ -131,7 +165,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		return "", nil, err
 	}
 
-	if len(source.Overlays) > 0 {
+	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
 		overlayStep := rootStep.NewSubstep("Applying Overlays")
 
 		overlayLocation := outputLocation
