@@ -3,17 +3,18 @@ id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
   docChecksum: a4d3bd495fce448395865a70b9d5dc38
   docVersion: 1.0.0
-  speakeasyVersion: 1.345.4
-  generationVersion: 2.378.3
-  releaseVersion: 0.2.1
-  configChecksum: 78300fa1327f0c7da2d7a53185703315
+  speakeasyVersion: 0.0.1
+  generationVersion: 2.387.0
+  releaseVersion: 0.1.2
+  configChecksum: 4bff2c22d9c626cd5beac48ff8b56071
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.5.1
+    core: 3.5.3
     defaultEnabledRetries: 0.2.0
-    envVarSecurityUsage: 0.2.0
-    globalSecurity: 2.82.9
+    devContainers: 2.90.0
+    envVarSecurityUsage: 0.2.2
+    globalSecurity: 2.82.10
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
     globalServerURLs: 2.82.2
@@ -22,7 +23,7 @@ features:
     retries: 2.83.0
     sdkHooks: 0.1.0
 generatedFiles:
-  - sdk.go
+  - spekaeasystudio.go
   - models/sdkerrors/sdkerror.go
   - retry/config.go
   - types/bigint.go
@@ -86,8 +87,11 @@ generatedFiles:
   - docs/models/components/sourceresponse.md
   - docs/models/components/security.md
   - docs/models/operations/option.md
-  - docs/sdks/sdk/README.md
+  - docs/sdks/spekaeasystudio/README.md
   - USAGE.md
   - models/operations/options.go
+  - .devcontainer/README.md
+  - .devcontainer/devcontainer.json
+  - .devcontainer/setup.sh
   - internal/hooks/hooks.go
   - CONTRIBUTING.md

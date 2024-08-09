@@ -30,7 +30,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		return errors.New("unable to launch studio without a workflow")
 	}
 
-	handlers, err := NewStudioHandlers(workflow)
+	handlers, err := NewStudioHandlers(ctx, workflow)
 	if err != nil {
 		return fmt.Errorf("error creating studio handlers: %w", err)
 	}
@@ -116,6 +116,7 @@ func authMiddleware(secret string, next http.Handler) http.Handler {
 
 func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.From(r.Context()).Info("handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path))
 		ctx := r.Context()
 		if err := h(ctx, w, r); err != nil {
 			log.From(ctx).Error("error handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.Error(err))
@@ -147,7 +148,7 @@ func startServer(ctx context.Context, server *http.Server) error {
 }
 
 func searchForAvailablePort() (int, error) {
-	for port := 3000; port < 7000; port++ {
+	for port := 3333; port < 7000; port++ {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
 			_ = l.Close()

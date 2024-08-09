@@ -22,10 +22,11 @@ type StudioHandlers struct {
 	WorkflowRunner run.Workflow
 	SourceID       string
 	OverlayPath    string
+	Ctx            context.Context
 }
 
-func NewStudioHandlers(workflow *run.Workflow) (StudioHandlers, error) {
-	ret := StudioHandlers{WorkflowRunner: *workflow}
+func NewStudioHandlers(ctx context.Context, workflow *run.Workflow) (StudioHandlers, error) {
+	ret := StudioHandlers{WorkflowRunner: *workflow, Ctx: ctx}
 
 	sourceID, err := findWorkflowSourceIDBasedOnTarget(*workflow, workflow.Target)
 	if err != nil {
@@ -41,6 +42,8 @@ func NewStudioHandlers(workflow *run.Workflow) (StudioHandlers, error) {
 
 func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	res := components.RunResponse{}
+
+	res.TargetResults = make(map[string]components.TargetRunSummary)
 
 	for k, v := range h.WorkflowRunner.TargetResults {
 		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
@@ -86,7 +89,12 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func (h *StudioHandlers) updateRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	err := h.WorkflowRunner.Run(ctx)
+	cloned, err := h.WorkflowRunner.Clone(h.Ctx)
+	if err != nil {
+		return fmt.Errorf("error cloning workflow runner: %w", err)
+	}
+	h.WorkflowRunner = *cloned
+	err = h.WorkflowRunner.Run(h.Ctx)
 	if err != nil {
 		return fmt.Errorf("error running workflow: %w", err)
 	}
@@ -120,7 +128,7 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	sourceID := h.SourceID
 
-	workflowRunnerPtr, err := workflowRunner.Clone(ctx, run.WithSkipLinting())
+	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx, run.WithSkipLinting())
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
@@ -174,9 +182,9 @@ func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter
 	return h.getSource(ctx, w, r)
 }
 
-// ========================================
+// ---------------------------------
 // Helper functions
-// ========================================
+// ---------------------------------
 
 func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult, workflowConfig workflow.Workflow) (components.SourceResponse, error) {
 	sourceConfig := workflowConfig.Sources[sourceID]

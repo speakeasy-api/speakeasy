@@ -2,16 +2,16 @@ speakeasyVersion: 0.0.1
 sources:
     SpekaeasyStudio-OAS:
         sourceNamespace: spekaeasy-studio-oas
-        sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
-        sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
+        sourceRevisionDigest: sha256:2594c72319aaa14bfe54ad50809c733b9e45a9dd75db1adab234ac84322c90a1
+        sourceBlobDigest: sha256:0e3957089cf61702e113f40255b23f103b7bcbf6d07ec1361b85c9f0937f546b
         tags:
             - latest
 targets:
     spekaeasy-studio:
         source: SpekaeasyStudio-OAS
         sourceNamespace: spekaeasy-studio-oas
-        sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
-        sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
+        sourceRevisionDigest: sha256:2594c72319aaa14bfe54ad50809c733b9e45a9dd75db1adab234ac84322c90a1
+        sourceBlobDigest: sha256:0e3957089cf61702e113f40255b23f103b7bcbf6d07ec1361b85c9f0937f546b
         outLocation: /Users/da/code/speakeasy-cli/internal/run/studio/generated-studio-sdk
 workflow:
     workflowVersion: 1.0.0
