@@ -20,7 +20,7 @@ It has been generated successfully based on your OpenAPI spec. However, it is no
 ## SDK Installation
 
 ```bash
-go get openapi
+go get github.com/speakeasy-api/speakeasy/internal/studio/sdk
 ```
 <!-- End SDK Installation [installation] -->
 
@@ -34,13 +34,13 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
-	"openapi"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -86,15 +86,15 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
 	"models/operations"
-	"openapi"
-	"openapi/retry"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -131,14 +131,14 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
-	"openapi"
-	"openapi/retry"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithRetryConfig(
+	s := sdk.New(
+		sdk.WithRetryConfig(
 			retry.Config{
 				Strategy: "backoff",
 				Backoff: &retry.BackoffStrategy{
@@ -149,7 +149,7 @@ func main() {
 				},
 				RetryConnectionErrors: false,
 			}),
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -188,14 +188,14 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/sdkerrors"
 	"log"
-	"openapi"
-	"openapi/models/sdkerrors"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -231,14 +231,14 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
-	"openapi"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithServerIndex(0),
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithServerIndex(0),
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -272,14 +272,14 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
-	"openapi"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithServerURL("http://localhost:{port}"),
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithServerURL("http://localhost:{port}"),
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -353,13 +353,13 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
-	"openapi"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -395,13 +395,13 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
-	"openapi"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()

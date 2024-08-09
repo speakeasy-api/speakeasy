@@ -22,14 +22,14 @@ Check the CLI health and return relevant information.
 package main
 
 import(
-	"openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+    s := sdk.New(
+        sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
     ctx := context.Background()
@@ -74,14 +74,14 @@ Get the output of the last run.
 package main
 
 import(
-	"openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+    s := sdk.New(
+        sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
     ctx := context.Background()
@@ -120,14 +120,14 @@ Regenerate the currently selected targets.
 package main
 
 import(
-	"openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+    s := sdk.New(
+        sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
     ctx := context.Background()
@@ -166,14 +166,14 @@ Retrieve the source information from the workflow file, before and after applyin
 package main
 
 import(
-	"openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+    s := sdk.New(
+        sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
     ctx := context.Background()
@@ -212,15 +212,15 @@ Update the source with studio modifications overlay contents. This will re-run t
 package main
 
 import(
-	"openapi"
-	"openapi/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+    s := sdk.New(
+        sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
     request := operations.UpdateSourceRequestBody{
         Overlay: "<value>",
@@ -262,14 +262,14 @@ SSE endpoint to send changes detected on the local file system.
 package main
 
 import(
-	"openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
 	"log"
 )
 
 func main() {
-    s := openapi.New(
-        openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+    s := sdk.New(
+        sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
     ctx := context.Background()

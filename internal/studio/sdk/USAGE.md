@@ -4,13 +4,13 @@ package main
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
-	"openapi"
 )
 
 func main() {
-	s := openapi.New(
-		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := sdk.New(
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()

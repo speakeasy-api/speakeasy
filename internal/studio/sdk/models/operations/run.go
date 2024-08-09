@@ -3,23 +3,23 @@
 package operations
 
 import (
-	"openapi/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 )
 
-type GetRunResponse struct {
+type RunResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
 	RunResponse *components.RunResponse
 }
 
-func (o *GetRunResponse) GetHTTPMeta() components.HTTPMetadata {
+func (o *RunResponse) GetHTTPMeta() components.HTTPMetadata {
 	if o == nil {
 		return components.HTTPMetadata{}
 	}
 	return o.HTTPMeta
 }
 
-func (o *GetRunResponse) GetRunResponse() *components.RunResponse {
+func (o *RunResponse) GetRunResponse() *components.RunResponse {
 	if o == nil {
 		return nil
 	}

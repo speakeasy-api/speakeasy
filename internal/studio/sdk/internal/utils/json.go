@@ -13,7 +13,7 @@ import (
 	"time"
 	"unsafe"
 
-	"openapi/types"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/types"
 
 	"github.com/ericlagergren/decimal"
 )

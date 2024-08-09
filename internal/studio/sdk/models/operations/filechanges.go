@@ -3,7 +3,7 @@
 package operations
 
 import (
-	"openapi/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 )
 
 type FileChangesResponse struct {

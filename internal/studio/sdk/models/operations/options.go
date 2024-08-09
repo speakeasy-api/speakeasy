@@ -4,8 +4,8 @@ package operations
 
 import (
 	"errors"
-	"openapi/internal/utils"
-	"openapi/retry"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/internal/utils"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"time"
 )
 
