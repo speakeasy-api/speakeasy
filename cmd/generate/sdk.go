@@ -95,6 +95,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		false,
 		flags.Force,
 		"",
+		false,
 	)
 
 	return err
