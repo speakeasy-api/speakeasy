@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    # Try to group minor and patch updates for less toil
+    groups:
+      github-actions-minor-and-patch:
+        applies-to: version-updates
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+    schedule:
+      interval: weekly
