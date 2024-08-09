@@ -147,44 +147,51 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		}
 
 		for t := range w.workflow.Targets {
-			sourceRes, err := w.runTarget(ctx, t)
+			sourceRes, targetRes, err := w.runTarget(ctx, t)
 			if err != nil {
 				return err
 			}
 
-			w.sourceResults[sourceRes.Source] = sourceRes
+			w.SourceResults[sourceRes.Source] = sourceRes
+			w.TargetResults[t] = targetRes
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
-			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "", true)
+			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "")
 			if err != nil {
 				return err
 			}
 
-			w.sourceResults[sourceRes.Source] = sourceRes
+			w.SourceResults[sourceRes.Source] = sourceRes
 		}
 	} else if w.Target != "" {
 		if _, ok := w.workflow.Targets[w.Target]; !ok {
 			return fmt.Errorf("target %s not found", w.Target)
 		}
 
-		sourceRes, err := w.runTarget(ctx, w.Target)
+		sourceRes, targetRes, err := w.runTarget(ctx, w.Target)
 		if err != nil {
 			return err
 		}
 
-		w.sourceResults[sourceRes.Source] = sourceRes
+		w.SourceResults[sourceRes.Source] = sourceRes
+		w.TargetResults[w.Target] = targetRes
 	} else if w.Source != "" {
 		if _, ok := w.workflow.Sources[w.Source]; !ok {
 			return fmt.Errorf("source %s not found", w.Source)
 		}
 
-		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "", true)
+		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "")
 		if err != nil {
 			return err
 		}
 
-		w.sourceResults[sourceRes.Source] = sourceRes
+		w.SourceResults[sourceRes.Source] = sourceRes
+	}
+
+	if !w.SkipCleanup {
+		w.RootStep.NewSubstep("Cleaning Up")
+		os.RemoveAll(workflow.GetTempDir())
 	}
 
 	if err := workflow.SaveLockfile(w.ProjectDir, w.lockfile); err != nil {
@@ -259,7 +266,7 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 	return nil
 }
 
-func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool, viableOperations []string) (string, *SourceResult, error) {
+func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, viableOperations []string) (string, *SourceResult, error) {
 	subStep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
 	baseLocation := source.Inputs[0].Location
@@ -324,7 +331,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	source.Overlays = []workflow.Overlay{{Document: &workflow.Document{Location: minimumViableOverlayPath}}}
 	w.workflow.Sources[sourceID] = source
 
-	sourcePath, sourceRes, err := w.RunSource(ctx, subStep, sourceID, targetID, cleanUp)
+	sourcePath, sourceRes, err := w.RunSource(ctx, subStep, sourceID, targetID)
 	if err != nil {
 		failedRetry = true
 		return "", nil, err
