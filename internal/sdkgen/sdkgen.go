@@ -110,7 +110,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		opts = append(opts, generate.WithOutputTests())
 	}
 	if skipVersioning {
-		opts = append(opts, generate.WithSkipVersioning())
+		opts = append(opts, generate.WithSkipVersioning(skipVersioning))
 	}
 
 	g, err := generate.New(opts...)
