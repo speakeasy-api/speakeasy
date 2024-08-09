@@ -106,10 +106,6 @@ func (h *StudioHandlers) updateRun(ctx context.Context, w http.ResponseWriter, r
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	// workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
-	// if err != nil {
-	// 	return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
-	// }
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -119,8 +115,7 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 		return errors.New("streaming unsupported")
 	}
 
-	// response := components.HealthResponse{Version: events.GetSpeakeasyVersionFromContext(h.Ctx)}
-	response := map[string]string{"version": events.GetSpeakeasyVersionFromContext(h.Ctx)}
+	response := map[string]string{"status": "ok", "version": events.GetSpeakeasyVersionFromContext(h.Ctx)}
 
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
