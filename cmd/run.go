@@ -6,7 +6,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
-	"github.com/speakeasy-api/speakeasy/internal/run/studio"
+	"github.com/speakeasy-api/speakeasy/internal/studio"
 	"github.com/spf13/cobra"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -284,8 +284,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	workflow, err := run.NewWorkflow(
-		ctx,
+	opts := []run.Opt{
 		run.WithTarget(flags.Target),
 		run.WithSource(flags.Source),
 		run.WithRepo(flags.Repo),
@@ -296,6 +295,16 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithForceGeneration(flags.Force),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
+	}
+
+	// Don't cleanup if we're launching studio, we need the temp output
+	if flags.LaunchStudio {
+		opts = append(opts, run.WithSkipCleanup())
+	}
+
+	workflow, err := run.NewWorkflow(
+		ctx,
+		opts...,
 	)
 	if err != nil {
 		return err

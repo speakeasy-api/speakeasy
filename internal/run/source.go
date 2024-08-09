@@ -63,7 +63,7 @@ func (e *LintingError) Error() string {
 	return fmt.Sprintf("linting failed: %s - %s", e.Document, e.Err.Error())
 }
 
-func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *SourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{
@@ -215,11 +215,6 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	rootStep.SucceedWorkflow()
-
-	if cleanUp {
-		rootStep.NewSubstep("Cleaning Up")
-		os.RemoveAll(workflow.GetTempDir())
-	}
 
 	sourceRes.OutputPath = currentDocument
 	return currentDocument, sourceRes, nil

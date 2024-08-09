@@ -72,16 +72,14 @@ func (w *WorkflowStep) Succeed() {
 	if w.status == StatusRunning {
 		w.status = StatusSucceeded
 	}
+
+	for _, substep := range w.substeps {
+		substep.Succeed()
+	}
 }
 
 func (w *WorkflowStep) SucceedWorkflow() {
-	if w.status == StatusRunning {
-		w.status = StatusSucceeded
-	}
-	for _, substep := range w.substeps {
-		substep.SucceedWorkflow()
-	}
-
+	w.Succeed()
 	w.notify()
 }
 
