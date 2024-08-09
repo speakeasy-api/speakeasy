@@ -3,8 +3,6 @@
 
 ## Fields
 
-| Field                                                      | Type                                                       | Required                                                   | Description                                                |
-| ---------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
-| `Workflow`                                                 | [components.Workflow](../../models/components/workflow.md) | :heavy_check_mark:                                         | N/A                                                        |
-| `TargetID`                                                 | *string*                                                   | :heavy_check_mark:                                         | Target ID in the workflow file                             |
-| `WorkingDirectory`                                         | *string*                                                   | :heavy_check_mark:                                         | Working directory                                          |
+| Field                                               | Type                                                | Required                                            | Description                                         |
+| --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| `Data`                                              | [*components.Data](../../models/components/data.md) | :heavy_minus_sign:                                  | N/A                                                 |

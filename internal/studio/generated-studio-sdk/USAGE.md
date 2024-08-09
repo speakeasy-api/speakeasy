@@ -19,7 +19,13 @@ func main() {
 		log.Fatal(err)
 	}
 	if res.HealthResponse != nil {
-		// handle response
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 

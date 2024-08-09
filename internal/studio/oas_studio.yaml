@@ -18,7 +18,8 @@ paths:
         '200':
           description: Successful response
           content:
-            application/json:
+            text/event-stream:
+              x-speakeasy-sse-sentinel: "[DONE]"
               schema:
                 $ref: '#/components/schemas/HealthResponse'
   /run:
@@ -97,19 +98,12 @@ components:
     HealthResponse:
       type: object
       properties:
-        workflow:
-          $ref: '#/components/schemas/Workflow'
-          description: Workflow information
-        targetId:
-          type: string
-          description: Target ID in the workflow file
-        workingDirectory:
-          type: string
-          description: Working directory
-      required:
-        - workflow
-        - targetId
-        - workingDirectory
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Status of the CLI
     RunResponse:
       type: object
       description: Map of target run summaries
@@ -150,10 +144,15 @@ components:
           description: Map of target results
         workflow:
           $ref: '#/components/schemas/Workflow'
+          description: Workflow information
+        workingDirectory:
+          type: string
+          description: Working directory
       required:
         - sourceResult
         - targetResults
         - workflow
+        - workingDirectory
     TargetRunSummary:
       type: object
       properties:

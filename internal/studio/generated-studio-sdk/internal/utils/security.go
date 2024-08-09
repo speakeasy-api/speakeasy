@@ -21,6 +21,7 @@ type securityTag struct {
 	Name    string
 	Type    string
 	SubType string
+	Env     string
 }
 
 func PopulateSecurity(ctx context.Context, req *http.Request, securitySource func(context.Context) (interface{}, error)) error {
@@ -227,6 +228,7 @@ func parseSecurityTag(field reflect.StructField) *securityTag {
 	name := ""
 	securityType := ""
 	securitySubType := ""
+	env := ""
 
 	options := strings.Split(tag, ",")
 	for _, optionConf := range options {
@@ -246,6 +248,8 @@ func parseSecurityTag(field reflect.StructField) *securityTag {
 			option = true
 		case "scheme":
 			scheme = true
+		case "env":
+			env = parts[1]
 		}
 	}
 
@@ -257,6 +261,7 @@ func parseSecurityTag(field reflect.StructField) *securityTag {
 		Name:    name,
 		Type:    securityType,
 		SubType: securitySubType,
+		Env:     env,
 	}
 }
 

@@ -49,7 +49,13 @@ func main() {
 		log.Fatal(err)
 	}
 	if res.HealthResponse != nil {
-		// handle response
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -107,7 +113,13 @@ func main() {
 		log.Fatal(err)
 	}
 	if res.HealthResponse != nil {
-		// handle response
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -146,7 +158,13 @@ func main() {
 		log.Fatal(err)
 	}
 	if res.HealthResponse != nil {
-		// handle response
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -229,7 +247,13 @@ func main() {
 		log.Fatal(err)
 	}
 	if res.HealthResponse != nil {
-		// handle response
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -264,7 +288,13 @@ func main() {
 		log.Fatal(err)
 	}
 	if res.HealthResponse != nil {
-		// handle response
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -338,12 +368,62 @@ func main() {
 		log.Fatal(err)
 	}
 	if res.HealthResponse != nil {
-		// handle response
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
 ```
 <!-- End Authentication [security] -->
+
+<!-- Start Server-sent event streaming [eventstream] -->
+## Server-sent event streaming
+
+[Server-sent events][mdn-sse] are used to stream content from certain
+operations. These operations will expose the stream as an iterable that
+can be consumed using a simple `for` loop. The loop will
+terminate when the server no longer has any events to send and closes the
+underlying connection.
+
+```go
+package main
+
+import (
+	"context"
+	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
+	"log"
+)
+
+func main() {
+	s := generatedstudiosdk.New(
+		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	)
+
+	ctx := context.Background()
+	res, err := s.CheckHealth(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
+	}
+}
+
+```
+
+[mdn-sse]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events
+<!-- End Server-sent event streaming [eventstream] -->
 
 <!-- Placeholder for Future Speakeasy SDK Sections -->
 

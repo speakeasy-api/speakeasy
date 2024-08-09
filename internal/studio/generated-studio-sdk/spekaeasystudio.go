@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/sdkerrors"
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/types/stream"
 	"io"
 	"net/http"
 	"net/url"
@@ -162,9 +163,9 @@ func New(opts ...SDKOption) *SpekaeasyStudio {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.1.2",
-			GenVersion:        "2.387.0",
-			UserAgent:         "speakeasy-sdk/go 0.1.2 2.387.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk",
+			SDKVersion:        "0.3.0",
+			GenVersion:        "2.391.1",
+			UserAgent:         "speakeasy-sdk/go 0.3.0 2.391.1 1.0.0 github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -198,6 +199,7 @@ func (s *SpekaeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Op
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "checkHealth",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -234,7 +236,7 @@ func (s *SpekaeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Op
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("User-Agent", s.sdkConfiguration.UserAgent)
 
 	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
@@ -333,31 +335,41 @@ func (s *SpekaeasyStudio) CheckHealth(ctx context.Context, opts ...operations.Op
 		},
 	}
 
-	rawBody, err := io.ReadAll(httpRes.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
-	httpRes.Body.Close()
-	httpRes.Body = io.NopCloser(bytes.NewBuffer(rawBody))
-
 	switch {
 	case httpRes.StatusCode == 200:
 		switch {
-		case utils.MatchContentType(httpRes.Header.Get("Content-Type"), `application/json`):
-			var out components.HealthResponse
-			if err := utils.UnmarshalJsonFromResponseBody(bytes.NewBuffer(rawBody), &out, ""); err != nil {
-				return nil, err
+		case utils.MatchContentType(httpRes.Header.Get("Content-Type"), `text/event-stream`):
+			out := stream.NewEventStream(httpRes.Body, func(se []byte) (components.HealthResponse, error) {
+				var e components.HealthResponse
+				if err := utils.UnmarshalJsonFromResponseBody(bytes.NewBuffer(se), &e, ""); err != nil {
+					return components.HealthResponse{}, err
+				}
+				return e, nil
+			}, "[DONE]")
+			res.HealthResponse = out
+		default:
+			rawBody, err := io.ReadAll(httpRes.Body)
+			if err != nil {
+				return nil, fmt.Errorf("error reading response body: %w", err)
 			}
 
-			res.HealthResponse = &out
-		default:
 			return nil, sdkerrors.NewSDKError(fmt.Sprintf("unknown content-type received: %s", httpRes.Header.Get("Content-Type")), httpRes.StatusCode, string(rawBody), httpRes)
 		}
 	case httpRes.StatusCode >= 400 && httpRes.StatusCode < 500:
 		fallthrough
 	case httpRes.StatusCode >= 500 && httpRes.StatusCode < 600:
+		rawBody, err := io.ReadAll(httpRes.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading response body: %w", err)
+		}
+
 		return nil, sdkerrors.NewSDKError("API error occurred", httpRes.StatusCode, string(rawBody), httpRes)
 	default:
+		rawBody, err := io.ReadAll(httpRes.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading response body: %w", err)
+		}
+
 		return nil, sdkerrors.NewSDKError("unknown status code returned", httpRes.StatusCode, string(rawBody), httpRes)
 	}
 
@@ -371,6 +383,7 @@ func (s *SpekaeasyStudio) GetRun(ctx context.Context, opts ...operations.Option)
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "getRun",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -544,6 +557,7 @@ func (s *SpekaeasyStudio) Run(ctx context.Context, opts ...operations.Option) (*
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "run",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -717,6 +731,7 @@ func (s *SpekaeasyStudio) GetSource(ctx context.Context, opts ...operations.Opti
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "getSource",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -890,6 +905,7 @@ func (s *SpekaeasyStudio) UpdateSource(ctx context.Context, request operations.U
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "updateSource",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -1069,6 +1085,7 @@ func (s *SpekaeasyStudio) FileChanges(ctx context.Context, opts ...operations.Op
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "fileChanges",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 

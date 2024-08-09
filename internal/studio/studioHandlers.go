@@ -12,6 +12,7 @@ import (
 	"github.com/speakeasy-api/jsonpath/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/generated-studio-sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -105,20 +106,32 @@ func (h *StudioHandlers) updateRun(ctx context.Context, w http.ResponseWriter, r
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
-	if err != nil {
-		return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+	// workflow, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
+	// if err != nil {
+	// 	return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+	// }
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return errors.New("streaming unsupported")
 	}
 
-	ret := components.HealthResponse{
-		Workflow:         workflow,
-		TargetID:         h.WorkflowRunner.Target,
-		WorkingDirectory: os.Getenv("PWD"),
-	}
-	err = json.NewEncoder(w).Encode(ret)
+	// response := components.HealthResponse{Version: events.GetSpeakeasyVersionFromContext(h.Ctx)}
+	response := map[string]string{"version": events.GetSpeakeasyVersionFromContext(h.Ctx)}
+
+	responseJSON, err := json.Marshal(response)
 	if err != nil {
-		return fmt.Errorf("error encoding health response: %w", err)
+		return fmt.Errorf("error marshaling health response: %w", err)
 	}
+
+	fmt.Fprintf(w, "data: %s\n\n", responseJSON)
+	flusher.Flush()
+
+	// Wait for the context to be done
+	<-ctx.Done()
 
 	return nil
 }

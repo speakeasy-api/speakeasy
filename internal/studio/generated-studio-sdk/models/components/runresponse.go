@@ -22,6 +22,8 @@ type RunResponse struct {
 	// Map of target results
 	TargetResults map[string]TargetRunSummary `json:"targetResults"`
 	Workflow      Workflow                    `json:"workflow"`
+	// Working directory
+	WorkingDirectory string `json:"workingDirectory"`
 }
 
 func (o *RunResponse) GetErrors() []string {
@@ -92,4 +94,11 @@ func (o *RunResponse) GetWorkflow() Workflow {
 		return Workflow{}
 	}
 	return o.Workflow
+}
+
+func (o *RunResponse) GetWorkingDirectory() string {
+	if o == nil {
+		return ""
+	}
+	return o.WorkingDirectory
 }

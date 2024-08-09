@@ -2,31 +2,29 @@
 
 package components
 
+type Data struct {
+	// Status of the CLI
+	Status *string `json:"status,omitempty"`
+}
+
+func (o *Data) GetStatus() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Status
+}
+
 type HealthResponse struct {
-	Workflow Workflow `json:"workflow"`
-	// Target ID in the workflow file
-	TargetID string `json:"targetId"`
-	// Working directory
-	WorkingDirectory string `json:"workingDirectory"`
+	Data *Data `json:"data,omitempty"`
 }
 
-func (o *HealthResponse) GetWorkflow() Workflow {
+func (o *HealthResponse) GetData() *Data {
 	if o == nil {
-		return Workflow{}
+		return nil
 	}
-	return o.Workflow
+	return o.Data
 }
 
-func (o *HealthResponse) GetTargetID() string {
-	if o == nil {
-		return ""
-	}
-	return o.TargetID
-}
-
-func (o *HealthResponse) GetWorkingDirectory() string {
-	if o == nil {
-		return ""
-	}
-	return o.WorkingDirectory
+func (o HealthResponse) GetEventEncoding(event string) (string, error) {
+	return "application/json", nil
 }

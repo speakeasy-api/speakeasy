@@ -4,12 +4,13 @@ package operations
 
 import (
 	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/types/stream"
 )
 
 type CheckHealthResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
-	HealthResponse *components.HealthResponse
+	HealthResponse *stream.EventStream[components.HealthResponse]
 }
 
 func (o *CheckHealthResponse) GetHTTPMeta() components.HTTPMetadata {
@@ -19,7 +20,7 @@ func (o *CheckHealthResponse) GetHTTPMeta() components.HTTPMetadata {
 	return o.HTTPMeta
 }
 
-func (o *CheckHealthResponse) GetHealthResponse() *components.HealthResponse {
+func (o *CheckHealthResponse) GetHealthResponse() *stream.EventStream[components.HealthResponse] {
 	if o == nil {
 		return nil
 	}
