@@ -24,6 +24,7 @@ type Workflow struct {
 	SkipLinting      bool
 	SkipChangeReport bool
 	SkipSnapshot     bool
+	SkipCleanup      bool
 	FromQuickstart   bool
 	RepoSubDirs      map[string]string
 	InstallationURLs map[string]string
@@ -39,7 +40,8 @@ type Workflow struct {
 	generationAccess   *sdkgen.GenerationAccess
 	OperationsRemoved  []string
 	computedChanges    map[string]bool
-	sourceResults      map[string]*SourceResult
+	SourceResults      map[string]*SourceResult
+	TargetResults      map[string]*TargetResult
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
 }
@@ -79,7 +81,8 @@ func NewWorkflow(
 		workflow:         *wf,
 		ProjectDir:       projectDir,
 		ForceGeneration:  false,
-		sourceResults:    make(map[string]*SourceResult),
+		SourceResults:    make(map[string]*SourceResult),
+		TargetResults:    make(map[string]*TargetResult),
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
@@ -160,6 +163,12 @@ func WithSkipLinting() Opt {
 	}
 }
 
+func WithSkipCleanup() Opt {
+	return func(w *Workflow) {
+		w.SkipCleanup = true
+	}
+}
+
 func WithFromQuickstart(fromQuickstart bool) Opt {
 	return func(w *Workflow) {
 		w.FromQuickstart = fromQuickstart
@@ -182,4 +191,31 @@ func WithRegistryTags(registryTags []string) Opt {
 	return func(w *Workflow) {
 		w.RegistryTags = registryTags
 	}
+}
+
+func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
+
+	return NewWorkflow(
+		ctx,
+		append(
+			[]Opt{
+				WithWorkflowName(w.workflowName),
+				WithSource(w.Source),
+				WithTarget(w.Target),
+				WithSetVersion(w.SetVersion),
+				WithDebug(w.Debug),
+				WithShouldCompile(w.ShouldCompile),
+				WithForceGeneration(w.ForceGeneration),
+				WithSkipLinting(),
+				WithSkipChangeReport(w.SkipChangeReport),
+				WithSkipSnapshot(w.SkipSnapshot),
+				WithFromQuickstart(w.FromQuickstart),
+				WithRepo(w.Repo),
+				WithRepoSubDirs(w.RepoSubDirs),
+				WithInstallationURLs(w.InstallationURLs),
+				WithRegistryTags(w.RegistryTags),
+			},
+			opts...,
+		)...,
+	)
 }
