@@ -3,8 +3,8 @@
 package operations
 
 import (
-	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/components"
-	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/types/stream"
+	"openapi/models/components"
+	"openapi/types/stream"
 )
 
 type CheckHealthResponse struct {

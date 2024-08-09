@@ -20,7 +20,7 @@ It has been generated successfully based on your OpenAPI spec. However, it is no
 ## SDK Installation
 
 ```bash
-go get github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk
+go get openapi
 ```
 <!-- End SDK Installation [installation] -->
 
@@ -34,13 +34,13 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"openapi"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := openapi.New(
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -65,14 +65,14 @@ func main() {
 <!-- Start Available Resources and Operations [operations] -->
 ## Available Resources and Operations
 
-### [SpekaeasyStudio SDK](docs/sdks/spekaeasystudio/README.md)
+### [SDK](docs/sdks/sdk/README.md)
 
-* [CheckHealth](docs/sdks/spekaeasystudio/README.md#checkhealth) - Health Check
-* [GetRun](docs/sdks/spekaeasystudio/README.md#getrun) - Run
-* [Run](docs/sdks/spekaeasystudio/README.md#run) - Run
-* [GetSource](docs/sdks/spekaeasystudio/README.md#getsource) - Get Source
-* [UpdateSource](docs/sdks/spekaeasystudio/README.md#updatesource) - Update Source
-* [FileChanges](docs/sdks/spekaeasystudio/README.md#filechanges) - File Changes
+* [CheckHealth](docs/sdks/sdk/README.md#checkhealth) - Health Check
+* [GetRun](docs/sdks/sdk/README.md#getrun) - Run
+* [Run](docs/sdks/sdk/README.md#run) - Run
+* [GetSource](docs/sdks/sdk/README.md#getsource) - Get Source
+* [UpdateSource](docs/sdks/sdk/README.md#updatesource) - Update Source
+* [FileChanges](docs/sdks/sdk/README.md#filechanges) - File Changes
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->
@@ -86,15 +86,15 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"log"
 	"models/operations"
+	"openapi"
+	"openapi/retry"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := openapi.New(
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -131,14 +131,14 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/retry"
 	"log"
+	"openapi"
+	"openapi/retry"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithRetryConfig(
+	s := openapi.New(
+		openapi.WithRetryConfig(
 			retry.Config{
 				Strategy: "backoff",
 				Backoff: &retry.BackoffStrategy{
@@ -149,7 +149,7 @@ func main() {
 				},
 				RetryConnectionErrors: false,
 			}),
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -188,14 +188,14 @@ package main
 import (
 	"context"
 	"errors"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
-	"github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk/models/sdkerrors"
 	"log"
+	"openapi"
+	"openapi/models/sdkerrors"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := openapi.New(
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -231,14 +231,14 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"openapi"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithServerIndex(0),
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := openapi.New(
+		openapi.WithServerIndex(0),
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -272,14 +272,14 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"openapi"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithServerURL("http://localhost:{port}"),
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := openapi.New(
+		openapi.WithServerURL("http://localhost:{port}"),
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -353,13 +353,13 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"openapi"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := openapi.New(
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
@@ -395,13 +395,13 @@ package main
 
 import (
 	"context"
-	generatedstudiosdk "github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk"
 	"log"
+	"openapi"
 )
 
 func main() {
-	s := generatedstudiosdk.New(
-		generatedstudiosdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	s := openapi.New(
+		openapi.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
 	ctx := context.Background()
