@@ -94,7 +94,7 @@ func FileExists(file string) bool {
 	}
 
 	info, err := os.Stat(file)
-	if os.IsNotExist(err) {
+	if os.IsNotExist(err) || info == nil {
 		return false
 	}
 
