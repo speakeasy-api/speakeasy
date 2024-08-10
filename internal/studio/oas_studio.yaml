@@ -108,33 +108,9 @@ components:
       type: object
       description: Map of target run summaries
       properties:
-        errors:
-          type: array
-          items:
-            type: string
-          description: List of errors
-        warnings:
-          type: array
-          items:
-            type: string
-          description: List of warnings
-        info:
-          type: array
-          items:
-            type: string
-          description: List of informational messages
         lintingReportLink:
           type: string
           description: Link to the linting report
-        lintingErrorCount:
-          type: integer
-          description: Count of linting errors
-        lintingWarningCount:
-          type: integer
-          description: Count of linting warnings
-        lintingInfoCount:
-          type: integer
-          description: Count of linting informational messages
         sourceResult:
           $ref: '#/components/schemas/SourceResponse'
         targetResults:
@@ -196,11 +172,17 @@ components:
         output:
           type: string
           description: Result of running the source in the workflow
+        lintingResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          description: List of validation errors
       required:
         - sourceID
         - input
         - overlay
         - output
+        - lintingResults
     Workflow:
       type: object
       properties:
@@ -247,6 +229,29 @@ components:
         registry:
           $ref: '#/components/schemas/SourceRegistry'
           description: Source registry information
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+        severity:
+          type: string
+          description: Error severity
+        line:
+          type: integer
+          description: Line number
+        type:
+          type: string
+          description: Error type
+        helpMessage:
+          type: string
+          description: Help message
+      required:
+        - message
+        - severity
+        - line
+        - type
     Document:
       type: object
       properties:

@@ -4,21 +4,9 @@ package components
 
 // RunResponse - Map of target run summaries
 type RunResponse struct {
-	// List of errors
-	Errors []string `json:"errors,omitempty"`
-	// List of warnings
-	Warnings []string `json:"warnings,omitempty"`
-	// List of informational messages
-	Info []string `json:"info,omitempty"`
 	// Link to the linting report
-	LintingReportLink *string `json:"lintingReportLink,omitempty"`
-	// Count of linting errors
-	LintingErrorCount *int64 `json:"lintingErrorCount,omitempty"`
-	// Count of linting warnings
-	LintingWarningCount *int64 `json:"lintingWarningCount,omitempty"`
-	// Count of linting informational messages
-	LintingInfoCount *int64         `json:"lintingInfoCount,omitempty"`
-	SourceResult     SourceResponse `json:"sourceResult"`
+	LintingReportLink *string        `json:"lintingReportLink,omitempty"`
+	SourceResult      SourceResponse `json:"sourceResult"`
 	// Map of target results
 	TargetResults map[string]TargetRunSummary `json:"targetResults"`
 	Workflow      Workflow                    `json:"workflow"`
@@ -26,53 +14,11 @@ type RunResponse struct {
 	WorkingDirectory string `json:"workingDirectory"`
 }
 
-func (o *RunResponse) GetErrors() []string {
-	if o == nil {
-		return nil
-	}
-	return o.Errors
-}
-
-func (o *RunResponse) GetWarnings() []string {
-	if o == nil {
-		return nil
-	}
-	return o.Warnings
-}
-
-func (o *RunResponse) GetInfo() []string {
-	if o == nil {
-		return nil
-	}
-	return o.Info
-}
-
 func (o *RunResponse) GetLintingReportLink() *string {
 	if o == nil {
 		return nil
 	}
 	return o.LintingReportLink
-}
-
-func (o *RunResponse) GetLintingErrorCount() *int64 {
-	if o == nil {
-		return nil
-	}
-	return o.LintingErrorCount
-}
-
-func (o *RunResponse) GetLintingWarningCount() *int64 {
-	if o == nil {
-		return nil
-	}
-	return o.LintingWarningCount
-}
-
-func (o *RunResponse) GetLintingInfoCount() *int64 {
-	if o == nil {
-		return nil
-	}
-	return o.LintingInfoCount
 }
 
 func (o *RunResponse) GetSourceResult() SourceResponse {

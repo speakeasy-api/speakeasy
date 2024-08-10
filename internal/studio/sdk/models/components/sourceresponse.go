@@ -11,6 +11,8 @@ type SourceResponse struct {
 	Overlay string `json:"overlay"`
 	// Result of running the source in the workflow
 	Output string `json:"output"`
+	// List of validation errors
+	LintingResults []ValidationError `json:"lintingResults"`
 }
 
 func (o *SourceResponse) GetSourceID() string {
@@ -39,4 +41,11 @@ func (o *SourceResponse) GetOutput() string {
 		return ""
 	}
 	return o.Output
+}
+
+func (o *SourceResponse) GetLintingResults() []ValidationError {
+	if o == nil {
+		return []ValidationError{}
+	}
+	return o.LintingResults
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy-core/errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,7 +13,6 @@ import (
 
 	"github.com/speakeasy-api/jsonpath/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
@@ -212,11 +213,23 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 		return components.SourceResponse{}, fmt.Errorf("error reading output document: %w", err)
 	}
 
+	var lintingResults []components.ValidationError
+	for _, e := range sourceResult.LintResult.AllErrors {
+		vErr := vErrs.GetValidationErr(e)
+		lintingResults = append(lintingResults, components.ValidationError{
+			Message:  vErr.Message,
+			Severity: string(vErr.Severity),
+			Line:     int64(vErr.LineNumber),
+			Type:     vErr.Rule,
+		})
+	}
+
 	ret := components.SourceResponse{
-		SourceID: sourceID,
-		Input:    sourceResult.InputSpec,
-		Overlay:  overlayContents,
-		Output:   outputDocumentString,
+		SourceID:       sourceID,
+		Input:          sourceResult.InputSpec,
+		Overlay:        overlayContents,
+		Output:         outputDocumentString,
+		LintingResults: lintingResults,
 	}
 
 	return ret, nil
