@@ -12,7 +12,7 @@ type SourceResponse struct {
 	// Result of running the source in the workflow
 	Output string `json:"output"`
 	// List of validation errors
-	LintingResults []ValidationError `json:"lintingResults"`
+	Diagnosis []Diagnostic `json:"diagnosis"`
 }
 
 func (o *SourceResponse) GetSourceID() string {
@@ -43,9 +43,9 @@ func (o *SourceResponse) GetOutput() string {
 	return o.Output
 }
 
-func (o *SourceResponse) GetLintingResults() []ValidationError {
+func (o *SourceResponse) GetDiagnosis() []Diagnostic {
 	if o == nil {
-		return []ValidationError{}
+		return []Diagnostic{}
 	}
-	return o.LintingResults
+	return o.Diagnosis
 }

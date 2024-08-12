@@ -334,7 +334,8 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		}
 		log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
 	case "console":
-		err = runFunc(ctx, flags)
+		err = workflow.Run(ctx)
+		workflow.RootStep.Finalize(err == nil)
 	}
 
 	if err != nil {

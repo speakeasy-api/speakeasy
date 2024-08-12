@@ -36,6 +36,7 @@ require (
 )
 
 require (
+	github.com/AlekSi/pointer v1.2.0
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/inkeep/ai-api-go v0.3.1
@@ -51,7 +52,6 @@ require (
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
-	github.com/AlekSi/pointer v1.2.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
