@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
@@ -35,6 +34,7 @@ type RunFlags struct {
 	RegistryTags     []string          `json:"registry-tags"`
 	SetVersion       string            `json:"set-version"`
 	LaunchStudio     bool              `json:"launch-studio"`
+	GitHub           bool              `json:"github"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -125,6 +125,10 @@ A full workflow is capable of running the following steps:
 		flag.BooleanFlag{
 			Name:        "launch-studio",
 			Description: "launch the web studio for iterating on the generated SDK",
+		},
+		flag.BooleanFlag{
+			Name:        "github",
+			Description: "kick off a generation run in GitHub",
 		},
 	},
 }
@@ -257,6 +261,10 @@ func askForSource(sources []string) (string, error) {
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
+	if flags.GitHub {
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion)
+	}
+
 	workflow, err := run.NewWorkflow(
 		ctx,
 		run.WithTarget(flags.Target),
@@ -284,6 +292,10 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
+	if flags.GitHub {
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion)
+	}
+
 	opts := []run.Opt{
 		run.WithTarget(flags.Target),
 		run.WithSource(flags.Source),
