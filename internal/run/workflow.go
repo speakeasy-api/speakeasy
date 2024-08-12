@@ -194,7 +194,6 @@ func WithRegistryTags(registryTags []string) Opt {
 }
 
 func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
-
 	return NewWorkflow(
 		ctx,
 		append(
