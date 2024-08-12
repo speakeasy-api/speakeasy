@@ -7,8 +7,8 @@ import (
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"net/http"
-	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/jsonpath/pkg/overlay"
@@ -27,8 +27,12 @@ type StudioHandlers struct {
 	Ctx            context.Context
 }
 
-func NewStudioHandlers(ctx context.Context, workflow *run.Workflow) (StudioHandlers, error) {
-	ret := StudioHandlers{WorkflowRunner: *workflow, Ctx: ctx}
+const (
+	modificationsOverlayPath = ".speakeasy/speakeasy-modifications-overlay.yaml"
+)
+
+func NewStudioHandlers(ctx context.Context, workflow *run.Workflow) (*StudioHandlers, error) {
+	ret := &StudioHandlers{WorkflowRunner: *workflow, Ctx: ctx}
 
 	sourceID, err := findWorkflowSourceIDBasedOnTarget(*workflow, workflow.Target)
 	if err != nil {
@@ -72,11 +76,11 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	sourceResult := h.WorkflowRunner.SourceResults[h.SourceID]
-	sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, *h.WorkflowRunner.GetWorkflowFile())
+	sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult)
 	if err != nil {
 		return fmt.Errorf("error converting source result to source response: %w", err)
 	}
-	res.SourceResult = sourceResponse
+	res.SourceResult = *sourceResponse
 
 	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
 	if err != nil {
@@ -136,10 +140,9 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 	var err error
 
 	workflowRunner := h.WorkflowRunner
-	workflowConfig := workflowRunner.GetWorkflowFile()
 	sourceID := h.SourceID
 
-	workflowRunnerPtr, err := workflowRunner.Clone(ctx, run.WithSkipLinting(), run.WithSkipCleanup())
+	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx, run.WithSkipLinting(), run.WithSkipCleanup())
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
@@ -150,7 +153,7 @@ func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r
 		return fmt.Errorf("error running source: %w", err)
 	}
 
-	ret, err := convertSourceResultIntoSourceResponse(sourceID, *sourceResult, *workflowConfig)
+	ret, err := convertSourceResultIntoSourceResponse(sourceID, *sourceResult)
 	if err != nil {
 		return fmt.Errorf("error converting source result to source response: %w", err)
 	}
@@ -197,20 +200,23 @@ func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter
 // Helper functions
 // ---------------------------------
 
-func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult, workflowConfig workflow.Workflow) (components.SourceResponse, error) {
-	sourceConfig := workflowConfig.Sources[sourceID]
-	overlayContents := ""
-	for _, overlay := range sourceConfig.Overlays {
-		// If there are multiple modifications overlays - we take the last one
-		contents, _ := isStudioModificationsOverlay(overlay)
-		if contents != "" {
-			overlayContents = contents
-		}
+func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult) (*components.SourceResponse, error) {
+	overlayContents, err := utils.ReadFileToString(modificationsOverlayPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading modifications overlay: %w", err)
 	}
+	// TODO: Why is this necessary? Can't modifications always live at modificationsOverlayPath?
+	//for _, overlay := range sourceConfig.Overlays {
+	//	// If there are multiple modifications overlays - we take the last one
+	//	contents, _ := isStudioModificationsOverlay(overlay)
+	//	if contents != "" {
+	//		overlayContents = contents
+	//	}
+	//}
 
 	outputDocumentString, err := utils.ReadFileToString(sourceResult.OutputPath)
 	if err != nil {
-		return components.SourceResponse{}, fmt.Errorf("error reading output document: %w", err)
+		return nil, fmt.Errorf("error reading output document: %w", err)
 	}
 
 	var lintingResults []components.ValidationError
@@ -224,15 +230,13 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 		})
 	}
 
-	ret := components.SourceResponse{
+	return &components.SourceResponse{
 		SourceID:       sourceID,
 		Input:          sourceResult.InputSpec,
 		Overlay:        overlayContents,
 		Output:         outputDocumentString,
 		LintingResults: lintingResults,
-	}
-
-	return ret, nil
+	}, nil
 }
 
 func (h *StudioHandlers) getOrCreateOverlayPath() error {
@@ -240,31 +244,24 @@ func (h *StudioHandlers) getOrCreateOverlayPath() error {
 		return nil
 	}
 
-	for i := 0; i < 100; i++ {
-		x := ""
-		if i > 0 {
-			x = fmt.Sprintf("-%d", i)
-		}
-		path := "./speakeasy-modifications-overlay" + x + ".yaml"
-		_, err := os.Stat(path)
-		if os.IsNotExist(err) {
-			h.OverlayPath = path
-			workflowConfig := h.WorkflowRunner.GetWorkflowFile()
+	// TODO: this probably doesn't need to be stored in h.OverlayPath? Do we need to support custom modification filepaths?
+	h.OverlayPath = modificationsOverlayPath
 
-			source := workflowConfig.Sources[h.SourceID]
+	workflowConfig := h.WorkflowRunner.GetWorkflowFile()
 
-			source.Overlays = append(source.Overlays, workflow.Overlay{
-				Document: &workflow.Document{
-					Location: path,
-				},
-			})
-			workflowConfig.Sources[h.SourceID] = source
-			workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
-			return nil
-		}
+	source := workflowConfig.Sources[h.SourceID]
+
+	if !slices.ContainsFunc(source.Overlays, func(o workflow.Overlay) bool { return o.Document.Location == h.OverlayPath }) {
+		source.Overlays = append(source.Overlays, workflow.Overlay{
+			Document: &workflow.Document{
+				Location: h.OverlayPath,
+			},
+		})
+		workflowConfig.Sources[h.SourceID] = source
+		return workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
 	}
 
-	return errors.New("unable to create overlay file")
+	return nil
 }
 
 func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {
@@ -318,7 +315,10 @@ func findWorkflowSourceIDBasedOnTarget(workflow run.Workflow, targetID string) (
 }
 
 func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
-	isLocalFile := overlay.Document != nil && !strings.HasPrefix(overlay.Document.Location, "https://") && !strings.HasPrefix(overlay.Document.Location, "http://") && !strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
+	isLocalFile := overlay.Document != nil &&
+		!strings.HasPrefix(overlay.Document.Location, "https://") &&
+		!strings.HasPrefix(overlay.Document.Location, "http://") &&
+		!strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
 	if !isLocalFile {
 		return "", nil
 	}
