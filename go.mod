@@ -2,6 +2,8 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.22.4
 
+replace github.com/speakeasy-api/speakeasy-core v0.12.2 => ../speakeasy-core
+
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.18.0
