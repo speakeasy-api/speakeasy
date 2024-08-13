@@ -172,17 +172,17 @@ components:
         output:
           type: string
           description: Result of running the source in the workflow
-        lintingResults:
+        diagnosis:
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: '#/components/schemas/Diagnostic'
           description: List of validation errors
       required:
         - sourceID
         - input
         - overlay
         - output
-        - lintingResults
+        - diagnosis
     Workflow:
       type: object
       properties:
@@ -229,28 +229,32 @@ components:
         registry:
           $ref: '#/components/schemas/SourceRegistry'
           description: Source registry information
-    ValidationError:
+    Diagnostic:
       type: object
       properties:
         message:
           type: string
-          description: Error message
+          description: Message describing the issue
         severity:
           type: string
-          description: Error severity
+          description: Severity
         line:
           type: integer
           description: Line number
+        path:
+          type: array
+          items:
+            type: string
+          description: Schema path to the issue
         type:
           type: string
-          description: Error type
+          description: Issue type
         helpMessage:
           type: string
-          description: Help message
+          description: Help message for how to fix the issue
       required:
         - message
         - severity
-        - line
         - type
     Document:
       type: object
