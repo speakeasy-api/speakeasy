@@ -228,6 +228,10 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	}
 
 	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("computing document changes panicked: %v", r)
+		}
+
 		if err != nil {
 			changesStep.Fail()
 		}
@@ -316,6 +320,10 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("tracking OpenAPI changes panicked: %v", r)
+		}
+
 		if err != nil {
 			registryStep.Fail()
 		}
