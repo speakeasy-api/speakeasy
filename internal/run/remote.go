@@ -3,6 +3,8 @@ package run
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -12,10 +14,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"time"
 )
 
-func RunGitHub(ctx context.Context, target, version string) error {
+func RunGitHub(ctx context.Context, target, version string, force bool) error {
 	sdk, err := auth.GetSDKFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get sdk from context: %w", err)
@@ -48,10 +49,13 @@ func RunGitHub(ctx context.Context, target, version string) error {
 		Org:        org,
 		RepoName:   repo,
 		TargetName: &target,
-		//TODO support force
 	}
 	if version != "" {
 		triggerRequest.SetVersion = &version
+	}
+
+	if force {
+		triggerRequest.Force = &force
 	}
 
 	_, err = sdk.Github.TriggerAction(ctx, triggerRequest)
