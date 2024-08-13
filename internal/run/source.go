@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strings"
 
@@ -228,6 +229,10 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	}
 
 	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("computing document changes panicked: %v", r)
+		}
+
 		if err != nil {
 			changesStep.Fail()
 		}
@@ -316,6 +321,21 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	defer func() {
+		if r := recover(); r != nil {
+			// Handle the panic and log the error
+			err = fmt.Errorf("snapshotSource panicked: %v", r)
+			// Optionally, you can log the stack trace or additional details here
+			fmt.Println("Recovered from panic:", r)
+			// Log the stack trace for debugging
+			fmt.Println("Stack trace:", string(debug.Stack()))
+		}
+	}()
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("tracking OpenAPI changes panicked: %v", r)
+		}
+
 		if err != nil {
 			registryStep.Fail()
 		}
