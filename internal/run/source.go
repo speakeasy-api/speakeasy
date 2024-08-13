@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
 
@@ -319,17 +318,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		registryStep.Skip("API Registry not enabled")
 		return ocicommon.ErrAccessGated
 	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			// Handle the panic and log the error
-			err = fmt.Errorf("snapshotSource panicked: %v", r)
-			// Optionally, you can log the stack trace or additional details here
-			fmt.Println("Recovered from panic:", r)
-			// Log the stack trace for debugging
-			fmt.Println("Stack trace:", string(debug.Stack()))
-		}
-	}()
 
 	defer func() {
 		if r := recover(); r != nil {
