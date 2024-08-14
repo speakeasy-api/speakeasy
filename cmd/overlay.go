@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"context"
+	"os"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"os"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -37,7 +38,7 @@ var overlayValidateCmd = &model.ExecutableCommand[overlayValidateFlags]{
 
 type overlayCompareFlags struct {
 	Before string `json:"before"`
-    After  string `json:"after"`
+	After  string `json:"after"`
 }
 
 var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
@@ -63,7 +64,7 @@ var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 type overlayApplyFlags struct {
 	Overlay string `json:"overlay"`
 	Schema  string `json:"schema"`
-	Strict  bool `json:"strict"`
+	Strict  bool   `json:"strict"`
 	Out     string `json:"out"`
 }
 
@@ -80,8 +81,8 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		flag.BooleanFlag{
-			Name:                       "strict",
-			Description:                "fail if the overlay has any action target expressions which match no nodes, and produce warnings if any overlay actions do nothing",
+			Name:        "strict",
+			Description: "fail if the overlay has any action target expressions which match no nodes, and produce warnings if any overlay actions do nothing",
 		},
 		flag.StringFlag{
 			Name:        "out",
