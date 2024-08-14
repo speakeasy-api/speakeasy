@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -39,11 +40,14 @@ type Workflow struct {
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
 	OperationsRemoved  []string
-	computedChanges    map[string]bool
-	SourceResults      map[string]*SourceResult
-	TargetResults      map[string]*TargetResult
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
+
+	computedChanges map[string]bool
+	SourceResults   map[string]*SourceResult
+	TargetResults   map[string]*TargetResult
+	duration        time.Duration
+	criticalWarns   []string
 }
 
 type Opt func(w *Workflow)

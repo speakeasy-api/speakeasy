@@ -269,6 +269,9 @@ func (l Logger) Fprint(w io.Writer, s string) {
 	if l.style != nil {
 		s = l.style.Render(s)
 	}
+
+	s = StyleMarkdown(s)
+
 	fmt.Fprint(w, s)
 }
 
@@ -317,11 +320,11 @@ func PrefixedFormatter(l Logger, level Level, msg string, err error) string {
 
 	switch level {
 	case LevelInfo, LevelSuccess:
-		prefix = styles.Info.Render("INFO\t")
+		prefix = styles.Info.Bold(true).Render("INFO\t")
 	case LevelWarn:
-		prefix = styles.Warning.Render("WARN\t")
+		prefix = styles.Warning.Bold(true).Render("WARN\t")
 	case LevelErr:
-		prefix = styles.Error.Render("ERROR\t")
+		prefix = styles.Error.Bold(true).Render("ERROR\t")
 	}
 
 	return prefix + msg

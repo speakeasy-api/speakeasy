@@ -565,15 +565,16 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 	return tags, nil
 }
 
-func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Logger) {
+func (w *Workflow) printSourceSuccessMessage(ctx context.Context) {
 	if len(w.SourceResults) == 0 {
 		return
 	}
 
+	logger := log.From(ctx)
 	logger.Println("") // Newline for better readability
 
 	for sourceID, sourceRes := range w.SourceResults {
-		heading := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(sourceID), styles.Success.Render("Compiled Successfully"))
+		heading := fmt.Sprintf("Source `%s` Compiled Successfully", sourceID)
 		var additionalLines []string
 
 		appendReportLocation := func(report reports.ReportResult) {
@@ -595,7 +596,7 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Log
 			link = links.Shorten(ctx, link)
 
 			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(sourceRes.Diagnosis.Summarize()+"."), styles.DimmedItalic.Render(link))
-			additionalLines = append(additionalLines, styles.HeavilyEmphasized.Render(fmt.Sprintf("└─%s: ", "Improve with AI")+msg))
+			additionalLines = append(additionalLines, fmt.Sprintf("`└─Improve with AI:` %s", msg))
 		}
 
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
