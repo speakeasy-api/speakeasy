@@ -16,6 +16,7 @@ import (
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -72,6 +73,12 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 
 	if err != nil {
 		return result, err
+	}
+
+	configWorkspaceID := config.GetWorkspaceID()
+
+	if !slices.Contains([]string{"", "self"}, configWorkspaceID) {
+		workspaceID = configWorkspaceID
 	}
 
 	wsReq := operations.GetWorkspaceRequest{
