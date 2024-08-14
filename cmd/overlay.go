@@ -36,18 +36,25 @@ var overlayValidateCmd = &model.ExecutableCommand[overlayValidateFlags]{
 }
 
 type overlayCompareFlags struct {
-	Schemas []string `json:"schemas"`
+	Before string `json:"before"`
+    After  string `json:"after"`
 }
 
 var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 	Usage: "compare",
-	Short: "Given two specs, output an overlay that describes the differences between them",
+	Short: "Given two specs (before and after), output an overlay that describes the differences between them",
 	Run:   runCompare,
 	Flags: []flag.Flag{
-		flag.StringSliceFlag{
-			Name:        "schemas",
-			Shorthand:   "s",
-			Description: "two schemas to compare and generate overlay from",
+		flag.StringFlag{
+			Name:        "before",
+			Shorthand:   "b",
+			Description: "the before schema to compare",
+			Required:    true,
+		},
+		flag.StringFlag{
+			Name:        "after",
+			Shorthand:   "a",
+			Description: "the after schema to compare",
 			Required:    true,
 		},
 	},
@@ -93,7 +100,8 @@ func runValidateOverlay(ctx context.Context, flags overlayValidateFlags) error {
 }
 
 func runCompare(ctx context.Context, flags overlayCompareFlags) error {
-	return overlay.Compare(flags.Schemas, os.Stdout)
+	schemas := []string{flags.Before, flags.After}
+	return overlay.Compare(schemas, os.Stdout)
 }
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
