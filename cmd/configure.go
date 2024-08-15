@@ -373,7 +373,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
 	}
 
 	var publishingOptions []huh.Option[string]
@@ -515,7 +515,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
 	}
 
 	ctx = events.SetTargetInContext(ctx, workingDir)
