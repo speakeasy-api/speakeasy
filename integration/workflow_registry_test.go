@@ -40,7 +40,7 @@ func TestStability(t *testing.T) {
 
 	// Run the initial generation
 	var initialChecksums map[string]string
-	initialArgs := []string{"run", "-t", "all", "--force", "--skip-versioning", "--skip-compile"}
+	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
 	cmdErr := execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
