@@ -47,16 +47,18 @@ var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 	Run:   runCompare,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:        "before",
-			Shorthand:   "b",
-			Description: "the before schema to compare",
-			Required:    true,
+			Name:                       "before",
+			Shorthand:                  "b",
+			Description:                "the before schema to compare",
+			Required:                   true,
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
-			Name:        "after",
-			Shorthand:   "a",
-			Description: "the after schema to compare",
-			Required:    true,
+			Name:                       "after",
+			Shorthand:                  "a",
+			Description:                "the after schema to compare",
+			Required:                   true,
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 	},
 }
