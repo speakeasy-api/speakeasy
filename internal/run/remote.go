@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -15,6 +16,14 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
+
+var githubActionRunningStatuses = []string{
+	"queued",
+	"in_progress",
+	"requested",
+	"waiting",
+	"pending",
+}
 
 func RunGitHub(ctx context.Context, target, version string, force bool) error {
 	sdk, err := auth.GetSDKFromContext(ctx)
@@ -64,23 +73,32 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 	}
 
 	var runURL string
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	timeoutCh := time.After(5 * time.Minute)
 
 	for runURL == "" {
-		actionRes, err := sdk.Github.GetAction(ctx, operations.GetActionRequest{
-			Org:        org,
-			Repo:       repo,
-			TargetName: &target,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to get GitHub action(s): %w", err)
-		}
+		select {
+		case <-ticker.C:
+			// Perform the action check
+			actionRes, err := sdk.Github.GetAction(ctx, operations.GetActionRequest{
+				Org:        org,
+				Repo:       repo,
+				TargetName: &target,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to get GitHub action(s): %w", err)
+			}
 
-		if actionRes != nil && actionRes.GithubGetActionResponse != nil && actionRes.GithubGetActionResponse.RunURL != nil {
-			runURL = *actionRes.GithubGetActionResponse.RunURL
-			break
-		}
+			if actionRes != nil && actionRes.GithubGetActionResponse != nil && actionRes.GithubGetActionResponse.RunURL != nil && slices.Contains(githubActionRunningStatuses, *actionRes.GithubGetActionResponse.RunStatus) {
+				runURL = *actionRes.GithubGetActionResponse.RunURL
+				break
+			}
 
-		time.Sleep(1 * time.Second)
+		case <-timeoutCh:
+			return nil
+		}
 	}
 
 	log.From(ctx).Println(styles.RenderSuccessMessage("Successfully Kicked Off Generation Run", runURL))
