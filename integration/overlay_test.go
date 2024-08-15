@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -28,5 +29,15 @@ func TestOverlayMatchesSnapshot(t *testing.T) {
 	require.NoError(t, cmdErr)
 	readBytes, err := os.ReadFile(outputPath)
 	require.NoError(t, err)
-	require.Equal(t, string(expectedBytes), string(readBytes))
+
+	// Normalize line endings for both expected and actual content
+	expectedNormalized := normalizeLineEndings(string(expectedBytes))
+	actualNormalized := normalizeLineEndings(string(readBytes))
+
+	require.Equal(t, expectedNormalized, actualNormalized)
+}
+
+// normalizeLineEndings replaces all occurrences of \r\n with \n
+func normalizeLineEndings(s string) string {
+	return strings.ReplaceAll(s, "\r\n", "\n")
 }
