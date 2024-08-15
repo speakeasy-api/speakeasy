@@ -21,9 +21,10 @@ var (
 
 	Emphasized = HeavilyEmphasized.Foreground(Colors.WhiteBlackAdaptive)
 
-	Info    = Emphasized.Foreground(Colors.Blue)
-	Warning = Emphasized.Foreground(Colors.Yellow)
-	Error   = Emphasized.Foreground(Colors.Red)
+	Success = lipgloss.NewStyle().Foreground(Colors.Green).Bold(true)
+	Info    = lipgloss.NewStyle().Foreground(Colors.Blue)
+	Warning = lipgloss.NewStyle().Foreground(Colors.Yellow)
+	Error   = lipgloss.NewStyle().Foreground(Colors.Red)
 
 	Focused       = lipgloss.NewStyle().Foreground(Colors.Yellow)
 	FocusedDimmed = Focused.Foreground(Colors.DimYellow)
@@ -31,8 +32,6 @@ var (
 	Dimmed       = lipgloss.NewStyle().Foreground(Colors.Grey)
 	DimmedItalic = Dimmed.Italic(true)
 	Help         = DimmedItalic
-
-	Success = Emphasized.Foreground(Colors.Green)
 
 	Cursor = FocusedDimmed
 	None   = lipgloss.NewStyle()

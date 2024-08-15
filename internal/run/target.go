@@ -343,7 +343,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 	return
 }
 
-func (w *Workflow) printTargetSuccessMessage(ctx context.Context, logger log.Logger) {
+func (w *Workflow) printTargetSuccessMessage(ctx context.Context) {
 	if len(w.SDKOverviewURLs) == 0 {
 		return
 	}
@@ -352,9 +352,9 @@ func (w *Workflow) printTargetSuccessMessage(ctx context.Context, logger log.Log
 	var additionalLines []string
 	for target, url := range w.SDKOverviewURLs {
 		link := links.Shorten(ctx, url)
-		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s %s %s", styles.HeavilyEmphasized.Render(target), styles.Success.Render("overview:"), styles.Dimmed.Render(link))))
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─`%s` overview: %s", target, styles.Dimmed.Render(link))))
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
-	logger.Println(msg)
+	log.From(ctx).Println(msg)
 }

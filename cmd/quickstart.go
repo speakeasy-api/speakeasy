@@ -22,6 +22,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -67,6 +68,11 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	},
 }
 
+const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+	"To create a brand _new_ SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
+	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+	"To regenerate the current workflow: `speakeasy run`.")
+
 func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -74,17 +80,11 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return ErrWorkflowExists
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: cd .. and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return ErrWorkflowExists
 	}
 
 	log.From(ctx).PrintfStyled(styles.DimmedItalic, "\nYour first SDK is a few short questions away...\n")
