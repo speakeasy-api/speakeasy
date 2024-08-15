@@ -111,7 +111,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		registryLocation := fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
 			lockSource.SourceNamespace, lockSource.SourceRevisionDigest)
 		d := workflow.Document{Location: registryLocation}
-		docPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
+		docPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
 		if err != nil {
 			return "", nil, fmt.Errorf("error resolving registry bundle from %s: %w", registryLocation, err)
 		}
@@ -210,7 +210,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = overlayLocation
 	}
 
-	if !isSingleRegistrySource(source) && !w.SkipSnapshot {
+	if !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			logger.Warnf("failed to snapshot source: %s", err.Error())
@@ -287,7 +287,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	changesStep.NewSubstep("Downloading prior revision")
 
 	d := workflow.Document{Location: oldRegistryLocation}
-	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
+	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d,workflow.GetTempDir())
 	if err != nil {
 		return
 	}
@@ -394,6 +394,21 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	tags, err := w.getRegistryTags(ctx, sourceID)
 	if err != nil {
 		return err
+	}
+
+
+	if isSingleRegistrySource(source) {
+		document, err := registry.ResolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], workflow.GetTempDir())
+		if err != nil {
+			return err
+		}
+		w.lockfile.Sources[sourceID] = workflow.SourceLock{
+			SourceNamespace:      namespaceName,
+			SourceRevisionDigest: document.ManifestDigest,
+			SourceBlobDigest:     document.BlobDigest,
+			Tags:                 tags,
+		}
+		return nil
 	}
 
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})

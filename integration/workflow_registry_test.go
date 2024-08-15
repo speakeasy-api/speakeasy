@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFrozenWorkflowLock(t *testing.T) {
+func TestStabilityFrozenWorkflowLock(t *testing.T) {
 	t.Parallel()
 	temp := setupTestDir(t)
 
@@ -47,6 +47,14 @@ func TestFrozenWorkflowLock(t *testing.T) {
 	// Calculate checksums of generated files
 	initialChecksums, err := calculateChecksums(temp)
 	require.NoError(t, err)
+
+	// Re-run the generation. We should have stable digests.
+	cmdErr = executeI(t, temp, initialArgs...).Run()
+	require.NoError(t, cmdErr)
+	rerunChecksums, err := calculateChecksums(temp)
+	require.NoError(t, err)
+	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
+
 
 	// Modify the source OpenAPI spec to simulate a change
 	// Shouldn't do anything; we'll validate that later.

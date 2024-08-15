@@ -2,7 +2,8 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.22.4
 
-replace github.com/speakeasy-api/speakeasy-core v0.12.2 => ../speakeasy-core
+replace github.com/speakeasy-api/speakeasy-core v0.13.1 => ../speakeasy-core
+replace github.com/speakeasy-api/sdk-gen-config v1.17.1 => ../sdk-gen-config
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4

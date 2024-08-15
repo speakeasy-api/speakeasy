@@ -155,10 +155,17 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 		return nil, err
 	}
 
+	shortDigest := bundleResult.BlobDigest[8:14]
+	outPath = filepath.Join(outPath, shortDigest)
+
 	var outputFileName string
 	if fileName, _ := bundleResult.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
 		cleanName := filepath.Clean(fileName)
 		outputFileName = filepath.Join(outPath, cleanName)
+		err = os.MkdirAll(filepath.Dir(outputFileName), os.ModePerm)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create output directory: %w", err)
+		}
 	} else {
 		return nil, fmt.Errorf("no root openapi file found in bundle")
 	}
