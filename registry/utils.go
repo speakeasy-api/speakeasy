@@ -32,7 +32,7 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 	}
 
 	keyForWorkspace := config.GetWorkspaceAPIKey(organizationSlug, workspaceSlug)
-	if keyForWorkspace == "" {
+	if keyForWorkspace == "" && organizationSlug != "speakeasy-self" {
 		if registryBreakdown.OrganizationSlug != organizationSlug {
 			return nil, fmt.Errorf("organization mismatch: %s != %s", registryBreakdown.OrganizationSlug, organizationSlug)
 		}

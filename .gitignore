@@ -4,6 +4,7 @@ bin/
 .vscode/
 *.iml
 summary.md
-.speakeasy/
+/.speakeasy/
+temp/
 integration/temp
 .DS_Store

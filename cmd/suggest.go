@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	charminternal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"os"
 )
 
 var suggestCmd = &model.CommandGroup{
@@ -68,5 +71,16 @@ func runSuggest(ctx context.Context, flags suggestOperationIDsFlags) error {
 		depthStyle = shared.DepthStyleFlat
 	}
 
-	return suggest.Suggest(ctx, flags.Schema, flags.Out, flags.Overlay, style, depthStyle)
+	yamlOut := utils.HasYAMLExt(flags.Out)
+	if flags.Overlay && !yamlOut {
+		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
+	}
+
+	outFile, err := os.Create(flags.Out)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	return suggest.SuggestOperationIDsAndWrite(ctx, flags.Schema, flags.Overlay, yamlOut, style, depthStyle, outFile)
 }

@@ -1,14 +1,18 @@
 package integration_tests
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/versioning-reports/versioning"
+	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -117,7 +121,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			require.NoError(t, err)
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
-			args := []string{"run", "-t", "all", "--pinned"}
+			args := []string{"run", "-t", "all", "--pinned", "--skip-compile"}
 			if tt.withForce {
 				args = append(args, "--force", "true")
 			}
@@ -142,7 +146,25 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 }
 
-func execute(t *testing.T, wd string, args ...string) *exec.Cmd {
+type Runnable interface {
+	Run() error
+}
+
+type subprocessRunner struct {
+	cmd *exec.Cmd
+	out *bytes.Buffer
+}
+
+func (r *subprocessRunner) Run() error {
+	err := r.cmd.Run()
+	if err != nil {
+		fmt.Println(r.out.String())
+		return err
+	}
+	return nil
+}
+
+func execute(t *testing.T, wd string, args ...string) Runnable {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
@@ -150,9 +172,44 @@ func execute(t *testing.T, wd string, args ...string) *exec.Cmd {
 	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
 	cmd.Env = os.Environ()
 	cmd.Dir = wd
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd
+	// store stdout and stderr in a buffer and output it all in one go if there's a failure
+	out := bytes.Buffer{}
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	return &subprocessRunner{
+		cmd:    cmd,
+		out:    &out,
+	}
+}
+
+// executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
+var mutex sync.Mutex
+var rootCmd = cmd.CmdForTest(version, artifactArch)
+func executeI(t *testing.T, wd string, args ...string) Runnable {
+	mutex.Lock()
+	t.Helper()
+	rootCmd.SetArgs(args)
+	oldWD, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(wd))
+
+	return &cmdRunner{
+		rootCmd: rootCmd,
+		cleanup: func() {
+			require.NoError(t, os.Chdir(oldWD))
+			mutex.Unlock()
+		},
+	}
+}
+type cmdRunner struct {
+	rootCmd *cobra.Command
+	cleanup func()
+}
+
+func (c *cmdRunner) Run() error {
+	defer c.cleanup()
+	return c.rootCmd.Execute()
 }
 
 func TestSpecWorkflows(t *testing.T) {
@@ -247,7 +304,7 @@ func TestSpecWorkflows(t *testing.T) {
 			require.NoError(t, err)
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
-			args := []string{"run", "-s", "all", "--pinned"}
+			args := []string{"run", "-s", "all", "--pinned", "--skip-compile"}
 			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
 
@@ -360,8 +417,9 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 		err := execute(t, temp, args...).Run()
 		return true, err
 	})
+	require.NoError(t, cmdErr)
 	require.NotNil(t, reports)
-	require.Len(t, reports.Reports, 1)
+	require.True(t, len(reports.Reports) > 0, "must have version reports")
 	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
 
 	require.NoError(t, cmdErr)

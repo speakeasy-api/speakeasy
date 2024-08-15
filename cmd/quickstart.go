@@ -4,11 +4,12 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -263,11 +264,22 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 	wf.FromQuickstart = true
 
+	logger := log.From(ctx)
+	var changeDirMsg string
+	relPath, _ := filepath.Rel(workingDir, outDir)
+	if workingDir != outDir && relPath != "" {
+		changeDirMsg = fmt.Sprintf("`cd %s` before moving forward with your SDK", relPath)
+	}
+
 	if err = wf.RunWithVisualization(ctx); err != nil {
 		if strings.Contains(err.Error(), "document invalid") {
 			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
 				return errors.Wrapf(err, "failed to run generation workflow")
 			} else if retry {
+				if changeDirMsg != "" {
+					logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
+				}
+
 				return nil
 			}
 		}
@@ -286,6 +298,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if len(wf.SDKOverviewURLs) == 1 {
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
 		browser.OpenURL(overviewURL)
+	}
+
+	if changeDirMsg != "" {
+		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
 	return nil

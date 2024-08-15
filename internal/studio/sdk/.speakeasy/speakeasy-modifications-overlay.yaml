@@ -1,0 +1,40 @@
+overlay: 1.0.0
+info:
+  title: speakeasy-studio-modifications
+  version: 1.0.0
+actions:
+  - target: $["paths"]["/run"]["get"]
+    x-speakeasy-modification:
+      created_at: 1723739390834
+      type: method-name
+      before: sdk.<no_group>.getRun()
+      after: sdk.runs.getLastOutput()
+    update: {}
+  - target: $["paths"]["/run"]["post"]
+    x-speakeasy-modification:
+      created_at: 1723739390834
+      type: method-name
+      before: sdk.<no_group>.run()
+      after: sdk.runs.create()
+    update: {}
+  - target: $["paths"]["/source"]["get"]
+    x-speakeasy-modification:
+      created_at: 1723739390834
+      type: method-name
+      before: sdk.<no_group>.getSource()
+      after: sdk.source.get()
+    update: {}
+  - target: $["paths"]["/source"]["post"]
+    x-speakeasy-modification:
+      created_at: 1723739390834
+      type: method-name
+      before: sdk.<no_group>.updateSource()
+      after: sdk.source.update()
+    update: {}
+  - target: $["paths"]["/suggest/method-names"]["get"]
+    x-speakeasy-modification:
+      created_at: 1723739390834
+      type: method-name
+      before: sdk.<no_group>.suggestMethodNames()
+      after: sdk.methods.suggestNames()
+    update: {}

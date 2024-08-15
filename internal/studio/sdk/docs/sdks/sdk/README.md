@@ -10,7 +10,7 @@
 * [Run](#run) - Run
 * [GetSource](#getsource) - Get Source
 * [UpdateSource](#updatesource) - Update Source
-* [FileChanges](#filechanges) - File Changes
+* [SuggestMethodNames](#suggestmethodnames) - Suggest Method Names
 
 ## CheckHealth
 
@@ -48,6 +48,8 @@ func main() {
     }
 }
 ```
+
+
 
 ### Parameters
 
@@ -95,6 +97,8 @@ func main() {
 }
 ```
 
+
+
 ### Parameters
 
 | Parameter                                                | Type                                                     | Required                                                 | Description                                              |
@@ -141,6 +145,8 @@ func main() {
 }
 ```
 
+
+
 ### Parameters
 
 | Parameter                                                | Type                                                     | Required                                                 | Description                                              |
@@ -186,6 +192,8 @@ func main() {
     }
 }
 ```
+
+
 
 ### Parameters
 
@@ -236,6 +244,8 @@ func main() {
 }
 ```
 
+
+
 ### Parameters
 
 | Parameter                                                                                | Type                                                                                     | Required                                                                                 | Description                                                                              |
@@ -252,9 +262,9 @@ func main() {
 | ------------------ | ------------------ | ------------------ |
 | sdkerrors.SDKError | 4xx-5xx            | */*                |
 
-## FileChanges
+## SuggestMethodNames
 
-SSE endpoint to send changes detected on the local file system.
+Suggest method names for the current source.
 
 ### Example Usage
 
@@ -273,15 +283,17 @@ func main() {
     )
 
     ctx := context.Background()
-    res, err := s.FileChanges(ctx)
+    res, err := s.SuggestMethodNames(ctx)
     if err != nil {
         log.Fatal(err)
     }
-    if res.Res != nil {
+    if res.SuggestResponse != nil {
         // handle response
     }
 }
 ```
+
+
 
 ### Parameters
 
@@ -293,7 +305,7 @@ func main() {
 
 ### Response
 
-**[*operations.FileChangesResponse](../../models/operations/filechangesresponse.md), error**
+**[*operations.SuggestMethodNamesResponse](../../models/operations/suggestmethodnamesresponse.md), error**
 | Error Object       | Status Code        | Content Type       |
 | ------------------ | ------------------ | ------------------ |
 | sdkerrors.SDKError | 4xx-5xx            | */*                |

@@ -80,18 +80,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SourceResponse'
-  /file_changes:
+  /suggest/method-names:
     get:
-      summary: File Changes
-      description: SSE endpoint to send changes detected on the local file system.
-      operationId: fileChanges
+      summary: Suggest Method Names
+      description: Suggest method names for the current source.
+      operationId: suggestMethodNames
       responses:
         '200':
           description: Successful response
           content:
-            text/event-stream:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/SuggestResponse'
 
 components:
   schemas:
@@ -183,6 +183,14 @@ components:
         - overlay
         - output
         - diagnosis
+    SuggestResponse:
+      type: object
+      properties:
+        overlay:
+          type: string
+          description: The studio modifications overlay contents - this should be an overlay YAML document
+      required:
+        - overlay
     Workflow:
       type: object
       properties:
