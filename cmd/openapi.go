@@ -263,7 +263,7 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 			Location: oldSchema,
 		}
 
-		output := document.GetTempRegistryDir(workflow.GetTempDir())
+		output := workflow.GetTempDir()
 		oldSchemaResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 		if err != nil {
 			return false, "", "", err
@@ -285,7 +285,7 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 			Location: newSchema,
 		}
 
-		output := document.GetTempRegistryDir(workflow.GetTempDir())
+		output := workflow.GetTempDir()
 		newSchemaResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, document, output)
 		if err != nil {
 			return false, "", "", err

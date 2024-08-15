@@ -130,11 +130,23 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 		apiKey = config.GetSpeakeasyAPIKey()
 	}
 
+	workspaceID, err := auth.GetWorkspaceIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	access := ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+		Insecure: insecurePublish,
+	})
+	if (document.WorkspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) || document.OrganizationSlug != auth.GetOrgSlugFromContext(ctx)) && workspaceID == "self" {
+		access = ocicommon.NewRepositoryAccessAdmin(apiKey, document.NamespaceID, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		})
+	}
+
 	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
 		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
-			Insecure: insecurePublish,
-		}),
+		Access: access,
 	})
 
 	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, document.Reference)
@@ -155,10 +167,17 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 		return nil, err
 	}
 
+	shortDigest := bundleResult.BlobDigest[8:14]
+	outPath = filepath.Join(outPath, shortDigest)
+
 	var outputFileName string
 	if fileName, _ := bundleResult.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
 		cleanName := filepath.Clean(fileName)
 		outputFileName = filepath.Join(outPath, cleanName)
+		err = os.MkdirAll(filepath.Dir(outputFileName), os.ModePerm)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create output directory: %w", err)
+		}
 	} else {
 		return nil, fmt.Errorf("no root openapi file found in bundle")
 	}
