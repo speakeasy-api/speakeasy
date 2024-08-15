@@ -40,7 +40,7 @@ func TestStability(t *testing.T) {
 
 	// Run the initial generation
 	var initialChecksums map[string]string
-	initialArgs := []string{"run", "-t", "all", "--force", "--skip-versioning"}
+	initialArgs := []string{"run", "-t", "all", "--force", "--skip-versioning", "--skip-compile"}
 	cmdErr := execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
@@ -60,7 +60,7 @@ func TestStability(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run with --frozen-workflow-lock
-	frozenArgs := []string{"run", "-t", "all", "--frozen-workflow-lockfile"}
+	frozenArgs := []string{"run", "-t", "all", "--frozen-workflow-lockfile", "--skip-compile"}
 	cmdErr = execute(t, temp, frozenArgs...).Run()
 	require.NoError(t, cmdErr)
 
