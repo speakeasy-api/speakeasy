@@ -15,7 +15,11 @@ var (
 	}
 )
 
-func StyleMarkdown(s string) string {
+// InjectMarkdownStyles parses the string for markdown patterns and applies the appropriate styles
+// For example, the string "*bold text*" will be rendered in bold with the asterisks stripped out
+// The "parent style" will then be resumed. Note that it is assumed there is only one "parent style."
+// Whatever the first style is will be used to resume the original style.
+func InjectMarkdownStyles(s string) string {
 	// Extract the first style from the string, if present
 	parentStyleRegex := regexp.MustCompile(`\x1b\[.*?m`)
 	parentStyle := parentStyleRegex.FindString(s)
