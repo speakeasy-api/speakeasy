@@ -60,7 +60,7 @@ func TestStability(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run with --frozen-workflow-lock
-	frozenArgs := []string{"run", "-t", "all", "--frozen-workflow-lockfile", "--skip-compile"}
+	frozenArgs := []string{"run", "-t", "all", "--pinned", "--frozen-workflow-lockfile", "--skip-compile"}
 	cmdErr = execute(t, temp, frozenArgs...).Run()
 	require.NoError(t, cmdErr)
 
