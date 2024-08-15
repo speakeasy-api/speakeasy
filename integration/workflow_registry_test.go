@@ -40,7 +40,7 @@ func TestStabilityFrozenWorkflowLock(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the initial generation
-	initialArgs := []string{"run", "-t", "all"}
+	initialArgs := []string{"run", "-t", "all", "--force", "--skip-versioning"}
 	cmdErr := executeI(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
