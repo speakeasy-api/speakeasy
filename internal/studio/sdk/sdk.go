@@ -163,9 +163,9 @@ func New(opts ...SDKOption) *SDK {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.3.9",
-			GenVersion:        "2.393.4",
-			UserAgent:         "speakeasy-sdk/go 0.3.9 2.393.4 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			SDKVersion:        "0.3.12",
+			GenVersion:        "2.396.0",
+			UserAgent:         "speakeasy-sdk/go 0.3.12 2.396.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -1079,12 +1079,12 @@ func (s *SDK) UpdateSource(ctx context.Context, request operations.UpdateSourceR
 
 }
 
-// FileChanges - File Changes
-// SSE endpoint to send changes detected on the local file system.
-func (s *SDK) FileChanges(ctx context.Context, opts ...operations.Option) (*operations.FileChangesResponse, error) {
+// SuggestMethodNames - Suggest Method Names
+// Suggest method names for the current source.
+func (s *SDK) SuggestMethodNames(ctx context.Context, opts ...operations.Option) (*operations.SuggestMethodNamesResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
-		OperationID:    "fileChanges",
+		OperationID:    "suggestMethodNames",
 		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
@@ -1102,7 +1102,7 @@ func (s *SDK) FileChanges(ctx context.Context, opts ...operations.Option) (*oper
 	}
 
 	baseURL := utils.ReplaceParameters(s.sdkConfiguration.GetServerDetails())
-	opURL, err := url.JoinPath(baseURL, "/file_changes")
+	opURL, err := url.JoinPath(baseURL, "/suggest/method-names")
 	if err != nil {
 		return nil, fmt.Errorf("error generating URL: %w", err)
 	}
@@ -1122,7 +1122,7 @@ func (s *SDK) FileChanges(ctx context.Context, opts ...operations.Option) (*oper
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
-	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", s.sdkConfiguration.UserAgent)
 
 	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
@@ -1214,7 +1214,7 @@ func (s *SDK) FileChanges(ctx context.Context, opts ...operations.Option) (*oper
 		}
 	}
 
-	res := &operations.FileChangesResponse{
+	res := &operations.SuggestMethodNamesResponse{
 		HTTPMeta: components.HTTPMetadata{
 			Request:  req,
 			Response: httpRes,
@@ -1231,10 +1231,13 @@ func (s *SDK) FileChanges(ctx context.Context, opts ...operations.Option) (*oper
 	switch {
 	case httpRes.StatusCode == 200:
 		switch {
-		case utils.MatchContentType(httpRes.Header.Get("Content-Type"), `text/event-stream`):
+		case utils.MatchContentType(httpRes.Header.Get("Content-Type"), `application/json`):
+			var out components.SuggestResponse
+			if err := utils.UnmarshalJsonFromResponseBody(bytes.NewBuffer(rawBody), &out, ""); err != nil {
+				return nil, err
+			}
 
-			out := string(rawBody)
-			res.Res = &out
+			res.SuggestResponse = &out
 		default:
 			return nil, sdkerrors.NewSDKError(fmt.Sprintf("unknown content-type received: %s", httpRes.Header.Get("Content-Type")), httpRes.StatusCode, string(rawBody), httpRes)
 		}

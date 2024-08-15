@@ -6,22 +6,22 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 )
 
-type FileChangesResponse struct {
+type SuggestMethodNamesResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
-	Res *string
+	SuggestResponse *components.SuggestResponse
 }
 
-func (o *FileChangesResponse) GetHTTPMeta() components.HTTPMetadata {
+func (o *SuggestMethodNamesResponse) GetHTTPMeta() components.HTTPMetadata {
 	if o == nil {
 		return components.HTTPMetadata{}
 	}
 	return o.HTTPMeta
 }
 
-func (o *FileChangesResponse) GetRes() *string {
+func (o *SuggestMethodNamesResponse) GetSuggestResponse() *components.SuggestResponse {
 	if o == nil {
 		return nil
 	}
-	return o.Res
+	return o.SuggestResponse
 }

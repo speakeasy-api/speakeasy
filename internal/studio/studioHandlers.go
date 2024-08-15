@@ -4,19 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/AlekSi/pointer"
-	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/AlekSi/pointer"
+	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/errors"
 
 	"github.com/speakeasy-api/jsonpath/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/suggest"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v2"
 )
@@ -29,7 +34,7 @@ type StudioHandlers struct {
 }
 
 const (
-	modificationsOverlayPath = ".speakeasy/speakeasy-modifications-overlay.yaml"
+	ModificationsOverlayPath = ".speakeasy/speakeasy-modifications-overlay.yaml"
 )
 
 func NewStudioHandlers(ctx context.Context, workflow *run.Workflow) (*StudioHandlers, error) {
@@ -64,11 +69,23 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 		if err != nil {
 			return fmt.Errorf("error reading gen.yaml: %w", err)
 		}
+
+		workflowConfig := h.WorkflowRunner.GetWorkflowFile()
+		targetConfig := workflowConfig.Targets[k]
+
+		outputDirectory := ""
+
+		if targetConfig.Output != nil {
+			// TODO: Otherwise the current directory
+			outputDirectory = *targetConfig.Output
+		}
 		res.TargetResults[k] = components.TargetRunSummary{
-			TargetID: k,
-			SourceID: h.SourceID,
-			Readme:   readMeContents,
-			GenYaml:  genYamlContents,
+			TargetID:        k,
+			SourceID:        h.SourceID,
+			Readme:          readMeContents,
+			GenYaml:         genYamlContents,
+			Language:        targetConfig.Target,
+			OutputDirectory: outputDirectory,
 		}
 	}
 
@@ -98,7 +115,7 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func (h *StudioHandlers) updateRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	cloned, err := h.WorkflowRunner.Clone(h.Ctx)
+	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup())
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
@@ -140,16 +157,8 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var err error
 
-	workflowRunner := h.WorkflowRunner
 	sourceID := h.SourceID
-
-	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx, run.WithSkipLinting(), run.WithSkipCleanup())
-	if err != nil {
-		return fmt.Errorf("error cloning workflow runner: %w", err)
-	}
-	workflowRunner = *workflowRunnerPtr
-
-	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "")
+	sourceResult, err := h.getSourceInner(ctx)
 	if err != nil {
 		return fmt.Errorf("error running source: %w", err)
 	}
@@ -197,24 +206,67 @@ func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter
 	return h.getSource(ctx, w, r)
 }
 
+func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	sourceResult, err := h.getSourceInner(ctx)
+	if err != nil {
+		return fmt.Errorf("error running source: %w", err)
+	}
+
+	_, model, err := openapi.Load([]byte(sourceResult.InputSpec), sourceResult.OutputPath)
+	if err != nil {
+		return fmt.Errorf("error loading document: %w", err)
+	}
+
+	_, overlay, err := suggest.SuggestOperationIDs(h.Ctx, []byte(sourceResult.InputSpec), model.Model, shared.StyleResource, shared.DepthStyleOriginal)
+	if err != nil {
+		return fmt.Errorf("error suggesting method names: %w", err)
+	}
+
+	yamlBytes, err := yaml.Marshal(overlay)
+	if err != nil {
+		return fmt.Errorf("error marshaling overlay to yaml: %w", err)
+	}
+	overlayAsYaml := string(yamlBytes)
+
+	data := components.SuggestResponse{Overlay: overlayAsYaml}
+
+	err = json.NewEncoder(w).Encode(data)
+	if err != nil {
+		return fmt.Errorf("error encoding method name suggestions: %w", err)
+	}
+
+	return nil
+}
+
 // ---------------------------------
 // Helper functions
 // ---------------------------------
 
-func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult) (*components.SourceResponse, error) {
-	overlayContents, err := utils.ReadFileToString(modificationsOverlayPath)
+func (h *StudioHandlers) getSourceInner(ctx context.Context) (*run.SourceResult, error) {
+	workflowRunner := h.WorkflowRunner
+	sourceID := h.SourceID
+
+	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx, run.WithSkipLinting(), run.WithSkipCleanup())
 	if err != nil {
-		return nil, fmt.Errorf("error reading modifications overlay: %w", err)
+		return nil, fmt.Errorf("error cloning workflow runner: %w", err)
+	}
+	workflowRunner = *workflowRunnerPtr
+
+	_, sourceResult, err := workflowRunner.RunSource(h.Ctx, workflowRunner.RootStep, sourceID, "")
+	if err != nil {
+		return nil, fmt.Errorf("error running source: %w", err)
 	}
 
-	// TODO: Why is this necessary? Can't modifications always live at modificationsOverlayPath?
-	//for _, overlay := range sourceConfig.Overlays {
-	//	// If there are multiple modifications overlays - we take the last one
-	//	contents, _ := isStudioModificationsOverlay(overlay)
-	//	if contents != "" {
-	//		overlayContents = contents
-	//	}*
-	//}
+	return sourceResult, nil
+}
+
+func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult) (*components.SourceResponse, error) {
+	overlayContents, err := utils.ReadFileToString(ModificationsOverlayPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("error reading modifications overlay: %w", err)
+		}
+	}
 
 	outputDocumentString, err := utils.ReadFileToString(sourceResult.OutputPath)
 	if err != nil {
@@ -223,14 +275,16 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 
 	var diagnosis []components.Diagnostic
 
-	for _, e := range sourceResult.LintResult.AllErrors {
-		vErr := vErrs.GetValidationErr(e)
-		diagnosis = append(diagnosis, components.Diagnostic{
-			Message:  vErr.Message,
-			Severity: string(vErr.Severity),
-			Line:     pointer.ToInt64(int64(vErr.LineNumber)),
-			Type:     vErr.Rule,
-		})
+	if sourceResult.LintResult != nil {
+		for _, e := range sourceResult.LintResult.AllErrors {
+			vErr := vErrs.GetValidationErr(e)
+			diagnosis = append(diagnosis, components.Diagnostic{
+				Message:  vErr.Message,
+				Severity: string(vErr.Severity),
+				Line:     pointer.ToInt64(int64(vErr.LineNumber)),
+				Type:     vErr.Rule,
+			})
+		}
 	}
 
 	for t, d := range sourceResult.Diagnosis {
@@ -259,7 +313,7 @@ func (h *StudioHandlers) getOrCreateOverlayPath() error {
 	}
 
 	// TODO: this probably doesn't need to be stored in h.OverlayPath? Do we need to support custom modification filepaths?
-	h.OverlayPath = modificationsOverlayPath
+	h.OverlayPath = ModificationsOverlayPath
 
 	workflowConfig := h.WorkflowRunner.GetWorkflowFile()
 

@@ -190,13 +190,17 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 
 	if !w.SkipCleanup {
 		w.RootStep.NewSubstep("Cleaning Up")
-		os.RemoveAll(workflow.GetTempDir())
+		w.Cleanup()
 	}
 
 	if err := workflow.SaveLockfile(w.ProjectDir, w.lockfile); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (w *Workflow) Cleanup() {
+	os.RemoveAll(workflow.GetTempDir())
 }
 
 func (w *Workflow) printGenerationOverview(ctx context.Context) error {

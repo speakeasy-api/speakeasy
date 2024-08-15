@@ -204,3 +204,26 @@ func WriteStringToFile(path, content string) error {
 
 	return os.WriteFile(path, []byte(content), 0o644)
 }
+
+// Returns full path to the temp file
+func WriteTempFile(content string, optionalFilename string) (string, error) {
+	fileName := optionalFilename
+	if fileName == "" {
+		fileName = "tempfile"
+	}
+
+	tmpFile, err := os.CreateTemp("", fileName)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		return "", err
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
+}

@@ -72,7 +72,7 @@ func main() {
 * [Run](docs/sdks/sdk/README.md#run) - Run
 * [GetSource](docs/sdks/sdk/README.md#getsource) - Get Source
 * [UpdateSource](docs/sdks/sdk/README.md#updatesource) - Update Source
-* [FileChanges](docs/sdks/sdk/README.md#filechanges) - File Changes
+* [SuggestMethodNames](docs/sdks/sdk/README.md#suggestmethodnames) - Suggest Method Names
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->

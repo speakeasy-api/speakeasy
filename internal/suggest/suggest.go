@@ -3,13 +3,16 @@ package suggest
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"io"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	overlayUtil "github.com/speakeasy-api/speakeasy/internal/overlay"
@@ -22,15 +25,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 )
 
-func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool, style shared.Style, depthStyle shared.DepthStyle) error {
-	if asOverlay && !utils.HasYAMLExt(outPath) {
-		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
-	}
-
-	httpClient := &http.Client{Timeout: 5 * time.Minute}
-	client, err := sdk.InitSDK(speakeasy.WithClient(httpClient))
-	if err != nil {
-		return err
+func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asOverlay, yamlOut bool, style shared.Style, depthStyle shared.DepthStyle, w io.Writer) error {
+	if asOverlay {
+		yamlOut = true
 	}
 
 	schemaBytes, _, model, err := schema.LoadDocument(ctx, schemaLocation)
@@ -39,6 +36,56 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 	}
 
 	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
+
+	updates, overlay, err := SuggestOperationIDs(ctx, schemaBytes, model.Model, style, depthStyle)
+
+	stopSpinner()
+
+	if err != nil {
+		return err
+	}
+
+	printSuggestions(ctx, updates)
+
+	/*
+	 * Write the new document or overlay
+	 */
+	if asOverlay {
+		if err := overlay.Format(w); err != nil {
+			return err
+		}
+	} else {
+		root := model.Index.GetRootNode()
+		if err := overlay.ApplyTo(root); err != nil {
+			return err
+		}
+
+		finalBytes, err := overlayUtil.Render(root, schemaLocation, yamlOut)
+		if err != nil {
+			return err
+		}
+
+		if _, err = w.Write(finalBytes); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func SuggestOperationIDs(ctx context.Context, schema []byte, model v3.Document, style shared.Style, depthStyle shared.DepthStyle) ([]suggestions.OperationUpdate, *overlay.Overlay, error) {
+	httpClient := &http.Client{Timeout: 5 * time.Minute}
+	severURL := speakeasy.ServerList[speakeasy.ServerProd]
+	if strings.Contains(auth.GetServerURL(), "localhost") {
+		severURL = "http://localhost:35291"
+	}
+	client, err := sdk.InitSDK(
+		speakeasy.WithClient(httpClient),
+		speakeasy.WithServerURL(severURL),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	/* Get suggestion */
 	res, err := client.Suggest.SuggestOperationIDs(ctx, operations.SuggestOperationIDsRequest{
@@ -49,52 +96,20 @@ func Suggest(ctx context.Context, schemaLocation, outPath string, asOverlay bool
 				DepthStyle: depthStyle.ToPointer(),
 			},
 			Schema: operations.Schema{
-				FileName: schemaLocation,
-				Content:  schemaBytes,
+				FileName: "openapi.yaml",
+				Content:  schema,
 			},
 		},
 	})
 	if err != nil || res.SuggestedOperationIDs == nil {
-		return err
+		return nil, nil, err
 	}
-	stopSpinner()
 
-	/* Update operation IDS and tags/groups */
+	/* Convert result to overlay */
 	suggestion := suggestions.MakeOperationIDs(res.SuggestedOperationIDs.OperationIds)
-	updates, overlay := suggestion.AsOverlay(model.Model)
-	printSuggestions(ctx, updates)
+	updates, overlay := suggestion.AsOverlay(model)
 
-	/*
-	 * Write the new document or overlay
-	 */
-
-	outFile, err := os.Create(outPath)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	if asOverlay {
-		if err := overlay.Format(outFile); err != nil {
-			return err
-		}
-	} else {
-		root := model.Index.GetRootNode()
-		if err := overlay.ApplyTo(root); err != nil {
-			return err
-		}
-
-		finalBytes, err := overlayUtil.Render(root, schemaLocation, utils.HasYAMLExt(outPath))
-		if err != nil {
-			return err
-		}
-
-		if _, err = outFile.Write(finalBytes); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return updates, &overlay, nil
 }
 
 var changedStyle = styles.Dimmed.Strikethrough(true)

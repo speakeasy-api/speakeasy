@@ -6,12 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/auth"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/speakeasy-api/speakeasy-core/auth"
 
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy-core/errors"
@@ -61,6 +62,8 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		}
 	})
 
+	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
+
 	port, err := searchForAvailablePort()
 	if err != nil {
 		return err
@@ -81,7 +84,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		fmt.Println("Opening URL in your browser:", url)
 	}
 
-	return startServer(ctx, server)
+	return startServer(ctx, server, workflow)
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -115,16 +118,18 @@ func authMiddleware(secret string, next http.Handler) http.Handler {
 
 func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.From(r.Context()).Info("handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path))
+		id := generateRequestID()
+		log.From(r.Context()).Info("handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id))
 		ctx := r.Context()
 		if err := h(ctx, w, r); err != nil {
-			log.From(ctx).Error("error handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.Error(err))
+			log.From(ctx).Error("error handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id), zap.Error(err))
 			respondJSONError(ctx, w, err)
 		}
+		log.From(ctx).Info("request handled", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id))
 	}
 }
 
-func startServer(ctx context.Context, server *http.Server) error {
+func startServer(ctx context.Context, server *http.Server, workflow *run.Workflow) error {
 
 	// Channel to listen for interrupt or terminate signals
 	quit := make(chan os.Signal, 1)
@@ -133,7 +138,7 @@ func startServer(ctx context.Context, server *http.Server) error {
 	go func() {
 		<-quit
 		// Attempt to gracefully shutdown the server
-		// TODO: Clean up temp dir
+		workflow.Cleanup()
 		if err := server.Shutdown(ctx); err != nil {
 			log.From(ctx).Error("Server forced to shutdown", zap.Error(err))
 		}
@@ -202,4 +207,10 @@ func respondJSONError(ctx context.Context, w http.ResponseWriter, err error) {
 	if jsonError := json.NewEncoder(w).Encode(data); jsonError != nil {
 		log.From(ctx).Error("failed to encode JSON error response", zap.Error(jsonError))
 	}
+}
+
+func generateRequestID() string {
+	bytes := make([]byte, 4)
+	rand.Read(bytes) // Generate random bytes
+	return hex.EncodeToString(bytes)
 }
