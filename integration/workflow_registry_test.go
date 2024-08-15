@@ -41,42 +41,35 @@ func TestStability(t *testing.T) {
 	// Run the initial generation
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--skip-versioning"}
-	t.Run("Initial generation", func(t *testing.T) {
-		cmdErr := execute(t, temp, initialArgs...).Run()
-		require.NoError(t, cmdErr)
+	cmdErr := execute(t, temp, initialArgs...).Run()
+	require.NoError(t, cmdErr)
 
-		// Calculate checksums of generated files
-		initialChecksums, err = calculateChecksums(temp)
-		require.NoError(t, err)
-	})
+	// Calculate checksums of generated files
+	initialChecksums, err = calculateChecksums(temp)
+	require.NoError(t, err)
 
 	// Re-run the generation. We should have stable digests.
-	t.Run("Re-run generation, validate stability", func(t *testing.T) {
-		cmdErr := execute(t, temp, initialArgs...).Run()
-		require.NoError(t, cmdErr)
-		rerunChecksums, err := calculateChecksums(temp)
-		require.NoError(t, err)
-		require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
-	})
+	cmdErr = execute(t, temp, initialArgs...).Run()
+	require.NoError(t, cmdErr)
+	rerunChecksums, err := calculateChecksums(temp)
+	require.NoError(t, err)
+	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
+	// Modify the workflow file to simulate a change
+	// Shouldn't do anything; we'll validate that later.
+	workflowFile.Sources["test-source"].Inputs[0].Location = "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.1/petstore.yaml"
+	require.NoError(t, err)
 
-	t.Run("Modify the workflow file, then run it with --frozen-workflow-lockfile", func(t *testing.T) {
-		// Modify the workflow file to simulate a change
-		// Shouldn't do anything; we'll validate that later.
-		workflowFile.Sources["test-source"].Inputs[0].Location = "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.1/petstore.yaml"
-		require.NoError(t, err)
+	// Run with --frozen-workflow-lock
+	frozenArgs := []string{"run", "-t", "all", "--frozen-workflow-lockfile"}
+	cmdErr = execute(t, temp, frozenArgs...).Run()
+	require.NoError(t, cmdErr)
 
-		// Run with --frozen-workflow-lock
-		frozenArgs := []string{"run", "-t", "all", "--frozen-workflow-lockfile"}
-		cmdErr := execute(t, temp, frozenArgs...).Run()
-		require.NoError(t, cmdErr)
+	// Calculate checksums after frozen run
+	frozenChecksums, err := calculateChecksums(temp)
+	require.NoError(t, err)
 
-		// Calculate checksums after frozen run
-		frozenChecksums, err := calculateChecksums(temp)
-		require.NoError(t, err)
-
-		// Compare checksums
-		require.Equal(t, initialChecksums, frozenChecksums, "Generated files should be identical when using --frozen-workflow-lock")
-	})
+	// Compare checksums
+	require.Equal(t, initialChecksums, frozenChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 }
 
 func calculateChecksums(dir string) (map[string]string, error) {
