@@ -22,7 +22,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	errors2 "github.com/speakeasy-api/speakeasy-core/errors"
+	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -68,7 +68,7 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	},
 }
 
-const ErrWorkflowExists = errors2.Error("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when a speakeasy workflow already exists. \n" +
 	"To create a brand _new_ SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
 	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
 	"To regenerate the current workflow: `speakeasy run`.")
