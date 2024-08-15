@@ -277,7 +277,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 				return errors.Wrapf(err, "failed to run generation workflow")
 			} else if retry {
 				if changeDirMsg != "" {
-					logger.Println(styles.RenderWarningMessage("ATTENTION DO THIS", changeDirMsg))
+					logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 				}
 
 				return nil
@@ -301,7 +301,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if changeDirMsg != "" {
-		logger.Println(styles.RenderWarningMessage("ATTENTION DO THIS", changeDirMsg))
+		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
 	return nil

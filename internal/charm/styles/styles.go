@@ -92,7 +92,7 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 }
 
 func RenderWarningMessage(heading string, additionalLines ...string) string {
-	s := Success.Render(utils.CapitalizeFirst(heading))
+	s := Warning.Render(utils.CapitalizeFirst(heading))
 	for _, line := range additionalLines {
 		s += "\n" + Dimmed.Render(line)
 	}
