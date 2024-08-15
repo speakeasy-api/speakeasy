@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/AlekSi/pointer"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"net/http"
@@ -72,7 +73,7 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if len(h.WorkflowRunner.SourceResults) != 1 {
-		return errors.New("expected just one source")
+		return errors.New("expected exactly one source")
 	}
 
 	sourceResult := h.WorkflowRunner.SourceResults[h.SourceID]
@@ -205,13 +206,14 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 	if err != nil {
 		return nil, fmt.Errorf("error reading modifications overlay: %w", err)
 	}
+
 	// TODO: Why is this necessary? Can't modifications always live at modificationsOverlayPath?
 	//for _, overlay := range sourceConfig.Overlays {
 	//	// If there are multiple modifications overlays - we take the last one
 	//	contents, _ := isStudioModificationsOverlay(overlay)
 	//	if contents != "" {
 	//		overlayContents = contents
-	//	}
+	//	}*
 	//}
 
 	outputDocumentString, err := utils.ReadFileToString(sourceResult.OutputPath)
@@ -219,23 +221,35 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 		return nil, fmt.Errorf("error reading output document: %w", err)
 	}
 
-	var lintingResults []components.ValidationError
+	var diagnosis []components.Diagnostic
+
 	for _, e := range sourceResult.LintResult.AllErrors {
 		vErr := vErrs.GetValidationErr(e)
-		lintingResults = append(lintingResults, components.ValidationError{
+		diagnosis = append(diagnosis, components.Diagnostic{
 			Message:  vErr.Message,
 			Severity: string(vErr.Severity),
-			Line:     int64(vErr.LineNumber),
+			Line:     pointer.ToInt64(int64(vErr.LineNumber)),
 			Type:     vErr.Rule,
 		})
 	}
 
+	for t, d := range sourceResult.Diagnosis {
+		for _, diagnostic := range d {
+			diagnosis = append(diagnosis, components.Diagnostic{
+				Message:  diagnostic.Message,
+				Type:     string(t),
+				Path:     diagnostic.SchemaPath,
+				Severity: "suggestion",
+			})
+		}
+	}
+
 	return &components.SourceResponse{
-		SourceID:       sourceID,
-		Input:          sourceResult.InputSpec,
-		Overlay:        overlayContents,
-		Output:         outputDocumentString,
-		LintingResults: lintingResults,
+		SourceID:  sourceID,
+		Input:     sourceResult.InputSpec,
+		Overlay:   overlayContents,
+		Output:    outputDocumentString,
+		Diagnosis: diagnosis,
 	}, nil
 }
 

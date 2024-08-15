@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
@@ -262,7 +263,7 @@ func askForSource(sources []string) (string, error) {
 
 func runFunc(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
-		return run.RunGitHub(ctx, flags.Target, flags.SetVersion)
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
 	workflow, err := run.NewWorkflow(
@@ -293,7 +294,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
-		return run.RunGitHub(ctx, flags.Target, flags.SetVersion)
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
 	opts := []run.Opt{
@@ -334,7 +335,8 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		}
 		log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
 	case "console":
-		err = runFunc(ctx, flags)
+		err = workflow.Run(ctx)
+		workflow.RootStep.Finalize(err == nil)
 	}
 
 	if err != nil {
