@@ -343,6 +343,8 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		return err
 	}
 
+	workflow.PrintSuccessSummary(ctx)
+
 	// Pass initial results to launch studio
 
 	if flags.LaunchStudio {

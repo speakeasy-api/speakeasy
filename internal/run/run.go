@@ -6,14 +6,13 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/download"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/speakeasy-api/speakeasy/internal/download"
-	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -86,15 +85,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		return nil
 	}
 
-	startTime := time.Now()
 	err = w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
-	endDuration := time.Since(startTime)
 
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
 
-	criticalWarns := getCriticalWarnings(warnings)
+	w.criticalWarns = getCriticalWarnings(warnings)
 
 	// Display error logs if the workflow failed
 	if runErr != nil {
@@ -113,23 +110,25 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		if !w.FromQuickstart {
 			ask.OfferChatSessionOnError(ctx, filteredLogs)
 		}
-	} else if len(criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
-		s := strings.Join(criticalWarns, "\n")
+	} else if len(w.criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
+		s := strings.Join(w.criticalWarns, "\n")
 		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
-	}
-
-	// Display success message if the workflow succeeded
-	if err == nil && runErr == nil {
-		w.printSourceSuccessMessage(ctx, logger)
-		w.printTargetSuccessMessage(ctx, logger)
-		_ = w.printGenerationOverview(logger, endDuration, len(criticalWarns) > 0)
 	}
 
 	return stdErrors.Join(err, runErr)
 }
 
+func (w *Workflow) PrintSuccessSummary(ctx context.Context) {
+	// Display success message if the workflow succeeded
+	w.printSourceSuccessMessage(ctx)
+	w.printTargetSuccessMessage(ctx)
+	_ = w.printGenerationOverview(ctx)
+}
+
 func (w *Workflow) Run(ctx context.Context) error {
+	startTime := time.Now()
 	err := w.RunInner(ctx)
+	w.duration = time.Since(startTime)
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
 
@@ -200,7 +199,9 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	return nil
 }
 
-func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.Duration, criticalWarnings bool) error {
+func (w *Workflow) printGenerationOverview(ctx context.Context) error {
+	logger := log.From(ctx)
+
 	t, err := getTarget(w.Target)
 	if err != nil {
 		return err
@@ -218,7 +219,7 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 	}
 
 	additionalLines := []string{
-		fmt.Sprintf("⏲ Generated in %.1f Seconds", endDuration.Seconds()),
+		fmt.Sprintf("⏲ Generated in %.1f Seconds", w.duration.Seconds()),
 		"✎ Output written to " + tOut,
 	}
 
@@ -231,7 +232,7 @@ func (w *Workflow) printGenerationOverview(logger log.Logger, endDuration time.D
 		additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 	}
 
-	if criticalWarnings {
+	if len(w.criticalWarns) > 0 {
 		additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
 	}
 

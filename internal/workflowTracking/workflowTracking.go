@@ -186,14 +186,14 @@ func (w *WorkflowStep) toString(parentIndent, indent int) string {
 
 	s := fmt.Sprintf("%s%s", indentString, w.name)
 
-	style := styles.Info
+	style := styles.Info.Bold(true)
 	switch w.status {
 	case StatusFailed:
-		style = styles.Error
+		style = styles.Error.Bold(true)
 	case StatusRunning:
-		style = styles.Info
+		style = styles.Info.Bold(true)
 	case StatusSucceeded:
-		style = styles.Success
+		style = styles.Success.Bold(true)
 	case StatusSkipped:
 		style = styles.Dimmed
 	}
