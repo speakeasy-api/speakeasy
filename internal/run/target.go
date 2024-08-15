@@ -166,6 +166,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		w.ShouldCompile,
 		w.ForceGeneration,
 		target,
+		w.SkipVersioning,
 	)
 	if err != nil {
 		return nil, nil, err

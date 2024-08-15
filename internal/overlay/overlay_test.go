@@ -3,6 +3,7 @@ package overlay
 import (
 	"github.com/stretchr/testify/require"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,5 +62,10 @@ func test(t *testing.T, schemaFile string, expectedFile string, yamlOut bool) {
 
 	println(string(actualContent))
 
-	assert.Equal(t, string(expectedContent), string(actualContent))
+	normalizeLineEndings := func(s string) string {
+		// Important on Windows
+		return strings.ReplaceAll(s, "\r\n", "\n")
+	}
+
+	assert.Equal(t, normalizeLineEndings(string(expectedContent)), normalizeLineEndings(string(actualContent)))
 }

@@ -40,6 +40,7 @@ speakeasy run [flags]
       --repo-subdirs string       a map from target ID to the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation (default "null")
       --set-version string        the manual version to apply to the generated SDK
       --skip-compile              skip compilation when generating the SDK
+      --skip-versioning           skip automatic SDK version increments
   -s, --source string             source to run. specify 'all' to run all sources
   -t, --target string             target to run. specify 'all' to run all targets
 ```
