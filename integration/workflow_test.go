@@ -1,6 +1,7 @@
 package integration_tests
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/cmd"
@@ -148,6 +149,21 @@ func TestGenerationWorkflows(t *testing.T) {
 type Runnable interface {
 	Run() error
 }
+
+type subprocessRunner struct {
+	cmd *exec.Cmd
+	out *bytes.Buffer
+}
+
+func (r *subprocessRunner) Run() error {
+	err := r.cmd.Run()
+	if err != nil {
+		fmt.Println(r.out.String())
+		return err
+	}
+	return nil
+}
+
 func execute(t *testing.T, wd string, args ...string) Runnable {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)
@@ -156,9 +172,15 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
 	cmd.Env = os.Environ()
 	cmd.Dir = wd
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd
+	// store stdout and stderr in a buffer and output it all in one go if there's a failure
+	out := bytes.Buffer{}
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	return &subprocessRunner{
+		cmd:    cmd,
+		out:    &out,
+	}
 }
 
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
