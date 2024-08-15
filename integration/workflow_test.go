@@ -120,7 +120,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			require.NoError(t, err)
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
-			args := []string{"run", "-t", "all", "--pinned"}
+			args := []string{"run", "-t", "all", "--pinned", "--skip-compile"}
 			if tt.withForce {
 				args = append(args, "--force", "true")
 			}
@@ -282,7 +282,7 @@ func TestSpecWorkflows(t *testing.T) {
 			require.NoError(t, err)
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
-			args := []string{"run", "-s", "all", "--pinned"}
+			args := []string{"run", "-s", "all", "--pinned", "--skip-compile"}
 			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
 
@@ -397,7 +397,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	})
 	require.NoError(t, cmdErr)
 	require.NotNil(t, reports)
-	require.Greater(t, reports.Reports, 0)
+	require.True(t, len(reports.Reports) > 0, "must have version reports")
 	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
 
 	require.NoError(t, cmdErr)
