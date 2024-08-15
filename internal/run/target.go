@@ -66,7 +66,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
 				if cliEvent != nil {
 					cliEvent.GenerateNumberOfOperationsIgnored = new(int64)
-					*cliEvent.GenerateNumberOfOperationsIgnored = int64(len(sourceRes.LintResult.InvalidOperation))
+					*cliEvent.GenerateNumberOfOperationsIgnored = int64(len(sourceRes.LintResult.InvalidOperations))
 				}
 
 				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, sourceRes.LintResult.ValidOperations)
@@ -76,7 +76,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 					return nil, nil, err
 				}
 
-				w.OperationsRemoved = sourceRes.LintResult.InvalidOperation
+				w.OperationsRemoved = sourceRes.LintResult.InvalidOperations
 				sourcePath = retriedPath
 				sourceRes = retriedRes
 			} else {

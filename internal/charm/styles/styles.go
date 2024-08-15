@@ -140,6 +140,9 @@ func MakeBold(s string) string {
 }
 
 func MakeBoxed(s string, borderColor lipgloss.AdaptiveColor, alignment lipgloss.Position) string {
+	// We need to do this before boxing things because the sizing can change
+	s = InjectMarkdownStyles(s)
+
 	termWidth := TerminalWidth() - 2     // Leave room for padding (if the terminal is too small to fit, we need to wrap)
 	stringWidth := lipgloss.Width(s) + 2 // Account for padding (on the other hand, if the terminal is wide enough, add back in the space so it doesn't needlessly wrap)
 	w := min(termWidth, stringWidth)
