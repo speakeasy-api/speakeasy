@@ -182,7 +182,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 				}
 			} else if overlay.FallbackCodeSamples != nil {
 				// Make temp file for the overlay output
-				overlayFilePath := filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
+				overlayFilePath = filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
 				if err := os.MkdirAll(filepath.Dir(overlayFilePath), 0o755); err != nil {
 					return "", nil, err
 				}

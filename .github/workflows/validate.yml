@@ -81,6 +81,6 @@ jobs:
         run: go build ./...
 
       - name: ${{ matrix.test-group }}
-        run: go test -json -v -p 1 -run ./... | gotestfmt
+        run: go test -json -v -p 1 ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}

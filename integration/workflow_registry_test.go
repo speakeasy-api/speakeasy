@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
 )
 
-func TestStabilityFrozenWorkflowLock(t *testing.T) {
+func TestStability(t *testing.T) {
 	t.Parallel()
 	temp := setupTestDir(t)
 
@@ -41,7 +40,7 @@ func TestStabilityFrozenWorkflowLock(t *testing.T) {
 
 	// Run the initial generation
 	initialArgs := []string{"run", "-t", "all", "--force", "--skip-versioning"}
-	cmdErr := executeI(t, temp, initialArgs...).Run()
+	cmdErr := execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files
@@ -49,21 +48,21 @@ func TestStabilityFrozenWorkflowLock(t *testing.T) {
 	require.NoError(t, err)
 
 	// Re-run the generation. We should have stable digests.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 	rerunChecksums, err := calculateChecksums(temp)
 	require.NoError(t, err)
 	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 
 
-	// Modify the source OpenAPI spec to simulate a change
+	// Modify the workflow file to simulate a change
 	// Shouldn't do anything; we'll validate that later.
-	err = modifyOpenAPISpec(temp)
+	workflowFile.Sources["test-source"].Inputs[0].Location = "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.1/petstore.yaml"
 	require.NoError(t, err)
 
 	// Run with --frozen-workflow-lock
-	frozenArgs := []string{"run", "-t", "all", "--frozen-workflow-lock"}
-	cmdErr = executeI(t, temp, frozenArgs...).Run()
+	frozenArgs := []string{"run", "-t", "all", "--frozen-workflow-lockfile"}
+	cmdErr = execute(t, temp, frozenArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums after frozen run
@@ -91,17 +90,4 @@ func calculateChecksums(dir string) (map[string]string, error) {
 		return nil
 	})
 	return checksums, err
-}
-
-func modifyOpenAPISpec(dir string) error {
-	specPath := filepath.Join(dir, ".speakeasy", "workflow.lock")
-	data, err := os.ReadFile(specPath)
-	if err != nil {
-		return err
-	}
-
-	// Modify the spec content (this is a simplistic change, you might want to do something more sophisticated)
-	modifiedData := strings.Replace(string(data), "Swagger Petstore", "Modified Petstore", 1)
-
-	return os.WriteFile(specPath, []byte(modifiedData), 0644)
 }

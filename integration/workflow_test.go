@@ -395,6 +395,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 		err := execute(t, temp, args...).Run()
 		return true, err
 	})
+	require.NoError(t, cmdErr)
 	require.NotNil(t, reports)
 	require.Len(t, reports.Reports, 1)
 	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
