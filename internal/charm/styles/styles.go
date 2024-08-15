@@ -91,6 +91,15 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 	return MakeBoxed(s, Colors.Green, lipgloss.Center)
 }
 
+func RenderWarningMessage(heading string, additionalLines ...string) string {
+	s := Success.Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + Dimmed.Render(line)
+	}
+
+	return MakeBoxed(s, Colors.Yellow, lipgloss.Center)
+}
+
 func RenderInfoMessage(heading string, additionalLines ...string) string {
 	s := lipgloss.NewStyle().Foreground(Colors.Blue).Bold(true).Render(utils.CapitalizeFirst(heading))
 	for _, line := range additionalLines {
