@@ -30,7 +30,7 @@ type RunFlags struct {
 	RepoSubdirs        map[string]string `json:"repo-subdirs"`
 	SkipCompile        bool              `json:"skip-compile"`
 	SkipVersioning     bool              `json:"skip-versioning"`
-	FrozenWorkflowLock bool              `json:"frozen-workflow-lock"`
+	FrozenWorkflowLock bool              `json:"frozen-workflow-lockfile"`
 	Force              bool              `json:"force"`
 	Output             string            `json:"output"`
 	Pinned             bool              `json:"pinned"`
@@ -107,7 +107,7 @@ A full workflow is capable of running the following steps:
 			DefaultValue: false,
 		},
 		flag.BooleanFlag{
-			Name:         "frozen-workflow-lock",
+			Name:         "frozen-workflow-lockfile",
 			Description:  "executes using the stored inputs from the workflow.lock, such that no OAS change occurs",
 			DefaultValue: false,
 			Hidden:       true, // we are unaware of any use cases for this flag outside of upgrade regression testing, which we execute internally

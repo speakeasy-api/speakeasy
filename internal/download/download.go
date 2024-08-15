@@ -130,11 +130,23 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 		apiKey = config.GetSpeakeasyAPIKey()
 	}
 
+	workspaceID, err := auth.GetWorkspaceIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	access := ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+		Insecure: insecurePublish,
+	})
+	if (document.WorkspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) || document.OrganizationSlug != auth.GetOrgSlugFromContext(ctx)) && workspaceID == "self" {
+		access = ocicommon.NewRepositoryAccessAdmin(apiKey, document.NamespaceID, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		})
+	}
+
 	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
 		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
-			Insecure: insecurePublish,
-		}),
+		Access: access,
 	})
 
 	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, document.Reference)
