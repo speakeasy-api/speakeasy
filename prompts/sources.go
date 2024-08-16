@@ -474,7 +474,7 @@ func validateFileLocation(input string, permittedFileExtensions []string) error 
 	}
 
 	if parsedURL.Scheme != "" {
-		// Check if the scheme is known
+		// TODO: check if other protocols are supported
 		if parsedURL.Scheme == "http" || parsedURL.Scheme == "https" {
 			if parsedURL.Host == "" {
 				return errors.New(ErrMsgInvalidURL)
