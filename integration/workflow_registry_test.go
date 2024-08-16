@@ -49,6 +49,10 @@ func TestStability(t *testing.T) {
 	initialChecksums, err = calculateChecksums(temp)
 	require.NoError(t, err)
 
+	// Let's move our temporary directory around. We should be resilient to moves
+	newTemp := setupTestDir(t)
+	require.NoError(t, os.Rename(temp, newTemp))
+
 	// Re-run the generation. We should have stable digests.
 	cmdErr = executeI(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
@@ -121,7 +125,7 @@ func TestRegistryFlow(t *testing.T) {
 	require.NoError(t, workflow.Save(temp, workflowFile))
 
 	// Re-run the generation. It should work.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 }
 
@@ -131,16 +135,19 @@ func calculateChecksums(dir string) (map[string]string, error) {
 		if err != nil {
 			return err
 		}
+
 		// Skip .git
 		if strings.Contains(path, ".git") {
 			return nil
 		}
+
 		// skip gen.lock. In particular, this currently varies between runs if the OAS is reformatted which occurs during bundling
 		// however we validate stability through the workflow lock file
-		// TODO: once https://github.com/pb33f/libopenapi/issues/321 is closed, use this to power document checksums and drop this if
+		// TODO: once https://github.com/pb33f/libopenapi/issues/321 is closed, use this to power document checksums and drop this block
 		if strings.Contains(path, "gen.lock") {
 			return nil
 		}
+
 		if !info.IsDir() {
 			data, err := os.ReadFile(path)
 			if err != nil {
