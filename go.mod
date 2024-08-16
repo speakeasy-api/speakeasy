@@ -1,6 +1,12 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.22.4
+go 1.23.0
+
+// Can be removed once https://github.com/pb33f/libopenapi/pull/319 is merged and the dependency is updated here
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826
+
+// Can be removed once https://github.com/wk8/go-ordered-map/pull/41 is merged and the dependency updated in libopenapi
+replace github.com/wk8/go-ordered-map/v2 => github.com/speakeasy-api/go-ordered-map/v2 v2.0.0-20240813202817-2f1629387283
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -18,7 +24,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.399.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.401.2
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.18.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.12.5
@@ -82,8 +88,8 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/daveshanley/vacuum v0.11.1 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
-	github.com/dlclark/regexp2 v1.10.0 // indirect
-	github.com/dop251/goja v0.0.0-20240707163329-b1681fb2a2f5 // indirect
+	github.com/dlclark/regexp2 v1.11.4 // indirect
+	github.com/dop251/goja v0.0.0-20240806095544-3491d4a58fbe // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf // indirect
 	github.com/dprotaso/go-yit v0.0.0-20240618133044-5a0af90af097 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
