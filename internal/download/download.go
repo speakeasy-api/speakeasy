@@ -218,6 +218,41 @@ func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
 		}
 		defer fileReader.Close()
 
+		// If the target file exists and has the same content, skip it
+		if existingFile, err := os.Open(filePath); err == nil {
+			defer existingFile.Close()
+			existingContent, err := io.ReadAll(existingFile)
+			if err != nil {
+				return err
+			}
+
+			newContent, err := io.ReadAll(fileReader)
+			if err != nil {
+				return err
+			}
+
+			if bytes.Equal(existingContent, newContent) {
+				continue // Skip this file as it's unchanged
+			}
+
+			if err := existingFile.Close(); err != nil {
+				return err
+			}
+
+			// Else (can happen if we had a partial extraction), given the folder name is based on a checksum of the zip, we are safe to just delete the file
+			if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+				return err
+			}
+			if err := fileReader.Close(); err != nil {
+				return err
+			}
+
+			if fileReader, err = file.Open(); err != nil {
+				return err
+			}
+			defer fileReader.Close()
+		}
+
 		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
 		if err != nil {
 			return err
