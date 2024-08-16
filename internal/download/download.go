@@ -253,7 +253,7 @@ func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
 			defer fileReader.Close()
 		}
 
-		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o660)
 		if err != nil {
 			return err
 		}
