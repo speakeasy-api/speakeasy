@@ -329,7 +329,6 @@ func TestSpecWorkflows(t *testing.T) {
 }
 
 func TestFallbackCodeSamplesWorkflow(t *testing.T) {
-	t.Parallel()
 	spec := `{
 		"openapi": "3.0.0",
 		"info": {
