@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -41,7 +42,7 @@ func TestStability(t *testing.T) {
 	// Run the initial generation
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
-	cmdErr := execute(t, temp, initialArgs...).Run()
+	cmdErr := executeI(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files
@@ -49,9 +50,16 @@ func TestStability(t *testing.T) {
 	require.NoError(t, err)
 
 	// Re-run the generation. We should have stable digests.
-	cmdErr = execute(t, temp, initialArgs...).Run()
+	cmdErr = executeI(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
+
 	rerunChecksums, err := calculateChecksums(temp)
+	require.NoError(t, err)
+	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
+	// Once more, just to be sure. This now has a change report so it could in theory change.
+	cmdErr = executeI(t, temp, initialArgs...).Run()
+	require.NoError(t, cmdErr)
+	rerunChecksums, err = calculateChecksums(temp)
 	require.NoError(t, err)
 	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 	// Modify the workflow file to simulate a change
@@ -61,7 +69,7 @@ func TestStability(t *testing.T) {
 
 	// Run with --frozen-workflow-lock
 	frozenArgs := []string{"run", "-t", "all", "--pinned", "--frozen-workflow-lockfile", "--skip-compile"}
-	cmdErr = execute(t, temp, frozenArgs...).Run()
+	cmdErr = executeI(t, temp, frozenArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums after frozen run
@@ -77,6 +85,16 @@ func calculateChecksums(dir string) (map[string]string, error) {
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		// Skip .git
+		if strings.Contains(path, ".git") {
+			return nil
+		}
+		// skip gen.lock. In particular, this currently varies between runs if the OAS is reformatted which occurs during bundling
+		// however we validate stability through the workflow lock file
+		// TODO: once https://github.com/pb33f/libopenapi/issues/321 is closed, use this to power document checksums and drop this if
+		if strings.Contains(path, "gen.lock") {
+			return nil
 		}
 		if !info.IsDir() {
 			data, err := os.ReadFile(path)
