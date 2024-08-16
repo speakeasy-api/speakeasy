@@ -500,7 +500,7 @@ func validateFileLocation(input string, permittedFileExtensions []string) error 
 	if os.IsNotExist(err) {
 		return errors.New(ErrMsgNonExistentFile)
 	} else if err != nil {
-		return fmt.Errorf(ErrMsgInvalidFilePath)
+		return errors.New(ErrMsgInvalidFilePath)
 	}
 
 	// Check if it's a file and not a directory
