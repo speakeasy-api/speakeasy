@@ -72,6 +72,51 @@ func TestStability(t *testing.T) {
 	require.Equal(t, initialChecksums, frozenChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 }
 
+func TestRegistryFlow(t *testing.T) {
+	t.Parallel()
+	temp := setupTestDir(t)
+
+	// Create a basic workflow file
+	workflowFile := &workflow.Workflow{
+		Version: workflow.WorkflowVersion,
+		Sources: map[string]workflow.Source{
+			"test-source": {
+				Inputs: []workflow.Document{
+					{Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml"},
+				},
+			},
+		},
+		Targets: map[string]workflow.Target{
+			"test-target": {
+				Target: "typescript",
+				Source: "test-source",
+			},
+		},
+	}
+
+	err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+	require.NoError(t, err)
+	require.NoError(t, workflow.Save(temp, workflowFile))
+
+	// Run the initial generation
+	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
+	cmdErr := execute(t, temp, initialArgs...).Run()
+	require.NoError(t, cmdErr)
+
+	// Get the registry location and set it to the source input
+	workflowFile, _, err = workflow.Load(temp)
+	require.NoError(t, err)
+	registryLocation := workflowFile.Sources["test-source"].Registry.Location.String()
+	require.True(t, len(registryLocation) > 0, "registry location should be set")
+
+	workflowFile.Sources["test-source"].Inputs[0].Location = registryLocation
+	require.NoError(t, workflow.Save(temp, workflowFile))
+
+	// Re-run the generation. It should work.
+	cmdErr = executeI(t, temp, initialArgs...).Run()
+	require.NoError(t, cmdErr)
+}
+
 func calculateChecksums(dir string) (map[string]string, error) {
 	checksums := make(map[string]string)
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
