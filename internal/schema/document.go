@@ -28,7 +28,7 @@ func ResolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 			return "", fmt.Errorf("schema registry is not enabled for this workspace")
 		}
 
-		location := d.GetTempRegistryDir(workflow.GetTempDir())
+		location := workflow.GetTempDir()
 		if outputLocation != nil {
 			location = *outputLocation
 		}

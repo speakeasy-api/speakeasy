@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"context"
+	"os"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"os"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -36,19 +37,28 @@ var overlayValidateCmd = &model.ExecutableCommand[overlayValidateFlags]{
 }
 
 type overlayCompareFlags struct {
-	Schemas []string `json:"schemas"`
+	Before string `json:"before"`
+	After  string `json:"after"`
 }
 
 var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 	Usage: "compare",
-	Short: "Given two specs, output an overlay that describes the differences between them",
+	Short: "Given two specs (before and after), output an overlay that describes the differences between them",
 	Run:   runCompare,
 	Flags: []flag.Flag{
-		flag.StringSliceFlag{
-			Name:        "schemas",
-			Shorthand:   "s",
-			Description: "two schemas to compare and generate overlay from",
-			Required:    true,
+		flag.StringFlag{
+			Name:                       "before",
+			Shorthand:                  "b",
+			Description:                "the before schema to compare",
+			Required:                   true,
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
+		},
+		flag.StringFlag{
+			Name:                       "after",
+			Shorthand:                  "a",
+			Description:                "the after schema to compare",
+			Required:                   true,
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
 		},
 	},
 }
@@ -56,6 +66,7 @@ var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 type overlayApplyFlags struct {
 	Overlay string `json:"overlay"`
 	Schema  string `json:"schema"`
+	Strict  bool   `json:"strict"`
 	Out     string `json:"out"`
 }
 
@@ -70,6 +81,10 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 			Shorthand:                  "s",
 			Description:                "the schema to extend",
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
+		},
+		flag.BooleanFlag{
+			Name:        "strict",
+			Description: "fail if the overlay has any action target expressions which match no nodes, and produce warnings if any overlay actions do nothing",
 		},
 		flag.StringFlag{
 			Name:        "out",
@@ -88,7 +103,8 @@ func runValidateOverlay(ctx context.Context, flags overlayValidateFlags) error {
 }
 
 func runCompare(ctx context.Context, flags overlayCompareFlags) error {
-	return overlay.Compare(flags.Schemas, os.Stdout)
+	schemas := []string{flags.Before, flags.After}
+	return overlay.Compare(schemas, os.Stdout)
 }
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
@@ -106,5 +122,5 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		yamlOut = utils.HasYAMLExt(flags.Out)
 	}
 
-	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out)
+	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out, flags.Strict, len(flags.Out) > 0 && flags.Strict)
 }

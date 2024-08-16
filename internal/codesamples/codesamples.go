@@ -1,9 +1,11 @@
-package usagegen
+package codesamples
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/yamlutil"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"os"
 	"path/filepath"
 
@@ -13,14 +15,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool) (string, error) {
-	targetToCodeSamples := map[string][]UsageSnippet{}
+type CodeSamplesStyle int
+
+const (
+	Default CodeSamplesStyle = iota
+	ReadMe
+)
+
+func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, style CodeSamplesStyle) (string, error) {
+	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
 	isJSON := filepath.Ext(schema) == ".json"
 
 	for _, lang := range langs {
 		usageOutput := &bytes.Buffer{}
 
-		if err := Generate(
+		if err := usagegen.Generate(
 			ctx,
 			config.GetCustomerID(),
 			lang,
@@ -39,13 +48,13 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 
 		log.From(ctx).Infof("\nGenerated usage snippets for %s\n\n", lang)
 
-		snippets, err := ParseUsageOutput(lang, usageOutput.String())
+		snippets, err := usagegen.ParseUsageOutput(lang, usageOutput.String())
 		if err != nil {
 			return "", err
 		}
 
 		for _, snippet := range snippets {
-			target := fmt.Sprintf(`$["paths"]["%s"]["%s"]`, snippet.Path, snippet.Method)
+			target := overlay.NewTargetSelector(snippet.Path, snippet.Method)
 
 			targetToCodeSamples[target] = append(targetToCodeSamples[target], snippet)
 		}
@@ -53,34 +62,9 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 
 	var actions []overlay.Action
 	for target, snippets := range targetToCodeSamples {
-		var content []*yaml.Node
-		for _, snippet := range snippets {
-			content = append(content,
-				&yaml.Node{
-					Kind: yaml.MappingNode,
-					Content: []*yaml.Node{
-						{Kind: yaml.ScalarNode, Value: "lang", Style: styleForNode(isJSON)},
-						{Kind: yaml.ScalarNode, Value: snippet.Language, Style: styleForNode(isJSON)},
-						{Kind: yaml.ScalarNode, Value: "label", Style: styleForNode(isJSON)},
-						{Kind: yaml.ScalarNode, Value: snippet.OperationId, Style: styleForNode(isJSON)},
-						{Kind: yaml.ScalarNode, Value: "source", Style: styleForNode(isJSON)},
-						{Kind: yaml.ScalarNode, Value: snippet.Snippet},
-					},
-				})
-		}
-
 		actions = append(actions, overlay.Action{
 			Target: target,
-			Update: yaml.Node{
-				Kind: yaml.MappingNode,
-				Content: []*yaml.Node{
-					{Kind: yaml.ScalarNode, Value: "x-codeSamples", Style: styleForNode(isJSON)},
-					{
-						Kind:    yaml.SequenceNode,
-						Content: content,
-					},
-				},
-			},
+			Update: *rootCodeSampleNode(snippets, style, isJSON),
 		})
 	}
 
@@ -128,6 +112,35 @@ func GenerateCodeSamplesOverlay(ctx context.Context, schema, header, token, conf
 	}
 
 	return overlayString, nil
+}
+
+func rootCodeSampleNode(snippets []usagegen.UsageSnippet, style CodeSamplesStyle, isJSON bool) *yaml.Node {
+	builder := yamlutil.NewBuilder(isJSON)
+
+	var content []*yaml.Node
+	for _, snippet := range snippets {
+		content = append(content, singleCodeSampleNode(snippet, style, builder))
+	}
+
+	switch style {
+	case Default:
+		return builder.NewListNode("x-codeSamples", content)
+	case ReadMe:
+		return builder.NewNode("x-readme", builder.NewListNode("code-samples", content))
+	}
+
+	panic("unrecognized style")
+}
+
+func singleCodeSampleNode(snippet usagegen.UsageSnippet, style CodeSamplesStyle, builder *yamlutil.Builder) *yaml.Node {
+	switch style {
+	case Default:
+		return builder.NewMultinode("lang", snippet.Language, "label", snippet.OperationId, "source", snippet.Snippet)
+	case ReadMe:
+		return builder.NewMultinode("name", snippet.OperationId, "language", snippet.Language, "code", snippet.Snippet)
+	}
+
+	panic("unrecognized style")
 }
 
 func styleForNode(isJSON bool) yaml.Style {

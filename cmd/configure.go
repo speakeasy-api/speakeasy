@@ -144,8 +144,10 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 
 	if !flags.New && existingSource == nil {
 		prompt := charm.NewSelectPrompt("What source would you like to configure?", "You may choose an existing source or create a new source.", sourceOptions, &existingSourceName)
-		if _, err := charm.NewForm(huh.NewForm(prompt),
-			"Let's configure a source for your workflow.").ExecuteForm(); err != nil {
+		if _, err := charm.NewForm(
+			huh.NewForm(prompt),
+			charm.WithTitle("Let's configure a source for your workflow."),
+		).ExecuteForm(); err != nil {
 			return err
 		}
 		if existingSourceName == "new source" {
@@ -248,7 +250,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	if !newTarget && existingTarget == "" {
 		prompt := charm.NewSelectPrompt("What target would you like to configure?", "You may choose an existing target or create a new target.", targetOptions, &existingTarget)
 		if _, err := charm.NewForm(huh.NewForm(prompt),
-			"Let's configure a target for your workflow.").
+			charm.WithTitle("Let's configure a target for your workflow.")).
 			ExecuteForm(); err != nil {
 			return err
 		}
@@ -275,7 +277,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 
 		workflowFile.Targets[targetName] = *target
 
-		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, nil, false)
+		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -301,7 +303,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 			existingConfig = cfg.Config
 		}
 
-		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, existingConfig, false)
+		targetConfig, err = prompts.PromptForTargetConfig(targetName, workflowFile, target, existingConfig, nil)
 		if err != nil {
 			return err
 		}
@@ -371,7 +373,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
 	}
 
 	var publishingOptions []huh.Option[string]
@@ -381,14 +383,17 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		}
 	}
 
+	var chosenTargets []string
 	if len(publishingOptions) == 0 {
 		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
 		return nil
-	}
-
-	chosenTargets, err := prompts.SelectPublishingTargets(publishingOptions, true)
-	if err != nil {
-		return err
+	} else if len(publishingOptions) == 1 {
+		chosenTargets = []string{publishingOptions[0].Value}
+	} else {
+		chosenTargets, err = prompts.SelectPublishingTargets(publishingOptions, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, name := range chosenTargets {
@@ -510,7 +515,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, try speakeasy quickstart")
+		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
 	}
 
 	ctx = events.SetTargetInContext(ctx, workingDir)

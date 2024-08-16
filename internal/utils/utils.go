@@ -94,7 +94,7 @@ func FileExists(file string) bool {
 	}
 
 	info, err := os.Stat(file)
-	if os.IsNotExist(err) {
+	if os.IsNotExist(err) || info == nil {
 		return false
 	}
 
@@ -186,4 +186,44 @@ var yamlExtensions = []string{".yaml", ".yml"}
 
 func HasYAMLExt(path string) bool {
 	return slices.Contains(yamlExtensions, filepath.Ext(path))
+}
+
+func ReadFileToString(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
+
+func WriteStringToFile(path, content string) error {
+	if err := CreateDirectory(path); err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, []byte(content), 0o644)
+}
+
+// Returns full path to the temp file
+func WriteTempFile(content string, optionalFilename string) (string, error) {
+	fileName := optionalFilename
+	if fileName == "" {
+		fileName = "tempfile"
+	}
+
+	tmpFile, err := os.CreateTemp("", fileName)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		return "", err
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
 }

@@ -191,11 +191,11 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 	for prompt, value := range prompts {
 		var input *huh.Input
 		if prompt.entryType == publishingTypeSecret {
-			input = charm.NewInput().
+			input = charm.NewInlineInput().
 				Title(fmt.Sprintf("Provide a name for your %s secret:", prompt.key)).
 				Value(value)
 		} else {
-			input = charm.NewInput().
+			input = charm.NewInlineInput().
 				Title(fmt.Sprintf("Provide the value of your %s:", prompt.key)).
 				Value(value)
 		}
@@ -218,8 +218,8 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 	}
 
 	if _, err := charm.NewForm(huh.NewForm(groups...),
-		fmt.Sprintf("Setup publishing variables for your %s target %s.", target.Target, name),
-		"These environment variables will be used to publish to package managers from your speakeasy workflow.").
+		charm.WithTitle(fmt.Sprintf("Setup publishing variables for your %s target %s.", target.Target, name)),
+		charm.WithDescription("These environment variables will be used to publish to package managers from your speakeasy workflow.")).
 		ExecuteForm(); err != nil {
 		return err
 	}
@@ -416,8 +416,13 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*target))
 		}
 
+		var releaseDirectory string
 		if outputPath != nil {
-			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *outputPath)}
+			releaseDirectory = strings.TrimPrefix(*outputPath, "./")
+		}
+		
+		if releaseDirectory != "" {
+			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", releaseDirectory)}
 		}
 
 		for name, value := range secrets {
@@ -569,15 +574,16 @@ func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect 
 			chosenTargets = append(chosenTargets, option.Value)
 		}
 	}
-	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(
+
+	form := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
 			Title("Select targets to configure publishing configs for.").
 			Description("Setup variables to configure publishing directly from Speakeasy.\n").
 			Options(publishingOptions...).
 			Value(&chosenTargets),
-	)),
-		"Would you like to configure publishing for any existing targets?").
-		ExecuteForm(); err != nil {
+	)), charm.WithKey("x/space", "toggle"))
+
+	if _, err := form.ExecuteForm(); err != nil {
 		return nil, err
 	}
 

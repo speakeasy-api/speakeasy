@@ -2,6 +2,7 @@ package interactivity
 
 import (
 	"os"
+	"slices"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -18,36 +19,38 @@ var (
 	maxHeight = 22
 )
 
-type item struct {
-	title, desc string
-	cmd         *cobra.Command
+type Item[T interface{}] struct {
+	Label, Desc string
+	Value       T
 }
 
-func (i item) Title() string       { return i.title }
-func (i item) Description() string { return i.desc }
-func (i item) FilterValue() string { return i.title }
+func (i Item[T]) Title() string       { return i.Label }
+func (i Item[T]) Description() string { return i.Desc }
+func (i Item[T]) FilterValue() string { return i.Label }
 
-type ListSelect struct {
+type ListSelect[T interface{}] struct {
 	list     list.Model
-	selected *cobra.Command
+	selected T
+	done     bool
 }
 
-func (m *ListSelect) Init() tea.Cmd {
+func (m *ListSelect[T]) Init() tea.Cmd {
 	return nil
 }
 
-func (m *ListSelect) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *ListSelect[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }
 
-func (m *ListSelect) HandleKeypress(key string) tea.Cmd {
+func (m *ListSelect[T]) HandleKeypress(key string) tea.Cmd {
 	switch key {
 	case "enter":
-		selected, ok := m.list.SelectedItem().(item)
+		selected, ok := m.list.SelectedItem().(Item[T])
 		if ok {
-			m.selected = selected.cmd
+			m.selected = selected.Value
+			m.done = true
 		}
 		return tea.Quit
 	}
@@ -55,13 +58,13 @@ func (m *ListSelect) HandleKeypress(key string) tea.Cmd {
 	return nil
 }
 
-func (m *ListSelect) SetWidth(width int) {
+func (m *ListSelect[T]) SetWidth(width int) {
 	w, _ := docStyle.GetFrameSize()
 	m.list.SetWidth(width - w)
 }
 
-func (m *ListSelect) View() string {
-	if m.selected != nil {
+func (m *ListSelect[T]) View() string {
+	if m.done {
 		return ""
 	}
 
@@ -81,14 +84,22 @@ func (m *ListSelect) View() string {
 	return docStyle.Render(m.list.View() + "\n\n" + inputLegend)
 }
 
-func (m *ListSelect) OnUserExit() {}
+func (m *ListSelect[T]) OnUserExit() {}
 
-func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command {
+func selectCommand(label string, options []*cobra.Command) *cobra.Command {
 	items := make([]list.Item, len(options))
 	for i, option := range options {
-		items[i] = item{title: option.Name(), desc: utils.CapitalizeFirst(option.Short), cmd: option}
+		items[i] = Item[*cobra.Command]{
+			Label: option.Name(),
+			Desc:  utils.CapitalizeFirst(option.Short),
+			Value: option,
+		}
 	}
 
+	return SelectFrom[*cobra.Command](label, items)
+}
+
+func SelectFrom[T interface{}](label string, options []list.Item) T {
 	itemDelegate := list.NewDefaultDelegate()
 	itemDelegate.Styles.NormalTitle = itemDelegate.Styles.NormalTitle.Bold(true)
 	itemDelegate.Styles.SelectedTitle = itemDelegate.Styles.SelectedTitle.
@@ -99,14 +110,18 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 		Foreground(styles.FocusedDimmed.GetForeground()).
 		BorderForeground(styles.Focused.GetForeground())
 
-	listHeight := len(items) * (itemDelegate.Height() + itemDelegate.Spacing())
+	itemDelegate.ShowDescription = slices.ContainsFunc(options, func(i list.Item) bool {
+		return i.(list.DefaultItem).Description() != ""
+	})
+
+	listHeight := len(options) * (itemDelegate.Height() + itemDelegate.Spacing())
 	if listHeight > maxHeight {
 		listHeight = maxHeight
 	}
 	surroundingContentHeight := 5
 	listHeight += surroundingContentHeight
 
-	l := list.New(items, itemDelegate, 0, listHeight)
+	l := list.New(options, itemDelegate, 0, listHeight)
 	l.Title = label
 	l.Styles.Title = styles.HeavilyEmphasized
 	l.SetShowStatusBar(false)
@@ -121,16 +136,13 @@ func getSelectionFromList(label string, options []*cobra.Command) *cobra.Command
 		Quit:       key.NewBinding(key.WithKeys("esc")),
 	}
 
-	m := ListSelect{list: l}
+	m := ListSelect[T]{list: l}
 
 	mResult, err := charm_internal.RunModel(&m)
 	if err != nil {
 		os.Exit(1)
 	}
 
-	if m, ok := mResult.(*ListSelect); ok && m.selected != nil {
-		return m.selected
-	}
-
-	return nil
+	final, _ := mResult.(*ListSelect[T])
+	return final.selected
 }

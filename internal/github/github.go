@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 	"os"
 	"regexp"
 	"strconv"
@@ -127,6 +128,20 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		}
 		log.From(ctx).Infof("wrote changes summary to \"%s\"", filepath)
 	}
+	prMD := ""
+	if len(summary.Text) > 0 {
+		prMD = "## OpenAPI Change Summary\n" + summary.Text + "\n"
+	} else {
+		prMD = "## OpenAPI Change Summary\nNo specification changes\n"
+	}
+
+	// New form -- the above form is deprecated.
+	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+		MustGenerate: summary.Bump != changes.None,
+		Key:          "openapi_change_summary",
+		PRReport:     prMD,
+		Priority:     5, // High priority -- place at top
+	})
 }
 
 func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {

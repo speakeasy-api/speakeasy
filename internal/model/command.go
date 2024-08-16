@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/errors"
 	"os"
 	"os/exec"
 	"slices"
@@ -27,6 +28,8 @@ import (
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v3"
 )
+
+const ErrDownloadFailed = errors.Error("failed to download Speakeasy version")
 
 type Command interface {
 	Init() (*cobra.Command, error) // TODO: make private when rootCmd is refactored?
@@ -112,7 +115,15 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			// If we're running locally or the --pinned flag is set simply run the command normally with the existing version of the CLI
 			pinned, _ := cmd.Flags().GetBool("pinned")
 			if !pinned && !env.IsLocalDev() {
-				return runWithVersionFromWorkflowFile(cmd)
+				err := runWithVersionFromWorkflowFile(cmd)
+				if err == nil {
+					return nil
+				} else if !errors.Is(err, ErrDownloadFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+					return err
+				}
+				logger := log.From(cmd.Context())
+				logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version")
+				logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
 			}
 		}
 
@@ -258,7 +269,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	if desiredVersion == "latest" {
 		latest, err := updates.GetLatestVersion(ctx, artifactArch)
 		if err != nil {
-			return err
+			return ErrDownloadFailed
 		}
 		desiredVersion = latest.String()
 
@@ -268,7 +279,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	}
 
 	// Get lockfile version before running the command, in case it gets overwritten
-	lockfileVersion := getLockfileVersion()
+	lockfileVersion := getSpeakeasyVersionFromLockfile()
 
 	runErr := runWithVersion(cmd, artifactArch, desiredVersion)
 	if runErr != nil {
@@ -337,7 +348,7 @@ func pinningWasReleased(v string) (bool, error) {
 	return desiredV.GreaterThan(minVersionForPinnedFlag), nil
 }
 
-func getLockfileVersion() string {
+func getSpeakeasyVersionFromLockfile() string {
 	wd, err := os.Getwd()
 	if err != nil {
 		return ""

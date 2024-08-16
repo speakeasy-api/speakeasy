@@ -33,3 +33,4 @@ speakeasy auth [flags]
 
 * [speakeasy auth login](login.md)	 - Authenticate the CLI
 * [speakeasy auth logout](logout.md)	 - Logout of the CLI
+* [speakeasy auth switch](switch.md)	 - Switch between authenticated workspaces

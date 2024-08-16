@@ -251,7 +251,7 @@ func (m *MultiInput) getFilledValues() map[string]string {
 
 func (m *MultiInput) OnUserExit() {}
 
-// Run returns a map from input name to the input value
+// Run returns a map from input name to the input Value
 func (m *MultiInput) Run() map[string]string {
 	newM, err := charm_internal.RunModel(m)
 	if err != nil {

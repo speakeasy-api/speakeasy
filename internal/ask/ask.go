@@ -152,7 +152,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 	logger := log.From(ctx)
 	scanner := bufio.NewScanner(os.Stdin)
 	logger.Info("Entering interactive chat session, type exit or use ctrl + c to close.")
-    logger.PrintfStyled(styles.Dimmed, "Example: How do I override a method name in my OpenAPI document?")
+	logger.PrintfStyled(styles.Dimmed, "Example: How do I override a method name in my OpenAPI document?")
 
 	if message != "" {
 		logger.Info("\nProcessing your question, this may take a minute...")
@@ -178,7 +178,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 		}
 
 		var err error
-        logger.Info("Processing your question, this may take a minute...")
+		logger.Info("Processing your question, this may take a minute...")
 		sessionID, err = Ask(ctx, input, sessionID)
 		if err != nil {
 			logger.Errorf("An error occurred: %v\n", err)
@@ -193,8 +193,10 @@ func OfferChatSessionOnError(ctx context.Context, message string) {
 	logger := log.From(ctx)
 	var confirm bool
 
-	if _, err := charm_internal.NewForm(huh.NewForm(
-		charm_internal.NewBranchPrompt("Would you like to enter an interactive chat session with Speakeasy AI for help?", &confirm)), fmt.Sprintf("Ask Speakeasy AI:")).
+	if _, err := charm_internal.NewForm(
+		huh.NewForm(charm_internal.NewBranchPrompt("Would you like to enter an interactive chat session with Speakeasy AI for help?", &confirm)),
+		charm_internal.WithTitle(fmt.Sprintf("Ask Speakeasy AI:")),
+	).
 		ExecuteForm(); err != nil {
 		logger.Printf("Failed to display confirmation prompt: %v", err)
 		return

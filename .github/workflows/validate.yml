@@ -30,14 +30,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        include:
-          - test-group: "Test Generations"
-            test-pattern: "TestGenerationWorkflows"
-          - test-group: "Test Spec Operations"
-            test-pattern: "TestSpecWorkflows"
-          - test-group: "Test Fallback Code Samples Workflow"
-            test-pattern: "TestFallbackCodeSamplesWorkflow"
-
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -89,6 +81,6 @@ jobs:
         run: go build ./...
 
       - name: ${{ matrix.test-group }}
-        run: go test -json -v -p 1 -run ${{ matrix.test-pattern }} ./... | gotestfmt
+        run: go test -json -v -p 1 ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}

@@ -1,0 +1,12 @@
+overlay: 1.0.0
+info:
+  title: Overlay
+  version: 0.0.0
+actions:
+  - target: $.unknown-element
+    description: "should make an error"
+    update:
+      description: not found
+  - target: $.info.title
+    description: "should make a warning"
+    update: Test

@@ -4,9 +4,12 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -20,6 +23,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -65,6 +69,11 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	},
 }
 
+const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+	"To create a brand _new_ SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
+	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+	"To regenerate the current workflow: `speakeasy run`.")
+
 func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -72,22 +81,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return ErrWorkflowExists
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: cd .. and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return ErrWorkflowExists
 	}
 
-	fmt.Println(charm.FormatCommandDescription(
-		"Speakeasy Quickstart guides you to build a generation workflow for any combination of sources and targets. \n"+
-			"After completing these steps you will be ready to start customizing and generating your SDKs.") + "\n\n\n")
+	log.From(ctx).PrintfStyled(styles.DimmedItalic, "\nYour first SDK is a few short questions away...\n")
 
 	quickstartObj := prompts.Quickstart{
 		WorkflowFile: &workflow.Workflow{
@@ -155,22 +156,28 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		outDir = "terraform-provider"
 	}
 
-	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
-		Title("What directory should the "+targetType+" files be written to?").
-		Description(description+"\n").
-		Suggestions(charm.DirsInCurrentDir(promptedDir)).
-		SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
-		Validate(func(s string) error {
-			if targetType == "terraform" {
-				if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
-					return errors.New("a terraform provider directory must start with 'terraform-provider'")
+	if !currentDirectoryEmpty() {
+		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+			Title("What directory should the "+targetType+" files be written to?").
+			Description(description+"\n").
+			Suggestions(charm.DirsInCurrentDir(promptedDir)).
+			SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
+			Validate(func(s string) error {
+				if targetType == "terraform" {
+					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
+						return errors.New("a terraform provider directory must start with 'terraform-provider'")
+					}
 				}
-			}
-			return nil
-		}).
-		Inline(false).Prompt("").Value(&promptedDir))),
-		"Pick an output directory for your newly created files.").
-		ExecuteForm(); err != nil {
+				return nil
+			}).
+			Value(&promptedDir))),
+			charm.WithTitle("Pick an output directory for your newly created files.")).
+			ExecuteForm()
+	} else {
+		promptedDir = "."
+	}
+
+	if err != nil {
 		return err
 	}
 	if !filepath.IsAbs(promptedDir) {
@@ -217,13 +224,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			return errors.Wrapf(err, "failed to write sample OpenAPI spec")
 		}
 
-		fmt.Println(
-			styles.RenderInfoMessage(
-				"The OpenAPI sample document will be used",
-				"It can be found here, you can edit it at anytime:",
-				absSchemaPath,
-			),
-		)
+		printSampleSpecMessage(absSchemaPath)
 
 		referencePath, err := filepath.Rel(outDir, absSchemaPath)
 		if err != nil {
@@ -255,28 +256,30 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	wf, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		initialTarget,
-		"",
-		"",
-		nil,
-		nil,
-		false,
-		!flags.SkipCompile,
-		false,
-		[]string{},
-		"",
+		run.WithTarget(initialTarget),
+		run.WithShouldCompile(!flags.SkipCompile),
 	)
 	if err != nil {
 		return err
 	}
 	wf.FromQuickstart = true
 
+	logger := log.From(ctx)
+	var changeDirMsg string
+	relPath, _ := filepath.Rel(workingDir, outDir)
+	if workingDir != outDir && relPath != "" {
+		changeDirMsg = fmt.Sprintf("`cd %s` before moving forward with your SDK", relPath)
+	}
+
 	if err = wf.RunWithVisualization(ctx); err != nil {
 		if strings.Contains(err.Error(), "document invalid") {
 			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
 				return errors.Wrapf(err, "failed to run generation workflow")
 			} else if retry {
+				if changeDirMsg != "" {
+					logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
+				}
+
 				return nil
 			}
 		}
@@ -295,6 +298,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if len(wf.SDKOverviewURLs) == 1 {
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
 		browser.OpenURL(overviewURL)
+	}
+
+	if changeDirMsg != "" {
+		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
 	return nil
@@ -331,27 +338,12 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		return true, errors.Wrapf(err, "failed to save workflow file")
 	}
 
-	fmt.Println(
-		styles.RenderInfoMessage(
-			"The OpenAPI sample document will be used",
-			"It can be found here, you can edit it at anytime:",
-			absSchemaPath,
-		),
-	)
+	printSampleSpecMessage(absSchemaPath)
 
 	wf, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		initialTarget,
-		"",
-		"",
-		nil,
-		nil,
-		false,
-		!skipCompile,
-		false,
-		[]string{},
-		"",
+		run.WithTarget(initialTarget),
+		run.WithShouldCompile(!skipCompile),
 	)
 
 	err = wf.RunWithVisualization(ctx)
@@ -362,6 +354,16 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	}
 
 	return true, err
+}
+
+func printSampleSpecMessage(absSchemaPath string) {
+	fmt.Println(
+		styles.RenderInfoMessage(
+			"A sample OpenAPI document will be used",
+			"You can edit it anytime here:",
+			absSchemaPath,
+		) + "\n",
+	)
 }
 
 func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
@@ -375,4 +377,16 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	}
 
 	return filepath.Join(workingDir, subDirectory)
+}
+
+func currentDirectoryEmpty() bool {
+	dir, err := os.Open(".")
+	if err != nil {
+		fmt.Println("Error opening directory:", err)
+		return false
+	}
+	defer dir.Close()
+
+	_, err = dir.Readdirnames(1)
+	return err == io.EOF
 }

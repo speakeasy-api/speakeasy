@@ -6,6 +6,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
+	"github.com/speakeasy-api/speakeasy/internal/studio"
 	"github.com/spf13/cobra"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -19,20 +20,24 @@ import (
 )
 
 type RunFlags struct {
-	Target           string            `json:"target"`
-	Source           string            `json:"source"`
-	InstallationURL  string            `json:"installationURL"`
-	InstallationURLs map[string]string `json:"installationURLs"`
-	Debug            bool              `json:"debug"`
-	Repo             string            `json:"repo"`
-	RepoSubdir       string            `json:"repo-subdir"`
-	RepoSubdirs      map[string]string `json:"repo-subdirs"`
-	SkipCompile      bool              `json:"skip-compile"`
-	Force            bool              `json:"force"`
-	Output           string            `json:"output"`
-	Pinned           bool              `json:"pinned"`
-	RegistryTags     []string          `json:"registry-tags"`
-	SetVersion       string            `json:"set-version"`
+	Target             string            `json:"target"`
+	Source             string            `json:"source"`
+	InstallationURL    string            `json:"installationURL"`
+	InstallationURLs   map[string]string `json:"installationURLs"`
+	Debug              bool              `json:"debug"`
+	Repo               string            `json:"repo"`
+	RepoSubdir         string            `json:"repo-subdir"`
+	RepoSubdirs        map[string]string `json:"repo-subdirs"`
+	SkipCompile        bool              `json:"skip-compile"`
+	SkipVersioning     bool              `json:"skip-versioning"`
+	FrozenWorkflowLock bool              `json:"frozen-workflow-lockfile"`
+	Force              bool              `json:"force"`
+	Output             string            `json:"output"`
+	Pinned             bool              `json:"pinned"`
+	RegistryTags       []string          `json:"registry-tags"`
+	SetVersion         string            `json:"set-version"`
+	LaunchStudio       bool              `json:"launch-studio"`
+	GitHub           bool              `json:"github"`
 }
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
@@ -97,6 +102,17 @@ A full workflow is capable of running the following steps:
 			Description: "skip compilation when generating the SDK",
 		},
 		flag.BooleanFlag{
+			Name:         "skip-versioning",
+			Description:  "skip automatic SDK version increments",
+			DefaultValue: false,
+		},
+		flag.BooleanFlag{
+			Name:         "frozen-workflow-lockfile",
+			Description:  "executes using the stored inputs from the workflow.lock, such that no OAS change occurs",
+			DefaultValue: false,
+			Hidden:       true, // we are unaware of any use cases for this flag outside of upgrade regression testing, which we execute internally
+		},
+		flag.BooleanFlag{
 			Name:        "force",
 			Description: "Force generation of SDKs even when no changes are present",
 		},
@@ -119,6 +135,14 @@ A full workflow is capable of running the following steps:
 		flag.StringFlag{
 			Name:        "set-version",
 			Description: "the manual version to apply to the generated SDK",
+		},
+		flag.BooleanFlag{
+			Name:        "launch-studio",
+			Description: "launch the web studio for iterating on the generated SDK",
+		},
+		flag.BooleanFlag{
+			Name:        "github",
+			Description: "kick off a generation run in GitHub",
 		},
 	},
 }
@@ -224,7 +248,7 @@ func askForTarget(title, description, confirmation string, targets []string, all
 	target := ""
 
 	prompt := charm.NewSelectPrompt(title, description, targetOptions, &target)
-	if _, err := charm.NewForm(huh.NewForm(prompt), confirmation).ExecuteForm(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt), charm.WithTitle(confirmation)).ExecuteForm(); err != nil {
 		return "", err
 	}
 
@@ -243,7 +267,7 @@ func askForSource(sources []string) (string, error) {
 	source := ""
 
 	prompt := charm.NewSelectPrompt("What source would you like to run?", "You may choose an individual target or 'all'.", sourceOptions, &source)
-	if _, err := charm.NewForm(huh.NewForm(prompt), "Let's choose a target to run the generation workflow.").ExecuteForm(); err != nil {
+	if _, err := charm.NewForm(huh.NewForm(prompt), charm.WithTitle("Let's choose a target to run the generation workflow.")).ExecuteForm(); err != nil {
 		return "", err
 	}
 
@@ -251,19 +275,24 @@ func askForSource(sources []string) (string, error) {
 }
 
 func runFunc(ctx context.Context, flags RunFlags) error {
+	if flags.GitHub {
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
+	}
+
 	workflow, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		flags.Target,
-		flags.Source,
-		flags.Repo,
-		flags.RepoSubdirs,
-		flags.InstallationURLs,
-		flags.Debug,
-		!flags.SkipCompile,
-		flags.Force,
-		flags.RegistryTags,
-		flags.SetVersion,
+		run.WithTarget(flags.Target),
+		run.WithSource(flags.Source),
+		run.WithRepo(flags.Repo),
+		run.WithRepoSubDirs(flags.RepoSubdirs),
+		run.WithInstallationURLs(flags.InstallationURLs),
+		run.WithDebug(flags.Debug),
+		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithForceGeneration(flags.Force),
+		run.WithRegistryTags(flags.RegistryTags),
+		run.WithSetVersion(flags.SetVersion),
+		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 	)
 	if err != nil {
 		return err
@@ -279,19 +308,33 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
+	if flags.GitHub {
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
+	}
+
+	opts := []run.Opt{
+		run.WithTarget(flags.Target),
+		run.WithSource(flags.Source),
+		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithRepo(flags.Repo),
+		run.WithRepoSubDirs(flags.RepoSubdirs),
+		run.WithInstallationURLs(flags.InstallationURLs),
+		run.WithDebug(flags.Debug),
+		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithForceGeneration(flags.Force),
+		run.WithRegistryTags(flags.RegistryTags),
+		run.WithSetVersion(flags.SetVersion),
+		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+	}
+
+	// Don't cleanup if we're launching studio, we need the temp output
+	if flags.LaunchStudio {
+		opts = append(opts, run.WithSkipCleanup())
+	}
+
 	workflow, err := run.NewWorkflow(
 		ctx,
-		"ignored",
-		flags.Target,
-		flags.Source,
-		flags.Repo,
-		flags.RepoSubdirs,
-		flags.InstallationURLs,
-		flags.Debug,
-		!flags.SkipCompile,
-		flags.Force,
-		flags.RegistryTags,
-		flags.SetVersion,
+		opts...,
 	)
 	if err != nil {
 		return err
@@ -299,7 +342,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 	switch flags.Output {
 	case "summary":
-		return workflow.RunWithVisualization(ctx)
+		err = workflow.RunWithVisualization(ctx)
 	case "mermaid":
 		err = workflow.Run(ctx)
 		workflow.RootStep.Finalize(err == nil)
@@ -309,7 +352,20 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		}
 		log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
 	case "console":
-		return runFunc(ctx, flags)
+		err = workflow.Run(ctx)
+		workflow.RootStep.Finalize(err == nil)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	workflow.PrintSuccessSummary(ctx)
+
+	// Pass initial results to launch studio
+
+	if flags.LaunchStudio {
+		return studio.LaunchStudio(ctx, workflow)
 	}
 
 	return nil

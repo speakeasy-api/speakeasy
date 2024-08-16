@@ -28,16 +28,19 @@ speakeasy run [flags]
 ```
   -d, --debug                     enable writing debug files with broken code
       --force                     Force generation of SDKs even when no changes are present
+      --github                    kick off a generation run in GitHub
   -h, --help                      help for run
   -i, --installationURL string    the language specific installation URL for installation instructions if the SDK is not published to a package manager
       --installationURLs string   a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager (default "null")
-  -o, --output string             What to output while running (one of: summary, mermaid, console, default: summary) (default "summary")
+      --launch-studio             launch the web studio for iterating on the generated SDK
+  -o, --output string             What to output while running (default "summary")
       --registry-tags strings     tags to apply to the speakeasy registry bundle (comma-separated list)
   -r, --repo string               the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions
   -b, --repo-subdir string        the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation
       --repo-subdirs string       a map from target ID to the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation (default "null")
       --set-version string        the manual version to apply to the generated SDK
       --skip-compile              skip compilation when generating the SDK
+      --skip-versioning           skip automatic SDK version increments
   -s, --source string             source to run. specify 'all' to run all sources
   -t, --target string             target to run. specify 'all' to run all targets
 ```

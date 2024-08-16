@@ -36,11 +36,12 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	Run:          genSDKs,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
-		flag.StringFlag{
-			Name:         "lang",
-			Shorthand:    "l",
-			DefaultValue: "go",
-			Description:  fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
+		flag.EnumFlag{
+			Name:          "lang",
+			Shorthand:     "l",
+			Required:      true,
+			AllowedValues: SDKSupportedLanguageTargets(),
+			Description:   fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
 		},
 		schemaFlag,
 		outFlag,
@@ -95,6 +96,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		false,
 		flags.Force,
 		"",
+		false,
 	)
 
 	return err

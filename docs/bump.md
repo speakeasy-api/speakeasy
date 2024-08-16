@@ -19,7 +19,7 @@ Examples:
 ## Usage
 
 ```
-speakeasy bump [patch|minor|major] [flags]
+speakeasy bump [patch|minor|major|graduate] [flags]
 ```
 
 ### Options

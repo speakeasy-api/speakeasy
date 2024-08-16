@@ -19,6 +19,7 @@ speakeasy generate codeSamples [flags]
   -l, --langs strings        the languages to generate code samples for (comma-separated list)
       --out string           write directly to a file instead of stdout
   -s, --schema string        the schema to generate code samples for
+      --style string         the codeSamples style to generate, usually based on where the code samples will be used (default "standard")
       --token string         token value to use if authentication is required for downloading schema from remote URL
 ```
 

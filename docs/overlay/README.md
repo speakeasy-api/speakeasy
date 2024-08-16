@@ -28,5 +28,5 @@ speakeasy overlay [flags]
 ### Sub Commands
 
 * [speakeasy overlay apply](apply.md)	 - Given an overlay, construct a new specification by extending a specification and applying the overlay, and output it to stdout.
-* [speakeasy overlay compare](compare.md)	 - Given two specs, output an overlay that describes the differences between them
+* [speakeasy overlay compare](compare.md)	 - Given two specs (before and after), output an overlay that describes the differences between them
 * [speakeasy overlay validate](validate.md)	 - Given an overlay, validate it according to the OpenAPI Overlay specification

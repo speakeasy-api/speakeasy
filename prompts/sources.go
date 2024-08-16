@@ -3,6 +3,7 @@ package prompts
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,52 +17,64 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 )
 
-func getBaseSourcePrompts(currentWorkflow *workflow.Workflow, sourceName, fileLocation, authHeader *string) []*huh.Group {
-	var initialGroup []huh.Field
+func getOASLocation(location, authHeader *string, allowSample bool) error {
+	locationPrompt := oasLocationPrompt(location)
 
+	if allowSample {
+		locationPrompt = locationPrompt.Description("Leave blank to use a sample spec\n")
+	}
+
+	if err := charm_internal.Execute(locationPrompt); err != nil {
+		return err
+	}
+
+	_, err := charm_internal.NewForm(huh.NewForm(
+		getRemoteAuthenticationPrompts(location, authHeader)...),
+		charm_internal.WithTitle("Looks like your document requires authentication")).
+		ExecuteForm()
+
+	return err
+}
+
+func oasLocationPrompt(fileLocation *string) *huh.Input {
 	if fileLocation == nil || *fileLocation == "" {
-		initialGroup = append(initialGroup,
-			charm_internal.NewInput().
-				Title("What is the location of your OpenAPI document?").
-				Placeholder("local file path or remote file reference.").
-				Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-				SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
-					FileExtensions: charm_internal.OpenAPIFileExtensions,
-				})).
-				Value(fileLocation),
-		)
+		return charm_internal.NewInput().
+			Title("OpenAPI Document Location").
+			Placeholder("local file path or remote file reference").
+			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
+			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
+				FileExtensions: charm_internal.OpenAPIFileExtensions,
+			})).
+			Prompt("").
+			Value(fileLocation)
 	}
 
+	return nil
+}
+
+func sourceNamePrompt(currentWorkflow *workflow.Workflow, sourceName *string) huh.Field {
 	if sourceName == nil || *sourceName == "" {
-		initialGroup = append(initialGroup,
-			charm_internal.NewInput().
-				Title("What is a good name for this source document?").
-				Validate(func(s string) error {
-					if s == "" {
-						return fmt.Errorf("a source name must be provided")
-					}
+		return charm_internal.NewInlineInput().
+			Title("What is a good name for this source document?").
+			Placeholder("source-name").
+			Validate(func(s string) error {
+				if s == "" {
+					return fmt.Errorf("a source name must be provided")
+				}
 
-					if strings.Contains(s, " ") {
-						return fmt.Errorf("a source name must not contain spaces")
-					}
+				if strings.Contains(s, " ") {
+					return fmt.Errorf("a source name must not contain spaces")
+				}
 
-					if _, ok := currentWorkflow.Sources[s]; ok {
-						return fmt.Errorf("a source with the name %s already exists", s)
-					}
-					return nil
-				}).
-				Value(sourceName),
-		)
+				if _, ok := currentWorkflow.Sources[s]; ok {
+					return fmt.Errorf("a source with the name %s already exists", s)
+				}
+				return nil
+			}).
+			Value(sourceName)
 	}
 
-	var groups []*huh.Group
-
-	if len(initialGroup) > 0 {
-		groups = append(groups, huh.NewGroup(initialGroup...))
-	}
-
-	groups = append(groups, getRemoteAuthenticationPrompts(fileLocation, authHeader)...)
-	return groups
+	return nil
 }
 
 func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Group {
@@ -94,7 +107,6 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 			charm_internal.NewInput().
 				Title("What is the name of your authentication header?").
 				Description("The value for this header will be fetched from the secret $OPENAPI_DOC_AUTH_TOKEN\n").
-				Inline(false).
 				Prompt("").
 				Placeholder("x-auth-token").
 				Value(authHeader),
@@ -104,10 +116,34 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 	}
 }
 
+func getSDKName(sdkName *string, placeholder string) error {
+	if sdkName == nil || *sdkName == "" {
+		descriptionFn := func() string {
+			v := placeholder
+			if sdkName != nil && *sdkName != "" {
+				v = *sdkName
+			}
+			return "Your users will access your SDK using " + styles.Emphasized.Render(fmt.Sprintf("%s.DoThing()\n", v))
+		}
+
+		return charm_internal.Execute(
+			charm_internal.NewInput().
+				Title("Give your SDK a name").
+				DescriptionFunc(descriptionFn, sdkName).
+				Placeholder(placeholder).
+				Suggestions([]string{placeholder}).
+				Value(sdkName),
+		)
+	}
+
+	return nil
+
+}
+
 func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *string) []*huh.Group {
 	groups := []*huh.Group{
 		huh.NewGroup(
-			charm_internal.NewInput().
+			charm_internal.NewInlineInput().
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
 				Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
@@ -124,7 +160,7 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *stri
 	return groups
 }
 
-func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
+func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	source := &workflow.Source{}
 	var sourceName, fileLocation, authHeader string
 
@@ -132,38 +168,28 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		fileLocation = *quickstart.Defaults.SchemaPath
 	}
 
-	useSampleSpec := false
-	_, err := charm_internal.NewForm(huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[bool]().
-				Title("Do you have an existing OpenAPI spec?").
-				Description("You can provide a local file path or a remote file URL to your OpenAPI spec.").
-				Options(
-					huh.NewOption("Yes", false),
-					huh.NewOption("No, use a sample OpenAPI spec", true),
-				).
-				Value(&useSampleSpec),
-		),
-	)).ExecuteForm()
-	if err != nil {
+	orgSlug := auth.GetOrgSlugFromContext(ctx)
+
+	if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
 		return nil, err
 	}
 
-	if useSampleSpec {
+	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
+
+	if isUsingSampleSpec {
 		quickstart.IsUsingSampleOpenAPISpec = true
 		// Other parts of the code make assumptions that the workflow has a valid source
 		// This is a hack to satisfy those assumptions, we will overwrite this with a proper
 		// file location when we have written the sample spec to disk when we know the SDK output directory
 		fileLocation = "https://example.com/OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
-		sourceName = "sample-source"
+		sourceName = "petstore-oas"
+		quickstart.SDKName = "Petstore"
 	} else {
-		if _, err := charm_internal.NewForm(huh.NewForm(
-			getBaseSourcePrompts(quickstart.WorkflowFile, &sourceName, &fileLocation, &authHeader)...),
-			"Let's setup a new source for your workflow.",
-			"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
-			ExecuteForm(); err != nil {
+		// No need to prompt for SDK name if we are using a sample spec
+		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
+		sourceName = quickstart.SDKName + "-OAS"
 	}
 
 	document, err := formatDocument(fileLocation, authHeader, false)
@@ -173,9 +199,9 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	source.Inputs = append(source.Inputs, *document)
 
-	if registry.IsRegistryEnabled(ctx) && auth.GetOrgSlugFromContext(ctx) != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
+	if registry.IsRegistryEnabled(ctx) && orgSlug != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
 		registryEntry := &workflow.SourceRegistry{}
-		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
+		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", orgSlug, auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
 			return nil, err
 		}
 		source.Registry = registryEntry
@@ -203,7 +229,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	prompt := charm_internal.NewSelectPrompt("Would you like to modify the location of an existing OpenAPI document or add a new one?", "", inputOptions, &selectedDoc)
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		prompt),
-		fmt.Sprintf("Let's modify the source %s", name)).
+		charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -212,6 +238,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	if !addOpenAPIFile {
 		fileLocation := selectedDoc
 		var authHeader string
+		// TODO: What is this prompt even doing? "if !addOpenAPIFile" so why are we asking for an OAS
 		groups := []*huh.Group{
 			huh.NewGroup(
 				charm_internal.NewInput().
@@ -221,14 +248,13 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 						FileExtensions: charm_internal.OpenAPIFileExtensions,
 					})).
-					Inline(false).
 					Value(&fileLocation),
 			),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader)...)
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's modify the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -253,22 +279,13 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		addOpenAPIFile = false
 		var fileLocation, authHeader string
 		groups := []*huh.Group{
-			huh.NewGroup(
-				charm_internal.NewInput().
-					Title("What is the location of your OpenAPI document?").
-					Placeholder("local file path or remote file reference.").
-					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
-					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
-						FileExtensions: charm_internal.OpenAPIFileExtensions,
-					})).
-					Value(&fileLocation),
-			),
+			huh.NewGroup(oasLocationPrompt(&fileLocation)),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader)...)
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -283,7 +300,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	addOverlayFile := false
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
-		fmt.Sprintf("Let's add to the source %s", name)).
+		charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -296,7 +313,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -319,7 +336,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		previousOutputLocation := outputLocation
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			huh.NewGroup(
-				charm_internal.NewInput().
+				charm_internal.NewInlineInput().
 					Title("Optionally provide an output location for your build source file:").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
@@ -327,7 +344,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 					})).
 					Value(&outputLocation),
 			)),
-			fmt.Sprintf("Let's modify the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -349,12 +366,20 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 	var sourceName, fileLocation, authHeader string
 	var overlayFileLocation, overlayAuthHeader, outputLocation string
 
-	groups := getBaseSourcePrompts(currentWorkflow, &sourceName, &fileLocation, &authHeader)
+	if err := charm_internal.Execute(sourceNamePrompt(currentWorkflow, &sourceName)); err != nil {
+		return "", nil, err
+	}
+
+	if err := getOASLocation(&fileLocation, &authHeader, false); err != nil {
+		return "", nil, err
+	}
+
+	var groups []*huh.Group
 	var promptForOverlay bool
 	groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
 	groups = append(groups, getOverlayPrompts(&promptForOverlay, &overlayFileLocation, &overlayAuthHeader)...)
 	groups = append(groups, huh.NewGroup(
-		charm_internal.NewInput().
+		charm_internal.NewInlineInput().
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
@@ -369,8 +394,8 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		groups...),
-		"Let's setup a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+		charm_internal.WithTitle("Let's set up a new source for your workflow."),
+		charm_internal.WithDescription("A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
 		ExecuteForm(); err != nil {
 		return "", nil, err
 	}

@@ -3,6 +3,9 @@ package run
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
+
 	"github.com/hashicorp/go-version"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -14,20 +17,23 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/codesamples"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/git"
+	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
-	"os"
-	"path/filepath"
-	"strings"
 )
+
+type TargetResult struct {
+	OutputPath  string
+	GenYamlPath string
+}
 
 func getTarget(target string) (*workflow.Target, error) {
 	wf, _, err := utils.GetWorkflowAndDir()
@@ -38,7 +44,7 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult, error) {
+func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult, *TargetResult, error) {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
@@ -48,42 +54,42 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 
 	source, sourcePath, err := w.workflow.GetTargetSource(target)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var sourceRes *sourceResult
+	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.runSource(ctx, rootStep, t.Source, target, false)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
 				if cliEvent != nil {
 					cliEvent.GenerateNumberOfOperationsIgnored = new(int64)
-					*cliEvent.GenerateNumberOfOperationsIgnored = int64(len(sourceRes.LintResult.InvalidOperation))
+					*cliEvent.GenerateNumberOfOperationsIgnored = int64(len(sourceRes.LintResult.InvalidOperations))
 				}
 
-				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, false, sourceRes.LintResult.ValidOperations)
+				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, sourceRes.LintResult.ValidOperations)
 				if retriedErr != nil {
 					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
 					// return the original error
-					return nil, err
+					return nil, nil, err
 				}
 
-				w.OperationsRemoved = sourceRes.LintResult.InvalidOperation
+				w.OperationsRemoved = sourceRes.LintResult.InvalidOperations
 				sourcePath = retriedPath
 				sourceRes = retriedRes
 			} else {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	} else {
-		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.projectDir)
+		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		sourceRes = &sourceResult{
+		sourceRes = &SourceResult{
 			Source:     t.Source,
 			LintResult: res,
 		}
@@ -93,7 +99,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 	if t.Output != nil {
 		outDir = *t.Output
 	} else {
-		outDir = w.projectDir
+		outDir = w.ProjectDir
 	}
 	targetLock.OutLocation = outDir
 
@@ -103,7 +109,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 
 	genConfig, err := sdkGenConfig.Load(outDir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if w.SetVersion != "" && genConfig.Config != nil {
@@ -113,13 +119,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		}
 		if langCfg, ok := genConfig.Config.Languages[t.Target]; ok {
 			if _, err := version.NewVersion(appliedVersion); err != nil {
-				return nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
+				return nil, nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
 			}
 
 			langCfg.Version = appliedVersion
 			genConfig.Config.Languages[t.Target] = langCfg
 			if err := sdkGenConfig.SaveConfig(outDir, genConfig.Config); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
@@ -129,7 +135,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		if errors.Is(err, validation.NoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -160,9 +166,10 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 		w.ShouldCompile,
 		w.ForceGeneration,
 		target,
+		w.SkipVersioning,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	w.generationAccess = generationAccess
 
@@ -175,23 +182,26 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 			outputPath = filepath.Join(*t.Output, outputPath)
 		}
 
-		overlayString, err := usagegen.GenerateCodeSamplesOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true)
+		style := codesamples.Default
+		if t.CodeSamples.Style != nil {
+			switch *t.CodeSamples.Style {
+			case "readme":
+				style = codesamples.ReadMe
+			}
+		}
+
+		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, style)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		namespaceName, digest, err := w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		targetLock.CodeSamplesNamespace = namespaceName
 		targetLock.CodeSamplesRevisionDigest = digest
 	}
-
-	rootStep.NewSubstep("Cleaning up")
-
-	// Clean up temp files on success
-	os.RemoveAll(workflow.GetTempDir())
 
 	rootStep.SucceedWorkflow()
 
@@ -210,7 +220,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*sourceResult,
 
 	w.lockfile.Targets[target] = targetLock
 
-	return sourceRes, nil
+	targetResult := TargetResult{
+		OutputPath:  outDir,
+		GenYamlPath: genConfig.ConfigPath,
+	}
+
+	return sourceRes, &targetResult, nil
 }
 
 func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflowTracking.WorkflowStep, overlayString string, codeSampleConfig workflow.CodeSamples) (namespaceName string, digest string, err error) {
@@ -257,7 +272,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 
 	registryStep.NewSubstep("Snapshotting Code Samples")
 
-	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	gitRepo, err := git.NewLocalRepository(w.ProjectDir)
 	if err != nil {
 		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
 	}
@@ -329,7 +344,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 	return
 }
 
-func (w *Workflow) printTargetSuccessMessage(logger log.Logger) {
+func (w *Workflow) printTargetSuccessMessage(ctx context.Context) {
 	if len(w.SDKOverviewURLs) == 0 {
 		return
 	}
@@ -337,9 +352,10 @@ func (w *Workflow) printTargetSuccessMessage(logger log.Logger) {
 	heading := styles.Success.Render("SDKs Generated Successfully")
 	var additionalLines []string
 	for target, url := range w.SDKOverviewURLs {
-		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─%s %s %s", styles.HeavilyEmphasized.Render(target), styles.Success.Render("overview:"), styles.Dimmed.Render(url))))
+		link := links.Shorten(ctx, url)
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─`%s` overview: %s", target, styles.Dimmed.Render(link))))
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
-	logger.Println(msg)
+	log.From(ctx).Println(msg)
 }

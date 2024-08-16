@@ -62,7 +62,7 @@ func SelectCommand(label string, cmd *cobra.Command) *cobra.Command {
 		return cmd
 	}
 
-	selected := getSelectionFromList(label, subcommands)
+	selected := selectCommand(label, subcommands)
 
 	if selected != nil && selected != cmd && selected.HasSubCommands() {
 		return SelectCommand(label, selected)
@@ -110,7 +110,7 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	var missingOptionalFlags []*pflag.Flag
 
 	requestValue := func(flag *pflag.Flag) {
-		// If the flag already has a value, skip it
+		// If the flag already has a Value, skip it
 		if flag.Changed || flag.Hidden || slices.Contains(utils.FlagsToIgnore, flag.Name) {
 			return
 		}
@@ -154,7 +154,7 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 		}
 
 		if v != "" {
-			// Check if the flag takes an array value
+			// Check if the flag takes an array Value
 			if sliceVal, ok := flag.Value.(pflag.SliceValue); ok {
 				vals := strings.Split(v, ",")
 				if err := sliceVal.Replace(vals); err != nil {

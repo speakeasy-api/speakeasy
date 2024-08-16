@@ -20,7 +20,7 @@ const (
 )
 
 var bumpCommand = &cobra.Command{
-	Use:   "bump [patch|minor|major]",
+	Use:   "bump [patch|minor|major|graduate]",
 	Short: "Bumps the version of a Speakeasy Generation Target",
 	Long: `Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.
 

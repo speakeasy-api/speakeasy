@@ -2,6 +2,7 @@ package prompts
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"os"
 	"strings"
 
@@ -47,7 +48,7 @@ func GetTargetOptions() []huh.Option[string] {
 	for _, target := range priorityTargets {
 		for _, supportedTarget := range targets {
 			if supportedTarget.Target == target {
-				options = append(options, huh.NewOption(fmt.Sprintf("%s (%s)", supportedTarget.Target, supportedTarget.Maturity), supportedTarget.Target))
+				options = append(options, targetOption(supportedTarget.Target, string(supportedTarget.Maturity)))
 				break
 			}
 		}
@@ -58,10 +59,14 @@ func GetTargetOptions() []huh.Option[string] {
 			continue
 		}
 
-		options = append(options, huh.NewOption(fmt.Sprintf("%s (%s)", target.Target, target.Maturity), target.Target))
+		options = append(options, targetOption(target.Target, string(target.Maturity)))
 	}
 
 	return options
+}
+
+func targetOption(target, maturity string) huh.Option[string] {
+	return huh.NewOption(fmt.Sprintf("%s %s", getTargetDisplay(target), getMaturityDisplay(maturity)), target)
 }
 
 func GetSupportedTargets() []string {
@@ -100,4 +105,46 @@ func HasExistingGeneration(dir string) bool {
 	}
 
 	return false
+}
+
+func getTargetDisplay(target string) string {
+	switch target {
+	case "typescript":
+		return "TypeScript"
+	case "python":
+		return "Python"
+	case "go":
+		return "Go"
+	case "java":
+		return "Java"
+	case "terraform":
+		return "Terraform"
+	case "csharp":
+		return "C#"
+	case "unity":
+		return "Unity"
+	case "php":
+		return "PHP"
+	case "postman":
+		return "Postman"
+	case "ruby":
+		return "Ruby"
+	case "swift":
+		return "Swift"
+	}
+
+	return target
+}
+
+func getMaturityDisplay(maturity string) string {
+	switch maturity {
+	case "GA":
+		return ""
+	case "Beta":
+		return styles.DimmedItalic.Render("beta")
+	case "Alpha":
+		return styles.DimmedItalic.Render("alpha")
+	}
+
+	return maturity
 }

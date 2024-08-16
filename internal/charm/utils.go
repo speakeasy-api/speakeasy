@@ -41,8 +41,12 @@ func FormatCommandDescription(description string) string {
 	return "\n" + descriptionStyle.Render(description)
 }
 
-func NewInput() *huh.Input {
+func NewInlineInput() *huh.Input {
 	return huh.NewInput().Prompt(" ").Inline(true)
+}
+
+func NewInput() *huh.Input {
+	return huh.NewInput().Prompt("")
 }
 
 func FormatEditOption(text string) string {
