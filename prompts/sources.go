@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	humanize "github.com/dustin/go-humanize/english"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/iancoleman/strcase"
@@ -458,28 +459,35 @@ func formatDocument(fileLocation, authHeader string, validate bool) (*workflow.D
 	return document, nil
 }
 
+const (
+	ErrMsgInvalidFilePath = "Please provide a valid file path"
+	ErrMsgNonExistentFile = "File does not exist"
+	ErrMessageFileIsDir   = "Path is a directory, not a file"
+	ErrMessageFileExt     = "File extension '%s' is invalid. Valid extensions are %s"
+	ErrMsgInvalidURL      = "Please provide a valid URL"
+)
+
 func validateFileLocation(input string, permittedFileExtensions []string) error {
 	// Check if the input is a valid URL
 	parsedURL, err := url.Parse(input)
 	if err != nil {
-		return fmt.Errorf("please provide a valid URL: %w", err)
+		return errors.New(ErrMsgInvalidURL)
 	}
 	if parsedURL.Scheme != "" && parsedURL.Host != "" && strings.Contains(parsedURL.Host, ".") {
 		// Valid URL, return nil
 		return nil
 	}
 
-	// Check if the input is an existing file path from the current directory
 	absPath, err := filepath.Abs(input)
 	if err != nil {
-		return fmt.Errorf("failed to get absolute path: %w", err)
+		return errors.New(ErrMsgInvalidFilePath)
 	}
 
 	fileInfo, err := os.Stat(absPath)
 	if os.IsNotExist(err) {
-		return errors.New("path does not exist")
+		return errors.New(ErrMsgNonExistentFile)
 	} else if err != nil {
-		return fmt.Errorf("error checking file path: %w", err)
+		return fmt.Errorf(ErrMsgInvalidFilePath)
 	}
 
 	// Check if it's a file and not a directory
@@ -488,14 +496,13 @@ func validateFileLocation(input string, permittedFileExtensions []string) error 
 		ext := strings.ToLower(filepath.Ext(absPath))
 		for _, allowedExt := range permittedFileExtensions {
 			if ext == strings.ToLower(allowedExt) {
-				// Valid file path with permitted extension
 				return nil
 			}
 		}
-		return fmt.Errorf("file has an invalid extension: %s", ext)
+		return fmt.Errorf(ErrMessageFileExt, ext, humanize.WordSeries(permittedFileExtensions, "or"))
 	}
 
-	return errors.New("path is a directory, not a file")
+	return errors.New(ErrMessageFileIsDir)
 }
 
 func validateOpenApiFileLocation(s string) error {
