@@ -468,13 +468,12 @@ const (
 )
 
 func validateFileLocation(input string, permittedFileExtensions []string) error {
-	// Check if the input is a valid URL
 	parsedURL, err := url.Parse(input)
 	if err != nil {
 		return errors.New(ErrMsgInvalidURL)
 	}
+
 	if parsedURL.Scheme != "" && parsedURL.Host != "" && strings.Contains(parsedURL.Host, ".") {
-		// Valid URL, return nil
 		return nil
 	}
 
@@ -506,5 +505,8 @@ func validateFileLocation(input string, permittedFileExtensions []string) error 
 }
 
 func validateOpenApiFileLocation(s string) error {
+	if s == "" {
+		return nil
+	}
 	return validateFileLocation(s, charm_internal.OpenAPIFileExtensions)
 }
