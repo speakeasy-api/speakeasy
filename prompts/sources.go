@@ -3,10 +3,13 @@ package prompts
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
@@ -44,9 +47,11 @@ func oasLocationPrompt(fileLocation *string) *huh.Input {
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 				FileExtensions: charm_internal.OpenAPIFileExtensions,
+				IsDirectories:  true,
 			})).
 			Prompt("").
-			Value(fileLocation)
+			Value(fileLocation).
+			Validate(validateOpenApiFileLocation)
 	}
 
 	return nil
@@ -451,4 +456,48 @@ func formatDocument(fileLocation, authHeader string, validate bool) (*workflow.D
 	}
 
 	return document, nil
+}
+
+func validateFileLocation(input string, permittedFileExtensions []string) error {
+	// Check if the input is a valid URL
+	parsedURL, err := url.Parse(input)
+	if err != nil {
+		return fmt.Errorf("please provide a valid URL: %w", err)
+	}
+	if parsedURL.Scheme != "" && parsedURL.Host != "" && strings.Contains(parsedURL.Host, ".") {
+		// Valid URL, return nil
+		return nil
+	}
+
+	// Check if the input is an existing file path from the current directory
+	absPath, err := filepath.Abs(input)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	fileInfo, err := os.Stat(absPath)
+	if os.IsNotExist(err) {
+		return errors.New("path does not exist")
+	} else if err != nil {
+		return fmt.Errorf("error checking file path: %w", err)
+	}
+
+	// Check if it's a file and not a directory
+	if !fileInfo.IsDir() {
+		// Check if the file extension is in the list of permitted file extensions
+		ext := strings.ToLower(filepath.Ext(absPath))
+		for _, allowedExt := range permittedFileExtensions {
+			if ext == strings.ToLower(allowedExt) {
+				// Valid file path with permitted extension
+				return nil
+			}
+		}
+		return fmt.Errorf("file has an invalid extension: %s", ext)
+	}
+
+	return errors.New("path is a directory, not a file")
+}
+
+func validateOpenApiFileLocation(s string) error {
+	return validateFileLocation(s, charm_internal.OpenAPIFileExtensions)
 }
