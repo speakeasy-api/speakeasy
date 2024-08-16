@@ -2,6 +2,12 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.23.0
 
+// Can be removed once https://github.com/pb33f/libopenapi/pull/319 is merged and the dependency is updated here
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826
+
+// Can be removed once https://github.com/wk8/go-ordered-map/pull/41 is merged and the dependency updated in libopenapi
+replace github.com/wk8/go-ordered-map/v2 => github.com/speakeasy-api/go-ordered-map/v2 v2.0.0-20240813202817-2f1629387283
+
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.18.0
