@@ -21,6 +21,7 @@ type Workflow struct {
 	SetVersion         string
 	Debug              bool
 	ShouldCompile      bool
+	Verbose      bool
 	ForceGeneration    bool
 	FrozenWorkflowLock bool
 	SkipVersioning     bool
@@ -182,6 +183,12 @@ func WithShouldCompile(shouldCompile bool) Opt {
 func WithForceGeneration(forceGeneration bool) Opt {
 	return func(w *Workflow) {
 		w.ForceGeneration = forceGeneration
+	}
+}
+
+func WithVerbose(verbose bool) Opt {
+	return func(w *Workflow) {
+		w.Verbose = verbose
 	}
 }
 

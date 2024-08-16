@@ -34,6 +34,7 @@ type RunFlags struct {
 	Force              bool              `json:"force"`
 	Output             string            `json:"output"`
 	Pinned             bool              `json:"pinned"`
+	Verbose             bool             `json:"verbose"`
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
 	LaunchStudio       bool              `json:"launch-studio"`
@@ -127,6 +128,11 @@ A full workflow is capable of running the following steps:
 			Name:        "pinned",
 			Description: "Run using the current CLI version instead of the version specified in the workflow file",
 			Hidden:      true,
+		},
+		flag.BooleanFlag{
+			Name:        "verbose",
+			Description: "Verbose logging",
+			Hidden:      false,
 		},
 		flag.StringSliceFlag{
 			Name:        "registry-tags",
@@ -289,6 +295,7 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithVerbose(flags.Verbose),
 		run.WithForceGeneration(flags.Force),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
@@ -322,6 +329,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithForceGeneration(flags.Force),
+		run.WithVerbose(flags.Verbose),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
@@ -338,6 +346,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	if flags.Verbose {
+		flags.Output = "console"
 	}
 
 	switch flags.Output {
