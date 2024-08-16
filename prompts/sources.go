@@ -473,8 +473,22 @@ func validateFileLocation(input string, permittedFileExtensions []string) error 
 		return errors.New(ErrMsgInvalidURL)
 	}
 
-	if parsedURL.Scheme != "" && parsedURL.Host != "" && strings.Contains(parsedURL.Host, ".") {
-		return nil
+	if parsedURL.Scheme != "" {
+		// Check if the scheme is known
+		if parsedURL.Scheme == "http" || parsedURL.Scheme == "https" {
+			if parsedURL.Host == "" {
+				return errors.New(ErrMsgInvalidURL)
+			}
+
+			hostParts := strings.Split(parsedURL.Host, ".")
+
+			// TODO: make this more robust
+			if len(hostParts) < 2 || (len(hostParts) == 2 && len(hostParts[1]) < 2) {
+				return errors.New(ErrMsgInvalidURL)
+			} else {
+				return nil
+			}
+		}
 	}
 
 	absPath, err := filepath.Abs(input)
