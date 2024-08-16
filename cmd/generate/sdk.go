@@ -20,7 +20,7 @@ type GenerateFlags struct {
 	Header          string `json:"header"`
 	Token           string `json:"token"`
 	Debug           bool   `json:"debug"`
-	Verbose           bool `json:"verbose"`
+	Verbose         bool   `json:"verbose"`
 	AutoYes         bool   `json:"auto-yes"`
 	InstallationURL string `json:"installationURL"`
 	Published       bool   `json:"published"`
