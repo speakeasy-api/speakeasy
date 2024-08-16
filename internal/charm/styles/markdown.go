@@ -1,9 +1,8 @@
-package log
+package styles
 
 import (
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"regexp"
 	"strings"
 )
@@ -12,7 +11,7 @@ var (
 	patternToStyle = map[string]lipgloss.Style{
 		"\\*": lipgloss.NewStyle().Bold(true),
 		"_":   lipgloss.NewStyle().Italic(true),
-		"`":   styles.HeavilyEmphasized,
+		"`":   HeavilyEmphasized,
 	}
 )
 

@@ -270,7 +270,7 @@ func (l Logger) Fprint(w io.Writer, s string) {
 		s = l.style.Render(s)
 	}
 
-	s = InjectMarkdownStyles(s)
+	s = styles.InjectMarkdownStyles(s)
 
 	fmt.Fprint(w, s)
 }

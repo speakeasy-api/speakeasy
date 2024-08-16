@@ -4,20 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/AlekSi/pointer"
+	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
-
-	"github.com/AlekSi/pointer"
-	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy-core/errors"
 
 	"github.com/speakeasy-api/jsonpath/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
@@ -32,10 +31,6 @@ type StudioHandlers struct {
 	OverlayPath    string
 	Ctx            context.Context
 }
-
-const (
-	ModificationsOverlayPath = ".speakeasy/speakeasy-modifications-overlay.yaml"
-)
 
 func NewStudioHandlers(ctx context.Context, workflow *run.Workflow) (*StudioHandlers, error) {
 	ret := &StudioHandlers{WorkflowRunner: *workflow, Ctx: ctx}
@@ -261,7 +256,7 @@ func (h *StudioHandlers) getSourceInner(ctx context.Context) (*run.SourceResult,
 }
 
 func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult) (*components.SourceResponse, error) {
-	overlayContents, err := utils.ReadFileToString(ModificationsOverlayPath)
+	overlayContents, err := utils.ReadFileToString(modifications.OverlayPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("error reading modifications overlay: %w", err)
@@ -313,23 +308,15 @@ func (h *StudioHandlers) getOrCreateOverlayPath() error {
 	}
 
 	// TODO: this probably doesn't need to be stored in h.OverlayPath? Do we need to support custom modification filepaths?
-	h.OverlayPath = ModificationsOverlayPath
+	h.OverlayPath = modifications.OverlayPath
 
 	workflowConfig := h.WorkflowRunner.GetWorkflowFile()
 
 	source := workflowConfig.Sources[h.SourceID]
 
-	if !slices.ContainsFunc(source.Overlays, func(o workflow.Overlay) bool { return o.Document.Location == h.OverlayPath }) {
-		source.Overlays = append(source.Overlays, workflow.Overlay{
-			Document: &workflow.Document{
-				Location: h.OverlayPath,
-			},
-		})
-		workflowConfig.Sources[h.SourceID] = source
-		return workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
-	}
+	modifications.UpsertOverlayIntoSource(&source)
 
-	return nil
+	return workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
 }
 
 func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {

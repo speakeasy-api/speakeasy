@@ -6,10 +6,8 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/download"
 	"gopkg.in/yaml.v3"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -21,13 +19,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/overlay"
-	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
-
-const minimumViableOverlayPath = "valid-overlay.yaml"
 
 const speakeasySelf = "speakeasy-self"
 
@@ -271,80 +265,6 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 	return nil
 }
 
-func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, viableOperations []string) (string, *SourceResult, error) {
-	subStep := parentStep.NewSubstep("Retrying with minimum viable document")
-	source := w.workflow.Sources[sourceID]
-	baseLocation := source.Inputs[0].Location
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return "", nil, err
-	}
-
-	// This is intended to only be used from quickstart, we must assume a singular input document
-	if len(source.Inputs)+len(source.Overlays) > 1 {
-		return "", nil, errors.New("multiple inputs are not supported for minimum viable spec")
-	}
-
-	tempOmitted := fmt.Sprintf("ommitted_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
-	tempBase := fmt.Sprintf("downloaded_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
-
-	if source.Inputs[0].IsRemote() {
-		outResolved, err := download.ResolveRemoteDocument(ctx, source.Inputs[0], tempBase)
-		if err != nil {
-			return "", nil, err
-		}
-
-		baseLocation = outResolved
-	}
-
-	file, err := os.Create(filepath.Join(workingDir, tempOmitted))
-	if err != nil {
-		return "", nil, err
-	}
-	defer file.Close()
-
-	failedRetry := false
-	defer func() {
-		os.Remove(filepath.Join(workingDir, tempOmitted))
-		os.Remove(filepath.Join(workingDir, tempBase))
-		if failedRetry {
-			source.Overlays = []workflow.Overlay{}
-			w.workflow.Sources[sourceID] = source
-			os.Remove(filepath.Join(workingDir, minimumViableOverlayPath))
-		}
-	}()
-
-	if err := transform.FilterOperations(ctx, source.Inputs[0].Location, viableOperations, true, file); err != nil {
-		failedRetry = true
-		return "", nil, err
-	}
-
-	overlayFile, err := os.Create(filepath.Join(workingDir, minimumViableOverlayPath))
-	if err != nil {
-		return "", nil, err
-	}
-	defer overlayFile.Close()
-
-	if err := overlay.Compare([]string{
-		baseLocation,
-		tempOmitted,
-	}, overlayFile); err != nil {
-		failedRetry = true
-		return "", nil, err
-	}
-
-	source.Overlays = []workflow.Overlay{{Document: &workflow.Document{Location: minimumViableOverlayPath}}}
-	w.workflow.Sources[sourceID] = source
-
-	sourcePath, sourceRes, err := w.RunSource(ctx, subStep, sourceID, targetID)
-	if err != nil {
-		failedRetry = true
-		return "", nil, err
-	}
-
-	return sourcePath, sourceRes, err
-}
-
 func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
 	logger := log.From(ctx)
 	var filteredLogs strings.Builder
@@ -360,20 +280,6 @@ func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
 	}
 
 	return filteredLogs.String()
-}
-
-func groupInvalidOperations(input []string) []string {
-	var result []string
-	for _, op := range input[0:7] {
-		joined := styles.DimmedItalic.Render(fmt.Sprintf("- %s", op))
-		result = append(result, joined)
-	}
-
-	if len(input) > 7 {
-		result = append(result, styles.DimmedItalic.Render(fmt.Sprintf("- ... see %s", minimumViableOverlayPath)))
-	}
-
-	return result
 }
 
 func enrichTelemetryWithCompletedWorkflow(ctx context.Context, w *Workflow) {
