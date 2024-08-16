@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"github.com/stoewer/go-strcase"
 	"os"
 	"path/filepath"
@@ -31,7 +31,7 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 	}
 	digest := hex.EncodeToString(md5Hasher.Sum(nil))
 
-	s, err := sdk.InitSDK()
+	s, err := auth.GetSDKFromContext(ctx)
 	if err != nil {
 		return writeLocally(digest, reportBytes, reportType)
 	}
