@@ -17,7 +17,7 @@ const (
 
 func UpsertOverlay(source *workflow.Source, o overlay.Overlay) error {
 	// Open the file with read and write permissions
-	overlayFile, err := os.OpenFile(OverlayPath, os.O_RDWR|os.O_CREATE, 0644)
+	overlayFile, err := os.OpenFile(OverlayPath, os.O_RDWR, 0644)
 	var baseOverlay *overlay.Overlay
 
 	// If the file exists, load the current overlay
