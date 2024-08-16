@@ -10,8 +10,8 @@ import (
 var (
 	patternToStyle = map[string]lipgloss.Style{
 		"\\*": lipgloss.NewStyle().Bold(true),
-		"_":   lipgloss.NewStyle().Italic(true),
-		"`":   HeavilyEmphasized,
+		//"_":   lipgloss.NewStyle().Italic(true), // TODO: Disabled for now because values like SPEAKEASY_API_KEY get messed up
+		"`": HeavilyEmphasized,
 	}
 )
 
