@@ -503,9 +503,7 @@ func validateFileLocation(input string, permittedFileExtensions []string) error 
 		return errors.New(ErrMsgInvalidFilePath)
 	}
 
-	// Check if it's a file and not a directory
 	if !fileInfo.IsDir() {
-		// Check if the file extension is in the list of permitted file extensions
 		ext := strings.ToLower(filepath.Ext(absPath))
 		for _, allowedExt := range permittedFileExtensions {
 			if ext == strings.ToLower(allowedExt) {
