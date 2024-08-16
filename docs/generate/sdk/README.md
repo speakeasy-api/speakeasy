@@ -128,6 +128,7 @@ speakeasy generate sdk [flags]
   -b, --repo-subdir string       the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation
   -s, --schema string            local filepath or URL for the OpenAPI schema (default "./openapi.yaml")
       --token string             token value to use if authentication is required for downloading schema from remote URL
+      --verbose                  Verbose output
 ```
 
 ### Options inherited from parent commands

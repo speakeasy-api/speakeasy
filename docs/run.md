@@ -43,6 +43,7 @@ speakeasy run [flags]
       --skip-versioning           skip automatic SDK version increments
   -s, --source string             source to run. specify 'all' to run all sources
   -t, --target string             target to run. specify 'all' to run all targets
+      --verbose                   Verbose logging
 ```
 
 ### Options inherited from parent commands
