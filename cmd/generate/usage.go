@@ -30,7 +30,7 @@ var genUsageSnippetCmd = &model.ExecutableCommand[GenerateUsageSnippetFlags]{
 The following languages are currently supported:
 	- %s
 
-You can generate usage snippets by OperationID or by Namespace. By default this command will write to stdout.
+You can generate usage snippets by AffectedOperationIDs or by Namespace. By default this command will write to stdout.
 
 You can also select to write to a file or write to a formatted output directory.
 `, strings.Join(usagegen.SupportedLanguagesUsageSnippets, "\n	- ")),
@@ -48,7 +48,7 @@ You can also select to write to a file or write to a formatted output directory.
 		flag.StringFlag{
 			Name:        "operation-id",
 			Shorthand:   "i",
-			Description: "The OperationID to generate usage snippet for",
+			Description: "The AffectedOperationIDs to generate usage snippet for",
 		},
 		flag.StringFlag{
 			Name:        "namespace",

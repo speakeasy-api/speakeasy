@@ -27,7 +27,7 @@ type Workflow struct {
 	SkipLinting        bool
 	SkipChangeReport   bool
 	SkipSnapshot       bool
-	SkipCleanup      bool
+	SkipCleanup        bool
 	FromQuickstart     bool
 	RepoSubDirs        map[string]string
 	InstallationURLs   map[string]string
@@ -97,6 +97,8 @@ func NewWorkflow(
 	for _, opt := range opts {
 		opt(w)
 	}
+
+	w.FromQuickstart = true //TODO!
 
 	w.RootStep = workflowTracking.NewWorkflowStep(w.workflowName, log.From(ctx), nil)
 

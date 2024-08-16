@@ -6,6 +6,7 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 	"io"
 	"slices"
@@ -20,7 +21,7 @@ func FilterOperations(ctx context.Context, schemaPath string, includeOps []strin
 		return err
 	}
 
-	overlay := BuildFilterOperationsOverlay(model, include, includeOps)
+	overlay := BuildFilterOperationsOverlay(model, include, includeOps, nil)
 
 	root := model.Index.GetRootNode()
 	if err := overlay.ApplyTo(root); err != nil {
@@ -32,7 +33,11 @@ func FilterOperations(ctx context.Context, schemaPath string, includeOps []strin
 	return enc.Encode(root)
 }
 
-func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string) overlay.Overlay {
+func BuildRemoveInvalidOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], opToErr map[string]error) overlay.Overlay {
+	return BuildFilterOperationsOverlay(model, false, maps.Keys(opToErr), opToErr)
+}
+
+func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string, opToErr map[string]error) overlay.Overlay {
 	actionFn := func(method, path string, operation *v3.Operation) (map[string]string, *overlay.Action, *suggestions.ModificationExtension) {
 		operationID := operation.OperationId
 
@@ -57,9 +62,15 @@ func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], 
 				Target: target,
 				Remove: true,
 			}
+
+			before := "<invalid_operation>"
+			if err, ok := opToErr[operationID]; ok {
+				before = err.Error()
+			}
+
 			return nil, &action, &suggestions.ModificationExtension{
 				Type:   suggestions.ModificationTypeRemoveInvalid,
-				Before: "<invalid_operation>", // TODO: insert the actual error message here
+				Before: before,
 				After:  "<removed>",
 			}
 		}
