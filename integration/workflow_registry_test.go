@@ -42,7 +42,7 @@ func TestStability(t *testing.T) {
 	// Run the initial generation
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
-	cmdErr := executeI(t, temp, initialArgs...).Run()
+	cmdErr := execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files
@@ -56,14 +56,14 @@ func TestStability(t *testing.T) {
 	temp = newTemp
 
 	// Re-run the generation. We should have stable digests.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	rerunChecksums, err := calculateChecksums(temp)
 	require.NoError(t, err)
 	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 	// Once more, just to be sure. This now has a change report so it could in theory change.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 	rerunChecksums, err = calculateChecksums(temp)
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestStability(t *testing.T) {
 
 	// Run with --frozen-workflow-lock
 	frozenArgs := []string{"run", "-t", "all", "--pinned", "--frozen-workflow-lockfile", "--skip-compile"}
-	cmdErr = executeI(t, temp, frozenArgs...).Run()
+	cmdErr = execute(t, temp, frozenArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums after frozen run

@@ -49,19 +49,6 @@ func UploadReport(ctx context.Context, reportBytes []byte, reportType shared.Typ
 		log.From(ctx).Warnf("Failed to upload report to Speakeasy %s", err.Error())
 		return writeLocally(digest, reportBytes, reportType)
 	}
-	_, err = s.Reports.UploadReport(ctx, operations.UploadReportRequestBody{
-		Data: shared.Report{
-			Type: reportType.ToPointer(),
-		},
-		File: operations.File{
-			Content:  reportBytes,
-			FileName: digest + ".html",
-		},
-	})
-	if err != nil {
-		log.From(ctx).Warnf("Failed to upload report to Speakeasy %s", err.Error())
-		return writeLocally(digest, reportBytes, reportType)
-	}
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
 	if cliEvent != nil {
