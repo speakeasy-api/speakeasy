@@ -46,12 +46,14 @@ import (
 )
 
 type SourceResult struct {
-	Source       string
+	Source string
+	// The merged OAS spec that was input to the source contents as a string
 	InputSpec    string
 	LintResult   *validation.ValidationResult
 	ChangeReport *reports.ReportResult
 	Diagnosis    suggestions.Diagnosis
-	OutputPath   string
+	// The path to the output OAS spec
+	OutputPath string
 }
 
 type LintingError struct {
@@ -287,7 +289,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	changesStep.NewSubstep("Downloading prior revision")
 
 	d := workflow.Document{Location: oldRegistryLocation}
-	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d,workflow.GetTempDir())
+	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
 	if err != nil {
 		return
 	}
@@ -395,7 +397,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	if err != nil {
 		return err
 	}
-
 
 	if isSingleRegistrySource(source) {
 		document, err := registry.ResolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], workflow.GetTempDir())

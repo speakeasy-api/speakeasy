@@ -4,13 +4,13 @@ management:
   docChecksum: 5313df51e05604d7c64a7609d4cb9b9d
   docVersion: 1.0.0
   speakeasyVersion: 0.0.1
-  generationVersion: 2.396.0
-  releaseVersion: 0.3.12
-  configChecksum: 23ba9e69d04663f4bc65ba9fbe82c691
+  generationVersion: 2.401.2
+  releaseVersion: 0.3.13
+  configChecksum: 8804bb474f84691e26152fd039fbdc96
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.5.3
+    core: 3.5.4
     defaultEnabledRetries: 0.2.0
     envVarSecurityUsage: 0.3.0
     globalSecurity: 2.82.10
