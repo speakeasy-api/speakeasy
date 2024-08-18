@@ -51,7 +51,9 @@ func TestStability(t *testing.T) {
 
 	// Let's move our temporary directory around. We should be resilient to moves
 	newTemp := setupTestDir(t)
+	require.NoError(t, os.RemoveAll(newTemp))
 	require.NoError(t, os.Rename(temp, newTemp))
+	temp = newTemp
 
 	// Re-run the generation. We should have stable digests.
 	cmdErr = executeI(t, temp, initialArgs...).Run()

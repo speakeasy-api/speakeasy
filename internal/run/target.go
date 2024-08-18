@@ -99,7 +99,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	if t.Output != nil {
 		outDir = *t.Output
 	} else {
-		outDir = w.ProjectDir
+		outDir = "."
 	}
 	targetLock.OutLocation = outDir
 
