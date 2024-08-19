@@ -460,37 +460,44 @@ func formatDocument(fileLocation, authHeader string, validate bool) (*workflow.D
 }
 
 const (
-	ErrMsgInvalidFilePath = "Please provide a valid file path"
-	ErrMsgNonExistentFile = "File does not exist"
-	ErrMessageFileIsDir   = "Path is a directory, not a file"
-	ErrMessageFileExt     = "File extension '%s' is invalid. Valid extensions are %s"
-	ErrMsgInvalidURL      = "Please provide a valid URL"
+	ErrMsgInvalidFilePath = "please provide a valid file path"
+	ErrMsgNonExistentFile = "file does not exist"
+	ErrMessageFileIsDir   = "path is a directory, not a file"
+	ErrMessageFileExt     = "file extension '%s' is invalid. Valid extensions are %s"
+	ErrMsgInvalidURL      = "please provide a valid URL"
 )
 
-func validateFileLocation(input string, permittedFileExtensions []string) error {
+func validateDocumentLocation(input string, permittedFileExtensions []string) error {
 	parsedURL, err := url.Parse(input)
 	if err != nil {
 		return errors.New(ErrMsgInvalidURL)
 	}
 
 	if parsedURL.Scheme != "" {
-		// TODO: check if other protocols are supported
-		if parsedURL.Scheme == "http" || parsedURL.Scheme == "https" {
-			if parsedURL.Host == "" {
-				return errors.New(ErrMsgInvalidURL)
-			}
-
-			hostParts := strings.Split(parsedURL.Host, ".")
-
-			// TODO: make this more robust
-			if len(hostParts) < 2 || (len(hostParts) == 2 && len(hostParts[1]) < 2) {
-				return errors.New(ErrMsgInvalidURL)
-			} else {
-				return nil
-			}
-		}
+		return validateURL(parsedURL)
 	}
 
+	return validateFilePath(input, permittedFileExtensions)
+}
+
+func validateURL(parsedURL *url.URL) error {
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	if parsedURL.Host == "" {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	hostParts := strings.Split(parsedURL.Host, ".")
+	if len(hostParts) < 2 || (len(hostParts) == 2 && len(hostParts[1]) < 2) {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	return nil
+}
+
+func validateFilePath(input string, permittedFileExtensions []string) error {
 	absPath, err := filepath.Abs(input)
 	if err != nil {
 		return errors.New(ErrMsgInvalidFilePath)
@@ -499,26 +506,27 @@ func validateFileLocation(input string, permittedFileExtensions []string) error 
 	fileInfo, err := os.Stat(absPath)
 	if os.IsNotExist(err) {
 		return errors.New(ErrMsgNonExistentFile)
-	} else if err != nil {
+	}
+	if err != nil {
 		return errors.New(ErrMsgInvalidFilePath)
 	}
 
-	if !fileInfo.IsDir() {
-		ext := strings.ToLower(filepath.Ext(absPath))
-		for _, allowedExt := range permittedFileExtensions {
-			if ext == strings.ToLower(allowedExt) {
-				return nil
-			}
-		}
-		return fmt.Errorf(ErrMessageFileExt, ext, humanize.WordSeries(permittedFileExtensions, "or"))
+	if fileInfo.IsDir() {
+		return errors.New(ErrMessageFileIsDir)
 	}
 
-	return errors.New(ErrMessageFileIsDir)
+	ext := strings.ToLower(filepath.Ext(absPath))
+	for _, allowedExt := range permittedFileExtensions {
+		if ext == strings.ToLower(allowedExt) {
+			return nil
+		}
+	}
+	return fmt.Errorf(ErrMessageFileExt, ext, humanize.WordSeries(permittedFileExtensions, "or"))
 }
 
 func validateOpenApiFileLocation(s string) error {
 	if s == "" {
 		return nil
 	}
-	return validateFileLocation(s, charm_internal.OpenAPIFileExtensions)
+	return validateDocumentLocation(s, charm_internal.OpenAPIFileExtensions)
 }
