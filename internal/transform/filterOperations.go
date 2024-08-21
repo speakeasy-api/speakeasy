@@ -61,7 +61,7 @@ func filterOperations(ctx context.Context, doc libopenapi.Document, model *libop
 		return doc, model, err
 	}
 
-	_, model, err = Cleanup(ctx, doc, nil, nil)
+	_, model, err = Cleanup(ctx, doc, model, nil)
 	if err != nil {
 		return doc, model, err
 	}

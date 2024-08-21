@@ -2,7 +2,6 @@ package transform
 
 import (
 	"context"
-	"fmt"
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
@@ -18,19 +17,7 @@ func CleanupDocument(ctx context.Context, schemaPath string, w io.Writer) error 
 	}.Do(ctx)
 }
 
-func Cleanup(ctx context.Context, doc libopenapi.Document, _ *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	_, doc, model, errs := doc.RenderAndReload()
-	// remove nil errs
-	var nonNilErrs []error
-	for _, e := range errs {
-		if e != nil {
-			nonNilErrs = append(nonNilErrs, e)
-		}
-	}
-	if len(nonNilErrs) > 0 {
-		return nil, nil, fmt.Errorf("failed to render and reload document: %v", errs)
-	}
-
+func Cleanup(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	pathItems := model.Model.Paths.PathItems
 	var pathsToDelete []string
 

@@ -3,14 +3,13 @@ package transform
 import (
 	"context"
 	"fmt"
-	"io"
-	"strings"
-
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"io"
+	"strings"
 )
 
 func RemoveUnused(ctx context.Context, schemaPath string, w io.Writer) error {
@@ -23,7 +22,9 @@ func RemoveUnused(ctx context.Context, schemaPath string, w io.Writer) error {
 
 func RemoveOrphans(ctx context.Context, doc libopenapi.Document, _ *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	logger := log.From(ctx)
+
 	_, doc, model, errs := doc.RenderAndReload()
+
 	// remove nil errs
 	var nonNilErrs []error
 	for _, e := range errs {
@@ -202,6 +203,7 @@ func RemoveOrphans(ctx context.Context, doc libopenapi.Document, _ *libopenapi.D
 	for _, key := range toDelete {
 		headers.Delete(key)
 	}
+
 	if anyRemoved {
 		return RemoveOrphans(ctx, doc, model, nil)
 	}
