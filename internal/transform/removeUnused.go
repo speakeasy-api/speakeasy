@@ -21,7 +21,7 @@ func RemoveUnused(ctx context.Context, schemaPath string, w io.Writer) error {
 	}.Do(ctx)
 }
 
-func RemoveOrphans(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+func RemoveOrphans(ctx context.Context, doc libopenapi.Document, _ *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	logger := log.From(ctx)
 	_, doc, model, errs := doc.RenderAndReload()
 	// remove nil errs
