@@ -1,6 +1,7 @@
 package transform
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
@@ -15,21 +16,57 @@ import (
 )
 
 func FilterOperations(ctx context.Context, schemaPath string, includeOps []string, include bool, w io.Writer) error {
-	_, _, model, err := openapi.LoadDocument(ctx, schemaPath)
-	if err != nil {
-		return err
-	}
+	return transformer[args]{
+		schemaPath:  schemaPath,
+		transformFn: filterOperations,
+		w:           w,
+		args: args{
+			includeOps: includeOps,
+			include:    include,
+			schemaPath: schemaPath,
+		},
+	}.Do(ctx)
+}
 
-	overlay := BuildFilterOperationsOverlay(model, include, includeOps)
+type args struct {
+	includeOps []string
+	include    bool
+	schemaPath string
+}
+
+func filterOperations(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+	overlay := BuildFilterOperationsOverlay(model, args.include, args.includeOps)
 
 	root := model.Index.GetRootNode()
 	if err := overlay.ApplyTo(root); err != nil {
-		return err
+		return doc, model, err
 	}
 
-	enc := yaml.NewEncoder(w)
+	newSpec := bytes.Buffer{}
+	enc := yaml.NewEncoder(&newSpec)
 	enc.SetIndent(2)
-	return enc.Encode(root)
+	if err := enc.Encode(root); err != nil {
+		return doc, model, err
+	}
+
+	// Unfortunately, in order to remove orphans, we need to re-render the document.
+	updatedDoc, _, err := openapi.Load(newSpec.Bytes(), args.schemaPath)
+	if err != nil {
+		return doc, model, err
+	}
+	doc = *updatedDoc
+
+	_, model, err = RemoveOrphans(ctx, doc, nil, nil)
+	if err != nil {
+		return doc, model, err
+	}
+
+	_, model, err = Cleanup(ctx, doc, model, nil)
+	if err != nil {
+		return doc, model, err
+	}
+
+	return doc, model, err
 }
 
 func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string) overlay.Overlay {
