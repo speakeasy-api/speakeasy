@@ -377,7 +377,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
 			return err
 		}
-		workflowFile, _, _ = workflow.Load(workflowFileDir)
+		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
 	}
 
 	if workflowFile == nil {
@@ -446,7 +446,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		}
 	}
 
-	if err := workflow.Save(workingDir, workflowFile); err != nil {
+	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
@@ -460,7 +460,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
 	}
 
-	_, workflowFilePath, err := workflow.Load(workingDir)
+	_, workflowFilePath, err := workflow.Load(filepath.Join(workingDir, workflowFileDir))
 	if err != nil {
 		return errors.Wrapf(err, "failed to load workflow file")
 	}
@@ -527,7 +527,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
 			return err
 		}
-		workflowFile, _, _ = workflow.Load(workflowFileDir)
+		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
 	}
 
 	if workflowFile == nil {
@@ -605,7 +605,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	if err := workflow.Save(workingDir, workflowFile); err != nil {
+	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
@@ -624,7 +624,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
 	}
 
-	_, workflowFilePath, err := workflow.Load(workingDir)
+	_, workflowFilePath, err := workflow.Load(filepath.Join(workingDir, workflowFileDir))
 	if err != nil {
 		return errors.Wrapf(err, "failed to load workflow file")
 	}
