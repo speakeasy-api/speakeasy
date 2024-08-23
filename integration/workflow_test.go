@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/cmd"
-	"github.com/speakeasy-api/versioning-reports/versioning"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +11,10 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/speakeasy-api/speakeasy/cmd"
+	"github.com/speakeasy-api/versioning-reports/versioning"
+	"github.com/spf13/cobra"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
@@ -178,14 +179,15 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 	cmd.Stderr = &out
 
 	return &subprocessRunner{
-		cmd:    cmd,
-		out:    &out,
+		cmd: cmd,
+		out: &out,
 	}
 }
 
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
 var mutex sync.Mutex
 var rootCmd = cmd.CmdForTest(version, artifactArch)
+
 func executeI(t *testing.T, wd string, args ...string) Runnable {
 	mutex.Lock()
 	t.Helper()
@@ -202,6 +204,7 @@ func executeI(t *testing.T, wd string, args ...string) Runnable {
 		},
 	}
 }
+
 type cmdRunner struct {
 	rootCmd *cobra.Command
 	cleanup func()
@@ -301,7 +304,10 @@ func TestSpecWorkflows(t *testing.T) {
 			}
 
 			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
-			require.NoError(t, err)
+			// Ignore error if directory already exists
+			if err != nil && !os.IsExist(err) {
+				require.NoError(t, err)
+			}
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned", "--skip-compile"}
