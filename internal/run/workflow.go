@@ -21,6 +21,7 @@ type Workflow struct {
 	SetVersion         string
 	Debug              bool
 	ShouldCompile      bool
+	Verbose      bool
 	ForceGeneration    bool
 	FrozenWorkflowLock bool
 	SkipVersioning     bool
@@ -185,9 +186,21 @@ func WithForceGeneration(forceGeneration bool) Opt {
 	}
 }
 
+func WithVerbose(verbose bool) Opt {
+	return func(w *Workflow) {
+		w.Verbose = verbose
+	}
+}
+
 func WithSkipLinting() Opt {
 	return func(w *Workflow) {
 		w.SkipLinting = true
+	}
+}
+
+func WithLinting() Opt {
+	return func(w *Workflow) {
+		w.SkipLinting = false
 	}
 }
 

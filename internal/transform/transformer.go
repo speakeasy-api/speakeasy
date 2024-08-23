@@ -2,12 +2,11 @@ package transform
 
 import (
 	"context"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"io"
-
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"io"
 )
 
 type transformer[Args interface{}] struct {

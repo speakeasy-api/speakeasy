@@ -3,10 +3,14 @@ package prompts
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+
+	humanize "github.com/dustin/go-humanize/english"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
@@ -44,9 +48,11 @@ func oasLocationPrompt(fileLocation *string) *huh.Input {
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 				FileExtensions: charm_internal.OpenAPIFileExtensions,
+				IsDirectories:  true,
 			})).
 			Prompt("").
-			Value(fileLocation)
+			Value(fileLocation).
+			Validate(validateOpenApiFileLocation)
 	}
 
 	return nil
@@ -451,4 +457,76 @@ func formatDocument(fileLocation, authHeader string, validate bool) (*workflow.D
 	}
 
 	return document, nil
+}
+
+const (
+	ErrMsgInvalidFilePath = "please provide a valid file path"
+	ErrMsgNonExistentFile = "file does not exist"
+	ErrMessageFileIsDir   = "path is a directory, not a file"
+	ErrMessageFileExt     = "file extension '%s' is invalid. Valid extensions are %s"
+	ErrMsgInvalidURL      = "please provide a valid URL"
+)
+
+func validateDocumentLocation(input string, permittedFileExtensions []string) error {
+	parsedURL, err := url.Parse(input)
+	if err != nil {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	if parsedURL.Scheme != "" {
+		return validateURL(parsedURL)
+	}
+
+	return validateFilePath(input, permittedFileExtensions)
+}
+
+func validateURL(parsedURL *url.URL) error {
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	if parsedURL.Host == "" {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	hostParts := strings.Split(parsedURL.Host, ".")
+	if len(hostParts) < 2 || (len(hostParts) == 2 && len(hostParts[1]) < 2) {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	return nil
+}
+
+func validateFilePath(input string, permittedFileExtensions []string) error {
+	absPath, err := filepath.Abs(input)
+	if err != nil {
+		return errors.New(ErrMsgInvalidFilePath)
+	}
+
+	fileInfo, err := os.Stat(absPath)
+	if os.IsNotExist(err) {
+		return errors.New(ErrMsgNonExistentFile)
+	}
+	if err != nil {
+		return errors.New(ErrMsgInvalidFilePath)
+	}
+
+	if fileInfo.IsDir() {
+		return errors.New(ErrMessageFileIsDir)
+	}
+
+	ext := strings.ToLower(filepath.Ext(absPath))
+	for _, allowedExt := range permittedFileExtensions {
+		if ext == strings.ToLower(allowedExt) {
+			return nil
+		}
+	}
+	return fmt.Errorf(ErrMessageFileExt, ext, humanize.WordSeries(permittedFileExtensions, "or"))
+}
+
+func validateOpenApiFileLocation(s string) error {
+	if s == "" {
+		return nil
+	}
+	return validateDocumentLocation(s, charm_internal.OpenAPIFileExtensions)
 }

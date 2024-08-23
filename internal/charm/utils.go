@@ -57,6 +57,10 @@ func FormatNewOption(text string) string {
 	return fmt.Sprintf("+ %s", text)
 }
 
+const pathSeparator string = string(os.PathSeparator)
+
+var relPath = fmt.Sprintf(".%s", pathSeparator)
+
 // Populates tab complete for schema files in the relative directory
 func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []string {
 	var validFiles []string
@@ -76,9 +80,13 @@ func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []stri
 		if !file.Type().IsDir() {
 			for _, ext := range fileExtensions {
 				if strings.HasSuffix(file.Name(), ext) {
+					if !strings.HasSuffix(relativeDir, pathSeparator) {
+						relativeDir += pathSeparator
+					}
 					fileSuggestion := filepath.Join(relativeDir, file.Name())
+
 					// allows us to support current directory relative paths
-					if relativeDir == "./" {
+					if strings.HasPrefix(relativeDir, relPath) {
 						fileSuggestion = relativeDir + file.Name()
 					}
 					validFiles = append(validFiles, fileSuggestion)
@@ -109,9 +117,13 @@ func DirsInCurrentDir(relativeDir string) []string {
 
 	for _, file := range files {
 		if file.Type().IsDir() {
+			if !strings.HasSuffix(relativeDir, pathSeparator) {
+				relativeDir += pathSeparator
+			}
 			fileSuggestion := filepath.Join(relativeDir, file.Name())
+
 			// allows us to support current directory relative paths
-			if relativeDir == "./" {
+			if strings.HasPrefix(relativeDir, relPath) {
 				fileSuggestion = relativeDir + file.Name()
 			}
 			validDirs = append(validDirs, fileSuggestion)
@@ -129,11 +141,14 @@ type SuggestionCallbackConfig struct {
 func SuggestionCallback(cfg SuggestionCallbackConfig) func(val string) []string {
 	return func(val string) []string {
 		var files []string
+
 		if info, err := os.Stat(val); err == nil && info.IsDir() {
 			if len(cfg.FileExtensions) > 0 {
 				files = SchemaFilesInCurrentDir(val, cfg.FileExtensions)
-			} else if cfg.IsDirectories {
-				files = DirsInCurrentDir(val)
+			}
+
+			if cfg.IsDirectories {
+				files = append(files, DirsInCurrentDir(val)...)
 			}
 		}
 

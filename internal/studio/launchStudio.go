@@ -201,7 +201,7 @@ func respondJSONError(ctx context.Context, w http.ResponseWriter, err error) {
 
 	w.WriteHeader(code)
 	data := map[string]interface{}{
-		"error":      err.Error(),
+		"message":    err.Error(),
 		"statusCode": code,
 	}
 	if jsonError := json.NewEncoder(w).Encode(data); jsonError != nil {

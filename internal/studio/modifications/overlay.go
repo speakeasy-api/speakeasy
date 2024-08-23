@@ -1,13 +1,15 @@
 package modifications
 
 import (
+	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"os"
-	"slices"
-	"strconv"
 )
 
 const (
@@ -46,21 +48,29 @@ func UpsertOverlay(source *workflow.Source, o overlay.Overlay) error {
 	baseOverlay.Actions = append(baseOverlay.Actions, o.Actions...)
 	baseOverlay.Info.Version = bumpVersion(baseOverlay.Info.Version, o.Info.Version)
 
-	UpsertOverlayIntoSource(source)
+	// TODO: This should use get or create overlay path
+	UpsertOverlayIntoSource(source, OverlayPath)
 
 	return baseOverlay.Format(overlayFile)
 }
 
-func UpsertOverlayIntoSource(source *workflow.Source) {
+func UpsertOverlayIntoSource(source *workflow.Source, overlayPath string) {
 	if source == nil {
 		return
 	}
 
+	// Assert the overlay path is relative
+	// TODO: this should be the project directory
+	overlayPath, err := filepath.Rel(".", overlayPath)
+	if err != nil {
+		panic(err)
+	}
+
 	// Add the new overlay to the source, if not already present
-	if !slices.ContainsFunc(source.Overlays, func(o workflow.Overlay) bool { return o.Document.Location == OverlayPath }) {
+	if !slices.ContainsFunc(source.Overlays, func(o workflow.Overlay) bool { return o.Document.Location == overlayPath }) {
 		source.Overlays = append(source.Overlays, workflow.Overlay{
 			Document: &workflow.Document{
-				Location: OverlayPath,
+				Location: overlayPath,
 			},
 		})
 	}
