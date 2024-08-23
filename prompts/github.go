@@ -429,6 +429,10 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", releaseDirectory)}
 		}
 
+		if workflowFileDir != "" {
+			publishingFile.Jobs.Publish.With["working_directory"] = workflowFileDir
+		}
+
 		for name, value := range secrets {
 			publishingFile.Jobs.Publish.Secrets[name] = value
 		}
