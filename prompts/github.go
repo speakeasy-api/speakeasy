@@ -430,7 +430,9 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		}
 
 		if workflowFileDir != "" {
-			publishingFile.Jobs.Publish.With["working_directory"] = workflowFileDir
+			publishingFile.Jobs.Publish.With = map[string]any{
+				"working_directory": workflowFileDir,
+			}
 		}
 
 		for name, value := range secrets {
