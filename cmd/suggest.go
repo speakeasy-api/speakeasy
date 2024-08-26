@@ -2,16 +2,25 @@ package cmd
 
 import (
 	"context"
+
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	charminternal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
+
+const suggestLong = `
+# Suggest 
+
+Automatically improve your OpenAPI document with an LLM.
+`
 
 var suggestCmd = &model.CommandGroup{
 	Usage:          "suggest",
 	Short:          "Automatically improve your OpenAPI document with an LLM",
+	Long:           utils.RenderMarkdown(suggestLong),
 	InteractiveMsg: "What would you like to improve?",
 	Commands:       []model.Command{suggestOperationIDsCmd},
 }

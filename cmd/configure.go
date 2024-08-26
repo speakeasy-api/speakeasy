@@ -15,6 +15,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
@@ -38,10 +39,22 @@ const (
 	appInstallURL        = "https://github.com/apps/speakeasy-github"
 )
 
+const configureLong = `# Configure
+
+Configure your Speakeasy workflow file.
+
+[Workflows](https://www.speakeasy.com/docs/workflow-file-reference)
+
+[GitHub Setup](https://www.speakeasy.com/docs/publish-sdks/github-setup)
+
+[Publishing](https://www.speakeasy.com/docs/publish-sdks/publish-sdks)
+
+`
+
 var configureCmd = &model.CommandGroup{
 	Usage:          "configure",
 	Short:          "Configure your Speakeasy SDK Setup.",
-	Long:           `Configure your Speakeasy SDK Setup.`,
+	Long:           utils.RenderMarkdown(configureLong),
 	InteractiveMsg: "What do you want to configure?",
 	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd},
 }

@@ -18,11 +18,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
+const lintLong = "# Lint \n The `lint` command provides a set of commands for linting OpenAPI docs and more."
+
 var lintCmd = &model.CommandGroup{
 	Usage:          "lint",
 	Aliases:        []string{"validate"},
 	Short:          "Lint/Validate OpenAPI documents and Speakeasy configuration files",
-	Long:           `The "lint" command provides a set of commands for linting OpenAPI docs and more.`,
+	Long:           utils.RenderMarkdown(lintLong),
 	InteractiveMsg: "What do you want to lint?",
 	Commands:       []model.Command{lintOpenapiCmd, lintConfigCmd},
 }
@@ -36,10 +38,15 @@ type LintOpenapiFlags struct {
 	Ruleset               string `json:"ruleset"`
 }
 
+const lintOpenAPILong = `# Lint 
+## OpenAPI
+
+Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`
+
 var lintOpenapiCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "openapi",
 	Short:          "Lint an OpenAPI document",
-	Long:           `Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`,
+	Long:           utils.RenderMarkdown(lintOpenAPILong),
 	Run:            lintOpenapi,
 	RunInteractive: lintOpenapiInteractive,
 	Flags: []flag.Flag{

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/go-version"
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -19,10 +20,9 @@ const (
 	bumpGraduate bumpType = "graduate"
 )
 
-var bumpCommand = &cobra.Command{
-	Use:   "bump [patch|minor|major|graduate]",
-	Short: "Bumps the version of a Speakeasy Generation Target",
-	Long: `Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.
+const bumpLong = `# Bump
+
+Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.
 
 Examples:
 
@@ -30,8 +30,20 @@ Examples:
 - speakeasy bump -v 1.2.3 - Sets the target's version to 1.2.3
 - speakeasy bump major -t typescript - Bumps the typescript target's version by one major version
 - speakeasy bump graduate - Current version 1.2.3-alpha.1 sets the target's version to 1.2.3
-`,
-	Args: cobra.RangeArgs(0, 1),
+`
+
+const bumpExamples = `
+
+const version = require("@speakeasy/sdk-typescript").version;
+console.log(version);
+`
+
+var bumpCommand = &cobra.Command{
+	Use:     "bump [patch|minor|major|graduate]",
+	Short:   "Bumps the version of a Speakeasy Generation Target",
+	Long:    utils.RenderMarkdown(bumpLong),
+	Example: utils.RenderMarkdown(bumpExamples),
+	Args:    cobra.RangeArgs(0, 1),
 }
 
 func bumpInit() {

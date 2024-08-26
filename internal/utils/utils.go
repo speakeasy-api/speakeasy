@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/spf13/cobra"
@@ -17,6 +18,32 @@ import (
 
 	"golang.org/x/term"
 )
+
+var renderer *glamour.TermRenderer
+
+func init() {
+	var err error
+	renderer, err = glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(120),
+	)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func RenderMarkdown(md string) string {
+	text, err := renderer.Render(md)
+	if err != nil {
+
+		panic(err)
+	}
+	return text
+}
+
+func RenderError(md string) string {
+	return RenderMarkdown("_Error_:\n" + md)
+}
 
 var FlagsToIgnore = []string{"help", "version", "logLevel"}
 

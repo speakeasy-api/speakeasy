@@ -35,19 +35,23 @@ type RunFlags struct {
 	SetVersion       string            `json:"set-version"`
 }
 
-var runCmd = &model.ExecutableCommand[RunFlags]{
-	Usage: "run",
-	Short: "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
-	Long: "run the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
+const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
+
 A workflow can consist of multiple targets that define a source OpenAPI document that can be downloaded from a URL, exist as a local file, or be created via merging multiple OpenAPI documents together and/or overlaying them with an OpenAPI overlay document.
-A full workflow is capable of running the following steps:
+
+A full workflow is capable of running the following:
   - Downloading source OpenAPI documents from a URL
   - Merging multiple OpenAPI documents together
   - Overlaying OpenAPI documents with an OpenAPI overlay document
   - Generating one or many SDKs from the resulting OpenAPI document
   - Compiling the generated SDKs
 
-` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.",
+` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run."
+
+var runCmd = &model.ExecutableCommand[RunFlags]{
+	Usage:            "run",
+	Short:            "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
+	Long:             utils.RenderMarkdown(runLong),
 	PreRun:           preRun,
 	Run:              runFunc,
 	RunInteractive:   runInteractive,
