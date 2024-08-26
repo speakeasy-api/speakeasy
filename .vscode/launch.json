@@ -1,8 +1,7 @@
-// .vscode/tasks.json
 {
   "configurations": [
       {
-          "name": "Attach to CLI",
+          "name": "Debug CLI",
           "type": "go",
           "debugAdapter": "dlv-dap",
           "request": "attach",
