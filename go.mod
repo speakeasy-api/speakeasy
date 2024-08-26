@@ -41,9 +41,9 @@ require (
 )
 
 require (
-	github.com/charmbracelet/glamour v0.7.0
 	github.com/AlekSi/pointer v1.2.0
 	github.com/cenkalti/backoff/v4 v4.3.0
+	github.com/charmbracelet/glamour v0.7.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/inkeep/ai-api-go v0.3.1
@@ -217,7 +217,7 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
-	github.com/yuin/goldmark v1.5.4 // indirect
+	github.com/yuin/goldmark v1.7.1 // indirect
 	github.com/yuin/goldmark-emoji v1.0.2 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect

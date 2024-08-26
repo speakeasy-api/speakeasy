@@ -518,8 +518,6 @@ github.com/speakeasy-api/jsonpath v0.1.1 h1:79gtq+zHYPe9dR1urEwl/PPsvP9nMRTGG1xH
 github.com/speakeasy-api/jsonpath v0.1.1/go.mod h1:Py01TnxRUMhC0/FT954KBiaDY2/kaZv3QMc8JxQaVys=
 github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826 h1:IT86QeGi61zmS/iKkf5rSzxYMO1TDLN/to4ZWP2DyeI=
 github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826/go.mod h1:EjqZbDvviAL4wH/7DF43JuA17D1YTIydhs8qZmjYrWo=
-github.com/speakeasy-api/openapi-generation/v2 v2.404.2 h1:XD/PqANxgRnI4qkZo+YBYQLgVAW2abhsg8eeaEj2nI0=
-github.com/speakeasy-api/openapi-generation/v2 v2.404.2/go.mod h1:fSXXtngF0WtOV5Ysx3pJ59jg48SROvgcwTBM8rkdoHI=
 github.com/speakeasy-api/openapi-generation/v2 v2.404.3 h1:0v7bdrFKe5JYCi07hcMAD/7gLqV2H7/yI8CVXTXI1Mg=
 github.com/speakeasy-api/openapi-generation/v2 v2.404.3/go.mod h1:fSXXtngF0WtOV5Ysx3pJ59jg48SROvgcwTBM8rkdoHI=
 github.com/speakeasy-api/openapi-overlay v0.9.0 h1:Wrz6NO02cNlLzx1fB093lBlYxSI54VRhy1aSutx0PQg=
@@ -603,8 +601,8 @@ github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c/go.mod h1:UrdRz5enIKZ63M
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.3.7/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
-github.com/yuin/goldmark v1.5.4 h1:2uY/xC0roWy8IBEGLgB1ywIoEJFGmRrX21YQcvGZzjU=
-github.com/yuin/goldmark v1.5.4/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
+github.com/yuin/goldmark v1.7.1 h1:3bajkSilaCbjdKVsKdZjZCLBNPL9pYzrCakKaf4U49U=
+github.com/yuin/goldmark v1.7.1/go.mod h1:uzxRWxtg69N339t3louHJ7+O03ezfj6PlliRlaOzY1E=
 github.com/yuin/goldmark-emoji v1.0.2 h1:c/RgTShNgHTtc6xdz2KKI74jJr6rWi7FPgnP9GAsO5s=
 github.com/yuin/goldmark-emoji v1.0.2/go.mod h1:RhP/RWpexdp+KHs7ghKnifRoIs/Bq4nDS7tRbCkOwKY=
 github.com/zclconf/go-cty v1.14.4 h1:uXXczd9QDGsgu0i/QFR/hzI5NYCHLf6NQw/atrbnhq8=
