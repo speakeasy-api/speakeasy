@@ -3,8 +3,6 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/links"
-	"github.com/speakeasy-api/versioning-reports/versioning"
 	"io"
 	"io/fs"
 	"math/rand"
@@ -12,6 +10,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/links"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -44,17 +45,30 @@ import (
 	"go.uber.org/zap"
 )
 
-type sourceResult struct {
-	Source       string
+type SourceResult struct {
+	Source string
+	// The merged OAS spec that was input to the source contents as a string
+	InputSpec    string
 	LintResult   *validation.ValidationResult
 	ChangeReport *reports.ReportResult
-	Diagnosis    *suggestions.Diagnosis
+	Diagnosis    suggestions.Diagnosis
+	// The path to the output OAS spec
+	OutputPath string
 }
 
-func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, cleanUp bool) (string, *sourceResult, error) {
+type LintingError struct {
+	Err      error
+	Document string
+}
+
+func (e *LintingError) Error() string {
+	return fmt.Sprintf("linting failed: %s - %s", e.Document, e.Err.Error())
+}
+
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
-	sourceRes := &sourceResult{
+	sourceRes := &SourceResult{
 		Source: sourceID,
 	}
 
@@ -72,7 +86,41 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	var currentDocument string
-	if len(source.Inputs) == 1 {
+	if w.FrozenWorkflowLock {
+		mergeStep := rootStep.NewSubstep("Download OAS from lockfile")
+
+		// Check it exists, produce an error if not
+		if w.lockfileOld == nil {
+			return "", nil, fmt.Errorf("workflow lacks a prior lock file: can't use this on first run")
+		}
+		lockSource, ok := w.lockfileOld.Sources[sourceID]
+		if !ok {
+			return "", nil, fmt.Errorf("workflow lockfile lacks a reference to source %s: can't use this on first run", sourceID)
+		}
+		if !registry.IsRegistryEnabled(ctx) {
+			return "", nil, fmt.Errorf("registry is not enabled for this workspace")
+		}
+		if lockSource.SourceBlobDigest == "" || lockSource.SourceRevisionDigest == "" || lockSource.SourceNamespace == "" {
+			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace = %s blobDigest = %s revisionDigest = %s", lockSource.SourceNamespace, lockSource.SourceBlobDigest, lockSource.SourceRevisionDigest)
+		}
+		orgSlug, workspaceSlug, registryNamespace, err := w.workflow.Sources[sourceID].Registry.ParseRegistryLocation()
+		if err != nil {
+			return "", nil, fmt.Errorf("error parsing registry location %s: %w", string(w.workflow.Sources[sourceID].Registry.Location), err)
+		}
+		if lockSource.SourceNamespace != registryNamespace {
+			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace %s != %s", lockSource.SourceNamespace, registryNamespace)
+		}
+		registryLocation := fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+			lockSource.SourceNamespace, lockSource.SourceRevisionDigest)
+		d := workflow.Document{Location: registryLocation}
+		docPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
+		if err != nil {
+			return "", nil, fmt.Errorf("error resolving registry bundle from %s: %w", registryLocation, err)
+		}
+		currentDocument = docPath.LocalFilePath
+		mergeStep.Succeed()
+
+	} else if len(source.Inputs) == 1 {
 		var singleLocation *string
 		// The output location should be the resolved location
 		if len(source.Overlays) == 0 {
@@ -107,14 +155,19 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
 
-		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.projectDir); err != nil {
+		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.ProjectDir); err != nil {
 			return "", nil, err
 		}
 
 		currentDocument = mergeLocation
 	}
 
-	if len(source.Overlays) > 0 {
+	sourceRes.InputSpec, err = utils.ReadFileToString(currentDocument)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
 		overlayStep := rootStep.NewSubstep("Applying Overlays")
 
 		overlayLocation := outputLocation
@@ -123,30 +176,31 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 
 		overlaySchemas := []string{}
 		for _, overlay := range source.Overlays {
+			overlayFilePath := ""
 			if overlay.Document != nil {
-				resolvedPath, err := schema.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
+				overlayFilePath, err = schema.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
 				if err != nil {
 					return "", nil, err
 				}
-				overlaySchemas = append(overlaySchemas, resolvedPath)
 			} else if overlay.FallbackCodeSamples != nil {
 				// Make temp file for the overlay output
-				overlayFileName := filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
-				if err := os.MkdirAll(filepath.Dir(overlayFileName), 0o755); err != nil {
+				overlayFilePath = filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
+				if err := os.MkdirAll(filepath.Dir(overlayFilePath), 0o755); err != nil {
 					return "", nil, err
 				}
 
 				err = defaultcodesamples.DefaultCodeSamples(ctx, defaultcodesamples.DefaultCodeSamplesFlags{
 					SchemaPath: currentDocument,
 					Language:   overlay.FallbackCodeSamples.FallbackCodeSamplesLanguage,
-					Out:        overlayFileName,
+					Out:        overlayFilePath,
 				})
 				if err != nil {
 					logger.Errorf("failed to generate default code samples: %s", err.Error())
 					return "", nil, err
 				}
-				overlaySchemas = append(overlaySchemas, overlayFileName)
 			}
+			overlaySchemas = append(overlaySchemas, overlayFilePath)
+
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
@@ -158,7 +212,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = overlayLocation
 	}
 
-	if !isSingleRegistrySource(source) {
+	if !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			logger.Warnf("failed to snapshot source: %s", err.Error())
@@ -171,7 +225,7 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	// If the source has a previous tracked revision, compute changes against it
-	if w.lockfileOld != nil {
+	if w.lockfileOld != nil && !w.SkipChangeReport {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
 			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
@@ -189,18 +243,16 @@ func (w *Workflow) runSource(ctx context.Context, parentStep *workflowTracking.W
 		})
 	}
 
-	sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.projectDir)
-	if err != nil {
-		return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
+	if !w.SkipLinting {
+		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
+		if err != nil {
+			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
+		}
 	}
 
 	rootStep.SucceedWorkflow()
 
-	if cleanUp {
-		rootStep.NewSubstep("Cleaning Up")
-		os.RemoveAll(workflow.GetTempDir())
-	}
-
+	sourceRes.OutputPath = currentDocument
 	return currentDocument, sourceRes, nil
 }
 
@@ -212,6 +264,10 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	}
 
 	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("computing document changes panicked: %v", r)
+		}
+
 		if err != nil {
 			changesStep.Fail()
 		}
@@ -233,7 +289,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	changesStep.NewSubstep("Downloading prior revision")
 
 	d := workflow.Document{Location: oldRegistryLocation}
-	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, d.GetTempRegistryDir(workflow.GetTempDir()))
+	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
 	if err != nil {
 		return
 	}
@@ -300,12 +356,18 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("tracking OpenAPI changes panicked: %v", r)
+		}
+
 		if err != nil {
 			registryStep.Fail()
 		}
 	}()
 
 	namespaceName := strcase.ToKebab(sourceID)
+	apiKey := config.GetSpeakeasyAPIKey()
+
 	if source.Registry != nil {
 		orgSlug, workspaceSlug, name, err := source.Registry.ParseRegistryLocation()
 		if err != nil {
@@ -316,36 +378,38 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			log.From(ctx).Warnf("error parsing registry location %s: %v", string(source.Registry.Location), err)
 		}
 
-		if orgSlug != auth.GetOrgSlugFromContext(ctx) {
-			message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(source.Registry.Location))
-			if !env.IsGithubAction() {
-				message += " run `speakeasy auth logout`"
-			}
-			if speakeasySelf == auth.GetOrgSlugFromContext(ctx) && !env.IsGithubAction() {
-				log.From(ctx).Warn(message)
-			} else {
-				return fmt.Errorf(message)
-			}
+		skip, key, err := getAndValidateAPIKey(ctx, orgSlug, workspaceSlug, string(source.Registry.Location))
+
+		if skip {
+			registryStep.Skip("you are authenticated with speakeasy-self")
+			return nil
 		}
 
-		if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
-			message := fmt.Sprintf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(source.Registry.Location))
-			if !env.IsGithubAction() {
-				message += " run `speakeasy auth logout`"
-			}
-			if speakeasySelf == auth.GetWorkspaceSlugFromContext(ctx) && !env.IsGithubAction() {
-				log.From(ctx).Warn(message)
-			} else {
-				return fmt.Errorf(message)
-			}
+		if err != nil {
+			return err
 		}
 
 		namespaceName = name
+		apiKey = key
 	}
 
 	tags, err := w.getRegistryTags(ctx, sourceID)
 	if err != nil {
 		return err
+	}
+
+	if isSingleRegistrySource(source) {
+		document, err := registry.ResolveSpeakeasyRegistryBundle(ctx, source.Inputs[0], workflow.GetTempDir())
+		if err != nil {
+			return err
+		}
+		w.lockfile.Sources[sourceID] = workflow.SourceLock{
+			SourceNamespace:      namespaceName,
+			SourceRevisionDigest: document.ManifestDigest,
+			SourceBlobDigest:     document.BlobDigest,
+			Tags:                 tags,
+		}
+		return nil
 	}
 
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
@@ -360,7 +424,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return fmt.Errorf("error localizing openapi document: %w", err)
 	}
 
-	gitRepo, err := git.NewLocalRepository(w.projectDir)
+	gitRepo, err := git.NewLocalRepository(w.ProjectDir)
 	if err != nil {
 		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
 	}
@@ -411,7 +475,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
 		Tags:     tags,
 		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
+		Access: ocicommon.NewRepositoryAccess(apiKey, namespaceName, ocicommon.RepositoryAccessOptions{
 			Insecure: insecurePublish,
 		}),
 	})
@@ -455,13 +519,13 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		}
 		source.Registry = registryEntry
 		w.workflow.Sources[sourceID] = source
-		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
+		if err := workflow.Save(w.ProjectDir, &w.workflow); err != nil {
 			return err
 		}
 	} else if source.Registry != nil && !registry.IsRegistryEnabled(ctx) { // Automatically remove source publishing location if registry is disabled
 		source.Registry = nil
 		w.workflow.Sources[sourceID] = source
-		if err := workflow.Save(w.projectDir, &w.workflow); err != nil {
+		if err := workflow.Save(w.ProjectDir, &w.workflow); err != nil {
 			return err
 		}
 	}
@@ -474,6 +538,41 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	return nil
+}
+
+func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryLocation string) (skip bool, key string, err error) {
+	if key = config.GetWorkspaceAPIKey(orgSlug, workspaceSlug); key != "" {
+		return
+	}
+
+	authenticatedOrg := auth.GetOrgSlugFromContext(ctx)
+	if orgSlug != authenticatedOrg {
+		// If the user is authenticated with speakeasy-self, just skip snapshotting rather than failing
+		if authenticatedOrg == speakeasySelf && !env.IsGithubAction() {
+			skip = true
+			return
+		}
+
+		message := fmt.Sprintf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), registryLocation)
+		if !env.IsGithubAction() {
+			message += " run `speakeasy auth logout`"
+		}
+		err = fmt.Errorf(message)
+		return
+	}
+
+	if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+		message := fmt.Sprintf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), registryLocation)
+		if !env.IsGithubAction() {
+			message += " run `speakeasy auth logout`"
+		}
+		err = fmt.Errorf(message)
+		return
+	}
+
+	key = config.GetSpeakeasyAPIKey()
+
+	return
 }
 
 func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {
@@ -524,15 +623,16 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 	return tags, nil
 }
 
-func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Logger) {
-	if len(w.sourceResults) == 0 {
+func (w *Workflow) printSourceSuccessMessage(ctx context.Context) {
+	if len(w.SourceResults) == 0 {
 		return
 	}
 
+	logger := log.From(ctx)
 	logger.Println("") // Newline for better readability
 
-	for sourceID, sourceRes := range w.sourceResults {
-		heading := fmt.Sprintf("Source %s %s", styles.HeavilyEmphasized.Render(sourceID), styles.Success.Render("Compiled Successfully"))
+	for sourceID, sourceRes := range w.SourceResults {
+		heading := fmt.Sprintf("Source `%s` Compiled Successfully", sourceID)
 		var additionalLines []string
 
 		appendReportLocation := func(report reports.ReportResult) {
@@ -548,13 +648,13 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context, logger log.Log
 			appendReportLocation(*sourceRes.ChangeReport)
 		}
 
-		if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(*sourceRes.Diagnosis) {
+		if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(sourceRes.Diagnosis) {
 			baseURL := auth.GetWorkspaceBaseURL(ctx)
 			link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
 			link = links.Shorten(ctx, link)
 
-			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(suggest.Summarize(*sourceRes.Diagnosis)+"."), styles.DimmedItalic.Render(link))
-			additionalLines = append(additionalLines, styles.HeavilyEmphasized.Render(fmt.Sprintf("└─%s: ", "Improve with AI")+msg))
+			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(sourceRes.Diagnosis.Summarize()+"."), styles.DimmedItalic.Render(link))
+			additionalLines = append(additionalLines, fmt.Sprintf("`└─Improve with AI:` %s", msg))
 		}
 
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))

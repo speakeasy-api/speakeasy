@@ -3,10 +3,14 @@ package prompts
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+
+	humanize "github.com/dustin/go-humanize/english"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
@@ -30,7 +34,7 @@ func getOASLocation(location, authHeader *string, allowSample bool) error {
 
 	_, err := charm_internal.NewForm(huh.NewForm(
 		getRemoteAuthenticationPrompts(location, authHeader)...),
-		"Looks like your document requires authentication").
+		charm_internal.WithTitle("Looks like your document requires authentication")).
 		ExecuteForm()
 
 	return err
@@ -44,9 +48,11 @@ func oasLocationPrompt(fileLocation *string) *huh.Input {
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 				FileExtensions: charm_internal.OpenAPIFileExtensions,
+				IsDirectories:  true,
 			})).
 			Prompt("").
-			Value(fileLocation)
+			Value(fileLocation).
+			Validate(validateOpenApiFileLocation)
 	}
 
 	return nil
@@ -229,7 +235,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	prompt := charm_internal.NewSelectPrompt("Would you like to modify the location of an existing OpenAPI document or add a new one?", "", inputOptions, &selectedDoc)
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		prompt),
-		fmt.Sprintf("Let's modify the source %s", name)).
+		charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -254,7 +260,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader)...)
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's modify the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -285,7 +291,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -300,7 +306,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 	addOverlayFile := false
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
-		fmt.Sprintf("Let's add to the source %s", name)).
+		charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 		ExecuteForm(); err != nil {
 		return nil, err
 	}
@@ -313,7 +319,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
-			fmt.Sprintf("Let's add to the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -344,7 +350,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 					})).
 					Value(&outputLocation),
 			)),
-			fmt.Sprintf("Let's modify the source %s", name)).
+			charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
@@ -394,8 +400,8 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	if _, err := charm_internal.NewForm(huh.NewForm(
 		groups...),
-		"Let's set up a new source for your workflow.",
-		"A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.").
+		charm_internal.WithTitle("Let's set up a new source for your workflow."),
+		charm_internal.WithDescription("A source is a compiled set of OpenAPI specs and overlays that are used as the input for a SDK generation.")).
 		ExecuteForm(); err != nil {
 		return "", nil, err
 	}
@@ -451,4 +457,76 @@ func formatDocument(fileLocation, authHeader string, validate bool) (*workflow.D
 	}
 
 	return document, nil
+}
+
+const (
+	ErrMsgInvalidFilePath = "please provide a valid file path"
+	ErrMsgNonExistentFile = "file does not exist"
+	ErrMessageFileIsDir   = "path is a directory, not a file"
+	ErrMessageFileExt     = "file extension '%s' is invalid. Valid extensions are %s"
+	ErrMsgInvalidURL      = "please provide a valid URL"
+)
+
+func validateDocumentLocation(input string, permittedFileExtensions []string) error {
+	parsedURL, err := url.Parse(input)
+	if err != nil {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	if parsedURL.Scheme != "" {
+		return validateURL(parsedURL)
+	}
+
+	return validateFilePath(input, permittedFileExtensions)
+}
+
+func validateURL(parsedURL *url.URL) error {
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	if parsedURL.Host == "" {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	hostParts := strings.Split(parsedURL.Host, ".")
+	if len(hostParts) < 2 || (len(hostParts) == 2 && len(hostParts[1]) < 2) {
+		return errors.New(ErrMsgInvalidURL)
+	}
+
+	return nil
+}
+
+func validateFilePath(input string, permittedFileExtensions []string) error {
+	absPath, err := filepath.Abs(input)
+	if err != nil {
+		return errors.New(ErrMsgInvalidFilePath)
+	}
+
+	fileInfo, err := os.Stat(absPath)
+	if os.IsNotExist(err) {
+		return errors.New(ErrMsgNonExistentFile)
+	}
+	if err != nil {
+		return errors.New(ErrMsgInvalidFilePath)
+	}
+
+	if fileInfo.IsDir() {
+		return errors.New(ErrMessageFileIsDir)
+	}
+
+	ext := strings.ToLower(filepath.Ext(absPath))
+	for _, allowedExt := range permittedFileExtensions {
+		if ext == strings.ToLower(allowedExt) {
+			return nil
+		}
+	}
+	return fmt.Errorf(ErrMessageFileExt, ext, humanize.WordSeries(permittedFileExtensions, "or"))
+}
+
+func validateOpenApiFileLocation(s string) error {
+	if s == "" {
+		return nil
+	}
+	return validateDocumentLocation(s, charm_internal.OpenAPIFileExtensions)
 }

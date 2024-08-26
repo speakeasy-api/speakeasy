@@ -125,7 +125,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	if len(initialFields) > 0 {
 		form := huh.NewForm(huh.NewGroup(initialFields...))
-		if _, err := charm.NewForm(form, formTitle, formSubtitle).ExecuteForm(); err != nil {
+		if _, err := charm.NewForm(form, charm.WithTitle(formTitle), charm.WithDescription(formSubtitle)).ExecuteForm(); err != nil {
 			return nil, err
 		}
 	}
@@ -147,7 +147,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	if len(languageGroups) > 0 {
 		form := huh.NewForm(languageGroups...)
-		if _, err := charm.NewForm(form, formTitle, formSubtitle).
+		if _, err := charm.NewForm(form, charm.WithTitle(formTitle), charm.WithDescription(formSubtitle)).
 			ExecuteForm(); err != nil {
 			return nil, err
 		}

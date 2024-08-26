@@ -51,7 +51,7 @@ var terraformReleaseAction string
 //go:embed terraform_releaser.yaml
 var goReleaser string
 
-func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow, target *string) (*config.GenerateWorkflow, error) {
+func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow.Workflow, workflowFileDir string, target *string) (*config.GenerateWorkflow, error) {
 	if githubWorkflow == nil || githubWorkflow.Jobs.Generate.Uses == "" {
 		githubWorkflow = defaultGenerationFile()
 	}
@@ -74,6 +74,9 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 		Type:        "string",
 	}
 	githubWorkflow.Jobs.Generate.With["set_version"] = "${{ github.event.inputs.set_version }}"
+	if workflowFileDir != "" {
+		githubWorkflow.Jobs.Generate.With["working_directory"] = workflowFileDir
+	}
 
 	secrets := githubWorkflow.Jobs.Generate.Secrets
 	for _, source := range workflow.Sources {
@@ -218,8 +221,8 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 	}
 
 	if _, err := charm.NewForm(huh.NewForm(groups...),
-		fmt.Sprintf("Setup publishing variables for your %s target %s.", target.Target, name),
-		"These environment variables will be used to publish to package managers from your speakeasy workflow.").
+		charm.WithTitle(fmt.Sprintf("Setup publishing variables for your %s target %s.", target.Target, name)),
+		charm.WithDescription("These environment variables will be used to publish to package managers from your speakeasy workflow.")).
 		ExecuteForm(); err != nil {
 		return err
 	}
@@ -354,7 +357,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir string, target, outputPath *string) (*config.GenerateWorkflow, []string, error) {
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir, workflowFileDir string, target, outputPath *string) (*config.GenerateWorkflow, []string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
@@ -388,7 +391,7 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		releaseActionPath := filepath.Join(workingDir, ".github/workflows/tf_provider_release.yaml")
 		goReleaserPath := workingDir
 		if terraformOutDir != nil {
-			goReleaserPath = filepath.Join(goReleaserPath, *terraformOutDir)
+			goReleaserPath = filepath.Join(goReleaserPath, filepath.Join(workflowFileDir, *terraformOutDir))
 		}
 		goReleaserPath = filepath.Join(goReleaserPath, ".goreleaser.yml")
 		releasePaths := []string{releaseActionPath, goReleaserPath}
@@ -416,8 +419,20 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*target))
 		}
 
+		releaseDirectory := workflowFileDir
 		if outputPath != nil {
-			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", *outputPath)}
+			trimmedPath := strings.TrimPrefix(*outputPath, "./")
+			releaseDirectory = filepath.Join(releaseDirectory, trimmedPath)
+		}
+
+		if releaseDirectory != "" {
+			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", releaseDirectory)}
+		}
+
+		if workflowFileDir != "" {
+			publishingFile.Jobs.Publish.With = map[string]any{
+				"working_directory": workflowFileDir,
+			}
 		}
 
 		for name, value := range secrets {
@@ -569,15 +584,16 @@ func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect 
 			chosenTargets = append(chosenTargets, option.Value)
 		}
 	}
-	if _, err := charm.NewForm(huh.NewForm(huh.NewGroup(
+
+	form := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
 			Title("Select targets to configure publishing configs for.").
 			Description("Setup variables to configure publishing directly from Speakeasy.\n").
 			Options(publishingOptions...).
 			Value(&chosenTargets),
-	)),
-		"Would you like to configure publishing for any existing targets?").
-		ExecuteForm(); err != nil {
+	)), charm.WithKey("x/space", "toggle"))
+
+	if _, err := form.ExecuteForm(); err != nil {
 		return nil, err
 	}
 

@@ -1,0 +1,12 @@
+overlay: 1.0.0
+info:
+  title: speakeasy-studio-modifications
+  version: 1.0.0
+actions:
+  - target: $["paths"]["/run"]["get"]
+    x-speakeasy-modification:
+      created_at: 1723739390834
+      type: method-name
+      before: sdk.<no_group>.getRun()
+      after: sdk.runs.getLastOutput()
+    update: {}

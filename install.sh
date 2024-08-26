@@ -17,9 +17,26 @@ ISSUE_URL="https://github.com/speakeasy-api/speakeasy/issues/new"
 
 # get_latest_release "speakeasy-api/speakeasy"
 get_latest_release() {
-  curl --retry 5 --silent "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
-    grep '"tag_name":' |                                            # Get tag line
-    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
+  local retry=0
+  local max_retries=5
+  local release_info
+  local delay=1
+
+  while [ $retry -lt $max_retries ]; do
+    release_info=$(curl --retry 5 --silent "https://api.github.com/repos/$1/releases/latest")
+    tag_name=$(echo "$release_info" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+    if echo "$tag_name" | grep -q '^v'; then
+      echo "$tag_name"
+      return
+    else
+      sleep $delay
+      delay=$((delay * 2))  # Double the delay for each retry
+      retry=$((retry + 1))
+    fi
+  done
+  echo "Error: Unable to retrieve a valid release tag after $max_retries attempts." >&2
+  exit 1
 }
 
 get_asset_name() {

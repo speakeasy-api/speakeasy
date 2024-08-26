@@ -21,9 +21,10 @@ var (
 
 	Emphasized = HeavilyEmphasized.Foreground(Colors.WhiteBlackAdaptive)
 
-	Info    = Emphasized.Foreground(Colors.Blue)
-	Warning = Emphasized.Foreground(Colors.Yellow)
-	Error   = Emphasized.Foreground(Colors.Red)
+	Success = lipgloss.NewStyle().Foreground(Colors.Green).Bold(true)
+	Info    = lipgloss.NewStyle().Foreground(Colors.Blue)
+	Warning = lipgloss.NewStyle().Foreground(Colors.Yellow)
+	Error   = lipgloss.NewStyle().Foreground(Colors.Red)
 
 	Focused       = lipgloss.NewStyle().Foreground(Colors.Yellow)
 	FocusedDimmed = Focused.Foreground(Colors.DimYellow)
@@ -31,8 +32,6 @@ var (
 	Dimmed       = lipgloss.NewStyle().Foreground(Colors.Grey)
 	DimmedItalic = Dimmed.Italic(true)
 	Help         = DimmedItalic
-
-	Success = Emphasized.Foreground(Colors.Green)
 
 	Cursor = FocusedDimmed
 	None   = lipgloss.NewStyle()
@@ -91,6 +90,15 @@ func RenderSuccessMessage(heading string, additionalLines ...string) string {
 	return MakeBoxed(s, Colors.Green, lipgloss.Center)
 }
 
+func RenderWarningMessage(heading string, additionalLines ...string) string {
+	s := Warning.Render(utils.CapitalizeFirst(heading))
+	for _, line := range additionalLines {
+		s += "\n" + Dimmed.Render(line)
+	}
+
+	return MakeBoxed(s, Colors.Yellow, lipgloss.Center)
+}
+
 func RenderInfoMessage(heading string, additionalLines ...string) string {
 	s := lipgloss.NewStyle().Foreground(Colors.Blue).Bold(true).Render(utils.CapitalizeFirst(heading))
 	for _, line := range additionalLines {
@@ -132,6 +140,9 @@ func MakeBold(s string) string {
 }
 
 func MakeBoxed(s string, borderColor lipgloss.AdaptiveColor, alignment lipgloss.Position) string {
+	// We need to do this before boxing things because the sizing can change
+	s = InjectMarkdownStyles(s)
+
 	termWidth := TerminalWidth() - 2     // Leave room for padding (if the terminal is too small to fit, we need to wrap)
 	stringWidth := lipgloss.Width(s) + 2 // Account for padding (on the other hand, if the terminal is wide enough, add back in the space so it doesn't needlessly wrap)
 	w := min(termWidth, stringWidth)

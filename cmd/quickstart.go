@@ -4,11 +4,12 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -22,6 +23,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -67,6 +69,11 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	},
 }
 
+const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when a speakeasy workflow already exists. \n" +
+	"To create a brand _new_ SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
+	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
+	"To regenerate the current workflow: `speakeasy run`.")
+
 func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -74,17 +81,11 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return ErrWorkflowExists
 	}
 
 	if prompts.HasExistingGeneration(workingDir) {
-		return fmt.Errorf("You cannot run quickstart when a speakeasy workflow already exists. \n" +
-			"To create a brand new SDK directory: cd .. and then `speakeasy quickstart`. \n" +
-			"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-			"To regenerate the current workflow: `speakeasy run`.")
+		return ErrWorkflowExists
 	}
 
 	log.From(ctx).PrintfStyled(styles.DimmedItalic, "\nYour first SDK is a few short questions away...\n")
@@ -170,7 +171,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 				return nil
 			}).
 			Value(&promptedDir))),
-			"Pick an output directory for your newly created files.").
+			charm.WithTitle("Pick an output directory for your newly created files.")).
 			ExecuteForm()
 	} else {
 		promptedDir = "."
@@ -255,28 +256,30 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	wf, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		initialTarget,
-		"",
-		"",
-		nil,
-		nil,
-		false,
-		!flags.SkipCompile,
-		false,
-		[]string{},
-		"",
+		run.WithTarget(initialTarget),
+		run.WithShouldCompile(!flags.SkipCompile),
 	)
 	if err != nil {
 		return err
 	}
 	wf.FromQuickstart = true
 
+	logger := log.From(ctx)
+	var changeDirMsg string
+	relPath, _ := filepath.Rel(workingDir, outDir)
+	if workingDir != outDir && relPath != "" {
+		changeDirMsg = fmt.Sprintf("`cd %s` before moving forward with your SDK", relPath)
+	}
+
 	if err = wf.RunWithVisualization(ctx); err != nil {
 		if strings.Contains(err.Error(), "document invalid") {
 			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
 				return errors.Wrapf(err, "failed to run generation workflow")
 			} else if retry {
+				if changeDirMsg != "" {
+					logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
+				}
+
 				return nil
 			}
 		}
@@ -295,6 +298,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if len(wf.SDKOverviewURLs) == 1 {
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
 		browser.OpenURL(overviewURL)
+	}
+
+	if changeDirMsg != "" {
+		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
 	return nil
@@ -335,17 +342,8 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 
 	wf, err := run.NewWorkflow(
 		ctx,
-		"Workflow",
-		initialTarget,
-		"",
-		"",
-		nil,
-		nil,
-		false,
-		!skipCompile,
-		false,
-		[]string{},
-		"",
+		run.WithTarget(initialTarget),
+		run.WithShouldCompile(!skipCompile),
 	)
 
 	err = wf.RunWithVisualization(ctx)

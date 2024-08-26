@@ -1,0 +1,41 @@
+speakeasyVersion: 0.0.1
+sources:
+    SpeakeasyStudio-OAS:
+        sourceNamespace: speakeasy-studio-oas
+        sourceRevisionDigest: sha256:3d4fcb9baad5f941c6345be49360b781bab4b389a1d67f0671438bb01ad1d9b7
+        sourceBlobDigest: sha256:99e19755f848474236d47979657a17b5c84fa542cf027c746eceea8cb5fb7235
+        tags:
+            - latest
+    SpekaeasyStudio-OAS:
+        sourceNamespace: spekaeasy-studio-oas
+        sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
+        sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
+        tags:
+            - latest
+targets:
+    speakeasy-studio:
+        source: SpeakeasyStudio-OAS
+        sourceNamespace: speakeasy-studio-oas
+        sourceRevisionDigest: sha256:3d4fcb9baad5f941c6345be49360b781bab4b389a1d67f0671438bb01ad1d9b7
+        sourceBlobDigest: sha256:99e19755f848474236d47979657a17b5c84fa542cf027c746eceea8cb5fb7235
+        outLocation: /Users/da/code/speakeasy-cli/internal/studio/sdk
+    spekaeasy-studio:
+        source: SpekaeasyStudio-OAS
+        sourceNamespace: spekaeasy-studio-oas
+        sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
+        sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
+        outLocation: /Users/da/code/speakeasy-cli/internal/run/studio/generated-studio-sdk
+workflow:
+    workflowVersion: 1.0.0
+    sources:
+        SpeakeasyStudio-OAS:
+            inputs:
+                - location: ../oas_studio.yaml
+            overlays:
+                - location: .speakeasy/speakeasy-modifications-overlay.yaml
+            registry:
+                location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
+    targets:
+        speakeasy-studio:
+            target: go
+            source: SpeakeasyStudio-OAS

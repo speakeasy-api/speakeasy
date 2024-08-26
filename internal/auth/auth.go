@@ -15,7 +15,7 @@ func Authenticate(ctx context.Context, force bool) (context.Context, error) {
 	if err != nil {
 		return authCtx, err
 	}
-	if err := config.SetSpeakeasyAuthInfo(res); err != nil {
+	if err := config.SetSpeakeasyAuthInfo(authCtx, res); err != nil {
 		return authCtx, fmt.Errorf("failed to save API key: %w", err)
 	}
 
@@ -35,10 +35,11 @@ func UseExistingAPIKeyIfAvailable(ctx context.Context) (context.Context, error) 
 	if err != nil {
 		return ctx, err
 	}
-	config.SetSpeakeasyAuthInfo(core.SpeakeasyAuthInfo{
+	config.SetSpeakeasyAuthInfo(ctx, core.SpeakeasyAuthInfo{
 		APIKey:      existingApiKey,
 		WorkspaceID: workspaceID,
 	})
+
 	return ctx, nil
 }
 

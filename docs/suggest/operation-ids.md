@@ -17,7 +17,7 @@ speakeasy suggest operation-ids [flags]
   -o, --out string      write the suggestion to the specified path
       --overlay         write the suggestion as an overlay to --out, instead of the full document (default: true) (default true)
   -s, --schema string   the schema to transform
-      --style string    the style of suggestion to provide (one of: standardize, resource, flatten, default: resource) (default "resource")
+      --style string    the style of suggestion to provide (default "resource")
 ```
 
 ### Options inherited from parent commands

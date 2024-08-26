@@ -1,0 +1,13 @@
+workflowVersion: 1.0.0
+sources:
+    SpeakeasyStudio-OAS:
+        inputs:
+            - location: ../oas_studio.yaml
+        overlays:
+            - location: .speakeasy/speakeasy-modifications-overlay.yaml
+        registry:
+            location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
+targets:
+    speakeasy-studio:
+        target: go
+        source: SpeakeasyStudio-OAS

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
@@ -29,7 +30,7 @@ type GenerationAccess struct {
 	Level         *shared.Level
 }
 
-func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, cliVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, compile, force bool, targetName string) (*GenerationAccess, error) {
+func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, cliVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, verbose, compile, force bool, targetName string, skipVersioning bool) (*GenerationAccess, error) {
 	if !generate.CheckLanguageSupported(lang) {
 		return nil, fmt.Errorf("language not supported: %s", lang)
 	}
@@ -97,6 +98,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		generate.WithCLIVersion(cliVersion),
 	}
 
+	if verbose {
+		opts = append(opts, generate.WithVerboseOutput(true))
+	}
+
 	if force {
 		opts = append(opts, generate.WithForceGeneration())
 	}
@@ -108,6 +113,9 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	// Enable outputting of internal tests for internal speakeasy use cases
 	if outputTests {
 		opts = append(opts, generate.WithOutputTests())
+	}
+	if skipVersioning {
+		opts = append(opts, generate.WithSkipVersioning(skipVersioning))
 	}
 
 	g, err := generate.New(opts...)

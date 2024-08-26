@@ -116,7 +116,7 @@ func DownloadFile(url, outPath, header, token string) error {
 }
 
 // DownloadRegistryOpenAPIBundle Returns a file path within the downloaded bundle or error
-func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference, outPath string) (*DownloadedRegistryOpenAPIBundle, error) {
+func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.SpeakeasyRegistryDocument, outPath string) (*DownloadedRegistryOpenAPIBundle, error) {
 	serverURL := auth.GetServerURL()
 	insecurePublish := false
 	if strings.HasPrefix(serverURL, "http://") {
@@ -125,14 +125,31 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
 
+	apiKey := config.GetWorkspaceAPIKey(document.OrganizationSlug, document.WorkspaceSlug)
+	if apiKey == "" {
+		apiKey = config.GetSpeakeasyAPIKey()
+	}
+
+	workspaceID, err := auth.GetWorkspaceIDFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	access := ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+		Insecure: insecurePublish,
+	})
+	if (document.WorkspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) || document.OrganizationSlug != auth.GetOrgSlugFromContext(ctx)) && workspaceID == "self" {
+		access = ocicommon.NewRepositoryAccessAdmin(apiKey, document.NamespaceID, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		})
+	}
+
 	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
 		Registry: reg,
-		Access: ocicommon.NewRepositoryAccess(config.GetSpeakeasyAPIKey(), namespaceName, ocicommon.RepositoryAccessOptions{
-			Insecure: insecurePublish,
-		}),
+		Access: access,
 	})
 
-	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, reference)
+	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, document.Reference)
 	if err != nil {
 		return nil, err
 	}
@@ -150,10 +167,17 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference
 		return nil, err
 	}
 
+	shortDigest := bundleResult.BlobDigest[8:14]
+	outPath = filepath.Join(outPath, shortDigest)
+
 	var outputFileName string
 	if fileName, _ := bundleResult.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
 		cleanName := filepath.Clean(fileName)
 		outputFileName = filepath.Join(outPath, cleanName)
+		err = os.MkdirAll(filepath.Dir(outputFileName), os.ModePerm)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create output directory: %w", err)
+		}
 	} else {
 		return nil, fmt.Errorf("no root openapi file found in bundle")
 	}
@@ -164,8 +188,8 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, namespaceName, reference
 
 	return &DownloadedRegistryOpenAPIBundle{
 		LocalFilePath:     outputFileName,
-		NamespaceName:     namespaceName,
-		ManifestReference: reference,
+		NamespaceName:     document.NamespaceName,
+		ManifestReference: document.Reference,
 		ManifestDigest:    bundleResult.ManifestDigest,
 		BlobDigest:        bundleResult.BlobDigest,
 	}, nil
@@ -194,7 +218,42 @@ func copyZipToOutDir(zipReader *zip.Reader, outDir string) error {
 		}
 		defer fileReader.Close()
 
-		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		// If the target file exists and has the same content, skip it
+		if existingFile, err := os.Open(filePath); err == nil {
+			defer existingFile.Close()
+			existingContent, err := io.ReadAll(existingFile)
+			if err != nil {
+				return err
+			}
+
+			newContent, err := io.ReadAll(fileReader)
+			if err != nil {
+				return err
+			}
+
+			if bytes.Equal(existingContent, newContent) {
+				continue // Skip this file as it's unchanged
+			}
+
+			if err := existingFile.Close(); err != nil {
+				return err
+			}
+
+			// Else (can happen if we had a partial extraction), given the folder name is based on a checksum of the zip, we are safe to just delete the file
+			if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+				return err
+			}
+			if err := fileReader.Close(); err != nil {
+				return err
+			}
+
+			if fileReader, err = file.Open(); err != nil {
+				return err
+			}
+			defer fileReader.Close()
+		}
+
+		targetFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o660)
 		if err != nil {
 			return err
 		}

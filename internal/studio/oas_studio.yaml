@@ -1,0 +1,350 @@
+openapi: 3.0.3
+info:
+  title: OpenAPI Studio CLI API
+  version: 1.0.0
+servers:
+  - url: http://localhost:{port}
+    variables:
+      port:
+        default: "8080"
+        description: The port number the CLI server is running on
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Check the CLI health and return relevant information.
+      operationId: checkHealth
+      responses:
+        "200":
+          description: Successful response
+          content:
+            text/event-stream:
+              x-speakeasy-sse-sentinel: "[DONE]"
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /run:
+    get:
+      summary: Run
+      description: Get the output of the last run.
+      operationId: getRun
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
+    post:
+      summary: Run
+      description: Regenerate the currently selected targets.
+      operationId: run
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
+  /source:
+    get:
+      summary: Get Source
+      description: Retrieve the source information from the workflow file, before and after applying the studio modifications overlay.
+      operationId: getSource
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceResponse"
+    post:
+      summary: Update Source
+      description: Update the source with studio modifications overlay contents. This will re-run the source in the workflow.
+      operationId: updateSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                overlay:
+                  type: string
+                  description: The studio modifications overlay contents - this should be an overlay YAML document
+              required:
+                - overlay
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceResponse"
+  /suggest/method-names:
+    get:
+      summary: Suggest Method Names
+      description: Suggest method names for the current source.
+      operationId: suggestMethodNames
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Status of the CLI
+    RunResponse:
+      type: object
+      description: Map of target run summaries
+      properties:
+        lintingReportLink:
+          type: string
+          description: Link to the linting report
+        sourceResult:
+          $ref: "#/components/schemas/SourceResponse"
+        targetResults:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TargetRunSummary"
+          description: Map of target results
+        workflow:
+          $ref: "#/components/schemas/Workflow"
+          description: Workflow information
+        workingDirectory:
+          type: string
+          description: Working directory
+      required:
+        - sourceResult
+        - targetResults
+        - workflow
+        - workingDirectory
+    TargetRunSummary:
+      type: object
+      properties:
+        readme:
+          type: string
+          description: Contents of the README file for this target
+        gen_yaml:
+          type: string
+          description: Contents of the gen.yaml file for this target
+        output_directory:
+          type: string
+          description: Output directory for this target
+        language:
+          type: string
+          description: Language for this target
+        sourceID:
+          type: string
+          description: Source ID in the workflow file
+        targetID:
+          type: string
+          description: Target ID in the workflow file
+      required:
+        - targetID
+        - sourceID
+        - readme
+        - gen_yaml
+        - output_directory
+        - language
+    SourceResponse:
+      type: object
+      properties:
+        sourceID:
+          type: string
+          description: Source ID in the workflow file
+        input:
+          type: string
+          description: The merged input specs for the source
+        overlay:
+          type: string
+          description: Studio modifications overlay contents (could be empty string)
+        output:
+          type: string
+          description: Result of running the source in the workflow
+        diagnosis:
+          type: array
+          items:
+            $ref: "#/components/schemas/Diagnostic"
+          description: List of validation errors
+      required:
+        - sourceID
+        - input
+        - overlay
+        - output
+        - diagnosis
+    SuggestResponse:
+      type: object
+      properties:
+        overlay:
+          type: string
+          description: The studio modifications overlay contents - this should be an overlay YAML document
+      required:
+        - overlay
+    Workflow:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Workflow version
+        speakeasyVersion:
+          type: string
+          description: Speakeasy version
+        sources:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Source"
+          description: Map of sources
+        targets:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Target"
+          description: Map of targets
+      required:
+        - version
+        - speakeasyVersion
+        - sources
+        - targets
+    Source:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+          description: List of input documents
+        overlays:
+          type: array
+          items:
+            $ref: "#/components/schemas/Overlay"
+          description: List of overlays
+        output:
+          type: string
+          description: Output string
+        ruleset:
+          type: string
+          description: Ruleset string
+        registry:
+          $ref: "#/components/schemas/SourceRegistry"
+          description: Source registry information
+    Diagnostic:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Message describing the issue
+        severity:
+          type: string
+          description: Severity
+        line:
+          type: integer
+          description: Line number
+        path:
+          type: array
+          items:
+            type: string
+          description: Schema path to the issue
+        type:
+          type: string
+          description: Issue type
+        helpMessage:
+          type: string
+          description: Help message for how to fix the issue
+      required:
+        - message
+        - severity
+        - type
+    Document:
+      type: object
+      properties:
+        location:
+          type: string
+          description: Document location
+        auth:
+          $ref: "#/components/schemas/Auth"
+          description: Authentication information
+      required:
+        - location
+    Overlay:
+      type: object
+      properties:
+        fallbackCodeSamples:
+          $ref: "#/components/schemas/FallbackCodeSamples"
+          description: Fallback code samples
+        document:
+          $ref: "#/components/schemas/Document"
+          description: Document information
+    SourceRegistry:
+      type: object
+      properties:
+        location:
+          type: string
+          description: Source registry location
+        tags:
+          type: array
+          items:
+            type: string
+          description: List of tags
+    Target:
+      type: object
+      properties:
+        target:
+          type: string
+          description: Target language
+        source:
+          type: string
+          description: Source ID
+        output:
+          type: string
+          description: Output string
+        publishing:
+          $ref: "#/components/schemas/Publishing"
+          description: Publishing information
+        codeSamples:
+          $ref: "#/components/schemas/CodeSamples"
+          description: Code samples
+      required:
+        - target
+        - source
+    CodeSamples:
+      type: object
+      properties:
+        output:
+          type: string
+          description: Output string
+        registry:
+          $ref: "#/components/schemas/SourceRegistry"
+          description: Source registry information
+    FallbackCodeSamples:
+      type: object
+    Auth:
+      type: object
+      properties:
+        authHeader:
+          type: string
+          description: Auth header
+        authSecret:
+          type: string
+          description: Auth secret
+      required:
+        - authHeader
+        - authSecret
+    Publishing:
+      type: object
+  securitySchemes:
+    secret:
+      type: apiKey
+      name: x-secret-key
+      in: header
+security:
+  - secret: []

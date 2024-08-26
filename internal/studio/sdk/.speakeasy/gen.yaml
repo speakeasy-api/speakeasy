@@ -1,0 +1,33 @@
+configVersion: 2.0.0
+generation:
+  sdkClassName: SDK
+  maintainOpenAPIOrder: true
+  usageSnippets:
+    optionalPropertyRendering: withExample
+  useClassNamesForArrayFields: true
+  fixes:
+    nameResolutionDec2023: true
+    parameterOrderingFeb2024: true
+    requestResponseComponentNamesFeb2024: true
+  auth:
+    oAuth2ClientCredentialsEnabled: true
+go:
+  version: 0.3.14
+  additionalDependencies: {}
+  allowUnknownFieldsInWeakUnions: false
+  clientServerStatusCodesAsErrors: true
+  flattenGlobalSecurity: true
+  imports:
+    option: openapi
+    paths:
+      callbacks: models/callbacks
+      errors: models/sdkerrors
+      operations: models/operations
+      shared: models/components
+      webhooks: models/webhooks
+  inputModelSuffix: input
+  maxMethodParams: 4
+  methodArguments: require-security-and-request
+  outputModelSuffix: output
+  packageName: github.com/speakeasy-api/speakeasy/internal/studio/sdk
+  responseFormat: envelope-http

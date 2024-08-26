@@ -20,6 +20,7 @@ type GenerateFlags struct {
 	Header          string `json:"header"`
 	Token           string `json:"token"`
 	Debug           bool   `json:"debug"`
+	Verbose         bool   `json:"verbose"`
 	AutoYes         bool   `json:"auto-yes"`
 	InstallationURL string `json:"installationURL"`
 	Published       bool   `json:"published"`
@@ -36,17 +37,23 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	Run:          genSDKs,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
-		flag.StringFlag{
-			Name:         "lang",
-			Shorthand:    "l",
-			DefaultValue: "go",
-			Description:  fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
+		flag.EnumFlag{
+			Name:          "lang",
+			Shorthand:     "l",
+			Required:      true,
+			AllowedValues: SDKSupportedLanguageTargets(),
+			Description:   fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
 		},
 		schemaFlag,
 		outFlag,
 		headerFlag,
 		tokenFlag,
 		debugFlag,
+		flag.BooleanFlag{
+			Name:         "verbose",
+			DefaultValue: false,
+			Description:  fmt.Sprintf("Verbose output"),
+		},
 		autoYesFlag,
 		flag.StringFlag{
 			Name:        "installationURL",
@@ -92,9 +99,11 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		flags.OutputTests,
 		flags.Repo,
 		flags.RepoSubdir,
+		flags.Verbose,
 		false,
 		flags.Force,
 		"",
+		false,
 	)
 
 	return err
