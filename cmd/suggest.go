@@ -15,7 +15,7 @@ import (
 const suggestLong = `
 # Suggest 
 
-Automatically improve your OpenAPI document with an LLM.
+Automatically optimise your OpenAPI document for SDK generation with an LLM powered suggestions
 `
 
 var suggestCmd = &model.CommandGroup{
