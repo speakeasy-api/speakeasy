@@ -56,7 +56,7 @@ A full workflow is capable of running the following:
 
 var runCmd = &model.ExecutableCommand[RunFlags]{
 	Usage:            "run",
-	Short:            "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
+	Short:            "Run all the workflows defined in your workflow.yaml file. This can include multiple SDK generations from different OpenAPI sources",
 	Long:             utils.RenderMarkdown(runLong),
 	PreRun:           preRun,
 	Run:              runFunc,
