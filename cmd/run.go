@@ -34,11 +34,11 @@ type RunFlags struct {
 	Force              bool              `json:"force"`
 	Output             string            `json:"output"`
 	Pinned             bool              `json:"pinned"`
-	Verbose             bool             `json:"verbose"`
+	Verbose            bool              `json:"verbose"`
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
 	LaunchStudio       bool              `json:"launch-studio"`
-	GitHub           bool              `json:"github"`
+	GitHub             bool              `json:"github"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `

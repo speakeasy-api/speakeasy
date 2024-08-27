@@ -12,6 +12,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -78,6 +79,8 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 
 	timeoutCh := time.After(5 * time.Minute)
 
+	stopSpinner := interactivity.StartSpinner("Kicking off Github Action run...")
+
 	for runURL == "" {
 		select {
 		case <-ticker.C:
@@ -88,6 +91,7 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 				TargetName: &target,
 			})
 			if err != nil {
+				stopSpinner()
 				return fmt.Errorf("failed to get GitHub action(s): %w", err)
 			}
 
@@ -97,10 +101,12 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 			}
 
 		case <-timeoutCh:
+			stopSpinner()
 			return nil
 		}
 	}
 
+	stopSpinner()
 	log.From(ctx).Println(styles.RenderSuccessMessage("Successfully Kicked Off Generation Run", runURL))
 
 	return nil
