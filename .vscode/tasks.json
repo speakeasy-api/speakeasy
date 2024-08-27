@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+      {
+          "label": "Run headless dlv",
+          "type": "process",
+          "command": [
+              "dlv",
+          ],
+          "args": [
+              "debug",
+              "--headless",
+              "--listen=:2345",
+              "--api-version=2",
+              "${workspaceFolder}/main.go",
+              "--",
+              "${input:command}"
+          ],
+          "isBackground": true
+      }
+  ],
+  "inputs": [
+    {
+        "id": "command",
+        "type": "promptString",
+        "default": "quickstart",
+        "description": "CLI command to debug"
+    }
+  ]
+}
