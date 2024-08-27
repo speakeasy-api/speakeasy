@@ -26,17 +26,31 @@ import (
 	"go.uber.org/zap"
 )
 
+const rootLong = `# Speakeasy 
+
+A CLI tool for interacting with the [Speakeasy platform](https://www.speakeasy.com/) and its APIs.
+
+Use this CLI to:
+- Lint and validate OpenAPI specs
+- Create, manage, and run Speakeasy workflows
+- Configure GitHub Actions for Speakeasy workflows
+- Suggest improvements to OpenAPI specs
+
+Generate from OpenAPI Specs:
+- Client and Server SDKs in GO, Python, TypeScript, Java, PHP, C#, Swift, Ruby
+- Postman collections
+- Terraform providers
+
+[Quickstart guide](https://www.speakeasy.com/docs/create-client-sdks)
+
+Visit [Speakeasy](https://www.speakeasy.com/) for more information
+`
+
 var rootCmd = &cobra.Command{
 	Use:   "speakeasy",
-	Short: "The speakeasy cli tool provides access to the speakeasyapi.dev toolchain",
-	Long: ` A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, c#, swift, ruby, terraform)
-	- Validating OpenAPI specs
-	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic
-	- Generating Postman collections from OpenAPI Specs
-`,
-	RunE: rootExec,
+	Short: "The Speakeasy CLI tool provides access to the Speakeasy.com platform",
+	Long:  utils.RenderMarkdown(rootLong),
+	RunE:  rootExec,
 }
 
 var l = log.New().WithLevel(log.LevelInfo)
