@@ -33,10 +33,10 @@ type StudioHandlers struct {
 	Ctx            context.Context
 }
 
-func NewStudioHandlers(ctx context.Context, workflow *run.Workflow) (*StudioHandlers, error) {
-	ret := &StudioHandlers{WorkflowRunner: *workflow, Ctx: ctx}
+func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*StudioHandlers, error) {
+	ret := &StudioHandlers{WorkflowRunner: *workflowRunner, Ctx: ctx}
 
-	sourceID, err := findWorkflowSourceIDBasedOnTarget(*workflow, workflow.Target)
+	sourceID, err := findWorkflowSourceIDBasedOnTarget(*workflowRunner, workflowRunner.Target)
 	if err != nil {
 		return ret, fmt.Errorf("error finding source: %w", err)
 	}
@@ -44,6 +44,15 @@ func NewStudioHandlers(ctx context.Context, workflow *run.Workflow) (*StudioHand
 		return ret, errors.New("unable to find source")
 	}
 	ret.SourceID = sourceID
+	sourceConfig := workflowRunner.GetWorkflowFile().Sources[sourceID]
+
+	for _, overlay := range sourceConfig.Overlays {
+		// If there are multiple modifications overlays - we take the last one
+		contents, _ := isStudioModificationsOverlay(overlay)
+		if contents != "" {
+			ret.OverlayPath = overlay.Document.Location
+		}
+	}
 
 	return ret, nil
 }
@@ -261,16 +270,6 @@ func (h *StudioHandlers) getSourceInner(ctx context.Context) (*run.SourceResult,
 	_, sourceResult, err := workflowRunner.RunSource(h.Ctx, workflowRunner.RootStep, sourceID, "")
 	if err != nil {
 		return nil, fmt.Errorf("error running source: %w", err)
-	}
-
-	sourceConfig := workflowRunner.GetWorkflowFile().Sources[sourceID]
-
-	for _, overlay := range sourceConfig.Overlays {
-		// If there are multiple modifications overlays - we take the last one
-		contents, _ := isStudioModificationsOverlay(overlay)
-		if contents != "" {
-			h.OverlayPath = overlay.Document.Location
-		}
 	}
 
 	return sourceResult, nil
