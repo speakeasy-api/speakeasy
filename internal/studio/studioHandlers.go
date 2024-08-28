@@ -85,6 +85,10 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 		}
 	}
 
+	if len(h.WorkflowRunner.SourceResults) == 0 {
+		return errors.New("source failed to run")
+	}
+
 	if len(h.WorkflowRunner.SourceResults) != 1 {
 		return errors.New("expected exactly one source")
 	}
@@ -326,6 +330,7 @@ func (h *StudioHandlers) getOrCreateOverlayPath() error {
 		return nil
 	}
 
+	// Look for an unused filename for writing the overlay
 	overlayPath := filepath.Join(h.WorkflowRunner.ProjectDir, modifications.OverlayPath)
 	for i := 0; i < 100; i++ {
 		if _, err := os.Stat(overlayPath); os.IsNotExist(err) {
@@ -340,7 +345,12 @@ func (h *StudioHandlers) getOrCreateOverlayPath() error {
 
 	source := workflowConfig.Sources[h.SourceID]
 
-	modifications.UpsertOverlayIntoSource(&source, h.OverlayPath)
+	relativeOverlayPath, err := filepath.Rel(h.WorkflowRunner.ProjectDir, overlayPath)
+	if err != nil {
+		return fmt.Errorf("error getting relative path: %w", err)
+	}
+
+	modifications.UpsertOverlayIntoSource(&source, relativeOverlayPath)
 
 	workflowConfig.Sources[h.SourceID] = source
 

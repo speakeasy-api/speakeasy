@@ -2,7 +2,6 @@ package modifications
 
 import (
 	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 
@@ -57,13 +56,6 @@ func UpsertOverlay(source *workflow.Source, o overlay.Overlay) error {
 func UpsertOverlayIntoSource(source *workflow.Source, overlayPath string) {
 	if source == nil {
 		return
-	}
-
-	// Assert the overlay path is relative
-	// TODO: this should be the project directory
-	overlayPath, err := filepath.Rel(".", overlayPath)
-	if err != nil {
-		panic(err)
 	}
 
 	// Add the new overlay to the source, if not already present
