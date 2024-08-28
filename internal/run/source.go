@@ -103,9 +103,25 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		if lockSource.SourceBlobDigest == "" || lockSource.SourceRevisionDigest == "" || lockSource.SourceNamespace == "" {
 			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace = %s blobDigest = %s revisionDigest = %s", lockSource.SourceNamespace, lockSource.SourceBlobDigest, lockSource.SourceRevisionDigest)
 		}
-		orgSlug, workspaceSlug, registryNamespace, err := w.workflow.Sources[sourceID].Registry.ParseRegistryLocation()
-		if err != nil {
-			return "", nil, fmt.Errorf("error parsing registry location %s: %w", string(w.workflow.Sources[sourceID].Registry.Location), err)
+		var orgSlug, workspaceSlug, registryNamespace string
+		if isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil	 {
+			d := w.workflow.Sources[sourceID].Inputs[0]
+			registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
+			if registryBreakdown == nil {
+				return "", nil, fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
+			}
+			orgSlug = registryBreakdown.OrganizationSlug
+			workspaceSlug = registryBreakdown.WorkspaceSlug
+			// odd edge case: we are not migrating the registry location when we're a single registry source.
+			// Unfortunately can't just fix here as it needs a migration
+			registryNamespace = lockSource.SourceNamespace
+		} else if !isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil {
+			return "", nil, fmt.Errorf("invalid workflow lockfile: no registry location found for source %s", sourceID)
+		} else if w.workflow.Sources[sourceID].Registry != nil {
+			orgSlug, workspaceSlug, registryNamespace, err = w.workflow.Sources[sourceID].Registry.ParseRegistryLocation()
+			if err != nil {
+				return "", nil, fmt.Errorf("error parsing registry location %s: %w", string(w.workflow.Sources[sourceID].Registry.Location), err)
+			}
 		}
 		if lockSource.SourceNamespace != registryNamespace {
 			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace %s != %s", lockSource.SourceNamespace, registryNamespace)
