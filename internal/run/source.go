@@ -112,7 +112,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 			orgSlug = registryBreakdown.OrganizationSlug
 			workspaceSlug = registryBreakdown.WorkspaceSlug
-			// odd edge case: we are not re-using this registry breakdown properly
+			// odd edge case: we are not migrating the registry location when we're a single registry source.
+			// Unfortunately can't just fix here as it needs a migration
 			registryNamespace = lockSource.SourceNamespace
 		} else if !isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil {
 			return "", nil, fmt.Errorf("invalid workflow lockfile: no registry location found for source %s", sourceID)
