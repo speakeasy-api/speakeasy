@@ -59,7 +59,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 	Short:            "Run all the workflows defined in your workflow.yaml file. This can include multiple SDK generations from different OpenAPI sources",
 	Long:             utils.RenderMarkdown(runLong),
 	PreRun:           preRun,
-	Run:              runFunc,
+	Run:              runNonInteractive,
 	RunInteractive:   runInteractive,
 	RequiresAuth:     true,
 	UsesWorkflowFile: true,
@@ -284,13 +284,12 @@ func askForSource(sources []string) (string, error) {
 	return source, nil
 }
 
-func runFunc(ctx context.Context, flags RunFlags) error {
+func runNonInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
-	workflow, err := run.NewWorkflow(
-		ctx,
+	opts := []run.Opt{
 		run.WithTarget(flags.Target),
 		run.WithSource(flags.Source),
 		run.WithRepo(flags.Repo),
@@ -304,7 +303,17 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+	}
+
+	if flags.LaunchStudio {
+		opts = append(opts, run.WithSkipCleanup())
+	}
+
+	workflow, err := run.NewWorkflow(
+		ctx,
+		opts...,
 	)
+
 	if err != nil {
 		return err
 	}
@@ -314,6 +323,10 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow.RootStep.Finalize(err == nil)
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
+
+	if flags.LaunchStudio {
+		return studio.LaunchStudio(ctx, workflow)
+	}
 
 	return err
 }
