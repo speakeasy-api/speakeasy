@@ -65,12 +65,8 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 }
 
 func (h *StudioHandlers) getLastCompletedRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	fmt.Println("Getting run")
-
-	// Wait for the run to finish
 	h.syncCondition.L.Lock()
 	for h.running {
-		fmt.Println("Waiting for run to finish")
 		h.syncCondition.Wait()
 	}
 	defer h.syncCondition.L.Unlock()
@@ -79,22 +75,17 @@ func (h *StudioHandlers) getLastCompletedRunResult(ctx context.Context, w http.R
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	fmt.Println("Re-running")
 	// Wait for the run to finish
 	h.syncCondition.L.Lock()
 	for h.running {
-		fmt.Println("Waiting for run to finish inside re-run")
 		h.syncCondition.Wait()
 	}
-
-	fmt.Println("Start re-run")
 
 	h.running = true
 	defer func() {
 		h.syncCondition.L.Unlock()
 		h.running = false
 		h.syncCondition.Broadcast()
-		fmt.Println("Run finished")
 	}()
 
 	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
@@ -233,8 +224,6 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 // ---------------------------------
 
 func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	fmt.Println("getLastCompletedRunResultInner")
-
 	res := components.RunResponse{
 		TargetResults: make(map[string]components.TargetRunSummary),
 	}
