@@ -33,7 +33,7 @@ type StudioHandlers struct {
 	OverlayPath    string
 	Ctx            context.Context
 	mutex          sync.Mutex
-	syncCondition  *sync.Cond
+	mutexCondition *sync.Cond
 	running        bool
 }
 
@@ -59,33 +59,33 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 	}
 
 	ret.mutex = sync.Mutex{}
-	ret.syncCondition = sync.NewCond(&ret.mutex)
+	ret.mutexCondition = sync.NewCond(&ret.mutex)
 
 	return ret, nil
 }
 
 func (h *StudioHandlers) getLastCompletedRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	h.syncCondition.L.Lock()
+	h.mutexCondition.L.Lock()
 	for h.running {
-		h.syncCondition.Wait()
+		h.mutexCondition.Wait()
 	}
-	defer h.syncCondition.L.Unlock()
+	defer h.mutexCondition.L.Unlock()
 
 	return h.getLastCompletedRunResultInner(ctx, w, r)
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	// Wait for the run to finish
-	h.syncCondition.L.Lock()
+	h.mutexCondition.L.Lock()
 	for h.running {
-		h.syncCondition.Wait()
+		h.mutexCondition.Wait()
 	}
 
 	h.running = true
 	defer func() {
 		h.running = false
-		h.syncCondition.Broadcast()
-		h.syncCondition.L.Unlock()
+		h.mutexCondition.Broadcast()
+		h.mutexCondition.L.Unlock()
 	}()
 
 	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
