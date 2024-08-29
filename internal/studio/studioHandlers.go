@@ -83,9 +83,9 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 
 	h.running = true
 	defer func() {
-		h.syncCondition.L.Unlock()
 		h.running = false
 		h.syncCondition.Broadcast()
+		h.syncCondition.L.Unlock()
 	}()
 
 	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
