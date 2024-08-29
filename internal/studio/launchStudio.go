@@ -45,7 +45,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		case http.MethodPost:
 			handler(handlers.updateSource)(w, r)
 		case http.MethodGet:
-			handler(handlers.getSource)(w, r)
+			handler(handlers.getLastCompletedSourceResult)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -54,9 +54,9 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			handler(handlers.updateRun)(w, r)
+			handler(handlers.reRun)(w, r)
 		case http.MethodGet:
-			handler(handlers.getRun)(w, r)
+			handler(handlers.getLastCompletedRunResult)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
