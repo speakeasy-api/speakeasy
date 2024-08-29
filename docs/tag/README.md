@@ -24,7 +24,7 @@ speakeasy tag [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
 * [speakeasy tag apply](apply.md)	 - Add tags to a given revision of your API. Specific to a registry namespace

@@ -198,6 +198,12 @@ func WithSkipLinting() Opt {
 	}
 }
 
+func WithLinting() Opt {
+	return func(w *Workflow) {
+		w.SkipLinting = false
+	}
+}
+
 func WithSkipCleanup() Opt {
 	return func(w *Workflow) {
 		w.SkipCleanup = true

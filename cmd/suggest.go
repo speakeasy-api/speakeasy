@@ -12,9 +12,16 @@ import (
 	"os"
 )
 
+const suggestLong = `
+# Suggest 
+
+Automatically optimise your OpenAPI document for SDK generation with an LLM powered suggestions
+`
+
 var suggestCmd = &model.CommandGroup{
 	Usage:          "suggest",
 	Short:          "Automatically improve your OpenAPI document with an LLM",
+	Long:           utils.RenderMarkdown(suggestLong),
 	InteractiveMsg: "What would you like to improve?",
 	Commands:       []model.Command{suggestOperationIDsCmd},
 }
