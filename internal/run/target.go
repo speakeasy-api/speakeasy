@@ -163,6 +163,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		false,
 		w.Repo,
 		w.RepoSubDirs[target],
+		w.Verbose,
 		w.ShouldCompile,
 		w.ForceGeneration,
 		target,
@@ -195,12 +196,14 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			return nil, nil, err
 		}
 
-		namespaceName, digest, err := w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
-		if err != nil {
-			return nil, nil, err
+		if !w.FrozenWorkflowLock {
+			namespaceName, digest, err := w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
+			if err != nil {
+				return nil, nil, err
+			}
+			targetLock.CodeSamplesNamespace = namespaceName
+			targetLock.CodeSamplesRevisionDigest = digest
 		}
-		targetLock.CodeSamplesNamespace = namespaceName
-		targetLock.CodeSamplesRevisionDigest = digest
 	}
 
 	rootStep.SucceedWorkflow()

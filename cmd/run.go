@@ -34,27 +34,32 @@ type RunFlags struct {
 	Force              bool              `json:"force"`
 	Output             string            `json:"output"`
 	Pinned             bool              `json:"pinned"`
+	Verbose            bool              `json:"verbose"`
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
 	LaunchStudio       bool              `json:"launch-studio"`
-	GitHub           bool              `json:"github"`
+	GitHub             bool              `json:"github"`
 }
 
-var runCmd = &model.ExecutableCommand[RunFlags]{
-	Usage: "run",
-	Short: "generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file",
-	Long: "run the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
+const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
+
 A workflow can consist of multiple targets that define a source OpenAPI document that can be downloaded from a URL, exist as a local file, or be created via merging multiple OpenAPI documents together and/or overlaying them with an OpenAPI overlay document.
-A full workflow is capable of running the following steps:
+
+A full workflow is capable of running the following:
   - Downloading source OpenAPI documents from a URL
   - Merging multiple OpenAPI documents together
   - Overlaying OpenAPI documents with an OpenAPI overlay document
   - Generating one or many SDKs from the resulting OpenAPI document
   - Compiling the generated SDKs
 
-` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run.",
+` + "If `speakeasy run` is run without any arguments it will run either the first target in the workflow or the first source in the workflow if there are no other targets or sources, otherwise it will prompt you to select a target or source to run."
+
+var runCmd = &model.ExecutableCommand[RunFlags]{
+	Usage:            "run",
+	Short:            "Run all the workflows defined in your workflow.yaml file. This can include multiple SDK generations from different OpenAPI sources",
+	Long:             utils.RenderMarkdown(runLong),
 	PreRun:           preRun,
-	Run:              runFunc,
+	Run:              runNonInteractive,
 	RunInteractive:   runInteractive,
 	RequiresAuth:     true,
 	UsesWorkflowFile: true,
@@ -127,6 +132,11 @@ A full workflow is capable of running the following steps:
 			Name:        "pinned",
 			Description: "Run using the current CLI version instead of the version specified in the workflow file",
 			Hidden:      true,
+		},
+		flag.BooleanFlag{
+			Name:        "verbose",
+			Description: "Verbose logging",
+			Hidden:      false,
 		},
 		flag.StringSliceFlag{
 			Name:        "registry-tags",
@@ -274,13 +284,12 @@ func askForSource(sources []string) (string, error) {
 	return source, nil
 }
 
-func runFunc(ctx context.Context, flags RunFlags) error {
+func runNonInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
-	workflow, err := run.NewWorkflow(
-		ctx,
+	opts := []run.Opt{
 		run.WithTarget(flags.Target),
 		run.WithSource(flags.Source),
 		run.WithRepo(flags.Repo),
@@ -289,11 +298,22 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithVerbose(flags.Verbose),
 		run.WithForceGeneration(flags.Force),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+	}
+
+	if flags.LaunchStudio {
+		opts = append(opts, run.WithSkipCleanup())
+	}
+
+	workflow, err := run.NewWorkflow(
+		ctx,
+		opts...,
 	)
+
 	if err != nil {
 		return err
 	}
@@ -303,6 +323,10 @@ func runFunc(ctx context.Context, flags RunFlags) error {
 	workflow.RootStep.Finalize(err == nil)
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
+
+	if flags.LaunchStudio {
+		return studio.LaunchStudio(ctx, workflow)
+	}
 
 	return err
 }
@@ -322,6 +346,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithForceGeneration(flags.Force),
+		run.WithVerbose(flags.Verbose),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
@@ -338,6 +363,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	if flags.Verbose {
+		flags.Output = "console"
 	}
 
 	switch flags.Output {

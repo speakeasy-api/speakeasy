@@ -20,6 +20,7 @@ type GenerateFlags struct {
 	Header          string `json:"header"`
 	Token           string `json:"token"`
 	Debug           bool   `json:"debug"`
+	Verbose         bool   `json:"verbose"`
 	AutoYes         bool   `json:"auto-yes"`
 	InstallationURL string `json:"installationURL"`
 	Published       bool   `json:"published"`
@@ -48,6 +49,11 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 		headerFlag,
 		tokenFlag,
 		debugFlag,
+		flag.BooleanFlag{
+			Name:         "verbose",
+			DefaultValue: false,
+			Description:  fmt.Sprintf("Verbose output"),
+		},
 		autoYesFlag,
 		flag.StringFlag{
 			Name:        "installationURL",
@@ -93,6 +99,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		flags.OutputTests,
 		flags.Repo,
 		flags.RepoSubdir,
+		flags.Verbose,
 		false,
 		flags.Force,
 		"",

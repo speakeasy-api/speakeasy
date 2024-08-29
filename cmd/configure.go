@@ -15,6 +15,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
@@ -38,10 +39,22 @@ const (
 	appInstallURL        = "https://github.com/apps/speakeasy-github"
 )
 
+const configureLong = `# Configure
+
+Configure your Speakeasy workflow file.
+
+[Workflows](https://www.speakeasy.com/docs/workflow-file-reference)
+
+[GitHub Setup](https://www.speakeasy.com/docs/publish-sdks/github-setup)
+
+[Publishing](https://www.speakeasy.com/docs/publish-sdks/publish-sdks)
+
+`
+
 var configureCmd = &model.CommandGroup{
 	Usage:          "configure",
 	Short:          "Configure your Speakeasy SDK Setup.",
-	Long:           `Configure your Speakeasy SDK Setup.`,
+	Long:           utils.RenderMarkdown(configureLong),
 	InteractiveMsg: "What do you want to configure?",
 	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd},
 }
@@ -371,7 +384,15 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		return err
 	}
 
+	var workflowFileDir string
 	workflowFile, _, _ := workflow.Load(workingDir)
+	if workflowFile == nil {
+		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
+			return err
+		}
+		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
+	}
+
 	if workflowFile == nil {
 		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
 	}
@@ -408,7 +429,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	secrets := make(map[string]string)
 	var publishPaths, generationWorkflowFilePaths []string
 	if len(workflowFile.Targets) == 1 {
-		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workingDir, nil)
+		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workingDir, workflowFileDir, nil)
 		if err != nil {
 			return err
 		}
@@ -423,7 +444,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
 	} else if len(workflowFile.Targets) > 1 {
 		for _, name := range chosenTargets {
-			generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workingDir, &name)
+			generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workingDir, workflowFileDir, &name)
 			if err != nil {
 				return err
 			}
@@ -438,7 +459,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		}
 	}
 
-	if err := workflow.Save(workingDir, workflowFile); err != nil {
+	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
@@ -452,7 +473,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
 	}
 
-	_, workflowFilePath, err := workflow.Load(workingDir)
+	_, workflowFilePath, err := workflow.Load(filepath.Join(workingDir, workflowFileDir))
 	if err != nil {
 		return errors.Wrapf(err, "failed to load workflow file")
 	}
@@ -513,7 +534,15 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	orgSlug := core.GetOrgSlugFromContext(ctx)
 	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
 
+	var workflowFileDir string
 	workflowFile, _, _ := workflow.Load(workingDir)
+	if workflowFile == nil {
+		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
+			return err
+		}
+		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
+	}
+
 	if workflowFile == nil {
 		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
 	}
@@ -557,7 +586,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	var generationWorkflowFilePaths []string
 
 	if len(workflowFile.Targets) <= 1 {
-		generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, workingDir, nil)
+		generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, workingDir, workflowFileDir, nil)
 		if err != nil {
 			return err
 		}
@@ -569,7 +598,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
 	} else {
 		for name := range workflowFile.Targets {
-			generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, workingDir, &name)
+			generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, workingDir, workflowFileDir, &name)
 			if err != nil {
 				return err
 			}
@@ -589,7 +618,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	if err := workflow.Save(workingDir, workflowFile); err != nil {
+	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
@@ -608,7 +637,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
 	}
 
-	_, workflowFilePath, err := workflow.Load(workingDir)
+	_, workflowFilePath, err := workflow.Load(filepath.Join(workingDir, workflowFileDir))
 	if err != nil {
 		return errors.Wrapf(err, "failed to load workflow file")
 	}
@@ -667,7 +696,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	return nil
 }
 
-func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, target *string) (*config.GenerateWorkflow, string, error) {
+func writeGenerationFile(workflowFile *workflow.Workflow, workingDir, workflowFileDir string, target *string) (*config.GenerateWorkflow, string, error) {
 	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
 	if target != nil {
 		sanitizedName := strings.ReplaceAll(strings.ToLower(*target), "-", "_")
@@ -684,7 +713,7 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, tar
 	generationWorkflow := &config.GenerateWorkflow{}
 	prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
 
-	generationWorkflow, err := prompts.ConfigureGithub(generationWorkflow, workflowFile, target)
+	generationWorkflow, err := prompts.ConfigureGithub(generationWorkflow, workflowFile, workflowFileDir, target)
 	if err != nil {
 		return nil, "", err
 	}
@@ -696,7 +725,7 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir string, tar
 	return generationWorkflow, generationWorkflowFilePath, nil
 }
 
-func writePublishingFile(workflowFile *workflow.Workflow, workingDir string, name *string) (*config.GenerateWorkflow, string, []string, error) {
+func writePublishingFile(workflowFile *workflow.Workflow, workingDir, workflowFileDir string, name *string) (*config.GenerateWorkflow, string, []string, error) {
 	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
 	if name != nil {
 		sanitizedName := strings.ReplaceAll(strings.ToLower(*name), "-", "_")
@@ -720,7 +749,7 @@ func writePublishingFile(workflowFile *workflow.Workflow, workingDir string, nam
 		output = workflowFile.Targets[*name].Output
 	}
 
-	generationWorkflow, publishPaths, err := prompts.WritePublishing(generationWorkflow, workflowFile, workingDir, name, output)
+	generationWorkflow, publishPaths, err := prompts.WritePublishing(generationWorkflow, workflowFile, workingDir, workflowFileDir, name, output)
 	if err != nil {
 		return nil, "", nil, errors.Wrapf(err, "failed to write publishing configs")
 	}
@@ -795,4 +824,15 @@ func configureGithubRepo(ctx context.Context, org, repo string) bool {
 	}
 
 	return res.StatusCode == http.StatusOK
+}
+
+func promptForWorkflowFileDir(workingDir string, dirOutput *string) error {
+	_, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		Title("What directory is your speakeasy workflow file in?").
+		Suggestions(charm.DirsInCurrentDir(workingDir)).
+		SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
+		Value(dirOutput))),
+		charm.WithTitle("Find your Speakeasy workflow file.")).
+		ExecuteForm()
+	return err
 }
