@@ -417,6 +417,11 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		}
 	}
 
+	if len(chosenTargets) == 0 {
+		logger.Println(styles.Info.Render("No targets selected. Exiting."))
+		return nil
+	}
+
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
 		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
@@ -428,12 +433,17 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 
 	secrets := make(map[string]string)
 	var publishPaths, generationWorkflowFilePaths []string
-	if len(workflowFile.Targets) == 1 {
-		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workingDir, workflowFileDir, nil)
+
+	for _, name := range chosenTargets {
+		// If the repo contains only one target we don't need to specify the target name in the file name
+		filenameAddendum := &name
+		if len(workflowFile.Targets) == 1 {
+			filenameAddendum = nil
+		}
+		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile.Targets[name], workingDir, workflowFileDir, filenameAddendum)
 		if err != nil {
 			return err
 		}
-
 		for key, val := range generationWorkflow.Jobs.Generate.Secrets {
 			secrets[key] = val
 		}
@@ -442,21 +452,6 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 			publishPaths = append(publishPaths, newPaths...)
 		}
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
-	} else if len(workflowFile.Targets) > 1 {
-		for _, name := range chosenTargets {
-			generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workingDir, workflowFileDir, &name)
-			if err != nil {
-				return err
-			}
-			for key, val := range generationWorkflow.Jobs.Generate.Secrets {
-				secrets[key] = val
-			}
-
-			if len(newPaths) > 0 {
-				publishPaths = append(publishPaths, newPaths...)
-			}
-			generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
-		}
 	}
 
 	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
@@ -725,10 +720,10 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir, workflowFi
 	return generationWorkflow, generationWorkflowFilePath, nil
 }
 
-func writePublishingFile(workflowFile *workflow.Workflow, workingDir, workflowFileDir string, name *string) (*config.GenerateWorkflow, string, []string, error) {
+func writePublishingFile(target workflow.Target, workingDir, workflowFileDir string, filenameAddendum *string) (*config.GenerateWorkflow, string, []string, error) {
 	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
-	if name != nil {
-		sanitizedName := strings.ReplaceAll(strings.ToLower(*name), "-", "_")
+	if filenameAddendum != nil {
+		sanitizedName := strings.ReplaceAll(strings.ToLower(*filenameAddendum), "-", "_")
 		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
 	}
 
@@ -744,12 +739,7 @@ func writePublishingFile(workflowFile *workflow.Workflow, workingDir, workflowFi
 		return nil, "", nil, fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
 	}
 
-	var output *string
-	if name != nil {
-		output = workflowFile.Targets[*name].Output
-	}
-
-	generationWorkflow, publishPaths, err := prompts.WritePublishing(generationWorkflow, workflowFile, workingDir, workflowFileDir, name, output)
+	publishPaths, err := prompts.WritePublishing(generationWorkflow, workingDir, workflowFileDir, target, filenameAddendum, target.Output)
 	if err != nil {
 		return nil, "", nil, errors.Wrapf(err, "failed to write publishing configs")
 	}
