@@ -46,6 +46,9 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	}
 
 	overlayOut := filepath.Join(workingDir, fmt.Sprintf("mvs_overlay_%s.yaml", randStringBytes(10)))
+	if err := os.MkdirAll(workingDir, os.ModePerm); err != nil {
+		return "", nil, err
+	}
 	overlayFile, err := os.Create(overlayOut)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to create overlay file: %w", err)
