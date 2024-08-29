@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/AlekSi/pointer"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
@@ -31,6 +32,9 @@ type StudioHandlers struct {
 	SourceID       string
 	OverlayPath    string
 	Ctx            context.Context
+	mutex          sync.Mutex
+	mutexCondition *sync.Cond
+	running        bool
 }
 
 func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*StudioHandlers, error) {
@@ -54,10 +58,172 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 		}
 	}
 
+	ret.mutex = sync.Mutex{}
+	ret.mutexCondition = sync.NewCond(&ret.mutex)
+
 	return ret, nil
 }
 
-func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *StudioHandlers) getLastCompletedRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	h.mutexCondition.L.Lock()
+	for h.running {
+		h.mutexCondition.Wait()
+	}
+	defer h.mutexCondition.L.Unlock()
+
+	return h.getLastCompletedRunResultInner(ctx, w, r)
+}
+
+func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	// Wait for the run to finish
+	h.mutexCondition.L.Lock()
+	for h.running {
+		h.mutexCondition.Wait()
+	}
+
+	h.running = true
+	defer func() {
+		h.running = false
+		h.mutexCondition.Broadcast()
+		h.mutexCondition.L.Unlock()
+	}()
+
+	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
+	if err != nil {
+		return fmt.Errorf("error cloning workflow runner: %w", err)
+	}
+	h.WorkflowRunner = *cloned
+	err = h.WorkflowRunner.Run(h.Ctx)
+	if err != nil {
+		return fmt.Errorf("error running workflow: %w", err)
+	}
+
+	ret := h.getLastCompletedRunResultInner(ctx, w, r)
+
+	return ret
+}
+
+func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return errors.New("streaming unsupported")
+	}
+
+	response := map[string]string{"status": "ok", "version": events.GetSpeakeasyVersionFromContext(h.Ctx)}
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		return fmt.Errorf("error marshaling health response: %w", err)
+	}
+
+	fmt.Fprintf(w, "data: %s\n\n", responseJSON)
+	flusher.Flush()
+
+	// Wait for the context to be done
+	<-ctx.Done()
+
+	return nil
+}
+
+func (h *StudioHandlers) getLastCompletedSourceResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	var err error
+
+	sourceID := h.SourceID
+	sourceResult, err := h.runSource(ctx)
+	if err != nil {
+		return fmt.Errorf("error running source: %w", err)
+	}
+
+	ret, err := convertSourceResultIntoSourceResponse(sourceID, *sourceResult, h.OverlayPath)
+	if err != nil {
+		return fmt.Errorf("error converting source result to source response: %w", err)
+	}
+
+	_ = json.NewEncoder(w).Encode(ret)
+
+	return nil
+}
+
+func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	var err error
+
+	// Destructure the request body which is a json object with a single key "overlay" which is a string
+	var reqBody struct {
+		Overlay string `json:"overlay"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&reqBody)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
+	}
+
+	// Verify this is a valid overlay
+	var overlay overlay.Overlay
+	dec := yaml.NewDecoder(strings.NewReader(reqBody.Overlay))
+	err = dec.Decode(&overlay)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding overlay: %w", err))
+	}
+
+	// Write the overlay to a file
+	err = h.getOrCreateOverlayPath()
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
+	}
+	err = utils.WriteStringToFile(h.OverlayPath, reqBody.Overlay)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing overlay to file: %w", err))
+	}
+
+	return h.getLastCompletedSourceResult(ctx, w, r)
+}
+
+func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	sourceResult, err := h.runSource(ctx)
+	if err != nil {
+		return fmt.Errorf("error running source: %w", err)
+	}
+
+	specBytes, err := os.ReadFile(sourceResult.OutputPath)
+	if err != nil {
+		return fmt.Errorf("error reading output spec: %w", err)
+	}
+	specPath := sourceResult.OutputPath
+
+	_, model, err := openapi.Load(specBytes, specPath)
+	if err != nil {
+		return fmt.Errorf("error loading document: %w", err)
+	}
+
+	_, overlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes, model.Model, shared.StyleResource, shared.DepthStyleOriginal)
+	if err != nil {
+		return fmt.Errorf("error suggesting method names: %w", err)
+	}
+
+	yamlBytes, err := yaml.Marshal(overlay)
+	if err != nil {
+		return fmt.Errorf("error marshaling overlay to yaml: %w", err)
+	}
+	overlayAsYaml := string(yamlBytes)
+
+	data := components.SuggestResponse{Overlay: overlayAsYaml}
+
+	err = json.NewEncoder(w).Encode(data)
+	if err != nil {
+		return fmt.Errorf("error encoding method name suggestions: %w", err)
+	}
+
+	return nil
+}
+
+// ---------------------------------
+// Helper functions
+// ---------------------------------
+
+func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	res := components.RunResponse{
 		TargetResults: make(map[string]components.TargetRunSummary),
 	}
@@ -123,141 +289,7 @@ func (h *StudioHandlers) getRun(ctx context.Context, w http.ResponseWriter, r *h
 	return nil
 }
 
-func (h *StudioHandlers) updateRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
-	if err != nil {
-		return fmt.Errorf("error cloning workflow runner: %w", err)
-	}
-	h.WorkflowRunner = *cloned
-	err = h.WorkflowRunner.Run(h.Ctx)
-	if err != nil {
-		return fmt.Errorf("error running workflow: %w", err)
-	}
-
-	return h.getRun(ctx, w, r)
-}
-
-func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		return errors.New("streaming unsupported")
-	}
-
-	response := map[string]string{"status": "ok", "version": events.GetSpeakeasyVersionFromContext(h.Ctx)}
-
-	responseJSON, err := json.Marshal(response)
-	if err != nil {
-		return fmt.Errorf("error marshaling health response: %w", err)
-	}
-
-	fmt.Fprintf(w, "data: %s\n\n", responseJSON)
-	flusher.Flush()
-
-	// Wait for the context to be done
-	<-ctx.Done()
-
-	return nil
-}
-
-func (h *StudioHandlers) getSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var err error
-
-	sourceID := h.SourceID
-	sourceResult, err := h.getSourceInner(ctx)
-	if err != nil {
-		return fmt.Errorf("error running source: %w", err)
-	}
-
-	ret, err := convertSourceResultIntoSourceResponse(sourceID, *sourceResult, h.OverlayPath)
-	if err != nil {
-		return fmt.Errorf("error converting source result to source response: %w", err)
-	}
-
-	_ = json.NewEncoder(w).Encode(ret)
-
-	return nil
-}
-
-func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var err error
-
-	// Destructure the request body which is a json object with a single key "overlay" which is a string
-	var reqBody struct {
-		Overlay string `json:"overlay"`
-	}
-	err = json.NewDecoder(r.Body).Decode(&reqBody)
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
-	}
-
-	// Verify this is a valid overlay
-	var overlay overlay.Overlay
-	dec := yaml.NewDecoder(strings.NewReader(reqBody.Overlay))
-	err = dec.Decode(&overlay)
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding overlay: %w", err))
-	}
-
-	// Write the overlay to a file
-	err = h.getOrCreateOverlayPath()
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
-	}
-	err = utils.WriteStringToFile(h.OverlayPath, reqBody.Overlay)
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing overlay to file: %w", err))
-	}
-
-	return h.getSource(ctx, w, r)
-}
-
-func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	sourceResult, err := h.getSourceInner(ctx)
-	if err != nil {
-		return fmt.Errorf("error running source: %w", err)
-	}
-
-	specBytes, err := os.ReadFile(sourceResult.OutputPath)
-	if err != nil {
-		return fmt.Errorf("error reading output spec: %w", err)
-	}
-	specPath := sourceResult.OutputPath
-
-	_, model, err := openapi.Load(specBytes, specPath)
-	if err != nil {
-		return fmt.Errorf("error loading document: %w", err)
-	}
-
-	_, overlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes, model.Model, shared.StyleResource, shared.DepthStyleOriginal)
-	if err != nil {
-		return fmt.Errorf("error suggesting method names: %w", err)
-	}
-
-	yamlBytes, err := yaml.Marshal(overlay)
-	if err != nil {
-		return fmt.Errorf("error marshaling overlay to yaml: %w", err)
-	}
-	overlayAsYaml := string(yamlBytes)
-
-	data := components.SuggestResponse{Overlay: overlayAsYaml}
-
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		return fmt.Errorf("error encoding method name suggestions: %w", err)
-	}
-
-	return nil
-}
-
-// ---------------------------------
-// Helper functions
-// ---------------------------------
-
-func (h *StudioHandlers) getSourceInner(ctx context.Context) (*run.SourceResult, error) {
+func (h *StudioHandlers) runSource(ctx context.Context) (*run.SourceResult, error) {
 	workflowRunner := h.WorkflowRunner
 	sourceID := h.SourceID
 
