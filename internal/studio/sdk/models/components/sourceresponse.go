@@ -9,6 +9,8 @@ type SourceResponse struct {
 	Input string `json:"input"`
 	// Studio modifications overlay contents (could be empty string)
 	Overlay string `json:"overlay"`
+	// Studio modifications overlay path (could be empty string)
+	OverlayPath string `json:"overlayPath"`
 	// Result of running the source in the workflow
 	Output string `json:"output"`
 	// List of validation errors

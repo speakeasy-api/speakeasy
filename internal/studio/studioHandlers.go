@@ -348,11 +348,12 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 	}
 
 	return &components.SourceResponse{
-		SourceID:  sourceID,
-		Input:     sourceResult.InputSpec,
-		Overlay:   overlayContents,
-		Output:    outputDocumentString,
-		Diagnosis: diagnosis,
+		SourceID:    sourceID,
+		Input:       sourceResult.InputSpec,
+		Overlay:     overlayContents,
+		OverlayPath: overlayPath,
+		Output:      outputDocumentString,
+		Diagnosis:   diagnosis,
 	}, nil
 }
 
