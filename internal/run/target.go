@@ -73,20 +73,20 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 				if retriedErr != nil {
 					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
 					// return the original error
-					return nil, nil, err
+					return sourceRes, nil, err
 				}
 
 				w.OperationsRemoved = sourceRes.LintResult.InvalidOperations
 				sourcePath = retriedPath
 				sourceRes = retriedRes
 			} else {
-				return nil, nil, err
+				return sourceRes, nil, err
 			}
 		}
 	} else {
 		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir)
 		if err != nil {
-			return nil, nil, err
+			return sourceRes, nil, err
 		}
 
 		sourceRes = &SourceResult{
@@ -109,7 +109,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	genConfig, err := sdkGenConfig.Load(outDir)
 	if err != nil {
-		return nil, nil, err
+		return sourceRes, nil, err
 	}
 
 	if w.SetVersion != "" && genConfig.Config != nil {
@@ -119,13 +119,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}
 		if langCfg, ok := genConfig.Config.Languages[t.Target]; ok {
 			if _, err := version.NewVersion(appliedVersion); err != nil {
-				return nil, nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
+				return sourceRes, nil, fmt.Errorf("failed to parse version %s: %w", w.SetVersion, err)
 			}
 
 			langCfg.Version = appliedVersion
 			genConfig.Config.Languages[t.Target] = langCfg
 			if err := sdkGenConfig.SaveConfig(outDir, genConfig.Config); err != nil {
-				return nil, nil, err
+				return sourceRes, nil, err
 			}
 		}
 	}
@@ -135,7 +135,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		if errors.Is(err, validation.NoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
 		} else {
-			return nil, nil, err
+			return sourceRes, nil, err
 		}
 	}
 
@@ -170,7 +170,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		w.SkipVersioning,
 	)
 	if err != nil {
-		return nil, nil, err
+		return sourceRes, nil, err
 	}
 	w.generationAccess = generationAccess
 
@@ -193,13 +193,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, style)
 		if err != nil {
-			return nil, nil, err
+			return sourceRes, nil, err
 		}
 
 		if !w.FrozenWorkflowLock {
 			namespaceName, digest, err := w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
 			if err != nil {
-				return nil, nil, err
+				return sourceRes, nil, err
 			}
 			targetLock.CodeSamplesNamespace = namespaceName
 			targetLock.CodeSamplesRevisionDigest = digest

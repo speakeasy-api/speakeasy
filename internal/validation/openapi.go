@@ -3,9 +3,10 @@ package validation
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -20,6 +21,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"go.uber.org/zap"
 )
+
+var ErrValidationFailed = fmt.Errorf("validation failed")
 
 // OutputLimits defines the limits for validation output.
 type OutputLimits struct {
@@ -135,7 +138,7 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 	})
 
 	if len(res.Errors) > 0 {
-		return res, fmt.Errorf(res.Status)
+		return res, ErrValidationFailed
 	}
 
 	if len(res.Warnings) > 0 {

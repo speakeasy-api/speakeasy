@@ -95,7 +95,9 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	h.WorkflowRunner = *cloned
 	err = h.WorkflowRunner.Run(h.Ctx)
 	if err != nil {
-		return fmt.Errorf("error running workflow: %w", err)
+		// TODO: We should still return this on the response
+		fmt.Println("error running workflow:", err)
+		// return err
 	}
 
 	ret := h.getLastCompletedRunResultInner(ctx, w, r)
@@ -231,6 +233,10 @@ func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w h
 	res.TargetResults = make(map[string]components.TargetRunSummary)
 
 	for k, v := range h.WorkflowRunner.TargetResults {
+		if v == nil {
+			continue
+		}
+
 		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
 		if err != nil {
 			return fmt.Errorf("error reading gen.yaml: %w", err)
