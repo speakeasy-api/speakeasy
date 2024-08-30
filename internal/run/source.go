@@ -104,7 +104,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace = %s blobDigest = %s revisionDigest = %s", lockSource.SourceNamespace, lockSource.SourceBlobDigest, lockSource.SourceRevisionDigest)
 		}
 		var orgSlug, workspaceSlug, registryNamespace string
-		if isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil	 {
+		if isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil {
 			d := w.workflow.Sources[sourceID].Inputs[0]
 			registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
 			if registryBreakdown == nil {
@@ -261,7 +261,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !w.SkipLinting {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
-		if err != nil {
+		if err != nil && !errors.Is(err, validation.ErrValidationFailed) {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
 	}

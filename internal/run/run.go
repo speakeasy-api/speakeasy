@@ -6,17 +6,17 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"slices"
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -99,11 +99,6 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		}
 
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", output, styles.Colors.Grey))
-
-		filteredLogs := filterLogs(ctx, &logs)
-		if !w.FromQuickstart {
-			ask.OfferChatSessionOnError(ctx, filteredLogs)
-		}
 	} else if len(w.criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
 		s := strings.Join(w.criticalWarns, "\n")
 		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
@@ -122,7 +117,8 @@ func (w *Workflow) PrintSuccessSummary(ctx context.Context) {
 func (w *Workflow) Run(ctx context.Context) error {
 	startTime := time.Now()
 	err := w.RunInner(ctx)
-	w.duration = time.Since(startTime)
+	w.Error = err
+	w.Duration = time.Since(startTime)
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
 
@@ -154,7 +150,6 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
 			w.SourceResults[sourceRes.Source] = sourceRes
 		}
 	} else if w.Target != "" {
@@ -163,12 +158,13 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		}
 
 		sourceRes, targetRes, err := w.runTarget(ctx, w.Target)
+		w.SourceResults[sourceRes.Source] = sourceRes
+		w.TargetResults[w.Target] = targetRes
+
 		if err != nil {
 			return err
 		}
 
-		w.SourceResults[sourceRes.Source] = sourceRes
-		w.TargetResults[w.Target] = targetRes
 	} else if w.Source != "" {
 		if _, ok := w.workflow.Sources[w.Source]; !ok {
 			return fmt.Errorf("source %s not found", w.Source)
@@ -217,7 +213,7 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 	}
 
 	additionalLines := []string{
-		fmt.Sprintf("⏲ Generated in %.1f Seconds", w.duration.Seconds()),
+		fmt.Sprintf("⏲ Generated in %.1f Seconds", w.Duration.Seconds()),
 		"✎ Output written to " + tOut,
 	}
 

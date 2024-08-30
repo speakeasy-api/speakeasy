@@ -1,14 +1,15 @@
-# SDK
+# Suggest
+(*Suggest*)
 
 ## Overview
 
 ### Available Operations
 
-* [GetRun](#getrun) - Run
+* [MethodNames](#methodnames) - Suggest Method Names
 
-## GetRun
+## MethodNames
 
-Get the output of the last run.
+Suggest method names for the current source.
 
 ### Example Usage
 
@@ -27,11 +28,11 @@ func main() {
     )
 
     ctx := context.Background()
-    res, err := s.GetRun(ctx)
+    res, err := s.Suggest.MethodNames(ctx)
     if err != nil {
         log.Fatal(err)
     }
-    if res.RunResponse != nil {
+    if res.SuggestResponse != nil {
         // handle response
     }
 }
@@ -46,7 +47,7 @@ func main() {
 
 ### Response
 
-**[*operations.GetRunResponse](../../models/operations/getrunresponse.md), error**
+**[*operations.SuggestMethodNamesResponse](../../models/operations/suggestmethodnamesresponse.md), error**
 
 ### Errors
 

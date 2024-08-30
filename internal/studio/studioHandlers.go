@@ -88,6 +88,11 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		h.mutexCondition.L.Unlock()
 	}()
 
+	// If the context is cancelled, we should return early
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
@@ -95,7 +100,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	h.WorkflowRunner = *cloned
 	err = h.WorkflowRunner.Run(h.Ctx)
 	if err != nil {
-		return fmt.Errorf("error running workflow: %w", err)
+		fmt.Println("error running workflow:", err)
 	}
 
 	ret := h.getLastCompletedRunResultInner(ctx, w, r)
@@ -154,28 +159,55 @@ func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter
 	// Destructure the request body which is a json object with a single key "overlay" which is a string
 	var reqBody struct {
 		Overlay string `json:"overlay"`
+		Input   string `json:"input"`
 	}
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
 	}
 
-	// Verify this is a valid overlay
-	var overlay overlay.Overlay
-	dec := yaml.NewDecoder(strings.NewReader(reqBody.Overlay))
-	err = dec.Decode(&overlay)
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding overlay: %w", err))
+	if reqBody.Input != "" {
+		// Assert that the workflow source input is a single local file
+		workflowConfig := h.WorkflowRunner.GetWorkflowFile()
+		source := workflowConfig.Sources[h.SourceID]
+		if len(source.Inputs) != 1 {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input for source with multiple inputs"))
+		}
+		if strings.HasPrefix(reqBody.Input, "http://") || strings.HasPrefix(reqBody.Input, "https://") {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input to a remote file"))
+		}
+
+		inputLocation := source.Inputs[0].Location
+
+		// if it's absolute that's fine, otherwise it's relative to the project directory
+		if !filepath.IsAbs(inputLocation) {
+			inputLocation = filepath.Join(h.WorkflowRunner.ProjectDir, inputLocation)
+		}
+
+		err = utils.WriteStringToFile(inputLocation, reqBody.Input)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
+		}
 	}
 
-	// Write the overlay to a file
-	err = h.getOrCreateOverlayPath()
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
-	}
-	err = utils.WriteStringToFile(h.OverlayPath, reqBody.Overlay)
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing overlay to file: %w", err))
+	if reqBody.Overlay != "" {
+		// Verify this is a valid overlay
+		var overlay overlay.Overlay
+		dec := yaml.NewDecoder(strings.NewReader(reqBody.Overlay))
+		err = dec.Decode(&overlay)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding overlay: %w", err))
+		}
+
+		// Write the overlay to a file
+		err = h.getOrCreateOverlayPath()
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
+		}
+		err = utils.WriteStringToFile(h.OverlayPath, reqBody.Overlay)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing overlay to file: %w", err))
+		}
 	}
 
 	return h.getLastCompletedSourceResult(ctx, w, r)
@@ -228,9 +260,21 @@ func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w h
 		TargetResults: make(map[string]components.TargetRunSummary),
 	}
 
+	res.Took = h.WorkflowRunner.Duration.Milliseconds()
+	res.WorkingDirectory = h.WorkflowRunner.ProjectDir
+
+	if h.WorkflowRunner.Error != nil {
+		errStr := h.WorkflowRunner.Error.Error()
+		res.Error = &errStr
+	}
+
 	res.TargetResults = make(map[string]components.TargetRunSummary)
 
 	for k, v := range h.WorkflowRunner.TargetResults {
+		if v == nil {
+			continue
+		}
+
 		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
 		if err != nil {
 			return fmt.Errorf("error reading gen.yaml: %w", err)
@@ -318,7 +362,7 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 	}
 
 	outputDocumentString, err := utils.ReadFileToString(sourceResult.OutputPath)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("error reading output document: %w", err)
 	}
 

@@ -1,14 +1,15 @@
-# SDK
+# Health
+(*Health*)
 
 ## Overview
 
 ### Available Operations
 
-* [GetRun](#getrun) - Run
+* [Check](#check) - Health Check
 
-## GetRun
+## Check
 
-Get the output of the last run.
+Check the CLI health and return relevant information.
 
 ### Example Usage
 
@@ -27,12 +28,18 @@ func main() {
     )
 
     ctx := context.Background()
-    res, err := s.GetRun(ctx)
+    res, err := s.Health.Check(ctx)
     if err != nil {
         log.Fatal(err)
     }
-    if res.RunResponse != nil {
-        // handle response
+    if res.HealthResponse != nil {
+        defer res.HealthResponse.Close()
+
+        for res.HealthResponse.Next() {
+            event := res.HealthResponse.Value()
+            log.Print(event)
+            // Handle the event
+	      }
     }
 }
 ```
@@ -46,7 +53,7 @@ func main() {
 
 ### Response
 
-**[*operations.GetRunResponse](../../models/operations/getrunresponse.md), error**
+**[*operations.CheckHealthResponse](../../models/operations/checkhealthresponse.md), error**
 
 ### Errors
 

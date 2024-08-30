@@ -21,7 +21,7 @@ type Workflow struct {
 	SetVersion         string
 	Debug              bool
 	ShouldCompile      bool
-	Verbose      bool
+	Verbose            bool
 	ForceGeneration    bool
 	FrozenWorkflowLock bool
 	SkipVersioning     bool
@@ -49,8 +49,9 @@ type Workflow struct {
 	computedChanges map[string]bool
 	SourceResults   map[string]*SourceResult
 	TargetResults   map[string]*TargetResult
-	duration        time.Duration
+	Duration        time.Duration
 	criticalWarns   []string
+	Error           error
 }
 
 type Opt func(w *Workflow)
