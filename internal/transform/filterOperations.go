@@ -7,6 +7,7 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 	"io"
 	"slices"
@@ -35,7 +36,7 @@ type args struct {
 }
 
 func filterOperations(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	overlay := BuildFilterOperationsOverlay(model, args.include, args.includeOps)
+	overlay := BuildFilterOperationsOverlay(model, args.include, args.includeOps, nil)
 
 	root := model.Index.GetRootNode()
 	if err := overlay.ApplyTo(root); err != nil {
@@ -69,7 +70,11 @@ func filterOperations(ctx context.Context, doc libopenapi.Document, model *libop
 	return doc, model, err
 }
 
-func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string) overlay.Overlay {
+func BuildRemoveInvalidOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], opToErr map[string]error) overlay.Overlay {
+	return BuildFilterOperationsOverlay(model, false, maps.Keys(opToErr), opToErr)
+}
+
+func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string, opToErr map[string]error) overlay.Overlay {
 	actionFn := func(method, path string, operation *v3.Operation) (map[string]string, *overlay.Action, *suggestions.ModificationExtension) {
 		operationID := operation.OperationId
 
@@ -94,9 +99,15 @@ func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], 
 				Target: target,
 				Remove: true,
 			}
+
+			before := "<invalid_operation>"
+			if err, ok := opToErr[operationID]; ok {
+				before = err.Error()
+			}
+
 			return nil, &action, &suggestions.ModificationExtension{
 				Type:   suggestions.ModificationTypeRemoveInvalid,
-				Before: "<invalid_operation>", // TODO: insert the actual error message here
+				Before: before,
 				After:  "<removed>",
 			}
 		}
