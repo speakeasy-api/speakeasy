@@ -357,26 +357,23 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflow.Workflow, workingDir, workflowFileDir string, target, outputPath *string) (*config.GenerateWorkflow, []string, error) {
+// WritePublishing writes a github action file for a given target for publishing to a package manager.
+// If filenameAddendum is provided, it will be appended to the filename (i.e. sdk_publish_lending.yaml).
+// Returns the paths to the files written.
+func WritePublishing(genWorkflow *config.GenerateWorkflow, workingDir, workflowFileDir string, target workflow.Target, filenameAddendum, outputPath *string) ([]string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
-	var targetType string
+
 	var terraformOutDir *string
-	for name, t := range workflowFile.Targets {
-		if target != nil && *target != name {
-			continue
+
+	if target.Publishing != nil {
+		for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
+			secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 		}
 
-		if t.Publishing != nil {
-			for _, secret := range getSecretsValuesFromPublishing(*t.Publishing) {
-				secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
-			}
-
-			if t.Target == "terraform" {
-				terraformOutDir = t.Output
-			}
-			targetType = t.Target
+		if target.Target == "terraform" {
+			terraformOutDir = target.Output
 		}
 	}
 
@@ -387,7 +384,7 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 	genWorkflow.Jobs.Generate.Secrets = currentSecrets
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
-	if targetType == "terraform" {
+	if target.Target == "terraform" {
 		releaseActionPath := filepath.Join(workingDir, ".github/workflows/tf_provider_release.yaml")
 		goReleaserPath := workingDir
 		if terraformOutDir != nil {
@@ -396,27 +393,28 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		goReleaserPath = filepath.Join(goReleaserPath, ".goreleaser.yml")
 		releasePaths := []string{releaseActionPath, goReleaserPath}
 		if err := os.WriteFile(releaseActionPath, []byte(terraformReleaseAction), 0o644); err != nil {
-			return genWorkflow, releasePaths, errors.Wrapf(err, "failed to write terraform release github action release file %s", terraformReleaseAction)
+			return releasePaths, errors.Wrapf(err, "failed to write terraform release github action release file %s", terraformReleaseAction)
 		}
 
 		if err := os.WriteFile(goReleaserPath, []byte(goReleaser), 0o644); err != nil {
-			return genWorkflow, releasePaths, errors.Wrapf(err, "failed to write terraform goreleaser file %s", goReleaserPath)
+			return releasePaths, errors.Wrapf(err, "failed to write terraform goreleaser file %s", goReleaserPath)
 		}
 
-		return genWorkflow, releasePaths, nil
+		return releasePaths, nil
 	} else if mode == "pr" {
 		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
-		if target != nil {
-			sanitizedName := strings.ReplaceAll(strings.ToLower(*target), "-", "_")
+		if filenameAddendum != nil {
+			sanitizedName := strings.ReplaceAll(strings.ToLower(*filenameAddendum), "-", "_")
 			filePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_publish_%s.yaml", sanitizedName))
 		}
+
 		publishingFile := &config.PublishWorkflow{}
 		if err := readPublishingFile(publishingFile, filePath); err != nil {
 			publishingFile = defaultPublishingFile()
 		}
 
-		if target != nil {
-			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*target))
+		if filenameAddendum != nil {
+			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*filenameAddendum))
 		}
 
 		releaseDirectory := workflowFileDir
@@ -444,17 +442,17 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workflowFile *workflo
 		yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
 		yamlEncoder.SetIndent(2)
 		if err := yamlEncoder.Encode(publishingFile); err != nil {
-			return genWorkflow, nil, errors.Wrapf(err, "failed to encode workflow file")
+			return nil, errors.Wrapf(err, "failed to encode workflow file")
 		}
 
 		if err := os.WriteFile(filePath, publishingWorkflowBuf.Bytes(), 0o644); err != nil {
-			return genWorkflow, []string{filePath}, errors.Wrapf(err, "failed to write github publishing file")
+			return []string{filePath}, errors.Wrapf(err, "failed to write github publishing file")
 		}
 
-		return genWorkflow, []string{filePath}, nil
+		return []string{filePath}, nil
 	}
 
-	return genWorkflow, nil, nil
+	return nil, nil
 }
 
 func WriteGenerationFile(generationWorkflow *config.GenerateWorkflow, generationWorkflowFilePath string) error {

@@ -9,6 +9,8 @@ type SourceResponse struct {
 	Input string `json:"input"`
 	// Studio modifications overlay contents (could be empty string)
 	Overlay string `json:"overlay"`
+	// Studio modifications overlay path
+	OverlayPath string `json:"overlayPath"`
 	// Result of running the source in the workflow
 	Output string `json:"output"`
 	// List of validation errors
@@ -34,6 +36,13 @@ func (o *SourceResponse) GetOverlay() string {
 		return ""
 	}
 	return o.Overlay
+}
+
+func (o *SourceResponse) GetOverlayPath() string {
+	if o == nil {
+		return ""
+	}
+	return o.OverlayPath
 }
 
 func (o *SourceResponse) GetOutput() string {

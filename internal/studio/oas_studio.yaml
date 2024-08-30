@@ -169,6 +169,9 @@ components:
         overlay:
           type: string
           description: Studio modifications overlay contents (could be empty string)
+        overlayPath:
+          type: string
+          description: Studio modifications overlay path
         output:
           type: string
           description: Result of running the source in the workflow
@@ -181,6 +184,7 @@ components:
         - sourceID
         - input
         - overlay
+        - overlayPath
         - output
         - diagnosis
     SuggestResponse:
