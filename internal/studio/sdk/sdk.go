@@ -163,9 +163,9 @@ func New(opts ...SDKOption) *SDK {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.3.14",
-			GenVersion:        "2.404.1",
-			UserAgent:         "speakeasy-sdk/go 0.3.14 2.404.1 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			SDKVersion:        "0.3.15",
+			GenVersion:        "2.404.9",
+			UserAgent:         "speakeasy-sdk/go 0.3.15 2.404.9 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -199,7 +199,6 @@ func (s *SDK) CheckHealth(ctx context.Context, opts ...operations.Option) (*oper
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "checkHealth",
-		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -383,7 +382,6 @@ func (s *SDK) GetRun(ctx context.Context, opts ...operations.Option) (*operation
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "getRun",
-		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -557,7 +555,6 @@ func (s *SDK) Run(ctx context.Context, opts ...operations.Option) (*operations.R
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "run",
-		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -731,7 +728,6 @@ func (s *SDK) GetSource(ctx context.Context, opts ...operations.Option) (*operat
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "getSource",
-		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -905,7 +901,6 @@ func (s *SDK) UpdateSource(ctx context.Context, request operations.UpdateSourceR
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "updateSource",
-		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -1085,7 +1080,6 @@ func (s *SDK) SuggestMethodNames(ctx context.Context, opts ...operations.Option)
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "suggestMethodNames",
-		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
