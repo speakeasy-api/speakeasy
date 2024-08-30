@@ -3,8 +3,10 @@ package suggest
 import (
 	"context"
 	"fmt"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"gopkg.in/yaml.v3"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -13,7 +15,6 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
-	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	overlayUtil "github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/schema"
@@ -25,7 +26,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 )
 
-func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asOverlay, yamlOut bool, style shared.Style, depthStyle shared.DepthStyle, w io.Writer) error {
+func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asOverlay, yamlOut bool, w io.Writer) error {
 	if asOverlay {
 		yamlOut = true
 	}
@@ -37,7 +38,7 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 
 	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
 
-	updates, overlay, err := SuggestOperationIDs(ctx, schemaBytes, model.Model, style, depthStyle)
+	overlay, err := SuggestOperationIDs(ctx, schemaBytes)
 
 	stopSpinner()
 
@@ -45,7 +46,7 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 		return err
 	}
 
-	printSuggestions(ctx, updates)
+	printSuggestions(ctx, overlay)
 
 	/*
 	 * Write the new document or overlay
@@ -73,7 +74,7 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 	return nil
 }
 
-func SuggestOperationIDs(ctx context.Context, schema []byte, model v3.Document, style shared.Style, depthStyle shared.DepthStyle) ([]suggestions.OperationUpdate, *overlay.Overlay, error) {
+func SuggestOperationIDs(ctx context.Context, schema []byte) (*overlay.Overlay, error) {
 	httpClient := &http.Client{Timeout: 5 * time.Minute}
 	severURL := speakeasy.ServerList[speakeasy.ServerProd]
 	if strings.Contains(auth.GetServerURL(), "localhost") {
@@ -84,16 +85,14 @@ func SuggestOperationIDs(ctx context.Context, schema []byte, model v3.Document, 
 		speakeasy.WithServerURL(severURL),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	/* Get suggestion */
-	res, err := client.Suggest.SuggestOperationIDs(ctx, operations.SuggestOperationIDsRequest{
-		XSessionID: "unused",
-		RequestBody: operations.SuggestOperationIDsRequestBody{
-			Opts: &shared.SuggestOperationIDsOpts{
-				Style:      style.ToPointer(),
-				DepthStyle: depthStyle.ToPointer(),
+	res, err := client.Suggest.SuggestOpenAPI(ctx, operations.SuggestOpenAPIRequest{
+		RequestBody: operations.SuggestOpenAPIRequestBody{
+			Opts: &shared.SuggestOpts{
+				SuggestionType: shared.SuggestionTypeMethodNames,
 			},
 			Schema: operations.Schema{
 				FileName: "openapi.yaml",
@@ -101,20 +100,26 @@ func SuggestOperationIDs(ctx context.Context, schema []byte, model v3.Document, 
 			},
 		},
 	})
-	if err != nil || res.SuggestedOperationIDs == nil {
-		return nil, nil, err
+	if err != nil || res.Schema == nil {
+		return nil, err
 	}
 
-	/* Convert result to overlay */
-	suggestion := suggestions.MakeOperationIDs(res.SuggestedOperationIDs.OperationIds)
-	updates, overlay := suggestion.AsOverlay(model)
+	bytes, err := ioutil.ReadAll(res.Schema)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
 
-	return updates, &overlay, nil
+	var o overlay.Overlay
+	if err := yaml.Unmarshal(bytes, &o); err != nil {
+		return nil, fmt.Errorf("error unmarshalling response body into overlay: %w", err)
+	}
+
+	return &o, nil
 }
 
 var changedStyle = styles.Dimmed.Strikethrough(true)
 
-func printSuggestions(ctx context.Context, updates []suggestions.OperationUpdate) {
+func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 	logger := log.From(ctx)
 
 	maxWidth := 0
@@ -122,28 +127,29 @@ func printSuggestions(ctx context.Context, updates []suggestions.OperationUpdate
 	var lhs []string
 	var rhs []string
 
-	for _, update := range updates {
-		oldGroupIDStr := styles.Info.Render(update.OldGroupID)
-		oldOperationIDStr := styles.Info.Render(update.OldOperationID)
-		newGroupIDStr := styles.DimmedItalic.Render(update.NewGroupID)
-		newOperationIDStr := styles.DimmedItalic.Render(update.NewOperationID)
-
-		if update.NewGroupID != update.OldGroupID {
-			oldGroupIDStr = changedStyle.Render(update.OldGroupID)
-			newGroupIDStr = styles.Success.Render(update.NewGroupID)
+	for _, action := range overlay.Actions {
+		modificationExtension := action.Extensions["x-speakeasy-modification"]
+		if modificationExtension == nil {
+			continue
 		}
 
-		if update.NewOperationID != update.OldOperationID {
-			oldOperationIDStr = changedStyle.Render(update.OldOperationID)
-			newOperationIDStr = styles.Success.Render(update.NewOperationID)
+		modificationE := modificationExtension.(map[string]interface{})
+		modification := suggestions.ModificationExtension{
+			Before: modificationE["before"].(string),
+			After:  modificationE["after"].(string),
+		}
+		before := changedStyle.Render(modification.Before)
+		after := styles.Success.Render(modification.After)
+
+		if modification.Before == modification.After {
+			before = styles.Info.Render(modification.Before)
+			after = styles.DimmedItalic.Render(modification.After)
 		}
 
-		l := fmt.Sprintf("%s.%s", oldGroupIDStr, oldOperationIDStr)
-		lhs = append(lhs, l)
+		lhs = append(lhs, before)
+		rhs = append(rhs, after)
 
-		rhs = append(rhs, fmt.Sprintf("%s.%s", newGroupIDStr, newOperationIDStr))
-
-		if w := lipgloss.Width(l); w > maxWidth {
+		if w := lipgloss.Width(before); w > maxWidth {
 			maxWidth = w
 		}
 	}

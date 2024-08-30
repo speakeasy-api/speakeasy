@@ -13,12 +13,10 @@ import (
 	"github.com/AlekSi/pointer"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy-core/errors"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 
 	"github.com/speakeasy-api/jsonpath/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
@@ -191,14 +189,8 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 	if err != nil {
 		return fmt.Errorf("error reading output spec: %w", err)
 	}
-	specPath := sourceResult.OutputPath
 
-	_, model, err := openapi.Load(specBytes, specPath)
-	if err != nil {
-		return fmt.Errorf("error loading document: %w", err)
-	}
-
-	_, overlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes, model.Model, shared.StyleResource, shared.DepthStyleOriginal)
+	overlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes)
 	if err != nil {
 		return fmt.Errorf("error suggesting method names: %w", err)
 	}
