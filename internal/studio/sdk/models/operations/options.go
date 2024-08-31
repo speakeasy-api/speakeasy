@@ -22,8 +22,8 @@ const (
 type AcceptHeaderEnum string
 
 const (
-	AcceptHeaderEnumTextEventStream AcceptHeaderEnum = "text/event-stream"
 	AcceptHeaderEnumApplicationJson AcceptHeaderEnum = "application/json"
+	AcceptHeaderEnumTextEventStream AcceptHeaderEnum = "text/event-stream"
 )
 
 func (e AcceptHeaderEnum) ToPointer() *AcceptHeaderEnum {

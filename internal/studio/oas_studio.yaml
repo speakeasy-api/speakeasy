@@ -124,11 +124,15 @@ components:
         workingDirectory:
           type: string
           description: Working directory
+        took:
+          type: integer
+          description: Time taken to run the workflow in milliseconds
       required:
         - sourceResult
         - targetResults
         - workflow
         - workingDirectory
+        - took
     TargetRunSummary:
       type: object
       properties:

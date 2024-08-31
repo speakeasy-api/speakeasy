@@ -21,14 +21,14 @@ type Workflow struct {
 	SetVersion         string
 	Debug              bool
 	ShouldCompile      bool
-	Verbose      bool
+	Verbose            bool
 	ForceGeneration    bool
 	FrozenWorkflowLock bool
 	SkipVersioning     bool
 	SkipLinting        bool
 	SkipChangeReport   bool
 	SkipSnapshot       bool
-	SkipCleanup      bool
+	SkipCleanup        bool
 	FromQuickstart     bool
 	RepoSubDirs        map[string]string
 	InstallationURLs   map[string]string
@@ -49,7 +49,7 @@ type Workflow struct {
 	computedChanges map[string]bool
 	SourceResults   map[string]*SourceResult
 	TargetResults   map[string]*TargetResult
-	duration        time.Duration
+	Duration        time.Duration
 	criticalWarns   []string
 }
 

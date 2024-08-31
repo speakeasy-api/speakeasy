@@ -1,14 +1,15 @@
-# SDK
+# Run
+(*Run*)
 
 ## Overview
 
 ### Available Operations
 
-* [GetRun](#getrun) - Run
+* [RegenerateTargets](#regeneratetargets) - Run
 
-## GetRun
+## RegenerateTargets
 
-Get the output of the last run.
+Regenerate the currently selected targets.
 
 ### Example Usage
 
@@ -27,7 +28,7 @@ func main() {
     )
 
     ctx := context.Background()
-    res, err := s.GetRun(ctx)
+    res, err := s.Run.RegenerateTargets(ctx)
     if err != nil {
         log.Fatal(err)
     }
@@ -46,7 +47,7 @@ func main() {
 
 ### Response
 
-**[*operations.GetRunResponse](../../models/operations/getrunresponse.md), error**
+**[*operations.RunResponse](../../models/operations/runresponse.md), error**
 
 ### Errors
 

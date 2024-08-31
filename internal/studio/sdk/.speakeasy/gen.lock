@@ -1,29 +1,35 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 1da231eb795b308b6c18e846ef2746f5
+  docChecksum: f4aa678d777843c38609e48a16d0e51b
   docVersion: 1.0.0
-  speakeasyVersion: 1.379.4
-  generationVersion: 2.404.9
-  releaseVersion: 0.3.15
-  configChecksum: 997e467b0eb775fe88e76ad341f6588d
+  speakeasyVersion: 0.0.1
+  generationVersion: 2.407.1
+  releaseVersion: 0.4.0
+  configChecksum: dec8c96495e864169e7ad5ddc7ce7a71
 features:
   go:
     additionalDependencies: 0.1.0
     core: 3.5.5
     defaultEnabledRetries: 0.2.0
-    envVarSecurityUsage: 0.3.0
+    envVarSecurityUsage: 0.3.1
     globalSecurity: 2.82.10
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
     globalServerURLs: 2.82.2
+    groups: 2.81.2
     intellisenseMarkdownSupport: 0.1.0
+    nameOverrides: 2.81.2
     responseFormat: 0.1.2
     retries: 2.83.0
     sdkHooks: 0.1.0
     serverEvents: 0.1.2
     serverEventsSentinels: 0.1.0
 generatedFiles:
+  - health.go
+  - run.go
+  - source.go
+  - suggest.go
   - sdk.go
   - models/sdkerrors/sdkerror.go
   - retry/config.go
@@ -43,14 +49,12 @@ generatedFiles:
   - internal/utils/retries.go
   - internal/utils/security.go
   - internal/utils/utils.go
-  - /models/operations/checkhealth.go
   - /models/operations/getrun.go
+  - /models/operations/checkhealth.go
   - /models/operations/run.go
   - /models/operations/getsource.go
   - /models/operations/updatesource.go
   - /models/operations/suggestmethodnames.go
-  - /models/components/healthresponse.go
-  - /models/components/httpmetadata.go
   - /models/components/runresponse.go
   - /models/components/workflow.go
   - /models/components/target.go
@@ -65,18 +69,17 @@ generatedFiles:
   - /models/components/targetrunsummary.go
   - /models/components/sourceresponse.go
   - /models/components/diagnostic.go
+  - /models/components/httpmetadata.go
+  - /models/components/healthresponse.go
   - /models/components/suggestresponse.go
   - /models/components/security.go
-  - docs/models/operations/checkhealthresponse.md
   - docs/models/operations/getrunresponse.md
+  - docs/models/operations/checkhealthresponse.md
   - docs/models/operations/runresponse.md
   - docs/models/operations/getsourceresponse.md
   - docs/models/operations/updatesourcerequestbody.md
   - docs/models/operations/updatesourceresponse.md
   - docs/models/operations/suggestmethodnamesresponse.md
-  - docs/models/components/data.md
-  - docs/models/components/healthresponse.md
-  - docs/models/components/httpmetadata.md
   - docs/models/components/runresponse.md
   - docs/models/components/workflow.md
   - docs/models/components/target.md
@@ -91,10 +94,17 @@ generatedFiles:
   - docs/models/components/targetrunsummary.md
   - docs/models/components/sourceresponse.md
   - docs/models/components/diagnostic.md
+  - docs/models/components/httpmetadata.md
+  - docs/models/components/data.md
+  - docs/models/components/healthresponse.md
   - docs/models/components/suggestresponse.md
   - docs/models/components/security.md
   - docs/models/operations/option.md
   - docs/sdks/sdk/README.md
+  - docs/sdks/health/README.md
+  - docs/sdks/run/README.md
+  - docs/sdks/source/README.md
+  - docs/sdks/suggest/README.md
   - USAGE.md
   - models/operations/options.go
   - internal/hooks/hooks.go

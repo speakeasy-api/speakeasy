@@ -88,6 +88,11 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		h.mutexCondition.L.Unlock()
 	}()
 
+	// If the context is cancelled, we should return early
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
@@ -229,6 +234,8 @@ func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w h
 	res := components.RunResponse{
 		TargetResults: make(map[string]components.TargetRunSummary),
 	}
+
+	res.Took = h.WorkflowRunner.Duration.Milliseconds()
 
 	res.TargetResults = make(map[string]components.TargetRunSummary)
 

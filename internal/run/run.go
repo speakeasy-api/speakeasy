@@ -117,7 +117,7 @@ func (w *Workflow) PrintSuccessSummary(ctx context.Context) {
 func (w *Workflow) Run(ctx context.Context) error {
 	startTime := time.Now()
 	err := w.RunInner(ctx)
-	w.duration = time.Since(startTime)
+	w.Duration = time.Since(startTime)
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
 
@@ -212,7 +212,7 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 	}
 
 	additionalLines := []string{
-		fmt.Sprintf("⏲ Generated in %.1f Seconds", w.duration.Seconds()),
+		fmt.Sprintf("⏲ Generated in %.1f Seconds", w.Duration.Seconds()),
 		"✎ Output written to " + tOut,
 	}
 

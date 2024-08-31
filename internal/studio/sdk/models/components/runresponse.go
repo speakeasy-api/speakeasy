@@ -12,6 +12,8 @@ type RunResponse struct {
 	Workflow      Workflow                    `json:"workflow"`
 	// Working directory
 	WorkingDirectory string `json:"workingDirectory"`
+	// Time taken to run the workflow in milliseconds
+	Took int64 `json:"took"`
 }
 
 func (o *RunResponse) GetLintingReportLink() *string {
@@ -47,4 +49,11 @@ func (o *RunResponse) GetWorkingDirectory() string {
 		return ""
 	}
 	return o.WorkingDirectory
+}
+
+func (o *RunResponse) GetTook() int64 {
+	if o == nil {
+		return 0
+	}
+	return o.Took
 }
