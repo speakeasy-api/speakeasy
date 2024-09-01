@@ -77,9 +77,7 @@ func main() {
     s := sdk.New(
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
-    request := operations.UpdateSourceRequestBody{
-        Overlay: "<value>",
-    }
+    request := operations.UpdateSourceRequestBody{}
     ctx := context.Background()
     res, err := s.Source.Update(ctx, request)
     if err != nil {

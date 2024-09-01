@@ -71,8 +71,9 @@ paths:
                 overlay:
                   type: string
                   description: The studio modifications overlay contents - this should be an overlay YAML document
-              required:
-                - overlay
+                input:
+                  type: string
+                  description: The input spec for the source
       responses:
         "200":
           description: Successful response
@@ -127,6 +128,9 @@ components:
         took:
           type: integer
           description: Time taken to run the workflow in milliseconds
+        error:
+          type: string
+          description: Error message if the run failed
       required:
         - sourceResult
         - targetResults

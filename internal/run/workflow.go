@@ -51,6 +51,7 @@ type Workflow struct {
 	TargetResults   map[string]*TargetResult
 	Duration        time.Duration
 	criticalWarns   []string
+	Error           error
 }
 
 type Opt func(w *Workflow)

@@ -14,6 +14,8 @@ type RunResponse struct {
 	WorkingDirectory string `json:"workingDirectory"`
 	// Time taken to run the workflow in milliseconds
 	Took int64 `json:"took"`
+	// Error message if the run failed
+	Error *string `json:"error,omitempty"`
 }
 
 func (o *RunResponse) GetLintingReportLink() *string {
@@ -56,4 +58,11 @@ func (o *RunResponse) GetTook() int64 {
 		return 0
 	}
 	return o.Took
+}
+
+func (o *RunResponse) GetError() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Error
 }

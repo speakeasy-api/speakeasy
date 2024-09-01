@@ -117,6 +117,7 @@ func (w *Workflow) PrintSuccessSummary(ctx context.Context) {
 func (w *Workflow) Run(ctx context.Context) error {
 	startTime := time.Now()
 	err := w.RunInner(ctx)
+	w.Error = err
 	w.Duration = time.Since(startTime)
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
