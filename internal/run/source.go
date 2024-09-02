@@ -265,7 +265,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !w.SkipLinting {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
-		if err != nil && !errors.Is(err, validation.ErrValidationFailed) {
+		if err != nil {
 			w.OnSourceResult(sourceRes)
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}

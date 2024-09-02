@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 6d9ccd8c6523c411c5e09787abf154a6
+  docChecksum: 62c5f3c2e87efaae849036b5c7c73a1c
   docVersion: 1.0.0
   speakeasyVersion: 0.0.1
   generationVersion: 2.407.2
-  releaseVersion: 0.6.7
-  configChecksum: b87df3101e13408fa2090fe357d62e1c
+  releaseVersion: 0.6.8
+  configChecksum: 6533a3fb74006f871fafdb2d438ebd46
 features:
   go:
     additionalDependencies: 0.1.0
@@ -28,7 +28,6 @@ features:
     unions: 2.85.9
 generatedFiles:
   - health.go
-  - runs.go
   - run.go
   - suggest.go
   - sdk.go
@@ -102,7 +101,6 @@ generatedFiles:
   - docs/sdks/sdk/README.md
   - docs/models/operations/option.md
   - docs/sdks/health/README.md
-  - docs/sdks/runs/README.md
   - docs/sdks/run/README.md
   - docs/sdks/suggest/README.md
   - USAGE.md

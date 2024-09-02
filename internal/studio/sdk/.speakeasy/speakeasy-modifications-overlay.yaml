@@ -11,7 +11,7 @@ actions:
       before: sdk.<no_group>.getRun()
       after: sdk.run.getLastResult()
     update: {
-      "x-speakeasy-group": "runs",
+      "x-speakeasy-group": "run",
       "x-speakeasy-name-override": "getLastResult"
     }
   - target: $["paths"]["/run"]["post"]

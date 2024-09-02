@@ -91,12 +91,9 @@ func main() {
 
 * [Check](docs/sdks/health/README.md#check) - Health Check
 
-### [Runs](docs/sdks/runs/README.md)
-
-* [GetLastResult](docs/sdks/runs/README.md#getlastresult) - Run
-
 ### [Run](docs/sdks/run/README.md)
 
+* [GetLastResult](docs/sdks/run/README.md#getlastresult) - Run
 * [ReRun](docs/sdks/run/README.md#rerun) - Run
 
 ### [Suggest](docs/sdks/suggest/README.md)
