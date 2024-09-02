@@ -73,12 +73,13 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 		return errors.New("streaming unsupported")
 	}
 
+	err := h.sendLastRunResultToStream(ctx, w, flusher, true)
+	if err != nil {
+		return fmt.Errorf("error sending last run result to stream: %w", err)
+	}
+
 	h.mutexCondition.L.Lock()
 	for h.running {
-		err := h.sendLastRunResultToStream(ctx, w, flusher, true)
-		if err != nil {
-			return fmt.Errorf("error sending last run result to stream: %w", err)
-		}
 		h.mutexCondition.Wait()
 	}
 	defer h.mutexCondition.L.Unlock()
