@@ -22,8 +22,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrValidationFailed = fmt.Errorf("validation failed")
-
 // OutputLimits defines the limits for validation output.
 type OutputLimits struct {
 	// MaxErrors prevents errors after this limit from being displayed.
@@ -138,7 +136,7 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 	})
 
 	if len(res.Errors) > 0 {
-		return res, ErrValidationFailed
+		return res, fmt.Errorf(res.Status)
 	}
 
 	if len(res.Warnings) > 0 {
