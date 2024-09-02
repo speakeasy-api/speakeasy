@@ -5,9 +5,9 @@
 
 ### Available Operations
 
-* [Execute](#execute) - Run
+* [ReRun](#rerun) - Run
 
-## Execute
+## ReRun
 
 Regenerate the currently selected targets.
 
@@ -29,7 +29,7 @@ func main() {
     )
     request := operations.RunRequestBody{}
     ctx := context.Background()
-    res, err := s.Run.Execute(ctx, request)
+    res, err := s.Run.ReRun(ctx, request)
     if err != nil {
         log.Fatal(err)
     }

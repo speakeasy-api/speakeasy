@@ -27,9 +27,9 @@ func newRuns(sdkConfig sdkConfiguration) *Runs {
 	}
 }
 
-// GetLast - Run
+// GetLastResult - Run
 // Get the output of the last run.
-func (s *Runs) GetLast(ctx context.Context, opts ...operations.Option) (*operations.GetRunResponse, error) {
+func (s *Runs) GetLastResult(ctx context.Context, opts ...operations.Option) (*operations.GetRunResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "getRun",

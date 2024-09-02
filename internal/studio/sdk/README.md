@@ -93,11 +93,11 @@ func main() {
 
 ### [Runs](docs/sdks/runs/README.md)
 
-* [GetLast](docs/sdks/runs/README.md#getlast) - Run
+* [GetLastResult](docs/sdks/runs/README.md#getlastresult) - Run
 
 ### [Run](docs/sdks/run/README.md)
 
-* [Execute](docs/sdks/run/README.md#execute) - Run
+* [ReRun](docs/sdks/run/README.md#rerun) - Run
 
 ### [Suggest](docs/sdks/suggest/README.md)
 

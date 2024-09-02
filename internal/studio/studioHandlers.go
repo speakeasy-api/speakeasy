@@ -64,7 +64,7 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 	return ret, nil
 }
 
-func (h *StudioHandlers) getLastCompletedRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	h.mutexCondition.L.Lock()
 	for h.running {
 		h.mutexCondition.Wait()

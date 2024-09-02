@@ -5,9 +5,9 @@
 
 ### Available Operations
 
-* [GetLast](#getlast) - Run
+* [GetLastResult](#getlastresult) - Run
 
-## GetLast
+## GetLastResult
 
 Get the output of the last run.
 
@@ -28,7 +28,7 @@ func main() {
     )
 
     ctx := context.Background()
-    res, err := s.Runs.GetLast(ctx)
+    res, err := s.Runs.GetLastResult(ctx)
     if err != nil {
         log.Fatal(err)
     }

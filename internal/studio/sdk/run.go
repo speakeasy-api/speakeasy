@@ -28,9 +28,9 @@ func newRun(sdkConfig sdkConfiguration) *Run {
 	}
 }
 
-// Execute - Run
+// ReRun - Run
 // Regenerate the currently selected targets.
-func (s *Run) Execute(ctx context.Context, request operations.RunRequestBody, opts ...operations.Option) (*operations.RunResponse, error) {
+func (s *Run) ReRun(ctx context.Context, request operations.RunRequestBody, opts ...operations.Option) (*operations.RunResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "run",
