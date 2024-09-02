@@ -8,14 +8,23 @@ import (
 
 type UpdateSourceRequestBody struct {
 	// The studio modifications overlay contents - this should be an overlay YAML document
-	Overlay string `json:"overlay"`
+	Overlay *string `json:"overlay,omitempty"`
+	// The input spec for the source
+	Input *string `json:"input,omitempty"`
 }
 
-func (o *UpdateSourceRequestBody) GetOverlay() string {
+func (o *UpdateSourceRequestBody) GetOverlay() *string {
 	if o == nil {
-		return ""
+		return nil
 	}
 	return o.Overlay
+}
+
+func (o *UpdateSourceRequestBody) GetInput() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Input
 }
 
 type UpdateSourceResponse struct {

@@ -69,7 +69,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{
-		Source: sourceID,
+		Source:    sourceID,
+		Diagnosis: suggestions.Diagnosis{},
 	}
 
 	rulesetToUse := "speakeasy-generation"
@@ -104,7 +105,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			return "", nil, fmt.Errorf("invalid workflow lockfile: namespace = %s blobDigest = %s revisionDigest = %s", lockSource.SourceNamespace, lockSource.SourceBlobDigest, lockSource.SourceRevisionDigest)
 		}
 		var orgSlug, workspaceSlug, registryNamespace string
-		if isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil	 {
+		if isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil {
 			d := w.workflow.Sources[sourceID].Inputs[0]
 			registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
 			if registryBreakdown == nil {
@@ -228,6 +229,11 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = overlayLocation
 	}
 
+	sourceRes.OutputPath = currentDocument
+
+	// Emit once before linting as that can be slow
+	w.OnSourceResult(sourceRes)
+
 	if !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
@@ -237,6 +243,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
 	if err != nil {
+		w.OnSourceResult(sourceRes)
 		return "", sourceRes, err
 	}
 
@@ -261,6 +268,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !w.SkipLinting {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
+		w.OnSourceResult(sourceRes)
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
@@ -268,7 +276,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	rootStep.SucceedWorkflow()
 
-	sourceRes.OutputPath = currentDocument
+	w.OnSourceResult(sourceRes)
 	return currentDocument, sourceRes, nil
 }
 
@@ -711,7 +719,7 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 		}
 
 		// YamlOut param needs to be based on the eventual output file
-		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil {
+		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && !strings.Contains(err.Error(), "overlay must define at least one action") {
 			return err
 		}
 

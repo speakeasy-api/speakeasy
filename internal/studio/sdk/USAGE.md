@@ -14,7 +14,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
