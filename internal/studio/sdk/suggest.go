@@ -17,19 +17,19 @@ import (
 	"net/url"
 )
 
-type Source struct {
+type Suggest struct {
 	sdkConfiguration sdkConfiguration
 }
 
-func newSource(sdkConfig sdkConfiguration) *Source {
-	return &Source{
+func newSuggest(sdkConfig sdkConfiguration) *Suggest {
+	return &Suggest{
 		sdkConfiguration: sdkConfig,
 	}
 }
 
 // MethodNames - Suggest Method Names
 // Suggest method names for the current source.
-func (s *Source) MethodNames(ctx context.Context, opts ...operations.Option) (*operations.SuggestMethodNamesResponse, error) {
+func (s *Suggest) MethodNames(ctx context.Context, opts ...operations.Option) (*operations.SuggestMethodNamesResponse, error) {
 	hookCtx := hooks.HookContext{
 		Context:        ctx,
 		OperationID:    "suggestMethodNames",

@@ -102,6 +102,8 @@ func NewWorkflow(
 		opt(w)
 	}
 
+	w.FromQuickstart = true //TODO!
+
 	w.RootStep = workflowTracking.NewWorkflowStep(w.workflowName, log.From(ctx), nil)
 
 	return w, nil

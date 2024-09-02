@@ -1,5 +1,5 @@
-# Source
-(*Source*)
+# Suggest
+(*Suggest*)
 
 ## Overview
 
@@ -28,7 +28,7 @@ func main() {
     )
 
     ctx := context.Background()
-    res, err := s.Source.MethodNames(ctx)
+    res, err := s.Suggest.MethodNames(ctx)
     if err != nil {
         log.Fatal(err)
     }

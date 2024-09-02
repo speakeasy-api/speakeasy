@@ -137,7 +137,9 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 
 		for t := range w.workflow.Targets {
 			sourceRes, targetRes, err := w.runTarget(ctx, t)
-			w.SourceResults[sourceRes.Source] = sourceRes
+			if sourceRes != nil {
+				w.SourceResults[sourceRes.Source] = sourceRes
+			}
 			w.TargetResults[t] = targetRes
 
 			if err != nil {
@@ -148,7 +150,9 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
 			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "")
-			w.SourceResults[sourceRes.Source] = sourceRes
+			if sourceRes != nil {
+				w.SourceResults[sourceRes.Source] = sourceRes
+			}
 			if err != nil {
 				return err
 			}
@@ -159,7 +163,9 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		}
 
 		sourceRes, targetRes, err := w.runTarget(ctx, w.Target)
-		w.SourceResults[sourceRes.Source] = sourceRes
+		if sourceRes != nil {
+			w.SourceResults[sourceRes.Source] = sourceRes
+		}
 		w.TargetResults[w.Target] = targetRes
 
 		if err != nil {

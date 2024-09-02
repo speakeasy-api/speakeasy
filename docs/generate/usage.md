@@ -19,7 +19,7 @@ The following languages are currently supported:
 	- csharp
 	- unity
 
-You can generate usage snippets by OperationID or by Namespace. By default this command will write to stdout.
+You can generate usage snippets by AffectedOperationIDs or by Namespace. By default this command will write to stdout.
 
 You can also select to write to a file or write to a formatted output directory.
 
@@ -39,7 +39,7 @@ speakeasy generate usage [flags]
   -h, --help                  help for usage
   -l, --lang string           language to generate sdk for (available options: [go, typescript, python, java, php, swift, ruby, csharp, unity]) (default "go")
   -n, --namespace string      The namespace to generate multiple usage snippets for. This could correspond to a tag or a x-speakeasy-group-name in your OpenAPI spec.
-  -i, --operation-id string   The OperationID to generate usage snippet for
+  -i, --operation-id string   The AffectedOperationIDs to generate usage snippet for
   -o, --out string            By default this command will write to stdout. If a filepath is provided results will be written into that file.
                               	If the path to an existing directory is provided, all results will be formatted into that directory with each operation getting its own sub folder.
   -s, --schema string         local filepath or URL for the OpenAPI schema (default "./openapi.yaml")

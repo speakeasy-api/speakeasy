@@ -98,7 +98,7 @@ func main() {
 
 ### [Source](docs/sdks/source/README.md)
 
-* [SuggestMethodNames](docs/sdks/source/README.md#suggestmethodnames) - Suggest Method Names
+* [MethodNames](docs/sdks/source/README.md#methodnames) - Suggest Method Names
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->
