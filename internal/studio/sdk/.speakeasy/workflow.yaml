@@ -5,9 +5,6 @@ sources:
             - location: ../oas_studio.yaml
         overlays:
             - location: .speakeasy/speakeasy-modifications-overlay.yaml
-            - location: .speakeasy/speakeasy-modifications-overlay-1.yaml
-            - location: .speakeasy/speakeasy-modifications-overlay-2.yaml
-            - location: .speakeasy/speakeasy-modifications-overlay-3.yaml
         registry:
             location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
 targets:

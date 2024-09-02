@@ -9,10 +9,10 @@ actions:
       reviewed_at: 1725122245820
       type: method-name
       before: sdk.<no_group>.getRun()
-      after: sdk.run.getLastRun()
+      after: sdk.run.getLast()
     update: {
       "x-speakeasy-group": "runs",
-      "x-speakeasy-name-override": "getLastRun"
+      "x-speakeasy-name-override": "getLast"
     }
   - target: $["paths"]["/health"]["get"]
     x-speakeasy-modification:
@@ -30,10 +30,10 @@ actions:
       reviewed_at: 1725122245820
       type: method-name
       before: sdk.<no_group>.run()
-      after: sdk.run.reRun()
+      after: sdk.run.execute()
     update:
       x-speakeasy-group: run
-      x-speakeasy-name-override: reRun
+      x-speakeasy-name-override: execute
   - target: $["paths"]["/suggest/method-names"]["get"]
     x-speakeasy-modification:
       created_at: 1725122168100

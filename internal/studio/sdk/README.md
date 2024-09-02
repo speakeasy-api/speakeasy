@@ -91,14 +91,17 @@ func main() {
 
 * [Check](docs/sdks/health/README.md#check) - Health Check
 
+### [Runs](docs/sdks/runs/README.md)
+
+* [GetLast](docs/sdks/runs/README.md#getlast) - Run
+
 ### [Run](docs/sdks/run/README.md)
 
-* [GetLastOutput](docs/sdks/run/README.md#getlastoutput) - Run
-* [RegenerateTargets](docs/sdks/run/README.md#regeneratetargets) - Run
+* [Execute](docs/sdks/run/README.md#execute) - Run
 
-### [Source](docs/sdks/source/README.md)
+### [Suggest](docs/sdks/suggest/README.md)
 
-* [MethodNames](docs/sdks/source/README.md#methodnames) - Suggest Method Names
+* [MethodNames](docs/sdks/suggest/README.md#methodnames) - Suggest Method Names
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->

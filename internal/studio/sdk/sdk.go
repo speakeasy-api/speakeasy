@@ -66,9 +66,10 @@ func (c *sdkConfiguration) GetServerDetails() (string, map[string]string) {
 }
 
 type SDK struct {
-	Health *Health
-	Run    *Run
-	Source *Source
+	Health  *Health
+	Runs    *Runs
+	Run     *Run
+	Suggest *Suggest
 
 	sdkConfiguration sdkConfiguration
 }
@@ -160,9 +161,9 @@ func New(opts ...SDKOption) *SDK {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.6.5",
+			SDKVersion:        "0.6.6",
 			GenVersion:        "2.407.2",
-			UserAgent:         "speakeasy-sdk/go 0.6.5 2.407.2 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			UserAgent:         "speakeasy-sdk/go 0.6.6 2.407.2 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -189,9 +190,11 @@ func New(opts ...SDKOption) *SDK {
 
 	sdk.Health = newHealth(sdk.sdkConfiguration)
 
+	sdk.Runs = newRuns(sdk.sdkConfiguration)
+
 	sdk.Run = newRun(sdk.sdkConfiguration)
 
-	sdk.Source = newSource(sdk.sdkConfiguration)
+	sdk.Suggest = newSuggest(sdk.sdkConfiguration)
 
 	return sdk
 }
