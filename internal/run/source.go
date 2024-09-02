@@ -228,6 +228,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = overlayLocation
 	}
 
+	sourceRes.OutputPath = currentDocument
+
 	// Emit once before linting as that can be slow
 	w.OnSourceResult(sourceRes)
 
@@ -265,15 +267,14 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !w.SkipLinting {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
+		w.OnSourceResult(sourceRes)
 		if err != nil {
-			w.OnSourceResult(sourceRes)
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
 	}
 
 	rootStep.SucceedWorkflow()
 
-	sourceRes.OutputPath = currentDocument
 	w.OnSourceResult(sourceRes)
 	return currentDocument, sourceRes, nil
 }
@@ -717,7 +718,7 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 		}
 
 		// YamlOut param needs to be based on the eventual output file
-		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil {
+		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && strings.Contains(err.Error(), "overlay must define at least one action") {
 			return err
 		}
 
