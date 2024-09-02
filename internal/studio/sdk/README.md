@@ -16,9 +16,31 @@ It has been generated successfully based on your OpenAPI spec. However, it is no
 - [ ] 🎁 Publish your SDK to package managers by [configuring automatic publishing](https://www.speakeasyapi.dev/docs/advanced-setup/publish-sdks)
 - [ ] ✨ When ready to productionize, delete this section from the README
 
+<!-- Start Summary [summary] -->
+## Summary
+
+
+<!-- End Summary [summary] -->
+
+<!-- Start Table of Contents [toc] -->
+## Table of Contents
+
+* [SDK Installation](#sdk-installation)
+* [SDK Example Usage](#sdk-example-usage)
+* [Available Resources and Operations](#available-resources-and-operations)
+* [Server-sent event streaming](#server-sent-event-streaming)
+* [Retries](#retries)
+* [Error Handling](#error-handling)
+* [Server Selection](#server-selection)
+* [Custom HTTP Client](#custom-http-client)
+* [Authentication](#authentication)
+* [Special Types](#special-types)
+<!-- End Table of Contents [toc] -->
+
 <!-- Start SDK Installation [installation] -->
 ## SDK Installation
 
+To add the SDK as a dependency to your project:
 ```bash
 go get github.com/speakeasy-api/speakeasy/internal/studio/sdk
 ```
@@ -44,7 +66,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,14 +87,18 @@ func main() {
 <!-- Start Available Resources and Operations [operations] -->
 ## Available Resources and Operations
 
-### [SDK](docs/sdks/sdk/README.md)
+### [Health](docs/sdks/health/README.md)
 
-* [CheckHealth](docs/sdks/sdk/README.md#checkhealth) - Health Check
-* [GetRun](docs/sdks/sdk/README.md#getrun) - Run
-* [Run](docs/sdks/sdk/README.md#run) - Run
-* [GetSource](docs/sdks/sdk/README.md#getsource) - Get Source
-* [UpdateSource](docs/sdks/sdk/README.md#updatesource) - Update Source
-* [SuggestMethodNames](docs/sdks/sdk/README.md#suggestmethodnames) - Suggest Method Names
+* [Check](docs/sdks/health/README.md#check) - Health Check
+
+### [Run](docs/sdks/run/README.md)
+
+* [GetLastResult](docs/sdks/run/README.md#getlastresult) - Run
+* [ReRun](docs/sdks/run/README.md#rerun) - Run
+
+### [Suggest](docs/sdks/suggest/README.md)
+
+* [MethodNames](docs/sdks/suggest/README.md#methodnames) - Suggest Method Names
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->
@@ -98,7 +124,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx, operations.WithRetries(
+	res, err := s.Health.Check(ctx, operations.WithRetries(
 		retry.Config{
 			Strategy: "backoff",
 			Backoff: &retry.BackoffStrategy{
@@ -153,7 +179,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -199,7 +225,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 
 		var e *sdkerrors.SDKError
@@ -242,7 +268,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -283,7 +309,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -363,7 +389,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -405,7 +431,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}

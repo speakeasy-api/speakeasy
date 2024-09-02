@@ -314,7 +314,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		opts...,
 	)
 
-	if err != nil {
+	if err != nil && !flags.LaunchStudio {
 		return err
 	}
 
@@ -385,7 +385,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		workflow.RootStep.Finalize(err == nil)
 	}
 
-	if err != nil {
+	if err != nil && !flags.LaunchStudio {
 		return err
 	}
 

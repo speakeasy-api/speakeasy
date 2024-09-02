@@ -21,7 +21,7 @@ type Workflow struct {
 	SetVersion         string
 	Debug              bool
 	ShouldCompile      bool
-	Verbose      bool
+	Verbose            bool
 	ForceGeneration    bool
 	FrozenWorkflowLock bool
 	SkipVersioning     bool
@@ -49,8 +49,10 @@ type Workflow struct {
 	computedChanges map[string]bool
 	SourceResults   map[string]*SourceResult
 	TargetResults   map[string]*TargetResult
-	duration        time.Duration
+	OnSourceResult  func(*SourceResult)
+	Duration        time.Duration
 	criticalWarns   []string
+	Error           error
 }
 
 type Opt func(w *Workflow)
@@ -90,6 +92,7 @@ func NewWorkflow(
 		ForceGeneration:  false,
 		SourceResults:    make(map[string]*SourceResult),
 		TargetResults:    make(map[string]*TargetResult),
+		OnSourceResult:   func(*SourceResult) {},
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,

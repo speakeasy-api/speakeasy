@@ -14,7 +14,7 @@ type SourceResponse struct {
 	// Result of running the source in the workflow
 	Output string `json:"output"`
 	// List of validation errors
-	Diagnosis []Diagnostic `json:"diagnosis"`
+	Diagnosis []Diagnostic `json:"diagnosis,omitempty"`
 }
 
 func (o *SourceResponse) GetSourceID() string {
@@ -54,7 +54,7 @@ func (o *SourceResponse) GetOutput() string {
 
 func (o *SourceResponse) GetDiagnosis() []Diagnostic {
 	if o == nil {
-		return []Diagnostic{}
+		return nil
 	}
 	return o.Diagnosis
 }
