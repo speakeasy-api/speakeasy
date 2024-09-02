@@ -69,7 +69,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{
-		Source: sourceID,
+		Source:    sourceID,
+		Diagnosis: suggestions.Diagnosis{},
 	}
 
 	rulesetToUse := "speakeasy-generation"

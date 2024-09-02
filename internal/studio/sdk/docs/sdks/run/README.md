@@ -33,8 +33,14 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    if res.RunResponse != nil {
-        // handle response
+    if res.RunResponseStreamEvent != nil {
+        defer res.RunResponseStreamEvent.Close()
+
+        for res.RunResponseStreamEvent.Next() {
+            event := res.RunResponseStreamEvent.Value()
+            log.Print(event)
+            // Handle the event
+	      }
     }
 }
 ```

@@ -16,6 +16,8 @@ type RunResponse struct {
 	Took int64 `json:"took"`
 	// Error message if the run failed
 	Error *string `json:"error,omitempty"`
+	// Whether the run was partial
+	IsPartial bool `json:"isPartial"`
 }
 
 func (o *RunResponse) GetLintingReportLink() *string {
@@ -65,4 +67,11 @@ func (o *RunResponse) GetError() *string {
 		return nil
 	}
 	return o.Error
+}
+
+func (o *RunResponse) GetIsPartial() bool {
+	if o == nil {
+		return false
+	}
+	return o.IsPartial
 }

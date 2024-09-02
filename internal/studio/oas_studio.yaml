@@ -31,9 +31,9 @@ paths:
         "200":
           description: Successful response
           content:
-            application/json:
+            text/event-stream:
               schema:
-                $ref: "#/components/schemas/RunResponse"
+                $ref: "#/components/schemas/RunResponseStreamEvent"
     post:
       summary: Run
       description: Regenerate the currently selected targets.
@@ -109,12 +109,16 @@ components:
         error:
           type: string
           description: Error message if the run failed
+        isPartial:
+          type: boolean
+          description: Whether the run was partial
       required:
         - sourceResult
         - targetResults
         - workflow
         - workingDirectory
         - took
+        - isPartial
     TargetRunSummary:
       type: object
       properties:
@@ -172,7 +176,6 @@ components:
         - overlay
         - overlayPath
         - output
-        - diagnosis
     SuggestResponse:
       type: object
       properties:

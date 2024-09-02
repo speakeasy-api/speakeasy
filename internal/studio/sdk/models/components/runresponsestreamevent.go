@@ -22,3 +22,7 @@ func (o *RunResponseStreamEvent) GetData() RunResponse {
 	}
 	return o.Data
 }
+
+func (o RunResponseStreamEvent) GetEventEncoding(event string) (string, error) {
+	return "application/json", nil
+}

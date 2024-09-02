@@ -10,10 +10,9 @@ actions:
       type: method-name
       before: sdk.<no_group>.getRun()
       after: sdk.run.getLastResult()
-    update: {
-      "x-speakeasy-group": "run",
-      "x-speakeasy-name-override": "getLastResult"
-    }
+    update:
+      x-speakeasy-group: run
+      x-speakeasy-name-override: getLastResult
   - target: $["paths"]["/run"]["post"]
     x-speakeasy-modification:
       created_at: 1725122168100

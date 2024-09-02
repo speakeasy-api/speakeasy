@@ -65,13 +65,25 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 }
 
 func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return errors.New("streaming unsupported")
+	}
+
 	h.mutexCondition.L.Lock()
 	for h.running {
+		err := h.sendLastRunResultToStream(ctx, w, flusher, true)
+		if err != nil {
+			return fmt.Errorf("error sending last run result to stream: %w", err)
+		}
 		h.mutexCondition.Wait()
 	}
 	defer h.mutexCondition.L.Unlock()
 
-	return h.sendLastCompletedRunResult(ctx, w, r)
+	return h.sendLastRunResultToStream(ctx, w, flusher, false)
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -101,7 +113,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return ctx.Err()
 	}
 
-	err := h.updateSource(ctx, w, r)
+	err := h.updateSource(r)
 	if err != nil {
 		return fmt.Errorf("error updating source: %w", err)
 	}
@@ -121,12 +133,13 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 				return
 			}
 
-			response, err := h.convertLastCompletedRunResult(ctx)
+			response, err := h.convertLastRunResult(ctx)
 			if err != nil {
 				fmt.Println("error getting last completed run result:", err)
 				return
 			}
 			response.SourceResult = *sourceResponse
+			response.IsPartial = true
 
 			responseJSON, err := json.Marshal(response)
 			if err != nil {
@@ -147,20 +160,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		fmt.Println("error running workflow:", err)
 	}
 
-	ret, err := h.convertLastCompletedRunResult(ctx)
-
-	if err != nil {
-		return fmt.Errorf("error getting last completed run result: %w", err)
-	}
-
-	responseJSON, err := json.Marshal(ret)
-	if err != nil {
-		return fmt.Errorf("error marshaling run response: %w", err)
-	}
-	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
-	flusher.Flush()
-
-	return nil
+	return h.sendLastRunResultToStream(ctx, w, flusher, false)
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -189,26 +189,7 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 	return nil
 }
 
-func (h *StudioHandlers) getLastCompletedSourceResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var err error
-
-	sourceID := h.SourceID
-	sourceResult, err := h.runSource(ctx)
-	if err != nil {
-		return fmt.Errorf("error running source: %w", err)
-	}
-
-	ret, err := convertSourceResultIntoSourceResponse(sourceID, *sourceResult, h.OverlayPath)
-	if err != nil {
-		return fmt.Errorf("error converting source result to source response: %w", err)
-	}
-
-	_ = json.NewEncoder(w).Encode(ret)
-
-	return nil
-}
-
-func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (h *StudioHandlers) updateSource(r *http.Request) error {
 	var err error
 
 	// Destructure the request body which is a json object with a single key "overlay" which is a string
@@ -269,7 +250,7 @@ func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter
 }
 
 func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	sourceResult, err := h.runSource(ctx)
+	sourceResult, err := h.runSource()
 	if err != nil {
 		return fmt.Errorf("error running source: %w", err)
 	}
@@ -310,7 +291,7 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 // Helper functions
 // ---------------------------------
 
-func (h *StudioHandlers) convertLastCompletedRunResult(ctx context.Context) (*components.RunResponse, error) {
+func (h *StudioHandlers) convertLastRunResult(ctx context.Context) (*components.RunResponse, error) {
 	ret := components.RunResponse{
 		TargetResults:    make(map[string]components.TargetRunSummary),
 		WorkingDirectory: h.WorkflowRunner.ProjectDir,
@@ -376,21 +357,24 @@ func (h *StudioHandlers) convertLastCompletedRunResult(ctx context.Context) (*co
 	return &ret, nil
 }
 
-func (h *StudioHandlers) sendLastCompletedRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	res, err := h.convertLastCompletedRunResult(ctx)
+func (h *StudioHandlers) sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, isPartial bool) error {
+	ret, err := h.convertLastRunResult(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting last completed run result: %w", err)
 	}
+	ret.IsPartial = isPartial
 
-	err = json.NewEncoder(w).Encode(res)
+	responseJSON, err := json.Marshal(ret)
 	if err != nil {
-		return fmt.Errorf("error encoding getRun response: %w", err)
+		return fmt.Errorf("error marshaling run response: %w", err)
 	}
+	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+	flusher.Flush()
 
 	return nil
 }
 
-func (h *StudioHandlers) runSource(ctx context.Context) (*run.SourceResult, error) {
+func (h *StudioHandlers) runSource() (*run.SourceResult, error) {
 	workflowRunner := h.WorkflowRunner
 	sourceID := h.SourceID
 
@@ -555,7 +539,7 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 		return "", err
 	}
 
-	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-modification")
+	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-modification") || strings.Contains(asString, "title: speakeasy-studio-modifications")
 	if !looksLikeStudioModifications {
 		return "", nil
 	}

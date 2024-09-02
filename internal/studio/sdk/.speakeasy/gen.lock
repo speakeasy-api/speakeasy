@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 62c5f3c2e87efaae849036b5c7c73a1c
+  docChecksum: bf2012a6029279e53a80cdcca799467d
   docVersion: 1.0.0
   speakeasyVersion: 0.0.1
   generationVersion: 2.407.2
-  releaseVersion: 0.6.8
-  configChecksum: 6533a3fb74006f871fafdb2d438ebd46
+  releaseVersion: 0.6.13
+  configChecksum: 709c0991850382bd7c764f66a6027515
 features:
   go:
     additionalDependencies: 0.1.0
@@ -55,6 +55,7 @@ generatedFiles:
   - /models/operations/suggestmethodnames.go
   - /models/components/healthresponse.go
   - /models/components/httpmetadata.go
+  - /models/components/runresponsestreamevent.go
   - /models/components/runresponse.go
   - /models/components/workflow.go
   - /models/components/target.go
@@ -69,7 +70,6 @@ generatedFiles:
   - /models/components/targetrunsummary.go
   - /models/components/sourceresponse.go
   - /models/components/diagnostic.go
-  - /models/components/runresponsestreamevent.go
   - /models/components/suggestresponse.go
   - /models/components/security.go
   - docs/models/operations/checkhealthresponse.md
@@ -81,6 +81,7 @@ generatedFiles:
   - docs/models/components/data.md
   - docs/models/components/healthresponse.md
   - docs/models/components/httpmetadata.md
+  - docs/models/components/runresponsestreamevent.md
   - docs/models/components/runresponse.md
   - docs/models/components/workflow.md
   - docs/models/components/target.md
@@ -95,7 +96,6 @@ generatedFiles:
   - docs/models/components/targetrunsummary.md
   - docs/models/components/sourceresponse.md
   - docs/models/components/diagnostic.md
-  - docs/models/components/runresponsestreamevent.md
   - docs/models/components/suggestresponse.md
   - docs/models/components/security.md
   - docs/sdks/sdk/README.md
