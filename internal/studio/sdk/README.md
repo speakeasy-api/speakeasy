@@ -66,12 +66,18 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.RunResponse != nil {
-		// handle response
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -81,26 +87,18 @@ func main() {
 <!-- Start Available Resources and Operations [operations] -->
 ## Available Resources and Operations
 
-### [SDK](docs/sdks/sdk/README.md)
-
-* [GetRun](docs/sdks/sdk/README.md#getrun) - Run
-
 ### [Health](docs/sdks/health/README.md)
 
 * [Check](docs/sdks/health/README.md#check) - Health Check
 
 ### [Run](docs/sdks/run/README.md)
 
+* [GetLastOutput](docs/sdks/run/README.md#getlastoutput) - Run
 * [RegenerateTargets](docs/sdks/run/README.md#regeneratetargets) - Run
 
 ### [Source](docs/sdks/source/README.md)
 
-* [Get](docs/sdks/source/README.md#get) - Get Source
-* [Update](docs/sdks/source/README.md#update) - Update Source
-
-### [Suggest](docs/sdks/suggest/README.md)
-
-* [MethodNames](docs/sdks/suggest/README.md#methodnames) - Suggest Method Names
+* [SuggestMethodNames](docs/sdks/source/README.md#suggestmethodnames) - Suggest Method Names
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->
@@ -126,7 +124,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx, operations.WithRetries(
+	res, err := s.Health.Check(ctx, operations.WithRetries(
 		retry.Config{
 			Strategy: "backoff",
 			Backoff: &retry.BackoffStrategy{
@@ -140,8 +138,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.RunResponse != nil {
-		// handle response
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -175,12 +179,18 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.RunResponse != nil {
-		// handle response
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -215,7 +225,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 
 		var e *sdkerrors.SDKError
@@ -258,12 +268,18 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.RunResponse != nil {
-		// handle response
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -293,12 +309,18 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.RunResponse != nil {
-		// handle response
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 
@@ -367,12 +389,18 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.RunResponse != nil {
-		// handle response
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 

@@ -228,6 +228,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = overlayLocation
 	}
 
+	// Emit once before linting as that can be slow
+	w.OnSourceResult(sourceRes)
+
 	if !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
@@ -237,6 +240,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
 	if err != nil {
+		w.OnSourceResult(sourceRes)
 		return "", sourceRes, err
 	}
 
@@ -262,6 +266,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	if !w.SkipLinting {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
 		if err != nil && !errors.Is(err, validation.ErrValidationFailed) {
+			w.OnSourceResult(sourceRes)
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
 	}
@@ -269,6 +274,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	rootStep.SucceedWorkflow()
 
 	sourceRes.OutputPath = currentDocument
+	w.OnSourceResult(sourceRes)
 	return currentDocument, sourceRes, nil
 }
 

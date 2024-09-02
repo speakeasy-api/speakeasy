@@ -14,12 +14,18 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.GetRun(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.RunResponse != nil {
-		// handle response
+	if res.HealthResponse != nil {
+		defer res.HealthResponse.Close()
+
+		for res.HealthResponse.Next() {
+			event := res.HealthResponse.Value()
+			log.Print(event)
+			// Handle the event
+		}
 	}
 }
 

@@ -137,20 +137,21 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 
 		for t := range w.workflow.Targets {
 			sourceRes, targetRes, err := w.runTarget(ctx, t)
+			w.SourceResults[sourceRes.Source] = sourceRes
+			w.TargetResults[t] = targetRes
+
 			if err != nil {
 				return err
 			}
 
-			w.SourceResults[sourceRes.Source] = sourceRes
-			w.TargetResults[t] = targetRes
 		}
 	} else if w.Source == "all" {
 		for id := range w.workflow.Sources {
 			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "")
+			w.SourceResults[sourceRes.Source] = sourceRes
 			if err != nil {
 				return err
 			}
-			w.SourceResults[sourceRes.Source] = sourceRes
 		}
 	} else if w.Target != "" {
 		if _, ok := w.workflow.Targets[w.Target]; !ok {
@@ -171,11 +172,11 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		}
 
 		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "")
+		w.SourceResults[sourceRes.Source] = sourceRes
 		if err != nil {
 			return err
 		}
 
-		w.SourceResults[sourceRes.Source] = sourceRes
 	}
 
 	if !w.SkipCleanup {

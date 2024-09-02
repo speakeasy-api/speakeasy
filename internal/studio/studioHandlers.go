@@ -71,10 +71,18 @@ func (h *StudioHandlers) getLastCompletedRunResult(ctx context.Context, w http.R
 	}
 	defer h.mutexCondition.L.Unlock()
 
-	return h.getLastCompletedRunResultInner(ctx, w, r)
+	return h.sendLastCompletedRunResult(ctx, w, r)
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return errors.New("streaming unsupported")
+	}
+
 	// Wait for the run to finish
 	h.mutexCondition.L.Lock()
 	for h.running {
@@ -88,9 +96,14 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		h.mutexCondition.L.Unlock()
 	}()
 
-	// If the context is cancelled, we should return early
+	// If the client disconnected already, save ourselves the trouble
 	if ctx.Err() != nil {
 		return ctx.Err()
+	}
+
+	err := h.updateSource(ctx, w, r)
+	if err != nil {
+		return fmt.Errorf("error updating source: %w", err)
 	}
 
 	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
@@ -98,14 +111,56 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
 	h.WorkflowRunner = *cloned
+
+	h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult) {
+		if sourceResult.Source == h.SourceID {
+			sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, h.OverlayPath)
+			if err != nil {
+				// TODO: How to handle this error and exit the parent function?
+				fmt.Println("error converting source result to source response:", err)
+				return
+			}
+
+			response, err := h.convertLastCompletedRunResult(ctx)
+			if err != nil {
+				fmt.Println("error getting last completed run result:", err)
+				return
+			}
+			response.SourceResult = *sourceResponse
+
+			responseJSON, err := json.Marshal(response)
+			if err != nil {
+				fmt.Println("error marshaling run response:", err)
+				return
+			}
+
+			fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+			flusher.Flush()
+		}
+	}
+	defer func() {
+		h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult) {}
+	}()
+
 	err = h.WorkflowRunner.Run(h.Ctx)
 	if err != nil {
 		fmt.Println("error running workflow:", err)
 	}
 
-	ret := h.getLastCompletedRunResultInner(ctx, w, r)
+	ret, err := h.convertLastCompletedRunResult(ctx)
 
-	return ret
+	if err != nil {
+		return fmt.Errorf("error getting last completed run result: %w", err)
+	}
+
+	responseJSON, err := json.Marshal(ret)
+	if err != nil {
+		return fmt.Errorf("error marshaling run response: %w", err)
+	}
+	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+	flusher.Flush()
+
+	return nil
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -125,10 +180,10 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 		return fmt.Errorf("error marshaling health response: %w", err)
 	}
 
-	fmt.Fprintf(w, "data: %s\n\n", responseJSON)
+	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
 	flusher.Flush()
 
-	// Wait for the context to be done
+	// This keeps the connection open while the client is still connected
 	<-ctx.Done()
 
 	return nil
@@ -210,7 +265,7 @@ func (h *StudioHandlers) updateSource(ctx context.Context, w http.ResponseWriter
 		}
 	}
 
-	return h.getLastCompletedSourceResult(ctx, w, r)
+	return nil
 }
 
 func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -255,20 +310,18 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 // Helper functions
 // ---------------------------------
 
-func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	res := components.RunResponse{
-		TargetResults: make(map[string]components.TargetRunSummary),
+func (h *StudioHandlers) convertLastCompletedRunResult(ctx context.Context) (*components.RunResponse, error) {
+	ret := components.RunResponse{
+		TargetResults:    make(map[string]components.TargetRunSummary),
+		WorkingDirectory: h.WorkflowRunner.ProjectDir,
 	}
 
-	res.Took = h.WorkflowRunner.Duration.Milliseconds()
-	res.WorkingDirectory = h.WorkflowRunner.ProjectDir
+	ret.Took = h.WorkflowRunner.Duration.Milliseconds()
 
 	if h.WorkflowRunner.Error != nil {
 		errStr := h.WorkflowRunner.Error.Error()
-		res.Error = &errStr
+		ret.Error = &errStr
 	}
-
-	res.TargetResults = make(map[string]components.TargetRunSummary)
 
 	for k, v := range h.WorkflowRunner.TargetResults {
 		if v == nil {
@@ -277,12 +330,12 @@ func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w h
 
 		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
 		if err != nil {
-			return fmt.Errorf("error reading gen.yaml: %w", err)
+			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
 		}
 		readMePath := filepath.Join(v.OutputPath, "README.md")
 		readMeContents, err := utils.ReadFileToString(readMePath)
 		if err != nil {
-			return fmt.Errorf("error reading gen.yaml: %w", err)
+			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
 		}
 
 		workflowConfig := h.WorkflowRunner.GetWorkflowFile()
@@ -291,10 +344,11 @@ func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w h
 		outputDirectory := ""
 
 		if targetConfig.Output != nil {
-			// TODO: Otherwise the current directory
 			outputDirectory = *targetConfig.Output
+		} else {
+			outputDirectory = ret.WorkingDirectory
 		}
-		res.TargetResults[k] = components.TargetRunSummary{
+		ret.TargetResults[k] = components.TargetRunSummary{
 			TargetID:        k,
 			SourceID:        h.SourceID,
 			Readme:          readMeContents,
@@ -304,26 +358,29 @@ func (h *StudioHandlers) getLastCompletedRunResultInner(ctx context.Context, w h
 		}
 	}
 
-	if len(h.WorkflowRunner.SourceResults) == 0 {
-		return errors.New("source failed to run")
-	}
-
-	if len(h.WorkflowRunner.SourceResults) != 1 {
-		return errors.New("expected exactly one source")
-	}
-
 	sourceResult := h.WorkflowRunner.SourceResults[h.SourceID]
-	sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, h.OverlayPath)
-	if err != nil {
-		return fmt.Errorf("error converting source result to source response: %w", err)
+	if sourceResult != nil {
+		sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, h.OverlayPath)
+		if err != nil {
+			return &ret, fmt.Errorf("error converting source result to source response: %w", err)
+		}
+		ret.SourceResult = *sourceResponse
 	}
-	res.SourceResult = *sourceResponse
 
 	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
 	if err != nil {
-		return fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
 	}
-	res.Workflow = wf
+	ret.Workflow = wf
+
+	return &ret, nil
+}
+
+func (h *StudioHandlers) sendLastCompletedRunResult(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	res, err := h.convertLastCompletedRunResult(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting last completed run result: %w", err)
+	}
 
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
