@@ -719,7 +719,7 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 		}
 
 		// YamlOut param needs to be based on the eventual output file
-		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && strings.Contains(err.Error(), "overlay must define at least one action") {
+		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && !strings.Contains(err.Error(), "overlay must define at least one action") {
 			return err
 		}
 
