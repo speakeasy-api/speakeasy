@@ -432,11 +432,17 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 		}
 	}
 
+	finalOverlayPath := ""
+
+	if overlayPath != "" {
+		finalOverlayPath, err = filepath.Abs(overlayPath)
+	}
+
 	return &components.SourceResponse{
 		SourceID:    sourceID,
 		Input:       sourceResult.InputSpec,
 		Overlay:     overlayContents,
-		OverlayPath: overlayPath,
+		OverlayPath: finalOverlayPath,
 		Output:      outputDocumentString,
 		Diagnosis:   diagnosis,
 	}, nil
