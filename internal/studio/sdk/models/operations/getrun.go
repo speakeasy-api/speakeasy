@@ -4,12 +4,13 @@ package operations
 
 import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/types/stream"
 )
 
 type GetRunResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
-	RunResponse *components.RunResponse
+	RunResponseStreamEvent *stream.EventStream[components.RunResponseStreamEvent]
 }
 
 func (o *GetRunResponse) GetHTTPMeta() components.HTTPMetadata {
@@ -19,9 +20,9 @@ func (o *GetRunResponse) GetHTTPMeta() components.HTTPMetadata {
 	return o.HTTPMeta
 }
 
-func (o *GetRunResponse) GetRunResponse() *components.RunResponse {
+func (o *GetRunResponse) GetRunResponseStreamEvent() *stream.EventStream[components.RunResponseStreamEvent] {
 	if o == nil {
 		return nil
 	}
-	return o.RunResponse
+	return o.RunResponseStreamEvent
 }

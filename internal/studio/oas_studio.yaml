@@ -31,36 +31,13 @@ paths:
         "200":
           description: Successful response
           content:
-            application/json:
+            text/event-stream:
               schema:
-                $ref: "#/components/schemas/RunResponse"
+                $ref: "#/components/schemas/RunResponseStreamEvent"
     post:
       summary: Run
       description: Regenerate the currently selected targets.
       operationId: run
-      responses:
-        "200":
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RunResponse"
-  /source:
-    get:
-      summary: Get Source
-      description: Retrieve the source information from the workflow file, before and after applying the studio modifications overlay.
-      operationId: getSource
-      responses:
-        "200":
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SourceResponse"
-    post:
-      summary: Update Source
-      description: Update the source with studio modifications overlay contents. This will re-run the source in the workflow.
-      operationId: updateSource
       requestBody:
         required: true
         content:
@@ -71,15 +48,17 @@ paths:
                 overlay:
                   type: string
                   description: The studio modifications overlay contents - this should be an overlay YAML document
-              required:
-                - overlay
+                input:
+                  type: string
+                  description: The input spec for the source
       responses:
         "200":
           description: Successful response
           content:
-            application/json:
+            text/event-stream:
               schema:
-                $ref: "#/components/schemas/SourceResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/RunResponseStreamEvent"
   /suggest/method-names:
     get:
       summary: Suggest Method Names
@@ -124,11 +103,26 @@ components:
         workingDirectory:
           type: string
           description: Working directory
+        took:
+          type: integer
+          description: Time taken to run the workflow in milliseconds
+        error:
+          type: string
+          description: Error message if the run failed
+        isPartial:
+          type: boolean
+          description: Whether the run was partial
+        step:
+          type: string
+          description: Step of the run
       required:
         - sourceResult
         - targetResults
         - workflow
         - workingDirectory
+        - took
+        - isPartial
+        - step
     TargetRunSummary:
       type: object
       properties:
@@ -186,7 +180,6 @@ components:
         - overlay
         - overlayPath
         - output
-        - diagnosis
     SuggestResponse:
       type: object
       properties:
@@ -345,6 +338,28 @@ components:
         - authSecret
     Publishing:
       type: object
+    RunResponseStreamEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          description: Type of the stream
+        data:
+          $ref: "#/components/schemas/RunResponse"
+    SourceResponseStreamEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          description: Type of the stream
+        data:
+          $ref: "#/components/schemas/SourceResponse"
   securitySchemes:
     secret:
       type: apiKey

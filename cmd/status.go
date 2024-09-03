@@ -153,7 +153,7 @@ func (m statusModel) Print(ctx context.Context) {
 		expiryHours := int64(expiryDiff.Hours()) % 24
 		expiryDays := int64(expiryDiff.Hours() / 24)
 
-		accountTypeLine.WriteString(" (Free Trial Expire")
+		accountTypeLine.WriteString(" (Business Trial Expire")
 
 		if expiryHours > 0 {
 			accountTypeLine.WriteString("s: ")

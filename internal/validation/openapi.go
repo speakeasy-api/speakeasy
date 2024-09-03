@@ -3,9 +3,10 @@ package validation
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
