@@ -112,6 +112,9 @@ components:
         isPartial:
           type: boolean
           description: Whether the run was partial
+        step:
+          type: string
+          description: Step of the run
       required:
         - sourceResult
         - targetResults
@@ -119,6 +122,7 @@ components:
         - workingDirectory
         - took
         - isPartial
+        - step
     TargetRunSummary:
       type: object
       properties:
