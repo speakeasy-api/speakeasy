@@ -128,7 +128,7 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 	var rhs []string
 
 	for _, action := range overlay.Actions {
-		modificationExtension := action.Extensions["x-speakeasy-modification"]
+		modificationExtension := action.Extensions["x-speakeasy-metadata"]
 		if modificationExtension == nil {
 			continue
 		}
