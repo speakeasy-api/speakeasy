@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -33,6 +34,11 @@ func init() {
 }
 
 func RenderMarkdown(md string) string {
+
+	if env.IsDocsRuntime() {
+		return md
+	}
+
 	text, err := renderer.Render(md)
 	if err != nil {
 

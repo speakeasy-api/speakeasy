@@ -2,6 +2,10 @@ package env
 
 import "os"
 
+func IsDocsRuntime() bool {
+	return os.Getenv("CLI_RUNTIME") == "docs"
+}
+
 func IsGithubAction() bool {
 	return os.Getenv("GITHUB_ACTIONS") == "true"
 }
