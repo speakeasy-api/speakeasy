@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	charminternal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -30,7 +29,6 @@ type suggestOperationIDsFlags struct {
 	Schema  string `json:"schema"`
 	Out     string `json:"out"`
 	Overlay bool   `json:"overlay"`
-	Style   string `json:"style"`
 }
 
 var suggestOperationIDsCmd = &model.ExecutableCommand[suggestOperationIDsFlags]{
@@ -57,27 +55,10 @@ var suggestOperationIDsCmd = &model.ExecutableCommand[suggestOperationIDsFlags]{
 			Description:  "write the suggestion as an overlay to --out, instead of the full document (default: true)",
 			DefaultValue: true,
 		},
-		flag.EnumFlag{
-			Name:          "style",
-			Description:   "the style of suggestion to provide",
-			AllowedValues: []string{"standardize", "resource", "flatten"},
-			DefaultValue:  "resource",
-		},
 	},
 }
 
 func runSuggest(ctx context.Context, flags suggestOperationIDsFlags) error {
-	style := shared.StyleResource
-	depthStyle := shared.DepthStyleNested
-	switch flags.Style {
-	case "standardize":
-		style = shared.StyleStandardize
-		depthStyle = shared.DepthStyleOriginal
-	case "flatten":
-		style = shared.StyleStandardize
-		depthStyle = shared.DepthStyleFlat
-	}
-
 	yamlOut := utils.HasYAMLExt(flags.Out)
 	if flags.Overlay && !yamlOut {
 		return fmt.Errorf("output path must be a YAML or YML file when generating an overlay. Set --overlay=false to write an updated spec")
@@ -89,5 +70,5 @@ func runSuggest(ctx context.Context, flags suggestOperationIDsFlags) error {
 	}
 	defer outFile.Close()
 
-	return suggest.SuggestOperationIDsAndWrite(ctx, flags.Schema, flags.Overlay, yamlOut, style, depthStyle, outFile)
+	return suggest.SuggestOperationIDsAndWrite(ctx, flags.Schema, flags.Overlay, yamlOut, outFile)
 }
