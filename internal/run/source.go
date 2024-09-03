@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/versioning-reports/versioning"
 
 	"github.com/iancoleman/strcase"
@@ -672,14 +671,15 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context) {
 			appendReportLocation(*sourceRes.ChangeReport)
 		}
 
-		if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(sourceRes.Diagnosis) {
-			baseURL := auth.GetWorkspaceBaseURL(ctx)
-			link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
-			link = links.Shorten(ctx, link)
-
-			msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(sourceRes.Diagnosis.Summarize()+"."), styles.DimmedItalic.Render(link))
-			additionalLines = append(additionalLines, fmt.Sprintf("`└─Improve with AI:` %s", msg))
-		}
+		// TODO: reintroduce with studio
+		//if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(sourceRes.Diagnosis) {
+		//	baseURL := auth.GetWorkspaceBaseURL(ctx)
+		//	link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
+		//	link = links.Shorten(ctx, link)
+		//
+		//	msg := fmt.Sprintf("%s %s", styles.Dimmed.Render(sourceRes.Diagnosis.Summarize()+"."), styles.DimmedItalic.Render(link))
+		//	additionalLines = append(additionalLines, fmt.Sprintf("`└─Improve with AI:` %s", msg))
+		//}
 
 		msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
 		logger.Println(msg)
