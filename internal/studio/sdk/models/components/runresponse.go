@@ -18,6 +18,8 @@ type RunResponse struct {
 	Error *string `json:"error,omitempty"`
 	// Whether the run was partial
 	IsPartial bool `json:"isPartial"`
+	// Step of the run
+	Step string `json:"step"`
 }
 
 func (o *RunResponse) GetLintingReportLink() *string {
@@ -74,4 +76,11 @@ func (o *RunResponse) GetIsPartial() bool {
 		return false
 	}
 	return o.IsPartial
+}
+
+func (o *RunResponse) GetStep() string {
+	if o == nil {
+		return ""
+	}
+	return o.Step
 }

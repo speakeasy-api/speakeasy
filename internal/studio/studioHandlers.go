@@ -73,17 +73,20 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 		return errors.New("streaming unsupported")
 	}
 
+	step := h.WorkflowRunner.RootStep.LastStepToString()
+
+	err := h.sendLastRunResultToStream(ctx, w, flusher, step)
+	if err != nil {
+		return fmt.Errorf("error sending last run result to stream: %w", err)
+	}
+
 	h.mutexCondition.L.Lock()
 	for h.running {
-		err := h.sendLastRunResultToStream(ctx, w, flusher, true)
-		if err != nil {
-			return fmt.Errorf("error sending last run result to stream: %w", err)
-		}
 		h.mutexCondition.Wait()
 	}
 	defer h.mutexCondition.L.Unlock()
 
-	return h.sendLastRunResultToStream(ctx, w, flusher, false)
+	return h.sendLastRunResultToStream(ctx, w, flusher, "end")
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -133,13 +136,13 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 				return
 			}
 
-			response, err := h.convertLastRunResult(ctx)
+			step := h.WorkflowRunner.RootStep.LastStepToString()
+			response, err := h.convertLastRunResult(ctx, step)
 			if err != nil {
 				fmt.Println("error getting last completed run result:", err)
 				return
 			}
 			response.SourceResult = *sourceResponse
-			response.IsPartial = true
 
 			responseJSON, err := json.Marshal(response)
 			if err != nil {
@@ -160,7 +163,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		fmt.Println("error running workflow:", err)
 	}
 
-	return h.sendLastRunResultToStream(ctx, w, flusher, false)
+	return h.sendLastRunResultToStream(ctx, w, flusher, "end")
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -291,10 +294,12 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 // Helper functions
 // ---------------------------------
 
-func (h *StudioHandlers) convertLastRunResult(ctx context.Context) (*components.RunResponse, error) {
+func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) (*components.RunResponse, error) {
 	ret := components.RunResponse{
 		TargetResults:    make(map[string]components.TargetRunSummary),
 		WorkingDirectory: h.WorkflowRunner.ProjectDir,
+		Step:             step,
+		IsPartial:        step != "end",
 	}
 
 	ret.Took = h.WorkflowRunner.Duration.Milliseconds()
@@ -357,12 +362,11 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context) (*components.
 	return &ret, nil
 }
 
-func (h *StudioHandlers) sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, isPartial bool) error {
-	ret, err := h.convertLastRunResult(ctx)
+func (h *StudioHandlers) sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, step string) error {
+	ret, err := h.convertLastRunResult(ctx, step)
 	if err != nil {
 		return fmt.Errorf("error getting last completed run result: %w", err)
 	}
-	ret.IsPartial = isPartial
 
 	responseJSON, err := json.Marshal(ret)
 	if err != nil {
