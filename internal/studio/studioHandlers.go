@@ -288,9 +288,14 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 		WorkingDirectory: h.WorkflowRunner.ProjectDir,
 		Step:             step,
 		IsPartial:        step != "end",
+		Took:             h.WorkflowRunner.Duration.Milliseconds(),
 	}
 
-	ret.Took = h.WorkflowRunner.Duration.Milliseconds()
+	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
+	if err != nil {
+		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+	}
+	ret.Workflow = wf
 
 	if h.WorkflowRunner.Error != nil {
 		errStr := h.WorkflowRunner.Error.Error()
@@ -340,12 +345,6 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 		}
 		ret.SourceResult = *sourceResponse
 	}
-
-	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
-	if err != nil {
-		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
-	}
-	ret.Workflow = wf
 
 	return &ret, nil
 }

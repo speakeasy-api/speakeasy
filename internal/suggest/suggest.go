@@ -3,13 +3,14 @@ package suggest
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"gopkg.in/yaml.v3"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"

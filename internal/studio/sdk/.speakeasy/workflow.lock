@@ -1,8 +1,8 @@
-speakeasyVersion: 0.0.1
+speakeasyVersion: 1.377.1
 sources:
     SpeakeasyStudio-OAS:
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:3e9ceaef4799d1b9736195c5a7e23e8beb52cccb308f48cc0f101282acb999b9
+        sourceRevisionDigest: sha256:22959a5102700320cb02912c08183eb65b458b4bedb0323bb0ed5ef6d83380c7
         sourceBlobDigest: sha256:45f804139bfdc947479c244b5e1d7f3a18b586e760766f176587328c5ed36025
         tags:
             - latest
@@ -16,7 +16,7 @@ targets:
     speakeasy-studio:
         source: SpeakeasyStudio-OAS
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:3e9ceaef4799d1b9736195c5a7e23e8beb52cccb308f48cc0f101282acb999b9
+        sourceRevisionDigest: sha256:22959a5102700320cb02912c08183eb65b458b4bedb0323bb0ed5ef6d83380c7
         sourceBlobDigest: sha256:45f804139bfdc947479c244b5e1d7f3a18b586e760766f176587328c5ed36025
         outLocation: /Users/da/code/speakeasy-cli/internal/studio/sdk
     spekaeasy-studio:
