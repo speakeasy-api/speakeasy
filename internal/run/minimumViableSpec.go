@@ -71,7 +71,13 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	}
 
 	overlay := transform.BuildRemoveInvalidOperationsOverlay(model, invalidOperationToErr)
-	if err = modifications.UpsertOverlay(&source, overlay); err != nil {
+
+	overlayPath, err := modifications.GetOverlayPath(workingDir)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get overlay path: %w", err)
+	}
+
+	if _, err = modifications.UpsertOverlay(overlayPath, &source, overlay); err != nil {
 		return "", nil, fmt.Errorf("failed to upsert overlay: %w", err)
 	}
 
