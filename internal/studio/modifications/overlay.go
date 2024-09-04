@@ -1,7 +1,9 @@
 package modifications
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 
@@ -16,21 +18,41 @@ const (
 	OverlayPath  = ".speakeasy/speakeasy-modifications-overlay.yaml"
 )
 
-func UpsertOverlay(source *workflow.Source, o overlay.Overlay) error {
+func GetOverlayPath(dir string) (string, error) {
+	// Look for an unused filename for writing the overlay
+	overlayPath := filepath.Join(dir, OverlayPath)
+	for i := 0; i < 100; i++ {
+		if _, err := os.Stat(overlayPath); os.IsNotExist(err) {
+			break
+		}
+
+		// Remove the .yaml suffix and add a number
+		overlayPath = filepath.Join(dir, fmt.Sprintf("%s-%d.yaml", OverlayPath[:len(OverlayPath)-5], i+1))
+	}
+
+	relativeOverlayPath, err := filepath.Rel(dir, overlayPath)
+	if err != nil {
+		return "", fmt.Errorf("error getting relative path: %w", err)
+	}
+
+	return relativeOverlayPath, nil
+}
+
+func UpsertOverlay(overlayPath string, source *workflow.Source, o overlay.Overlay) (string, error) {
 	// Open the file with read and write permissions
-	overlayFile, err := os.OpenFile(OverlayPath, os.O_RDWR, 0644)
+	overlayFile, err := os.OpenFile(overlayPath, os.O_RDWR, 0644)
 	var baseOverlay *overlay.Overlay
 
 	// If the file exists, load the current overlay
 	if err == nil {
-		baseOverlay, err = loader.LoadOverlay(OverlayPath)
+		baseOverlay, err = loader.LoadOverlay(overlayPath)
 		if err != nil {
-			return err
+			return overlayPath, err
 		}
 	} else if os.IsNotExist(err) {
-		overlayFile, err = os.Create(OverlayPath)
+		overlayFile, err = os.Create(overlayPath)
 		if err != nil {
-			return err
+			return overlayPath, err
 		}
 
 		baseOverlay = &overlay.Overlay{
@@ -41,16 +63,14 @@ func UpsertOverlay(source *workflow.Source, o overlay.Overlay) error {
 			},
 		}
 	} else {
-		return err
+		return overlayPath, err
 	}
 
 	baseOverlay.Actions = append(baseOverlay.Actions, o.Actions...)
 	baseOverlay.Info.Version = bumpVersion(baseOverlay.Info.Version, o.Info.Version)
 
-	// TODO: This should use get or create overlay path
-	UpsertOverlayIntoSource(source, OverlayPath)
-
-	return baseOverlay.Format(overlayFile)
+	UpsertOverlayIntoSource(source, overlayPath)
+	return overlayPath, baseOverlay.Format(overlayFile)
 }
 
 func UpsertOverlayIntoSource(source *workflow.Source, overlayPath string) {

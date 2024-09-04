@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,7 +16,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 
-	"github.com/speakeasy-api/jsonpath/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
@@ -237,13 +237,9 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 		}
 
 		// Write the overlay to a file
-		err = h.getOrCreateOverlayPath()
+		err = h.upsertOverlay(overlay)
 		if err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
-		}
-		err = utils.WriteStringToFile(h.OverlayPath, reqBody.Overlay)
-		if err != nil {
-			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing overlay to file: %w", err))
 		}
 	}
 
@@ -444,32 +440,24 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 	}, nil
 }
 
-func (h *StudioHandlers) getOrCreateOverlayPath() error {
-	if h.OverlayPath != "" {
-		return nil
-	}
-
-	// Look for an unused filename for writing the overlay
-	overlayPath := filepath.Join(h.WorkflowRunner.ProjectDir, modifications.OverlayPath)
-	for i := 0; i < 100; i++ {
-		if _, err := os.Stat(overlayPath); os.IsNotExist(err) {
-			break
-		}
-		// Remove the .yaml suffix and add a number
-		overlayPath = filepath.Join(h.WorkflowRunner.ProjectDir, fmt.Sprintf("%s-%d.yaml", modifications.OverlayPath[:len(modifications.OverlayPath)-5], i+1))
-	}
-	h.OverlayPath = overlayPath
-
+func (h *StudioHandlers) upsertOverlay(overlay overlay.Overlay) error {
 	workflowConfig := h.WorkflowRunner.GetWorkflowFile()
-
 	source := workflowConfig.Sources[h.SourceID]
 
-	relativeOverlayPath, err := filepath.Rel(h.WorkflowRunner.ProjectDir, overlayPath)
-	if err != nil {
-		return fmt.Errorf("error getting relative path: %w", err)
+	if h.OverlayPath == "" {
+		var err error
+		h.OverlayPath, err = modifications.GetOverlayPath(h.WorkflowRunner.ProjectDir)
+		if err != nil {
+			return err
+		}
 	}
 
-	modifications.UpsertOverlayIntoSource(&source, relativeOverlayPath)
+	overlayPath, err := modifications.UpsertOverlay(h.OverlayPath, &source, overlay)
+	if err != nil {
+		return err
+	}
+
+	h.OverlayPath = overlayPath
 
 	workflowConfig.Sources[h.SourceID] = source
 
