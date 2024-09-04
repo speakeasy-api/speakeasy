@@ -71,6 +71,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		Source:    sourceID,
 		Diagnosis: suggestions.Diagnosis{},
 	}
+	defer func() {
+		w.OnSourceResult(sourceRes)
+	}()
 
 	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
@@ -261,12 +264,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		})
 	}
 
-	if w.SkipLinting {
-		w.OnSourceResult(sourceRes)
-	} else {
+	if !w.SkipLinting {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
-		fmt.Println("sourceRes.LintResult", sourceRes.LintResult)
-		w.OnSourceResult(sourceRes)
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
@@ -276,7 +275,6 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
 	if err != nil {
 		step.Fail()
-		w.OnSourceResult(sourceRes)
 		return "", sourceRes, err
 	}
 	step.Succeed()
