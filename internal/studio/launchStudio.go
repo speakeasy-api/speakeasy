@@ -110,8 +110,8 @@ func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) 
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		id := generateRequestID()
-		method := fmt.Sprintf("%-6s", r.Method)
-		path := fmt.Sprintf("%-21s", r.URL.Path)
+		method := fmt.Sprintf("%-6s", r.Method)  // Fixed width 6 characters
+		path := fmt.Sprintf("%-21s", r.URL.Path) // Fixed width 21 characters
 		base := fmt.Sprintf("%s %s %s", id, method, path)
 		log.From(r.Context()).Info(fmt.Sprintf("%s started", base))
 		ctx := r.Context()
