@@ -16,6 +16,10 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-latest
+
+    env:
+      CLI_RUNTIME: "docs"
+
     steps:
       - name: Checkout speakeasy repository
         uses: actions/checkout@v3
