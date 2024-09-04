@@ -226,6 +226,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 
 		currentDocument = overlayLocation
+		overlayStep.Succeed()
 	}
 
 	sourceRes.OutputPath = currentDocument
@@ -240,12 +241,6 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
-	if err != nil {
-		w.OnSourceResult(sourceRes)
-		return "", sourceRes, err
-	}
-
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil && !w.SkipChangeReport {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
@@ -256,6 +251,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 		}
 	}
+
 	if sourceRes.ChangeReport == nil {
 		// If we failed to compute changes, always generate the SDK
 		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
@@ -265,17 +261,28 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		})
 	}
 
-	if !w.SkipLinting {
+	if w.SkipLinting {
+		w.OnSourceResult(sourceRes)
+	} else {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
+		fmt.Println("sourceRes.LintResult", sourceRes.LintResult)
 		w.OnSourceResult(sourceRes)
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
 	}
 
+	step := rootStep.NewSubstep("Diagnosing OpenAPI")
+	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
+	if err != nil {
+		step.Fail()
+		w.OnSourceResult(sourceRes)
+		return "", sourceRes, err
+	}
+	step.Succeed()
+
 	rootStep.SucceedWorkflow()
 
-	w.OnSourceResult(sourceRes)
 	return currentDocument, sourceRes, nil
 }
 
@@ -366,6 +373,8 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
+
+	step.SucceedWorkflow()
 
 	return res, err
 }

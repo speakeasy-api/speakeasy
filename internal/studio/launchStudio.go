@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/speakeasy-api/speakeasy-core/auth"
 
@@ -107,14 +108,20 @@ func authMiddleware(secret string, next http.Handler) http.Handler {
 
 func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		id := generateRequestID()
-		log.From(r.Context()).Info("handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id))
+		method := fmt.Sprintf("%-6s", r.Method)
+		path := fmt.Sprintf("%-21s", r.URL.Path)
+		base := fmt.Sprintf("%s %s %s", id, method, path)
+		log.From(r.Context()).Info(fmt.Sprintf("%s started", base))
 		ctx := r.Context()
 		if err := h(ctx, w, r); err != nil {
-			log.From(ctx).Error("error handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id), zap.Error(err))
+			log.From(ctx).Error(fmt.Sprintf("%s failed: %v", base, err))
 			respondJSONError(ctx, w, err)
+			return
 		}
-		log.From(ctx).Info("request handled", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id))
+		duration := time.Since(start)
+		log.From(ctx).Info(fmt.Sprintf("%s completed in %s", base, duration))
 	}
 }
 
@@ -198,8 +205,9 @@ func respondJSONError(ctx context.Context, w http.ResponseWriter, err error) {
 	}
 }
 
+var counter int
+
 func generateRequestID() string {
-	bytes := make([]byte, 4)
-	rand.Read(bytes) // Generate random bytes
-	return hex.EncodeToString(bytes)
+	counter++
+	return fmt.Sprintf("%03d", counter)
 }
