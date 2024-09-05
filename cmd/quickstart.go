@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/studio"
 
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -347,11 +348,8 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	)
 
 	err = wf.RunWithVisualization(ctx)
-	// There should only be one target after quickstart
-	if err == nil && len(wf.SDKOverviewURLs) == 1 {
-		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		browser.OpenURL(overviewURL)
-	}
+
+	studio.LaunchStudio(ctx, wf)
 
 	return true, err
 }

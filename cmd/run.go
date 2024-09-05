@@ -352,15 +352,15 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 	}
 
-	// Don't cleanup if we're launching studio, we need the temp output
-	if flags.LaunchStudio {
-		opts = append(opts, run.WithSkipCleanup())
-	}
-
 	workflow, err := run.NewWorkflow(
 		ctx,
 		opts...,
 	)
+
+	defer func() {
+		workflow.Cleanup()
+	}()
+
 	if err != nil {
 		return err
 	}
@@ -385,17 +385,11 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		workflow.RootStep.Finalize(err == nil)
 	}
 
-	if err != nil && !flags.LaunchStudio {
+	if err != nil {
 		return err
 	}
 
 	workflow.PrintSuccessSummary(ctx)
 
-	// Pass initial results to launch studio
-
-	if flags.LaunchStudio {
-		return studio.LaunchStudio(ctx, workflow)
-	}
-
-	return nil
+	return studio.LaunchStudio(ctx, workflow)
 }
