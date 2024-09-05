@@ -386,7 +386,8 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	}
 
 	if err != nil {
-		return err
+		// TODO: What if this error is not resolvable in the studio
+		log.From(ctx).Error(err.Error())
 	}
 
 	workflow.PrintSuccessSummary(ctx)
