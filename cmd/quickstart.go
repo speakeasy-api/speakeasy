@@ -347,9 +347,9 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		run.WithShouldCompile(!skipCompile),
 	)
 
-	err = wf.RunWithVisualization(ctx)
+	wf.RunWithVisualization(ctx)
 
-	studio.LaunchStudio(ctx, wf)
+	err = studio.LaunchStudio(ctx, wf)
 
 	return true, err
 }
