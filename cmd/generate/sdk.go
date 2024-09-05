@@ -196,5 +196,5 @@ generate:
   baseServerUrl: https://api.speakeasy.com 
 `+"```"+`
 
-For additional documentation visit: https://docs.speakeasy.com/docs/using-speakeasy/create-client-sdks/intro
+For additional documentation visit: https://speakeasy.com/docs/using-speakeasy/create-client-sdks/intro
 `, strings.Join(SDKSupportedLanguageTargets(), "\n	- "))
