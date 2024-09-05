@@ -508,7 +508,7 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 		hostname:                          target.Hostname,
 		id:                                target.ID,
 		lastEventCreatedAt:                target.LastEventCreatedAt,
-		speakeasyURL:                      links.Shorten(ctx, fmt.Sprintf("https://app.speakeasyapi.dev/org/%s/%s/targets/%s", org.slug, workspace.slug, target.ID)),
+		speakeasyURL:                      links.Shorten(ctx, fmt.Sprintf("https://app.speakeasy.com/org/%s/%s/targets/%s", org.slug, workspace.slug, target.ID)),
 		success:                           target.Success,
 	}
 

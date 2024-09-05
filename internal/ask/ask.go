@@ -35,7 +35,7 @@ type ChatResponse struct {
 	Message   string `json:"Message"`
 }
 
-const ApiURL = "https://api.prod.speakeasyapi.dev"
+const ApiURL = "https://api.prod.speakeasy.com"
 
 var baseURL = ApiURL
 

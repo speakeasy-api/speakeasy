@@ -35,7 +35,7 @@ const (
 	appInstallationLink  = "https://github.com/apps/speakeasy-github/installations/new"
 	repositorySecretPath = "Settings > Secrets & Variables > Actions"
 	actionsPath          = "Actions > Generate"
-	githubSetupDocs      = "https://www.speakeasyapi.dev/docs/advanced-setup/github-setup"
+	githubSetupDocs      = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
 	appInstallURL        = "https://github.com/apps/speakeasy-github"
 )
 
