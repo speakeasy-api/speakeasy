@@ -386,7 +386,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	}
 
 	if err != nil {
-		// TODO: What if this error is not resolvable in the studio
+		// TODO: What if this error is not resolvable in the studio - check if we have sourceResults?
 		log.From(ctx).Error(err.Error())
 	}
 
