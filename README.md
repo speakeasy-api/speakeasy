@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<a href="[Speakeasy](https://speakeasyapi.dev/)">
+<a href="[Speakeasy](https://speakeasy.com/)">
   <img src="https://github.com/speakeasy-api/speakeasy/assets/68016351/e959f81a-b250-4003-8c5c-a45b9463fc95" alt="Speakeasy Logo" width="700">
 <h2>Enterprise-Ready Developer Experience for your REST API</h2>
 <p>Launch production-quality SDKs, Terraform providers, docs, and more in minutes :rocket:</p>
@@ -10,7 +10,7 @@
 <br />
 <br />
 
-   <a href="https://speakeasyapi.dev/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
+   <a href="https://speakeasy.com/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
    <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
 
   ![Group 26](https://github.com/speakeasy-api/speakeasy/assets/68016351/159f0565-0cfa-468a-8fcd-7c3590eea355)
@@ -21,7 +21,7 @@
 
 ## What is Speakeasy?
 
-[Speakeasy](https://www.speakeasyapi.dev/) gives your users the developer experience that makes API integrations easy.
+[Speakeasy](https://www.speakeasy.com/) gives your users the developer experience that makes API integrations easy.
 
 Don't put the burden of integration on your users. Take your APIs to market with best-in-class, enterprise-ready SDKs, Terraform providers, SDK docs, and more.
 
@@ -40,9 +40,9 @@ For upcoming features and bug fixes, check out our [public roadmap](https://gith
 
 ## What is the Speakeasy CLI?
 
-The [Speakeasy CLI](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) is a tool for interacting with the Speakeasy platform that brings the functionality of Speakeasy into your development workflow. 
+The [Speakeasy CLI](https://www.speakeasy.com/docs/speakeasy-cli/getting-started) is a tool for interacting with the Speakeasy platform that brings the functionality of Speakeasy into your development workflow. 
 
-You can run the Speakeasy CLI locally or in your CI/CD pipeline to validate your API specs, generate SDKs, and more. Looking to embed this into your GitHub CI/CD? Check out [these docs](https://speakeasyapi.dev/docs/create-client-sdks/github-setup/) instead. 
+You can run the Speakeasy CLI locally or in your CI/CD pipeline to validate your API specs, generate SDKs, and more. Looking to embed this into your GitHub CI/CD? Check out [these docs](https://speakeasy.com/docs/create-client-sdks/github-setup/) instead. 
 
 Here are a few key functions of the CLI:
 
@@ -54,7 +54,7 @@ Here are a few key functions of the CLI:
 * `auth` - Authenticate with the platform and manage API keys. 
 * `status` - Review all SDK/targets in current workspace.
 
-For a complete list of commands check out our [reference](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) or type `speakeasy` and our interactive mode will take you through the available functions. 
+For a complete list of commands check out our [reference](https://www.speakeasy.com/docs/speakeasy-cli/getting-started) or type `speakeasy` and our interactive mode will take you through the available functions. 
 
 ## Design Choices
 
@@ -67,11 +67,11 @@ Here are some of the Speakeasy design decisions:
 * Based on the configuration in the OpenAPI document, Speakeasy annotates types using reflection metadata to determine how to serialize and deserialize them.
 * To get SDKs to your end users quickly, Speakeasy generates full packages for each language that you should be able to publish to a package registry with little additional work. If you're interested in having a managed pipeline to your package manager, check out the Speakeasy Generation GitHub Action.
 
-Want to learn more about the Speakeasy methodology? Take a look at [how the Speakeasy SDK generator compares to OSS options](https://www.speakeasyapi.dev/post/client-sdks-as-a-service). 
+Want to learn more about the Speakeasy methodology? Take a look at [how the Speakeasy SDK generator compares to OSS options](https://www.speakeasy.com/post/client-sdks-as-a-service). 
 
-If you're interested in generating managed GitHub repos for your SDKs or enterprise support, [reach out to us](https://www.speakeasyapi.dev/request-access) or [schedule a chat](https://calendly.com/d/drw-t98-rpq/simon-sagar-speakeasy). We'd love to help you build out API DevEx.
+If you're interested in generating managed GitHub repos for your SDKs or enterprise support, [reach out to us](https://www.speakeasy.com/request-access) or [schedule a chat](https://calendly.com/d/drw-t98-rpq/simon-sagar-speakeasy). We'd love to help you build out API DevEx.
 
-If you're interested in having managed GitHub repos generated for your SDKs or enterprise support, [reach out to us](https://www.speakeasyapi.dev/request-access) or [schedule a chat](https://calendly.com/d/drw-t98-rpq/simon-sagar-speakeasy). We'd love to help you build out API DevEx.
+If you're interested in having managed GitHub repos generated for your SDKs or enterprise support, [reach out to us](https://www.speakeasy.com/request-access) or [schedule a chat](https://calendly.com/d/drw-t98-rpq/simon-sagar-speakeasy). We'd love to help you build out API DevEx.
 
 > Speakeasy may capture metadata on usage of the Speakeasy CLI to better understand OpenAPI features so that we can build better code generators and other tools over time.
 
@@ -117,7 +117,7 @@ Once you have installed the Speakeasy CLI, you can verify it's working by runnin
 speakeasy --help
 ```
 
-See the Speakeasy docs for [how to get started with the Speakeasy CLI](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started).
+See the Speakeasy docs for [how to get started with the Speakeasy CLI](https://www.speakeasy.com/docs/speakeasy-cli/getting-started).
 
 ### Authenticating the Speakeasy CLI
 
@@ -126,7 +126,7 @@ The Speakeasy CLI depends on Speakeasy Platform APIs. Connect your Speakeasy CLI
 ```bash
 speakeasy auth login
 ```
-You'll be redirected to a login URL to select an existing workspace or create a new workspace on the platform. If your local network prevents you from accessing the login page prompted by the CLI, you can log in manually at [app.speakeasyapi.dev](https://app.speakeasyapi.dev), retrieve an API key, and populate a local environment variable named `SPEAKEASY_API_KEY` with the key.
+You'll be redirected to a login URL to select an existing workspace or create a new workspace on the platform. If your local network prevents you from accessing the login page prompted by the CLI, you can log in manually at [app.speakeasy.com](https://app.speakeasy.com), retrieve an API key, and populate a local environment variable named `SPEAKEASY_API_KEY` with the key.
 
 <img width="1268" alt="Screenshot 2023-01-29 at 23 12 05" src="https://user-images.githubusercontent.com/68016351/215410983-b41dab8c-12b1-472c-a2fb-3325b881ff8e.png">
 
@@ -150,7 +150,7 @@ speakeasy generate sdk [flags]
   -y, --auto-yes string  auto answer yes to all prompts
 ```
 
-Take a look at the Speakeasy [getting started](https://www.speakeasyapi.dev/docs/speakeasy-cli/getting-started) page for in-depth information.
+Take a look at the Speakeasy [getting started](https://www.speakeasy.com/docs/speakeasy-cli/getting-started) page for in-depth information.
 
 ## Schema Validation
 
@@ -293,19 +293,19 @@ The tables below give an overview of what we support from OpenAPI.
 
 ## Advanced Generation Features
 
-* [SDK Gen Configuration](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/intro/) - Learn how to configure the SDK generator to your needs.
-* [Generated Comments](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/sdk-docs/#comments) - Learn how comments are generated from your OpenAPI document and how to customize them.
-* [Configuring the SDK with Server URLs](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/servers/) - Learn how to configure the SDK to use different server URLs for different environments.
-* [Readme Generation](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/sdk-docs/) - Learn how the SDK generates README.md files and how to control this.
-* [Using Custom HTTP Clients With the SDK](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/custom-http-client/) - Learn how to provide a custom HTTP Client to the SDKs at runtime.
-* [Capturing Telemetry on SDK Usage](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/sdk-telemetry/) - Learn how you can capture telemetry to get an understanding of how your SDKs are being used.
-* [Automated SDK Generation](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/github-setup/) - Use our GitHub Action and Workflows to set up CI/CD for generating and publishing your SDKs.
-* [Override Generated Names](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/methods/) - Speakeasy uses your OpenAPI schema to infer names for class types, methods, and parameters. However, you can override these names to tailor the generated SDK to your preferences.
-* [Add Retries to Your SDKs](https://speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/customize-sdks/retries/) - The generator supports the ability to generate SDKs that will automatically retry requests that fail due to network errors or any configured HTTP status code.
+* [SDK Gen Configuration](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/customize-sdks/intro/) - Learn how to configure the SDK generator to your needs.
+* [Generated Comments](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/sdk-docs/#comments) - Learn how comments are generated from your OpenAPI document and how to customize them.
+* [Configuring the SDK with Server URLs](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/customize-sdks/servers/) - Learn how to configure the SDK to use different server URLs for different environments.
+* [Readme Generation](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/sdk-docs/) - Learn how the SDK generates README.md files and how to control this.
+* [Using Custom HTTP Clients With the SDK](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/customize-sdks/custom-http-client/) - Learn how to provide a custom HTTP Client to the SDKs at runtime.
+* [Capturing Telemetry on SDK Usage](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/sdk-telemetry/) - Learn how you can capture telemetry to get an understanding of how your SDKs are being used.
+* [Automated SDK Generation](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/github-setup/) - Use our GitHub Action and Workflows to set up CI/CD for generating and publishing your SDKs.
+* [Override Generated Names](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/customize-sdks/methods/) - Speakeasy uses your OpenAPI schema to infer names for class types, methods, and parameters. However, you can override these names to tailor the generated SDK to your preferences.
+* [Add Retries to Your SDKs](https://speakeasy.com/docs/using-speakeasy/create-client-sdks/customize-sdks/retries/) - The generator supports the ability to generate SDKs that will automatically retry requests that fail due to network errors or any configured HTTP status code.
 
 ## Getting Support
 
-If you need support using the Speakeasy CLI, please contact us via [email](info@speakeasyapi.dev), on [Slack](https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1df0lalk5-HCAlpcQiqPw8vGukQWhexw), or file a GitHub issue and we'll respond ASAP!
+If you need support using the Speakeasy CLI, please contact us via [email](info@speakeasy.com), on [Slack](https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1df0lalk5-HCAlpcQiqPw8vGukQWhexw), or file a GitHub issue and we'll respond ASAP!
 
 <!-- WARNING: The below content is replaced by running `go run cmd/docs/main.go` please don't manually edit anything below this line -->
 

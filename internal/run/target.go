@@ -218,7 +218,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 	genLockID := sdkgen.GetGenLockID(outDir)
 	if orgSlug != "" && workspaceSlug != "" && genLockID != nil && *genLockID != "" && !utils.IsZeroTelemetryOrganization(ctx) {
-		w.SDKOverviewURLs[target] = fmt.Sprintf("https://app.speakeasyapi.dev/org/%s/%s/targets/%s", orgSlug, workspaceSlug, *genLockID)
+		w.SDKOverviewURLs[target] = fmt.Sprintf("https://app.speakeasy.com/org/%s/%s/targets/%s", orgSlug, workspaceSlug, *genLockID)
 	}
 
 	w.lockfile.Targets[target] = targetLock
