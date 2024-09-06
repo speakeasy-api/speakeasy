@@ -15,24 +15,25 @@ import (
 
 type Workflow struct {
 	// Opts
-	Target             string
-	Source             string
-	Repo               string
-	SetVersion         string
-	Debug              bool
-	ShouldCompile      bool
-	Verbose            bool
-	ForceGeneration    bool
-	FrozenWorkflowLock bool
-	SkipVersioning     bool
-	SkipLinting        bool
-	SkipChangeReport   bool
-	SkipSnapshot       bool
-	SkipCleanup        bool
-	FromQuickstart     bool
-	RepoSubDirs        map[string]string
-	InstallationURLs   map[string]string
-	RegistryTags       []string
+	Target                 string
+	Source                 string
+	Repo                   string
+	SetVersion             string
+	Debug                  bool
+	ShouldCompile          bool
+	Verbose                bool
+	ForceGeneration        bool
+	FrozenWorkflowLock     bool
+	SkipVersioning         bool
+	SkipLinting            bool
+	SkipChangeReport       bool
+	SkipSnapshot           bool
+	SkipCleanup            bool
+	FromQuickstart         bool
+	SkipGenerateLintReport bool
+	RepoSubDirs            map[string]string
+	InstallationURLs       map[string]string
+	RegistryTags           []string
 
 	// Internal
 	workflowName       string
@@ -204,6 +205,12 @@ func WithSkipLinting() Opt {
 func WithLinting() Opt {
 	return func(w *Workflow) {
 		w.SkipLinting = false
+	}
+}
+
+func WithSkipGenerateLintReport() Opt {
+	return func(w *Workflow) {
+		w.SkipGenerateLintReport = true
 	}
 }
 

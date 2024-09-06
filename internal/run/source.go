@@ -174,7 +174,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 		mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(source.Inputs)))
 
-		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.ProjectDir); err != nil {
+		if err := mergeDocuments(ctx, inSchemas, mergeLocation, rulesetToUse, w.ProjectDir, w.SkipGenerateLintReport); err != nil {
 			return "", nil, err
 		}
 
@@ -237,6 +237,14 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	// Emit once before linting as that can be slow
 	w.OnSourceResult(sourceRes)
 
+	if !w.SkipLinting {
+		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
+		w.OnSourceResult(sourceRes)
+		if err != nil {
+			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
+		}
+	}
+
 	if !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
@@ -262,13 +270,6 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			Key:          "openapi_change_summary",
 			Priority:     5,
 		})
-	}
-
-	if !w.SkipLinting {
-		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
-		if err != nil {
-			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
-		}
 	}
 
 	step := rootStep.NewSubstep("Diagnosing OpenAPI")
@@ -368,7 +369,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 		MaxWarns:  1000,
 	}
 
-	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart)
+	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart, w.SkipGenerateLintReport)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 
@@ -693,12 +694,12 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context) {
 	}
 }
 
-func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string) error {
+func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir); err != nil {
+	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir, skipGenerateLintReport); err != nil {
 		return err
 	}
 

@@ -87,6 +87,12 @@ components:
       type: object
       description: Map of target run summaries
       properties:
+        step:
+            type: string
+            description: Step of the run
+        isPartial:
+          type: boolean
+          description: Whether the run was partial
         lintingReportLink:
           type: string
           description: Link to the linting report
@@ -109,12 +115,6 @@ components:
         error:
           type: string
           description: Error message if the run failed
-        isPartial:
-          type: boolean
-          description: Whether the run was partial
-        step:
-          type: string
-          description: Step of the run
       required:
         - sourceResult
         - targetResults
