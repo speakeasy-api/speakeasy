@@ -392,5 +392,9 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 	workflow.PrintSuccessSummary(ctx)
 
-	return studio.LaunchStudio(ctx, workflow)
+	if shouldLaunchStudio(ctx, workflow) {
+		return studio.LaunchStudio(ctx, workflow)
+	}
+
+	return nil
 }
