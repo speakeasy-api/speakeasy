@@ -72,8 +72,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		Diagnosis: suggestions.Diagnosis{},
 	}
 	defer func() {
-		w.OnSourceResult(sourceRes)
+		w.OnSourceResult(sourceRes, "")
 	}()
+	w.OnSourceResult(sourceRes, "Overlaying")
 
 	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
@@ -235,11 +236,12 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	sourceRes.OutputPath = currentDocument
 
 	// Emit once before linting as that can be slow
-	w.OnSourceResult(sourceRes)
+	w.OnSourceResult(sourceRes, "Linting")
 
 	if !w.SkipLinting {
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
-		w.OnSourceResult(sourceRes)
+		fmt.Println("after lint", w.RootStep.LastStepToString())
+		w.OnSourceResult(sourceRes, "Uploading spec")
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}

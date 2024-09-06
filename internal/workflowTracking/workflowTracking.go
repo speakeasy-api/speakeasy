@@ -157,10 +157,10 @@ func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
 func (w *WorkflowStep) LastStepToString() string {
 	step := w
 	var status Status = StatusSucceeded
-	var stringNames = []string{}
+	var stepNames = []string{}
 
 	for {
-		stringNames = append(stringNames, step.name)
+		stepNames = append(stepNames, step.name)
 		status = step.status
 
 		if len(step.substeps) == 0 {
@@ -169,7 +169,7 @@ func (w *WorkflowStep) LastStepToString() string {
 		step = step.substeps[len(step.substeps)-1]
 	}
 
-	return fmt.Sprintf("%s: %s", status, strings.Join(stringNames, " -> "))
+	return fmt.Sprintf("%s: %s", status, strings.Join(stepNames, " -> "))
 }
 
 func (w *WorkflowStep) toString(parentIndent, indent int) string {

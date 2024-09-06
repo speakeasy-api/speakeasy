@@ -50,7 +50,7 @@ type Workflow struct {
 	computedChanges map[string]bool
 	SourceResults   map[string]*SourceResult
 	TargetResults   map[string]*TargetResult
-	OnSourceResult  func(*SourceResult)
+	OnSourceResult  func(*SourceResult, string)
 	Duration        time.Duration
 	criticalWarns   []string
 	Error           error
@@ -93,7 +93,7 @@ func NewWorkflow(
 		ForceGeneration:  false,
 		SourceResults:    make(map[string]*SourceResult),
 		TargetResults:    make(map[string]*TargetResult),
-		OnSourceResult:   func(*SourceResult) {},
+		OnSourceResult:   func(*SourceResult, string) {},
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
