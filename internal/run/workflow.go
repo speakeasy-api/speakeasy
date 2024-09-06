@@ -15,24 +15,25 @@ import (
 
 type Workflow struct {
 	// Opts
-	Target             string
-	Source             string
-	Repo               string
-	SetVersion         string
-	Debug              bool
-	ShouldCompile      bool
-	Verbose            bool
-	ForceGeneration    bool
-	FrozenWorkflowLock bool
-	SkipVersioning     bool
-	SkipLinting        bool
-	SkipChangeReport   bool
-	SkipSnapshot       bool
-	SkipCleanup        bool
-	FromQuickstart     bool
-	RepoSubDirs        map[string]string
-	InstallationURLs   map[string]string
-	RegistryTags       []string
+	Target                 string
+	Source                 string
+	Repo                   string
+	SetVersion             string
+	Debug                  bool
+	ShouldCompile          bool
+	Verbose                bool
+	ForceGeneration        bool
+	FrozenWorkflowLock     bool
+	SkipVersioning         bool
+	SkipLinting            bool
+	SkipChangeReport       bool
+	SkipSnapshot           bool
+	SkipCleanup            bool
+	FromQuickstart         bool
+	SkipGenerateLintReport bool
+	RepoSubDirs            map[string]string
+	InstallationURLs       map[string]string
+	RegistryTags           []string
 
 	// Internal
 	workflowName       string
@@ -49,7 +50,7 @@ type Workflow struct {
 	computedChanges map[string]bool
 	SourceResults   map[string]*SourceResult
 	TargetResults   map[string]*TargetResult
-	OnSourceResult  func(*SourceResult)
+	OnSourceResult  func(*SourceResult, string)
 	Duration        time.Duration
 	criticalWarns   []string
 	Error           error
@@ -92,7 +93,7 @@ func NewWorkflow(
 		ForceGeneration:  false,
 		SourceResults:    make(map[string]*SourceResult),
 		TargetResults:    make(map[string]*TargetResult),
-		OnSourceResult:   func(*SourceResult) {},
+		OnSourceResult:   func(*SourceResult, string) {},
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
@@ -204,6 +205,12 @@ func WithSkipLinting() Opt {
 func WithLinting() Opt {
 	return func(w *Workflow) {
 		w.SkipLinting = false
+	}
+}
+
+func WithSkipGenerateLintReport() Opt {
+	return func(w *Workflow) {
+		w.SkipGenerateLintReport = true
 	}
 }
 
