@@ -178,11 +178,12 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		}
 
 		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "")
-		w.SourceResults[sourceRes.Source] = sourceRes
 		if err != nil {
 			return err
 		}
-
+		if sourceRes != nil {
+			w.SourceResults[sourceRes.Source] = sourceRes
+		}
 	}
 
 	if !w.SkipCleanup {
