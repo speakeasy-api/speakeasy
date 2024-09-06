@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
 	"golang.org/x/exp/maps"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -296,18 +296,15 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
-	// There should only be one target after quickstart
-	if len(wf.SDKOverviewURLs) == 1 {
-		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		browser.OpenURL(overviewURL)
-	}
-
 	if changeDirMsg != "" {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
 	if shouldLaunchStudio(ctx, wf) {
 		err = studio.LaunchStudio(ctx, wf)
+	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		browser.OpenURL(overviewURL)
 	}
 
 	return nil
