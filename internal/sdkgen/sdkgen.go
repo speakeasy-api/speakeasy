@@ -146,7 +146,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		}, err
 	}
 
-	sdkDocsLink := "https://www.speakeasyapi.dev/docs/customize-sdks"
+	sdkDocsLink := "https://www.speakeasy.com/docs/customize-sdks"
 
 	logger.Successf("\nSDK for %s generated successfully ✓", lang)
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)

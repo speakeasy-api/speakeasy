@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const defaultAPIURL = "https://api.prod.speakeasyapi.dev"
+const defaultAPIURL = "https://api.prod.speakeasy.com"
 
 type logProxyLevel string
 

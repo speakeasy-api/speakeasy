@@ -4,7 +4,7 @@ set -e
 # Adapted/Copied from https://raw.githubusercontent.com/daveshanley/vacuum/main/bin/install.sh
 #
 # Speakeasy CLI
-# https://speakeasyapi.dev/docs/speakeasy-cli/getting-started/
+# https://speakeasy.com/docs/speakeasy-cli/getting-started/
 #
 # Designed for quick installs over the network and CI/CD
 #   curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh

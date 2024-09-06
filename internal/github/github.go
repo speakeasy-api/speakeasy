@@ -164,7 +164,7 @@ func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {
 		md = fmt.Sprintf("# Generation Workflow Summary\n\n_This is a breakdown of the 'Generate Target' step above_\n%s", chart)
 	} else {
 		logger.Error("failed to generate github workflow summary", zap.Error(err))
-		md = "# Generation Workflow Summary\n\n:stop_sign: Failed to generate workflow summary. Please try again or [contact support](mailto:support@speakeasyapi.dev)."
+		md = "# Generation Workflow Summary\n\n:stop_sign: Failed to generate workflow summary. Please try again or [contact support](mailto:support@speakeasy.com)."
 	}
 
 	githubactions.AddStepSummary(md)

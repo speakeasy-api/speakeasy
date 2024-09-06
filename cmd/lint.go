@@ -117,7 +117,7 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 		return err
 	}
 
-	if _, err := validation.ValidateOpenAPI(ctx, "", flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false); err != nil {
+	if _, err := validation.ValidateOpenAPI(ctx, "", flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false, false); err != nil {
 		rootCmd.SilenceUsage = true
 
 		return err
@@ -141,7 +141,7 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 		return err
 	}
 
-	if _, err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd); err != nil {
+	if _, err := validation.ValidateWithInteractivity(ctx, flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false); err != nil {
 		return err
 	}
 

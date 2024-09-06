@@ -204,7 +204,7 @@ func printSuccessMsg(ctx context.Context, namespaceName, revisionDigest string, 
 		msg += fmt.Sprintf(" to %s", styles.HeavilyEmphasized.Render(strings.Join(usedBy, ", ")))
 	}
 
-	url := fmt.Sprintf("https://app.speakeasyapi.dev/org/%s/%s/apis/%s/%s", org, workspace, namespaceName, revisionDigest)
+	url := fmt.Sprintf("https://app.speakeasy.com/org/%s/%s/apis/%s/%s", org, workspace, namespaceName, revisionDigest)
 
 	logger := log.From(ctx)
 	logger.Success(msg)

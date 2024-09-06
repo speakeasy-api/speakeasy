@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 
 	"github.com/AlekSi/pointer"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
@@ -71,9 +72,7 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 		return errors.New("streaming unsupported")
 	}
 
-	step := h.WorkflowRunner.RootStep.LastStepToString()
-
-	err := h.sendLastRunResultToStream(ctx, w, flusher, step)
+	err := h.sendLastRunResultToStream(ctx, w, flusher, "Generating SDK")
 	if err != nil {
 		return fmt.Errorf("error sending last run result to stream: %w", err)
 	}
@@ -84,7 +83,7 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 	}
 	defer h.mutexCondition.L.Unlock()
 
-	return h.sendLastRunResultToStream(ctx, w, flusher, "end")
+	return h.sendLastRunResultToStream(ctx, w, flusher, "Complete")
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -119,13 +118,13 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error updating source: %w", err)
 	}
 
-	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting())
+	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting(), run.WithSkipGenerateLintReport())
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
 	h.WorkflowRunner = *cloned
 
-	h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult) {
+	h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult, step string) {
 		if sourceResult.Source == h.SourceID {
 			sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, h.OverlayPath)
 			if err != nil {
@@ -134,7 +133,9 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 				return
 			}
 
-			step := h.WorkflowRunner.RootStep.LastStepToString()
+			if step == "" {
+				step = "Generating SDK"
+			}
 			response, err := h.convertLastRunResult(ctx, step)
 			if err != nil {
 				fmt.Println("error getting last completed run result:", err)
@@ -153,7 +154,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		}
 	}
 	defer func() {
-		h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult) {}
+		h.WorkflowRunner.OnSourceResult = func(*run.SourceResult, string) {}
 	}()
 
 	err = h.WorkflowRunner.Run(h.Ctx)
@@ -161,7 +162,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		fmt.Println("error running workflow:", err)
 	}
 
-	return h.sendLastRunResultToStream(ctx, w, flusher, "end")
+	return h.sendLastRunResultToStream(ctx, w, flusher, "Complete")
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -287,7 +288,7 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 		TargetResults:    make(map[string]components.TargetRunSummary),
 		WorkingDirectory: h.WorkflowRunner.ProjectDir,
 		Step:             step,
-		IsPartial:        step != "end",
+		IsPartial:        step != "Complete",
 		Took:             h.WorkflowRunner.Duration.Milliseconds(),
 	}
 
