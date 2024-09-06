@@ -4,15 +4,17 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/pkg/browser"
+	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/studio"
+	"golang.org/x/exp/maps"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/log"
-
-	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 
 	"github.com/speakeasy-api/huh"
@@ -21,7 +23,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	config "github.com/speakeasy-api/sdk-gen-config"
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -96,7 +98,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			Sources: make(map[string]workflow.Source),
 			Targets: make(map[string]workflow.Target),
 		},
-		LanguageConfigs: make(map[string]*config.Configuration),
+		LanguageConfigs: make(map[string]*sdkGenConfig.Configuration),
 	}
 
 	if flags.Schema != "" {
@@ -238,7 +240,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	for key, outConfig := range quickstartObj.LanguageConfigs {
-		if err := config.SaveConfig(outDir, outConfig); err != nil {
+		if err := sdkGenConfig.SaveConfig(outDir, outConfig); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
 		}
 	}
@@ -294,14 +296,15 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
-	// There should only be one target after quickstart
-	if len(wf.SDKOverviewURLs) == 1 {
-		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		browser.OpenURL(overviewURL)
-	}
-
 	if changeDirMsg != "" {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
+	}
+
+	if shouldLaunchStudio(ctx, wf) {
+		err = studio.LaunchStudio(ctx, wf)
+	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		browser.OpenURL(overviewURL)
 	}
 
 	return nil
@@ -347,13 +350,23 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	)
 
 	err = wf.RunWithVisualization(ctx)
-	// There should only be one target after quickstart
-	if err == nil && len(wf.SDKOverviewURLs) == 1 {
-		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		browser.OpenURL(overviewURL)
-	}
 
 	return true, err
+}
+
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow) bool {
+	// Only one source at a time is supported in the studio at the moment
+	if len(wf.SourceResults) == 1 {
+		// If the source has a linting result, then it was loaded successfully so we can show something in the studio
+		if maps.Values(wf.SourceResults)[0].LintResult != nil {
+			// This will be true in most cases for admins, unless they have `auth switch`ed to a different workspace
+			if config.GetWorkspaceID() == "self" {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func printSampleSpecMessage(absSchemaPath string) {
