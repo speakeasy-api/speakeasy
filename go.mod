@@ -2,9 +2,6 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.23.0
 
-// Point at local core
-replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
-
 // Can be removed once https://github.com/pb33f/libopenapi/pull/319 is merged and the dependency is updated here
 replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826
 
@@ -27,11 +24,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.409.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.409.8
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.19.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.13.0
-	github.com/speakeasy-api/speakeasy-core v0.14.4
+	github.com/speakeasy-api/speakeasy-core v0.15.0
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -52,7 +49,6 @@ require (
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/speakeasy-api/jsonpath v0.1.1
 	github.com/speakeasy-api/versioning-reports v0.6.0
 	github.com/stoewer/go-strcase v1.3.0
 )
@@ -201,6 +197,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.11.0 // indirect
+	github.com/speakeasy-api/jsonpath v0.1.1 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
