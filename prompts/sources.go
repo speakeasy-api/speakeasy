@@ -172,13 +172,14 @@ func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*Quickstar
 
 	if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
+	} else {
+		if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
+			return nil, err
+		}
 	}
 
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 
-	if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
-		return nil, err
-	}
 
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
 
