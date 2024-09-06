@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -258,12 +260,21 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 		return fmt.Errorf("error reading output spec: %w", err)
 	}
 
-	overlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes)
+	suggestOverlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes)
 	if err != nil {
 		return fmt.Errorf("error suggesting method names: %w", err)
 	}
 
-	yamlBytes, err := yaml.Marshal(overlay)
+	if h.OverlayPath != "" {
+		existingOverlay, err := loader.LoadOverlay(h.OverlayPath)
+		if err != nil {
+			log.From(ctx).Warnf("error loading existing overlay: %s", err.Error())
+		} else {
+			suggestOverlay.Actions = modifications.RemoveDuplicates(suggestOverlay.Actions, existingOverlay.Actions)
+		}
+	}
+
+	yamlBytes, err := yaml.Marshal(suggestOverlay)
 	if err != nil {
 		return fmt.Errorf("error marshaling overlay to yaml: %w", err)
 	}
