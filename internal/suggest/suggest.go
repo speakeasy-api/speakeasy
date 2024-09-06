@@ -129,16 +129,11 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 	var rhs []string
 
 	for _, action := range overlay.Actions {
-		modificationExtension := action.Extensions["x-speakeasy-metadata"]
-		if modificationExtension == nil {
+		modification := suggestions.GetModificationExtension(action)
+		if modification == nil {
 			continue
 		}
 
-		modificationE := modificationExtension.(map[string]interface{})
-		modification := suggestions.ModificationExtension{
-			Before: modificationE["before"].(string),
-			After:  modificationE["after"].(string),
-		}
 		before := changedStyle.Render(modification.Before)
 		after := styles.Success.Render(modification.After)
 
