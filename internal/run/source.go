@@ -235,17 +235,15 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	sourceRes.OutputPath = currentDocument
 
-	// Emit once before linting as that can be slow
-	w.OnSourceResult(sourceRes, "Linting")
-
 	if !w.SkipLinting {
+		w.OnSourceResult(sourceRes, "Linting")
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
-		fmt.Println("after lint", w.RootStep.LastStepToString())
-		w.OnSourceResult(sourceRes, "Uploading spec")
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
 	}
+
+	w.OnSourceResult(sourceRes, "Uploading spec")
 
 	if !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
