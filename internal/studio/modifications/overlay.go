@@ -144,19 +144,20 @@ func MergeActions(actions []overlay.Action) []overlay.Action {
 	return deduped
 }
 
-// Remove duplicates from the list of actions - keeps the first action for each target and modification type
-func RemoveDuplicates(x []overlay.Action) []overlay.Action {
-	mashalled, _ := yaml.Marshal(x)
-	fmt.Println("before dedupe\n", string(mashalled))
-
-	return lo.UniqBy(x, func(x overlay.Action) string {
-		mod := suggestions.GetModificationExtension(x)
-		if mod == nil {
-			fmt.Println("no mod", x.Target, x)
-			return ":" + x.Target
+// Return new suggestions that are not already in the list of suggestions
+func RemoveAlreadySuggested(alreadySuggested []overlay.Action, newSuggestions []overlay.Action) []overlay.Action {
+	getKey := func(x overlay.Action, index int) string {
+		if mod := suggestions.GetModificationExtension(x); mod != nil {
+			return mod.Type + ":" + x.Target
 		}
-		fmt.Println("dedupe", mod.Type, x.Target)
-		return mod.Type + ":" + x.Target
+		return ":" + x.Target
+	}
+
+	alreadySuggestedKeys := lo.Map(alreadySuggested, getKey)
+
+	return lo.Filter(newSuggestions, func(x overlay.Action, index int) bool {
+		key := getKey(x, index)
+		return slices.Contains(alreadySuggestedKeys, key)
 	})
 }
 
