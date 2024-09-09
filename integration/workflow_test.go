@@ -147,6 +147,39 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 }
 
+func TestInputOnlyWorkflow(t *testing.T) {
+	t.Parallel()
+	temp := setupTestDir(t)
+
+	// Create workflow file and associated resources
+	workflowFile := &workflow.Workflow{
+		Version: workflow.WorkflowVersion,
+		Sources: make(map[string]workflow.Source),
+		Targets: make(map[string]workflow.Target),
+	}
+	workflowFile.Sources["first-source"] = workflow.Source{
+		Inputs: []workflow.Document{
+			{
+				Location: "spec.yaml",
+			},
+		},
+	}
+
+	err := copyFile("resources/spec.yaml", fmt.Sprintf("%s/spec.yaml", temp))
+	require.NoError(t, err)
+
+	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+	require.NoError(t, err)
+	err = workflow.Save(temp, workflowFile)
+	require.NoError(t, err)
+	args := []string{"run", "-s", "first-source", "--pinned", "--skip-compile"}
+
+	cmdErr := execute(t, temp, args...).Run()
+	require.NoError(t, cmdErr)
+
+	checkForExpectedFiles(t, temp, expectedFilesByLanguage("go"))
+}
+
 type Runnable interface {
 	Run() error
 }

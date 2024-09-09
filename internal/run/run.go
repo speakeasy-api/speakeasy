@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/samber/lo"
-	lo "github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
