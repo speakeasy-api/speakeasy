@@ -2,12 +2,14 @@ package modifications
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
+
+	lo "github.com/samber/lo"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"gopkg.in/yaml.v3"
 
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
@@ -58,6 +60,11 @@ func UpsertOverlay(overlayPath string, source *workflow.Source, o overlay.Overla
 			Info: overlay.Info{
 				Title:   overlayTitle,
 				Version: "0.0.0", // bumped later
+				Extensions: overlay.Extensions{
+					"x-speakeasy-metadata": suggestions.ModificationExtension{
+						Type: "speakeasy-modifications",
+					},
+				},
 			},
 		}
 	} else {
@@ -142,28 +149,21 @@ func MergeActions(actions []overlay.Action) []overlay.Action {
 	return deduped
 }
 
-func RemoveDuplicates(a, b []overlay.Action) []overlay.Action {
-	seen := map[string][]string{}
-	var deduped []overlay.Action
-
-	for _, action := range a {
-		m := suggestions.GetModificationExtension(action)
-		if m != nil {
-			seen[action.Target] = append(seen[action.Target], m.Type)
+// Return new suggestions that are not already in the list of suggestions
+func RemoveAlreadySuggested(alreadySuggested []overlay.Action, newSuggestions []overlay.Action) []overlay.Action {
+	getKey := func(x overlay.Action, index int) string {
+		if mod := suggestions.GetModificationExtension(x); mod != nil {
+			return mod.Type + ":" + x.Target
 		}
+		return ":" + x.Target
 	}
 
-	for _, action := range b {
-		m := suggestions.GetModificationExtension(action)
-		if _, ok := seen[action.Target]; ok {
-			if slices.Contains(seen[action.Target], m.Type) {
-				continue
-			}
-		}
-		deduped = append(deduped, action)
-	}
+	alreadySuggestedKeys := lo.Map(alreadySuggested, getKey)
 
-	return deduped
+	return lo.Filter(newSuggestions, func(x overlay.Action, index int) bool {
+		key := getKey(x, index)
+		return slices.Contains(alreadySuggestedKeys, key)
+	})
 }
 
 // If the new version is greater than the base version, return the new version

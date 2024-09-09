@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 
@@ -270,7 +271,7 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 		if err != nil {
 			log.From(ctx).Warnf("error loading existing overlay: %s", err.Error())
 		} else {
-			suggestOverlay.Actions = modifications.RemoveDuplicates(suggestOverlay.Actions, existingOverlay.Actions)
+			suggestOverlay.Actions = modifications.RemoveAlreadySuggested(existingOverlay.Actions, suggestOverlay.Actions)
 		}
 	}
 
@@ -540,7 +541,7 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 		return "", err
 	}
 
-	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-metadata") || strings.Contains(asString, "title: speakeasy-studio-modifications")
+	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-metadata")
 	if !looksLikeStudioModifications {
 		return "", nil
 	}
