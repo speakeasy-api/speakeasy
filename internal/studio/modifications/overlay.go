@@ -60,6 +60,11 @@ func UpsertOverlay(overlayPath string, source *workflow.Source, o overlay.Overla
 			Info: overlay.Info{
 				Title:   overlayTitle,
 				Version: "0.0.0", // bumped later
+				Extensions: overlay.Extensions{
+					"x-speakeasy-metadata": suggestions.ModificationExtension{
+						Type: "speakeasy-modifications",
+					},
+				},
 			},
 		}
 	} else {

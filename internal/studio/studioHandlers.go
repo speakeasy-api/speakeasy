@@ -541,7 +541,7 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 		return "", err
 	}
 
-	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-metadata") || strings.Contains(asString, "title: speakeasy-studio-modifications")
+	looksLikeStudioModifications := strings.Contains(asString, "x-speakeasy-metadata")
 	if !looksLikeStudioModifications {
 		return "", nil
 	}
