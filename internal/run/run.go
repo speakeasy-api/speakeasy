@@ -161,7 +161,9 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		if targetID == "" {
 			continue
 		}
-
+		if _, ok := w.workflow.Targets[targetID]; !ok {
+			return fmt.Errorf("target %s not found", targetID)
+		}
 		_, _, err := w.runTarget(ctx, targetID)
 		if err != nil {
 			return err
