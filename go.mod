@@ -2,9 +2,6 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.23.0
 
-// point at local core
-replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
-
 // Can be removed once https://github.com/pb33f/libopenapi/pull/319 is merged and the dependency is updated here
 replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826
 
