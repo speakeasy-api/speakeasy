@@ -368,11 +368,12 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 
 	// Only one source at a time is supported in the studio at the moment
 	// If the source has a linting result then it was loaded successfully, so we can show something in the studio
-	canLaunch := len(wf.SourceResults) == 1 && maps.Values(wf.SourceResults)[0].LintResult != nil
+	sourceResults := maps.Values(wf.SourceResults)
+	canLaunch := len(sourceResults) == 1 && sourceResults[0].LintResult != nil
 
 	shouldLaunch := fromQuickstart || !config.SeenStudio() || config.IsAdminUnsafe()
 
-	diagnosis := maps.Values(wf.SourceResults)[0].Diagnosis
+	diagnosis := sourceResults[0].Diagnosis
 	anyDiagnostics := len(diagnosis) > 0
 
 	return canLaunch && shouldLaunch && anyDiagnostics

@@ -74,8 +74,6 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		fmt.Println("Opening URL in your browser:", url)
 	}
 
-	_ = config.SetSeenStudio()
-
 	// After ten seconds, if the health check hasn't been seen then kill the server
 	go func() {
 		time.Sleep(10 * time.Second)

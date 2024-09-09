@@ -130,13 +130,8 @@ func ClearSpeakeasyAuthInfo() error {
 	return save()
 }
 
-func SetSeenStudio() error {
-	vCfg.Set("seen_studio", true)
-	return save()
-}
-
 func SeenStudio() bool {
-	return vCfg.GetBool("seen_studio")
+	return GetStudioSecret() != ""
 }
 
 // IsAdminUnsafe is "unsafe" because anyone could set a key for "-self" in theory. We aren't actually checking the key is valid.
