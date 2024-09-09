@@ -361,6 +361,11 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 }
 
 func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
+	// TODO: Remove this when ready to launch for everyone
+	if !config.IsAdminUnsafe() {
+		return false
+	}
+
 	// Only one source at a time is supported in the studio at the moment
 	// If the source has a linting result then it was loaded successfully, so we can show something in the studio
 	canLaunch := len(wf.SourceResults) == 1 && maps.Values(wf.SourceResults)[0].LintResult != nil
