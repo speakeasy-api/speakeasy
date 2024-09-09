@@ -72,6 +72,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		Diagnosis: suggestions.Diagnosis{},
 	}
 	defer func() {
+		w.SourceResults[sourceID] = sourceRes
 		w.OnSourceResult(sourceRes, "")
 	}()
 	w.OnSourceResult(sourceRes, "Overlaying")
