@@ -160,15 +160,12 @@ func TestInputOnlyWorkflow(t *testing.T) {
 	workflowFile.Sources["first-source"] = workflow.Source{
 		Inputs: []workflow.Document{
 			{
-				Location: "spec.yaml",
+				Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json",
 			},
 		},
 	}
 
-	err := copyFile("resources/spec.yaml", fmt.Sprintf("%s/spec.yaml", temp))
-	require.NoError(t, err)
-
-	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+	err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
 	require.NoError(t, err)
 	err = workflow.Save(temp, workflowFile)
 	require.NoError(t, err)
