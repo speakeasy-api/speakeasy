@@ -117,7 +117,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		GenYamlPath: genConfig.ConfigPath,
 	}
 	defer func() {
-		w.SourceResults[sourceRes.Source] = sourceRes
 		w.TargetResults[target] = &targetResult
 	}()
 
