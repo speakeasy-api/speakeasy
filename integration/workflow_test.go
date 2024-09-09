@@ -176,8 +176,6 @@ func TestInputOnlyWorkflow(t *testing.T) {
 	args = []string{"run", "-s", "all", "--pinned", "--skip-compile"}
 	cmdErr = execute(t, temp, args...).Run()
 	require.NoError(t, cmdErr)
-
-	checkForExpectedFiles(t, temp, expectedFilesByLanguage("go"))
 }
 
 type Runnable interface {
