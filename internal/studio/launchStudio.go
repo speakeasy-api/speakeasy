@@ -76,6 +76,18 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 
 	_ = config.SetSeenStudio()
 
+	// After ten seconds, if the health check hasn't been seen then kill the server
+	go func() {
+		time.Sleep(10 * time.Second)
+		if !handlers.healthCheckSeen {
+			log.From(ctx).Warnf("Health check not seen, shutting down server")
+			err := server.Shutdown(context.Background())
+			if err != nil {
+				fmt.Println("Error shutting down server:", err)
+			}
+		}
+	}()
+
 	return startServer(ctx, server, workflow)
 }
 
@@ -128,7 +140,6 @@ func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) 
 }
 
 func startServer(ctx context.Context, server *http.Server, workflow *run.Workflow) error {
-
 	// Channel to listen for interrupt or terminate signals
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

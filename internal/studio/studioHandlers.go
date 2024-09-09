@@ -34,9 +34,11 @@ type StudioHandlers struct {
 	SourceID       string
 	OverlayPath    string
 	Ctx            context.Context
-	mutex          sync.Mutex
-	mutexCondition *sync.Cond
-	running        bool
+
+	mutex           sync.Mutex
+	mutexCondition  *sync.Cond
+	running         bool
+	healthCheckSeen bool
 }
 
 func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*StudioHandlers, error) {
@@ -172,6 +174,8 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+
+	h.healthCheckSeen = true
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
