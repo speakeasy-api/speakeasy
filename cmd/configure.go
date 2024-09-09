@@ -819,7 +819,7 @@ func configureGithubRepo(ctx context.Context, org, repo string) bool {
 func promptForWorkflowFileDir(workingDir string, dirOutput *string) error {
 	_, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
 		Title("What directory is your speakeasy workflow file in?").
-		Suggestions(charm.DirsInCurrentDir(workingDir)).
+		Suggestions(charm.DirsInCurrentDir("")).
 		SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 		Value(dirOutput))),
 		charm.WithTitle("Find your Speakeasy workflow file.")).
