@@ -24,9 +24,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.411.9
+	github.com/speakeasy-api/openapi-generation/v2 v2.413.0
 	github.com/speakeasy-api/openapi-overlay v0.9.0
-	github.com/speakeasy-api/sdk-gen-config v1.20.0
+	github.com/speakeasy-api/sdk-gen-config v1.21.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.13.0
 	github.com/speakeasy-api/speakeasy-core v0.15.1
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
@@ -205,6 +205,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/tetratelabs/wazero v1.8.0 // indirect
 	github.com/tliron/commonlog v0.2.10 // indirect
 	github.com/tliron/glsp v0.2.2 // indirect
 	github.com/tliron/kutil v0.3.14 // indirect
