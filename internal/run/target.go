@@ -112,6 +112,15 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		return sourceRes, nil, err
 	}
 
+	targetResult := TargetResult{
+		OutputPath:  outDir,
+		GenYamlPath: genConfig.ConfigPath,
+	}
+	defer func() {
+		w.SourceResults[sourceRes.Source] = sourceRes
+		w.TargetResults[target] = &targetResult
+	}()
+
 	if w.SetVersion != "" && genConfig.Config != nil {
 		appliedVersion := w.SetVersion
 		if appliedVersion[0] == 'v' {
@@ -222,11 +231,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	}
 
 	w.lockfile.Targets[target] = targetLock
-
-	targetResult := TargetResult{
-		OutputPath:  outDir,
-		GenYamlPath: genConfig.ConfigPath,
-	}
 
 	return sourceRes, &targetResult, nil
 }

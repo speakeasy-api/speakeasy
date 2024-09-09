@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
+	lo "github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -130,51 +132,35 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		return fmt.Errorf("cannot specify both a target and a source")
 	}
 
+	if w.SetVersion != "" && len(w.workflow.Targets) > 1 {
+		return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
+	}
+
+	sourceIDs := []string{w.Source}
+	if w.Source == "all" {
+		sourceIDs = lo.Keys(w.workflow.Sources)
+	}
+	targetIDs := []string{w.Target}
 	if w.Target == "all" {
-		if w.SetVersion != "" && len(w.workflow.Targets) > 1 {
-			return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
-		}
+		targetIDs = lo.Keys(w.workflow.Targets)
+	}
 
-		for t := range w.workflow.Targets {
-			sourceRes, targetRes, err := w.runTarget(ctx, t)
-			if sourceRes != nil {
-				w.SourceResults[sourceRes.Source] = sourceRes
-			}
-			w.TargetResults[t] = targetRes
-
-			if err != nil {
-				return err
-			}
-
+	for _, sourceID := range sourceIDs {
+		if sourceID == "" {
+			continue
 		}
-	} else if w.Source == "all" {
-		for id := range w.workflow.Sources {
-			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "")
-			if sourceRes != nil {
-				w.SourceResults[sourceRes.Source] = sourceRes
-			}
-			if err != nil {
-				return err
-			}
+		if _, ok := w.workflow.Sources[sourceID]; !ok {
+			return fmt.Errorf("source %s not found", sourceID)
 		}
-	} else if w.Target != "" {
-		if _, ok := w.workflow.Targets[w.Target]; !ok {
-			return fmt.Errorf("target %s not found", w.Target)
-		}
-
-		sourceRes, targetRes, err := w.runTarget(ctx, w.Target)
-		if sourceRes != nil {
-			w.SourceResults[sourceRes.Source] = sourceRes
-		}
-		w.TargetResults[w.Target] = targetRes
-
+		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "")
 		if err != nil {
 			return err
 		}
+	}
 
-	} else if w.Source != "" {
-		if _, ok := w.workflow.Sources[w.Source]; !ok {
-			return fmt.Errorf("source %s not found", w.Source)
+	for _, targetID := range targetIDs {
+		if targetID == "" {
+			continue
 		}
 
 		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "")
