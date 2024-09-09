@@ -123,7 +123,14 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error updating source: %w", err)
 	}
 
-	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting(), run.WithSkipGenerateLintReport())
+	cloned, err := h.WorkflowRunner.Clone(
+		h.Ctx,
+		run.WithSkipCleanup(),
+		run.WithLinting(),
+		run.WithSkipGenerateLintReport(),
+		run.WithSkipSnapshot(true),
+		run.WithSkipChangeReport(true),
+	)
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
