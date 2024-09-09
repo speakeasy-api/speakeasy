@@ -352,6 +352,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 	}
 
+	if flags.LaunchStudio {
+		opts = append(opts, run.WithSkipCleanup())
+	}
+
 	workflow, err := run.NewWorkflow(
 		ctx,
 		opts...,
