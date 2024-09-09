@@ -243,6 +243,14 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
+	step := rootStep.NewSubstep("Diagnosing OpenAPI")
+	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
+	if err != nil {
+		step.Fail()
+		return "", sourceRes, err
+	}
+	step.Succeed()
+
 	w.OnSourceResult(sourceRes, "Uploading spec")
 
 	if !w.SkipSnapshot {
@@ -271,14 +279,6 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			Priority:     5,
 		})
 	}
-
-	step := rootStep.NewSubstep("Diagnosing OpenAPI")
-	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
-	if err != nil {
-		step.Fail()
-		return "", sourceRes, err
-	}
-	step.Succeed()
 
 	rootStep.SucceedWorkflow()
 
