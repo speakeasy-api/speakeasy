@@ -162,12 +162,9 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 			continue
 		}
 
-		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "")
+		_, _, err := w.runTarget(ctx, w.Target)
 		if err != nil {
 			return err
-		}
-		if sourceRes != nil {
-			w.SourceResults[sourceRes.Source] = sourceRes
 		}
 	}
 
