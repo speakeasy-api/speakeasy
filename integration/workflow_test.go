@@ -170,8 +170,11 @@ func TestInputOnlyWorkflow(t *testing.T) {
 	err = workflow.Save(temp, workflowFile)
 	require.NoError(t, err)
 	args := []string{"run", "-s", "first-source", "--pinned", "--skip-compile"}
-
 	cmdErr := execute(t, temp, args...).Run()
+	require.NoError(t, cmdErr)
+
+	args = []string{"run", "-s", "all", "--pinned", "--skip-compile"}
+	cmdErr = execute(t, temp, args...).Run()
 	require.NoError(t, cmdErr)
 
 	checkForExpectedFiles(t, temp, expectedFilesByLanguage("go"))
