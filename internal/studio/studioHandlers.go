@@ -160,7 +160,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		h.WorkflowRunner.OnSourceResult = func(*run.SourceResult, string) {}
 	}()
 
-	err = h.WorkflowRunner.Run(h.Ctx)
+	err = h.WorkflowRunner.RunWithVisualization(h.Ctx)
 	if err != nil {
 		fmt.Println("error running workflow:", err)
 	}

@@ -260,7 +260,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		ctx,
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	)
+
+	defer func() {
+		wf.Cleanup()
+	}()
+
 	if err != nil {
 		return err
 	}
@@ -300,7 +306,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
-	if shouldLaunchStudio(ctx, wf) {
+	if shouldLaunchStudio(ctx, wf, true) {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
@@ -354,19 +360,17 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
-func shouldLaunchStudio(ctx context.Context, wf *run.Workflow) bool {
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
 	// Only one source at a time is supported in the studio at the moment
-	if len(wf.SourceResults) == 1 {
-		// If the source has a linting result, then it was loaded successfully so we can show something in the studio
-		if maps.Values(wf.SourceResults)[0].LintResult != nil {
-			// This will be true in most cases for admins, unless they have `auth switch`ed to a different workspace
-			if config.GetWorkspaceID() == "self" {
-				return true
-			}
-		}
-	}
+	// If the source has a linting result then it was loaded successfully, so we can show something in the studio
+	canLaunch := len(wf.SourceResults) == 1 && maps.Values(wf.SourceResults)[0].LintResult != nil
 
-	return false
+	shouldLaunch := fromQuickstart || !config.SeenStudio() || config.IsAdminUnsafe()
+
+	diagnosis := maps.Values(wf.SourceResults)[0].Diagnosis
+	anyDiagnostics := len(diagnosis) > 0
+
+	return canLaunch && shouldLaunch && anyDiagnostics
 }
 
 func printSampleSpecMessage(absSchemaPath string) {

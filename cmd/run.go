@@ -350,10 +350,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
-	}
-
-	if flags.LaunchStudio {
-		opts = append(opts, run.WithSkipCleanup())
+		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	}
 
 	workflow, err := run.NewWorkflow(
@@ -395,8 +392,8 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 	workflow.PrintSuccessSummary(ctx)
 
-	if shouldLaunchStudio(ctx, workflow) {
-		return studio.LaunchStudio(ctx, workflow)
+	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
+		err = studio.LaunchStudio(ctx, workflow)
 	}
 
 	return err

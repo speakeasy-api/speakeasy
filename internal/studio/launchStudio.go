@@ -74,6 +74,8 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		fmt.Println("Opening URL in your browser:", url)
 	}
 
+	_ = config.SetSeenStudio()
+
 	return startServer(ctx, server, workflow)
 }
 
