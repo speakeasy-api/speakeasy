@@ -162,7 +162,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 			continue
 		}
 
-		_, _, err := w.runTarget(ctx, w.Target)
+		_, _, err := w.runTarget(ctx, targetID)
 		if err != nil {
 			return err
 		}
