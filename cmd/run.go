@@ -148,7 +148,8 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		},
 		flag.BooleanFlag{
 			Name:        "launch-studio",
-			Description: "launch the web studio for iterating on the generated SDK",
+			Description: "launch the web studio for improving the quality of the generated SDK",
+			Required:    false,
 		},
 		flag.BooleanFlag{
 			Name:        "github",
@@ -303,10 +304,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
-	}
-
-	if flags.LaunchStudio {
-		opts = append(opts, run.WithSkipCleanup())
+		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	}
 
 	workflow, err := run.NewWorkflow(
@@ -314,18 +312,26 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		opts...,
 	)
 
-	if err != nil && !flags.LaunchStudio {
+	defer func() {
+		workflow.Cleanup()
+	}()
+
+	if err != nil {
 		return err
 	}
 
 	err = workflow.Run(ctx)
 
+	if err != nil {
+		log.From(ctx).Error(err.Error())
+	}
+
 	workflow.RootStep.Finalize(err == nil)
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
-	if flags.LaunchStudio {
-		return studio.LaunchStudio(ctx, workflow)
+	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
+		err = studio.LaunchStudio(ctx, workflow)
 	}
 
 	return err
@@ -350,10 +356,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
-	}
-
-	if flags.LaunchStudio {
-		opts = append(opts, run.WithSkipCleanup())
+		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	}
 
 	workflow, err := run.NewWorkflow(
@@ -391,12 +394,12 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 	if err != nil {
 		log.From(ctx).Error(err.Error())
+	} else {
+		workflow.PrintSuccessSummary(ctx)
 	}
 
-	workflow.PrintSuccessSummary(ctx)
-
-	if shouldLaunchStudio(ctx, workflow) {
-		return studio.LaunchStudio(ctx, workflow)
+	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
+		err = studio.LaunchStudio(ctx, workflow)
 	}
 
 	return err

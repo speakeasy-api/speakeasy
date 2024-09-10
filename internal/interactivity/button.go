@@ -1,8 +1,11 @@
 package interactivity
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"os"
 )
 
 var (
@@ -15,33 +18,17 @@ var (
 )
 
 type Button struct {
-	Label    string
-	Disabled bool
-	Hovered  bool
+	Label        string
+	Disabled     bool
+	Hovered      bool
+	Clicked      bool
+	ShowValidity bool
 }
 
 type ButtonWithHelperText struct {
 	Button
 	HelperText      string
 	ShowOnlyOnHover bool
-}
-
-func (b Button) View() string {
-	validnessIndicator := " ✔"
-	if b.Disabled {
-		validnessIndicator = " ✘"
-	}
-
-	style := blurredStyle
-	if b.Hovered {
-		style = validStyle
-
-		if b.Disabled {
-			style = invalidStyle
-		}
-	}
-
-	return style.Render(b.Label + validnessIndicator)
 }
 
 func (b ButtonWithHelperText) View() string {
@@ -59,4 +46,80 @@ func (b ButtonWithHelperText) View() string {
 	}
 
 	return b.Button.View() + "\n" + style.Render(helperText)
+}
+
+func NewSimpleButton(text string) Button {
+	m := Button{
+		Label:        text,
+		Disabled:     false,
+		Hovered:      true,
+		ShowValidity: false,
+	}
+
+	return m
+}
+
+func (b *Button) Init() tea.Cmd {
+	return nil
+}
+
+func (b *Button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	return b, nil
+}
+
+func (b *Button) HandleKeypress(key string) tea.Cmd {
+	switch key {
+	case "enter":
+		b.Clicked = true
+		return tea.Quit
+	}
+
+	return nil
+}
+
+func (b *Button) SetWidth(width int) {}
+
+func (b *Button) Validate() error {
+	return nil
+}
+
+func (b *Button) View() string {
+	validnessIndicator := " ✔"
+	if b.Disabled {
+		validnessIndicator = " ✘"
+	}
+
+	if !b.ShowValidity {
+		validnessIndicator = ""
+	}
+
+	style := blurredStyle
+	if b.Hovered {
+		style = validStyle
+
+		if b.Disabled {
+			style = invalidStyle
+		}
+	}
+
+	return style.Render(b.Label + validnessIndicator)
+}
+
+func (b *Button) OnUserExit() {}
+
+// Run returns a map from input name to the input Value
+func (b *Button) Run() bool {
+	newM, err := charm_internal.RunModel(b)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	resultingModel := newM.(*Button)
+
+	return resultingModel.Clicked
+}
+
+func SimpleButton(text string) bool {
+	button := NewSimpleButton(text)
+	return button.Run()
 }

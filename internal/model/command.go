@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/errors"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/errors"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-version"

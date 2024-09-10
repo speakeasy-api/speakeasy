@@ -1,8 +1,9 @@
 package flag
 
 import (
-	"github.com/spf13/cobra"
 	"strconv"
+
+	"github.com/spf13/cobra"
 )
 
 type BooleanFlag struct {

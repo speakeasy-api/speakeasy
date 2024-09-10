@@ -4,14 +4,19 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/pkg/browser"
-	"github.com/speakeasy-api/speakeasy/internal/config"
-	"github.com/speakeasy-api/speakeasy/internal/studio"
-	"golang.org/x/exp/maps"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/browser"
+	"github.com/samber/lo"
+	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"github.com/speakeasy-api/speakeasy/internal/studio"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -26,6 +31,7 @@ import (
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -260,7 +266,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		ctx,
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	)
+
+	defer func() {
+		wf.Cleanup()
+	}()
+
 	if err != nil {
 		return err
 	}
@@ -300,14 +312,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
-	if shouldLaunchStudio(ctx, wf) {
+	if shouldLaunchStudio(ctx, wf, true) {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
 		browser.OpenURL(overviewURL)
 	}
 
-	return nil
+	return err
 }
 
 func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, initialTarget, outDir string, skipCompile bool) (bool, error) {
@@ -354,19 +366,47 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
-func shouldLaunchStudio(ctx context.Context, wf *run.Workflow) bool {
-	// Only one source at a time is supported in the studio at the moment
-	if len(wf.SourceResults) == 1 {
-		// If the source has a linting result, then it was loaded successfully so we can show something in the studio
-		if maps.Values(wf.SourceResults)[0].LintResult != nil {
-			// This will be true in most cases for admins, unless they have `auth switch`ed to a different workspace
-			if config.GetWorkspaceID() == "self" {
-				return true
-			}
-		}
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
+	// TODO: Remove this when ready to launch for everyone
+	if !config.IsAdminUnsafe() {
+		return false
 	}
 
-	return false
+	if len(wf.SourceResults) != 1 {
+		// Only one source at a time is supported in the studio at the moment
+		return false
+	}
+	sourceResult := maps.Values(wf.SourceResults)[0]
+
+	if !utils.IsInteractive() || env.IsGithubAction() {
+		return false
+	}
+
+	if sourceResult.LintResult == nil {
+		// No lint result indicates the spec wasn't even loaded successfully, the studio can't help with that
+		return false
+	}
+
+	// TODO: include more relevant diagnostics as we go!
+	numDiagnostics := lo.SumBy(maps.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
+		return len(x)
+	})
+
+	if numDiagnostics == 0 {
+		// No interesting diagnostics to show in the studio
+		return false
+	}
+
+	offerDeclineOption := !fromQuickstart && config.SeenStudio()
+
+	if offerDeclineOption {
+		message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
+		return interactivity.SimpleConfirm(message, true)
+	}
+
+	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. The Speakeasy Studio can help you fix them.\n", numDiagnostics)
+	log.From(ctx).PrintfStyled(styles.HeavilyEmphasized, message)
+	return interactivity.SimpleButton("↵ Launch Studio")
 }
 
 func printSampleSpecMessage(absSchemaPath string) {

@@ -8,6 +8,7 @@ import (
 	"golang.org/x/exp/maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/spf13/viper"
 )
@@ -127,6 +128,15 @@ func ClearSpeakeasyAuthInfo() error {
 	vCfg.Set("speakeasy_customer_id", "")
 	vCfg.Set("speakeasy_studio_secret", "")
 	return save()
+}
+
+func SeenStudio() bool {
+	return GetStudioSecret() != ""
+}
+
+// IsAdminUnsafe is "unsafe" because anyone could set a key for "-self" in theory. We aren't actually checking the key is valid.
+func IsAdminUnsafe() bool {
+	return slices.Contains(GetAuthenticatedWorkspaces(), "speakeasy-self@speakeasy-self")
 }
 
 func save() error {

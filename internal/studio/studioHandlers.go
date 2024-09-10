@@ -34,9 +34,11 @@ type StudioHandlers struct {
 	SourceID       string
 	OverlayPath    string
 	Ctx            context.Context
-	mutex          sync.Mutex
-	mutexCondition *sync.Cond
-	running        bool
+
+	mutex           sync.Mutex
+	mutexCondition  *sync.Cond
+	running         bool
+	healthCheckSeen bool
 }
 
 func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*StudioHandlers, error) {
@@ -121,7 +123,14 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error updating source: %w", err)
 	}
 
-	cloned, err := h.WorkflowRunner.Clone(h.Ctx, run.WithSkipCleanup(), run.WithLinting(), run.WithSkipGenerateLintReport())
+	cloned, err := h.WorkflowRunner.Clone(
+		h.Ctx,
+		run.WithSkipCleanup(),
+		run.WithLinting(),
+		run.WithSkipGenerateLintReport(),
+		run.WithSkipSnapshot(true),
+		run.WithSkipChangeReport(true),
+	)
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
@@ -160,7 +169,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		h.WorkflowRunner.OnSourceResult = func(*run.SourceResult, string) {}
 	}()
 
-	err = h.WorkflowRunner.Run(h.Ctx)
+	err = h.WorkflowRunner.RunWithVisualization(h.Ctx)
 	if err != nil {
 		fmt.Println("error running workflow:", err)
 	}
@@ -172,6 +181,8 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+
+	h.healthCheckSeen = true
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
