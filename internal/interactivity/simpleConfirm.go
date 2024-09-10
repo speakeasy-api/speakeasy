@@ -6,7 +6,7 @@ import (
 )
 
 func SimpleConfirm(message string, defaultValue bool) bool {
-	var confirm bool = defaultValue
+	confirm := defaultValue
 
 	if _, err := charm_internal.NewForm(
 		huh.NewForm(charm_internal.NewBranchPrompt(message, &confirm)),
@@ -16,15 +16,4 @@ func SimpleConfirm(message string, defaultValue bool) bool {
 	}
 
 	return confirm
-}
-
-func SimpleConfirmWithOnlyAccept(message string) {
-	form := huh.NewForm(huh.NewGroup(huh.NewConfirm().
-		Title(message).
-		Affirmative("Okay"),
-	))
-
-	if _, err := charm_internal.NewForm(form).ExecuteForm(); err != nil {
-		return
-	}
 }

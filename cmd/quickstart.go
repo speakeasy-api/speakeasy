@@ -404,11 +404,9 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 		return interactivity.SimpleConfirm(message, true)
 	}
 
-	message := fmt.Sprintf("We've detected %d potential improvements for your SDK we will launch the studio to help you fix them.", numDiagnostics)
-	// TODO: Make this just a button
-	interactivity.SimpleConfirmWithOnlyAccept(message)
-	return true
-
+	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. The Speakeasy Studio can help you fix them.\n", numDiagnostics)
+	log.From(ctx).PrintfStyled(styles.HeavilyEmphasized, message)
+	return interactivity.SimpleButton("↵ Launch Studio")
 }
 
 func printSampleSpecMessage(absSchemaPath string) {
