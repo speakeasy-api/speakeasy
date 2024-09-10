@@ -26,6 +26,5 @@ func (f BooleanFlag) GetName() string {
 }
 
 func (f BooleanFlag) ParseValue(v string) (interface{}, error) {
-	fmt.Println("Parsing boolean value", f.Name, v)
 	return strconv.ParseBool(v)
 }

@@ -222,7 +222,6 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 			return
 		}
 
-		fmt.Println("Parsing flag", f.Name, f.Value, f.Value.String())
 		v, err := flag.ParseValue(f.Value.String())
 		if err != nil {
 			panic(err)
