@@ -312,7 +312,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
-	if shouldLaunchStudio(ctx, wf, true) {
+	if shouldLaunchStudio(ctx, wf, true, nil) {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
