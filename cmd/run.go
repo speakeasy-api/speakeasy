@@ -152,10 +152,6 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Required:    false,
 		},
 		flag.BooleanFlag{
-			Name:        "never-launch-studio",
-			Description: "never launch the web studio",
-		},
-		flag.BooleanFlag{
 			Name:        "github",
 			Description: "kick off a generation run in GitHub",
 		},
