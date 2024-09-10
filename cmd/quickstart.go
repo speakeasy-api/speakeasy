@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/exp/maps"
 	"io"
 	"os"
@@ -366,17 +369,30 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 		return false
 	}
 
+	if !utils.IsInteractive() || env.IsGithubAction() {
+		return false
+	}
+
 	// Only one source at a time is supported in the studio at the moment
 	// If the source has a linting result then it was loaded successfully, so we can show something in the studio
 	sourceResults := maps.Values(wf.SourceResults)
 	canLaunch := len(sourceResults) == 1 && sourceResults[0].LintResult != nil
 
-	shouldLaunch := fromQuickstart || !config.SeenStudio() || config.IsAdminUnsafe()
+	// TODO: include anyDiagnostics into here if we want to launch the studio after run when we detect issues
+	shouldLaunch := fromQuickstart || !config.SeenStudio()
 
 	diagnosis := sourceResults[0].Diagnosis
 	anyDiagnostics := len(diagnosis) > 0
 
-	return canLaunch && shouldLaunch && anyDiagnostics
+	if canLaunch && shouldLaunch && anyDiagnostics {
+		numDiagnostics := 0
+		for _, d := range diagnosis {
+			numDiagnostics += len(d)
+		}
+		return interactivity.SimpleConfirm(fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics))
+	}
+
+	return false
 }
 
 func printSampleSpecMessage(absSchemaPath string) {
