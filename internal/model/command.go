@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/errors"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/errors"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-version"
@@ -221,6 +222,7 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 			return
 		}
 
+		fmt.Println("Parsing flag", f.Name, f.Value, f.Value.String())
 		v, err := flag.ParseValue(f.Value.String())
 		if err != nil {
 			panic(err)

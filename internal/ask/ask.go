@@ -6,12 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 
 	"github.com/inkeep/ai-api-go/models/sdkerrors"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -191,7 +192,7 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 func OfferChatSessionOnError(ctx context.Context, message string) {
 	logger := log.From(ctx)
 
-	confirm := interactivity.SimpleConfirm("Would you like to enter an interactive chat session with Speakeasy AI for help?")
+	confirm := interactivity.SimpleConfirm("Would you like to enter an interactive chat session with Speakeasy AI for help?", false)
 
 	if confirm {
 		if err := RunInteractiveChatSession(ctx, message, ""); err != nil {

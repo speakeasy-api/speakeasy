@@ -38,6 +38,7 @@ type RunFlags struct {
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
 	LaunchStudio       *bool             `json:"launch-studio"`
+	NeverLaunchStudio  bool              `json:"never-launch-studio"`
 	GitHub             bool              `json:"github"`
 }
 
@@ -148,8 +149,12 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		},
 		flag.BooleanFlag{
 			Name:        "launch-studio",
-			Description: "launch the web studio for iterating on the generated SDK",
+			Description: "launch the web studio for improving the quality of the generated SDK",
 			Required:    false,
+		},
+		flag.BooleanFlag{
+			Name:        "never-launch-studio",
+			Description: "never launch the web studio",
 		},
 		flag.BooleanFlag{
 			Name:        "github",
@@ -190,6 +195,14 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 
 	if flags.Target == "all" && len(targets) == 1 {
 		flags.Target = targets[0]
+	}
+
+	// This is a workaround for optional boolean flags - TODO: find a better way to handle this
+	if !*flags.LaunchStudio {
+		flags.LaunchStudio = nil
+	}
+	if flags.NeverLaunchStudio {
+		flags.LaunchStudio = new(bool)
 	}
 
 	// Needed later

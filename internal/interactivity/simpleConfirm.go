@@ -5,8 +5,8 @@ import (
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 )
 
-func SimpleConfirm(message string) bool {
-	var confirm bool
+func SimpleConfirm(message string, defaultValue bool) bool {
+	var confirm bool = defaultValue
 
 	if _, err := charm_internal.NewForm(
 		huh.NewForm(charm_internal.NewBranchPrompt(message, &confirm)),

@@ -319,7 +319,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		browser.OpenURL(overviewURL)
 	}
 
-	return nil
+	return err
 }
 
 func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, initialTarget, outDir string, skipCompile bool) (bool, error) {
@@ -392,7 +392,7 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 		return false
 	}
 
-	// TODO: include anyDiagnostics into here if we want to launch the studio after run when we detect issues
+	// TODO: include more relevant diagnostics as we go!
 	numDiagnostics := lo.SumBy(lo.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
 		return len(x)
 	})
@@ -407,7 +407,7 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 	message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
 
 	if offerDeclineOption {
-		return interactivity.SimpleConfirm(message)
+		return interactivity.SimpleConfirm(message, true)
 	}
 
 	interactivity.SimpleConfirmWithOnlyAccept(message)
