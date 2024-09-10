@@ -1,7 +1,6 @@
 package flag
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/spf13/cobra"
