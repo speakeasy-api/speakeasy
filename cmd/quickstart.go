@@ -312,7 +312,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
-	if shouldLaunchStudio(ctx, wf, true, nil) {
+	if shouldLaunchStudio(ctx, wf, true) {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
@@ -366,7 +366,7 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
-func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool, commandLineFlagToLaunchStudio *bool) bool {
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
 	// TODO: Remove this when ready to launch for everyone
 	if !config.IsAdminUnsafe() {
 		return false
@@ -378,11 +378,6 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 	}
 	sourceResult := maps.Values(wf.SourceResults)[0]
 
-	if commandLineFlagToLaunchStudio != nil {
-		// User explicitly chose whether to launch the studio or not
-		return *commandLineFlagToLaunchStudio
-	}
-
 	if !utils.IsInteractive() || env.IsGithubAction() {
 		return false
 	}
@@ -393,7 +388,7 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 	}
 
 	// TODO: include more relevant diagnostics as we go!
-	numDiagnostics := lo.SumBy(lo.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
+	numDiagnostics := lo.SumBy(maps.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
 		return len(x)
 	})
 
@@ -404,12 +399,13 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 
 	offerDeclineOption := !fromQuickstart && config.SeenStudio()
 
-	message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
-
 	if offerDeclineOption {
+		message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
 		return interactivity.SimpleConfirm(message, true)
 	}
 
+	message := fmt.Sprintf("We've detected %d potential improvements for your SDK we will launch the studio to help you fix them.", numDiagnostics)
+	// TODO: Make this just a button
 	interactivity.SimpleConfirmWithOnlyAccept(message)
 	return true
 

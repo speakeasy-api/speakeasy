@@ -37,8 +37,7 @@ type RunFlags struct {
 	Verbose            bool              `json:"verbose"`
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
-	LaunchStudio       *bool             `json:"launch-studio"`
-	NeverLaunchStudio  bool              `json:"never-launch-studio"`
+	LaunchStudio       bool              `json:"launch-studio"`
 	GitHub             bool              `json:"github"`
 }
 
@@ -197,14 +196,6 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		flags.Target = targets[0]
 	}
 
-	// This is a workaround for optional boolean flags - TODO: find a better way to handle this
-	if !*flags.LaunchStudio {
-		flags.LaunchStudio = nil
-	}
-	if flags.NeverLaunchStudio {
-		flags.LaunchStudio = new(bool)
-	}
-
 	// Needed later
 	if err := cmd.Flags().Set("target", flags.Target); err != nil {
 		return err
@@ -343,7 +334,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
-	if shouldLaunchStudio(ctx, workflow, false, flags.LaunchStudio) {
+	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
 		err = studio.LaunchStudio(ctx, workflow)
 	}
 
@@ -411,7 +402,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		workflow.PrintSuccessSummary(ctx)
 	}
 
-	if shouldLaunchStudio(ctx, workflow, false, flags.LaunchStudio) {
+	if shouldLaunchStudio(ctx, workflow, false) {
 		err = studio.LaunchStudio(ctx, workflow)
 	}
 
