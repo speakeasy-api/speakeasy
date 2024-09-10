@@ -4,17 +4,19 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/pkg/browser"
+	"github.com/samber/lo"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/exp/maps"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -29,6 +31,7 @@ import (
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -363,36 +366,53 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
-func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool, commandLineFlagToLaunchStudio *bool) bool {
 	// TODO: Remove this when ready to launch for everyone
 	if !config.IsAdminUnsafe() {
 		return false
+	}
+
+	if len(wf.SourceResults) != 1 {
+		// Only one source at a time is supported in the studio at the moment
+		return false
+	}
+	sourceResult := maps.Values(wf.SourceResults)[0]
+
+	if commandLineFlagToLaunchStudio != nil {
+		// User explicitly chose whether to launch the studio or not
+		return *commandLineFlagToLaunchStudio
 	}
 
 	if !utils.IsInteractive() || env.IsGithubAction() {
 		return false
 	}
 
-	// Only one source at a time is supported in the studio at the moment
-	// If the source has a linting result then it was loaded successfully, so we can show something in the studio
-	sourceResults := maps.Values(wf.SourceResults)
-	canLaunch := len(sourceResults) == 1 && sourceResults[0].LintResult != nil
-
-	// TODO: include anyDiagnostics into here if we want to launch the studio after run when we detect issues
-	shouldLaunch := fromQuickstart || !config.SeenStudio()
-
-	diagnosis := sourceResults[0].Diagnosis
-	anyDiagnostics := len(diagnosis) > 0
-
-	if canLaunch && shouldLaunch && anyDiagnostics {
-		numDiagnostics := 0
-		for _, d := range diagnosis {
-			numDiagnostics += len(d)
-		}
-		return interactivity.SimpleConfirm(fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics))
+	if sourceResult.LintResult == nil {
+		// No lint result indicates the spec wasn't even loaded successfully, the studio can't help with that
+		return false
 	}
 
-	return false
+	// TODO: include anyDiagnostics into here if we want to launch the studio after run when we detect issues
+	numDiagnostics := lo.SumBy(lo.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
+		return len(x)
+	})
+
+	if numDiagnostics == 0 {
+		// No interesting diagnostics to show in the studio
+		return false
+	}
+
+	offerDeclineOption := !fromQuickstart && config.SeenStudio()
+
+	message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
+
+	if offerDeclineOption {
+		return interactivity.SimpleConfirm(message)
+	}
+
+	interactivity.SimpleConfirmWithOnlyAccept(message)
+	return true
+
 }
 
 func printSampleSpecMessage(absSchemaPath string) {

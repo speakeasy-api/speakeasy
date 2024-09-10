@@ -17,3 +17,14 @@ func SimpleConfirm(message string) bool {
 
 	return confirm
 }
+
+func SimpleConfirmWithOnlyAccept(message string) {
+	form := huh.NewForm(huh.NewGroup(huh.NewConfirm().
+		Title(message).
+		Affirmative("Okay"),
+	))
+
+	if _, err := charm_internal.NewForm(form).ExecuteForm(); err != nil {
+		return
+	}
+}
