@@ -393,7 +393,13 @@ func (h *StudioHandlers) runSource() (*run.SourceResult, error) {
 	workflowRunner := h.WorkflowRunner
 	sourceID := h.SourceID
 
-	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx, run.WithSkipLinting(), run.WithSkipCleanup())
+	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx,
+		run.WithSkipCleanup(),
+		run.WithSkipLinting(),
+		run.WithSkipGenerateLintReport(),
+		run.WithSkipSnapshot(true),
+		run.WithSkipChangeReport(true),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error cloning workflow runner: %w", err)
 	}
