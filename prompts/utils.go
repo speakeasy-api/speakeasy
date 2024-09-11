@@ -19,6 +19,7 @@ var priorityTargets = []string{
 	"terraform",
 	"csharp",
 	"unity",
+	"php",
 }
 
 func inPriorityTargets(target string) bool {
