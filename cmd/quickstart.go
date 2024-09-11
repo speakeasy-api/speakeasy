@@ -401,7 +401,7 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 
 	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. The Speakeasy Studio can help you fix them.\n", numDiagnostics)
 	log.From(ctx).PrintfStyled(styles.HeavilyEmphasized, message)
-	return interactivity.SimpleButton("↵ Launch Studio")
+	return interactivity.SimpleButton("↵ Launch Studio", "Press enter to continue")
 }
 
 func printSampleSpecMessage(absSchemaPath string) {
