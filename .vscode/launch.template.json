@@ -6,7 +6,7 @@
       "request": "launch",
       "program": "main.go",
       "cwd": "/tmp/studio-test-6840674974721771490",
-      "args": ["run", "--launch-studio"]
+      "args": ["run", "--watch"]
     },
     {
       "name": "Debug CLI headless",
