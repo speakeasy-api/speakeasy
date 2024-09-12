@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/samber/lo"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
@@ -315,7 +316,7 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 		Took:             h.WorkflowRunner.Duration.Milliseconds(),
 	}
 
-	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
+	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile(), ret.WorkingDirectory)
 	if err != nil {
 		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
 	}
@@ -450,7 +451,7 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 	finalOverlayPath := ""
 
 	if overlayPath != "" {
-		finalOverlayPath, err = filepath.Abs(overlayPath)
+		finalOverlayPath, _ = filepath.Abs(overlayPath)
 	}
 
 	return &components.SourceResponse{
@@ -487,7 +488,7 @@ func (h *StudioHandlers) upsertOverlay(overlay overlay.Overlay) error {
 	return workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
 }
 
-func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {
+func convertWorkflowToComponentsWorkflow(w workflow.Workflow, workingDir string) (components.Workflow, error) {
 	// 1. Marshal to JSON
 	// 2. Unmarshal to components.Workflow
 
@@ -500,6 +501,40 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workfl
 	err = json.Unmarshal(jsonBytes, &c)
 	if err != nil {
 		return components.Workflow{}, err
+	}
+
+	for key, source := range c.Sources {
+		updatedInputs := lo.Map(source.Inputs, func(input components.Document, _ int) components.Document {
+			// URL
+			if strings.HasPrefix(input.Location, "https://") || strings.HasPrefix(input.Location, "http://") {
+				return input
+			}
+			// Absolute path
+			if strings.HasPrefix(input.Location, "/") {
+				return input
+			}
+			// Registry uri
+			if strings.HasPrefix(input.Location, "registry.speakeasyapi.dev") {
+				return input
+			}
+			if workingDir == "" {
+				return input
+			}
+
+			// Produce the lexically shortest path based on the base path and the location
+			shortestPath, err := filepath.Rel(workingDir, input.Location)
+
+			if err != nil {
+				shortestPath = input.Location
+			}
+
+			return components.Document{
+				Location: shortestPath,
+			}
+		})
+
+		source.Inputs = updatedInputs
+		c.Sources[key] = source
 	}
 
 	return c, nil
