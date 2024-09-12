@@ -101,7 +101,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	} else {
 		outDir = w.ProjectDir
 	}
-	targetLock.OutLocation = outDir
 
 	published := t.IsPublished()
 
