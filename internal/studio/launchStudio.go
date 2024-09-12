@@ -6,6 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/samber/lo"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
 	"net"
 	"net/http"
 	"os"
@@ -22,6 +27,32 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
 )
+
+// CanLaunch returns true if the studio can be launched, and the number of diagnostics
+func CanLaunch(ctx context.Context, wf *run.Workflow) (bool, int) {
+	if len(wf.SourceResults) != 1 {
+		// Only one source at a time is supported in the studio at the moment
+		return false, 0
+	}
+
+	sourceResult := maps.Values(wf.SourceResults)[0]
+
+	if !utils.IsInteractive() || env.IsGithubAction() {
+		return false, 0
+	}
+
+	if sourceResult.LintResult == nil {
+		// No lint result indicates the spec wasn't even loaded successfully, the studio can't help with that
+		return false, 0
+	}
+
+	// TODO: include more relevant diagnostics as we go!
+	numDiagnostics := lo.SumBy(maps.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
+		return len(x)
+	})
+
+	return numDiagnostics > 0, numDiagnostics
+}
 
 func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	secret, err := getOrCreateSecret()
