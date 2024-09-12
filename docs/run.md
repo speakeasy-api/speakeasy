@@ -35,7 +35,6 @@ speakeasy run [flags]
   -h, --help                      help for run
   -i, --installationURL string    the language specific installation URL for installation instructions if the SDK is not published to a package manager
       --installationURLs string   a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager (default "null")
-      --launch-studio             launch the web studio for improving the quality of the generated SDK
   -o, --output string             What to output while running (default "summary")
       --registry-tags strings     tags to apply to the speakeasy registry bundle (comma-separated list)
   -r, --repo string               the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions
@@ -47,6 +46,7 @@ speakeasy run [flags]
   -s, --source string             source to run. specify 'all' to run all sources
   -t, --target string             target to run. specify 'all' to run all targets
       --verbose                   Verbose logging
+  -w, --watch                     launch the web studio for improving the quality of the generated SDK
 ```
 
 ### Options inherited from parent commands
