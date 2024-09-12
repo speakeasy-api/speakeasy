@@ -330,7 +330,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
-	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
+	if (flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false)) && isSupportedInputSpecForStudio(ctx, workflow.GetWorkflowFile()) {
 		err = studio.LaunchStudio(ctx, workflow)
 	}
 
@@ -398,7 +398,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		workflow.PrintSuccessSummary(ctx)
 	}
 
-	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
+	if (flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false)) && isSupportedInputSpecForStudio(ctx, workflow.GetWorkflowFile()) {
 		err = studio.LaunchStudio(ctx, workflow)
 	}
 

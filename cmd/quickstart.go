@@ -312,7 +312,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
-	if shouldLaunchStudio(ctx, wf, true) {
+	if shouldLaunchStudio(ctx, wf, true) && isSupportedInputSpecForStudio(ctx, wf.GetWorkflowFile()) {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
@@ -402,6 +402,33 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. The Speakeasy Studio can help you fix them.\n", numDiagnostics)
 	log.From(ctx).PrintfStyled(styles.HeavilyEmphasized, message)
 	return interactivity.SimpleButton("↵ Launch Studio", "Press enter to continue")
+}
+
+func isSupportedInputSpecForStudio(ctx context.Context, wf *workflow.Workflow) bool {
+	sourcesValues := maps.Values(wf.Sources)
+
+	if len(sourcesValues) != 1 {
+		return false
+	}
+
+	firstSource := sourcesValues[0]
+
+	if len(firstSource.Inputs) != 1 {
+		return false
+	}
+
+	firstInput := firstSource.Inputs[0]
+
+	inputSpecFormat := filepath.Ext(firstInput.Location)
+
+	// Only support YAML and YML for now
+	validFileFormat := inputSpecFormat == ".yaml" || inputSpecFormat == ".yml"
+
+	if !validFileFormat {
+		log.From(ctx).PrintfStyled(styles.Warning, "\nWarning: Speakeasy Studio currently only supports OpenAPI specifications in YAML format. Launching disabled.\n")
+	}
+
+	return validFileFormat
 }
 
 func printSampleSpecMessage(absSchemaPath string) {

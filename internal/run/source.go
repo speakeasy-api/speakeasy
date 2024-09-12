@@ -45,6 +45,7 @@ import (
 )
 
 type SourceResult struct {
+	// The path to the input OAS spec
 	Source string
 	// The merged OAS spec that was input to the source contents as a string
 	InputSpec    string
