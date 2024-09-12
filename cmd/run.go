@@ -403,9 +403,9 @@ func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags) er
 	if canLaunch && flags.Watch {
 		return studio.LaunchStudio(ctx, wf)
 	} else if numDiagnostics > 1 {
-		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nThe Speakeasy Studio can fix them for you! Try it out with `speakeasy run --watch`", numDiagnostics)
+		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", numDiagnostics)
 	} else if numDiagnostics == 1 {
-		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `1` potential improvement for your SDK.\nThe Speakeasy Studio can fix it for you! Try it out with `speakeasy run --watch`")
+		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `1` potential improvement for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`")
 	}
 
 	return nil
