@@ -37,7 +37,7 @@ type RunFlags struct {
 	Verbose            bool              `json:"verbose"`
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
-	LaunchStudio       bool              `json:"launch-studio"`
+	Watch              bool              `json:"watch"`
 	GitHub             bool              `json:"github"`
 }
 
@@ -147,7 +147,8 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Description: "the manual version to apply to the generated SDK",
 		},
 		flag.BooleanFlag{
-			Name:        "launch-studio",
+			Name:        "watch",
+			Shorthand:   "w",
 			Description: "launch the web studio for improving the quality of the generated SDK",
 			Required:    false,
 		},
@@ -330,11 +331,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
-	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
-		err = studio.LaunchStudio(ctx, workflow)
-	}
-
-	return err
+	return maybeLaunchStudio(ctx, workflow, flags)
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
@@ -398,9 +395,18 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		workflow.PrintSuccessSummary(ctx)
 	}
 
-	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
-		err = studio.LaunchStudio(ctx, workflow)
+	return maybeLaunchStudio(ctx, workflow, flags)
+}
+
+func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags) error {
+	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
+	if canLaunch && flags.Watch {
+		return studio.LaunchStudio(ctx, wf)
+	} else if numDiagnostics > 1 {
+		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nThe Speakeasy Studio can fix them for you! Try it out with `speakeasy run --watch`", numDiagnostics)
+	} else if numDiagnostics == 1 {
+		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `1` potential improvement for your SDK.\nThe Speakeasy Studio can fix it for you! Try it out with `speakeasy run --watch`")
 	}
 
-	return err
+	return nil
 }

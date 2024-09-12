@@ -359,7 +359,7 @@ func (w *Workflow) printTargetSuccessMessage(ctx context.Context) {
 	var additionalLines []string
 	for target, url := range w.SDKOverviewURLs {
 		link := links.Shorten(ctx, url)
-		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─`%s` overview: %s", target, styles.Dimmed.Render(link))))
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─`%s` overview: ", target))+styles.DimmedItalic.Render(link))
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
