@@ -267,9 +267,9 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		}
 
 		for index, input := range currentSource.Inputs {
-			if input.Location == selectedDoc {
+			if input.Location.Reference() == selectedDoc {
 				newInput := workflow.Document{}
-				newInput.Location = fileLocation
+				newInput.Location = workflow.LocationString(fileLocation)
 				if authHeader != "" {
 					newInput.Auth = &workflow.Auth{
 						Header: authHeader,
@@ -441,7 +441,7 @@ func formatDocument(fileLocation, authHeader string, validate bool) (*workflow.D
 	}
 
 	document := &workflow.Document{
-		Location: fileLocation,
+		Location: workflow.LocationString(fileLocation),
 	}
 
 	if authHeader != "" {

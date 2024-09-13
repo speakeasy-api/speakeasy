@@ -302,7 +302,7 @@ func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 		token = os.Getenv(strings.ToUpper(envVar))
 	}
 
-	res, err := download.Fetch(d.Location, header, token)
+	res, err := download.Fetch(d.Location.Resolve(), header, token)
 	if err != nil {
 		return "", err
 	}

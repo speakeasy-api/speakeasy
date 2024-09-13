@@ -94,7 +94,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			workflowFile.Sources["first-source"] = workflow.Source{
 				Inputs: []workflow.Document{
 					{
-						Location: tt.inputDoc,
+						Location: workflow.LocationString(tt.inputDoc),
 					},
 				},
 			}
@@ -313,7 +313,7 @@ func TestSpecWorkflows(t *testing.T) {
 					require.NoError(t, err)
 				}
 				inputs = append(inputs, workflow.Document{
-					Location: inputDoc,
+					Location: workflow.LocationString(inputDoc),
 				})
 			}
 			var overlays []workflow.Overlay
@@ -324,7 +324,7 @@ func TestSpecWorkflows(t *testing.T) {
 				}
 				overlays = append(overlays, workflow.Overlay{
 					Document: &workflow.Document{
-						Location: overlay,
+						Location: workflow.LocationString(overlay),
 					},
 				})
 			}
@@ -424,7 +424,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 		Version: workflow.WorkflowVersion,
 		Sources: map[string]workflow.Source{
 			"first-source": {
-				Inputs: []workflow.Document{{Location: relFilePath}},
+				Inputs: []workflow.Document{{Location: workflow.LocationString(relFilePath)}},
 				Overlays: []workflow.Overlay{
 					{
 						FallbackCodeSamples: &workflow.FallbackCodeSamples{

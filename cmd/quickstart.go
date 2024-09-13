@@ -203,7 +203,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	var sourceName string
 	for name, source := range quickstartObj.WorkflowFile.Sources {
 		sourceName = name
-		resolvedSchema = source.Inputs[0].Location
+		resolvedSchema = source.Inputs[0].Location.Resolve()
 	}
 
 	// If we are referencing a local schema, set a relative path for the new out directory
@@ -217,7 +217,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if err != nil {
 			return err
 		}
-		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(referencePath)
 	}
 
 	if quickstartObj.IsUsingSampleOpenAPISpec {
@@ -232,7 +232,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if err != nil {
 			return err
 		}
-		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(referencePath)
 	}
 
 	if err := workflow.Save(outDir, quickstartObj.WorkflowFile); err != nil {

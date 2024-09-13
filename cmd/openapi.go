@@ -263,7 +263,7 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 	hasRegistrySchema := false
 	if strings.Contains(oldSchema, "registry.speakeasyapi.dev/") {
 		document := workflow.Document{
-			Location: oldSchema,
+			Location: workflow.LocationString(oldSchema),
 		}
 
 		output := workflow.GetTempDir()
@@ -285,7 +285,7 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 
 	if strings.Contains(newSchema, "registry.speakeasyapi.dev/") {
 		document := workflow.Document{
-			Location: newSchema,
+			Location: workflow.LocationString(newSchema),
 		}
 
 		output := workflow.GetTempDir()

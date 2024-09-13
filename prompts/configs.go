@@ -175,7 +175,7 @@ func setDevContainerDefaults(output *config.Configuration, wf *workflow.Workflow
 			if source.Output != nil {
 				schemaPath = *source.Output
 			} else {
-				schemaPath = source.Inputs[0].Location
+				schemaPath = source.Inputs[0].Location.Resolve()
 			}
 			output.Generation.DevContainers = &config.DevContainers{
 				Enabled:    true,
