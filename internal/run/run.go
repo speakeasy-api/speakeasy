@@ -131,10 +131,6 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		return fmt.Errorf("cannot specify both a target and a source")
 	}
 
-	if w.SetVersion != "" && len(w.workflow.Targets) > 1 {
-		return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
-	}
-
 	sourceIDs := []string{w.Source}
 	if w.Source == "all" {
 		sourceIDs = lo.Keys(w.workflow.Sources)
@@ -142,6 +138,10 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	targetIDs := []string{w.Target}
 	if w.Target == "all" {
 		targetIDs = lo.Keys(w.workflow.Targets)
+	}
+
+	if w.SetVersion != "" && len(targetIDs) > 1 {
+		return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
 	}
 
 	for _, sourceID := range sourceIDs {

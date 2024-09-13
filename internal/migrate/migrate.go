@@ -334,7 +334,7 @@ func docLocationsToDocuments(docLocations []string, authHeader string, hasToken 
 	var documents []workflow.Document
 	for _, docLocation := range docLocations {
 		documents = append(documents, workflow.Document{
-			Location: docLocation,
+			Location: workflow.LocationString(docLocation),
 			Auth:     auth,
 		})
 	}

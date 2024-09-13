@@ -59,7 +59,7 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 		// If there are multiple modifications overlays - we take the last one
 		contents, _ := isStudioModificationsOverlay(overlay)
 		if contents != "" {
-			ret.OverlayPath = overlay.Document.Location
+			ret.OverlayPath = overlay.Document.Location.Resolve()
 		}
 	}
 
@@ -230,7 +230,7 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input to a remote file"))
 		}
 
-		inputLocation := source.Inputs[0].Location
+		inputLocation := source.Inputs[0].Location.Resolve()
 
 		// if it's absolute that's fine, otherwise it's relative to the project directory
 		if !filepath.IsAbs(inputLocation) {
@@ -580,14 +580,14 @@ func findWorkflowSourceIDBasedOnTarget(workflow run.Workflow, targetID string) (
 
 func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 	isLocalFile := overlay.Document != nil &&
-		!strings.HasPrefix(overlay.Document.Location, "https://") &&
-		!strings.HasPrefix(overlay.Document.Location, "http://") &&
-		!strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
+		!strings.HasPrefix(overlay.Document.Location.Resolve(), "https://") &&
+		!strings.HasPrefix(overlay.Document.Location.Resolve(), "http://") &&
+		!strings.HasPrefix(overlay.Document.Location.Resolve(), "registry.speakeasyapi.dev")
 	if !isLocalFile {
 		return "", nil
 	}
 
-	asString, err := utils.ReadFileToString(overlay.Document.Location)
+	asString, err := utils.ReadFileToString(overlay.Document.Location.Resolve())
 
 	if err != nil {
 		return "", err

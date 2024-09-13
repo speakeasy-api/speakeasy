@@ -13,7 +13,7 @@ import (
 )
 
 func LoadDocument(ctx context.Context, schemaLocation string) ([]byte, *libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	docPath, err := ResolveDocument(ctx, workflow.Document{Location: schemaLocation}, nil, nil)
+	docPath, err := ResolveDocument(ctx, workflow.Document{Location: workflow.LocationString(schemaLocation)}, nil, nil)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -53,5 +53,5 @@ func ResolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 		return documentOut, nil
 	}
 
-	return d.Location, nil
+	return d.Location.Resolve(), nil
 }
