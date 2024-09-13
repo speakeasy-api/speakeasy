@@ -107,7 +107,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 
 	// After ten seconds, if the health check hasn't been seen then kill the server
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Minute)
 		if !handlers.healthCheckSeen {
 			log.From(ctx).Warnf("Health check not seen, shutting down server")
 			err := server.Shutdown(context.Background())
