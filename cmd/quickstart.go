@@ -74,7 +74,7 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when a speakeasy workflow already exists. \n" +
 	"To create a brand _new_ SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
 	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-	"To regenerate the current workflow: `speakeasy run`.")
+	"To regenerate the current workflow: `speakeasy run --watch`.")
 
 func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
