@@ -190,15 +190,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			outputPath = filepath.Join(*t.Output, outputPath)
 		}
 
-		style := codesamples.Default
-		if t.CodeSamples.Style != nil {
-			switch *t.CodeSamples.Style {
-			case "readme":
-				style = codesamples.ReadMe
-			}
-		}
-
-		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, style)
+		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, *t.CodeSamples)
 		if err != nil {
 			return sourceRes, nil, err
 		}
