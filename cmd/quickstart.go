@@ -355,16 +355,24 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		run.WithShouldCompile(!skipCompile),
 	)
 
+	if err != nil {
+		return true, err
+	}
+
 	err = wf.RunWithVisualization(ctx)
 
 	return true, err
 }
 
 func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
-	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
+	canLaunch, reason := studio.CanLaunch(ctx, wf)
+
 	if !canLaunch {
+		log.From(ctx).PrintfStyled(styles.Warning, "\nWarning: "+reason+" Skipping Studio launch")
 		return false
 	}
+
+	numDiagnostics := studio.DiagnosticCount(ctx, wf)
 
 	offerDeclineOption := !fromQuickstart && config.SeenStudio()
 

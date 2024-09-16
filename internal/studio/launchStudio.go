@@ -6,17 +6,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/samber/lo"
-	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/exp/maps"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/samber/lo"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
 
 	"github.com/speakeasy-api/speakeasy-core/auth"
 
@@ -28,30 +31,48 @@ import (
 	"go.uber.org/zap"
 )
 
-// CanLaunch returns true if the studio can be launched, and the number of diagnostics
-func CanLaunch(ctx context.Context, wf *run.Workflow) (bool, int) {
+// CanLaunch returns a bool to indicate if the studio can be launched, and a string explaining why it can't be launched
+func CanLaunch(ctx context.Context, wf *run.Workflow) (bool, string) {
 	if len(wf.SourceResults) != 1 {
 		// Only one source at a time is supported in the studio at the moment
-		return false, 0
+		return false, "Only one source is supported."
 	}
-
-	sourceResult := maps.Values(wf.SourceResults)[0]
 
 	if !utils.IsInteractive() || env.IsGithubAction() {
-		return false, 0
+		return false, "Non-interactive environment detected."
 	}
+
+	if !isSupportedInputSpecForStudio(ctx, wf.GetWorkflowFile()) {
+		return false, "Speakeasy Studio currently only supports OpenAPI specifications in YAML format."
+	}
+
+	diagnosticCount := DiagnosticCount(ctx, wf)
+
+	if diagnosticCount == 0 {
+		return false, "No issues found."
+	}
+
+	return true, ""
+}
+
+// DiagnosticCount returns the number of diagnostics found in the source
+// Only supports one source at a time for now
+func DiagnosticCount(ctx context.Context, wf *run.Workflow) int {
+	if len(wf.SourceResults) != 1 {
+		// Only one source at a time is supported in the studio at the moment
+		return 0
+	}
+	sourceResult := maps.Values(wf.SourceResults)[0]
 
 	if sourceResult.LintResult == nil {
 		// No lint result indicates the spec wasn't even loaded successfully, the studio can't help with that
-		return false, 0
+		return 0
 	}
 
 	// TODO: include more relevant diagnostics as we go!
-	numDiagnostics := lo.SumBy(maps.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
+	return lo.SumBy(maps.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
 		return len(x)
 	})
-
-	return numDiagnostics > 0, numDiagnostics
 }
 
 func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
@@ -252,4 +273,29 @@ var counter int
 func generateRequestID() string {
 	counter++
 	return fmt.Sprintf("%03d", counter)
+}
+
+// Checks if the input spec is in YAML/YML format as that is the only format supported by the Studio
+// at this present moment.
+func isSupportedInputSpecForStudio(ctx context.Context, wf *workflow.Workflow) bool {
+	sourcesValues := maps.Values(wf.Sources)
+
+	if len(sourcesValues) != 1 {
+		return false
+	}
+
+	firstSource := sourcesValues[0]
+
+	if len(firstSource.Inputs) != 1 {
+		return false
+	}
+
+	firstInput := firstSource.Inputs[0]
+
+	filePath := firstInput.Location.Resolve()
+
+	inputSpecFormat := filepath.Ext(filePath)
+
+	// Only support YAML and YML for now
+	return inputSpecFormat == ".yaml" || inputSpecFormat == ".yml"
 }

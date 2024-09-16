@@ -399,8 +399,15 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 }
 
 func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags) error {
-	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
-	if canLaunch && flags.Watch {
+	canLaunch, reason := studio.CanLaunch(ctx, wf)
+
+	if !canLaunch {
+		log.From(ctx).PrintfStyled(styles.Warning, "\nWarning: "+reason+" Skipping Studio launch")
+		return nil
+	}
+	numDiagnostics := studio.DiagnosticCount(ctx, wf)
+
+	if flags.Watch {
 		return studio.LaunchStudio(ctx, wf)
 	} else if numDiagnostics > 1 {
 		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", numDiagnostics)
