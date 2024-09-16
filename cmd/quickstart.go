@@ -12,11 +12,13 @@ import (
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
 
+	gitc "github.com/go-git/go-git/v5"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
@@ -80,6 +82,14 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
+	}
+
+	_, err = git.InitLocalRepository(workingDir)
+
+	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
+		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
+	} else if err == nil {
+		log.From(ctx).Infof("Initialized git repository in %s", workingDir)
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
