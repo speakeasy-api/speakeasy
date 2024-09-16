@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -22,7 +24,7 @@ const (
 	ReadMe
 )
 
-func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, style CodeSamplesStyle) (string, error) {
+func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, opts workflow.CodeSamples) (string, error) {
 	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
 	isJSON := filepath.Ext(schema) == ".json"
 
@@ -71,9 +73,10 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 		snippets := targetToCodeSamples[target]
 		actions = append(actions, overlay.Action{
 			Target: target,
-			Update: *rootCodeSampleNode(snippets, style, isJSON),
+			Update: *rootCodeSampleNode(snippets, opts, isJSON),
 		})
 	}
+
 	extends := schema
 	title := fmt.Sprintf("CodeSamples overlay for %s", schema)
 	abs, err := filepath.Abs(schema)
@@ -120,15 +123,25 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	return overlayString, nil
 }
 
-func rootCodeSampleNode(snippets []usagegen.UsageSnippet, style CodeSamplesStyle, isJSON bool) *yaml.Node {
+func getStyle(opts workflow.CodeSamples) CodeSamplesStyle {
+	if opts.Style != nil {
+		switch *opts.Style {
+		case "readme":
+			return ReadMe
+		}
+	}
+	return Default
+}
+
+func rootCodeSampleNode(snippets []usagegen.UsageSnippet, opts workflow.CodeSamples, isJSON bool) *yaml.Node {
 	builder := yamlutil.NewBuilder(isJSON)
 
 	var content []*yaml.Node
 	for _, snippet := range snippets {
-		content = append(content, singleCodeSampleNode(snippet, style, builder))
+		content = append(content, singleCodeSampleNode(snippet, opts, builder))
 	}
 
-	switch style {
+	switch getStyle(opts) {
 	case Default:
 		return builder.NewListNode("x-codeSamples", content)
 	case ReadMe:
@@ -138,15 +151,39 @@ func rootCodeSampleNode(snippets []usagegen.UsageSnippet, style CodeSamplesStyle
 	panic("unrecognized style")
 }
 
-func singleCodeSampleNode(snippet usagegen.UsageSnippet, style CodeSamplesStyle, builder *yamlutil.Builder) *yaml.Node {
-	switch style {
-	case Default:
-		return builder.NewMultinode("lang", snippet.Language, "label", snippet.OperationId, "source", snippet.Snippet)
-	case ReadMe:
-		return builder.NewMultinode("name", snippet.OperationId, "language", snippet.Language, "code", snippet.Snippet)
+func singleCodeSampleNode(snippet usagegen.UsageSnippet, opts workflow.CodeSamples, builder *yamlutil.Builder) *yaml.Node {
+	lang := snippet.Language
+	if opts.LangOverride != nil {
+		lang = *opts.LangOverride
 	}
 
-	panic("unrecognized style")
+	label := pointer.ToString(snippet.OperationId)
+	if opts.LabelOverride != nil {
+		if opts.LabelOverride.Omit != nil {
+			if *opts.LabelOverride.Omit {
+				label = nil
+			}
+		} else if opts.LabelOverride.FixedValue != nil {
+			label = opts.LabelOverride.FixedValue
+		}
+	}
+
+	var kvs []string
+	switch getStyle(opts) {
+	case Default:
+		kvs = append(kvs, "lang", lang)
+		if label != nil {
+			kvs = append(kvs, "label", *label)
+		}
+		kvs = append(kvs, "source", snippet.Snippet)
+	case ReadMe:
+		if label != nil {
+			kvs = append(kvs, "name", *label)
+		}
+		kvs = append(kvs, "language", lang, "code", snippet.Snippet)
+	}
+
+	return builder.NewMultinode(kvs...)
 }
 
 func styleForNode(isJSON bool) yaml.Style {
