@@ -6,17 +6,18 @@ import (
 	"context"
 	stdErrors "errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
+	"gopkg.in/yaml.v3"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/ask"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -99,11 +100,6 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		}
 
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", output, styles.Colors.Grey))
-
-		filteredLogs := filterLogs(ctx, &logs)
-		if !w.FromQuickstart {
-			ask.OfferChatSessionOnError(ctx, filteredLogs)
-		}
 	} else if len(w.criticalWarns) > 0 { // Display warning logs if the workflow succeeded with critical warnings
 		s := strings.Join(w.criticalWarns, "\n")
 		logger.PrintlnUnstyled(styles.MakeSection("Critical warnings found", strings.TrimSpace(s), styles.Colors.Yellow))
@@ -122,7 +118,8 @@ func (w *Workflow) PrintSuccessSummary(ctx context.Context) {
 func (w *Workflow) Run(ctx context.Context) error {
 	startTime := time.Now()
 	err := w.RunInner(ctx)
-	w.duration = time.Since(startTime)
+	w.Error = err
+	w.Duration = time.Since(startTime)
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
 
@@ -134,52 +131,43 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		return fmt.Errorf("cannot specify both a target and a source")
 	}
 
+	sourceIDs := []string{w.Source}
+	if w.Source == "all" {
+		sourceIDs = lo.Keys(w.workflow.Sources)
+	}
+	targetIDs := []string{w.Target}
 	if w.Target == "all" {
-		if w.SetVersion != "" && len(w.workflow.Targets) > 1 {
-			return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
-		}
+		targetIDs = lo.Keys(w.workflow.Targets)
+	}
 
-		for t := range w.workflow.Targets {
-			sourceRes, targetRes, err := w.runTarget(ctx, t)
-			if err != nil {
-				return err
-			}
+	if w.SetVersion != "" && len(targetIDs) > 1 {
+		return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
+	}
 
-			w.SourceResults[sourceRes.Source] = sourceRes
-			w.TargetResults[t] = targetRes
+	for _, sourceID := range sourceIDs {
+		if sourceID == "" {
+			continue
 		}
-	} else if w.Source == "all" {
-		for id := range w.workflow.Sources {
-			_, sourceRes, err := w.RunSource(ctx, w.RootStep, id, "")
-			if err != nil {
-				return err
-			}
-
-			w.SourceResults[sourceRes.Source] = sourceRes
+		if _, ok := w.workflow.Sources[sourceID]; !ok {
+			return fmt.Errorf("source '%s' not found", sourceID)
 		}
-	} else if w.Target != "" {
-		if _, ok := w.workflow.Targets[w.Target]; !ok {
-			return fmt.Errorf("target %s not found", w.Target)
-		}
-
-		sourceRes, targetRes, err := w.runTarget(ctx, w.Target)
+		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "")
 		if err != nil {
 			return err
 		}
+	}
 
-		w.SourceResults[sourceRes.Source] = sourceRes
-		w.TargetResults[w.Target] = targetRes
-	} else if w.Source != "" {
-		if _, ok := w.workflow.Sources[w.Source]; !ok {
-			return fmt.Errorf("source %s not found", w.Source)
+	for _, targetID := range targetIDs {
+		if targetID == "" {
+			continue
 		}
-
-		_, sourceRes, err := w.RunSource(ctx, w.RootStep, w.Source, "")
+		if _, ok := w.workflow.Targets[targetID]; !ok {
+			return fmt.Errorf("target '%s' not found", targetID)
+		}
+		_, _, err := w.runTarget(ctx, targetID)
 		if err != nil {
 			return err
 		}
-
-		w.SourceResults[sourceRes.Source] = sourceRes
 	}
 
 	if !w.SkipCleanup {
@@ -217,7 +205,7 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 	}
 
 	additionalLines := []string{
-		fmt.Sprintf("⏲ Generated in %.1f Seconds", w.duration.Seconds()),
+		fmt.Sprintf("⏲ Generated in %.1f Seconds", w.Duration.Seconds()),
 		"✎ Output written to " + tOut,
 	}
 

@@ -6,7 +6,17 @@ Configure your Speakeasy SDK Setup.
 
 ## Details
 
-Configure your Speakeasy SDK Setup.
+# Configure
+
+Configure your Speakeasy workflow file.
+
+[Workflows](https://www.speakeasy.com/docs/workflow-file-reference)
+
+[GitHub Setup](https://www.speakeasy.com/docs/publish-sdks/github-setup)
+
+[Publishing](https://www.speakeasy.com/docs/publish-sdks/publish-sdks)
+
+
 
 ## Usage
 
@@ -28,7 +38,7 @@ speakeasy configure [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
 * [speakeasy configure github](github.md)	 - Configure Speakeasy for github.

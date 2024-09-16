@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/cmd"
-	"github.com/speakeasy-api/versioning-reports/versioning"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +12,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/speakeasy-api/speakeasy/cmd"
+	"github.com/speakeasy-api/versioning-reports/versioning"
+	"github.com/spf13/cobra"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
 )
@@ -22,6 +23,41 @@ import (
 // These integration tests MUST be run in serial because we deal with changing working directories during the test.
 // If running locally make sure you are running test functions individually TestGenerationWorkflows, TestSpecWorkflows, etc.
 // If all test groups are run at the same time you will see test failures.
+
+func TestWorkflowWithEnvVar(t *testing.T) {
+	temp := setupTestDir(t)
+
+	// Create workflow file and associated resources
+	workflowFile := &workflow.Workflow{
+		Version: workflow.WorkflowVersion,
+		Sources: make(map[string]workflow.Source),
+		Targets: make(map[string]workflow.Target),
+	}
+	workflowFile.Sources["first-source"] = workflow.Source{
+		Inputs: []workflow.Document{
+			{
+				Location: workflow.LocationString("${MY_ENV_VAR}"),
+			},
+		},
+	}
+	workflowFile.Targets["test-target"] = workflow.Target{
+		Target: "typescript",
+		Source: "first-source",
+	}
+
+	err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+	require.NoError(t, err)
+	err = workflow.Save(temp, workflowFile)
+
+	require.NoError(t, os.Setenv("MY_ENV_VAR", "spec.yaml"))
+	require.NoError(t, copyFile(filepath.Join("resources", "spec.yaml"), filepath.Join(temp, "spec.yaml")))
+
+	require.NoError(t, execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile").Run())
+	// check README.md exists
+	_, err = os.Stat(filepath.Join(temp, "README.md"))
+	require.NoError(t, err)
+}
+
 
 func TestGenerationWorkflows(t *testing.T) {
 	t.Parallel()
@@ -93,7 +129,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			workflowFile.Sources["first-source"] = workflow.Source{
 				Inputs: []workflow.Document{
 					{
-						Location: tt.inputDoc,
+						Location: workflow.LocationString(tt.inputDoc),
 					},
 				},
 			}
@@ -146,6 +182,37 @@ func TestGenerationWorkflows(t *testing.T) {
 	}
 }
 
+func TestInputOnlyWorkflow(t *testing.T) {
+	t.Parallel()
+	temp := setupTestDir(t)
+
+	// Create workflow file and associated resources
+	workflowFile := &workflow.Workflow{
+		Version: workflow.WorkflowVersion,
+		Sources: make(map[string]workflow.Source),
+		Targets: make(map[string]workflow.Target),
+	}
+	workflowFile.Sources["first-source"] = workflow.Source{
+		Inputs: []workflow.Document{
+			{
+				Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json",
+			},
+		},
+	}
+
+	err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+	require.NoError(t, err)
+	err = workflow.Save(temp, workflowFile)
+	require.NoError(t, err)
+	args := []string{"run", "-s", "first-source", "--pinned", "--skip-compile"}
+	cmdErr := execute(t, temp, args...).Run()
+	require.NoError(t, cmdErr)
+
+	args = []string{"run", "-s", "all", "--pinned", "--skip-compile"}
+	cmdErr = execute(t, temp, args...).Run()
+	require.NoError(t, cmdErr)
+}
+
 type Runnable interface {
 	Run() error
 }
@@ -169,23 +236,24 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
 	mainGo := filepath.Join(baseFolder, "main.go")
-	cmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
-	cmd.Env = os.Environ()
-	cmd.Dir = wd
+	execCmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
+	execCmd.Env = os.Environ()
+	execCmd.Dir = wd
 	// store stdout and stderr in a buffer and output it all in one go if there's a failure
 	out := bytes.Buffer{}
-	cmd.Stdout = &out
-	cmd.Stderr = &out
+	execCmd.Stdout = &out
+	execCmd.Stderr = &out
 
 	return &subprocessRunner{
-		cmd:    cmd,
-		out:    &out,
+		cmd: execCmd,
+		out: &out,
 	}
 }
 
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
 var mutex sync.Mutex
 var rootCmd = cmd.CmdForTest(version, artifactArch)
+
 func executeI(t *testing.T, wd string, args ...string) Runnable {
 	mutex.Lock()
 	t.Helper()
@@ -202,6 +270,7 @@ func executeI(t *testing.T, wd string, args ...string) Runnable {
 		},
 	}
 }
+
 type cmdRunner struct {
 	rootCmd *cobra.Command
 	cleanup func()
@@ -279,7 +348,7 @@ func TestSpecWorkflows(t *testing.T) {
 					require.NoError(t, err)
 				}
 				inputs = append(inputs, workflow.Document{
-					Location: inputDoc,
+					Location: workflow.LocationString(inputDoc),
 				})
 			}
 			var overlays []workflow.Overlay
@@ -290,7 +359,7 @@ func TestSpecWorkflows(t *testing.T) {
 				}
 				overlays = append(overlays, workflow.Overlay{
 					Document: &workflow.Document{
-						Location: overlay,
+						Location: workflow.LocationString(overlay),
 					},
 				})
 			}
@@ -301,7 +370,10 @@ func TestSpecWorkflows(t *testing.T) {
 			}
 
 			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
-			require.NoError(t, err)
+			// Ignore error if directory already exists
+			if err != nil && !os.IsExist(err) {
+				require.NoError(t, err)
+			}
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned", "--skip-compile"}
@@ -387,7 +459,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 		Version: workflow.WorkflowVersion,
 		Sources: map[string]workflow.Source{
 			"first-source": {
-				Inputs: []workflow.Document{{Location: relFilePath}},
+				Inputs: []workflow.Document{{Location: workflow.LocationString(relFilePath)}},
 				Overlays: []workflow.Overlay{
 					{
 						FallbackCodeSamples: &workflow.FallbackCodeSamples{

@@ -24,11 +24,11 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.401.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.415.8
 	github.com/speakeasy-api/openapi-overlay v0.9.0
-	github.com/speakeasy-api/sdk-gen-config v1.18.0
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.12.5
-	github.com/speakeasy-api/speakeasy-core v0.14.1
+	github.com/speakeasy-api/sdk-gen-config v1.22.0
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.13.0
+	github.com/speakeasy-api/speakeasy-core v0.15.3
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -37,18 +37,19 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	golang.org/x/term v0.21.0
-	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/cenkalti/backoff/v4 v4.3.0
+	github.com/charmbracelet/glamour v0.7.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/speakeasy-api/jsonpath v0.1.1
+	github.com/samber/lo v1.47.0
 	github.com/speakeasy-api/versioning-reports v0.6.0
 	github.com/stoewer/go-strcase v1.3.0
 )
@@ -66,10 +67,12 @@ require (
 	github.com/ProtonMail/go-crypto v1.1.0-alpha.2 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
+	github.com/alecthomas/chroma/v2 v2.8.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
@@ -92,7 +95,6 @@ require (
 	github.com/dop251/goja v0.0.0-20240806095544-3491d4a58fbe // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf // indirect
 	github.com/dprotaso/go-yit v0.0.0-20240618133044-5a0af90af097 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
@@ -127,6 +129,7 @@ require (
 	github.com/google/pprof v0.0.0-20240117000934-35fc243c5815 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
+	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
@@ -157,6 +160,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.25 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
@@ -168,6 +172,7 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
+	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pb33f/doctor v0.0.8 // indirect
@@ -193,12 +198,14 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.11.0 // indirect
+	github.com/speakeasy-api/jsonpath v0.1.1 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/tetratelabs/wazero v1.8.0 // indirect
 	github.com/tliron/commonlog v0.2.10 // indirect
 	github.com/tliron/glsp v0.2.2 // indirect
 	github.com/tliron/kutil v0.3.14 // indirect
@@ -212,6 +219,8 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
+	github.com/yuin/goldmark v1.7.1 // indirect
+	github.com/yuin/goldmark-emoji v1.0.2 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.24.0 // indirect
@@ -237,5 +246,6 @@ require (
 	google.golang.org/protobuf v1.34.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )

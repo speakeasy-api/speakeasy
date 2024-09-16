@@ -4,6 +4,14 @@
 
 Automatically improve your OpenAPI document with an LLM  
 
+## Details
+
+
+# Suggest 
+
+Automatically optimise your OpenAPI document for SDK generation with an LLM powered suggestions
+
+
 ## Usage
 
 ```
@@ -24,7 +32,7 @@ speakeasy suggest [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
 * [speakeasy suggest operation-ids](operation-ids.md)	 - Get suggestions to improve your OpenAPI document's operation IDs

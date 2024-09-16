@@ -20,6 +20,7 @@ type GenerateFlags struct {
 	Header          string `json:"header"`
 	Token           string `json:"token"`
 	Debug           bool   `json:"debug"`
+	Verbose         bool   `json:"verbose"`
 	AutoYes         bool   `json:"auto-yes"`
 	InstallationURL string `json:"installationURL"`
 	Published       bool   `json:"published"`
@@ -48,6 +49,11 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 		headerFlag,
 		tokenFlag,
 		debugFlag,
+		flag.BooleanFlag{
+			Name:         "verbose",
+			DefaultValue: false,
+			Description:  fmt.Sprintf("Verbose output"),
+		},
 		autoYesFlag,
 		flag.StringFlag{
 			Name:        "installationURL",
@@ -93,6 +99,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 		flags.OutputTests,
 		flags.Repo,
 		flags.RepoSubdir,
+		flags.Verbose,
 		false,
 		flags.Force,
 		"",
@@ -123,7 +130,7 @@ go:
   version: 0.1.0
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 `+"```"+`
 
 Example gen.yaml file for Python SDK:
@@ -136,7 +143,7 @@ python:
   author: Speakeasy API
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 `+"```"+`
 
 Example gen.yaml file for Typescript SDK:
@@ -148,7 +155,7 @@ typescript:
   author: Speakeasy API
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 `+"```"+`
 
 Example gen.yaml file for Java SDK:
@@ -161,7 +168,7 @@ java:
   version: 0.1.0
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 `+"```"+`
 
 Example gen.yaml file for PHP SDK:
@@ -173,7 +180,7 @@ php:
   version: 0.1.0
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 `+"```"+`
 
 Example gen.yaml file for C# SDK:
@@ -186,8 +193,8 @@ csharp:
   packageName: SpeakeasySDK
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 `+"```"+`
 
-For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
+For additional documentation visit: https://speakeasy.com/docs/using-speakeasy/create-client-sdks/intro
 `, strings.Join(SDKSupportedLanguageTargets(), "\n	- "))

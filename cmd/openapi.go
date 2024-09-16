@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/registry"
 
 	"github.com/speakeasy-api/speakeasy/internal/changes"
@@ -21,10 +22,12 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
 
+const openapiLong = "# OpenAPI \n The `openapi` command provides a set of commands for visualizing, linting and transforming OpenAPI documents."
+
 var openapiCmd = &model.CommandGroup{
 	Usage:          "openapi",
 	Short:          "Utilities for working with OpenAPI documents",
-	Long:           `The "openapi" command provides a set of commands for visualizing, linting and transforming OpenAPI documents.`,
+	Long:           utils.RenderMarkdown(openapiLong),
 	InteractiveMsg: "What do you want to do?",
 	Commands:       []model.Command{openapiLintCmd, openapiDiffCmd, transformCmd},
 }
@@ -260,7 +263,7 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 	hasRegistrySchema := false
 	if strings.Contains(oldSchema, "registry.speakeasyapi.dev/") {
 		document := workflow.Document{
-			Location: oldSchema,
+			Location: workflow.LocationString(oldSchema),
 		}
 
 		output := workflow.GetTempDir()
@@ -282,7 +285,7 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 
 	if strings.Contains(newSchema, "registry.speakeasyapi.dev/") {
 		document := workflow.Document{
-			Location: newSchema,
+			Location: workflow.LocationString(newSchema),
 		}
 
 		output := workflow.GetTempDir()

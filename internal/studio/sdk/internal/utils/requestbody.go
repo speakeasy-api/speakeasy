@@ -82,7 +82,7 @@ func serializeRequestBody(request interface{}, nullable, optional bool, requestF
 	return serializeContentType(requestFieldName, SerializationMethodToContentType[serializationMethod], reflect.ValueOf(request), tag)
 }
 
-func serializeContentType(fieldName string, mediaType string, val reflect.Value, tag string) (*bytes.Buffer, string, error) {
+func serializeContentType(fieldName string, mediaType string, val reflect.Value, tag string) (io.Reader, string, error) {
 	buf := &bytes.Buffer{}
 
 	if isNil(val.Type(), val) {
@@ -116,6 +116,8 @@ func serializeContentType(fieldName string, mediaType string, val reflect.Value,
 		if err := encodeFormData(fieldName, buf, val.Interface()); err != nil {
 			return nil, "", err
 		}
+	case val.Type().Implements(reflect.TypeOf((*io.Reader)(nil)).Elem()):
+		return val.Interface().(io.Reader), mediaType, nil
 	default:
 		val = reflect.Indirect(val)
 
@@ -124,8 +126,8 @@ func serializeContentType(fieldName string, mediaType string, val reflect.Value,
 			if _, err := buf.WriteString(valToString(val.Interface())); err != nil {
 				return nil, "", err
 			}
-		case val.Type() == reflect.TypeOf([]byte(nil)):
-			if _, err := buf.Write(val.Bytes()); err != nil {
+		case reflect.TypeOf(val.Interface()) == reflect.TypeOf([]byte(nil)):
+			if _, err := buf.Write(val.Interface().([]byte)); err != nil {
 				return nil, "", err
 			}
 		default:
@@ -215,7 +217,7 @@ func encodeMultipartFormDataFile(w *multipart.Writer, fieldType reflect.Type, va
 
 	var fieldName string
 	var fileName string
-	var content []byte
+	var reader io.Reader
 
 	for i := 0; i < fieldType.NumField(); i++ {
 		field := fieldType.Field(i)
@@ -226,15 +228,19 @@ func encodeMultipartFormDataFile(w *multipart.Writer, fieldType reflect.Type, va
 			continue
 		}
 
-		if tag.Content {
-			content = val.Bytes()
+		if tag.Content && val.CanInterface() {
+			if reflect.TypeOf(val.Interface()) == reflect.TypeOf([]byte(nil)) {
+				reader = bytes.NewReader(val.Interface().([]byte))
+			} else if reflect.TypeOf(val.Interface()).Implements(reflect.TypeOf((*io.Reader)(nil)).Elem()) {
+				reader = val.Interface().(io.Reader)
+			}
 		} else {
 			fieldName = tag.Name
 			fileName = val.String()
 		}
 	}
 
-	if fieldName == "" || fileName == "" || content == nil {
+	if fieldName == "" || fileName == "" || reader == nil {
 		return fmt.Errorf("invalid multipart/form-data file")
 	}
 
@@ -242,7 +248,7 @@ func encodeMultipartFormDataFile(w *multipart.Writer, fieldType reflect.Type, va
 	if err != nil {
 		return err
 	}
-	if _, err := fw.Write(content); err != nil {
+	if _, err := io.Copy(fw, reader); err != nil {
 		return err
 	}
 

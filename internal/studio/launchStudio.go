@@ -11,6 +11,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/samber/lo"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
 
 	"github.com/speakeasy-api/speakeasy-core/auth"
 
@@ -21,6 +28,32 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
 )
+
+// CanLaunch returns true if the studio can be launched, and the number of diagnostics
+func CanLaunch(ctx context.Context, wf *run.Workflow) (bool, int) {
+	if len(wf.SourceResults) != 1 {
+		// Only one source at a time is supported in the studio at the moment
+		return false, 0
+	}
+
+	sourceResult := maps.Values(wf.SourceResults)[0]
+
+	if !utils.IsInteractive() || env.IsGithubAction() {
+		return false, 0
+	}
+
+	if sourceResult.LintResult == nil {
+		// No lint result indicates the spec wasn't even loaded successfully, the studio can't help with that
+		return false, 0
+	}
+
+	// TODO: include more relevant diagnostics as we go!
+	numDiagnostics := lo.SumBy(maps.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
+		return len(x)
+	})
+
+	return numDiagnostics > 0, numDiagnostics
+}
 
 func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	secret, err := getOrCreateSecret()
@@ -40,23 +73,12 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handler(handlers.health))
 
-	mux.HandleFunc("/source", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			handler(handlers.updateSource)(w, r)
-		case http.MethodGet:
-			handler(handlers.getSource)(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			handler(handlers.updateRun)(w, r)
+			handler(handlers.reRun)(w, r)
 		case http.MethodGet:
-			handler(handlers.getRun)(w, r)
+			handler(handlers.getLastRunResult)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -78,11 +100,25 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 
 	url := fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
 
+	listeningMessage := fmt.Sprintf("Listening on http://localhost:%d\n", port)
+
 	if err := browser.OpenURL(url); err != nil {
-		fmt.Println("Please open the following URL in your browser:", url)
+		fmt.Println(listeningMessage+"Please open the following URL in your browser:\n\t", url)
 	} else {
-		fmt.Println("Opening URL in your browser:", url)
+		fmt.Println(listeningMessage+"Opening URL in your browser:\n\t", url)
 	}
+
+	// After ten seconds, if the health check hasn't been seen then kill the server
+	go func() {
+		time.Sleep(1 * time.Minute)
+		if !handlers.healthCheckSeen {
+			log.From(ctx).Warnf("Health check not seen, shutting down server")
+			err := server.Shutdown(context.Background())
+			if err != nil {
+				fmt.Println("Error shutting down server:", err)
+			}
+		}
+	}()
 
 	return startServer(ctx, server, workflow)
 }
@@ -118,19 +154,24 @@ func authMiddleware(secret string, next http.Handler) http.Handler {
 
 func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		id := generateRequestID()
-		log.From(r.Context()).Info("handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id))
+		method := fmt.Sprintf("%-6s", r.Method)  // Fixed width 6 characters
+		path := fmt.Sprintf("%-21s", r.URL.Path) // Fixed width 21 characters
+		base := fmt.Sprintf("%s %s %s", id, method, path)
+		log.From(r.Context()).Info(fmt.Sprintf("%s started", base))
 		ctx := r.Context()
 		if err := h(ctx, w, r); err != nil {
-			log.From(ctx).Error("error handling request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id), zap.Error(err))
+			log.From(ctx).Error(fmt.Sprintf("%s failed: %v", base, err))
 			respondJSONError(ctx, w, err)
+			return
 		}
-		log.From(ctx).Info("request handled", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.String("request_id", id))
+		duration := time.Since(start)
+		log.From(ctx).Info(fmt.Sprintf("%s completed in %s", base, duration))
 	}
 }
 
 func startServer(ctx context.Context, server *http.Server, workflow *run.Workflow) error {
-
 	// Channel to listen for interrupt or terminate signals
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -201,7 +242,7 @@ func respondJSONError(ctx context.Context, w http.ResponseWriter, err error) {
 
 	w.WriteHeader(code)
 	data := map[string]interface{}{
-		"error":      err.Error(),
+		"message":    err.Error(),
 		"statusCode": code,
 	}
 	if jsonError := json.NewEncoder(w).Encode(data); jsonError != nil {
@@ -209,8 +250,9 @@ func respondJSONError(ctx context.Context, w http.ResponseWriter, err error) {
 	}
 }
 
+var counter int
+
 func generateRequestID() string {
-	bytes := make([]byte, 4)
-	rand.Read(bytes) // Generate random bytes
-	return hex.EncodeToString(bytes)
+	counter++
+	return fmt.Sprintf("%03d", counter)
 }

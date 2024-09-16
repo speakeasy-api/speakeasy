@@ -19,9 +19,15 @@ var overlayFlag = flag.StringFlag{
 	Required:    true,
 }
 
+const overlayLong = `# Overlay
+
+Command group for working with OpenAPI Overlays.
+`
+
 var overlayCmd = &model.CommandGroup{
 	Usage:    "overlay",
 	Short:    "Work with OpenAPI Overlays",
+	Long:     utils.RenderMarkdown(overlayLong),
 	Commands: []model.Command{overlayCompareCmd, overlayValidateCmd, overlayApplyCmd},
 }
 

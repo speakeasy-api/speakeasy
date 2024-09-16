@@ -6,6 +6,9 @@ Lint an OpenAPI document
 
 ## Details
 
+# Lint 
+## OpenAPI
+
 Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.
 
 ## Usage

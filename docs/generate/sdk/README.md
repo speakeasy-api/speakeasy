@@ -37,7 +37,7 @@ go:
   version: 0.1.0
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 ```
 
 Example gen.yaml file for Python SDK:
@@ -50,7 +50,7 @@ python:
   author: Speakeasy API
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 ```
 
 Example gen.yaml file for Typescript SDK:
@@ -62,7 +62,7 @@ typescript:
   author: Speakeasy API
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 ```
 
 Example gen.yaml file for Java SDK:
@@ -75,7 +75,7 @@ java:
   version: 0.1.0
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 ```
 
 Example gen.yaml file for PHP SDK:
@@ -87,7 +87,7 @@ php:
   version: 0.1.0
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document 
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 ```
 
 Example gen.yaml file for C# SDK:
@@ -100,10 +100,10 @@ csharp:
   packageName: SpeakeasySDK
 generate:
   # baseServerUrl is optional, if not specified it will use the server URL from the OpenAPI document
-  baseServerUrl: https://api.speakeasyapi.dev 
+  baseServerUrl: https://api.speakeasy.com 
 ```
 
-For additional documentation visit: https://docs.speakeasyapi.dev/docs/using-speakeasy/create-client-sdks/intro
+For additional documentation visit: https://speakeasy.com/docs/using-speakeasy/create-client-sdks/intro
 
 
 ## Usage
@@ -128,6 +128,7 @@ speakeasy generate sdk [flags]
   -b, --repo-subdir string       the subdirectory of the repository where the SDK is located in the repo, helps with documentation generation
   -s, --schema string            local filepath or URL for the OpenAPI schema (default "./openapi.yaml")
       --token string             token value to use if authentication is required for downloading schema from remote URL
+      --verbose                  Verbose output
 ```
 
 ### Options inherited from parent commands

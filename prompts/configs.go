@@ -3,11 +3,12 @@ package prompts
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
@@ -161,6 +162,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	// default dev containers on for new SDKs
 	if isQuickstart {
 		setDevContainerDefaults(output, wf, target)
+		setEnvVarPrefixDefaults(output, target, sdkClassName)
 	}
 
 	return output, nil
@@ -173,12 +175,20 @@ func setDevContainerDefaults(output *config.Configuration, wf *workflow.Workflow
 			if source.Output != nil {
 				schemaPath = *source.Output
 			} else {
-				schemaPath = source.Inputs[0].Location
+				schemaPath = source.Inputs[0].Location.Resolve()
 			}
 			output.Generation.DevContainers = &config.DevContainers{
 				Enabled:    true,
 				SchemaPath: schemaPath,
 			}
+		}
+	}
+}
+
+func setEnvVarPrefixDefaults(output *config.Configuration, target *workflow.Target, sdkClassName string) {
+	if target.Target == "go" || target.Target == "typescript" || target.Target == "python" {
+		if cfg, ok := output.Languages[target.Target]; ok && cfg.Cfg != nil {
+			cfg.Cfg["envVarPrefix"] = strings.ToUpper(sdkClassName)
 		}
 	}
 }

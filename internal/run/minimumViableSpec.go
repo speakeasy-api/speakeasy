@@ -2,8 +2,8 @@ package run
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -15,15 +15,23 @@ import (
 	"path/filepath"
 )
 
-func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, viableOperations []string) (string, *SourceResult, error) {
+func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, vErrs []error) (string, *SourceResult, error) {
+	invalidOperationToErr := make(map[string]error)
+	for _, err := range vErrs {
+		vErr := errors.GetValidationErr(err)
+		for _, op := range vErr.AffectedOperationIDs {
+			invalidOperationToErr[op] = err // TODO: support multiple errors per operation?
+		}
+	}
+
 	substep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
-	baseLocation := source.Inputs[0].Location
+	baseLocation := source.Inputs[0].Location.Resolve()
 	workingDir := workflow.GetTempDir()
 
 	// This is intended to only be used from quickstart, we must assume a singular input document
 	if len(source.Inputs)+len(source.Overlays) > 1 {
-		return "", nil, errors.New("multiple inputs are not supported for minimum viable spec")
+		return "", nil, fmt.Errorf("multiple inputs are not supported for minimum viable spec")
 	}
 
 	tempBase := fmt.Sprintf("downloaded_%s%s", randStringBytes(10), filepath.Ext(baseLocation))
@@ -31,16 +39,19 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	if source.Inputs[0].IsRemote() {
 		outResolved, err := download.ResolveRemoteDocument(ctx, source.Inputs[0], tempBase)
 		if err != nil {
-			return "", nil, err
+			return "", nil, fmt.Errorf("failed to download remote document: %w", err)
 		}
 
 		baseLocation = outResolved
 	}
 
 	overlayOut := filepath.Join(workingDir, fmt.Sprintf("mvs_overlay_%s.yaml", randStringBytes(10)))
+	if err := os.MkdirAll(workingDir, os.ModePerm); err != nil {
+		return "", nil, err
+	}
 	overlayFile, err := os.Create(overlayOut)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to create overlay file: %w", err)
 	}
 	defer overlayFile.Close()
 
@@ -54,14 +65,20 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 		}
 	}()
 
-	_, _, model, err := openapi.LoadDocument(ctx, source.Inputs[0].Location)
+	_, _, model, err := openapi.LoadDocument(ctx, source.Inputs[0].Location.Resolve())
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to load document: %w", err)
 	}
 
-	overlay := transform.BuildFilterOperationsOverlay(model, true, viableOperations)
-	if err = modifications.UpsertOverlay(&source, overlay); err != nil {
-		return "", nil, err
+	overlay := transform.BuildRemoveInvalidOperationsOverlay(model, invalidOperationToErr)
+
+	overlayPath, err := modifications.GetOverlayPath(workingDir)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get overlay path: %w", err)
+	}
+
+	if _, err = modifications.UpsertOverlay(overlayPath, &source, overlay); err != nil {
+		return "", nil, fmt.Errorf("failed to upsert overlay: %w", err)
 	}
 
 	w.workflow.Sources[sourceID] = source
@@ -69,11 +86,11 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	sourcePath, sourceRes, err := w.RunSource(ctx, substep, sourceID, targetID)
 	if err != nil {
 		failedRetry = true
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to re-run source: %w", err)
 	}
 
 	if err := workflow.Save(w.ProjectDir, &w.workflow); err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to save workflow: %w", err)
 	}
 
 	return sourcePath, sourceRes, err

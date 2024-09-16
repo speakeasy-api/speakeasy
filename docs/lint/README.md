@@ -6,7 +6,8 @@ Lint/Validate OpenAPI documents and Speakeasy configuration files
 
 ## Details
 
-The "lint" command provides a set of commands for linting OpenAPI docs and more.
+# Lint 
+ The `lint` command provides a set of commands for linting OpenAPI docs and more.
 
 ## Usage
 
@@ -28,7 +29,7 @@ speakeasy lint [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
 * [speakeasy lint config](config.md)	 - Lint a Speakeasy configuration file

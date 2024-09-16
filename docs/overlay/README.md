@@ -4,6 +4,13 @@
 
 Work with OpenAPI Overlays  
 
+## Details
+
+# Overlay
+
+Command group for working with OpenAPI Overlays.
+
+
 ## Usage
 
 ```
@@ -24,7 +31,7 @@ speakeasy overlay [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
 * [speakeasy overlay apply](apply.md)	 - Given an overlay, construct a new specification by extending a specification and applying the overlay, and output it to stdout.

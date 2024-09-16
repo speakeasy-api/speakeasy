@@ -12,9 +12,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+
 	"github.com/inkeep/ai-api-go/models/sdkerrors"
-	"github.com/speakeasy-api/huh"
-	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
@@ -35,7 +35,7 @@ type ChatResponse struct {
 	Message   string `json:"Message"`
 }
 
-const ApiURL = "https://api.prod.speakeasyapi.dev"
+const ApiURL = "https://api.prod.speakeasy.com"
 
 var baseURL = ApiURL
 
@@ -191,16 +191,8 @@ func RunInteractiveChatSession(ctx context.Context, message string, sessionID st
 
 func OfferChatSessionOnError(ctx context.Context, message string) {
 	logger := log.From(ctx)
-	var confirm bool
 
-	if _, err := charm_internal.NewForm(
-		huh.NewForm(charm_internal.NewBranchPrompt("Would you like to enter an interactive chat session with Speakeasy AI for help?", &confirm)),
-		charm_internal.WithTitle(fmt.Sprintf("Ask Speakeasy AI:")),
-	).
-		ExecuteForm(); err != nil {
-		logger.Printf("Failed to display confirmation prompt: %v", err)
-		return
-	}
+	confirm := interactivity.SimpleConfirm("Would you like to enter an interactive chat session with Speakeasy AI for help?", false)
 
 	if confirm {
 		if err := RunInteractiveChatSession(ctx, message, ""); err != nil {

@@ -4,7 +4,7 @@ set -e
 # Adapted/Copied from https://raw.githubusercontent.com/daveshanley/vacuum/main/bin/install.sh
 #
 # Speakeasy CLI
-# https://speakeasyapi.dev/docs/speakeasy-cli/getting-started/
+# https://speakeasy.com/docs/speakeasy-cli/getting-started/
 #
 # Designed for quick installs over the network and CI/CD
 #   curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
@@ -20,6 +20,7 @@ get_latest_release() {
   local retry=0
   local max_retries=5
   local release_info
+  local delay=1
 
   while [ $retry -lt $max_retries ]; do
     release_info=$(curl --retry 5 --silent "https://api.github.com/repos/$1/releases/latest")
@@ -29,8 +30,9 @@ get_latest_release() {
       echo "$tag_name"
       return
     else
-      sleep $((1.5 ** $retry))
-      retry=$(($retry + 1))
+      sleep $delay
+      delay=$((delay * 2))  # Double the delay for each retry
+      retry=$((retry + 1))
     fi
   done
   echo "Error: Unable to retrieve a valid release tag after $max_retries attempts." >&2

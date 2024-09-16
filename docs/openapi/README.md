@@ -6,7 +6,8 @@ Utilities for working with OpenAPI documents
 
 ## Details
 
-The "openapi" command provides a set of commands for visualizing, linting and transforming OpenAPI documents.
+# OpenAPI 
+ The `openapi` command provides a set of commands for visualizing, linting and transforming OpenAPI documents.
 
 ## Usage
 
@@ -28,7 +29,7 @@ speakeasy openapi [flags]
 
 ### Parent Command
 
-* [speakeasy](../README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
 * [speakeasy openapi diff](diff.md)	 - Visualize the changes between two OpenAPI documents

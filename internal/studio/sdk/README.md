@@ -1,7 +1,7 @@
 # github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk
 
 <div align="left">
-    <a href="https://speakeasyapi.dev/"><img src="https://custom-icon-badges.demolab.com/badge/-Built%20By%20Speakeasy-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
+    <a href="https://speakeasy.com/"><img src="https://custom-icon-badges.demolab.com/badge/-Built%20By%20Speakeasy-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
     <a href="https://opensource.org/licenses/MIT">
         <img src="https://img.shields.io/badge/License-MIT-blue.svg" style="width: 100px; height: 28px;" />
     </a>
@@ -11,14 +11,36 @@
 ## 🏗 **Welcome to your new SDK!** 🏗
 
 It has been generated successfully based on your OpenAPI spec. However, it is not yet ready for production use. Here are some next steps:
-- [ ] 🛠 Make your SDK feel handcrafted by [customizing it](https://www.speakeasyapi.dev/docs/customize-sdks)
+- [ ] 🛠 Make your SDK feel handcrafted by [customizing it](https://www.speakeasy.com/docs/customize-sdks)
 - [ ] ♻️ Refine your SDK quickly by iterating locally with the [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy)
-- [ ] 🎁 Publish your SDK to package managers by [configuring automatic publishing](https://www.speakeasyapi.dev/docs/advanced-setup/publish-sdks)
+- [ ] 🎁 Publish your SDK to package managers by [configuring automatic publishing](https://www.speakeasy.com/docs/advanced-setup/publish-sdks)
 - [ ] ✨ When ready to productionize, delete this section from the README
+
+<!-- Start Summary [summary] -->
+## Summary
+
+
+<!-- End Summary [summary] -->
+
+<!-- Start Table of Contents [toc] -->
+## Table of Contents
+
+* [SDK Installation](#sdk-installation)
+* [SDK Example Usage](#sdk-example-usage)
+* [Available Resources and Operations](#available-resources-and-operations)
+* [Server-sent event streaming](#server-sent-event-streaming)
+* [Retries](#retries)
+* [Error Handling](#error-handling)
+* [Server Selection](#server-selection)
+* [Custom HTTP Client](#custom-http-client)
+* [Authentication](#authentication)
+* [Special Types](#special-types)
+<!-- End Table of Contents [toc] -->
 
 <!-- Start SDK Installation [installation] -->
 ## SDK Installation
 
+To add the SDK as a dependency to your project:
 ```bash
 go get github.com/speakeasy-api/speakeasy/internal/studio/sdk
 ```
@@ -44,7 +66,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,14 +87,18 @@ func main() {
 <!-- Start Available Resources and Operations [operations] -->
 ## Available Resources and Operations
 
-### [SDK](docs/sdks/sdk/README.md)
+### [Health](docs/sdks/health/README.md)
 
-* [CheckHealth](docs/sdks/sdk/README.md#checkhealth) - Health Check
-* [GetRun](docs/sdks/sdk/README.md#getrun) - Run
-* [Run](docs/sdks/sdk/README.md#run) - Run
-* [GetSource](docs/sdks/sdk/README.md#getsource) - Get Source
-* [UpdateSource](docs/sdks/sdk/README.md#updatesource) - Update Source
-* [SuggestMethodNames](docs/sdks/sdk/README.md#suggestmethodnames) - Suggest Method Names
+* [Check](docs/sdks/health/README.md#check) - Health Check
+
+### [Run](docs/sdks/run/README.md)
+
+* [GetLastResult](docs/sdks/run/README.md#getlastresult) - Run
+* [ReRun](docs/sdks/run/README.md#rerun) - Run
+
+### [Suggest](docs/sdks/suggest/README.md)
+
+* [MethodNames](docs/sdks/suggest/README.md#methodnames) - Suggest Method Names
 <!-- End Available Resources and Operations [operations] -->
 
 <!-- Start Retries [retries] -->
@@ -98,7 +124,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx, operations.WithRetries(
+	res, err := s.Health.Check(ctx, operations.WithRetries(
 		retry.Config{
 			Strategy: "backoff",
 			Backoff: &retry.BackoffStrategy{
@@ -153,7 +179,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -199,7 +225,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 
 		var e *sdkerrors.SDKError
@@ -242,7 +268,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -283,7 +309,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -363,7 +389,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -405,7 +431,7 @@ func main() {
 	)
 
 	ctx := context.Background()
-	res, err := s.CheckHealth(ctx)
+	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -440,4 +466,4 @@ looking for the latest version.
 While we value open-source contributions to this SDK, this library is generated programmatically. Any manual changes added to internal files will be overwritten on the next generation. 
 We look forward to hearing your feedback. Feel free to open a PR or an issue with a proof of concept and we'll do our best to include it in a future release. 
 
-### SDK Created by [Speakeasy](https://docs.speakeasyapi.dev/docs/using-speakeasy/client-sdks)
+### SDK Created by [Speakeasy](https://speakeasy.com/docs/using-speakeasy/client-sdks)

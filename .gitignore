@@ -1,7 +1,6 @@
 dist/
 bin/
 .idea/
-.vscode/
 *.iml
 summary.md
 /.speakeasy/

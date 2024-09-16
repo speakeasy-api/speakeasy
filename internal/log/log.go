@@ -244,7 +244,7 @@ func (l Logger) Printf(format string, a ...any) {
 }
 
 func (l Logger) PrintfStyled(style lipgloss.Style, format string, a ...any) {
-	l.PrintlnUnstyled(style.Render(fmt.Sprintf(format, a...)))
+	l.Fprintln(l.writer, style.Render(fmt.Sprintf(format, a...)))
 }
 
 func (l Logger) Println(s string) {

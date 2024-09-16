@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/yamlutil"
-	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-	"os"
-	"path/filepath"
-
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"gopkg.in/yaml.v3"
+	"os"
+	"path/filepath"
+	"sort"
 )
 
 type CodeSamplesStyle int
@@ -61,13 +61,19 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	}
 
 	var actions []overlay.Action
-	for target, snippets := range targetToCodeSamples {
+	targets := []string{}
+	for target := range targetToCodeSamples {
+		targets = append(targets, target)
+	}
+	sort.Strings(targets)
+
+	for _, target := range targets {
+		snippets := targetToCodeSamples[target]
 		actions = append(actions, overlay.Action{
 			Target: target,
 			Update: *rootCodeSampleNode(snippets, style, isJSON),
 		})
 	}
-
 	extends := schema
 	title := fmt.Sprintf("CodeSamples overlay for %s", schema)
 	abs, err := filepath.Abs(schema)

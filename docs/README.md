@@ -2,16 +2,28 @@
 `speakeasy`  
 
 
-The speakeasy cli tool provides access to the speakeasyapi.dev toolchain  
+The Speakeasy CLI tool provides access to the Speakeasy.com platform  
 
 ## Details
 
- A cli tool for interacting with the Speakeasy https://www.speakeasyapi.dev/ platform and its various functions including:
-	- Generating Client SDKs from OpenAPI specs (go, python, typescript, java, php, c#, swift, ruby, terraform)
-	- Validating OpenAPI specs
-	- Interacting with the Speakeasy API to create and manage your API workspaces
-	- Generating OpenAPI specs from your API traffic
-	- Generating Postman collections from OpenAPI Specs
+# Speakeasy 
+
+A CLI tool for interacting with the [Speakeasy platform](https://www.speakeasy.com/) and its APIs.
+
+Use this CLI to:
+- Lint and validate OpenAPI specs
+- Create, manage, and run Speakeasy workflows
+- Configure GitHub Actions for Speakeasy workflows
+- Suggest improvements to OpenAPI specs
+
+Generate from OpenAPI Specs:
+- Client and Server SDKs in GO, Python, TypeScript, Java, PHP, C#, Swift, Ruby
+- Postman collections
+- Terraform providers
+
+[Quickstart guide](https://www.speakeasy.com/docs/create-client-sdks)
+
+Visit [Speakeasy](https://www.speakeasy.com/) for more information
 
 
 ## Usage
@@ -40,7 +52,7 @@ speakeasy [flags]
 * [speakeasy openapi](openapi/README.md)	 - Utilities for working with OpenAPI documents
 * [speakeasy overlay](overlay/README.md)	 - Work with OpenAPI Overlays
 * [speakeasy quickstart](quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
-* [speakeasy run](run.md)	 - generate an SDK, compile OpenAPI sources, and much more from a workflow.yaml file
+* [speakeasy run](run.md)	 - Run all the workflows defined in your workflow.yaml file. This can include multiple SDK generations from different OpenAPI sources
 * [speakeasy status](status.md)	 - Review status of current workspace
 * [speakeasy suggest](suggest/README.md)	 - Automatically improve your OpenAPI document with an LLM
 * [speakeasy tag](tag/README.md)	 - Add tags to a given revision of your API. Specific to a registry namespace

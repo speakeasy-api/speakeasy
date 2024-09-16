@@ -6,6 +6,8 @@ Bumps the version of a Speakeasy Generation Target
 
 ## Details
 
+# Bump
+
 Bumps the version of a Speakeasy Generation Target, run within the target's directory. Allows the bumping of patch, minor, and major versions or setting to a specific version.
 
 Examples:
@@ -20,6 +22,16 @@ Examples:
 
 ```
 speakeasy bump [patch|minor|major|graduate] [flags]
+```
+
+### Examples
+
+```
+
+
+const version = require("@speakeasy/sdk-typescript").version;
+console.log(version);
+
 ```
 
 ### Options
@@ -38,4 +50,4 @@ speakeasy bump [patch|minor|major|graduate] [flags]
 
 ### Parent Command
 
-* [speakeasy](README.md)	 - The speakeasy cli tool provides access to the speakeasyapi.dev toolchain
+* [speakeasy](README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform

@@ -9,19 +9,23 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/log"
-
 	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/git"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/studio"
 
+	gitc "github.com/go-git/go-git/v5"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	config "github.com/speakeasy-api/sdk-gen-config"
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -72,12 +76,20 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when a speakeasy workflow already exists. \n" +
 	"To create a brand _new_ SDK directory: `cd ..` and then `speakeasy quickstart`. \n" +
 	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
-	"To regenerate the current workflow: `speakeasy run`.")
+	"To regenerate the current workflow: `speakeasy run --watch`.")
 
 func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
+	}
+
+	_, err = git.InitLocalRepository(workingDir)
+
+	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
+		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
+	} else if err == nil {
+		log.From(ctx).Infof("Initialized git repository in %s", workingDir)
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
@@ -96,7 +108,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			Sources: make(map[string]workflow.Source),
 			Targets: make(map[string]workflow.Target),
 		},
-		LanguageConfigs: make(map[string]*config.Configuration),
+		LanguageConfigs: make(map[string]*sdkGenConfig.Configuration),
 	}
 
 	if flags.Schema != "" {
@@ -201,7 +213,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	var sourceName string
 	for name, source := range quickstartObj.WorkflowFile.Sources {
 		sourceName = name
-		resolvedSchema = source.Inputs[0].Location
+		resolvedSchema = source.Inputs[0].Location.Resolve()
 	}
 
 	// If we are referencing a local schema, set a relative path for the new out directory
@@ -215,7 +227,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if err != nil {
 			return err
 		}
-		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(referencePath)
 	}
 
 	if quickstartObj.IsUsingSampleOpenAPISpec {
@@ -230,7 +242,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if err != nil {
 			return err
 		}
-		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = referencePath
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(referencePath)
 	}
 
 	if err := workflow.Save(outDir, quickstartObj.WorkflowFile); err != nil {
@@ -238,7 +250,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	for key, outConfig := range quickstartObj.LanguageConfigs {
-		if err := config.SaveConfig(outDir, outConfig); err != nil {
+		if err := sdkGenConfig.SaveConfig(outDir, outConfig); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", key)
 		}
 	}
@@ -258,7 +270,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		ctx,
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	)
+
+	defer func() {
+		wf.Cleanup()
+	}()
+
 	if err != nil {
 		return err
 	}
@@ -294,17 +312,18 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
-	// There should only be one target after quickstart
-	if len(wf.SDKOverviewURLs) == 1 {
-		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		browser.OpenURL(overviewURL)
-	}
-
 	if changeDirMsg != "" {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
-	return nil
+	if shouldLaunchStudio(ctx, wf, true) {
+		err = studio.LaunchStudio(ctx, wf)
+	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
+		overviewURL := wf.SDKOverviewURLs[initialTarget]
+		browser.OpenURL(overviewURL)
+	}
+
+	return err
 }
 
 func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, initialTarget, outDir string, skipCompile bool) (bool, error) {
@@ -347,13 +366,26 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	)
 
 	err = wf.RunWithVisualization(ctx)
-	// There should only be one target after quickstart
-	if err == nil && len(wf.SDKOverviewURLs) == 1 {
-		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		browser.OpenURL(overviewURL)
-	}
 
 	return true, err
+}
+
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
+	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
+	if !canLaunch {
+		return false
+	}
+
+	offerDeclineOption := !fromQuickstart && config.SeenStudio()
+
+	if offerDeclineOption {
+		message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
+		return interactivity.SimpleConfirm(message, true)
+	}
+
+	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. The Speakeasy Studio can help you fix them.\n", numDiagnostics)
+	log.From(ctx).PrintfStyled(styles.HeavilyEmphasized, message)
+	return interactivity.SimpleButton("↵ Launch Studio", "Press enter to continue")
 }
 
 func printSampleSpecMessage(absSchemaPath string) {

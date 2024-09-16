@@ -6,7 +6,7 @@ servers:
   - url: http://localhost:{port}
     variables:
       port:
-        default: '8080'
+        default: "8080"
         description: The port number the CLI server is running on
 paths:
   /health:
@@ -14,53 +14,39 @@ paths:
       summary: Health Check
       description: Check the CLI health and return relevant information.
       operationId: checkHealth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tabID:
+                  type: string
+                  description: The tab ID of the studio
       responses:
-        '200':
+        "200":
           description: Successful response
           content:
             text/event-stream:
               x-speakeasy-sse-sentinel: "[DONE]"
               schema:
-                $ref: '#/components/schemas/HealthResponse'
+                $ref: "#/components/schemas/HealthResponse"
   /run:
     get:
       summary: Run
       description: Get the output of the last run.
       operationId: getRun
       responses:
-        '200':
+        "200":
           description: Successful response
           content:
-            application/json:
+            text/event-stream:
               schema:
-                $ref: '#/components/schemas/RunResponse'
+                $ref: "#/components/schemas/RunResponseStreamEvent"
     post:
       summary: Run
       description: Regenerate the currently selected targets.
       operationId: run
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RunResponse'
-  /source:
-    get:
-      summary: Get Source
-      description: Retrieve the source information from the workflow file, before and after applying the studio modifications overlay.
-      operationId: getSource
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SourceResponse'
-    post:
-      summary: Update Source
-      description: Update the source with studio modifications overlay contents. This will re-run the source in the workflow.
-      operationId: updateSource
       requestBody:
         required: true
         content:
@@ -71,27 +57,29 @@ paths:
                 overlay:
                   type: string
                   description: The studio modifications overlay contents - this should be an overlay YAML document
-              required:
-                - overlay
+                input:
+                  type: string
+                  description: The input spec for the source
       responses:
-        '200':
+        "200":
           description: Successful response
           content:
-            application/json:
+            text/event-stream:
               schema:
-                $ref: '#/components/schemas/SourceResponse'
+                oneOf:
+                  - $ref: "#/components/schemas/RunResponseStreamEvent"
   /suggest/method-names:
     get:
       summary: Suggest Method Names
       description: Suggest method names for the current source.
       operationId: suggestMethodNames
       responses:
-        '200':
+        "200":
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuggestResponse'
+                $ref: "#/components/schemas/SuggestResponse"
 
 components:
   schemas:
@@ -108,27 +96,42 @@ components:
       type: object
       description: Map of target run summaries
       properties:
+        step:
+            type: string
+            description: Step of the run
+        isPartial:
+          type: boolean
+          description: Whether the run was partial
         lintingReportLink:
           type: string
           description: Link to the linting report
         sourceResult:
-          $ref: '#/components/schemas/SourceResponse'
+          $ref: "#/components/schemas/SourceResponse"
         targetResults:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/TargetRunSummary'
+            $ref: "#/components/schemas/TargetRunSummary"
           description: Map of target results
         workflow:
-          $ref: '#/components/schemas/Workflow'
+          $ref: "#/components/schemas/Workflow"
           description: Workflow information
         workingDirectory:
           type: string
           description: Working directory
+        took:
+          type: integer
+          description: Time taken to run the workflow in milliseconds
+        error:
+          type: string
+          description: Error message if the run failed
       required:
         - sourceResult
         - targetResults
         - workflow
         - workingDirectory
+        - took
+        - isPartial
+        - step
     TargetRunSummary:
       type: object
       properties:
@@ -169,20 +172,23 @@ components:
         overlay:
           type: string
           description: Studio modifications overlay contents (could be empty string)
+        overlayPath:
+          type: string
+          description: Studio modifications overlay path
         output:
           type: string
           description: Result of running the source in the workflow
         diagnosis:
           type: array
           items:
-            $ref: '#/components/schemas/Diagnostic'
+            $ref: "#/components/schemas/Diagnostic"
           description: List of validation errors
       required:
         - sourceID
         - input
         - overlay
+        - overlayPath
         - output
-        - diagnosis
     SuggestResponse:
       type: object
       properties:
@@ -203,12 +209,12 @@ components:
         sources:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/Source'
+            $ref: "#/components/schemas/Source"
           description: Map of sources
         targets:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/Target'
+            $ref: "#/components/schemas/Target"
           description: Map of targets
       required:
         - version
@@ -221,12 +227,12 @@ components:
         inputs:
           type: array
           items:
-            $ref: '#/components/schemas/Document'
+            $ref: "#/components/schemas/Document"
           description: List of input documents
         overlays:
           type: array
           items:
-            $ref: '#/components/schemas/Overlay'
+            $ref: "#/components/schemas/Overlay"
           description: List of overlays
         output:
           type: string
@@ -235,7 +241,7 @@ components:
           type: string
           description: Ruleset string
         registry:
-          $ref: '#/components/schemas/SourceRegistry'
+          $ref: "#/components/schemas/SourceRegistry"
           description: Source registry information
     Diagnostic:
       type: object
@@ -271,7 +277,7 @@ components:
           type: string
           description: Document location
         auth:
-          $ref: '#/components/schemas/Auth'
+          $ref: "#/components/schemas/Auth"
           description: Authentication information
       required:
         - location
@@ -279,10 +285,10 @@ components:
       type: object
       properties:
         fallbackCodeSamples:
-          $ref: '#/components/schemas/FallbackCodeSamples'
+          $ref: "#/components/schemas/FallbackCodeSamples"
           description: Fallback code samples
         document:
-          $ref: '#/components/schemas/Document'
+          $ref: "#/components/schemas/Document"
           description: Document information
     SourceRegistry:
       type: object
@@ -308,10 +314,10 @@ components:
           type: string
           description: Output string
         publishing:
-          $ref: '#/components/schemas/Publishing'
+          $ref: "#/components/schemas/Publishing"
           description: Publishing information
         codeSamples:
-          $ref: '#/components/schemas/CodeSamples'
+          $ref: "#/components/schemas/CodeSamples"
           description: Code samples
       required:
         - target
@@ -323,7 +329,7 @@ components:
           type: string
           description: Output string
         registry:
-          $ref: '#/components/schemas/SourceRegistry'
+          $ref: "#/components/schemas/SourceRegistry"
           description: Source registry information
     FallbackCodeSamples:
       type: object
@@ -341,11 +347,32 @@ components:
         - authSecret
     Publishing:
       type: object
+    RunResponseStreamEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          description: Type of the stream
+        data:
+          $ref: "#/components/schemas/RunResponse"
+    SourceResponseStreamEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          description: Type of the stream
+        data:
+          $ref: "#/components/schemas/SourceResponse"
   securitySchemes:
     secret:
       type: apiKey
       name: x-secret-key
       in: header
 security:
-  - secret: [ ]
-  
+  - secret: []

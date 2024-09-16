@@ -6,35 +6,40 @@ actions:
   - target: $["paths"]["/run"]["get"]
     x-speakeasy-modification:
       created_at: 1723739390834
+      reviewed_at: 1725122245820
       type: method-name
       before: sdk.<no_group>.getRun()
-      after: sdk.runs.getLastOutput()
-    update: {}
+      after: sdk.run.getLastResult()
+    update:
+      x-speakeasy-group: run
+      x-speakeasy-name-override: getLastResult
   - target: $["paths"]["/run"]["post"]
     x-speakeasy-modification:
-      created_at: 1723739390834
+      created_at: 1725122168100
+      reviewed_at: 1725122245820
       type: method-name
       before: sdk.<no_group>.run()
-      after: sdk.runs.create()
-    update: {}
-  - target: $["paths"]["/source"]["get"]
+      after: sdk.run.reRun()
+    update:
+      x-speakeasy-group: run
+      x-speakeasy-name-override: reRun
+  - target: $["paths"]["/health"]["get"]
     x-speakeasy-modification:
-      created_at: 1723739390834
+      created_at: 1725122168100
+      reviewed_at: 1725122245820
       type: method-name
-      before: sdk.<no_group>.getSource()
-      after: sdk.source.get()
-    update: {}
-  - target: $["paths"]["/source"]["post"]
-    x-speakeasy-modification:
-      created_at: 1723739390834
-      type: method-name
-      before: sdk.<no_group>.updateSource()
-      after: sdk.source.update()
-    update: {}
+      before: sdk.<no_group>.checkHealth()
+      after: sdk.health.check()
+    update:
+      x-speakeasy-group: health
+      x-speakeasy-name-override: check
   - target: $["paths"]["/suggest/method-names"]["get"]
     x-speakeasy-modification:
-      created_at: 1723739390834
+      created_at: 1725122168100
+      reviewed_at: 1725122245820
       type: method-name
       before: sdk.<no_group>.suggestMethodNames()
-      after: sdk.methods.suggestNames()
-    update: {}
+      after: sdk.suggest.methodNames()
+    update:
+      x-speakeasy-group: suggest
+      x-speakeasy-name-override: methodNames
