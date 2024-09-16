@@ -430,6 +430,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
+github.com/ory/dockertest v3.3.5+incompatible h1:iLLK6SQwIhcbrG783Dghaaa3WPzGc+4Emza6EbVUUGA=
+github.com/ory/dockertest v3.3.5+incompatible/go.mod h1:1vX4m9wsvi00u5bseYwXaSnhNrne+V0E6LAcBILJdPs=
 github.com/pb33f/doctor v0.0.8 h1:vvBDPJZkQ4AcpexXcCn88G49OuaLdA+o9kvpswXdYYE=
 github.com/pb33f/doctor v0.0.8/go.mod h1:ZGm2CrCJZwltpmHOeTFwynglnqhgF4bxIf82976OSXs=
 github.com/pb33f/libopenapi-validator v0.1.0 h1:3XvtjtsMwPDM3qsC7ITrwVAzCLvOxKZLVKBukVBSRmY=
@@ -526,10 +528,6 @@ github.com/speakeasy-api/openapi-overlay v0.9.0 h1:Wrz6NO02cNlLzx1fB093lBlYxSI54
 github.com/speakeasy-api/openapi-overlay v0.9.0/go.mod h1:f5FloQrHA7MsxYg9djzMD5h6dxrHjVVByWKh7an8TRc=
 github.com/speakeasy-api/sdk-gen-config v1.22.0 h1:BGiTEiseH6xjCbddOTF/SN3CL2rGCsQayf3BxXkTqTA=
 github.com/speakeasy-api/sdk-gen-config v1.22.0/go.mod h1:e9PjnCRHGa4K4EFKVU+kKmihOZjJ2V4utcU+274+bnQ=
-github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.13.0 h1:MLLjjf2x2h9HFZY1Awfl/FO5AqCMPxb+0xPwvbQQ49w=
-github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.13.0/go.mod h1:b4fiZ1Wid0JHwwiYqhaPifDwjmC15uiN7A8Cmid+9kw=
-github.com/speakeasy-api/speakeasy-core v0.15.3 h1:9bBywhqMwBgXUu7UKznLD1ypxTyIKC//01W/Zu3YCfU=
-github.com/speakeasy-api/speakeasy-core v0.15.3/go.mod h1:oKhKOkLTohKir7dt4QSvugF/+9uP9T6ONGv3haF+ne8=
 github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 h1:atzohw12oQ5ipaLb1q7ntTu4vvAgKDJsrvaUoOu6sw0=
 github.com/speakeasy-api/speakeasy-go-sdk v1.8.1/go.mod h1:XbzaM0sMjj8bGooz/uEtNkOh1FQiJK7RFuNG3LPBSAU=
 github.com/speakeasy-api/speakeasy-proxy v0.0.2 h1:u4rQ8lXvuYRCSxiLQGb5JxkZRwNIDlyh+pMFYD6OGjA=
