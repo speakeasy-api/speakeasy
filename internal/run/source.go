@@ -1,7 +1,9 @@
 package run
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -34,7 +36,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -147,13 +149,21 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		if len(source.Overlays) == 0 {
 			singleLocation = &outputLocation
 		}
-		currentDocument, err = schema.ResolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
+		currentDocument, err = schemas.ResolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
 		if err != nil {
 			return "", nil, err
 		}
-		// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
-		if len(source.Overlays) == 0 && source.Inputs[0].IsSpeakeasyRegistry() {
-			outputLocation = currentDocument
+		if len(source.Overlays) == 0 {
+			// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
+			if source.Inputs[0].IsSpeakeasyRegistry() {
+				outputLocation = currentDocument
+			}
+			// If we aren't going to touch the document because it's a single input document with no overlay, then check if we should reformat it
+			// Primarily this is to improve readability of single-line documents in the Studio and Linting output
+			if reformattedLocation, wasReformatted, err := maybeReformatDocument(ctx, currentDocument, rootStep); err == nil && wasReformatted {
+				currentDocument = reformattedLocation
+				outputLocation = reformattedLocation
+			}
 		}
 	} else {
 		mergeStep := rootStep.NewSubstep("Merge Documents")
@@ -167,7 +177,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 		inSchemas := []string{}
 		for _, input := range source.Inputs {
-			resolvedPath, err := schema.ResolveDocument(ctx, input, nil, mergeStep)
+			resolvedPath, err := schemas.ResolveDocument(ctx, input, nil, mergeStep)
 			if err != nil {
 				return "", nil, err
 			}
@@ -199,7 +209,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		for _, overlay := range source.Overlays {
 			overlayFilePath := ""
 			if overlay.Document != nil {
-				overlayFilePath, err = schema.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
+				overlayFilePath, err = schemas.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
 				if err != nil {
 					return "", nil, err
 				}
@@ -220,8 +230,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 					return "", nil, err
 				}
 			}
-			overlaySchemas = append(overlaySchemas, overlayFilePath)
 
+			overlaySchemas = append(overlaySchemas, overlayFilePath)
 		}
 
 		overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(source.Overlays)))
@@ -776,4 +786,50 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(path)))
+}
+
+func maybeReformatDocument(ctx context.Context, documentPath string, rootStep *workflowTracking.WorkflowStep) (string, bool, error) {
+	content, err := os.ReadFile(documentPath)
+	if err != nil {
+		log.From(ctx).Warnf("Failed to read document: %v", err)
+		return documentPath, false, err
+	}
+
+	// Check if the file is only a single line
+	if bytes.Count(content, []byte("\n")) == 0 {
+		reformatStep := rootStep.NewSubstep("Reformatting Single-Line Document")
+
+		returnErr := func(err error) (string, bool, error) {
+			log.From(ctx).Warnf("Failed to reformat document: %v", err)
+			reformatStep.Fail()
+			return documentPath, false, err
+		}
+
+		isJSON := json.Valid(content)
+
+		reformattedContent, err := schemas.Format(ctx, documentPath, !isJSON)
+		if err != nil {
+			return returnErr(fmt.Errorf("failed to format document: %w", err))
+		}
+
+		// Write reformatted content to a new temporary file
+		if err := os.MkdirAll(workflow.GetTempDir(), os.ModePerm); err != nil {
+			return returnErr(fmt.Errorf("failed to create temp dir: %w", err))
+		}
+		tempFile, err := os.CreateTemp(workflow.GetTempDir(), "reformatted*"+filepath.Ext(documentPath))
+		if err != nil {
+			return returnErr(fmt.Errorf("failed to create temporary file: %w", err))
+		}
+		defer tempFile.Close()
+
+		if _, err := tempFile.Write(reformattedContent); err != nil {
+			return returnErr(fmt.Errorf("failed to write reformatted content: %w", err))
+		}
+
+		reformatStep.Succeed()
+		log.From(ctx).Infof("Document reformatted and saved to: %s", tempFile.Name())
+		return tempFile.Name(), true, nil
+	}
+
+	return documentPath, false, nil
 }
