@@ -91,10 +91,10 @@ func UpsertOverlayIntoSource(source *workflow.Source, overlayPath string) {
 	}
 
 	// Add the new overlay to the source, if not already present
-	if !slices.ContainsFunc(source.Overlays, func(o workflow.Overlay) bool { return o.Document.Location == overlayPath }) {
+	if !slices.ContainsFunc(source.Overlays, func(o workflow.Overlay) bool { return o.Document.Location.Reference() == overlayPath }) {
 		source.Overlays = append(source.Overlays, workflow.Overlay{
 			Document: &workflow.Document{
-				Location: overlayPath,
+				Location: workflow.LocationString(overlayPath),
 			},
 		})
 	}

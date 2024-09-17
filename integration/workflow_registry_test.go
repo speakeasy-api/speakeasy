@@ -110,7 +110,7 @@ func TestRegistryFlow(t *testing.T) {
 	registryLocation := workflowFile.Sources["test-source"].Registry.Location.String()
 	require.True(t, len(registryLocation) > 0, "registry location should be set")
 
-	workflowFile.Sources["test-source"].Inputs[0].Location = registryLocation
+	workflowFile.Sources["test-source"].Inputs[0].Location = workflow.LocationString(registryLocation)
 	require.NoError(t, workflow.Save(temp, workflowFile))
 
 	// Re-run the generation. It should work.

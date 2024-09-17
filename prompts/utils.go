@@ -90,7 +90,7 @@ func getCurrentInputs(currentSource *workflow.Source) []string {
 	var sources []string
 	if currentSource != nil {
 		for _, input := range currentSource.Inputs {
-			sources = append(sources, input.Location)
+			sources = append(sources, input.Location.Reference())
 		}
 	}
 	return sources

@@ -111,7 +111,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		var orgSlug, workspaceSlug, registryNamespace string
 		if isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil {
 			d := w.workflow.Sources[sourceID].Inputs[0]
-			registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
+			registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location.Resolve())
 			if registryBreakdown == nil {
 				return "", nil, fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
 			}
@@ -133,7 +133,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 		registryLocation := fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
 			lockSource.SourceNamespace, lockSource.SourceRevisionDigest)
-		d := workflow.Document{Location: registryLocation}
+		d := workflow.Document{Location: workflow.LocationString(registryLocation)}
 		docPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
 		if err != nil {
 			return "", nil, fmt.Errorf("error resolving registry bundle from %s: %w", registryLocation, err)
@@ -318,7 +318,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 
 	changesStep.NewSubstep("Downloading prior revision")
 
-	d := workflow.Document{Location: oldRegistryLocation}
+	d := workflow.Document{Location: workflow.LocationString(oldRegistryLocation)}
 	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
 	if err != nil {
 		return

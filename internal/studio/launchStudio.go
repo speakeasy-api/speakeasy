@@ -13,6 +13,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/samber/lo"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
+
 	"github.com/speakeasy-api/speakeasy-core/auth"
 
 	"github.com/pkg/browser"
@@ -22,6 +28,32 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
 )
+
+// CanLaunch returns true if the studio can be launched, and the number of diagnostics
+func CanLaunch(ctx context.Context, wf *run.Workflow) (bool, int) {
+	if len(wf.SourceResults) != 1 {
+		// Only one source at a time is supported in the studio at the moment
+		return false, 0
+	}
+
+	sourceResult := maps.Values(wf.SourceResults)[0]
+
+	if !utils.IsInteractive() || env.IsGithubAction() {
+		return false, 0
+	}
+
+	if sourceResult.LintResult == nil {
+		// No lint result indicates the spec wasn't even loaded successfully, the studio can't help with that
+		return false, 0
+	}
+
+	// TODO: include more relevant diagnostics as we go!
+	numDiagnostics := lo.SumBy(maps.Values(sourceResult.Diagnosis), func(x []suggestions.Diagnostic) int {
+		return len(x)
+	})
+
+	return numDiagnostics > 0, numDiagnostics
+}
 
 func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	secret, err := getOrCreateSecret()
@@ -39,6 +71,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", handler(handlers.root))
 	mux.HandleFunc("/health", handler(handlers.health))
 
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
@@ -66,17 +99,19 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 
 	serverURL := auth.GetWorkspaceBaseURL(ctx)
 
-	url := fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
+	handlers.StudioURL = fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
 
-	if err := browser.OpenURL(url); err != nil {
-		fmt.Println("Please open the following URL in your browser:", url)
+	listeningMessage := fmt.Sprintf("Listening on http://localhost:%d\n", port)
+
+	if err := browser.OpenURL(handlers.StudioURL); err != nil {
+		fmt.Println(listeningMessage+"Please open the following URL in your browser: ", handlers.StudioURL)
 	} else {
-		fmt.Println("Opening URL in your browser:", url)
+		fmt.Println(listeningMessage+"Opening URL in your browser: ", handlers.StudioURL)
 	}
 
 	// After ten seconds, if the health check hasn't been seen then kill the server
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Minute)
 		if !handlers.healthCheckSeen {
 			log.From(ctx).Warnf("Health check not seen, shutting down server")
 			err := server.Shutdown(context.Background())
@@ -109,7 +144,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func authMiddleware(secret string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Secret-Key") != secret {
+		if r.Header.Get("X-Secret-Key") != secret && r.URL.Path != "/" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

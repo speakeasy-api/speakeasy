@@ -3,6 +3,8 @@ package generate
 import (
 	"context"
 	"fmt"
+	"github.com/AlekSi/pointer"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/codesamples"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -61,15 +63,14 @@ var codeSamplesCmd = &model.ExecutableCommand[codeSamplesFlags]{
 }
 
 func runCodeSamples(ctx context.Context, flags codeSamplesFlags) error {
-	var style codesamples.CodeSamplesStyle
+	var opts workflow.CodeSamples
 	switch flags.Style {
-	case "standard":
-		style = codesamples.Default
 	case "readme":
-		style = codesamples.ReadMe
+		opts.Style = pointer.ToString("readme")
+		//Nothing to do in default case, rely on code samples default
 	}
 
-	_, err := codesamples.GenerateOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs, false, style)
+	_, err := codesamples.GenerateOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs, false, opts)
 
 	if err == nil {
 		locationString := "Overlay file written to stdout"

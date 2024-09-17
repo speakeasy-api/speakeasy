@@ -26,7 +26,7 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 		return nil, fmt.Errorf("unable to use speakeasy registry reference without authenticating")
 	}
 
-	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location)
+	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location.Resolve())
 	if registryBreakdown == nil {
 		return nil, fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
 	}

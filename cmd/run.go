@@ -37,7 +37,7 @@ type RunFlags struct {
 	Verbose            bool              `json:"verbose"`
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
-	LaunchStudio       bool              `json:"launch-studio"`
+	Watch              bool              `json:"watch"`
 	GitHub             bool              `json:"github"`
 }
 
@@ -147,7 +147,8 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Description: "the manual version to apply to the generated SDK",
 		},
 		flag.BooleanFlag{
-			Name:        "launch-studio",
+			Name:        "watch",
+			Shorthand:   "w",
 			Description: "launch the web studio for improving the quality of the generated SDK",
 			Required:    false,
 		},
@@ -322,6 +323,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 
 	err = workflow.Run(ctx)
 
+	// We don't return the error here because we want to try to launch the studio to help fix the issue, if possible
 	if err != nil {
 		log.From(ctx).Error(err.Error())
 	}
@@ -330,11 +332,11 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
-	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
-		err = studio.LaunchStudio(ctx, workflow)
+	if studioErr, studioLaunched := maybeLaunchStudio(ctx, workflow, flags); !studioLaunched {
+		return err // Now return the original error if we didn't launch the studio
+	} else {
+		return studioErr
 	}
-
-	return err
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
@@ -392,15 +394,29 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		workflow.RootStep.Finalize(err == nil)
 	}
 
+	// We don't return the error here because we want to try to launch the studio to help fix the issue, if possible
 	if err != nil {
 		log.From(ctx).Error(err.Error())
 	} else {
 		workflow.PrintSuccessSummary(ctx)
 	}
 
-	if flags.LaunchStudio || shouldLaunchStudio(ctx, workflow, false) {
-		err = studio.LaunchStudio(ctx, workflow)
+	if studioErr, studioLaunched := maybeLaunchStudio(ctx, workflow, flags); !studioLaunched {
+		return err // Now return the original error if we didn't launch the studio
+	} else {
+		return studioErr
+	}
+}
+
+func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags) (error, bool) {
+	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
+	if canLaunch && flags.Watch {
+		return studio.LaunchStudio(ctx, wf), true
+	} else if numDiagnostics > 1 {
+		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", numDiagnostics)
+	} else if numDiagnostics == 1 {
+		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `1` potential improvement for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`")
 	}
 
-	return err
+	return nil, false
 }

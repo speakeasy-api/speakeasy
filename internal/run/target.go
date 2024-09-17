@@ -101,7 +101,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	} else {
 		outDir = w.ProjectDir
 	}
-	targetLock.OutLocation = outDir
 
 	published := t.IsPublished()
 
@@ -191,15 +190,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			outputPath = filepath.Join(*t.Output, outputPath)
 		}
 
-		style := codesamples.Default
-		if t.CodeSamples.Style != nil {
-			switch *t.CodeSamples.Style {
-			case "readme":
-				style = codesamples.ReadMe
-			}
-		}
-
-		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, style)
+		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, *t.CodeSamples)
 		if err != nil {
 			return sourceRes, nil, err
 		}
@@ -359,7 +350,7 @@ func (w *Workflow) printTargetSuccessMessage(ctx context.Context) {
 	var additionalLines []string
 	for target, url := range w.SDKOverviewURLs {
 		link := links.Shorten(ctx, url)
-		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─`%s` overview: %s", target, styles.Dimmed.Render(link))))
+		additionalLines = append(additionalLines, styles.Success.Render(fmt.Sprintf("└─`%s` overview: ", target))+styles.DimmedItalic.Render(link))
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))

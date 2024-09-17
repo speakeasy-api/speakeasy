@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/samber/lo"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
@@ -34,6 +35,7 @@ type StudioHandlers struct {
 	SourceID       string
 	OverlayPath    string
 	Ctx            context.Context
+	StudioURL      string
 
 	mutex           sync.Mutex
 	mutexCondition  *sync.Cond
@@ -58,7 +60,7 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 		// If there are multiple modifications overlays - we take the last one
 		contents, _ := isStudioModificationsOverlay(overlay)
 		if contents != "" {
-			ret.OverlayPath = overlay.Document.Location
+			ret.OverlayPath = overlay.Document.Location.Resolve()
 		}
 	}
 
@@ -205,6 +207,12 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 	return nil
 }
 
+func (h *StudioHandlers) root(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	// In case the user navigates to the root of the studio, redirect them to the studio URL
+	http.Redirect(w, r, h.StudioURL, http.StatusSeeOther)
+	return nil
+}
+
 func (h *StudioHandlers) updateSource(r *http.Request) error {
 	var err error
 
@@ -229,7 +237,7 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input to a remote file"))
 		}
 
-		inputLocation := source.Inputs[0].Location
+		inputLocation := source.Inputs[0].Location.Resolve()
 
 		// if it's absolute that's fine, otherwise it's relative to the project directory
 		if !filepath.IsAbs(inputLocation) {
@@ -272,7 +280,7 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 		return fmt.Errorf("error reading output spec: %w", err)
 	}
 
-	suggestOverlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes)
+	suggestOverlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes, sourceResult.OutputPath)
 	if err != nil {
 		return fmt.Errorf("error suggesting method names: %w", err)
 	}
@@ -315,7 +323,7 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 		Took:             h.WorkflowRunner.Duration.Milliseconds(),
 	}
 
-	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile())
+	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile(), ret.WorkingDirectory)
 	if err != nil {
 		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
 	}
@@ -393,7 +401,13 @@ func (h *StudioHandlers) runSource() (*run.SourceResult, error) {
 	workflowRunner := h.WorkflowRunner
 	sourceID := h.SourceID
 
-	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx, run.WithSkipLinting(), run.WithSkipCleanup())
+	workflowRunnerPtr, err := workflowRunner.Clone(h.Ctx,
+		run.WithSkipCleanup(),
+		run.WithSkipLinting(),
+		run.WithSkipGenerateLintReport(),
+		run.WithSkipSnapshot(true),
+		run.WithSkipChangeReport(true),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error cloning workflow runner: %w", err)
 	}
@@ -450,7 +464,7 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 	finalOverlayPath := ""
 
 	if overlayPath != "" {
-		finalOverlayPath, err = filepath.Abs(overlayPath)
+		finalOverlayPath, _ = filepath.Abs(overlayPath)
 	}
 
 	return &components.SourceResponse{
@@ -487,7 +501,7 @@ func (h *StudioHandlers) upsertOverlay(overlay overlay.Overlay) error {
 	return workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
 }
 
-func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workflow, error) {
+func convertWorkflowToComponentsWorkflow(w workflow.Workflow, workingDir string) (components.Workflow, error) {
 	// 1. Marshal to JSON
 	// 2. Unmarshal to components.Workflow
 
@@ -500,6 +514,40 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow) (components.Workfl
 	err = json.Unmarshal(jsonBytes, &c)
 	if err != nil {
 		return components.Workflow{}, err
+	}
+
+	for key, source := range c.Sources {
+		updatedInputs := lo.Map(source.Inputs, func(input components.Document, _ int) components.Document {
+			// URL
+			if strings.HasPrefix(input.Location, "https://") || strings.HasPrefix(input.Location, "http://") {
+				return input
+			}
+			// Absolute path
+			if strings.HasPrefix(input.Location, "/") {
+				return input
+			}
+			// Registry uri
+			if strings.HasPrefix(input.Location, "registry.speakeasyapi.dev") {
+				return input
+			}
+			if workingDir == "" {
+				return input
+			}
+
+			// Produce the lexically shortest path based on the base path and the location
+			shortestPath, err := filepath.Rel(workingDir, input.Location)
+
+			if err != nil {
+				shortestPath = input.Location
+			}
+
+			return components.Document{
+				Location: shortestPath,
+			}
+		})
+
+		source.Inputs = updatedInputs
+		c.Sources[key] = source
 	}
 
 	return c, nil
@@ -539,14 +587,14 @@ func findWorkflowSourceIDBasedOnTarget(workflow run.Workflow, targetID string) (
 
 func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 	isLocalFile := overlay.Document != nil &&
-		!strings.HasPrefix(overlay.Document.Location, "https://") &&
-		!strings.HasPrefix(overlay.Document.Location, "http://") &&
-		!strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev")
+		!strings.HasPrefix(overlay.Document.Location.Resolve(), "https://") &&
+		!strings.HasPrefix(overlay.Document.Location.Resolve(), "http://") &&
+		!strings.HasPrefix(overlay.Document.Location.Resolve(), "registry.speakeasyapi.dev")
 	if !isLocalFile {
 		return "", nil
 	}
 
-	asString, err := utils.ReadFileToString(overlay.Document.Location)
+	asString, err := utils.ReadFileToString(overlay.Document.Location.Resolve())
 
 	if err != nil {
 		return "", err

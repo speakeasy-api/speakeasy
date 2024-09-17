@@ -12,6 +12,8 @@ type Repository struct {
 	repo *gitc.Repository
 }
 
+// NewLocalRepository will attempt to open a pre-existing git repository in the given directory
+// If no repository is found, it will return an empty Repository
 func NewLocalRepository(dir string) (*Repository, error) {
 	repo, err := gitc.PlainOpenWithOptions(dir, &gitc.PlainOpenOptions{
 		DetectDotGit: true,
@@ -20,6 +22,19 @@ func NewLocalRepository(dir string) (*Repository, error) {
 		return &Repository{}, nil
 	} else if err != nil {
 		return &Repository{}, fmt.Errorf("git: %w", err)
+	}
+
+	return &Repository{repo: repo}, nil
+}
+
+// InitLocalRepository will initialize a new git repository in the given directory
+func InitLocalRepository(dir string) (*Repository, error) {
+	repo, err := gitc.PlainInitWithOptions(dir, &gitc.PlainInitOptions{
+		Bare: false,
+	})
+
+	if err != nil {
+		return &Repository{}, err
 	}
 
 	return &Repository{repo: repo}, nil

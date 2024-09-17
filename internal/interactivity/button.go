@@ -23,6 +23,7 @@ type Button struct {
 	Hovered      bool
 	Clicked      bool
 	ShowValidity bool
+	HelpText     string
 }
 
 type ButtonWithHelperText struct {
@@ -48,12 +49,13 @@ func (b ButtonWithHelperText) View() string {
 	return b.Button.View() + "\n" + style.Render(helperText)
 }
 
-func NewSimpleButton(text string) Button {
+func NewSimpleButton(text string, helpText string) Button {
 	m := Button{
 		Label:        text,
 		Disabled:     false,
 		Hovered:      true,
 		ShowValidity: false,
+		HelpText:     helpText,
 	}
 
 	return m
@@ -102,7 +104,13 @@ func (b *Button) View() string {
 		}
 	}
 
-	return style.Render(b.Label + validnessIndicator)
+	button := style.Render(b.Label + validnessIndicator)
+
+	if b.HelpText != "" {
+		button += "\n" + styles.DimmedItalic.Render(b.HelpText)
+	}
+
+	return button
 }
 
 func (b *Button) OnUserExit() {}
@@ -119,7 +127,7 @@ func (b *Button) Run() bool {
 	return resultingModel.Clicked
 }
 
-func SimpleButton(text string) bool {
-	button := NewSimpleButton(text)
+func SimpleButton(text string, helpText string) bool {
+	button := NewSimpleButton(text, helpText)
 	return button.Run()
 }

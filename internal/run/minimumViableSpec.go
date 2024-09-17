@@ -26,7 +26,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 
 	substep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
-	baseLocation := source.Inputs[0].Location
+	baseLocation := source.Inputs[0].Location.Resolve()
 	workingDir := workflow.GetTempDir()
 
 	// This is intended to only be used from quickstart, we must assume a singular input document
@@ -65,7 +65,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 		}
 	}()
 
-	_, _, model, err := openapi.LoadDocument(ctx, source.Inputs[0].Location)
+	_, _, model, err := openapi.LoadDocument(ctx, source.Inputs[0].Location.Resolve())
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to load document: %w", err)
 	}
