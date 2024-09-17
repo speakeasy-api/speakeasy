@@ -144,7 +144,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func authMiddleware(secret string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Secret-Key") != secret {
+		if r.Header.Get("X-Secret-Key") != secret && r.URL.Path != "/" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
