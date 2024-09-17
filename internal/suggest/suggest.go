@@ -102,9 +102,9 @@ func SuggestOperationIDs(ctx context.Context, schema []byte, schemaPath string) 
 	}
 
 	/* Get suggestion */
-	res, err := client.Suggest.SuggestOpenAPI(ctx, operations.SuggestOpenAPIRequest{
+	res, err := client.Suggest.Suggest(ctx, operations.SuggestRequest{
 		SuggestRequestBody: shared.SuggestRequestBody{
-			SuggestionType: shared.SuggestionTypeMethodNames,
+			SuggestionType: shared.SuggestRequestBodySuggestionTypeMethodNames,
 			OasSummary:     utils.ConvertOASSummary(*summary),
 			Diagnostics:    utils.ConvertDiagnosis(diagnosis),
 		},
@@ -164,7 +164,7 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 
 	arrow := styles.HeavilyEmphasized.Render("->")
 	for i := range lhs {
-		l := lipgloss.NewStyle().Width(maxWidth).Render(lhs[i])
-		logger.Printf("%s %s %s", l, arrow, rhs[i])
+		l := lipgloss.NewStyle().Width(maxWidth).Render(strings.TrimSpace(lhs[i]))
+		logger.Printf("%s %s %s", l, arrow, strings.TrimSpace(rhs[i]))
 	}
 }

@@ -6,17 +6,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/samber/lo"
-	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/exp/maps"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/samber/lo"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/exp/maps"
 
 	"github.com/speakeasy-api/speakeasy-core/auth"
 
@@ -70,6 +71,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", handler(handlers.root))
 	mux.HandleFunc("/health", handler(handlers.health))
 
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
@@ -97,12 +99,14 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 
 	serverURL := auth.GetWorkspaceBaseURL(ctx)
 
-	url := fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
+	handlers.StudioURL = fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
 
-	if err := browser.OpenURL(url); err != nil {
-		fmt.Println("Please open the following URL in your browser:", url)
+	listeningMessage := fmt.Sprintf("Listening on http://localhost:%d\n", port)
+
+	if err := browser.OpenURL(handlers.StudioURL); err != nil {
+		fmt.Println(listeningMessage+"Please open the following URL in your browser: ", handlers.StudioURL)
 	} else {
-		fmt.Println("Opening URL in your browser:", url)
+		fmt.Println(listeningMessage+"Opening URL in your browser: ", handlers.StudioURL)
 	}
 
 	// After ten seconds, if the health check hasn't been seen then kill the server
@@ -140,7 +144,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func authMiddleware(secret string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Secret-Key") != secret {
+		if r.Header.Get("X-Secret-Key") != secret && r.URL.Path != "/" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

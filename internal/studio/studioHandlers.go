@@ -35,6 +35,7 @@ type StudioHandlers struct {
 	SourceID       string
 	OverlayPath    string
 	Ctx            context.Context
+	StudioURL      string
 
 	mutex           sync.Mutex
 	mutexCondition  *sync.Cond
@@ -203,6 +204,12 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 	// This keeps the connection open while the client is still connected
 	<-ctx.Done()
 
+	return nil
+}
+
+func (h *StudioHandlers) root(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	// In case the user navigates to the root of the studio, redirect them to the studio URL
+	http.Redirect(w, r, h.StudioURL, http.StatusSeeOther)
 	return nil
 }
 
