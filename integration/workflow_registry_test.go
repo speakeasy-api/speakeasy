@@ -3,6 +3,7 @@ package integration_tests
 import (
     "crypto/md5"
     "fmt"
+    "gopkg.in/yaml.v3"
     "os"
     "path/filepath"
     "testing"
@@ -134,7 +135,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
         },
         Targets: map[string]workflow.Target{
             "test-target": {
-                Target: "go",
+                Target: "typescript",
                 Source: "test-source",
             },
         },
@@ -142,7 +143,9 @@ func TestRegistryFlow_JSON(t *testing.T) {
 
     err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
     require.NoError(t, err)
-    require.NoError(t, workflow.Save(temp, workflowFile))
+    b, err := yaml.Marshal(workflowFile)
+    require.NoError(t, err)
+    require.NoError(t, os.WriteFile(filepath.Join(temp, ".speakeasy", "workflow.yaml"), b, 0o644))
 
     // Run the initial generation
     initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
