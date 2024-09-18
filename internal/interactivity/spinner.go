@@ -68,6 +68,5 @@ func StartSpinner(message string) func() {
 
 	return func() {
 		p.Send(exitMsg{})
-		p.Quit()
 	}
 }

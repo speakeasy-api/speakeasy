@@ -3,6 +3,9 @@ package suggest
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +18,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
-	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 
@@ -38,7 +40,7 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 
 	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
 
-	overlay, err := SuggestOperationIDs(ctx, schemaBytes)
+	overlay, err := SuggestOperationIDs(ctx, schemaBytes, schemaLocation)
 
 	stopSpinner()
 
@@ -74,7 +76,17 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 	return nil
 }
 
-func SuggestOperationIDs(ctx context.Context, schema []byte) (*overlay.Overlay, error) {
+func SuggestOperationIDs(ctx context.Context, schema []byte, schemaPath string) (*overlay.Overlay, error) {
+	summary, err := openapi.GetOASSummary(schema, schemaPath)
+	if err != nil || summary == nil {
+		return nil, fmt.Errorf("failed to get OAS summary: %w", err)
+	}
+
+	diagnosis, err := suggestions.Diagnose(ctx, *summary)
+	if err != nil {
+		return nil, err
+	}
+
 	httpClient := &http.Client{Timeout: 5 * time.Minute}
 	severURL := speakeasy.ServerList[speakeasy.ServerProd]
 	if strings.Contains(auth.GetServerURL(), "localhost") {
@@ -89,15 +101,11 @@ func SuggestOperationIDs(ctx context.Context, schema []byte) (*overlay.Overlay, 
 	}
 
 	/* Get suggestion */
-	res, err := client.Suggest.SuggestOpenAPI(ctx, operations.SuggestOpenAPIRequest{
-		RequestBody: operations.SuggestOpenAPIRequestBody{
-			Opts: &shared.SuggestOpts{
-				SuggestionType: shared.SuggestionTypeMethodNames,
-			},
-			Schema: operations.Schema{
-				FileName: "openapi.yaml",
-				Content:  schema,
-			},
+	res, err := client.Suggest.Suggest(ctx, operations.SuggestRequest{
+		SuggestRequestBody: shared.SuggestRequestBody{
+			SuggestionType: shared.SuggestRequestBodySuggestionTypeMethodNames,
+			OasSummary:     utils.ConvertOASSummary(*summary),
+			Diagnostics:    utils.ConvertDiagnosis(diagnosis),
 		},
 	})
 	if err != nil || res.Schema == nil {
@@ -155,7 +163,7 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 
 	arrow := styles.HeavilyEmphasized.Render("->")
 	for i := range lhs {
-		l := lipgloss.NewStyle().Width(maxWidth).Render(lhs[i])
-		logger.Printf("%s %s %s", l, arrow, rhs[i])
+		l := lipgloss.NewStyle().Width(maxWidth).Render(strings.TrimSpace(lhs[i]))
+		logger.Printf("%s %s %s", l, arrow, strings.TrimSpace(rhs[i]))
 	}
 }
