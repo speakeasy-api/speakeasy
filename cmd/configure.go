@@ -387,14 +387,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	var workflowFileDir string
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
-			return err
-		}
-		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
-	}
-
-	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
+		return fmt.Errorf("we couldn't find .speakeasy/workflow.yaml make sure you are in your SDK directory")
 	}
 
 	var publishingOptions []huh.Option[string]
@@ -532,16 +525,8 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	var workflowFileDir string
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
-			return err
-		}
-		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
+		return fmt.Errorf("we couldn't find .speakeasy/workflow.yaml make sure you are in your SDK directory")
 	}
-
-	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
-	}
-
 	ctx = events.SetTargetInContext(ctx, workingDir)
 
 	// check if the git repository is a github URI
