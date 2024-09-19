@@ -139,8 +139,8 @@ func GetRootCommand() *cobra.Command {
 }
 
 func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
-	// Don't display if piping to a file for example or running locally during development
-	if !utils.IsInteractive() { //TODO || env.IsLocalDev() {
+	// Don't display if piping to a file for example
+	if !utils.IsInteractive() {
 		return
 	}
 
