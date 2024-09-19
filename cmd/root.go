@@ -7,8 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/env"
-
 	"github.com/speakeasy-api/speakeasy/cmd/generate"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -141,8 +139,8 @@ func GetRootCommand() *cobra.Command {
 }
 
 func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
-	// Don't display if piping to a file for example or running locally during development
-	if !utils.IsInteractive() || env.IsLocalDev() {
+	// Don't display if piping to a file for example
+	if !utils.IsInteractive() {
 		return
 	}
 
@@ -155,12 +153,14 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
 		return
 	}
 
+	mainStyle := styles.Emphasized.Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary)
+	inverseStyle := styles.Emphasized.Background(styles.Colors.SpeakeasySecondary).Foreground(styles.Colors.SpeakeasyPrimary)
+
 	versionString := fmt.Sprintf("A new version of the Speakeasy CLI is available: v%s", newerVersion.String())
-	updateString := "Run `speakeasy update` to update to the latest version"
+	updateString := fmt.Sprintf("Run %s%s", inverseStyle.Render("speakeasy update"), mainStyle.Render(" to update to the latest version"))
 
 	l := log.From(ctx)
-	style := styles.Emphasized.Background(styles.Colors.SpeakeasyPrimary).Foreground(styles.Colors.SpeakeasySecondary).Padding(1, 2)
-	l.PrintfStyled(style, "%s\n%s", versionString, updateString)
+	l.PrintfStyled(mainStyle.Padding(1, 2), "%s\n%s", versionString, updateString)
 	l.Println("\n")
 
 	return
