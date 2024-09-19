@@ -8,6 +8,7 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/download"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/registry"
 )
@@ -29,12 +30,16 @@ func ResolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 		}
 
 		location := workflow.GetTempDir()
-		if outputLocation != nil {
-			location = *outputLocation
-		}
 		documentOut, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, location)
 		if err != nil {
 			return "", err
+		}
+
+		if outputLocation != nil {
+			// Copy actual document out of bundle over to outputLocation
+			if err := utils.CopyFile(documentOut.LocalFilePath, *outputLocation); err != nil {
+				return "", err
+			}
 		}
 
 		return documentOut.LocalFilePath, nil
