@@ -35,6 +35,7 @@ func ResolveDocument(ctx context.Context, d workflow.Document, outputLocation *s
 			return "", err
 		}
 
+		// Note that workflows with inputs from the registry will not work with $refs to other files in the bundle
 		if outputLocation != nil {
 			// Copy actual document out of bundle over to outputLocation
 			if err := utils.CopyFile(documentOut.LocalFilePath, *outputLocation); err != nil {
