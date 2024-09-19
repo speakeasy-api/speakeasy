@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
+	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -18,7 +20,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -32,11 +33,12 @@ import (
 )
 
 const (
-	appInstallationLink  = "https://github.com/apps/speakeasy-github/installations/new"
-	repositorySecretPath = "Settings > Secrets & Variables > Actions"
-	actionsPath          = "Actions > Generate"
-	githubSetupDocs      = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
-	appInstallURL        = "https://github.com/apps/speakeasy-github"
+	appInstallationLink     = "https://github.com/apps/speakeasy-github/installations/new"
+	repositorySecretPath    = "Settings > Secrets & Variables > Actions"
+	actionsPath             = "Actions > Generate"
+	githubSetupDocs         = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
+	appInstallURL           = "https://github.com/apps/speakeasy-github"
+	ErrWorkflowFileNotFound = spkErrors.Error("we couldn't find your Speakeasy workflow file (`.speakeasy/workflow.yaml`). Make sure you are in your SDK directory")
 )
 
 const configureLong = `# Configure
@@ -387,14 +389,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	var workflowFileDir string
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
-			return err
-		}
-		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
-	}
-
-	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
+		return ErrWorkflowFileNotFound
 	}
 
 	var publishingOptions []huh.Option[string]
@@ -532,16 +527,8 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	var workflowFileDir string
 	workflowFile, _, _ := workflow.Load(workingDir)
 	if workflowFile == nil {
-		if err := promptForWorkflowFileDir(workingDir, &workflowFileDir); err != nil {
-			return err
-		}
-		workflowFile, _, _ = workflow.Load(filepath.Join(workingDir, workflowFileDir))
+		return ErrWorkflowFileNotFound
 	}
-
-	if workflowFile == nil {
-		return fmt.Errorf("you cannot run configure when a speakeasy workflow does not exist, make sure you are in your SDK directory")
-	}
-
 	ctx = events.SetTargetInContext(ctx, workingDir)
 
 	// check if the git repository is a github URI
