@@ -280,7 +280,7 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 		return fmt.Errorf("error reading output spec: %w", err)
 	}
 
-	suggestOverlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes)
+	suggestOverlay, err := suggest.SuggestOperationIDs(h.Ctx, specBytes, sourceResult.OutputPath)
 	if err != nil {
 		return fmt.Errorf("error suggesting method names: %w", err)
 	}
