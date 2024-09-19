@@ -19,8 +19,7 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	overlayUtil "github.com/speakeasy-api/speakeasy/internal/overlay"
-	"github.com/speakeasy-api/speakeasy/internal/schema"
+	"github.com/speakeasy-api/speakeasy/internal/schemas"
 
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
@@ -34,7 +33,7 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 		yamlOut = true
 	}
 
-	schemaBytes, _, model, err := schema.LoadDocument(ctx, schemaLocation)
+	schemaBytes, _, model, err := schemas.LoadDocument(ctx, schemaLocation)
 	if err != nil {
 		return err
 	}
@@ -64,7 +63,7 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 			return err
 		}
 
-		finalBytes, err := overlayUtil.Render(root, schemaLocation, yamlOut)
+		finalBytes, err := schemas.Render(root, schemaLocation, yamlOut)
 		if err != nil {
 			return err
 		}
