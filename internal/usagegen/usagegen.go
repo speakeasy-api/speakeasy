@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -157,6 +158,22 @@ func ParseUsageOutput(lang, s string) ([]UsageSnippet, error) {
 		}
 		snippets[i] = *snippet
 	}
+	sort.SliceStable(snippets, func(i, j int) bool {
+		// First by path, then by method
+		if snippets[i].Path != snippets[j].Path {
+			return snippets[i].Path < snippets[j].Path
+		}
+		if snippets[i].Method != snippets[j].Method {
+			return snippets[i].Method < snippets[j].Method
+		}
+		if snippets[i].OperationId != snippets[j].OperationId {
+			return snippets[i].OperationId < snippets[j].OperationId
+		}
+		if snippets[i].Language != snippets[j].Language {
+			return snippets[i].Language < snippets[j].Language
+		}
+		return snippets[i].Snippet < snippets[j].Snippet
+	})
 
 	return snippets, nil
 }
