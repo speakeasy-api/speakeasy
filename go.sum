@@ -510,6 +510,8 @@ github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9yS
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/sourcegraph/jsonrpc2 v0.2.0 h1:KjN/dC4fP6aN9030MZCJs9WQbTOjWHhrtKVpzzSrr/U=
 github.com/sourcegraph/jsonrpc2 v0.2.0/go.mod h1:ZafdZgk/axhT1cvZAPOhw+95nz2I/Ra5qMlU4gTRwIo=
+github.com/speakeasy-api/doctor v0.0.0-20240920145439-74ab55243125 h1:NuSdCdaomuF04obAwxOJxSkNvkz3/1FruKtbNOIxndI=
+github.com/speakeasy-api/doctor v0.0.0-20240920145439-74ab55243125/go.mod h1:QUd4weB7WSxBD1lKJj82JPO+iDWvO7mK70QJV/P93nc=
 github.com/speakeasy-api/easytemplate v0.11.1 h1:YGEPoldsiXcfhPWN/12B2m78+67RhuFB09HzrVmnX4A=
 github.com/speakeasy-api/easytemplate v0.11.1/go.mod h1:C2px2dvDShpIVSMy6IjKymMNHMHWKv/wngLsf9bLHkA=
 github.com/speakeasy-api/go-ordered-map/v2 v2.0.0-20240813202817-2f1629387283 h1:QPZc0Mne/K4/R0giVVay0YODjMwP/BMSpYnQm5kWBgE=
