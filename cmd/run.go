@@ -313,6 +313,13 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		opts...,
 	)
 
+	// If we are in --watch mode (e.g the studio), we want to run the recommended
+	// ruleset that also includes additional rules such as missing-examples, which
+	// are not enabled by default in the generation only ruleset.
+	if flags.Watch {
+		workflow.RulesetOverride = "speakeasy-recommended"
+	}
+
 	defer func() {
 		workflow.Cleanup()
 	}()
@@ -380,7 +387,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 	switch flags.Output {
 	case "summary":
-		err = workflow.RunWithVisualization(ctx)
+		err = workflow.RunWithVisualization(ctx, flags.Debug)
 	case "mermaid":
 		err = workflow.Run(ctx)
 		workflow.RootStep.Finalize(err == nil)
@@ -409,7 +416,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 }
 
 func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags) (error, bool) {
-	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
+	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf, flags.Debug)
 	if canLaunch && flags.Watch {
 		return studio.LaunchStudio(ctx, wf), true
 	} else if numDiagnostics > 1 {

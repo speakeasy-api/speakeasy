@@ -34,6 +34,7 @@ type Workflow struct {
 	RepoSubDirs            map[string]string
 	InstallationURLs       map[string]string
 	RegistryTags           []string
+	RulesetOverride        string
 
 	// Internal
 	workflowName       string
