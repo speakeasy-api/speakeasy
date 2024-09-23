@@ -165,8 +165,8 @@ github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 h1:R/ZjJpjQK
 github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731/go.mod h1:M9R1FoZ3y//hwwnJtO51ypFGwm8ZfpxPT/ZLtO1mcgQ=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6baUTXGLOoWe4PQhGxaX0KpnayAqC48p4=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f/go.mod h1:vw97MGsxSvLiUE2X8qFplwetxpGLQrlU1Q9AUEIzCaM=
-github.com/ettle/strcase v0.1.1 h1:htFueZyVeE1XNnMEfbqp5r67qAN/4r6ya1ysq8Q+Zcw=
-github.com/ettle/strcase v0.1.1/go.mod h1:hzDLsPC7/lwKyBOywSHEP89nt2pDgdy+No1NBA9o9VY=
+github.com/ettle/strcase v0.2.0 h1:fGNiVF21fHXpX1niBgk0aROov1LagYsOwV/xqKDKR/Q=
+github.com/ettle/strcase v0.2.0/go.mod h1:DajmHElDSaX76ITe3/VHVyMin4LWSJN5Z909Wp+ED1A=
 github.com/evanw/esbuild v0.23.1 h1:ociewhY6arjTarKLdrXfDTgy25oxhTZmzP8pfuBTfTA=
 github.com/evanw/esbuild v0.23.1/go.mod h1:D2vIQZqV/vIf/VRHtViaUtViZmG7o+kKmlBfVQuRi48=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
@@ -430,8 +430,6 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
-github.com/pb33f/doctor v0.0.8 h1:vvBDPJZkQ4AcpexXcCn88G49OuaLdA+o9kvpswXdYYE=
-github.com/pb33f/doctor v0.0.8/go.mod h1:ZGm2CrCJZwltpmHOeTFwynglnqhgF4bxIf82976OSXs=
 github.com/pb33f/libopenapi-validator v0.1.0 h1:3XvtjtsMwPDM3qsC7ITrwVAzCLvOxKZLVKBukVBSRmY=
 github.com/pb33f/libopenapi-validator v0.1.0/go.mod h1:Cwdf0GUmnUrbw1LBpcGV1Wx5q/LC9akREV4Jc6/yJDc=
 github.com/pb33f/openapi-changes v0.0.61 h1:GGkvKfbZ5B6a1GmqfsxiUgyQekDC0RuLFw8MbTJTxFo=
@@ -522,8 +520,8 @@ github.com/speakeasy-api/jsonpath v0.1.1 h1:79gtq+zHYPe9dR1urEwl/PPsvP9nMRTGG1xH
 github.com/speakeasy-api/jsonpath v0.1.1/go.mod h1:Py01TnxRUMhC0/FT954KBiaDY2/kaZv3QMc8JxQaVys=
 github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826 h1:IT86QeGi61zmS/iKkf5rSzxYMO1TDLN/to4ZWP2DyeI=
 github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826/go.mod h1:EjqZbDvviAL4wH/7DF43JuA17D1YTIydhs8qZmjYrWo=
-github.com/speakeasy-api/openapi-generation/v2 v2.421.3 h1:NEPFAm+ccj4+aCSDmfiwdb4tbAzK1vuei8AYfEw6UfU=
-github.com/speakeasy-api/openapi-generation/v2 v2.421.3/go.mod h1:tFfp/O/WSHenBf1TXTuAzAakVQuUvNzYGBj1ULI/gYs=
+github.com/speakeasy-api/openapi-generation/v2 v2.422.6 h1:IyjHQHvnl/6NFFtN8UoFphnJgnvOLO89gtOVMvOAGm4=
+github.com/speakeasy-api/openapi-generation/v2 v2.422.6/go.mod h1:lRF25fWcyjBjFkJtpAtJUk7R5Kx8ZHyHQZHXkkcCpLo=
 github.com/speakeasy-api/openapi-overlay v0.9.0 h1:Wrz6NO02cNlLzx1fB093lBlYxSI54VRhy1aSutx0PQg=
 github.com/speakeasy-api/openapi-overlay v0.9.0/go.mod h1:f5FloQrHA7MsxYg9djzMD5h6dxrHjVVByWKh7an8TRc=
 github.com/speakeasy-api/sdk-gen-config v1.23.1 h1:aWdBKehsi9xUMEVbU5UmZ9OBaHxEnPKUnFNMQpFLSFM=
