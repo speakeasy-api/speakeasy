@@ -305,6 +305,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	}
 
@@ -312,14 +313,6 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		ctx,
 		opts...,
 	)
-
-	// If we are in --watch mode (e.g explicitly running the studio), we want to
-	// run the recommended ruleset that also includes additional rules such as
-	// missing-examples, which are not enabled by default in the generation only
-	// ruleset.
-	if flags.Watch {
-		workflow.RulesetOverride = "speakeasy-recommended"
-	}
 
 	defer func() {
 		workflow.Cleanup()
@@ -366,6 +359,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	}
 
