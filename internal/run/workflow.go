@@ -34,7 +34,11 @@ type Workflow struct {
 	RepoSubDirs            map[string]string
 	InstallationURLs       map[string]string
 	RegistryTags           []string
-	RulesetOverride        string
+
+	// RulesetOverride is used to override the rulesets used for validating
+	// Will take precedence over the ruleset set in the workflow file for the
+	// source being run.
+	RulesetOverride string
 
 	// Internal
 	workflowName       string
