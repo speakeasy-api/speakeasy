@@ -12,3 +12,18 @@ updates:
           - patch
     schedule:
       interval: weekly
+  - package-ecosystem: gomod
+    directory: "/"
+    # Try to group minor and patch updates for less toil
+    groups:
+      gomod-minor-and-patch:
+        applies-to: version-updates
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Updated via ./scripts/upgrade.bash
+      - dependency-name: "github.com/speakeasy-api/openapi-generation/v2"
+    schedule:
+      interval: weekly
