@@ -49,7 +49,7 @@ jobs:
         run: |
           go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/marketing-site/src/pages/docs/speakeasy-cli -doc-site
       - name: Commit and push changes to speakeasy repo
-        uses: stefanzweifel/git-auto-commit-action@3ea6ae190baf489ba007f7c92608f33ce20ef04a # v4.16.0
+        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
         with:
           repository: speakeasy
           commit_message: "docs: update speakeasy cli docs [skip ci]"
