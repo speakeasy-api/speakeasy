@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Conventional Commits
-        uses: TriPSs/conventional-changelog-action@b7f32a8347e86c26ea2f4823cc7c160b9014c6a0 # v3.18.1
+        uses: TriPSs/conventional-changelog-action@3a392e9aa44a72686b0fc13259a90d287dd0877c # v5.3.0
         with:
           github-token: ${{ secrets.github_token }}
           skip-commit: "true"
