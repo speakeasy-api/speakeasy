@@ -305,6 +305,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	}
 
@@ -358,6 +359,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
+		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 	}
 
