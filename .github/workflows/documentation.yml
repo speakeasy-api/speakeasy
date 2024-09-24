@@ -37,7 +37,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
         run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
       - name: Set up Go 1.x
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: ^1.21
       - name: Generate speakeasy cli docs
