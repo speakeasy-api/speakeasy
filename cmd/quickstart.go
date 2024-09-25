@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/git"
@@ -17,6 +16,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	gitc "github.com/go-git/go-git/v5"
 	"github.com/speakeasy-api/huh"
@@ -320,7 +320,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		browser.OpenURL(overviewURL)
+		utils.OpenInBrowser(overviewURL)
 	}
 
 	return err

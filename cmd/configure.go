@@ -3,15 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/pkg/browser"
+	"github.com/pkg/errors"
+	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
+
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -557,7 +557,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 			}
 
 			if continueAfterInstall {
-				browser.OpenURL(appInstallURL)
+				utils.OpenInBrowser(appInstallURL)
 				logger.Println(styles.Info.Render("Install the Github App then continue with `speakeasy configure github`!\n"))
 				return nil
 			}
