@@ -13,9 +13,9 @@ jobs:
     name: Conventional Commits
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: webiny/action-conventional-commits@v1.1.0
-      - uses: amannn/action-semantic-pull-request@v5
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: webiny/action-conventional-commits@8bc41ff4e7d423d56fa4905f6ff79209a78776c7 # v1.3.0
+      - uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-test:
@@ -33,20 +33,20 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: ">=1.20.0"
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5.2.0
         with:
           python-version: "3.8"
 
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
         with:
           node-version: "16.x"
           registry-url: "https://registry.npmjs.org"
@@ -66,7 +66,7 @@ jobs:
           GIT_AUTH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
         run: git config --global url."https://speakeasybot:${env:GIT_AUTH_TOKEN}@github.com".insteadOf "https://github.com"
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: |
             ~/go/pkg/mod

@@ -18,18 +18,18 @@ jobs:
           chcp 65001 #set code page to utf-8
           echo ("GOPRIVATE=github.com/speakeasy-api") >> $env:GITHUB_ENV
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
       - name: Conventional Commits
-        uses: TriPSs/conventional-changelog-action@v3
+        uses: TriPSs/conventional-changelog-action@3a392e9aa44a72686b0fc13259a90d287dd0877c # v5.3.0
         with:
           github-token: ${{ secrets.github_token }}
           skip-commit: "true"
           output-file: "false"
           skip-on-empty: "false"
           preset: conventionalcommits
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: ">=1.21.0"
           cache: true
@@ -38,7 +38,7 @@ jobs:
       - name: Configure git for private modules
         run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
       - name: Setup Choco
-        uses: crazy-max/ghaction-chocolatey@v2
+        uses: crazy-max/ghaction-chocolatey@0e015857dd851f84fcb7fb53380eb5c4c8202333 # v3.0.0
         with:
           args: --version
       - name: goreleaser

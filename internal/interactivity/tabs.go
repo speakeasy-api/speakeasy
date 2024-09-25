@@ -91,8 +91,16 @@ func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
 	return border
 }
 
+func inactiveTabBorderWithBottom(left, middle, right string) lipgloss.Border {
+	border := lipgloss.HiddenBorder()
+	border.BottomLeft = left
+	border.Bottom = middle
+	border.BottomRight = right
+	return border
+}
+
 var (
-	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
+	inactiveTabBorder = inactiveTabBorderWithBottom("─", "─", "─")
 	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
 	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
 	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
@@ -124,7 +132,7 @@ func (m *tabsModel) View() string {
 		if isFirst && isActive {
 			border.BottomLeft = "│"
 		} else if isFirst && !isActive {
-			border.BottomLeft = "├"
+			border.BottomLeft = "╭"
 		}
 
 		style = style.Border(border)

@@ -22,12 +22,12 @@ jobs:
 
     steps:
       - name: Checkout speakeasy repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           path: speakeasy
           token: ${{ secrets.DOCUMENTATION_PAT }}
       - name: Checkout speakeasy-registry repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           repository: speakeasy-api/speakeasy-registry
           path: speakeasy-registry
@@ -37,7 +37,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
         run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
       - name: Set up Go 1.x
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: ^1.21
       - name: Generate speakeasy cli docs
@@ -49,12 +49,12 @@ jobs:
         run: |
           go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/marketing-site/src/pages/docs/speakeasy-cli -doc-site
       - name: Commit and push changes to speakeasy repo
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
         with:
           repository: speakeasy
           commit_message: "docs: update speakeasy cli docs [skip ci]"
       - name: Create PR against speakeasy-registry
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
         with:
           path: speakeasy-registry
           token: ${{ secrets.DOCUMENTATION_PAT }}
