@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 var docSiteRoot = "/docs/speakeasy-cli"

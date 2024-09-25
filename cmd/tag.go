@@ -3,16 +3,17 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/exp/maps"
+	"maps"
+	"slices"
 	"strings"
 
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/registry"
 )
 
@@ -129,7 +130,7 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 	// Dedup revisions
 	revisions := make(map[string]revision)
 
-	opts := strings.Join(maps.Keys(wf.Sources), ", ")
+	opts := strings.Join(slices.Collect(maps.Keys(wf.Sources)), ", ")
 	for _, source := range sources {
 		if _, ok := wf.Sources[source]; !ok {
 			return nil, fmt.Errorf("source %s not found in workflow.yaml. Options: %s", source, opts)
@@ -144,7 +145,7 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 		addRevision(ctx, revisions, source, namespace, revisionDigest)
 	}
 
-	opts = strings.Join(maps.Keys(wf.Targets), ", ")
+	opts = strings.Join(slices.Collect(maps.Keys(wf.Targets)), ", ")
 	for _, target := range targets {
 		if _, ok := wf.Targets[target]; !ok {
 			return nil, fmt.Errorf("target %s not found in workflow.yaml. Options: %s", target, opts)
@@ -159,7 +160,7 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 		addRevision(ctx, revisions, target, namespace, revisionDigest)
 	}
 
-	return maps.Values(revisions), nil
+	return slices.Collect(maps.Values(revisions)), nil
 }
 
 func addRevision(ctx context.Context, revisions map[string]revision, owner, namespace, revisionDigest string) {
