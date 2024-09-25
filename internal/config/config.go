@@ -3,13 +3,13 @@ package config
 import (
 	"context"
 	"fmt"
-	core "github.com/speakeasy-api/speakeasy-core/auth"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"golang.org/x/exp/maps"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 
+	core "github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/spf13/viper"
 )
 
@@ -88,7 +88,7 @@ func SetWorkspaceAPIKey(orgSlug, workspaceSlug, key string) error {
 }
 
 func GetAuthenticatedWorkspaces() []string {
-	return maps.Keys(vCfg.GetStringMapString(workspaceKeysKey))
+	return slices.Collect(maps.Keys(vCfg.GetStringMapString(workspaceKeysKey)))
 }
 
 func getWorkspaceKey(orgSlug, workspaceSlug string) string {

@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"golang.org/x/exp/maps"
-	"gopkg.in/yaml.v3"
 	"io"
+	"maps"
 	"slices"
 
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
+	"gopkg.in/yaml.v3"
 )
 
 func FilterOperations(ctx context.Context, schemaPath string, includeOps []string, include bool, yamlOut bool, w io.Writer) error {
@@ -87,7 +87,7 @@ func filterOperations(ctx context.Context, doc libopenapi.Document, model *libop
 }
 
 func BuildRemoveInvalidOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], opToErr map[string]error) overlay.Overlay {
-	return BuildFilterOperationsOverlay(model, false, maps.Keys(opToErr), opToErr)
+	return BuildFilterOperationsOverlay(model, false, slices.Collect(maps.Keys(opToErr)), opToErr)
 }
 
 func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string, opToErr map[string]error) overlay.Overlay {
