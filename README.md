@@ -16,6 +16,7 @@
   <picture>
     <img src="https://github.com/speakeasy-api/speakeasy/assets/68016351/159f0565-0cfa-468a-8fcd-7c3590eea355">
   </picture>
+  <br />
 
   ![ezgif com-video-to-gif (1)](https://github.com/speakeasy-api/speakeasy/assets/90289500/ff6972c4-4e8a-4a5c-a976-75e97cc42f5a)
 </div>
