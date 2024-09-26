@@ -21,7 +21,7 @@
   ![ezgif com-video-to-gif (1)](https://github.com/speakeasy-api/speakeasy/assets/90289500/ff6972c4-4e8a-4a5c-a976-75e97cc42f5a)
 </div>
 <br />
-
+<br />
 ## What is Speakeasy?
 
 [Speakeasy](https://www.speakeasy.com/) gives your users the developer experience that makes API integrations easy.
