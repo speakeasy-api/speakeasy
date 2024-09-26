@@ -23,6 +23,10 @@ updates:
           - minor
           - patch
     ignore:
+      # Ignore private repositories for now. Consider private git "registries"
+      # configuration if we do want to automate these.
+      - dependency-name: "github.com/speakeasy-api/jsonpath"
+      - dependency-name: "github.com/speakeasy-api/speakeasy-core"
       # Updated via ./scripts/upgrade.bash
       - dependency-name: "github.com/speakeasy-api/openapi-generation/v2"
     schedule:
