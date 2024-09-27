@@ -76,9 +76,11 @@ const (
 // Retrieves the default branch from the user's global git config
 // e.g
 // git config --get init.defaultbranch
+// To set:
+// git config --global init.defaultbranch main
 func getDefaultGitBranch() string {
 	if cfg, _ := config.LoadConfig(config.GlobalScope); cfg != nil {
-		if branch := cfg.Raw.Section("init").Options.Get("defaultBranch"); branch != "" {
+		if branch := cfg.Init.DefaultBranch; branch != "" {
 			return branch
 		}
 	}

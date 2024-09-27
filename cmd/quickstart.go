@@ -89,7 +89,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
 		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
 	} else if err == nil {
-		log.From(ctx).Infof("Initialized git repository in %s", workingDir)
+		log.From(ctx).Infof("Initialized new git repository at %s", workingDir)
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
