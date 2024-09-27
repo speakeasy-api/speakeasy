@@ -70,7 +70,7 @@ func (r *Repository) HeadHash() (string, error) {
 }
 
 const (
-	defaultBranch string = "master"
+	defaultBranch string = "main"
 )
 
 // Retrieves the default branch from the user's global git config
