@@ -134,8 +134,6 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/daveshanley/vacuum v0.11.1 h1:mdEVqQWrpOCzmIW7K5pMcfD31qeeNzNO2u9w2efFmU8=
-github.com/daveshanley/vacuum v0.11.1/go.mod h1:9xQ7MHveknEoKJMfo1AEw1dfLwzYU6n6C4TekQV9AxI=
 github.com/dgraph-io/ristretto v0.1.0 h1:Jv3CGQHp9OjuMBSne1485aDpUkTKEcUqF+jm/LuerPI=
 github.com/dgraph-io/ristretto v0.1.0/go.mod h1:fux0lOrBhrVCJd3lcTHsIJhq1T2rokOu6v9Vcb3Q9ug=
 github.com/disintegration/imaging v1.6.2 h1:w1LecBlG2Lnp8B3jk5zSuNqd7b4DXhcjwek1ei82L+c=
@@ -508,14 +506,12 @@ github.com/sourcegraph/jsonrpc2 v0.2.0 h1:KjN/dC4fP6aN9030MZCJs9WQbTOjWHhrtKVpzz
 github.com/sourcegraph/jsonrpc2 v0.2.0/go.mod h1:ZafdZgk/axhT1cvZAPOhw+95nz2I/Ra5qMlU4gTRwIo=
 github.com/speakeasy-api/easytemplate v0.11.1 h1:YGEPoldsiXcfhPWN/12B2m78+67RhuFB09HzrVmnX4A=
 github.com/speakeasy-api/easytemplate v0.11.1/go.mod h1:C2px2dvDShpIVSMy6IjKymMNHMHWKv/wngLsf9bLHkA=
-github.com/speakeasy-api/go-ordered-map/v2 v2.0.0-20240813202817-2f1629387283 h1:QPZc0Mne/K4/R0giVVay0YODjMwP/BMSpYnQm5kWBgE=
-github.com/speakeasy-api/go-ordered-map/v2 v2.0.0-20240813202817-2f1629387283/go.mod h1:DbzwytT4g/odXquuOCqroKvtxxldI4nb3nuesHF/Exo=
 github.com/speakeasy-api/huh v1.1.1 h1:tSBHezk8MRHBwtWqjMB/fepU6HcFWu9esyZxAKw/XAY=
 github.com/speakeasy-api/huh v1.1.1/go.mod h1:iBavR3Ieq/4upEcdq+VXQyeShcoC9cOhsQbhc/cMuLU=
 github.com/speakeasy-api/jsonpath v0.1.1 h1:79gtq+zHYPe9dR1urEwl/PPsvP9nMRTGG1xHR62pM24=
 github.com/speakeasy-api/jsonpath v0.1.1/go.mod h1:Py01TnxRUMhC0/FT954KBiaDY2/kaZv3QMc8JxQaVys=
-github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826 h1:IT86QeGi61zmS/iKkf5rSzxYMO1TDLN/to4ZWP2DyeI=
-github.com/speakeasy-api/libopenapi v0.0.0-20240814113924-cc96d2bc2826/go.mod h1:EjqZbDvviAL4wH/7DF43JuA17D1YTIydhs8qZmjYrWo=
+github.com/speakeasy-api/libopenapi v0.0.0-20240926095056-5de396befa71 h1:bjiGgZ3pqR198H5ZvRZlf9NB/8WAhWwcylgetfEKWZA=
+github.com/speakeasy-api/libopenapi v0.0.0-20240926095056-5de396befa71/go.mod h1:9ap4lXBHgxGyFwxtOfa+B1C3IQ0rvnqteqjJvJ11oiQ=
 github.com/speakeasy-api/openapi-generation/v2 v2.426.0 h1:+R2xypqgep4VWfOq8wcGiszbeWD+ylXPl1h+/9PMiCM=
 github.com/speakeasy-api/openapi-generation/v2 v2.426.0/go.mod h1:08DP7J4+oCAA7433rcylklxBwcB1asT9ooGv2ulOQkk=
 github.com/speakeasy-api/openapi-overlay v0.9.0 h1:Wrz6NO02cNlLzx1fB093lBlYxSI54VRhy1aSutx0PQg=
@@ -532,6 +528,8 @@ github.com/speakeasy-api/speakeasy-proxy v0.0.2 h1:u4rQ8lXvuYRCSxiLQGb5JxkZRwNID
 github.com/speakeasy-api/speakeasy-proxy v0.0.2/go.mod h1:cvMxdIEPYAvXS5mpYMU6CuJRPQnhq4gRXKE7xeCP/V0=
 github.com/speakeasy-api/speakeasy-schemas v1.3.0 h1:7Arm2d0/K9owEBQPmNon1KPERmf58g0Eg/NmPgXaEY0=
 github.com/speakeasy-api/speakeasy-schemas v1.3.0/go.mod h1:g6NfrOjYLCJZp81ZLY2ksF7afC9BW9bL4Bg1V1oAFlw=
+github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f h1:t+hI2D1WaI/v/4Irrumm3aR3mxxEHE5MIUvtgiW342I=
+github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f/go.mod h1:kYBQKRk+mxK3z/nZeyo8VINT3IQtnNVQcpjZra/3bv4=
 github.com/speakeasy-api/versioning-reports v0.6.0 h1:oLokEQ7xnDXqWAQk60Sk+ifwYaRbq3BrLX2KyT8gWxE=
 github.com/speakeasy-api/versioning-reports v0.6.0/go.mod h1:LW5FABrvi5SBbeiD3HJYw0JZYe6Rw2Xna59pFJ2BmLI=
 github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd h1:csraKifkLpqDClUIbFTetjtraueL1KUhKBm6okL+ug4=
@@ -590,6 +588,8 @@ github.com/valyala/fasttemplate v1.2.1 h1:TVEnxayobAdVkhQfrfes2IzOB6o+z4roRkPF52
 github.com/valyala/fasttemplate v1.2.1/go.mod h1:KHLXt3tVN2HBp8eijSv/kGJopbvo7S+qRAEEKiv+SiQ=
 github.com/vmware-labs/yaml-jsonpath v0.3.2 h1:/5QKeCBGdsInyDCyVNLbXyilb61MXGi9NP674f9Hobk=
 github.com/vmware-labs/yaml-jsonpath v0.3.2/go.mod h1:U6whw1z03QyqgWdgXxvVnQ90zN1BWz5V+51Ewf8k+rQ=
+github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240815153524-6ea36470d1bd h1:dLuIF2kX9c+KknGJUdJi1Il1SDiTSK158/BB9kdgAew=
+github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240815153524-6ea36470d1bd/go.mod h1:DbzwytT4g/odXquuOCqroKvtxxldI4nb3nuesHF/Exo=
 github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM=
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778/go.mod h1:2MuV+tbUrU1zIOPMxZ5EncGwgmMJsa+9ucAQZXxsObs=
