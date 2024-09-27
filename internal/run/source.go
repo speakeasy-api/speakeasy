@@ -128,7 +128,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		} else if !isSingleRegistrySource(w.workflow.Sources[sourceID]) && w.workflow.Sources[sourceID].Registry == nil {
 			return "", nil, fmt.Errorf("invalid workflow lockfile: no registry location found for source %s", sourceID)
 		} else if w.workflow.Sources[sourceID].Registry != nil {
-			orgSlug, workspaceSlug, registryNamespace, err = w.workflow.Sources[sourceID].Registry.ParseRegistryLocation()
+			orgSlug, workspaceSlug, registryNamespace, _, err = w.workflow.Sources[sourceID].Registry.ParseRegistryLocation()
 			if err != nil {
 				return "", nil, fmt.Errorf("error parsing registry location %s: %w", string(w.workflow.Sources[sourceID].Registry.Location), err)
 			}
@@ -414,7 +414,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	apiKey := config.GetSpeakeasyAPIKey()
 
 	if source.Registry != nil {
-		orgSlug, workspaceSlug, name, err := source.Registry.ParseRegistryLocation()
+		orgSlug, workspaceSlug, name, _, err := source.Registry.ParseRegistryLocation()
 		if err != nil {
 			if env.IsGithubAction() {
 				return fmt.Errorf("error parsing registry location %s: %w", string(source.Registry.Location), err)

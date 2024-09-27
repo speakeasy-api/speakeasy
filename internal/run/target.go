@@ -244,7 +244,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return "", "", ocicommon.ErrAccessGated
 	}
 
-	orgSlug, workspaceSlug, namespaceName, err := registryLocation.ParseRegistryLocation()
+	orgSlug, workspaceSlug, namespaceName, _, err := registryLocation.ParseRegistryLocation()
 	if err != nil {
 		return "", "", fmt.Errorf("error parsing registry location %s: %w", string(registryLocation.Location), err)
 	}
