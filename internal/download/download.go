@@ -146,7 +146,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 
 	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
 		Registry: reg,
-		Access: access,
+		Access:   access,
 	})
 
 	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, document.Reference)

@@ -17,9 +17,9 @@ const (
 )
 
 type FileCache[T any] struct {
-	dur        time.Duration
-	mutex      sync.Mutex
-	dir 	   string
+	dur            time.Duration
+	mutex          sync.Mutex
+	dir            string
 	value          *T
 	valueExpiresAt *time.Time
 	key            string

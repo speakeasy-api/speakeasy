@@ -22,12 +22,12 @@ import (
 )
 
 const (
-	ArtifactArchContextKey = "cli-artifact-arch"
-    GitHubReleaseRateLimitingLimit = time.Second * 60
+	ArtifactArchContextKey         = "cli-artifact-arch"
+	GitHubReleaseRateLimitingLimit = time.Second * 60
 )
 
 type ReleaseCache struct {
-	Repo *github.RepositoryRelease
+	Repo    *github.RepositoryRelease
 	Release *github.ReleaseAsset
 }
 
@@ -208,7 +208,7 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 		Timeout: timeout,
 	})
 
-	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, "getLatestReleaseGitHub-" + artifactArch, GitHubReleaseRateLimitingLimit)
+	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, "getLatestReleaseGitHub-"+artifactArch, GitHubReleaseRateLimitingLimit)
 
 	cached, err := releaseCache.Get()
 	if err == nil {
@@ -228,7 +228,7 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 		for _, asset := range release.Assets {
 			if strings.Contains(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)) {
 				_ = releaseCache.Store(&ReleaseCache{
-					Repo: release,
+					Repo:    release,
 					Release: asset,
 				})
 				return release, asset, nil
@@ -246,7 +246,7 @@ func getReleaseForVersion(ctx context.Context, version version.Version, artifact
 
 	tag := "v" + version.String()
 
-	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, "repository-release-" + tag, GitHubReleaseRateLimitingLimit)
+	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, "repository-release-"+tag, GitHubReleaseRateLimitingLimit)
 	var release *github.RepositoryRelease
 	if cachedRelease, err := cache.Get(); err == nil {
 		release = cachedRelease
