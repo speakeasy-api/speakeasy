@@ -8,8 +8,6 @@ replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
 
-replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
-
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.18.0
@@ -30,7 +28,7 @@ require (
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.23.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.13.1
-	github.com/speakeasy-api/speakeasy-core v0.15.4
+	github.com/speakeasy-api/speakeasy-core v0.15.5
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
