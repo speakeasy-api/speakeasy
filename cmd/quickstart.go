@@ -378,12 +378,16 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 }
 
 func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
-	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
-	if !canLaunch {
+	if !studio.CanLaunch(ctx, wf) {
 		return false
 	}
 
 	offerDeclineOption := !fromQuickstart && config.SeenStudio()
+
+	numDiagnostics := wf.CountDiagnostics()
+	if numDiagnostics == 0 {
+		return false
+	}
 
 	if offerDeclineOption {
 		message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
