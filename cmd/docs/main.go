@@ -7,11 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/speakeasy/internal/docs"
-	"golang.org/x/exp/slices"
 )
 
 var linkRegex = regexp.MustCompile(`\((.*?\.md)\)`)

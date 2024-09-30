@@ -3,8 +3,10 @@ package migrate
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -13,8 +15,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
 
@@ -225,7 +225,7 @@ func buildGenerationWorkflowFiles(genWorkflow string) (*workflow.Workflow, *conf
 
 	targets := map[string]workflow.Target{}
 	for lang, output := range langToOutput {
-		name := promptForTargetName(lang, maps.Keys(targets))
+		name := promptForTargetName(lang, slices.Collect(maps.Keys(targets)))
 
 		targets[name] = workflow.Target{
 			Source:     defaultSourceName,

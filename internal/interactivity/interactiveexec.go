@@ -2,6 +2,7 @@ package interactivity
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -10,7 +11,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"golang.org/x/exp/slices"
 )
 
 func InteractiveExec(cmd *cobra.Command, args []string, label string) error {

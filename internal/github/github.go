@@ -3,20 +3,20 @@ package github
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/changes"
-	"github.com/speakeasy-api/versioning-reports/versioning"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/markdown"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 type LintingSummary struct {

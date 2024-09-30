@@ -3,18 +3,18 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/exp/maps"
-
-	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
@@ -163,7 +163,7 @@ func lintConfig(ctx context.Context, flags lintConfigFlags) error {
 		return err
 	}
 
-	langs := strings.Join(maps.Keys(targetToConfig), ", ")
+	langs := strings.Join(slices.Collect(maps.Keys(targetToConfig)), ", ")
 
 	msg := styles.RenderSuccessMessage(
 		"SDK generation configuration is valid ✓",
