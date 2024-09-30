@@ -84,14 +84,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return err
 	}
 
-	_, err = git.InitLocalRepository(workingDir)
-
-	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
-		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
-	} else if err == nil {
-		log.From(ctx).Infof("Initialized new git repository at %s", workingDir)
-	}
-
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
 		return ErrWorkflowExists
 	}
@@ -314,6 +306,16 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	if changeDirMsg != "" {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
+	}
+
+	// Initialize a new git repository in the output directory if one
+	// doesn't already exist
+	_, err = git.InitLocalRepository(outDir)
+
+	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
+		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
+	} else if err == nil {
+		log.From(ctx).Infof("Initialized new git repository at %s", outDir)
 	}
 
 	if shouldLaunchStudio(ctx, wf, true) {
