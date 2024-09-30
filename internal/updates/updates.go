@@ -163,6 +163,8 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 		return err
 	}
 
+	defer os.RemoveAll(dirName)
+
 	downloadedPath, err := downloadCLI(dirName, downloadURL, timeout)
 	if err != nil {
 		return fmt.Errorf("failed to download artifact: %w", err)
@@ -253,12 +255,6 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 
 		if err := os.Remove(installLocationOld); err != nil {
 			return fmt.Errorf("failed to replace binary: unable to remove old running executable: %w", err)
-		}
-
-		// TODO: Determine if this should be called after os.MkdirTemp instead:
-		//    defer os.RemoveAll(dirName)
-		if err := os.Remove(tmpBinaryLocation); err != nil {
-			return fmt.Errorf("failed to replace binary: unable to remove source file: %w", err)
 		}
 	}
 
