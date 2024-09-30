@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"io"
 	"os"
 	"path/filepath"
@@ -317,6 +318,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	} else if err == nil {
 		log.From(ctx).Infof("Initialized new git repository at %s", outDir)
 	}
+
+	// Flush event before launching studio so that we don't wait until the studio is closed to send telemetry
+	// Doing it before shouldLaunchStudio because that blocks asking the user for input
+	events.FlushActiveEvent(ctx, err)
 
 	if shouldLaunchStudio(ctx, wf, true) {
 		err = studio.LaunchStudio(ctx, wf)
