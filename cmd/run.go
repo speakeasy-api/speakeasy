@@ -411,12 +411,11 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 }
 
 func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags) (error, bool) {
-	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
-	if canLaunch && flags.Watch {
+	if studio.CanLaunch(ctx, wf) && flags.Watch {
 		return studio.LaunchStudio(ctx, wf), true
-	} else if numDiagnostics > 1 {
-		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", numDiagnostics)
-	} else if numDiagnostics == 1 {
+	} else if wf.CountDiagnostics() > 1 {
+		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", wf.CountDiagnostics())
+	} else if wf.CountDiagnostics() == 1 {
 		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `1` potential improvement for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`")
 	}
 
