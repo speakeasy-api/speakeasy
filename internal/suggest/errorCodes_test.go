@@ -33,8 +33,6 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			err = overlay.ApplyTo(root)
 			require.NoError(t, err)
 
-			yaml.NewEncoder(os.Stdout).Encode(root)
-
 			// Read the expected YAML file
 			expectedBytes, err := os.ReadFile(tt.out)
 			require.NoError(t, err)
