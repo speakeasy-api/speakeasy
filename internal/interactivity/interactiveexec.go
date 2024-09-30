@@ -109,6 +109,8 @@ func RequestFlagValues(commandName string, flags *pflag.FlagSet) ([]*pflag.Flag,
 	var missingRequiredFlags []*pflag.Flag
 	var missingOptionalFlags []*pflag.Flag
 
+	flags.SortFlags = false
+
 	requestValue := func(flag *pflag.Flag) {
 		// If the flag already has a Value, skip it
 		if flag.Changed || flag.Hidden || slices.Contains(utils.FlagsToIgnore, flag.Name) {
