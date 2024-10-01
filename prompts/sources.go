@@ -180,7 +180,6 @@ func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*Quickstar
 
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 
-
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
 
 	if isUsingSampleSpec {

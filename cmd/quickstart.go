@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"io"
 	"os"
 	"path/filepath"
@@ -82,14 +83,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
-	}
-
-	_, err = git.InitLocalRepository(workingDir)
-
-	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
-		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
-	} else if err == nil {
-		log.From(ctx).Infof("Initialized git repository in %s", workingDir)
 	}
 
 	if workflowFile, _, _ := workflow.Load(workingDir); workflowFile != nil {
@@ -316,6 +309,20 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
+	// Initialize a new git repository in the output directory if one
+	// doesn't already exist
+	_, err = git.InitLocalRepository(outDir)
+
+	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
+		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
+	} else if err == nil {
+		log.From(ctx).Infof("Initialized new git repository at %s", outDir)
+	}
+
+	// Flush event before launching studio so that we don't wait until the studio is closed to send telemetry
+	// Doing it before shouldLaunchStudio because that blocks asking the user for input
+	events.FlushActiveEvent(ctx, err)
+
 	if shouldLaunchStudio(ctx, wf, true) {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
@@ -371,12 +378,16 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 }
 
 func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
-	canLaunch, numDiagnostics := studio.CanLaunch(ctx, wf)
-	if !canLaunch {
+	if !studio.CanLaunch(ctx, wf) {
 		return false
 	}
 
 	offerDeclineOption := !fromQuickstart && config.SeenStudio()
+
+	numDiagnostics := wf.CountDiagnostics()
+	if numDiagnostics == 0 {
+		return false
+	}
 
 	if offerDeclineOption {
 		message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)

@@ -261,6 +261,16 @@ func WithRegistryTags(registryTags []string) Opt {
 	}
 }
 
+func (w *Workflow) CountDiagnostics() int {
+	count := 0
+	for _, sourceResult := range w.SourceResults {
+		for _, d := range sourceResult.Diagnosis {
+			count += len(d)
+		}
+	}
+	return count
+}
+
 func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 	return NewWorkflow(
 		ctx,

@@ -58,7 +58,6 @@ func TestWorkflowWithEnvVar(t *testing.T) {
 	require.NoError(t, err)
 }
 
-
 func TestGenerationWorkflows(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
