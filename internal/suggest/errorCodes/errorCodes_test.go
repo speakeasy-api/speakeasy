@@ -1,9 +1,10 @@
-package suggest_test
+package errorCodes_test
 
 import (
 	"context"
+	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
-	"github.com/speakeasy-api/speakeasy/internal/suggest"
+	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -26,7 +27,7 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
 			require.NoError(t, err)
 
-			overlay, err := suggest.BuildErrorCodesOverlay(ctx, model.Model)
+			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, model.Model)
 			require.NoError(t, err)
 
 			root := model.Index.GetRootNode()
@@ -43,6 +44,37 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 
 			// Compare the actual and expected YAML
 			require.YAMLEq(t, string(expectedBytes), string(actualBytes))
+		})
+	}
+}
+
+func TestDiagnose(t *testing.T) {
+	type args struct {
+		name, schema  string
+		expectedCount int
+	}
+	toTest := []args{
+		{"Most errors missing", "testData/simple.yaml", 3},
+		{"Already defined error codes", "testData/simple_expected.yaml", 0},
+	}
+
+	for _, tt := range toTest {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			_, _, model, err := schemas.LoadDocument(ctx, tt.schema)
+			require.NoError(t, err)
+
+			diagnosis := errorCodes.Diagnose(model.Model)
+			if tt.expectedCount == 0 {
+				require.Len(t, diagnosis, 0)
+				return
+			}
+			require.Len(t, diagnosis, 1)
+
+			diagnostics, ok := diagnosis[suggestions.MissingErrorCodes]
+			require.True(t, ok)
+
+			require.Len(t, diagnostics, tt.expectedCount)
 		})
 	}
 }
