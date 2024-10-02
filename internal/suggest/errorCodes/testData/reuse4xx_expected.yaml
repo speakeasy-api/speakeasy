@@ -1,0 +1,307 @@
+openapi: 3.1.0
+info:
+  title: Petstore - OpenAPI 3.1
+  description: |-
+    This is a sample Pet Store Server based on the OpenAPI 3.1 specification.
+  version: 1.0.0
+security:
+  - api_key: []
+servers:
+  - url: https://petstore.swagger.io/v2
+tags:
+  - name: pet
+    description: Everything about your Pets
+paths:
+  "/pet":
+    put:
+      tags:
+        - pet
+      summary: Update an existing pet
+      description: Update an existing pet by Id
+      operationId: updatePet
+      requestBody:
+        description: Update an existent pet in the store
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/Pet"
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Pet"
+        '4XX':
+          $ref: '#/components/responses/InvalidInput'
+        510:
+          $ref: '#/components/responses/InvalidInput'
+        511:
+          $ref: '#/components/responses/Unauthorized'
+        501:
+          $ref: '#/components/responses/NotFound'
+        505:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+        502:
+          $ref: '#/components/responses/InternalServerError'
+        503:
+          $ref: '#/components/responses/InternalServerError'
+        506:
+          $ref: '#/components/responses/InternalServerError'
+        507:
+          $ref: '#/components/responses/InternalServerError'
+        508:
+          $ref: '#/components/responses/InternalServerError'
+        504:
+          $ref: '#/components/responses/Timeout'
+    post:
+      tags:
+        - pet
+      summary: Add a new pet to the store
+      description: Add a new pet to the store
+      operationId: addPet
+      requestBody:
+        description: Create a new pet in the store
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/Pet"
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Pet"
+        '405':
+          description: Invalid input
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        413:
+          $ref: '#/components/responses/InvalidInput'
+        414:
+          $ref: '#/components/responses/InvalidInput'
+        415:
+          $ref: '#/components/responses/InvalidInput'
+        422:
+          $ref: '#/components/responses/InvalidInput'
+        431:
+          $ref: '#/components/responses/InvalidInput'
+        510:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/InvalidInput'
+        407:
+          $ref: '#/components/responses/InvalidInput'
+        511:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        501:
+          $ref: '#/components/responses/NotFound'
+        505:
+          $ref: '#/components/responses/NotFound'
+        429:
+          $ref: '#/components/responses/InvalidInput'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+        502:
+          $ref: '#/components/responses/InternalServerError'
+        503:
+          $ref: '#/components/responses/InternalServerError'
+        506:
+          $ref: '#/components/responses/InternalServerError'
+        507:
+          $ref: '#/components/responses/InternalServerError'
+        508:
+          $ref: '#/components/responses/InternalServerError'
+        408:
+          $ref: '#/components/responses/InvalidInput'
+        504:
+          $ref: '#/components/responses/Timeout'
+  "/pet/findByStatus":
+    get:
+      tags:
+        - pet
+      summary: Finds Pets by status
+      description: Multiple status values can be provided with comma separated strings
+      operationId: findPetsByStatus
+      parameters:
+        - name: status
+          in: query
+          description: Status values that need to be considered for filter
+          required: false
+          explode: true
+          schema:
+            type: string
+            default: available
+            enum:
+              - available
+              - pending
+              - sold
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Pet"
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        413:
+          $ref: '#/components/responses/InvalidInput'
+        414:
+          $ref: '#/components/responses/InvalidInput'
+        415:
+          $ref: '#/components/responses/InvalidInput'
+        422:
+          $ref: '#/components/responses/InvalidInput'
+        431:
+          $ref: '#/components/responses/InvalidInput'
+        510:
+          $ref: '#/components/responses/InvalidInput'
+        403:
+          $ref: '#/components/responses/InvalidInput'
+        407:
+          $ref: '#/components/responses/InvalidInput'
+        511:
+          $ref: '#/components/responses/Unauthorized'
+        501:
+          $ref: '#/components/responses/NotFound'
+        505:
+          $ref: '#/components/responses/NotFound'
+        429:
+          $ref: '#/components/responses/InvalidInput'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+        502:
+          $ref: '#/components/responses/InternalServerError'
+        503:
+          $ref: '#/components/responses/InternalServerError'
+        506:
+          $ref: '#/components/responses/InternalServerError'
+        507:
+          $ref: '#/components/responses/InternalServerError'
+        508:
+          $ref: '#/components/responses/InternalServerError'
+        408:
+          $ref: '#/components/responses/InvalidInput'
+        504:
+          $ref: '#/components/responses/Timeout'
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
+  schemas:
+    Pet:
+      required:
+        - name
+        - photoUrls
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        name:
+          type: string
+          example: doggie
+        status:
+          type: string
+          description: pet status in the store
+          enum:
+            - available
+            - pending
+            - sold
+    ApiErrorInvalidInput:
+      type: object
+      required:
+        - status
+        - error
+      properties:
+        status:
+          type: integer
+          format: int32
+          example: 400
+        error:
+          type: string
+          example: Bad request
+    ApiErrorNotFound:
+      type: object
+      required:
+        - status
+        - error
+        - code
+      properties:
+        status:
+          type: integer
+          format: int32
+          example: 404
+        error:
+          type: string
+          example: Not Found
+        code:
+          type: string
+          example: object_not_found
+    ApiErrorUnauthorized:
+      type: object
+      required:
+        - status
+        - error
+      properties:
+        status:
+          type: integer
+          format: int32
+          example: 401
+        error:
+          type: string
+          example: Unauthorized
+    InternalServerError:
+      type: string
+    TimeoutError:
+      type: string
+  responses:
+    Unauthorized:
+      description: Unauthorized error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorUnauthorized'
+    NotFound:
+      description: Not Found error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorNotFound'
+    InvalidInput:
+      description: Not Found error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorInvalidInput'
+    InternalServerError:
+      description: A collection of status codes that generally mean the server failed in an unexpected way
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/InternalServerError'
+    Timeout:
+      description: Timeouts occurred with the request
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/TimeoutError'
