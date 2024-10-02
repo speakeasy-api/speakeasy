@@ -132,6 +132,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		run.WithSkipGenerateLintReport(),
 		run.WithSkipSnapshot(true),
 		run.WithSkipChangeReport(true),
+		run.WithRulesetOverride(true),
 	)
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
