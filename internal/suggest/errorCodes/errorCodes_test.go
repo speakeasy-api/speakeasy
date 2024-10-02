@@ -29,6 +29,8 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 
 			overlay := errorCodes.BuildErrorCodesOverlay(ctx, model.Model)
 
+			overlay.Format(os.Stdout)
+
 			root := model.Index.GetRootNode()
 			err = overlay.ApplyTo(root)
 			require.NoError(t, err)

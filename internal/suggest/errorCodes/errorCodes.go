@@ -73,7 +73,10 @@ func (b *builder) Build() overlay.Overlay {
 			ref, exists := b.getReferenceForCode(codeToExistingComponent, code)
 			nodes = append(nodes, builder.NewKeyNode(code), builder.NewMultinode("$ref", ref))
 			if !exists {
-				missingComponents = append(missingComponents, b.errorGroups.FindCode(code))
+				missingGroup := b.errorGroups.FindCode(code)
+				if !slices.ContainsFunc(missingComponents, func(g errorGroup) bool { return g.responseName == missingGroup.responseName }) {
+					missingComponents = append(missingComponents, missingGroup)
+				}
 			}
 		}
 
