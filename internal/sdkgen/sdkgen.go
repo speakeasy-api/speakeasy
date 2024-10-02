@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -86,10 +87,15 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		runLocation = "cli"
 	}
 
+	workspaceUri := auth.GetWorkspaceBaseURL(ctx)
+
 	opts := []generate.GeneratorOptions{
 		generate.WithLogger(logger.WithFormatter(log.PrefixedFormatter)),
 		generate.WithCustomerID(customerID),
 		generate.WithWorkspaceID(workspaceID),
+		// We need the workspace uri in the generator to render a link to the
+		// workspace onboarding steps in the readme when it is not yet setup fully
+		generate.WithWorkspaceUri(workspaceUri),
 		generate.WithRunLocation(runLocation),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
 		generate.WithInstallationURL(installationURL),

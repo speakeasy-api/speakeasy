@@ -5,11 +5,8 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/cache"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"net/http"
 	"os"
@@ -17,17 +14,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy/internal/cache"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+
 	"github.com/google/go-github/v58/github"
 	"github.com/hashicorp/go-version"
 )
 
 const (
-	ArtifactArchContextKey = "cli-artifact-arch"
-    GitHubReleaseRateLimitingLimit = time.Second * 60
+	ArtifactArchContextKey         = "cli-artifact-arch"
+	GitHubReleaseRateLimitingLimit = time.Second * 60
 )
 
 type ReleaseCache struct {
-	Repo *github.RepositoryRelease
+	Repo    *github.RepositoryRelease
 	Release *github.ReleaseAsset
 }
 
@@ -161,6 +163,8 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 		return err
 	}
 
+	defer os.RemoveAll(dirName)
+
 	downloadedPath, err := downloadCLI(dirName, downloadURL, timeout)
 	if err != nil {
 		return fmt.Errorf("failed to download artifact: %w", err)
@@ -191,8 +195,67 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 		return err
 	}
 
-	if err := os.Rename(filepath.Join(tmpLocation, binaryName), installLocation); err != nil {
-		return fmt.Errorf("failed to replace binary: %w", err)
+	tmpBinaryLocation := filepath.Join(tmpLocation, binaryName)
+
+	if err := os.Rename(tmpBinaryLocation, installLocation); err != nil {
+		// os.Rename can have issues on Linux when the temporary and install
+		// directories are on separate filesystem mounts. In this case, try to
+		// catch the "invalid cross-device link" error and fallback to manual
+		// file copy and removal.
+		// Reference: https://github.com/golang/go/issues/41487
+		var linkErr *os.LinkError
+
+		if !errors.As(err, &linkErr) || !strings.Contains(linkErr.Err.Error(), "invalid cross-device link") {
+			return fmt.Errorf("failed to replace binary: %w", err)
+		}
+
+		tmpBinaryFile, err := os.Open(tmpBinaryLocation)
+
+		if err != nil {
+			return fmt.Errorf("failed to replace binary: unable to open source file: %w", err)
+		}
+
+		defer tmpBinaryFile.Close()
+
+		// To prevent ETXTBSY errors, write the new executable in the original
+		// location with a .new suffix, rename the running executable as .old,
+		// rename the new executable to the original location (now on same
+		// mount), and remove the old executable.
+		installLocationOld := installLocation + ".old"
+		installLocationNew := installLocation + ".new"
+
+		installFileNew, err := os.Create(installLocationNew)
+
+		if err != nil {
+			return fmt.Errorf("failed to replace binary: unable to create destination file: %w", err)
+		}
+
+		if _, err := io.Copy(installFileNew, tmpBinaryFile); err != nil {
+			_ = installFileNew.Close()
+
+			return fmt.Errorf("failed to replace binary: unable to copy file: %w", err)
+		}
+
+		_ = installFileNew.Close()
+
+		if err := os.Rename(installLocation, installLocationOld); err != nil {
+			_ = os.Remove(installLocationNew)
+
+			return fmt.Errorf("failed to replace binary: unable to rename running executable: %w", err)
+		}
+
+		if err := os.Rename(installLocationNew, installLocation); err != nil {
+			_ = os.Remove(installLocationNew)
+
+			// Ensure original executable path remains valid.
+			_ = os.Rename(installLocationOld, installLocation)
+
+			return fmt.Errorf("failed to replace binary: unable to rename new executable: %w", err)
+		}
+
+		if err := os.Remove(installLocationOld); err != nil {
+			return fmt.Errorf("failed to replace binary: unable to remove old running executable: %w", err)
+		}
 	}
 
 	// Ensure the install is executable
@@ -208,7 +271,7 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 		Timeout: timeout,
 	})
 
-	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, "getLatestReleaseGitHub-" + artifactArch, GitHubReleaseRateLimitingLimit)
+	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, "getLatestReleaseGitHub-"+artifactArch, GitHubReleaseRateLimitingLimit)
 
 	cached, err := releaseCache.Get()
 	if err == nil {
@@ -228,7 +291,7 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 		for _, asset := range release.Assets {
 			if strings.Contains(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)) {
 				_ = releaseCache.Store(&ReleaseCache{
-					Repo: release,
+					Repo:    release,
 					Release: asset,
 				})
 				return release, asset, nil
@@ -246,7 +309,7 @@ func getReleaseForVersion(ctx context.Context, version version.Version, artifact
 
 	tag := "v" + version.String()
 
-	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, "repository-release-" + tag, GitHubReleaseRateLimitingLimit)
+	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, "repository-release-"+tag, GitHubReleaseRateLimitingLimit)
 	var release *github.RepositoryRelease
 	if cachedRelease, err := cache.Get(); err == nil {
 		release = cachedRelease

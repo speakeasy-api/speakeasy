@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	gitc "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
@@ -29,8 +30,17 @@ func NewLocalRepository(dir string) (*Repository, error) {
 
 // InitLocalRepository will initialize a new git repository in the given directory
 func InitLocalRepository(dir string) (*Repository, error) {
+	// Try to retrieve the default branch from the global git config
+	// if the user has an explicit default branch set. Otherwise it
+	// will default to master.
+	branch := getDefaultGitBranch()
+	reference := plumbing.NewBranchReferenceName(branch)
+
 	repo, err := gitc.PlainInitWithOptions(dir, &gitc.PlainInitOptions{
 		Bare: false,
+		InitOptions: gitc.InitOptions{
+			DefaultBranch: reference,
+		},
 	})
 
 	if err != nil {
@@ -57,4 +67,22 @@ func (r *Repository) HeadHash() (string, error) {
 	}
 
 	return head.Hash().String(), nil
+}
+
+const (
+	defaultBranch string = "main"
+)
+
+// Retrieves the default branch from the user's global git config
+// e.g
+// git config --get init.defaultbranch
+// To set:
+// git config --global init.defaultbranch main
+func getDefaultGitBranch() string {
+	if cfg, _ := config.LoadConfig(config.GlobalScope); cfg != nil {
+		if branch := cfg.Init.DefaultBranch; branch != "" {
+			return branch
+		}
+	}
+	return defaultBranch
 }
