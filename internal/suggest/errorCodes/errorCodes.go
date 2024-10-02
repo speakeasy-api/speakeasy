@@ -9,16 +9,23 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"
+	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"gopkg.in/yaml.v3"
 	"slices"
 )
 
-func BuildErrorCodesOverlay(ctx context.Context, document v3.Document) overlay.Overlay {
-	groups := initErrorGroups()
-	groups.DeduplicateComponentNames(document)
+func BuildErrorCodesOverlay(ctx context.Context, schema []byte, schemaPath string) (*overlay.Overlay, error) {
+	_, _, model, err := schemas.LoadDocument(ctx, schemaPath)
+	if err != nil {
+		return nil, err
+	}
 
-	builder := builder{document: document, errorGroups: groups}
-	return builder.Build()
+	groups := initErrorGroups()
+	groups.DeduplicateComponentNames(model.Model)
+
+	builder := builder{document: model.Model, errorGroups: groups}
+	o := builder.Build()
+	return &o, nil
 }
 
 type builder struct {

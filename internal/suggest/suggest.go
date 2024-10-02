@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"io"
 	"io/ioutil"
@@ -28,7 +29,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 )
 
-func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asOverlay, yamlOut bool, w io.Writer) error {
+func SuggestAndWrite(
+	ctx context.Context,
+	modificationType string,
+	schemaLocation string,
+	asOverlay, yamlOut bool,
+	w io.Writer,
+) error {
 	if asOverlay {
 		yamlOut = true
 	}
@@ -40,7 +47,13 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 
 	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
 
-	overlay, err := SuggestOperationIDs(ctx, schemaBytes, schemaLocation)
+	var overlay *overlay.Overlay
+	switch modificationType {
+	case suggestions.ModificationTypeMethodName:
+		overlay, err = SuggestOperationIDs(ctx, schemaBytes, schemaLocation)
+	case suggestions.ModificationTypeErrorNames:
+		overlay, err = errorCodes.BuildErrorCodesOverlay(ctx, schemaBytes, schemaLocation)
+	}
 
 	stopSpinner()
 
@@ -130,6 +143,8 @@ var changedStyle = styles.Dimmed.Strikethrough(true)
 func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 	logger := log.From(ctx)
 
+	println("TRYYING TO PRINT SUGGESTIONS")
+
 	maxWidth := 0
 
 	var lhs []string
@@ -140,6 +155,8 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 		if modification == nil {
 			continue
 		}
+
+		println("GOT MODIFICATION")
 
 		before := changedStyle.Render(modification.Before)
 		after := styles.Success.Render(modification.After)
