@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 
 	"github.com/pb33f/openapi-changes/tui"
@@ -204,7 +202,7 @@ func runHTML(c changes.Changes, flags OpenAPIDiffFlags, shouldOpen bool) error {
 	}
 	fmt.Printf("Report saved to %s\n", flags.Output)
 	if shouldOpen {
-		return openInBrowser(flags.Output)
+		return utils.OpenInBrowser(flags.Output)
 	}
 	return nil
 }
@@ -306,23 +304,4 @@ func processRegistryBundles(ctx context.Context, flags OpenAPIDiffFlags) (bool, 
 	}
 
 	return hasRegistrySchema, oldSchema, newSchema, nil
-}
-
-func openInBrowser(path string) error {
-	var err error
-
-	url := path
-
-	switch runtime.GOOS {
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	default:
-		err = fmt.Errorf("unsupported platform")
-	}
-
-	return err
 }

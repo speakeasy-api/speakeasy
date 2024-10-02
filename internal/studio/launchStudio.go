@@ -19,7 +19,6 @@ import (
 
 	"github.com/speakeasy-api/speakeasy-core/auth"
 
-	"github.com/pkg/browser"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -96,7 +95,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 
 	listeningMessage := fmt.Sprintf("Listening on http://localhost:%d\n", port)
 
-	if err := browser.OpenURL(handlers.StudioURL); err != nil {
+	if err := utils.OpenInBrowser(handlers.StudioURL); err != nil {
 		fmt.Println(listeningMessage+"Please open the following URL in your browser: ", handlers.StudioURL)
 	} else {
 		fmt.Println(listeningMessage+"Opening URL in your browser: ", handlers.StudioURL)
