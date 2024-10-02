@@ -27,8 +27,7 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
 			require.NoError(t, err)
 
-			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, model.Model)
-			require.NoError(t, err)
+			overlay := errorCodes.BuildErrorCodesOverlay(ctx, model.Model)
 
 			root := model.Index.GetRootNode()
 			err = overlay.ApplyTo(root)

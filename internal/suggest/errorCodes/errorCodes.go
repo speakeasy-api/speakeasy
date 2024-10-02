@@ -13,7 +13,7 @@ import (
 	"slices"
 )
 
-func BuildErrorCodesOverlay(ctx context.Context, document v3.Document) (*overlay.Overlay, error) {
+func BuildErrorCodesOverlay(ctx context.Context, document v3.Document) overlay.Overlay {
 	groups := initErrorGroups()
 	groups.DeduplicateComponentNames(document)
 
@@ -26,7 +26,7 @@ type builder struct {
 	errorGroups errorGroupSlice
 }
 
-func (b *builder) Build() (*overlay.Overlay, error) {
+func (b *builder) Build() overlay.Overlay {
 	// Track which operations are missing which response codes
 	targetToMissingCodes := map[string][]string{}
 	// Track if certain response codes are already defined elsewhere in the document so we don't duplicate them
@@ -115,14 +115,14 @@ func (b *builder) Build() (*overlay.Overlay, error) {
 		})
 	}
 
-	return &overlay.Overlay{
+	return overlay.Overlay{
 		Version: "1.0.0",
 		Info: overlay.Info{
 			Title:   "Response Codes Overlay",
 			Version: "0.0.0", // TODO: bump this version
 		},
 		Actions: actions,
-	}, nil
+	}
 }
 
 func incrementCount(m map[string]map[string]int, code, path string) {
