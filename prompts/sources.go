@@ -3,16 +3,21 @@ package prompts
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/huh"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/speakeasy-api/huh"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
+
 	humanize "github.com/dustin/go-humanize/english"
+	"github.com/samber/lo"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/remote"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
@@ -164,18 +169,58 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *stri
 	return groups
 }
 
-func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
+const (
+	recentNamespacesLimit int = 5
+)
+
+func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	source := &workflow.Source{}
 	var sourceName, fileLocation, authHeader string
 
+	// Retrieve recent namespaces and check if there are any available.
+	recentNamespaces, err := remote.FindRecentRemoteNamespaces(ctx, recentNamespacesLimit)
+	hasRecentRemoteNamespaces := err == nil && len(recentNamespaces) > 0
+
+	// Determine if we should use a remote source. Defaults to true before the user
+	// has interacted with the form.
+	useRemoteSource := hasRecentRemoteNamespaces
+
+	if hasRecentRemoteNamespaces {
+		prompt := charm_internal.NewBranchPrompt(
+			"Do you want to base your SDK on an existing remote source?",
+			"Selecting 'Yes' will allow you to pick from the most recently used sources in your workspace",
+			&useRemoteSource,
+		)
+		if _, err := charm_internal.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
+			useRemoteSource = false
+		}
+	}
+
+	selectedRegistryUri := ""
+	if useRemoteSource {
+		namespaceId, err := selectNamespace(ctx, recentNamespaces)
+		if err == nil && namespaceId != "" {
+			selectedRegistryUri, err = fetchRegistryUri(ctx, namespaceId)
+
+			if err != nil {
+				useRemoteSource = false
+			}
+		}
+	}
+
+	// Determine the file location based on existing values or user input.
 	if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
+	} else if useRemoteSource && selectedRegistryUri != "" {
+		// The workflow file will be updated with a registry based input like:
+		// inputs:
+		// - location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/petstore-oas@latest
+		fileLocation = selectedRegistryUri
 	} else {
 		if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
 			return nil, err
 		}
 	}
-
 
 	var summary *openapi.Summary
 	if authHeader == "" {
@@ -183,19 +228,10 @@ func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*Quickstar
 		summary, _ = openapi.GetOASSummary(contents, fileLocation)
 	}
 
-
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
-
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
-
 	if isUsingSampleSpec {
-		quickstart.IsUsingSampleOpenAPISpec = true
-		// Other parts of the code make assumptions that the workflow has a valid source
-		// This is a hack to satisfy those assumptions, we will overwrite this with a proper
-		// file location when we have written the sample spec to disk when we know the SDK output directory
-		fileLocation = "https://example.com/OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
-		sourceName = "petstore-oas"
-		quickstart.SDKName = "Petstore"
+		configureSampleSpec(quickstart, &fileLocation, &sourceName)
 	} else {
 		// No need to prompt for SDK name if we are using a sample spec
 		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
@@ -208,29 +244,27 @@ func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*Quickstar
 		}
 	}
 
+	// Prepare the source with the provided document.
 	document, err := formatDocument(fileLocation, authHeader, false)
 	if err != nil {
 		return nil, err
 	}
-
 	source.Inputs = append(source.Inputs, *document)
 
+	// If registry is enabled, create a registry entry.
 	if registry.IsRegistryEnabled(ctx) && orgSlug != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
-		registryEntry := &workflow.SourceRegistry{}
-		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", orgSlug, auth.GetWorkspaceSlugFromContext(ctx), strcase.ToKebab(sourceName))); err != nil {
+		if err := configureRegistry(source, orgSlug, auth.GetWorkspaceSlugFromContext(ctx), sourceName); err != nil {
 			return nil, err
 		}
-		source.Registry = registryEntry
 	}
 
+	// Validate the source and set it to the quickstart.
 	if err := source.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to validate source")
 	}
-
 	quickstart.WorkflowFile.Sources[sourceName] = *source
 
 	nextState := TargetBase
-
 	return &nextState, nil
 }
 
@@ -297,7 +331,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 			huh.NewGroup(oasLocationPrompt(&fileLocation, false)),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader)...)
-		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
+		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", "", &addOpenAPIFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
 			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
@@ -314,7 +348,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 
 	addOverlayFile := false
 	if _, err := charm_internal.NewForm(huh.NewForm(
-		charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &addOverlayFile)),
+		charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", "", &addOverlayFile)),
 		charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
 		ExecuteForm(); err != nil {
 		return nil, err
@@ -325,7 +359,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		var fileLocation, authHeader string
 		trueVal := true
 		groups := getOverlayPrompts(&trueVal, &fileLocation, &authHeader)
-		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another overlay file to this source?", &addOverlayFile))
+		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another overlay file to this source?", "", &addOverlayFile))
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			groups...),
 			charm_internal.WithTitle(fmt.Sprintf("Let's add to the source %s", name))).
@@ -390,7 +424,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	var groups []*huh.Group
 	var promptForOverlay bool
-	groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
+	groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", "", &promptForOverlay))
 	groups = append(groups, getOverlayPrompts(&promptForOverlay, &overlayFileLocation, &overlayAuthHeader)...)
 	groups = append(groups, huh.NewGroup(
 		charm_internal.NewInlineInput(&outputLocation).
@@ -541,4 +575,60 @@ func validateOpenApiFileLocation(s string, allowEmpty bool) error {
 	}
 
 	return validateDocumentLocation(s, charm_internal.OpenAPIFileExtensions)
+}
+
+// selectNamespace handles the user interaction for selecting a namespace.
+func selectNamespace(ctx context.Context, namespaces []shared.Namespace) (string, error) {
+	nsOpts := make([]huh.Option[string], len(namespaces))
+	for i, ns := range namespaces {
+		nsOpts[i] = huh.NewOption(ns.Name, ns.Name)
+	}
+
+	namespaceId := ""
+	selectPrompt := charm_internal.NewSelectPrompt(
+		"Select a recent remote source",
+		"These are the most recently updated remote sources in your workspace.",
+		nsOpts,
+		&namespaceId,
+	)
+	_, err := charm_internal.NewForm(huh.NewForm(selectPrompt)).ExecuteForm()
+	return namespaceId, err
+}
+
+// fetchRegistryUri fetches the registry URI for a given namespace ID.
+func fetchRegistryUri(ctx context.Context, namespaceId string) (string, error) {
+	revisions, err := remote.FetchRevisions(ctx, namespaceId)
+	if err != nil || len(revisions) == 0 {
+		return "", err
+	}
+
+	// Prefer revision with the 'latest' tag or fallback to the first revision.
+	revision := lo.FindOrElse(revisions, revisions[0], func(rev shared.Revision) bool {
+		return slices.Contains(rev.Tags, "latest")
+	})
+
+	return remote.GetRegistryUriForRevision(ctx, revision)
+}
+
+// configureSampleSpec sets up the sample spec configuration for the quickstart.
+func configureSampleSpec(quickstart *Quickstart, fileLocation, sourceName *string) {
+	quickstart.IsUsingSampleOpenAPISpec = true
+
+	// Other parts of the code make assumptions that the workflow has a valid source
+	// This is a hack to satisfy those assumptions, we will overwrite this with a proper
+	// file location when we have written the sample spec to disk when we know the SDK output directory
+	*fileLocation = "https://example.com/OVERWRITE_WHEN_SAMPLE_SPEC_IS_WRITTEN"
+	*sourceName = "petstore-oas"
+	quickstart.SDKName = "Petstore"
+}
+
+// configureRegistry sets up the registry entry for the source.
+func configureRegistry(source *workflow.Source, orgSlug, workspaceSlug, sourceName string) error {
+	registryEntry := &workflow.SourceRegistry{}
+	namespace := fmt.Sprintf("%s/%s/%s", orgSlug, workspaceSlug, strcase.ToKebab(sourceName))
+	if err := registryEntry.SetNamespace(namespace); err != nil {
+		return err
+	}
+	source.Registry = registryEntry
+	return nil
 }
