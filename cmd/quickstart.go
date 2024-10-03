@@ -4,11 +4,12 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/events"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/events"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
