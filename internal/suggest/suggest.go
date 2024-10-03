@@ -52,7 +52,7 @@ func SuggestAndWrite(
 	case suggestions.ModificationTypeMethodName:
 		overlay, err = SuggestOperationIDs(ctx, schemaBytes, schemaLocation)
 	case suggestions.ModificationTypeErrorNames:
-		overlay, err = errorCodes.BuildErrorCodesOverlay(ctx, schemaBytes, schemaLocation)
+		overlay, err = errorCodes.BuildErrorCodesOverlay(ctx, schemaLocation)
 	}
 
 	stopSpinner()

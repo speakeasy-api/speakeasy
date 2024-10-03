@@ -14,7 +14,7 @@ import (
 	"slices"
 )
 
-func BuildErrorCodesOverlay(ctx context.Context, schema []byte, schemaPath string) (*overlay.Overlay, error) {
+func BuildErrorCodesOverlay(ctx context.Context, schemaPath string) (*overlay.Overlay, error) {
 	_, _, model, err := schemas.LoadDocument(ctx, schemaPath)
 	if err != nil {
 		return nil, err
