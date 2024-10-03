@@ -12,11 +12,12 @@ import (
 	"strings"
 )
 
-func RemoveUnused(ctx context.Context, schemaPath string, w io.Writer) error {
+func RemoveUnused(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
 	return transformer[interface{}]{
 		schemaPath:  schemaPath,
 		transformFn: RemoveOrphans,
 		w:           w,
+		jsonOut:     !yamlOut,
 	}.Do(ctx)
 }
 

@@ -16,11 +16,12 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 )
 
-func FilterOperations(ctx context.Context, schemaPath string, includeOps []string, include bool, w io.Writer) error {
+func FilterOperations(ctx context.Context, schemaPath string, includeOps []string, include bool, yamlOut bool, w io.Writer) error {
 	return transformer[args]{
 		schemaPath:  schemaPath,
 		transformFn: filterOperations,
 		w:           w,
+		jsonOut:     !yamlOut,
 		args: args{
 			includeOps: includeOps,
 			include:    include,

@@ -1,4 +1,4 @@
-package cmd
+package lint
 
 import (
 	"context"
@@ -20,13 +20,13 @@ import (
 
 const lintLong = "# Lint \n The `lint` command provides a set of commands for linting OpenAPI docs and more."
 
-var lintCmd = &model.CommandGroup{
+var LintCmd = &model.CommandGroup{
 	Usage:          "lint",
 	Aliases:        []string{"validate"},
 	Short:          "Lint/Validate OpenAPI documents and Speakeasy configuration files",
 	Long:           utils.RenderMarkdown(lintLong),
 	InteractiveMsg: "What do you want to lint?",
-	Commands:       []model.Command{lintOpenapiCmd, lintConfigCmd},
+	Commands:       []model.Command{LintOpenapiCmd, lintConfigCmd},
 }
 
 type LintOpenapiFlags struct {
@@ -43,7 +43,7 @@ const lintOpenAPILong = `# Lint
 
 Validates an OpenAPI document is valid and conforms to the Speakeasy OpenAPI specification.`
 
-var lintOpenapiCmd = &model.ExecutableCommand[LintOpenapiFlags]{
+var LintOpenapiCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 	Usage:          "openapi",
 	Short:          "Lint an OpenAPI document",
 	Long:           utils.RenderMarkdown(lintOpenAPILong),
@@ -118,8 +118,6 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 	}
 
 	if _, err := validation.ValidateOpenAPI(ctx, "", flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false, false); err != nil {
-		rootCmd.SilenceUsage = true
-
 		return err
 	}
 
