@@ -35,12 +35,12 @@ type builder struct {
 
 func (b *builder) Build() overlay.Overlay {
 	// Track which operations are missing which response codes
-	targetToMissingCodes := map[string][]string{}
+	operationToMissingCodes := map[openapi.OperationElem][]string{}
 	// Track if certain response codes are already defined elsewhere in the document so we don't duplicate them
 	codeUsedComponents := map[string]map[string]int{}
 
 	for op := range openapi.IterateOperations(b.document) {
-		method, path, operation := op.Method, op.Path, op.Operation
+		operation := op.Operation
 
 		codes := orderedmap.New[string, *v3.Response]()
 		if operation.Responses != nil && operation.Responses.Codes != nil {
@@ -58,8 +58,7 @@ func (b *builder) Build() overlay.Overlay {
 				}
 			} else {
 				// Otherwise, record that the response code is missing
-				target := overlay.NewTargetSelector(path, method) + `["responses"]`
-				targetToMissingCodes[target] = append(targetToMissingCodes[target], code)
+				operationToMissingCodes[op] = append(operationToMissingCodes[op], code)
 			}
 		}
 	}
@@ -74,7 +73,7 @@ func (b *builder) Build() overlay.Overlay {
 	var missingComponents []errorGroup
 
 	// TODO: if 4XX is used elsewhere, use it when adding if possible
-	for target, missingCodes := range targetToMissingCodes {
+	for operation, missingCodes := range operationToMissingCodes {
 		var nodes []*yaml.Node
 		for _, code := range missingCodes {
 			ref, exists := b.getReferenceForCode(codeToExistingComponent, code)
@@ -87,14 +86,16 @@ func (b *builder) Build() overlay.Overlay {
 			}
 		}
 
+		target := overlay.NewTargetSelector(operation.Path, operation.Method) + `["responses"]`
+
 		action := overlay.Action{
 			Target: target,
 			Update: *builder.NewMappingNode(nodes...),
 		}
 		suggestions.AddModificationExtension(&action, &suggestions.ModificationExtension{
 			Type:   suggestions.ModificationTypeErrorNames,
-			Before: "catch(SDKError) { ... }",
-			After:  "catch(Unauthorized) { ... }",
+			Before: fmt.Sprintf("%s:\n\tcatch(SDKError) { ... }", operation.Operation.OperationId),
+			After:  fmt.Sprintf("%s:\n\tcatch(Unauthorized) { ... }", operation.Operation.OperationId),
 		})
 		actions = append(actions, action)
 	}

@@ -143,20 +143,16 @@ var changedStyle = styles.Dimmed.Strikethrough(true)
 func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 	logger := log.From(ctx)
 
-	println("TRYYING TO PRINT SUGGESTIONS")
-
 	maxWidth := 0
 
-	var lhs []string
-	var rhs []string
+	var lhs [][]string
+	var rhs [][]string
 
 	for _, action := range overlay.Actions {
 		modification := suggestions.GetModificationExtension(action)
 		if modification == nil {
 			continue
 		}
-
-		println("GOT MODIFICATION")
 
 		before := changedStyle.Render(modification.Before)
 		after := styles.Success.Render(modification.After)
@@ -166,8 +162,8 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 			after = styles.DimmedItalic.Render(modification.After)
 		}
 
-		lhs = append(lhs, before)
-		rhs = append(rhs, after)
+		lhs = append(lhs, strings.Split(before, "\n"))
+		rhs = append(rhs, strings.Split(after, "\n"))
 
 		if w := lipgloss.Width(before); w > maxWidth {
 			maxWidth = w
@@ -180,7 +176,26 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 
 	arrow := styles.HeavilyEmphasized.Render("->")
 	for i := range lhs {
-		l := lipgloss.NewStyle().Width(maxWidth).Render(strings.TrimSpace(lhs[i]))
-		logger.Printf("%s %s %s", l, arrow, strings.TrimSpace(rhs[i]))
+		j := 0
+		for _, line := range lhs[i] {
+			l := lipgloss.NewStyle().Width(maxWidth).Render(strings.TrimSpace(line))
+
+			// Only print the arrow on the first line
+			arrowPrint := arrow
+			if j != 0 {
+				arrowPrint = "  "
+			}
+			rhsPrint := ""
+			if j < len(rhs[i]) {
+				rhsPrint = strings.TrimSpace(rhs[i][j])
+			}
+			logger.Printf("%s %s %s", l, arrowPrint, rhsPrint)
+			j++
+		}
+		// Print the rest of RHS lines if there are any
+		for j < len(rhs[i]) {
+			logger.Printf("%s    %s", lipgloss.NewStyle().Width(maxWidth).Render(""), strings.TrimSpace(rhs[i][j]))
+			j++
+		}
 	}
 }
