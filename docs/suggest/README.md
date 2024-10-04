@@ -35,4 +35,5 @@ speakeasy suggest [flags]
 * [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
-* [speakeasy suggest operation-ids](operation-ids.md)	 - Get suggestions to improve your OpenAPI document's operation IDs
+* [speakeasy suggest error-types](error-types.md)	 - Automatically improve your SDK's error handling ergonomics
+* [speakeasy suggest operation-ids](operation-ids.md)	 - Automatically improve your SDK's method names
