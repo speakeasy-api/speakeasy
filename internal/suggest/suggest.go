@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"io"
 	"io/ioutil"
@@ -28,7 +29,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 )
 
-func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asOverlay, yamlOut bool, w io.Writer) error {
+func SuggestAndWrite(
+	ctx context.Context,
+	modificationType string,
+	schemaLocation string,
+	asOverlay, yamlOut bool,
+	w io.Writer,
+) error {
 	if asOverlay {
 		yamlOut = true
 	}
@@ -40,7 +47,13 @@ func SuggestOperationIDsAndWrite(ctx context.Context, schemaLocation string, asO
 
 	stopSpinner := interactivity.StartSpinner("Generating suggestions...")
 
-	overlay, err := SuggestOperationIDs(ctx, schemaBytes, schemaLocation)
+	var overlay *overlay.Overlay
+	switch modificationType {
+	case suggestions.ModificationTypeMethodName:
+		overlay, err = SuggestOperationIDs(ctx, schemaBytes, schemaLocation)
+	case suggestions.ModificationTypeErrorNames:
+		overlay, err = errorCodes.BuildErrorCodesOverlay(ctx, schemaLocation)
+	}
 
 	stopSpinner()
 
@@ -132,8 +145,8 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 
 	maxWidth := 0
 
-	var lhs []string
-	var rhs []string
+	var lhs [][]string
+	var rhs [][]string
 
 	for _, action := range overlay.Actions {
 		modification := suggestions.GetModificationExtension(action)
@@ -149,8 +162,8 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 			after = styles.DimmedItalic.Render(modification.After)
 		}
 
-		lhs = append(lhs, before)
-		rhs = append(rhs, after)
+		lhs = append(lhs, strings.Split(before, "\n"))
+		rhs = append(rhs, strings.Split(after, "\n"))
 
 		if w := lipgloss.Width(before); w > maxWidth {
 			maxWidth = w
@@ -163,7 +176,26 @@ func printSuggestions(ctx context.Context, overlay *overlay.Overlay) {
 
 	arrow := styles.HeavilyEmphasized.Render("->")
 	for i := range lhs {
-		l := lipgloss.NewStyle().Width(maxWidth).Render(strings.TrimSpace(lhs[i]))
-		logger.Printf("%s %s %s", l, arrow, strings.TrimSpace(rhs[i]))
+		j := 0
+		for _, line := range lhs[i] {
+			l := lipgloss.NewStyle().Width(maxWidth).Render(strings.TrimSpace(line))
+
+			// Only print the arrow on the first line
+			arrowPrint := arrow
+			if j != 0 {
+				arrowPrint = "  "
+			}
+			rhsPrint := ""
+			if j < len(rhs[i]) {
+				rhsPrint = strings.TrimSpace(rhs[i][j])
+			}
+			logger.Printf("%s %s %s", l, arrowPrint, rhsPrint)
+			j++
+		}
+		// Print the rest of RHS lines if there are any
+		for j < len(rhs[i]) {
+			logger.Printf("%s    %s", lipgloss.NewStyle().Width(maxWidth).Render(""), strings.TrimSpace(rhs[i][j]))
+			j++
+		}
 	}
 }

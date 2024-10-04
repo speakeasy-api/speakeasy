@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/arazzo"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -26,7 +27,7 @@ var LintCmd = &model.CommandGroup{
 	Short:          "Lint/Validate OpenAPI documents and Speakeasy configuration files",
 	Long:           utils.RenderMarkdown(lintLong),
 	InteractiveMsg: "What do you want to lint?",
-	Commands:       []model.Command{LintOpenapiCmd, lintConfigCmd},
+	Commands:       []model.Command{LintOpenapiCmd, lintConfigCmd, lintArazzoCmd},
 }
 
 type LintOpenapiFlags struct {
@@ -104,6 +105,25 @@ var lintConfigCmd = &model.ExecutableCommand[lintConfigFlags]{
 	},
 }
 
+type lintArazzoFlags struct {
+	File string `json:"file"`
+}
+
+var lintArazzoCmd = &model.ExecutableCommand[lintArazzoFlags]{
+	Usage: "arazzo",
+	Short: "Validate an Arazzo document",
+	Long:  `Validates an Arazzo document adheres to the Arazzo specification. Supports either yaml or json based Arazzo documents.`,
+	Run:   validateArazzo,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:         "file",
+			Shorthand:    "f",
+			Description:  "path to the Arazzo document",
+			DefaultValue: "arazzo.yaml",
+		},
+	},
+}
+
 func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 	// no authentication required for validating specs
 
@@ -171,4 +191,8 @@ func lintConfig(ctx context.Context, flags lintConfigFlags) error {
 	log.From(ctx).Println(msg)
 
 	return nil
+}
+
+func validateArazzo(ctx context.Context, flags lintArazzoFlags) error {
+	return arazzo.Validate(ctx, flags.File)
 }
