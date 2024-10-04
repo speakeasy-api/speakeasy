@@ -45,11 +45,11 @@ func Render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
 	if yamlOut {
 		// Use libopenapi to convert JSON to YAML to preserve key ordering
 		_, model, err := openapi.Load(specBytes, schemaPath)
-
-		yamlBytes, err := model.Model.Render()
 		if err != nil {
-			return nil, fmt.Errorf("failed to Render YAML: %w", err)
+			return nil, fmt.Errorf("failed to load document: %w", err)
 		}
+
+		yamlBytes := model.Model.RenderWithIndention(2)
 
 		return yamlBytes, nil
 	} else {

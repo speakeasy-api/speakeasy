@@ -4,13 +4,14 @@ import (
 	"context"
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"io"
 )
 
 type transformer[Args interface{}] struct {
 	schemaPath  string
+	jsonOut     bool
 	transformFn func(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args Args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error)
 	w           io.Writer
 	args        Args
@@ -26,10 +27,10 @@ func (t transformer[Args]) Do(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// render the document to our shard
-	bytes, err := model.Model.Render()
+
+	bytes, err := schemas.Render(model.Index.GetRootNode(), t.schemaPath, !t.jsonOut)
 	if err != nil {
-		return errors.NewValidationError("failed to render document", -1, err)
+		return err
 	}
 
 	_, err = t.w.Write(bytes)

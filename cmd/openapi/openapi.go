@@ -1,8 +1,9 @@
-package cmd
+package openapi
 
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/cmd/lint"
 	"os"
 	"strings"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/registry"
 
@@ -22,7 +22,7 @@ import (
 
 const openapiLong = "# OpenAPI \n The `openapi` command provides a set of commands for visualizing, linting and transforming OpenAPI documents."
 
-var openapiCmd = &model.CommandGroup{
+var OpenAPICmd = &model.CommandGroup{
 	Usage:          "openapi",
 	Short:          "Utilities for working with OpenAPI documents",
 	Long:           utils.RenderMarkdown(openapiLong),
@@ -30,111 +30,14 @@ var openapiCmd = &model.CommandGroup{
 	Commands:       []model.Command{openapiLintCmd, openapiDiffCmd, transformCmd},
 }
 
-var transformCmd = &model.CommandGroup{
-	Usage:    "transform",
-	Short:    "Transform an OpenAPI spec using a well-defined function",
-	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd},
-}
-
-type removeUnusedFlags struct {
-	Schema string `json:"schema"`
-	Out    string `json:"out"`
-}
-
-var removeUnusedCmd = &model.ExecutableCommand[removeUnusedFlags]{
-	Usage: "remove-unused",
-	Short: "Given an OpenAPI file, remove all unused options",
-	Run:   runRemoveUnused,
-	Flags: []flag.Flag{
-		flag.StringFlag{
-			Name:                       "schema",
-			Shorthand:                  "s",
-			Description:                "the schema to transform",
-			Required:                   true,
-			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
-		},
-		flag.StringFlag{
-			Name:        "out",
-			Shorthand:   "o",
-			Description: "write directly to a file instead of stdout",
-		},
-	},
-}
-
-type filterOperationsFlags struct {
-	Schema       string   `json:"schema"`
-	Out          string   `json:"out"`
-	OperationIDs []string `json:"operations"`
-	Exclude      bool     `json:"exclude"`
-}
-
-var filterOperationsCmd = &model.ExecutableCommand[filterOperationsFlags]{
-	Usage: "filter-operations",
-	Short: "Given an OpenAPI file, filter down to just the given set of operations",
-	Run:   runFilterOperations,
-	Flags: []flag.Flag{
-		flag.StringFlag{
-			Name:                       "schema",
-			Shorthand:                  "s",
-			Description:                "the schema to transform",
-			Required:                   true,
-			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
-		},
-		flag.StringFlag{
-			Name:        "out",
-			Shorthand:   "o",
-			Description: "write directly to a file instead of stdout",
-		},
-		flag.StringSliceFlag{
-			Name:        "operations",
-			Description: "list of operation IDs to include (or exclude)",
-			Required:    true,
-		},
-		flag.BooleanFlag{
-			Name:         "exclude",
-			Shorthand:    "x",
-			Description:  "exclude the given operationIDs, rather than including them",
-			DefaultValue: false,
-		},
-	},
-}
-
-func runRemoveUnused(ctx context.Context, flags removeUnusedFlags) error {
-	out := os.Stdout
-	if flags.Out != "" {
-		file, err := os.Create(flags.Out)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		out = file
-	}
-
-	return transform.RemoveUnused(ctx, flags.Schema, out)
-}
-
-func runFilterOperations(ctx context.Context, flags filterOperationsFlags) error {
-	out := os.Stdout
-	if flags.Out != "" {
-		file, err := os.Create(flags.Out)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		out = file
-	}
-
-	return transform.FilterOperations(ctx, flags.Schema, flags.OperationIDs, !flags.Exclude, out)
-}
-
-var openapiLintCmd = &model.ExecutableCommand[LintOpenapiFlags]{
+var openapiLintCmd = &model.ExecutableCommand[lint.LintOpenapiFlags]{
 	Usage:          "lint",
 	Aliases:        []string{"validate"},
-	Short:          lintOpenapiCmd.Short,
-	Long:           lintOpenapiCmd.Long,
-	Run:            lintOpenapiCmd.Run,
-	RunInteractive: lintOpenapiCmd.RunInteractive,
-	Flags:          lintOpenapiCmd.Flags,
+	Short:          lint.LintOpenapiCmd.Short,
+	Long:           lint.LintOpenapiCmd.Long,
+	Run:            lint.LintOpenapiCmd.Run,
+	RunInteractive: lint.LintOpenapiCmd.RunInteractive,
+	Flags:          lint.LintOpenapiCmd.Flags,
 }
 
 type OpenAPIDiffFlags struct {
@@ -235,7 +138,7 @@ func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 	}
 
 	if hasRegistryBundle {
-		// Cleanup temp dir if we had used a registry bundle
+		// CleanupPaths temp dir if we had used a registry bundle
 		defer os.RemoveAll(workflow.GetTempDir())
 	}
 

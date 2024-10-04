@@ -3,11 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/cmd/lint"
 	"os"
 	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/cmd/generate"
+	"github.com/speakeasy-api/speakeasy/cmd/openapi"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 
@@ -71,8 +73,8 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
 	addCommand(rootCmd, generate.GenerateCmd)
-	addCommand(rootCmd, lintCmd)
-	addCommand(rootCmd, openapiCmd)
+	addCommand(rootCmd, lint.LintCmd)
+	addCommand(rootCmd, openapi.OpenAPICmd)
 	addCommand(rootCmd, migrateCmd)
 
 	authInit()
