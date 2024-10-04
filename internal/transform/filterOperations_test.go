@@ -15,7 +15,7 @@ func TestFilterOperations(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Call FilterOperations to remove the delete operation
-	err := FilterOperations(context.Background(), "../../integration/resources/part1.yaml", []string{"deletePet"}, false, &buf)
+	err := FilterOperations(context.Background(), "../../integration/resources/part1.yaml", []string{"deletePet"}, false, true, &buf)
 	require.NoError(t, err)
 
 	// Parse the filtered spec
