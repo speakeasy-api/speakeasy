@@ -24,13 +24,13 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 	for _, tt := range toTest {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
-			require.NoError(t, err)
 
-			overlay := errorCodes.BuildErrorCodesOverlay(ctx, model.Model)
+			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, tt.in)
 
 			overlay.Format(os.Stdout)
 
+			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
+			require.NoError(t, err)
 			root := model.Index.GetRootNode()
 			err = overlay.ApplyTo(root)
 			require.NoError(t, err)
