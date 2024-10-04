@@ -32,5 +32,6 @@ speakeasy lint [flags]
 * [speakeasy](../README.md)	 - The Speakeasy CLI tool provides access to the Speakeasy.com platform
 ### Sub Commands
 
+* [speakeasy lint arazzo](arazzo.md)	 - Validate an Arazzo document
 * [speakeasy lint config](config.md)	 - Lint a Speakeasy configuration file
 * [speakeasy lint openapi](openapi.md)	 - Lint an OpenAPI document
