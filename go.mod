@@ -4,7 +4,7 @@ go 1.23.0
 
 replace github.com/pb33f/doctor v0.0.8 => github.com/speakeasy-api/doctor v0.0.0-20240920145439-74ab55243125
 
-replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20240926095056-5de396befa71
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
 
