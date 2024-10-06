@@ -4,7 +4,7 @@ go 1.23.0
 
 replace github.com/pb33f/doctor v0.0.8 => github.com/speakeasy-api/doctor v0.0.0-20240920145439-74ab55243125
 
-replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20240926095056-5de396befa71
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
 
@@ -24,7 +24,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.429.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.434.1
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.23.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.13.1
