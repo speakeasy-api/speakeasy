@@ -3,7 +3,6 @@ package transform
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/pb33f/libopenapi"
@@ -61,7 +60,4 @@ func TestFilterOperations(t *testing.T) {
 	unauthorized, ok := components.Responses.Get("Unauthorized")
 	assert.True(t, ok, "Response 'Unauthorized' should still exist")
 	assert.NotNil(t, unauthorized)
-
-	fmt.Println(buf.String())
-	//strings.Contains(buf.String()
 }
