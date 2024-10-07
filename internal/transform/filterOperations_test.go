@@ -15,7 +15,7 @@ func TestFilterOperations(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Call FilterOperations to remove the delete operation
-	err := FilterOperations(context.Background(), "../../integration/resources/part1.yaml", []string{"deletePet"}, false, true, &buf)
+	err := FilterOperations(context.Background(), "../../integration/resources/part1.yaml", []string{"deletePet", "findPetsByStatus"}, false, true, &buf)
 	require.NoError(t, err)
 
 	// Parse the filtered spec
@@ -30,6 +30,11 @@ func TestFilterOperations(t *testing.T) {
 	petPath, ok := paths.PathItems.Get("/pet/{petId}")
 	require.True(t, ok)
 	assert.Nil(t, petPath.Delete, "Delete operation should be removed")
+
+	// Check that the findPetsByStatus operation is removed
+	// The entire path should be removed because findPetsByStatus was the only operation in it
+	_, ok = paths.PathItems.Get("/pet/findByStatus")
+	require.False(t, ok)
 
 	// Check that other operations still exist
 	assert.NotNil(t, petPath.Get, "Get operation should still exist")
@@ -55,7 +60,4 @@ func TestFilterOperations(t *testing.T) {
 	unauthorized, ok := components.Responses.Get("Unauthorized")
 	assert.True(t, ok, "Response 'Unauthorized' should still exist")
 	assert.NotNil(t, unauthorized)
-
-	// Optional: Print the filtered spec for manual inspection
-	// fmt.Println(buf.String())
 }

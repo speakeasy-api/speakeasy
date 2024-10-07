@@ -36,3 +36,18 @@ func (t transformer[Args]) Do(ctx context.Context) error {
 	_, err = t.w.Write(bytes)
 	return err
 }
+
+// Note, doc.RenderAndReload() is not sufficient because it does not reload changes to the model
+func reload(model *libopenapi.DocumentModel[v3.Document], basePath string) (*libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+	updatedBytes, err := model.Model.Render()
+	if err != nil {
+		return nil, model, err
+	}
+
+	doc, model, err := openapi.Load(updatedBytes, basePath)
+	if err != nil {
+		return doc, model, err
+	}
+
+	return doc, model, nil
+}
