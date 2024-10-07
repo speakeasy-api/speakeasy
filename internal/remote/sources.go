@@ -29,7 +29,7 @@ type RecentGeneration struct {
 	GitRepoOrg string
 	GitRepo    string
 
-	// gen.yaml - uses GenerateConfigPostRaw (e.g state of the config post-last-generation)
+	// gen.yaml
 	GenerateConfig *string
 }
 
@@ -92,7 +92,7 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 			GitRepo:              *event.GitRemoteDefaultRepo,
 			SourceNamespace:      *event.SourceNamespaceName,
 			SourceRevisionDigest: *event.SourceRevisionDigest,
-			GenerateConfig:       event.GenerateConfigPostRaw,
+			GenerateConfig:       event.GenerateConfigPreRaw,
 			Success:              event.Success,
 		})
 
