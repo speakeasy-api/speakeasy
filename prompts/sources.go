@@ -7,12 +7,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize/english"
-	"github.com/samber/lo"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/remote"
 
@@ -170,23 +167,20 @@ func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *stri
 	return groups
 }
 
-const (
-	recentNamespacesLimit int = 5
-)
-
 func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartState, error) {
 	source := &workflow.Source{}
-	var sourceName, fileLocation, authHeader string
+	var sourceName, fileLocation, authHeader, selectedRemoteNamespace string
+
+	recentGenerations, err := remote.GetRecentWorkspaceGenerations(ctx)
 
 	// Retrieve recent namespaces and check if there are any available.
-	recentNamespaces, err := remote.FindRecentRemoteNamespaces(ctx, recentNamespacesLimit)
-	hasRecentRemoteNamespaces := err == nil && len(recentNamespaces) > 0
+	hasRecentGenerations := err == nil && len(recentGenerations) > 0
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
-	useRemoteSource := hasRecentRemoteNamespaces
+	useRemoteSource := hasRecentGenerations
 
-	if hasRecentRemoteNamespaces {
+	if hasRecentGenerations {
 		prompt := charm_internal.NewBranchPrompt(
 			"Do you want to base your SDK on an existing remote source?",
 			"Selecting 'Yes' will allow you to pick from the most recently used sources in your workspace",
@@ -199,9 +193,14 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	selectedRegistryUri := ""
 	if useRemoteSource {
-		namespaceId, err := selectNamespace(ctx, recentNamespaces)
-		if err == nil && namespaceId != "" {
-			selectedRegistryUri, err = fetchRegistryUri(ctx, namespaceId)
+		selectedRecentGeneration, err := selectRecentGeneration(ctx, recentGenerations)
+
+		if err != nil {
+			useRemoteSource = false
+		}
+
+		if err == nil && selectedRecentGeneration != nil {
+			selectedRegistryUri, err = remote.GetRegistryUriForSource(ctx, selectedRecentGeneration.SourceNamespace, selectedRecentGeneration.SourceRevisionDigest)
 
 			if err != nil {
 				useRemoteSource = false
@@ -228,6 +227,8 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
 	if isUsingSampleSpec {
 		configureSampleSpec(quickstart, &fileLocation, &sourceName)
+	} else if selectedRemoteNamespace != "" {
+		sourceName = selectedRemoteNamespace
 	} else {
 		// No need to prompt for SDK name if we are using a sample spec
 		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
@@ -567,37 +568,44 @@ func validateOpenApiFileLocation(s string) error {
 	return validateDocumentLocation(s, charm_internal.OpenAPIFileExtensions)
 }
 
-// selectNamespace handles the user interaction for selecting a namespace.
-func selectNamespace(ctx context.Context, namespaces []shared.Namespace) (string, error) {
-	nsOpts := make([]huh.Option[string], len(namespaces))
-	for i, ns := range namespaces {
-		nsOpts[i] = huh.NewOption(ns.Name, ns.Name)
+// selectRecentGeneration handles the user interaction for selecting a namespace/recent generation
+// which will be used as the template for the new target.
+func selectRecentGeneration(ctx context.Context, generations []remote.RecentGeneration) (*remote.RecentGeneration, error) {
+	opts := make([]huh.Option[string], len(generations))
+
+	for i, generation := range generations {
+		label := fmt.Sprintf("%s (%s)", generation.TargetName, generation.Target)
+
+		if generation.GitRepo != nil {
+			label += fmt.Sprintf(" %s", *generation.GitRepo)
+		}
+
+		opts[i] = huh.NewOption(label, generation.ID)
 	}
 
-	namespaceId := ""
+	evtId := ""
+
+	// TODO: replace with updated Select API with custom option rendering when/if upstream is
+	// merged: https://github.com/charmbracelet/huh/pull/424
 	selectPrompt := charm_internal.NewSelectPrompt(
 		"Select a recent remote source",
 		"These are the most recently updated remote sources in your workspace.",
-		nsOpts,
-		&namespaceId,
+		opts,
+		&evtId,
 	)
 	_, err := charm_internal.NewForm(huh.NewForm(selectPrompt)).ExecuteForm()
-	return namespaceId, err
-}
 
-// fetchRegistryUri fetches the registry URI for a given namespace ID.
-func fetchRegistryUri(ctx context.Context, namespaceId string) (string, error) {
-	revisions, err := remote.FetchRevisions(ctx, namespaceId)
-	if err != nil || len(revisions) == 0 {
-		return "", err
+	if err != nil {
+		return nil, err
 	}
 
-	// Prefer revision with the 'latest' tag or fallback to the first revision.
-	revision := lo.FindOrElse(revisions, revisions[0], func(rev shared.Revision) bool {
-		return slices.Contains(rev.Tags, "latest")
-	})
+	for _, generation := range generations {
+		if generation.ID == evtId {
+			return &generation, nil
+		}
+	}
 
-	return remote.GetRegistryUriForRevision(ctx, revision)
+	return nil, fmt.Errorf("did not find matching generation with ID %s", evtId)
 }
 
 // configureSampleSpec sets up the sample spec configuration for the quickstart.
