@@ -40,6 +40,12 @@ func Cleanup(ctx context.Context, doc libopenapi.Document, model *libopenapi.Doc
 		pathItems.Delete(path)
 	}
 
+	// Unfortunately, rendering and reloading is the only way to "apply" the path changes
+	_, model, err := reload(model, doc.GetConfiguration().BasePath)
+	if err != nil {
+		return doc, model, err
+	}
+
 	root := model.Index.GetRootNode()
 	improveMultilineStrings(ctx, root)
 
