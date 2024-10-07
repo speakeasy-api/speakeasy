@@ -585,8 +585,8 @@ func selectRecentGeneration(ctx context.Context, generations []remote.RecentGene
 	for i, generation := range generations {
 		label := fmt.Sprintf("%s (%s)", generation.TargetName, generation.Target)
 
-		if generation.GitRepo != nil {
-			label += fmt.Sprintf(" %s", *generation.GitRepo)
+		if generation.GitRepo != "" && generation.GitRepoOrg != "" {
+			label += fmt.Sprintf(" %s/%s", generation.GitRepoOrg, generation.GitRepo)
 		}
 
 		opts[i] = huh.NewOption(label, generation.ID)
