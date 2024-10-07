@@ -22,7 +22,7 @@ import (
 )
 
 func getOASLocation(location, authHeader *string, allowSample bool) error {
-	locationPrompt := oasLocationPrompt(location)
+	locationPrompt := oasLocationPrompt(location, allowSample)
 
 	if allowSample {
 		locationPrompt = locationPrompt.Description("Leave blank to use a sample spec\n")
@@ -40,7 +40,7 @@ func getOASLocation(location, authHeader *string, allowSample bool) error {
 	return err
 }
 
-func oasLocationPrompt(fileLocation *string) *huh.Input {
+func oasLocationPrompt(fileLocation *string, allowEmpty bool) *huh.Input {
 	if fileLocation == nil || *fileLocation == "" {
 		return charm_internal.NewInput().
 			Title("OpenAPI Document Location").
@@ -52,7 +52,9 @@ func oasLocationPrompt(fileLocation *string) *huh.Input {
 			})).
 			Prompt("").
 			Value(fileLocation).
-			Validate(validateOpenApiFileLocation)
+			Validate(func(s string) error {
+				return validateOpenApiFileLocation(s, allowEmpty)
+			})
 	}
 
 	return nil
@@ -285,7 +287,7 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		addOpenAPIFile = false
 		var fileLocation, authHeader string
 		groups := []*huh.Group{
-			huh.NewGroup(oasLocationPrompt(&fileLocation)),
+			huh.NewGroup(oasLocationPrompt(&fileLocation, false)),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader)...)
 		groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add another openapi file to this source?", &addOpenAPIFile))
@@ -524,9 +526,14 @@ func validateFilePath(input string, permittedFileExtensions []string) error {
 	return fmt.Errorf(ErrMessageFileExt, ext, humanize.WordSeries(permittedFileExtensions, "or"))
 }
 
-func validateOpenApiFileLocation(s string) error {
+func validateOpenApiFileLocation(s string, allowEmpty bool) error {
 	if s == "" {
-		return nil
+		if allowEmpty {
+			return nil
+		}
+
+		return fmt.Errorf("please provide a valid file path")
 	}
+
 	return validateDocumentLocation(s, charm_internal.OpenAPIFileExtensions)
 }
