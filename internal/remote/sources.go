@@ -29,9 +29,13 @@ type RecentGeneration struct {
 }
 
 const (
+	// The event stream contains multiple events for the same namespace, so we want to
+	// break execution once we've seen a minimum, arbitrary number of unique namespaces.
 	minimumRecentGenerationsToShow int = 5
 )
 
+// GetRecentWorkspaceGenerations returns the most recent generations of targets in a workspace
+// This is based on the CLi event stream, which is updated on every CLI interaction.
 func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, error) {
 	workspaceId, err := core.GetWorkspaceIDFromContext(ctx)
 	if err != nil {
@@ -61,6 +65,8 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 	var generations []RecentGeneration
 
 	for _, event := range res.CliEventBatch {
+		// Filter out cli events that aren't generation based, or lack the required
+		// fields.
 		if !isRelevantGenerationEvent(event) {
 			continue
 		}

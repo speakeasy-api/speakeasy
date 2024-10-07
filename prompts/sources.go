@@ -144,7 +144,6 @@ func getSDKName(sdkName *string, placeholder string) error {
 	}
 
 	return nil
-
 }
 
 func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *string) []*huh.Group {
