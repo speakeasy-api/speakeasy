@@ -26,8 +26,8 @@ type RecentGeneration struct {
 	Published            bool
 
 	// May not be set
-	GitRepoOrg string
-	GitRepo    string
+	GitRepoOrg *string
+	GitRepo    *string
 
 	// gen.yaml
 	GenerateConfig *string
@@ -88,8 +88,8 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 			CreatedAt:            event.CreatedAt,
 			TargetName:           *event.GenerateTargetName,
 			Target:               *event.GenerateTarget,
-			GitRepoOrg:           *event.GitRemoteDefaultOwner,
-			GitRepo:              *event.GitRemoteDefaultRepo,
+			GitRepoOrg:           event.GitRemoteDefaultOwner,
+			GitRepo:              event.GitRemoteDefaultRepo,
 			SourceNamespace:      *event.SourceNamespaceName,
 			SourceRevisionDigest: *event.SourceRevisionDigest,
 			GenerateConfig:       event.GenerateConfigPreRaw,

@@ -180,8 +180,8 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	if hasRecentGenerations {
 		prompt := charm_internal.NewBranchPrompt(
-			"Do you want to base your SDK on an existing remote source?",
-			"Selecting 'Yes' will allow you to pick from the most recently used sources in your workspace",
+			"Do you want to base your SDK on an existing SDK?",
+			"Selecting 'Yes' will allow you to pick from the most recently used SDKs in your workspace",
 			&useRemoteSource,
 		)
 		if _, err := charm_internal.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
@@ -581,8 +581,8 @@ func selectRecentGeneration(ctx context.Context, generations []remote.RecentGene
 	for i, generation := range generations {
 		label := fmt.Sprintf("%s (%s)", generation.TargetName, generation.Target)
 
-		if generation.GitRepo != "" && generation.GitRepoOrg != "" {
-			label += fmt.Sprintf(" %s/%s", generation.GitRepoOrg, generation.GitRepo)
+		if generation.GitRepo != nil && generation.GitRepoOrg != nil {
+			label += fmt.Sprintf(" %s/%s", *generation.GitRepoOrg, *generation.GitRepo)
 		}
 
 		opts[i] = huh.NewOption(label, generation.ID)
@@ -593,8 +593,8 @@ func selectRecentGeneration(ctx context.Context, generations []remote.RecentGene
 	// TODO: replace with updated Select API with custom option rendering when/if upstream is
 	// merged: https://github.com/charmbracelet/huh/pull/424
 	selectPrompt := charm_internal.NewSelectPrompt(
-		"Select a recent remote source",
-		"These are the most recently updated remote sources in your workspace.",
+		"Select a recent SDK",
+		"These are the most recently updated SDKs in your workspace.",
 		opts,
 		&evtId,
 	)
