@@ -47,6 +47,7 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 		return nil, err
 	}
 
+	// The event stream is limited to the most recent 250 events
 	res, err := speakeasyClient.Events.SearchWorkspaceEvents(ctx, operations.SearchWorkspaceEventsRequest{
 		WorkspaceID:     &workspaceId,
 		InteractionType: shared.InteractionTypeTargetGenerate.ToPointer(),
@@ -56,7 +57,7 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 		return nil, err
 	}
 
-	if res.GetCliEventBatch() == nil {
+	if len(res.CliEventBatch) == 0 {
 		return nil, fmt.Errorf("no events found for workspace %s", workspaceId)
 	}
 
