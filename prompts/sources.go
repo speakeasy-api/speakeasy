@@ -206,7 +206,6 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	// Determine the file location based on existing values or user input.
 	if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	} else if useRemoteSource && selectedRegistryUri != "" {
@@ -244,21 +243,18 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	// Prepare the source with the provided document.
 	document, err := formatDocument(fileLocation, authHeader, false)
 	if err != nil {
 		return nil, err
 	}
 	source.Inputs = append(source.Inputs, *document)
 
-	// If registry is enabled, create a registry entry.
 	if registry.IsRegistryEnabled(ctx) && orgSlug != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
 		if err := configureRegistry(source, orgSlug, auth.GetWorkspaceSlugFromContext(ctx), sourceName); err != nil {
 			return nil, err
 		}
 	}
 
-	// Validate the source and set it to the quickstart.
 	if err := source.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to validate source")
 	}
