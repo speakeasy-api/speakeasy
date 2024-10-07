@@ -3,16 +3,18 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/cmd/lint"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/cmd/lint"
 
 	"github.com/speakeasy-api/speakeasy/cmd/generate"
 	"github.com/speakeasy-api/speakeasy/cmd/openapi"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -143,6 +145,10 @@ func GetRootCommand() *cobra.Command {
 func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
 	// Don't display if piping to a file for example
 	if !utils.IsInteractive() {
+		return
+	}
+
+	if env.IsLocalDev() {
 		return
 	}
 
