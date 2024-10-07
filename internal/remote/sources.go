@@ -36,7 +36,7 @@ type RecentGeneration struct {
 const (
 	// The event stream contains multiple events for the same namespace, so we want to
 	// break execution once we've seen a minimum, arbitrary number of unique namespaces.
-	minimumRecentGenerationsToShow int = 5
+	recentGenerationsToShow int = 5
 )
 
 // GetRecentWorkspaceGenerations returns the most recent generations of targets in a workspace
@@ -96,7 +96,7 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 			Success:              event.Success,
 		})
 
-		if len(seenUniqueNamespaces) >= minimumRecentGenerationsToShow {
+		if len(seenUniqueNamespaces) >= recentGenerationsToShow {
 			break
 		}
 	}
