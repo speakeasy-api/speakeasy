@@ -23,9 +23,14 @@ type RecentGeneration struct {
 	SourceNamespace      string
 	SourceRevisionDigest string
 	Success              bool
+	Published            bool
 
 	// May not be set
-	GitRepo *string
+	GitRepoOrg string
+	GitRepo    string
+
+	// gen.yaml - uses GenerateConfigPostRaw (e.g state of the config post-last-generation)
+	GenerateConfig *string
 }
 
 const (
@@ -71,6 +76,7 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 		if !isRelevantGenerationEvent(event) {
 			continue
 		}
+
 		if seenUniqueNamespaces[*event.SourceNamespaceName] {
 			continue
 		}
@@ -82,9 +88,11 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 			CreatedAt:            event.CreatedAt,
 			TargetName:           *event.GenerateTargetName,
 			Target:               *event.GenerateTarget,
-			GitRepo:              event.GenerateRepoURL,
+			GitRepoOrg:           *event.GitRemoteDefaultOwner,
+			GitRepo:              *event.GitRemoteDefaultRepo,
 			SourceNamespace:      *event.SourceNamespaceName,
 			SourceRevisionDigest: *event.SourceRevisionDigest,
+			GenerateConfig:       event.GenerateConfigPostRaw,
 			Success:              event.Success,
 		})
 
