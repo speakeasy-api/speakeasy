@@ -31,8 +31,7 @@ jobs:
           preset: conventionalcommits
       - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
-          go-version: ">=1.21.0"
-          cache: true
+          go-version-file: "go.mod"
       # More assembly might be required: Docker logins, GPG, etc. It all depends
       # on your needs.
       - name: Configure git for private modules
