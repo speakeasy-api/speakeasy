@@ -1,23 +1,102 @@
+<div align="left">
+  <h1>Speakeasy</h1>
+  <p>The platform to build, test, and distribute APIs your users ❤️</p>
+   <a href="https://speakeasy.com/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
+   <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
+</div>
+
+## Generate SDKs
+
+<p>Use Speakeasy to generate idiomatic, type-safe SDKs your users will love.</p>
+<a href="https://app.speakeasy.com/"><img src="https://custom-icon-badges.demolab.com/badge/-Start%20Generating%20-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
+
+<div align="left">
+  <h1>
+  	<p>
+  		<a href="https://www.speakeasy.com/docs/sdk-design/typescript/methodology-ts" target="_blank" margin-right="20px">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf">
+  				<img width="100px" src="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf#gh-light-mode-only" alt="Scalar API Reference">
+  			</picture>
+  	 	</a>
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
+        <img height="80" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Scalar API Reference">
+      </picture>
+      <a href="https://www.speakeasy.com/docs/sdk-design/python/methodology-python" target="_blank">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/34a57c5b-e81d-4238-a1a4-2f1289630599">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/34a57c5b-e81d-4238-a1a4-2f1289630599">
+  				<img width="100px" src="https://github.com/user-attachments/assets/34a57c5b-e81d-4238-a1a4-2f1289630599#gh-light-mode-only" alt="Python">
+  			</picture>
+  		</a>
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
+        <img height="80" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Scalar API Reference">
+      </picture>
+      <a href="https://www.speakeasy.com/docs/sdk-design/golang/methodology-go" target="_blank">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/7be9379e-d3ae-44f7-afd0-a9fee526d402">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7be9379e-d3ae-44f7-afd0-a9fee526d402">
+  				<img width="100px" src="https://github.com/user-attachments/assets/7be9379e-d3ae-44f7-afd0-a9fee526d402#gh-light-mode-only" alt="Golang">
+  			</picture>
+  		</a>
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
+        <img height="80" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Scalar API Reference">
+      </picture>
+      <a href="https://www.speakeasy.com/docs/create-terraform" target="_blank">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/7899cbd5-13c0-445e-b4ca-429fd2259477">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7899cbd5-13c0-445e-b4ca-429fd2259477">
+  				<img width="100px" src="https://github.com/user-attachments/assets/7899cbd5-13c0-445e-b4ca-429fd2259477#gh-light-mode-only" alt="Terraform">
+  			</picture>
+  		</a>
+  	</p>
+    <p>
+  		<a href="https://www.speakeasy.com/docs/sdk-design/java/methodology-java" target="_blank" margin-right="20px">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb">
+  				<img width="100px" src="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb#gh-light-mode-only" alt="Java">
+  			</picture>
+  	 	</a>
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
+        <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
+      </picture>
+      <a href="https://www.speakeasy.com/docs/sdk-design/csharp/methodology-csharp" target="_blank">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/1f5c4a9c-f841-4c56-8d3c-bcb43ac4eef7">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/1f5c4a9c-f841-4c56-8d3c-bcb43ac4eef7">
+  				<img width="100px" src="https://github.com/user-attachments/assets/1f5c4a9c-f841-4c56-8d3c-bcb43ac4eef7#gh-light-mode-only" alt="Csharp">
+  			</picture>
+  		</a>
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
+        <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
+      </picture>
+      <a href="https://www.speakeasy.com/docs/sdk-design/php/methodology-php" target="_blank">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c">
+  				<img width="100px" src="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c#gh-light-mode-only" alt="PHP">
+  			</picture>
+  		</a>
+  	</p>
+  </h1>
+</div>
+
+
 <br /><br />
 
 <div align="center">
-
-<a href="[Speakeasy](https://speakeasy.com/)">
-  <img src="https://github.com/speakeasy-api/speakeasy/assets/68016351/e959f81a-b250-4003-8c5c-a45b9463fc95" alt="Speakeasy Logo" width="700">
-<h2>Enterprise-Ready Developer Experience for your REST API</h2>
-<p>Launch production-quality SDKs, Terraform providers, docs, and more in minutes :rocket:</p>
-</a>
-<br />
-<br />
-
-   <a href="https://speakeasy.com/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
-   <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
-
-  <picture>
-    <img src="https://github.com/speakeasy-api/speakeasy/assets/68016351/159f0565-0cfa-468a-8fcd-7c3590eea355">
-  </picture>
-  <br />
-  <br />
 
   ![ezgif com-video-to-gif (1)](https://github.com/speakeasy-api/speakeasy/assets/90289500/ff6972c4-4e8a-4a5c-a976-75e97cc42f5a)
 </div>
