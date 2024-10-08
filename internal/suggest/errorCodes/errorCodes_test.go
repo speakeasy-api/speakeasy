@@ -16,6 +16,7 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 		name, in, out string
 	}
 	toTest := []args{
+		{"Simple petstore", "testData/petstore.yaml", "testData/petstore_expected.yaml"},
 		{"Reuse 4XX code", "testData/reuse4xx.yaml", "testData/reuse4xx_expected.yaml"},
 		{"Simple case -- add all missing", "testData/simple.yaml", "testData/simple_expected.yaml"},
 		{"Name conflict in added schema", "testData/nameConflict.yaml", "testData/nameConflict_expected.yaml"},
@@ -26,8 +27,6 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			ctx := context.Background()
 
 			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, tt.in)
-
-			overlay.Format(os.Stdout)
 
 			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
 			require.NoError(t, err)
@@ -42,6 +41,8 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			// Convert root to YAML
 			actualBytes, err := yaml.Marshal(root)
 			require.NoError(t, err)
+
+			println(string(actualBytes))
 
 			// Compare the actual and expected YAML
 			require.YAMLEq(t, string(expectedBytes), string(actualBytes))
