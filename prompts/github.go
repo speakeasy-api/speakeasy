@@ -530,9 +530,8 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 			Generate: config.Job{
 				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/workflow-executor.yaml@v15",
 				With: map[string]any{
-					"speakeasy_version": "latest",
-					"force":             "${{ github.event.inputs.force }}",
-					config.Mode:         "pr",
+					"force":     "${{ github.event.inputs.force }}",
+					config.Mode: "pr",
 				},
 				Secrets: secrets,
 			},
