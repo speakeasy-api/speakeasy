@@ -430,12 +430,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	var publishPaths, generationWorkflowFilePaths []string
 
 	for _, name := range chosenTargets {
-		// If the repo contains only one target we don't need to specify the target name in the file name
-		filenameAddendum := &name
-		if len(workflowFile.Targets) == 1 {
-			filenameAddendum = nil
-		}
-		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile.Targets[name], workingDir, workflowFileDir, filenameAddendum)
+		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workflowFile.Targets[name], name, workingDir, workflowFileDir)
 		if err != nil {
 			return err
 		}
@@ -707,10 +702,10 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir, workflowFi
 	return generationWorkflow, generationWorkflowFilePath, nil
 }
 
-func writePublishingFile(target workflow.Target, workingDir, workflowFileDir string, filenameAddendum *string) (*config.GenerateWorkflow, string, []string, error) {
+func writePublishingFile(wf *workflow.Workflow, target workflow.Target, targetName, workingDir, workflowFileDir string) (*config.GenerateWorkflow, string, []string, error) {
 	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
-	if filenameAddendum != nil {
-		sanitizedName := strings.ReplaceAll(strings.ToLower(*filenameAddendum), "-", "_")
+	if len(wf.Targets) > 1 {
+		sanitizedName := strings.ReplaceAll(strings.ToLower(targetName), "-", "_")
 		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
 	}
 
@@ -726,7 +721,7 @@ func writePublishingFile(target workflow.Target, workingDir, workflowFileDir str
 		return nil, "", nil, fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
 	}
 
-	publishPaths, err := prompts.WritePublishing(generationWorkflow, workingDir, workflowFileDir, target, filenameAddendum, target.Output)
+	publishPaths, err := prompts.WritePublishing(wf, generationWorkflow, targetName, workingDir, workflowFileDir, target)
 	if err != nil {
 		return nil, "", nil, errors.Wrapf(err, "failed to write publishing configs")
 	}
