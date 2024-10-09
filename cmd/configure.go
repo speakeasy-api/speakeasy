@@ -381,13 +381,13 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error {
 	logger := log.From(ctx)
 
-	workingDir, err := os.Getwd()
+	currentWorkingDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
 	var workflowFileDir string
-	workflowFile, _, _ := workflow.Load(workingDir)
+	workflowFile, _, _ := workflow.Load(currentWorkingDir)
 	if workflowFile == nil {
 		return ErrWorkflowFileNotFound
 	}
@@ -430,7 +430,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	var publishPaths, generationWorkflowFilePaths []string
 
 	for _, name := range chosenTargets {
-		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workflowFile.Targets[name], name, workingDir, workflowFileDir)
+		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workflowFile.Targets[name], name, currentWorkingDir, workflowFileDir)
 		if err != nil {
 			return err
 		}
@@ -444,12 +444,12 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
 	}
 
-	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
+	if err := workflow.Save(filepath.Join(currentWorkingDir, workflowFileDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
 	var remoteURL string
-	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
+	if repo := prompts.FindGithubRepository(currentWorkingDir); repo != nil {
 		remoteURL = prompts.ParseGithubRemoteURL(repo)
 	}
 
@@ -458,7 +458,12 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
 	}
 
-	_, workflowFilePath, err := workflow.Load(filepath.Join(workingDir, workflowFileDir))
+	actionPath := actionsPath
+	if remoteURL != "" {
+		actionPath = fmt.Sprintf("%s/actions", remoteURL)
+	}
+
+	_, workflowFilePath, err := workflow.Load(filepath.Join(currentWorkingDir, workflowFileDir))
 	if err != nil {
 		return errors.Wrapf(err, "failed to load workflow file")
 	}
@@ -488,6 +493,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
+	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to kick of your first publish.", actionPath))
 
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
 	for _, statusMsg := range status {
@@ -702,15 +708,15 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir, workflowFi
 	return generationWorkflow, generationWorkflowFilePath, nil
 }
 
-func writePublishingFile(wf *workflow.Workflow, target workflow.Target, targetName, workingDir, workflowFileDir string) (*config.GenerateWorkflow, string, []string, error) {
-	generationWorkflowFilePath := filepath.Join(workingDir, ".github/workflows/sdk_generation.yaml")
+func writePublishingFile(wf *workflow.Workflow, target workflow.Target, targetName, currentWorkingDir, workflowFileDir string) (*config.GenerateWorkflow, string, []string, error) {
+	generationWorkflowFilePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_generation.yaml")
 	if len(wf.Targets) > 1 {
 		sanitizedName := strings.ReplaceAll(strings.ToLower(targetName), "-", "_")
-		generationWorkflowFilePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
+		generationWorkflowFilePath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
 	}
 
-	if _, err := os.Stat(filepath.Join(workingDir, ".github/workflows")); os.IsNotExist(err) {
-		err = os.MkdirAll(filepath.Join(workingDir, ".github/workflows"), 0o755)
+	if _, err := os.Stat(filepath.Join(currentWorkingDir, ".github/workflows")); os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Join(currentWorkingDir, ".github/workflows"), 0o755)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -721,7 +727,7 @@ func writePublishingFile(wf *workflow.Workflow, target workflow.Target, targetNa
 		return nil, "", nil, fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
 	}
 
-	publishPaths, err := prompts.WritePublishing(wf, generationWorkflow, targetName, workingDir, workflowFileDir, target)
+	publishPaths, err := prompts.WritePublishing(wf, generationWorkflow, targetName, currentWorkingDir, workflowFileDir, target)
 	if err != nil {
 		return nil, "", nil, errors.Wrapf(err, "failed to write publishing configs")
 	}

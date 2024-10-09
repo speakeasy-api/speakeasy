@@ -360,7 +360,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 // WritePublishing writes a github action file for a given target for publishing to a package manager.
 // If filenameAddendum is provided, it will be appended to the filename (i.e. sdk_publish_lending.yaml).
 // Returns the paths to the files written.
-func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow, targetName, workingDir, workflowFileDir string, target workflow.Target) ([]string, error) {
+func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow, targetName, currentWorkingDir, workflowFileDir string, target workflow.Target) ([]string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
@@ -385,8 +385,8 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if target.Target == "terraform" {
-		releaseActionPath := filepath.Join(workingDir, ".github/workflows/tf_provider_release.yaml")
-		goReleaserPath := workingDir
+		releaseActionPath := filepath.Join(currentWorkingDir, ".github/workflows/tf_provider_release.yaml")
+		goReleaserPath := currentWorkingDir
 		if terraformOutDir != nil {
 			goReleaserPath = filepath.Join(goReleaserPath, filepath.Join(workflowFileDir, *terraformOutDir))
 		}
@@ -402,10 +402,10 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 
 		return releasePaths, nil
 	} else if mode == "pr" {
-		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
+		filePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_publish.yaml")
 		if len(wf.Targets) > 1 {
 			sanitizedName := strings.ReplaceAll(strings.ToLower(targetName), "-", "_")
-			filePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_publish_%s.yaml", sanitizedName))
+			filePath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_publish_%s.yaml", sanitizedName))
 		}
 
 		publishingFile := &config.PublishWorkflow{}
