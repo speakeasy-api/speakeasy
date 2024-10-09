@@ -454,7 +454,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	}
 
 	var remoteURL string
-	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
+	if repo, _ := prompts.FindGithubRepository(workingDir); repo != nil {
 		remoteURL = prompts.ParseGithubRemoteURL(repo)
 	}
 
@@ -514,7 +514,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 }
 
 func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
-	workingDir, err := os.Getwd()
+	currentDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -524,12 +524,27 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	orgSlug := core.GetOrgSlugFromContext(ctx)
 	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
 
-	var workflowFileDir string
-	workflowFile, _, _ := workflow.Load(workingDir)
+	var actionWorkingDir string
+	workflowFile, workflowFilePath, _ := workflow.Load(currentDir)
 	if workflowFile == nil {
 		return ErrWorkflowFileNotFound
 	}
-	ctx = events.SetTargetInContext(ctx, workingDir)
+	rootDir := filepath.Dir(workflowFilePath)
+	rootDir = strings.Replace(rootDir, "/.speakeasy", "", 1)
+	var remoteURL string
+	if repo, repoDir := prompts.FindGithubRepository(rootDir); repo != nil {
+		remoteURL = prompts.ParseGithubRemoteURL(repo)
+		if repoDir != rootDir {
+			fmt.Println("dir found")
+			fmt.Println(rootDir)
+			fmt.Println(repoDir)
+			actionWorkingDir, _ = filepath.Rel(repoDir, rootDir)
+			fmt.Println(actionWorkingDir)
+			rootDir = repoDir
+		}
+	}
+
+	ctx = events.SetTargetInContext(ctx, rootDir)
 
 	// check if the git repository is a github URI
 	event := shared.CliEvent{}
@@ -568,7 +583,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	var generationWorkflowFilePaths []string
 
 	if len(workflowFile.Targets) <= 1 {
-		generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, workingDir, workflowFileDir, nil)
+		generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, rootDir, actionWorkingDir, nil)
 		if err != nil {
 			return err
 		}
@@ -580,7 +595,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
 	} else {
 		for name := range workflowFile.Targets {
-			generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, workingDir, workflowFileDir, &name)
+			generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, rootDir, actionWorkingDir, &name)
 			if err != nil {
 				return err
 			}
@@ -600,7 +615,7 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		}
 	}
 
-	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
+	if err := workflow.Save(filepath.Join(rootDir, actionWorkingDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
@@ -609,19 +624,9 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 		autoConfigureRepoSuccess = configureGithubRepo(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
 	}
 
-	var remoteURL string
-	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
-		remoteURL = prompts.ParseGithubRemoteURL(repo)
-	}
-
 	secretPath := repositorySecretPath
 	if remoteURL != "" {
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
-	}
-
-	_, workflowFilePath, err := workflow.Load(filepath.Join(workingDir, workflowFileDir))
-	if err != nil {
-		return errors.Wrapf(err, "failed to load workflow file")
 	}
 
 	status := []string{
@@ -801,15 +806,4 @@ func configureGithubRepo(ctx context.Context, org, repo string) bool {
 	}
 
 	return res.StatusCode == http.StatusOK
-}
-
-func promptForWorkflowFileDir(workingDir string, dirOutput *string) error {
-	_, err := charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
-		Title("What directory is your speakeasy workflow file in?").
-		Suggestions(charm.DirsInCurrentDir("")).
-		SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
-		Value(dirOutput))),
-		charm.WithTitle("Find your Speakeasy workflow file.")).
-		ExecuteForm()
-	return err
 }

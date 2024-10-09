@@ -248,14 +248,14 @@ func formatGithubSecret(secret string) string {
 	return strings.ToLower(secret)
 }
 
-func FindGithubRepository(outDir string) *git.Repository {
+func FindGithubRepository(outDir string) (*git.Repository, string) {
 	if _, err := os.Stat(outDir); os.IsNotExist(err) {
-		return nil
+		return nil, ""
 	}
 
 	gitFolder, err := filepath.Abs(outDir)
 	if err != nil {
-		return nil
+		return nil, ""
 	}
 	prior := ""
 	for {
@@ -266,15 +266,16 @@ func FindGithubRepository(outDir string) *git.Repository {
 		gitFolder = filepath.Dir(gitFolder)
 		if gitFolder == prior {
 			// No longer have a parent directory
-			return nil
+			return nil, ""
 		}
 	}
 
 	repo, err := git.PlainOpen(gitFolder)
 	if err != nil {
-		return nil
+		return nil, ""
 	}
-	return repo
+
+	return repo, gitFolder
 }
 
 func ParseGithubRemoteURL(repo *git.Repository) string {
