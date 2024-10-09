@@ -38,7 +38,7 @@ const (
 	actionsPath             = "Actions > Generate"
 	githubSetupDocs         = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
 	appInstallURL           = "https://github.com/apps/speakeasy-github"
-	ErrWorkflowFileNotFound = spkErrors.Error("we couldn't find your Speakeasy workflow file (`.speakeasy/workflow.yaml`). Make sure you are in your SDK directory")
+	ErrWorkflowFileNotFound = spkErrors.Error("workflow file not found")
 )
 
 const configureLong = `# Configure
@@ -111,13 +111,22 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 	},
 }
 
-type ConfigureGithubFlags struct{}
+type ConfigureGithubFlags struct {
+	Directory string `json:"directory"`
+}
 
 var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
-	Usage:        "github",
-	Short:        "Configure Speakeasy for github.",
-	Long:         "Configure your Speakeasy workflow to generate and publish from your github repo.",
-	Run:          configureGithub,
+	Usage: "github",
+	Short: "Configure Speakeasy for github.",
+	Long:  "Configure your Speakeasy workflow to generate and publish from your github repo.",
+	Run:   configureGithub,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "directory",
+			Shorthand:   "d",
+			Description: "directory of speakeasy workflow file",
+		},
+	},
 	RequiresAuth: true,
 }
 
@@ -454,7 +463,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	}
 
 	var remoteURL string
-	if repo, _ := prompts.FindGithubRepository(workingDir); repo != nil {
+	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
 		remoteURL = prompts.ParseGithubRemoteURL(repo)
 	}
 
@@ -513,37 +522,32 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 	return nil
 }
 
-func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
-	currentDir, err := os.Getwd()
+func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
+	logger := log.From(ctx)
+	rootDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	logger := log.From(ctx)
-
 	orgSlug := core.GetOrgSlugFromContext(ctx)
 	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
 
-	var actionWorkingDir string
-	workflowFile, workflowFilePath, _ := workflow.Load(currentDir)
+	actionsWorkingDir, _ := filepath.Abs(strings.ReplaceAll(flags.Directory, "/.speakeasy/workflow.yaml", ""))
+	actionWorkingDir, _ := filepath.Rel(rootDir, actionsWorkingDir)
+	fmt.Println("action working dir")
+	fmt.Println(actionWorkingDir)
+	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
+		msg := styles.RenderErrorMessage("we couldn't find your Speakeasy workflow file (*.speakeasy/workflow.yaml*)",
+			lipgloss.Left,
+			[]string{
+				"Please do one of the following:",
+				"• Navigate to the root of your SDK repo",
+				"• If your Speakeasy workflow file is not in the root of your repo, run *speakeasy configure github -d /path/to/workflow*",
+			}...)
+		logger.Println(msg)
 		return ErrWorkflowFileNotFound
 	}
-	rootDir := filepath.Dir(workflowFilePath)
-	rootDir = strings.Replace(rootDir, "/.speakeasy", "", 1)
-	var remoteURL string
-	if repo, repoDir := prompts.FindGithubRepository(rootDir); repo != nil {
-		remoteURL = prompts.ParseGithubRemoteURL(repo)
-		if repoDir != rootDir {
-			fmt.Println("dir found")
-			fmt.Println(rootDir)
-			fmt.Println(repoDir)
-			actionWorkingDir, _ = filepath.Rel(repoDir, rootDir)
-			fmt.Println(actionWorkingDir)
-			rootDir = repoDir
-		}
-	}
-
 	ctx = events.SetTargetInContext(ctx, rootDir)
 
 	// check if the git repository is a github URI
@@ -622,6 +626,11 @@ func configureGithub(ctx context.Context, _flags ConfigureGithubFlags) error {
 	autoConfigureRepoSuccess := false
 	if hasAppAccess {
 		autoConfigureRepoSuccess = configureGithubRepo(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
+	}
+
+	var remoteURL string
+	if repo := prompts.FindGithubRepository(rootDir); repo != nil {
+		remoteURL = prompts.ParseGithubRemoteURL(repo)
 	}
 
 	secretPath := repositorySecretPath

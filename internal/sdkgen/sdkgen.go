@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
@@ -48,6 +49,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	if !generationAccess && level != nil && *level == shared.LevelBlocked {
 		msg := styles.RenderErrorMessage(
 			"Upgrade Required\n",
+			lipgloss.Center,
 			strings.Split(message, "\n")...,
 		)
 		logger.Println("\n\n" + msg)
