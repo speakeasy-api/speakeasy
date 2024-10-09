@@ -40,51 +40,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        400:
+        '400':
           $ref: '#/components/responses/BadRequest'
-        413:
+        '413':
           $ref: '#/components/responses/BadRequest'
-        414:
+        '414':
           $ref: '#/components/responses/BadRequest'
-        415:
+        '415':
           $ref: '#/components/responses/BadRequest'
-        422:
+        '422':
           $ref: '#/components/responses/BadRequest'
-        431:
+        '431':
           $ref: '#/components/responses/BadRequest'
-        510:
+        '510':
           $ref: '#/components/responses/BadRequest'
-        401:
+        '401':
           $ref: '#/components/responses/Unauthorized'
-        403:
+        '403':
           $ref: '#/components/responses/Unauthorized'
-        407:
+        '407':
           $ref: '#/components/responses/Unauthorized'
-        511:
+        '511':
           $ref: '#/components/responses/Unauthorized'
-        404:
+        '404':
           $ref: '#/components/responses/NotFound'
-        501:
+        '501':
           $ref: '#/components/responses/NotFound'
-        505:
+        '505':
           $ref: '#/components/responses/NotFound'
-        429:
+        '429':
           $ref: '#/components/responses/RateLimited'
-        500:
+        '500':
           $ref: '#/components/responses/InternalServerError'
-        502:
+        '502':
           $ref: '#/components/responses/InternalServerError'
-        503:
+        '503':
           $ref: '#/components/responses/InternalServerError'
-        506:
+        '506':
           $ref: '#/components/responses/InternalServerError'
-        507:
+        '507':
           $ref: '#/components/responses/InternalServerError'
-        508:
+        '508':
           $ref: '#/components/responses/InternalServerError'
-        408:
+        '408':
           $ref: '#/components/responses/Timeout'
-        504:
+        '504':
           $ref: '#/components/responses/Timeout'
     post:
       summary: Create a pet
@@ -100,51 +100,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        400:
+        '400':
           $ref: '#/components/responses/BadRequest'
-        413:
+        '413':
           $ref: '#/components/responses/BadRequest'
-        414:
+        '414':
           $ref: '#/components/responses/BadRequest'
-        415:
+        '415':
           $ref: '#/components/responses/BadRequest'
-        422:
+        '422':
           $ref: '#/components/responses/BadRequest'
-        431:
+        '431':
           $ref: '#/components/responses/BadRequest'
-        510:
+        '510':
           $ref: '#/components/responses/BadRequest'
-        401:
+        '401':
           $ref: '#/components/responses/Unauthorized'
-        403:
+        '403':
           $ref: '#/components/responses/Unauthorized'
-        407:
+        '407':
           $ref: '#/components/responses/Unauthorized'
-        511:
+        '511':
           $ref: '#/components/responses/Unauthorized'
-        404:
+        '404':
           $ref: '#/components/responses/NotFound'
-        501:
+        '501':
           $ref: '#/components/responses/NotFound'
-        505:
+        '505':
           $ref: '#/components/responses/NotFound'
-        429:
+        '429':
           $ref: '#/components/responses/RateLimited'
-        500:
+        '500':
           $ref: '#/components/responses/InternalServerError'
-        502:
+        '502':
           $ref: '#/components/responses/InternalServerError'
-        503:
+        '503':
           $ref: '#/components/responses/InternalServerError'
-        506:
+        '506':
           $ref: '#/components/responses/InternalServerError'
-        507:
+        '507':
           $ref: '#/components/responses/InternalServerError'
-        508:
+        '508':
           $ref: '#/components/responses/InternalServerError'
-        408:
+        '408':
           $ref: '#/components/responses/Timeout'
-        504:
+        '504':
           $ref: '#/components/responses/Timeout'
   /pets/{petId}:
     get:
@@ -172,51 +172,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        400:
+        '400':
           $ref: '#/components/responses/BadRequest'
-        413:
+        '413':
           $ref: '#/components/responses/BadRequest'
-        414:
+        '414':
           $ref: '#/components/responses/BadRequest'
-        415:
+        '415':
           $ref: '#/components/responses/BadRequest'
-        422:
+        '422':
           $ref: '#/components/responses/BadRequest'
-        431:
+        '431':
           $ref: '#/components/responses/BadRequest'
-        510:
+        '510':
           $ref: '#/components/responses/BadRequest'
-        401:
+        '401':
           $ref: '#/components/responses/Unauthorized'
-        403:
+        '403':
           $ref: '#/components/responses/Unauthorized'
-        407:
+        '407':
           $ref: '#/components/responses/Unauthorized'
-        511:
+        '511':
           $ref: '#/components/responses/Unauthorized'
-        404:
+        '404':
           $ref: '#/components/responses/NotFound'
-        501:
+        '501':
           $ref: '#/components/responses/NotFound'
-        505:
+        '505':
           $ref: '#/components/responses/NotFound'
-        429:
+        '429':
           $ref: '#/components/responses/RateLimited'
-        500:
+        '500':
           $ref: '#/components/responses/InternalServerError'
-        502:
+        '502':
           $ref: '#/components/responses/InternalServerError'
-        503:
+        '503':
           $ref: '#/components/responses/InternalServerError'
-        506:
+        '506':
           $ref: '#/components/responses/InternalServerError'
-        507:
+        '507':
           $ref: '#/components/responses/InternalServerError'
-        508:
+        '508':
           $ref: '#/components/responses/InternalServerError'
-        408:
+        '408':
           $ref: '#/components/responses/Timeout'
-        504:
+        '504':
           $ref: '#/components/responses/Timeout'
 components:
   schemas:
@@ -250,52 +250,76 @@ components:
           format: int32
         message:
           type: string
-    BadRequestError:
-      type: string
-    UnauthorizedError:
-      type: string
-    NotFoundError:
-      type: string
-    RateLimitedError:
-      type: string
+    BadRequest:
+      type: object
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+    Unauthorized:
+      type: object
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+    NotFound:
+      type: object
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+    RateLimited:
+      type: object
+      properties:
+        message:
+          type: string
+      additionalProperties: true
     InternalServerError:
-      type: string
-    TimeoutError:
-      type: string
+      type: object
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+    Timeout:
+      type: object
+      properties:
+        message:
+          type: string
+      additionalProperties: true
   responses:
     BadRequest:
       description: A collection of codes that generally means the end user got something wrong in making the request
       content:
-        '*/*':
+        application/json:
           schema:
-            $ref: '#/components/schemas/BadRequestError'
+            $ref: '#/components/schemas/BadRequest'
     Unauthorized:
       description: A collection of codes that generally means the client was not authenticated correctly for the request they want to make
       content:
-        '*/*':
+        application/json:
           schema:
-            $ref: '#/components/schemas/UnauthorizedError'
+            $ref: '#/components/schemas/Unauthorized'
     NotFound:
       description: Status codes relating to the resource/entity they are requesting not being found or endpoints/routes not existing
       content:
-        '*/*':
+        application/json:
           schema:
-            $ref: '#/components/schemas/NotFoundError'
+            $ref: '#/components/schemas/NotFound'
     RateLimited:
       description: Status codes relating to the client being rate limited by the server
       content:
-        '*/*':
+        application/json:
           schema:
-            $ref: '#/components/schemas/RateLimitedError'
+            $ref: '#/components/schemas/RateLimited'
     InternalServerError:
       description: A collection of status codes that generally mean the server failed in an unexpected way
       content:
-        '*/*':
+        application/json:
           schema:
             $ref: '#/components/schemas/InternalServerError'
     Timeout:
       description: Timeouts occurred with the request
       content:
-        '*/*':
+        application/json:
           schema:
-            $ref: '#/components/schemas/TimeoutError'
+            $ref: '#/components/schemas/Timeout'

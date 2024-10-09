@@ -42,8 +42,6 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			actualBytes, err := yaml.Marshal(root)
 			require.NoError(t, err)
 
-			println(string(actualBytes))
-
 			// Compare the actual and expected YAML
 			require.YAMLEq(t, string(expectedBytes), string(actualBytes))
 		})

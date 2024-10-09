@@ -71,6 +71,7 @@ func SuggestAndWrite(
 			return err
 		}
 	} else {
+		log.From(ctx).Infof("\nApplying overlay...")
 		root := model.Index.GetRootNode()
 		if err := overlay.ApplyTo(root); err != nil {
 			return err
