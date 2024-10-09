@@ -16,6 +16,7 @@ speakeasy overlay compare [flags]
   -a, --after string    the after schema to compare
   -b, --before string   the before schema to compare
   -h, --help            help for compare
+      --out string      write directly to a file instead of stdout
 ```
 
 ### Options inherited from parent commands

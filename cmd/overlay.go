@@ -45,6 +45,7 @@ var overlayValidateCmd = &model.ExecutableCommand[overlayValidateFlags]{
 type overlayCompareFlags struct {
 	Before string `json:"before"`
 	After  string `json:"after"`
+	Out    string `json:"out"`
 }
 
 var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
@@ -65,6 +66,10 @@ var overlayCompareCmd = &model.ExecutableCommand[overlayCompareFlags]{
 			Description:                "the after schema to compare",
 			Required:                   true,
 			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
+		},
+		flag.StringFlag{
+			Name:        "out",
+			Description: "write directly to a file instead of stdout",
 		},
 	},
 }
@@ -109,8 +114,19 @@ func runValidateOverlay(ctx context.Context, flags overlayValidateFlags) error {
 }
 
 func runCompare(ctx context.Context, flags overlayCompareFlags) error {
+	out := os.Stdout
+
+	if flags.Out != "" {
+		file, err := os.Create(flags.Out)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		out = file
+	}
+
 	schemas := []string{flags.Before, flags.After}
-	return overlay.Compare(schemas, os.Stdout)
+	return overlay.Compare(schemas, out)
 }
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {

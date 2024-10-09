@@ -109,21 +109,41 @@ func (b *builder) Build() overlay.Overlay {
 	}
 
 	if len(missingSchemaNodes) > 0 {
-		actions = append(actions, overlay.Action{
-			Target: "$.components.schemas",
-			Update: *builder.NewMappingNode(
-				missingSchemaNodes...,
-			),
-		})
+		schemasNode := *builder.NewMappingNode(missingSchemaNodes...)
+
+		// If components.schemas doesn't already exist, appending will fail silently
+		// If components.schemas does exist, we don't want to overwrite it
+		missingSchemasComponents := b.document.Components == nil || b.document.Components.Schemas == nil || b.document.Components.Schemas.IsZero()
+		if missingSchemasComponents {
+			actions = append(actions, overlay.Action{
+				Target: "$.components",
+				Update: *builder.NewNode("schemas", &schemasNode),
+			})
+		} else {
+			actions = append(actions, overlay.Action{
+				Target: "$.components.schemas",
+				Update: schemasNode,
+			})
+		}
 	}
 
 	if len(missingComponentNodes) > 0 {
-		actions = append(actions, overlay.Action{
-			Target: "$.components.responses",
-			Update: *builder.NewMappingNode(
-				missingComponentNodes...,
-			),
-		})
+		responsesNode := *builder.NewMappingNode(missingComponentNodes...)
+
+		// If components.responses doesn't already exist, appending will fail silently
+		// If components.responses does exist, we don't want to overwrite it
+		missingResponseComponents := b.document.Components == nil || b.document.Components.Responses == nil || b.document.Components.Responses.IsZero()
+		if missingResponseComponents {
+			actions = append(actions, overlay.Action{
+				Target: "$.components",
+				Update: *builder.NewNode("responses", &responsesNode),
+			})
+		} else {
+			actions = append(actions, overlay.Action{
+				Target: "$.components.responses",
+				Update: responsesNode,
+			})
+		}
 	}
 
 	return overlay.Overlay{
