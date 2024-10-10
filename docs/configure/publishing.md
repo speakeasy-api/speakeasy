@@ -17,7 +17,8 @@ speakeasy configure publishing [flags]
 ### Options
 
 ```
-  -h, --help   help for publishing
+  -h, --help                        help for publishing
+  -d, --workflow-directory string   directory of speakeasy workflow file
 ```
 
 ### Options inherited from parent commands
