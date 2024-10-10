@@ -838,7 +838,7 @@ func renderAndPrintWorkflowNotFound(cmd string, logger log.Logger) error {
 		[]string{
 			"Please do one of the following:",
 			"• Navigate to the root of your SDK repo",
-			"• If *.speakeasy/workflow.yaml* is not in the root of your repo:",
+			"• If *.speakeasy/workflow.yaml* is not in the root of your SDK repo:",
 			fmt.Sprintf("\t◦ run *speakeasy configure %s -d /path/to/workflow*", cmd),
 		}...)
 	logger.Println(msg)
