@@ -406,16 +406,7 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 
 	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
-		msg := styles.RenderErrorMessage("we couldn't find your Speakeasy workflow file (*.speakeasy/workflow.yaml*)",
-			lipgloss.Left,
-			[]string{
-				"Please do one of the following:",
-				"• Navigate to the root of your SDK repo",
-				"• If *.speakeasy/workflow.yaml* is not in the root of your repo:",
-				"\t◦ run *speakeasy configure publishing -d /path/to/workflow*",
-			}...)
-		logger.Println(msg)
-		return ErrWorkflowFileNotFound
+		return renderAndPrintWorkflowNotFound("publishing", logger)
 	}
 
 	var publishingOptions []huh.Option[string]
@@ -547,16 +538,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
-		msg := styles.RenderErrorMessage("we couldn't find your Speakeasy workflow file (*.speakeasy/workflow.yaml*)",
-			lipgloss.Left,
-			[]string{
-				"Please do one of the following:",
-				"• Navigate to the root of your SDK repo",
-				"• If *.speakeasy/workflow.yaml* is not in the root of your repo:",
-				"\t◦ run *speakeasy configure github -d /path/to/workflow*",
-			}...)
-		logger.Println(msg)
-		return ErrWorkflowFileNotFound
+		return renderAndPrintWorkflowNotFound("github", logger)
 	}
 	ctx = events.SetTargetInContext(ctx, rootDir)
 
@@ -848,4 +830,17 @@ func getActionWorkingDirectoryFromFlag(rootDir string, flags ConfigureGithubFlag
 	}
 
 	return actionWorkingDir
+}
+
+func renderAndPrintWorkflowNotFound(cmd string, logger log.Logger) error {
+	msg := styles.RenderErrorMessage("we couldn't find your Speakeasy workflow file (*.speakeasy/workflow.yaml*)",
+		lipgloss.Left,
+		[]string{
+			"Please do one of the following:",
+			"• Navigate to the root of your SDK repo",
+			"• If *.speakeasy/workflow.yaml* is not in the root of your repo:",
+			fmt.Sprintf("\t◦ run *speakeasy configure %s -d /path/to/workflow*", cmd),
+		}...)
+	logger.Println(msg)
+	return ErrWorkflowFileNotFound
 }
