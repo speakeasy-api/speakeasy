@@ -77,7 +77,11 @@ func (b *builder) Build() overlay.Overlay {
 		var nodes []*yaml.Node
 		for _, code := range missingCodes {
 			ref, exists := b.getReferenceForCode(codeToExistingComponent, code)
-			nodes = append(nodes, builder.NewKeyNode(code), builder.NewMultinode("$ref", ref))
+
+			codeKey := builder.NewKeyNode(code)
+			codeKey.Style = yaml.SingleQuotedStyle // Produces a warning otherwise
+
+			nodes = append(nodes, codeKey, builder.NewMultinode("$ref", ref))
 			if !exists {
 				missingGroup := b.errorGroups.FindCode(code)
 				if !slices.ContainsFunc(missingComponents, func(g errorGroup) bool { return g.responseName == missingGroup.responseName }) {
@@ -225,28 +229,47 @@ func keepOnlyMostUsed(codeUsedComponents map[string]map[string]int) map[string]s
 }
 
 // Returns something like:
-// InternalServerErrorError:
-//     type: string
+// InternalServerError:
+//      type: object
+//      properties:
+//        message:
+//          type: string
+//      additionalProperties: true
 func getSchemaNodes(group errorGroup) []*yaml.Node {
 	builder := yamlutil.NewBuilder(false)
 
-	return []*yaml.Node{builder.NewKeyNode(group.schemaName), builder.NewMultinode("type", "string")}
+	propertiesNode := builder.NewMappingNode(
+		builder.NewKeyNode("message"),
+		builder.NewMappingNode(
+			builder.NewNodeItem("type", "string")...,
+		),
+	)
+
+	var nodes []*yaml.Node
+	nodes = append(nodes, builder.NewNodeItem("type", "object")...)
+	nodes = append(nodes, builder.NewKeyNode("properties"), propertiesNode)
+	nodes = append(nodes, builder.NewNodeItem("additionalProperties", "true")...)
+
+	return []*yaml.Node{
+		builder.NewKeyNode(group.schemaName),
+		builder.NewMappingNode(nodes...),
+	}
 }
 
 // Returns something like:
 // InternalServerError:
 //     description: Internal Server Error
 //     content:
-//         '*/*':
+//         application/json:
 //             schema:
-//                 $ref: '#/components/schemas/InternalServerErrorError'
+//                 $ref: '#/components/schemas/InternalServerError'
 func getComponentNodes(group errorGroup) []*yaml.Node {
 	builder := yamlutil.NewBuilder(false)
 
 	var nodes []*yaml.Node
 	nodes = append(nodes, builder.NewNodeItem("description", group.description)...)
 	nodes = append(nodes, builder.NewKeyNode("content"))
-	nodes = append(nodes, builder.NewNode("*/*", builder.NewNode("schema", builder.NewMultinode("$ref", "#/components/schemas/"+group.schemaName))))
+	nodes = append(nodes, builder.NewNode("application/json", builder.NewNode("schema", builder.NewMultinode("$ref", "#/components/schemas/"+group.schemaName))))
 
 	return []*yaml.Node{builder.NewKeyNode(group.responseName), builder.NewMappingNode(nodes...)}
 }
