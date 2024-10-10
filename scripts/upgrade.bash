@@ -49,7 +49,12 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   echo "  ===== Commit Messages ==== "
   echo "$ALL_COMMIT_MESSAGES"
   echo "  ===== End Commit Messages ==== "
-  read -p "Commit Message (please summarize changes above): " SUMMARY
+  if command -v gum &> /dev/null; then
+    SUMMARY=$(gum input --placeholder "Commit Message (please summarize changes above): ")
+  else
+    echo "⚠️  Install gum for a better DX: https://github.com/charmbracelet/gum"
+    read -p "Commit Message (please summarize changes above): " SUMMARY
+  fi
 
   go get -v "github.com/speakeasy-api/openapi-generation/v2@v${NEXT_OPENAPI_GENERATION_VERSION}"
   go mod tidy
