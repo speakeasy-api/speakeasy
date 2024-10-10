@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi/arazzo"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -40,7 +41,7 @@ func Validate(ctx context.Context, file string) error {
 		lines = append(lines, fmt.Sprintf("- %s", err.Error()))
 	}
 
-	msg := styles.RenderErrorMessage("Validation Errors", lines...)
+	msg := styles.RenderErrorMessage("Validation Errors", lipgloss.Center, lines...)
 	logger.Println(msg)
 
 	return fmt.Errorf(`Arazzo document invalid ✖`)
