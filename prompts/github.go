@@ -274,7 +274,6 @@ func FindGithubRepository(outDir string) *git.Repository {
 	if err != nil {
 		return nil
 	}
-
 	return repo
 }
 

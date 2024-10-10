@@ -38,7 +38,7 @@ const (
 	actionsPath             = "Actions > Generate"
 	githubSetupDocs         = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
 	appInstallURL           = "https://github.com/apps/speakeasy-github"
-	ErrWorkflowFileNotFound = spkErrors.Error("workflow file not found")
+	ErrWorkflowFileNotFound = spkErrors.Error("workflow.yaml file not found")
 )
 
 const configureLong = `# Configure
@@ -112,7 +112,7 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 }
 
 type ConfigureGithubFlags struct {
-	Directory string `json:"directory"`
+	WorkflowDirectory string `json:"workflow-directory"`
 }
 
 var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
@@ -122,7 +122,7 @@ var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	Run:   configureGithub,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:        "directory",
+			Name:        "workflow-directory",
 			Shorthand:   "d",
 			Description: "directory of speakeasy workflow file",
 		},
@@ -131,10 +131,17 @@ var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 }
 
 var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
-	Usage:        "publishing",
-	Short:        "Configure Speakeasy for publishing.",
-	Long:         "Configure your Speakeasy workflow to publish to package managers from your github repo.",
-	Run:          configurePublishing,
+	Usage: "publishing",
+	Short: "Configure Speakeasy for publishing.",
+	Long:  "Configure your Speakeasy workflow to publish to package managers from your github repo.",
+	Run:   configurePublishing,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "workflow-directory",
+			Shorthand:   "d",
+			Description: "directory of speakeasy workflow file",
+		},
+	},
 	RequiresAuth: true,
 }
 
@@ -387,17 +394,27 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	return nil
 }
 
-func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error {
+func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error {
 	logger := log.From(ctx)
 
-	workingDir, err := os.Getwd()
+	rootDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	var workflowFileDir string
-	workflowFile, _, _ := workflow.Load(workingDir)
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
+
+	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
+		msg := styles.RenderErrorMessage("we couldn't find your Speakeasy workflow file (*.speakeasy/workflow.yaml*)",
+			lipgloss.Left,
+			[]string{
+				"Please do one of the following:",
+				"• Navigate to the root of your SDK repo",
+				"• If your Speakeasy workflow file is not in the root of your repo:",
+				"\t◦ run *speakeasy configure publishing -d /path/to/workflow*",
+			}...)
+		logger.Println(msg)
 		return ErrWorkflowFileNotFound
 	}
 
@@ -444,7 +461,7 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		if len(workflowFile.Targets) == 1 {
 			filenameAddendum = nil
 		}
-		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile.Targets[name], workingDir, workflowFileDir, filenameAddendum)
+		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile.Targets[name], rootDir, actionWorkingDir, filenameAddendum)
 		if err != nil {
 			return err
 		}
@@ -458,23 +475,18 @@ func configurePublishing(ctx context.Context, _flags ConfigureGithubFlags) error
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
 	}
 
-	if err := workflow.Save(filepath.Join(workingDir, workflowFileDir), workflowFile); err != nil {
+	if err := workflow.Save(filepath.Join(rootDir, actionWorkingDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
 
 	var remoteURL string
-	if repo := prompts.FindGithubRepository(workingDir); repo != nil {
+	if repo := prompts.FindGithubRepository(rootDir); repo != nil {
 		remoteURL = prompts.ParseGithubRemoteURL(repo)
 	}
 
 	secretPath := repositorySecretPath
 	if remoteURL != "" {
 		secretPath = fmt.Sprintf("%s/settings/secrets/actions", remoteURL)
-	}
-
-	_, workflowFilePath, err := workflow.Load(filepath.Join(workingDir, workflowFileDir))
-	if err != nil {
-		return errors.Wrapf(err, "failed to load workflow file")
 	}
 
 	status := []string{
@@ -531,11 +543,8 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	orgSlug := core.GetOrgSlugFromContext(ctx)
 	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
 
-	actionsWorkingDir, _ := filepath.Abs(strings.ReplaceAll(flags.Directory, "/.speakeasy/workflow.yaml", ""))
-	actionWorkingDir, _ := filepath.Rel(rootDir, actionsWorkingDir)
-	fmt.Println("action working dir")
-	fmt.Println(actionWorkingDir)
 	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
 		msg := styles.RenderErrorMessage("we couldn't find your Speakeasy workflow file (*.speakeasy/workflow.yaml*)",
@@ -543,7 +552,8 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 			[]string{
 				"Please do one of the following:",
 				"• Navigate to the root of your SDK repo",
-				"• If your Speakeasy workflow file is not in the root of your repo, run *speakeasy configure github -d /path/to/workflow*",
+				"• If your Speakeasy workflow file is not in the root of your repo:",
+				"\t◦ run *speakeasy configure github -d /path/to/workflow*",
 			}...)
 		logger.Println(msg)
 		return ErrWorkflowFileNotFound
@@ -815,4 +825,23 @@ func configureGithubRepo(ctx context.Context, org, repo string) bool {
 	}
 
 	return res.StatusCode == http.StatusOK
+}
+
+func getActionWorkingDirectoryFromFlag(rootDir string, flags ConfigureGithubFlags) string {
+	var actionWorkingDir string
+	if flags.WorkflowDirectory != "" {
+		if workflowFileDir, err := filepath.Abs(flags.WorkflowDirectory); err == nil {
+			if filepath.Base(workflowFileDir) == "workflow.yaml" {
+				workflowFileDir = filepath.Dir(workflowFileDir)
+			}
+
+			if filepath.Base(workflowFileDir) == ".speakeasy" {
+				workflowFileDir = filepath.Dir(workflowFileDir)
+			}
+
+			actionWorkingDir, _ = filepath.Rel(rootDir, workflowFileDir)
+		}
+	}
+
+	return actionWorkingDir
 }
