@@ -17,7 +17,8 @@ speakeasy configure github [flags]
 ### Options
 
 ```
-  -h, --help   help for github
+  -h, --help                        help for github
+  -d, --workflow-directory string   directory of speakeasy workflow file
 ```
 
 ### Options inherited from parent commands
