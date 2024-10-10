@@ -411,7 +411,7 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 			[]string{
 				"Please do one of the following:",
 				"• Navigate to the root of your SDK repo",
-				"• If your Speakeasy workflow file is not in the root of your repo:",
+				"• If *.speakeasy/workflow.yaml* is not in the root of your repo:",
 				"\t◦ run *speakeasy configure publishing -d /path/to/workflow*",
 			}...)
 		logger.Println(msg)
@@ -552,7 +552,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 			[]string{
 				"Please do one of the following:",
 				"• Navigate to the root of your SDK repo",
-				"• If your Speakeasy workflow file is not in the root of your repo:",
+				"• If *.speakeasy/workflow.yaml* is not in the root of your repo:",
 				"\t◦ run *speakeasy configure github -d /path/to/workflow*",
 			}...)
 		logger.Println(msg)
