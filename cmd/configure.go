@@ -840,6 +840,10 @@ func getActionWorkingDirectoryFromFlag(rootDir string, flags ConfigureGithubFlag
 			}
 
 			actionWorkingDir, _ = filepath.Rel(rootDir, workflowFileDir)
+			// filepath.Rel returns . on an equivalent path
+			if actionWorkingDir == "." || actionWorkingDir == "./" {
+				actionWorkingDir = ""
+			}
 		}
 	}
 
