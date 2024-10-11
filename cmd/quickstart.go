@@ -317,6 +317,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
 	} else if err == nil {
 		log.From(ctx).Infof("Initialized new git repository at %s", outDir)
+	} else { // If the error is ErrRepositoryAlreadyExists, ignore it
+		err = nil
 	}
 
 	// Flush event before launching studio so that we don't wait until the studio is closed to send telemetry
