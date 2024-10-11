@@ -360,7 +360,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 // WritePublishing writes a github action file for a given target for publishing to a package manager.
 // If filenameAddendum is provided, it will be appended to the filename (i.e. sdk_publish_lending.yaml).
 // Returns the paths to the files written.
-func WritePublishing(genWorkflow *config.GenerateWorkflow, workingDir, workflowFileDir string, target workflow.Target, filenameAddendum, outputPath *string) ([]string, error) {
+func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow, targetName, currentWorkingDir, workflowFileDir string, target workflow.Target) ([]string, error) {
 	secrets := make(map[string]string)
 	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
 	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
@@ -385,8 +385,8 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workingDir, workflowF
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if target.Target == "terraform" {
-		releaseActionPath := filepath.Join(workingDir, ".github/workflows/tf_provider_release.yaml")
-		goReleaserPath := workingDir
+		releaseActionPath := filepath.Join(currentWorkingDir, ".github/workflows/tf_provider_release.yaml")
+		goReleaserPath := currentWorkingDir
 		if terraformOutDir != nil {
 			goReleaserPath = filepath.Join(goReleaserPath, filepath.Join(workflowFileDir, *terraformOutDir))
 		}
@@ -402,10 +402,10 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workingDir, workflowF
 
 		return releasePaths, nil
 	} else if mode == "pr" {
-		filePath := filepath.Join(workingDir, ".github/workflows/sdk_publish.yaml")
-		if filenameAddendum != nil {
-			sanitizedName := strings.ReplaceAll(strings.ToLower(*filenameAddendum), "-", "_")
-			filePath = filepath.Join(workingDir, fmt.Sprintf(".github/workflows/sdk_publish_%s.yaml", sanitizedName))
+		filePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_publish.yaml")
+		if len(wf.Targets) > 1 {
+			sanitizedName := strings.ReplaceAll(strings.ToLower(targetName), "-", "_")
+			filePath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_publish_%s.yaml", sanitizedName))
 		}
 
 		publishingFile := &config.PublishWorkflow{}
@@ -413,24 +413,21 @@ func WritePublishing(genWorkflow *config.GenerateWorkflow, workingDir, workflowF
 			publishingFile = defaultPublishingFile()
 		}
 
-		if filenameAddendum != nil {
-			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(*filenameAddendum))
+		if len(wf.Targets) > 1 {
+			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(targetName))
 		}
 
-		releaseDirectory := workflowFileDir
-		if outputPath != nil {
+		configDirectory := workflowFileDir
+		if outputPath := target.Output; outputPath != nil {
 			trimmedPath := strings.TrimPrefix(*outputPath, "./")
-			releaseDirectory = filepath.Join(releaseDirectory, trimmedPath)
+			configDirectory = filepath.Join(configDirectory, trimmedPath)
 		}
 
-		if releaseDirectory != "" {
-			publishingFile.On.Push.Paths = []string{fmt.Sprintf("%s/RELEASES.md", releaseDirectory)}
-		}
+		publishingFile.On.Push.Paths = []string{filepath.Join(configDirectory, ".speakeasy/gen.lock")}
+		publishingFile.Jobs.Publish.With["target"] = targetName
 
 		if workflowFileDir != "" {
-			publishingFile.Jobs.Publish.With = map[string]any{
-				"working_directory": workflowFileDir,
-			}
+			publishingFile.Jobs.Publish.With["working_directory"] = workflowFileDir
 		}
 
 		for name, value := range secrets {
@@ -556,18 +553,17 @@ func defaultPublishingFile() *config.PublishWorkflow {
 		},
 		On: config.PublishOn{
 			Push: config.Push{
-				Paths: []string{
-					"RELEASES.md",
-					"*/RELEASES.md",
-				},
+				Paths: []string{},
 				Branches: []string{
 					"main",
 				},
 			},
+			WorkflowDispatch: &config.WorkflowDispatchEmpty{},
 		},
 		Jobs: config.Jobs{
 			Publish: config.Job{
 				Uses:    "speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15",
+				With:    make(map[string]any),
 				Secrets: make(map[string]string),
 			},
 		},
