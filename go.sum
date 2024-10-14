@@ -506,8 +506,6 @@ github.com/sourcegraph/jsonrpc2 v0.2.0 h1:KjN/dC4fP6aN9030MZCJs9WQbTOjWHhrtKVpzz
 github.com/sourcegraph/jsonrpc2 v0.2.0/go.mod h1:ZafdZgk/axhT1cvZAPOhw+95nz2I/Ra5qMlU4gTRwIo=
 github.com/speakeasy-api/easytemplate v0.11.1 h1:YGEPoldsiXcfhPWN/12B2m78+67RhuFB09HzrVmnX4A=
 github.com/speakeasy-api/easytemplate v0.11.1/go.mod h1:C2px2dvDShpIVSMy6IjKymMNHMHWKv/wngLsf9bLHkA=
-github.com/speakeasy-api/huh v1.1.1 h1:tSBHezk8MRHBwtWqjMB/fepU6HcFWu9esyZxAKw/XAY=
-github.com/speakeasy-api/huh v1.1.1/go.mod h1:iBavR3Ieq/4upEcdq+VXQyeShcoC9cOhsQbhc/cMuLU=
 github.com/speakeasy-api/jsonpath v0.1.1 h1:79gtq+zHYPe9dR1urEwl/PPsvP9nMRTGG1xHR62pM24=
 github.com/speakeasy-api/jsonpath v0.1.1/go.mod h1:Py01TnxRUMhC0/FT954KBiaDY2/kaZv3QMc8JxQaVys=
 github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939 h1:LGtzWUvGEZyMSZW34RHqE85HBsGRYgYP7L7Hh+4FSP4=

@@ -6,6 +6,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"slices"
+	"strings"
 )
 
 type Key struct {
@@ -14,18 +16,20 @@ type Key struct {
 }
 
 type FormModel struct {
-	title       string
-	description string
-	form        *huh.Form // huh.Form is just a tea.Model
-	signalExit  bool
-	keys        []Key
+	title          string
+	description    string
+	form           *huh.Form // huh.Form is just a tea.Model
+	signalExit     bool
+	keys           []Key
+	disallowedKeys []string
 }
 
-func Execute(fields ...huh.Field) error {
+func Execute(input huh.Field, opts ...FormOpt) error {
 	_, err := NewForm(
 		huh.NewForm(
-			huh.NewGroup(fields...),
+			huh.NewGroup(input),
 		),
+		opts...,
 	).ExecuteForm()
 	return err
 }
@@ -56,18 +60,39 @@ func (m FormModel) Init() tea.Cmd {
 }
 
 func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if len(m.disallowedKeys) > 0 {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if slices.Contains(m.disallowedKeys, msg.String()) {
+				return m, nil
+			}
+		}
+	}
+
 	var cmds []tea.Cmd
 
 	// Process the form
 	form, cmd := m.form.Update(msg)
+
 	if f, ok := form.(*huh.Form); ok {
+		for k, result := range f.Results {
+			resultString, ok := result.(string)
+			if !ok {
+				println("NOT A STRING")
+				continue
+			}
+			println("RESULT: " + resultString)
+			f.Results[k] = strings.TrimSpace(resultString)
+		}
+
 		m.form = f
 		cmds = append(cmds, cmd)
 	}
 
 	// Quit when the form is done.
 	if m.form.State == huh.StateCompleted {
-		cmds = append(cmds, tea.Quit)
+		return m, tea.Quit
+		//cmds = append(cmds, tea.Quit)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -138,5 +163,11 @@ func WithDescription(description string) FormOpt {
 func WithKey(key, label string) FormOpt {
 	return func(m *FormModel) {
 		m.keys = append([]Key{{Key: key, Label: label}}, m.keys...)
+	}
+}
+
+func WithNoSpaces() FormOpt {
+	return func(m *FormModel) {
+		m.disallowedKeys = append(m.disallowedKeys, " ")
 	}
 }

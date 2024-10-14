@@ -42,7 +42,7 @@ func getOASLocation(location, authHeader *string, allowSample bool) error {
 
 func oasLocationPrompt(fileLocation *string, allowEmpty bool) *huh.Input {
 	if fileLocation == nil || *fileLocation == "" {
-		return charm_internal.NewInput().
+		return charm_internal.NewInput(fileLocation).
 			Title("OpenAPI Document Location").
 			Placeholder("local file path or remote file reference").
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
@@ -51,7 +51,6 @@ func oasLocationPrompt(fileLocation *string, allowEmpty bool) *huh.Input {
 				IsDirectories:  true,
 			})).
 			Prompt("").
-			Value(fileLocation).
 			Validate(func(s string) error {
 				return validateOpenApiFileLocation(s, allowEmpty)
 			})
@@ -62,7 +61,7 @@ func oasLocationPrompt(fileLocation *string, allowEmpty bool) *huh.Input {
 
 func sourceNamePrompt(currentWorkflow *workflow.Workflow, sourceName *string) huh.Field {
 	if sourceName == nil || *sourceName == "" {
-		return charm_internal.NewInlineInput().
+		return charm_internal.NewInlineInput(sourceName).
 			Title("What is a good name for this source document?").
 			Placeholder("source-name").
 			Validate(func(s string) error {
@@ -78,8 +77,7 @@ func sourceNamePrompt(currentWorkflow *workflow.Workflow, sourceName *string) hu
 					return fmt.Errorf("a source with the name %s already exists", s)
 				}
 				return nil
-			}).
-			Value(sourceName)
+			})
 	}
 
 	return nil
@@ -112,12 +110,11 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 			return true
 		}),
 		huh.NewGroup(
-			charm_internal.NewInput().
+			charm_internal.NewInput(authHeader).
 				Title("What is the name of your authentication header?").
 				Description("The value for this header will be fetched from the secret $OPENAPI_DOC_AUTH_TOKEN\n").
 				Prompt("").
-				Placeholder("x-auth-token").
-				Value(authHeader),
+				Placeholder("x-auth-token"),
 		).WithHideFunc(func() bool {
 			return !requiresAuthentication
 		}),
@@ -135,12 +132,11 @@ func getSDKName(sdkName *string, placeholder string) error {
 		}
 
 		return charm_internal.Execute(
-			charm_internal.NewInput().
+			charm_internal.NewInput(sdkName).
 				Title("Give your SDK a name").
 				DescriptionFunc(descriptionFn, sdkName).
 				Placeholder(placeholder).
-				Suggestions([]string{placeholder}).
-				Value(sdkName),
+				Suggestions([]string{placeholder}),
 		)
 	}
 
@@ -151,14 +147,13 @@ func getSDKName(sdkName *string, placeholder string) error {
 func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *string) []*huh.Group {
 	groups := []*huh.Group{
 		huh.NewGroup(
-			charm_internal.NewInlineInput().
+			charm_internal.NewInlineInput(overlayLocation).
 				Title("What is the location of your Overlay file?").
 				Placeholder("local file path or remote file reference.").
 				Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 				SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 					FileExtensions: charm_internal.OpenAPIFileExtensions,
-				})).
-				Value(overlayLocation),
+				})),
 		).WithHideFunc(func() bool {
 			return !*promptForOverlay
 		}),
@@ -249,14 +244,13 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		// TODO: What is this prompt even doing? "if !addOpenAPIFile" so why are we asking for an OAS
 		groups := []*huh.Group{
 			huh.NewGroup(
-				charm_internal.NewInput().
+				charm_internal.NewInput(&fileLocation).
 					Title("What is the location of your OpenAPI document?\n").
 					Placeholder("local file path or remote file reference.").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 						FileExtensions: charm_internal.OpenAPIFileExtensions,
-					})).
-					Value(&fileLocation),
+					})),
 			),
 		}
 		groups = append(groups, getRemoteAuthenticationPrompts(&fileLocation, &authHeader)...)
@@ -344,13 +338,12 @@ func AddToSource(name string, currentSource *workflow.Source) (*workflow.Source,
 		previousOutputLocation := outputLocation
 		if _, err := charm_internal.NewForm(huh.NewForm(
 			huh.NewGroup(
-				charm_internal.NewInlineInput().
+				charm_internal.NewInlineInput(&outputLocation).
 					Title("Optionally provide an output location for your build source file:").
 					Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 					SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 						FileExtensions: charm_internal.OpenAPIFileExtensions,
-					})).
-					Value(&outputLocation),
+					})),
 			)),
 			charm_internal.WithTitle(fmt.Sprintf("Let's modify the source %s", name))).
 			ExecuteForm(); err != nil {
@@ -374,7 +367,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 	var sourceName, fileLocation, authHeader string
 	var overlayFileLocation, overlayAuthHeader, outputLocation string
 
-	if err := charm_internal.Execute(sourceNamePrompt(currentWorkflow, &sourceName)); err != nil {
+	if err := charm_internal.Execute(sourceNamePrompt(currentWorkflow, &sourceName), charm_internal.WithNoSpaces()); err != nil {
 		return "", nil, err
 	}
 
@@ -387,14 +380,13 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 	groups = append(groups, charm_internal.NewBranchPrompt("Would you like to add an overlay file to this source?", &promptForOverlay))
 	groups = append(groups, getOverlayPrompts(&promptForOverlay, &overlayFileLocation, &overlayAuthHeader)...)
 	groups = append(groups, huh.NewGroup(
-		charm_internal.NewInlineInput().
+		charm_internal.NewInlineInput(&outputLocation).
 			Title("Optionally provide an output location for your build source file:").
 			Placeholder("output.yaml").
 			Suggestions(charm_internal.SchemaFilesInCurrentDir("", charm_internal.OpenAPIFileExtensions)).
 			SetSuggestionCallback(charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
 				FileExtensions: charm_internal.OpenAPIFileExtensions,
-			})).
-			Value(&outputLocation),
+			})),
 	).WithHideFunc(
 		func() bool {
 			return overlayFileLocation == ""
