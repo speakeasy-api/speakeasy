@@ -74,10 +74,6 @@ func FormatNewOption(text string) string {
 	return fmt.Sprintf("+ %s", text)
 }
 
-func NewInputNoSpaces() *huh.Input {
-	return huh.NewInput().Prompt("").Inline(true).Accessor(&TransformAccessor{transform: strings.TrimSpace})
-}
-
 // Populates tab complete for schema files in the relative directory
 func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []string {
 	var validFiles []string

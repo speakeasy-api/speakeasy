@@ -7,7 +7,6 @@ import (
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"slices"
-	"strings"
 )
 
 type Key struct {
@@ -75,24 +74,13 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	form, cmd := m.form.Update(msg)
 
 	if f, ok := form.(*huh.Form); ok {
-		for k, result := range f.Results {
-			resultString, ok := result.(string)
-			if !ok {
-				println("NOT A STRING")
-				continue
-			}
-			println("RESULT: " + resultString)
-			f.Results[k] = strings.TrimSpace(resultString)
-		}
-
 		m.form = f
 		cmds = append(cmds, cmd)
 	}
 
 	// Quit when the form is done.
 	if m.form.State == huh.StateCompleted {
-		return m, tea.Quit
-		//cmds = append(cmds, tea.Quit)
+		cmds = append(cmds, tea.Quit)
 	}
 
 	return m, tea.Batch(cmds...)
