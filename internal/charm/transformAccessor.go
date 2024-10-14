@@ -18,7 +18,7 @@ func (t *TransformAccessor) Get() string {
 
 func (t *TransformAccessor) Set(value string) {
 	value = t.transform(value)
-	t.value = &value
+	*t.value = value
 }
 
 var _ huh.Accessor[string] = &TransformAccessor{}

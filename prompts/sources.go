@@ -3,6 +3,7 @@ package prompts
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/huh"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
-	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -399,6 +399,8 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 		ExecuteForm(); err != nil {
 		return "", nil, err
 	}
+
+	println("FILE LOCATION: " + fileLocation)
 
 	document, err := formatDocument(fileLocation, authHeader, false)
 	if err != nil {
