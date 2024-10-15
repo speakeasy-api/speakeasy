@@ -194,13 +194,11 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 	for prompt, value := range prompts {
 		var input *huh.Input
 		if prompt.entryType == publishingTypeSecret {
-			input = charm.NewInlineInput().
-				Title(fmt.Sprintf("Provide a name for your %s secret:", prompt.key)).
-				Value(value)
+			input = charm.NewInlineInput(value).
+				Title(fmt.Sprintf("Provide a name for your %s secret:", prompt.key))
 		} else {
-			input = charm.NewInlineInput().
-				Title(fmt.Sprintf("Provide the value of your %s:", prompt.key)).
-				Value(value)
+			input = charm.NewInlineInput(value).
+				Title(fmt.Sprintf("Provide the value of your %s:", prompt.key))
 		}
 		fields = append(fields,
 			input,

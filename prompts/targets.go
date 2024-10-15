@@ -33,7 +33,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 		}
 
 		targetFields = append(targetFields,
-			charm.NewInlineInput().
+			charm.NewInlineInput(targetName).
 				Title("What is a good name for this target?").
 				Validate(func(s string) error {
 					if s == "" {
@@ -48,8 +48,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 						return fmt.Errorf("a target with the name %s already exists", s)
 					}
 					return nil
-				}).
-				Value(targetName),
+				}),
 		)
 	}
 
@@ -59,7 +58,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	}
 	if len(currentWorkflow.Targets) > 0 {
 		groups = append(groups,
-			huh.NewGroup(charm.NewInlineInput().
+			huh.NewGroup(charm.NewInlineInput(outDir).
 				Title("What is a good output directory for your generation target?").
 				Suggestions(charm.DirsInCurrentDir(*outDir)).
 				SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
@@ -75,8 +74,7 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 					}
 
 					return nil
-				}).
-				Value(outDir),
+				}),
 			))
 	}
 
@@ -185,11 +183,10 @@ func PromptForOutDirMigration(currentWorkflow *workflow.Workflow, existingTarget
 			originalDir := outDir
 
 			if _, err := charm.NewForm(huh.NewForm(
-				huh.NewGroup(charm.NewInlineInput().
+				huh.NewGroup(charm.NewInlineInput(&outDir).
 					Title(fmt.Sprintf("Optionally provide an output directory to move your existing %s target %s to.", targetType, targetName)).
 					Suggestions(charm.DirsInCurrentDir(outDir)).
-					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
-					Value(&outDir))),
+					SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})))),
 				charm.WithTitle("When setting up multiple targets we recommend you select an output directory not in the root folder.")).ExecuteForm(); err != nil {
 				return err
 			}

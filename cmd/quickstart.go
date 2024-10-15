@@ -162,7 +162,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if !currentDirectoryEmpty() {
-		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput().
+		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput(&promptedDir).
 			Title("What directory should the "+targetType+" files be written to?").
 			Description(description+"\n").
 			Suggestions(charm.DirsInCurrentDir(promptedDir)).
@@ -174,8 +174,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 					}
 				}
 				return nil
-			}).
-			Value(&promptedDir))),
+			}))),
 			charm.WithTitle("Pick an output directory for your newly created files.")).
 			ExecuteForm()
 	} else {
