@@ -312,7 +312,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 		}
 
 		if err != nil {
-			changesStep.Fail()
+			changesStep.Skip("failed to compute document changes")
 		}
 	}()
 
@@ -406,7 +406,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		}
 
 		if err != nil {
-			registryStep.Fail()
+			registryStep.Skip("failed to track OpenAPI changes")
 		}
 	}()
 
