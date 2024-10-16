@@ -39,6 +39,7 @@ type RunFlags struct {
 	SetVersion         string            `json:"set-version"`
 	Watch              bool              `json:"watch"`
 	GitHub             bool              `json:"github"`
+	Minimal            bool              `json:"minimal"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -155,6 +156,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.BooleanFlag{
 			Name:        "github",
 			Description: "kick off a generation run in GitHub",
+		},
+		flag.BooleanFlag{
+			Name:        "minimal",
+			Description: "only run the steps that are strictly necessary to generate the SDK",
 		},
 	},
 }
@@ -286,6 +291,12 @@ func askForSource(sources []string) (string, error) {
 	return source, nil
 }
 
+var minimalOpts = []run.Opt{
+	run.WithSkipChangeReport(true),
+	run.WithSkipSnapshot(true),
+	run.WithSkipGenerateLintReport(),
+}
+
 func runNonInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
@@ -307,6 +318,10 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+	}
+
+	if flags.Minimal {
+		opts = append(opts, minimalOpts...)
 	}
 
 	workflow, err := run.NewWorkflow(
@@ -361,6 +376,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+	}
+
+	if flags.Minimal {
+		opts = append(opts, minimalOpts...)
 	}
 
 	workflow, err := run.NewWorkflow(
