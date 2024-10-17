@@ -141,18 +141,6 @@ func WithFrozenWorkflowLock(frozen bool) Opt {
 	}
 }
 
-// If we are in --watch mode (e.g explicitly running the studio), we want to
-// run the recommended ruleset that also includes additional rules such as
-// missing-examples, which are not enabled by default in the generation only
-// ruleset.
-func WithRulesetOverride(watchMode bool) Opt {
-	return func(w *Workflow) {
-		if watchMode {
-			w.RulesetOverride = "speakeasy-recommended"
-		}
-	}
-}
-
 func WithSkipVersioning(skipVersioning bool) Opt {
 	return func(w *Workflow) {
 		w.SkipVersioning = skipVersioning
