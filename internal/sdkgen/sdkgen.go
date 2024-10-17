@@ -50,7 +50,6 @@ type GenerateOptions struct {
 	RepoSubDir      string
 	Verbose         bool
 	Compile         bool
-	ForceGeneration bool
 	TargetName      string
 	SkipVersioning  bool
 }
@@ -127,14 +126,11 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generate.WithPublished(opts.Published),
 		generate.WithRepoDetails(opts.Repo, opts.RepoSubDir),
 		generate.WithCLIVersion(opts.CLIVersion),
+		generate.WithForceGeneration(),
 	}
 
 	if opts.Verbose {
 		generatorOpts = append(generatorOpts, generate.WithVerboseOutput(true))
-	}
-
-	if opts.ForceGeneration {
-		generatorOpts = append(generatorOpts, generate.WithForceGeneration())
 	}
 
 	if opts.Debug {
