@@ -52,7 +52,7 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 		flag.BooleanFlag{
 			Name:         "verbose",
 			DefaultValue: false,
-			Description:  fmt.Sprintf("Verbose output"),
+			Description:  "Verbose output",
 		},
 		autoYesFlag,
 		flag.StringFlag{
@@ -74,8 +74,10 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 			Hidden:      true,
 		},
 		flag.BooleanFlag{
-			Name:        "force",
-			Description: "Force generation of SDKs even when no changes are present",
+			Name:               "force",
+			Description:        "Force generation of SDKs even when no changes are present",
+			Deprecated:         true,
+			DeprecationMessage: "as it is now the default behavior and will be removed in a future version",
 		},
 	},
 	NonInteractiveSubcommands: []model.Command{genSDKVersionCmd, genSDKChangelogCmd},
@@ -102,7 +104,6 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 			RepoSubDir:      flags.RepoSubdir,
 			Verbose:         flags.Verbose,
 			Compile:         false,
-			ForceGeneration: flags.Force,
 			TargetName:      "",
 			SkipVersioning:  false,
 		},
