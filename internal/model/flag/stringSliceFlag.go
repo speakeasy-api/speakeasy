@@ -2,14 +2,17 @@ package flag
 
 import (
 	"encoding/csv"
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 type StringSliceFlag struct {
 	Name, Shorthand, Description string
 	Required, Hidden             bool
 	DefaultValue                 []string
+	Deprecated                   bool
+	DeprecationMessage           string
 }
 
 func (f StringSliceFlag) Init(cmd *cobra.Command) error {
@@ -18,6 +21,11 @@ func (f StringSliceFlag) Init(cmd *cobra.Command) error {
 	cmd.Flags().StringSliceP(f.Name, f.Shorthand, f.DefaultValue, fullDescription)
 	if err := setRequiredAndHidden(cmd, f.Name, f.Required, f.Hidden); err != nil {
 		return err
+	}
+	if f.Deprecated {
+		if err := setDeprecated(cmd, f.Name, f.DeprecationMessage); err != nil {
+			return err
+		}
 	}
 	return nil
 }

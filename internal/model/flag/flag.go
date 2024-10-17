@@ -25,6 +25,10 @@ func setRequiredAndHidden(cmd *cobra.Command, name string, required, hidden bool
 	return nil
 }
 
+func setDeprecated(cmd *cobra.Command, name, message string) error {
+	return cmd.Flags().MarkDeprecated(name, message)
+}
+
 // Verify that the flag types implement the Flag interface
 var _ = []Flag{
 	&StringFlag{},
