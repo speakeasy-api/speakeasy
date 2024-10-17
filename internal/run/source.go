@@ -83,9 +83,6 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	if source.Ruleset != nil {
 		rulesetToUse = *source.Ruleset
 	}
-	if w.RulesetOverride != "" {
-		rulesetToUse = w.RulesetOverride
-	}
 
 	logger := log.From(ctx)
 	logger.Infof("Running Source %s...", sourceID)
