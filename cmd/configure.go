@@ -782,7 +782,7 @@ func checkGithubAppAccess(ctx context.Context, org, repo string) bool {
 		return false
 	}
 
-	res, err := s.Github.CheckAccess(ctx, operations.CheckAccessRequest{
+	res, err := s.Github.CheckAccess(ctx, operations.CheckGithubAccessRequest{
 		Org:  org,
 		Repo: repo,
 	})

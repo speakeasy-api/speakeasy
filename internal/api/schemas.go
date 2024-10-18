@@ -56,7 +56,7 @@ func registerSchema(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.From(ctx).Successf("Schema successfully registered for: %s - %s ✓", apiID, versionID)
@@ -91,7 +91,7 @@ func getSchemas(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintArray(cmd, res.Classes, map[string]string{
@@ -134,7 +134,7 @@ func getSchemaRevision(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintValue(cmd, res.Schema, map[string]string{
@@ -183,7 +183,7 @@ func getSchemaDiff(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintValue(cmd, res.SchemaDiff, nil)
@@ -218,20 +218,20 @@ func downloadLatestSchema(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
-	if res.TwoHundredApplicationJSONSchema != nil {
-		defer res.TwoHundredApplicationJSONSchema.Close()
-		jsonSchema, err := io.ReadAll(res.TwoHundredApplicationJSONSchema)
+	if res.TwoXXApplicationJSONSchema != nil {
+		defer res.TwoXXApplicationJSONSchema.Close()
+		jsonSchema, err := io.ReadAll(res.TwoXXApplicationJSONSchema)
 		if err != nil {
 			return err
 		}
 		log.From(ctx).Println(string(jsonSchema))
 	}
-	if res.TwoHundredApplicationXYamlSchema != nil {
-		defer res.TwoHundredApplicationXYamlSchema.Close()
-		yamlSchema, err := io.ReadAll(res.TwoHundredApplicationXYamlSchema)
+	if res.TwoXXApplicationXYamlSchema != nil {
+		defer res.TwoXXApplicationXYamlSchema.Close()
+		yamlSchema, err := io.ReadAll(res.TwoXXApplicationXYamlSchema)
 		if err != nil {
 			return err
 		}
@@ -274,20 +274,20 @@ func downloadSchemaRevision(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
-	if res.TwoHundredApplicationJSONSchema != nil {
-		defer res.TwoHundredApplicationJSONSchema.Close()
-		jsonSchema, err := io.ReadAll(res.TwoHundredApplicationJSONSchema)
+	if res.TwoXXApplicationJSONSchema != nil {
+		defer res.TwoXXApplicationJSONSchema.Close()
+		jsonSchema, err := io.ReadAll(res.TwoXXApplicationJSONSchema)
 		if err != nil {
 			return err
 		}
 		log.From(ctx).Println(string(jsonSchema))
 	}
-	if res.TwoHundredApplicationXYamlSchema != nil {
-		defer res.TwoHundredApplicationXYamlSchema.Close()
-		yamlSchema, err := io.ReadAll(res.TwoHundredApplicationXYamlSchema)
+	if res.TwoXXApplicationXYamlSchema != nil {
+		defer res.TwoXXApplicationXYamlSchema.Close()
+		yamlSchema, err := io.ReadAll(res.TwoXXApplicationXYamlSchema)
 		if err != nil {
 			return err
 		}
