@@ -184,12 +184,6 @@ func WithShouldCompile(shouldCompile bool) Opt {
 	}
 }
 
-func WithForceGeneration(forceGeneration bool) Opt {
-	return func(w *Workflow) {
-		w.ForceGeneration = forceGeneration
-	}
-}
-
 func WithVerbose(verbose bool) Opt {
 	return func(w *Workflow) {
 		w.Verbose = verbose
@@ -265,7 +259,6 @@ func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 				WithSetVersion(w.SetVersion),
 				WithDebug(w.Debug),
 				WithShouldCompile(w.ShouldCompile),
-				WithForceGeneration(w.ForceGeneration),
 				WithSkipLinting(),
 				WithSkipChangeReport(w.SkipChangeReport),
 				WithSkipSnapshot(w.SkipSnapshot),

@@ -32,18 +32,40 @@ type GenerationAccess struct {
 	Level         *shared.Level
 }
 
-func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, header, token, outDir, cliVersion, installationURL string, debug, autoYes, published, outputTests bool, repo, repoSubDir string, verbose, compile, force bool, targetName string, skipVersioning bool) (*GenerationAccess, error) {
-	if !generate.CheckLanguageSupported(lang) {
-		return nil, fmt.Errorf("language not supported: %s", lang)
+type GenerateOptions struct {
+	CustomerID      string
+	WorkspaceID     string
+	Language        string
+	SchemaPath      string
+	Header          string
+	Token           string
+	OutDir          string
+	CLIVersion      string
+	InstallationURL string
+	Debug           bool
+	AutoYes         bool
+	Published       bool
+	OutputTests     bool
+	Repo            string
+	RepoSubDir      string
+	Verbose         bool
+	Compile         bool
+	TargetName      string
+	SkipVersioning  bool
+}
+
+func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
+	if !generate.CheckLanguageSupported(opts.Language) {
+		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
 
-	ctx = events.SetTargetInContext(ctx, outDir)
+	ctx = events.SetTargetInContext(ctx, opts.OutDir)
 
-	logger := log.From(ctx).WithAssociatedFile(schemaPath)
+	logger := log.From(ctx).WithAssociatedFile(opts.SchemaPath)
 
 	generationAccess, level, message, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
-		GenLockID:  GetGenLockID(outDir),
-		TargetType: &lang,
+		GenLockID:  GetGenLockID(opts.OutDir),
+		TargetType: &opts.Language,
 	})
 
 	if !generationAccess && level != nil && *level == shared.LevelBlocked {
@@ -60,9 +82,9 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 		}, errors.New("generation access blocked")
 	}
 
-	logger.Infof("Generating SDK for %s...\n", lang)
+	logger.Infof("Generating SDK for %s...\n", opts.Language)
 
-	if strings.TrimSpace(outDir) == "." {
+	if strings.TrimSpace(opts.OutDir) == "." {
 		wd, err := os.Getwd()
 		if err != nil {
 			return &GenerationAccess{
@@ -72,10 +94,10 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 			}, fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
-		outDir = wd
+		opts.OutDir = wd
 	}
 
-	isRemote, schema, err := openapi.GetSchemaContents(ctx, schemaPath, header, token)
+	isRemote, schema, err := openapi.GetSchemaContents(ctx, opts.SchemaPath, opts.Header, opts.Token)
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
@@ -91,42 +113,39 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	workspaceUri := auth.GetWorkspaceBaseURL(ctx)
 
-	opts := []generate.GeneratorOptions{
+	generatorOpts := []generate.GeneratorOptions{
 		generate.WithLogger(logger.WithFormatter(log.PrefixedFormatter)),
-		generate.WithCustomerID(customerID),
-		generate.WithWorkspaceID(workspaceID),
+		generate.WithCustomerID(opts.CustomerID),
+		generate.WithWorkspaceID(opts.WorkspaceID),
 		// We need the workspace uri in the generator to render a link to the
 		// workspace onboarding steps in the readme when it is not yet setup fully
 		generate.WithWorkspaceUri(workspaceUri),
 		generate.WithRunLocation(runLocation),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
-		generate.WithInstallationURL(installationURL),
-		generate.WithPublished(published),
-		generate.WithRepoDetails(repo, repoSubDir),
-		generate.WithCLIVersion(cliVersion),
+		generate.WithInstallationURL(opts.InstallationURL),
+		generate.WithPublished(opts.Published),
+		generate.WithRepoDetails(opts.Repo, opts.RepoSubDir),
+		generate.WithCLIVersion(opts.CLIVersion),
+		generate.WithForceGeneration(),
 	}
 
-	if verbose {
-		opts = append(opts, generate.WithVerboseOutput(true))
+	if opts.Verbose {
+		generatorOpts = append(generatorOpts, generate.WithVerboseOutput(true))
 	}
 
-	if force {
-		opts = append(opts, generate.WithForceGeneration())
-	}
-
-	if debug {
-		opts = append(opts, generate.WithDebuggingEnabled())
+	if opts.Debug {
+		generatorOpts = append(generatorOpts, generate.WithDebuggingEnabled())
 	}
 
 	// Enable outputting of internal tests for internal speakeasy use cases
-	if outputTests {
-		opts = append(opts, generate.WithOutputTests())
+	if opts.OutputTests {
+		generatorOpts = append(generatorOpts, generate.WithOutputTests())
 	}
-	if skipVersioning {
-		opts = append(opts, generate.WithSkipVersioning(skipVersioning))
+	if opts.SkipVersioning {
+		generatorOpts = append(generatorOpts, generate.WithSkipVersioning(opts.SkipVersioning))
 	}
 
-	g, err := generate.New(opts...)
+	g, err := generate.New(generatorOpts...)
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
@@ -136,13 +155,13 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 	}
 
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
-		event.GenerateTargetName = &targetName
-		if errs := g.Generate(ctx, schema, schemaPath, lang, outDir, isRemote, compile); len(errs) > 0 {
+		event.GenerateTargetName = &opts.TargetName
+		if errs := g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile); len(errs) > 0 {
 			for _, err := range errs {
 				logger.Error("", zap.Error(err))
 			}
 
-			return fmt.Errorf("failed to generate SDKs for %s ✖", lang)
+			return fmt.Errorf("failed to generate SDKs for %s ✖", opts.Language)
 		}
 		return nil
 	})
@@ -156,7 +175,7 @@ func Generate(ctx context.Context, customerID, workspaceID, lang, schemaPath, he
 
 	sdkDocsLink := "https://www.speakeasy.com/docs/customize-sdks"
 
-	logger.Successf("\nSDK for %s generated successfully ✓", lang)
+	logger.Successf("\nSDK for %s generated successfully ✓", opts.Language)
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	if !generationAccess {

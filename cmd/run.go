@@ -119,8 +119,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Hidden:       true, // we are unaware of any use cases for this flag outside of upgrade regression testing, which we execute internally
 		},
 		flag.BooleanFlag{
-			Name:        "force",
-			Description: "Force generation of SDKs even when no changes are present",
+			Name:               "force",
+			Description:        "Force generation of SDKs even when no changes are present",
+			Deprecated:         true,
+			DeprecationMessage: "as it is now the default behavior and will be removed in a future version",
 		},
 		flag.EnumFlag{
 			Name:          "output",
@@ -312,7 +314,6 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithSkipVersioning(flags.SkipVersioning),
 		run.WithVerbose(flags.Verbose),
-		run.WithForceGeneration(flags.Force),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
@@ -368,7 +369,6 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithInstallationURLs(flags.InstallationURLs),
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
-		run.WithForceGeneration(flags.Force),
 		run.WithVerbose(flags.Verbose),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
