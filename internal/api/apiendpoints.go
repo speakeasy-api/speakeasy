@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
@@ -34,7 +35,7 @@ func getAllAPIEndpoints(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintArray(cmd, res.APIEndpoints, map[string]string{
@@ -72,7 +73,7 @@ func getAllAPIEndpointsForVersion(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintArray(cmd, res.APIEndpoints, map[string]string{
@@ -116,7 +117,7 @@ func getApiEndpoint(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintValue(cmd, res.APIEndpoint, map[string]string{
@@ -160,7 +161,7 @@ func findApiEndpoint(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintValue(cmd, res.APIEndpoint, map[string]string{
@@ -207,7 +208,7 @@ func generateOpenAPISpecForAPIEndpoint(cmd *cobra.Command, args []string) error 
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	specDiff := res.GenerateOpenAPISpecDiff
@@ -255,7 +256,7 @@ func generatePostmanCollectionForAPIEndpoint(cmd *cobra.Command, args []string) 
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.From(ctx).PrintlnUnstyled(res.PostmanCollection)
