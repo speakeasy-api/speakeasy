@@ -2,8 +2,9 @@ package api
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
+
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
@@ -27,7 +28,7 @@ func getApis(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintArray(cmd, res.Apis, map[string]string{
@@ -58,7 +59,7 @@ func getApiVersions(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	log.PrintArray(cmd, res.Apis, map[string]string{
@@ -98,7 +99,7 @@ func generateOpenAPISpec(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	specDiff := res.GenerateOpenAPISpecDiff
@@ -140,7 +141,7 @@ func generatePostmanCollection(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("error: %s, statusCode: %d", res.Error.Message, res.StatusCode)
+		return fmt.Errorf("statusCode: %d", res.StatusCode)
 	}
 
 	collection, err := io.ReadAll(res.PostmanCollection)
