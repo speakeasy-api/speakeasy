@@ -101,7 +101,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			withCodeSamples: true,
 		},
 		{
-			name: "code samples with force",
+			name: "code samples",
 			targetTypes: []string{
 				"go",
 			},
