@@ -30,7 +30,6 @@ speakeasy run [flags]
 
 ```
   -d, --debug                     enable writing debug files with broken code
-      --force                     Force generation of SDKs even when no changes are present
       --github                    kick off a generation run in GitHub
   -h, --help                      help for run
   -i, --installationURL string    the language specific installation URL for installation instructions if the SDK is not published to a package manager
