@@ -12,6 +12,8 @@ type EnumFlag struct {
 	Required, Hidden             bool
 	DefaultValue                 string
 	AllowedValues                []string
+	Deprecated                   bool
+	DeprecationMessage           string
 }
 
 func (f EnumFlag) Init(cmd *cobra.Command) error {
@@ -33,7 +35,11 @@ func (f EnumFlag) Init(cmd *cobra.Command) error {
 	if err := setRequiredAndHidden(cmd, f.Name, f.Required, f.Hidden); err != nil {
 		return err
 	}
-
+	if f.Deprecated {
+		if err := setDeprecated(cmd, f.Name, f.DeprecationMessage); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

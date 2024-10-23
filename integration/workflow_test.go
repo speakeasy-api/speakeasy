@@ -65,7 +65,6 @@ func TestGenerationWorkflows(t *testing.T) {
 		targetTypes     []string
 		outdirs         []string
 		inputDoc        string
-		withForce       bool
 		withCodeSamples bool
 	}{
 		{
@@ -102,7 +101,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			withCodeSamples: true,
 		},
 		{
-			name: "code samples with force",
+			name: "code samples",
 			targetTypes: []string{
 				"go",
 			},
@@ -111,7 +110,6 @@ func TestGenerationWorkflows(t *testing.T) {
 			},
 			inputDoc:        "spec.yaml",
 			withCodeSamples: true,
-			withForce:       true,
 		},
 	}
 	for _, tt := range tests {
@@ -157,9 +155,6 @@ func TestGenerationWorkflows(t *testing.T) {
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-t", "all", "--pinned", "--skip-compile"}
-			if tt.withForce {
-				args = append(args, "--force", "true")
-			}
 
 			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
