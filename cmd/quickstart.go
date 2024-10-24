@@ -237,6 +237,9 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(referencePath)
 	}
 
+	// Make sure the workflow file stays up to date
+	run.Migrate(ctx, quickstartObj.WorkflowFile)
+
 	if err := workflow.Save(outDir, quickstartObj.WorkflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}

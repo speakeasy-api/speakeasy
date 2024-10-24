@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io/fs"
 	"os"
@@ -20,21 +21,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var SupportedLanguagesUsageSnippets = []string{
-	"go",
-	"typescript",
-	"python",
-	"java",
-	"php",
-	"swift",
-	"ruby",
-	"csharp",
-	"unity",
-}
-
 func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string, all bool, outputBuffer *bytes.Buffer) error {
 	matchedLanguage := false
-	for _, language := range SupportedLanguagesUsageSnippets {
+	for _, language := range workflow.SupportedLanguagesUsageSnippets {
 		if language == lang {
 			matchedLanguage = true
 		}

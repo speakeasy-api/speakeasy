@@ -70,7 +70,11 @@ func runCodeSamples(ctx context.Context, flags codeSamplesFlags) error {
 		//Nothing to do in default case, rely on code samples default
 	}
 
-	_, err := codesamples.GenerateOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs, false, opts)
+	result, err := codesamples.GenerateOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs, false, opts)
+
+	if flags.Out == "" {
+		fmt.Println(result)
+	}
 
 	if err == nil {
 		locationString := "Overlay file written to stdout"

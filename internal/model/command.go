@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 	"os"
 	"os/exec"
 	"slices"
@@ -255,15 +256,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	artifactArch := ctx.Value(updates.ArtifactArchContextKey).(string)
 
 	// Try to migrate existing workflows
-	if wf.SpeakeasyVersion == "" {
-		if ghPinned := env.PinnedVersion(); ghPinned != "" {
-			wf.SpeakeasyVersion = workflow.Version(ghPinned)
-		} else {
-			wf.SpeakeasyVersion = "latest"
-		}
-
-		_ = updateWorkflowFile(wf, wfPath)
-	}
+	run.Migrate(ctx, wf)
+	_ = updateWorkflowFile(wf, wfPath)
 
 	// Get the latest version, or use the pinned version
 	desiredVersion := wf.SpeakeasyVersion.String()

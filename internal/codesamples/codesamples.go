@@ -106,9 +106,7 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 		return "", err
 	}
 
-	if overlayFilename == "" {
-		println(overlayString)
-	} else {
+	if overlayFilename != "" {
 		f, err := os.Create(overlayFilename)
 		if err != nil {
 			return overlayString, err

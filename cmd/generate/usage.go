@@ -3,6 +3,7 @@ package generate
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -24,7 +25,7 @@ type GenerateUsageSnippetFlags struct {
 
 var genUsageSnippetCmd = &model.ExecutableCommand[GenerateUsageSnippetFlags]{
 	Usage: "usage",
-	Short: fmt.Sprintf("Generate standalone usage snippets for SDKs in (%s)", strings.Join(usagegen.SupportedLanguagesUsageSnippets, ", ")),
+	Short: fmt.Sprintf("Generate standalone usage snippets for SDKs in (%s)", strings.Join(workflow.SupportedLanguagesUsageSnippets, ", ")),
 	Long: fmt.Sprintf(`Using the "speakeasy generate usage" command you can generate usage snippets for various SDKs.
 
 The following languages are currently supported:
@@ -33,13 +34,13 @@ The following languages are currently supported:
 You can generate usage snippets by AffectedOperationIDs or by Namespace. By default this command will write to stdout.
 
 You can also select to write to a file or write to a formatted output directory.
-`, strings.Join(usagegen.SupportedLanguagesUsageSnippets, "\n	- ")),
+`, strings.Join(workflow.SupportedLanguagesUsageSnippets, "\n	- ")),
 	Run: genUsageSnippets,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:         "lang",
 			Shorthand:    "l",
-			Description:  fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(usagegen.SupportedLanguagesUsageSnippets, ", ")),
+			Description:  fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(workflow.SupportedLanguagesUsageSnippets, ", ")),
 			DefaultValue: "go",
 		},
 		schemaFlag,
