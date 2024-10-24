@@ -82,7 +82,7 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 	}
 
 	wsReq := operations.GetWorkspaceRequest{
-		WorkspaceID: workspaceID,
+		WorkspaceID: &workspaceID,
 	}
 
 	wsRes, err := client.Workspaces.GetByID(ctx, wsReq)
@@ -514,7 +514,7 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 	req := operations.SearchWorkspaceEventsRequest{
 		GenerateGenLockID: &target.ID,
 		InteractionType:   &interactionTypeTargetGenerate,
-		WorkspaceID:       workspace.id,
+		WorkspaceID:       &workspace.id,
 	}
 
 	res, err := client.Events.Search(ctx, req)
@@ -540,7 +540,7 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 	req = operations.SearchWorkspaceEventsRequest{
 		GenerateGenLockID: &target.ID,
 		InteractionType:   &interactionTypePublish,
-		WorkspaceID:       workspace.id,
+		WorkspaceID:       &workspace.id,
 	}
 
 	res, err = client.Events.Search(ctx, req)
