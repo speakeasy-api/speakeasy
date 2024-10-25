@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy/internal/codesamples"
+	"github.com/speakeasy-api/speakeasy/pkg/codesamples"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"

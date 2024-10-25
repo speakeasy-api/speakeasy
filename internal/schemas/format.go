@@ -23,7 +23,11 @@ func Format(ctx context.Context, schemaPath string, yamlOut bool) ([]byte, error
 
 func Render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
 	yamlIn := utils.HasYAMLExt(schemaPath)
+	return RenderDocument(y, schemaPath, yamlIn, yamlOut)
+}
 
+// RenderDocument - schemaPath can be unset if the docuemnt does not need reference resolution
+func RenderDocument(y *yaml.Node, schemaPath string, yamlIn bool, yamlOut bool) ([]byte, error) {
 	if yamlIn && yamlOut {
 		var res bytes.Buffer
 		encoder := yaml.NewEncoder(&res)

@@ -7,6 +7,8 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"gopkg.in/yaml.v3"
 	"io"
 )
 
@@ -54,30 +56,43 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict 
 		return err
 	}
 
-	if err := o.Validate(); err != nil {
-		return err
-	}
-
 	ys, specFile, err := loader.LoadEitherSpecification(schema, o)
 	if err != nil {
 		return err
 	}
 
+	return ApplyWithSourceLocation(ys, o, specFile, yamlOut, w, strict)
+}
+
+func ApplyWithSourceLocation(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlOut bool, w io.Writer, strict bool) error {
+	return apply(document, o, sourceLocation, utils.HasYAMLExt(sourceLocation), yamlOut, w, strict)
+}
+
+// ApplyDirect is used by the Registry to apply overlays from registry-based documents which do not have local file references
+func ApplyDirect(document *yaml.Node, o *overlay.Overlay, yamlIn, yamlOut bool, w io.Writer, strict bool) error {
+	return apply(document, o, "", yamlIn, yamlOut, w, strict)
+}
+
+func apply(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlIn, yamlOut bool, w io.Writer, strict bool) error {
+	if err := o.Validate(); err != nil {
+		return err
+	}
+
 	if strict {
-		err, warnings := o.ApplyToStrict(ys)
+		err, warnings := o.ApplyToStrict(document)
 		for _, warning := range warnings {
 			log.From(context.Background()).Warnf("WARN: %s", warning)
 		}
 		if err != nil {
-			return fmt.Errorf("failed to apply overlay to spec file (strict) %q: %w", specFile, err)
+			return fmt.Errorf("failed to apply overlay to spec file (strict): %w", err)
 		}
 	} else {
-		if err := o.ApplyTo(ys); err != nil {
-			return fmt.Errorf("failed to apply overlay to spec file %q: %w", specFile, err)
+		if err := o.ApplyTo(document); err != nil {
+			return fmt.Errorf("failed to apply overlay to spec file: %w", err)
 		}
 	}
 
-	bytes, err := schemas.Render(ys, schema, yamlOut)
+	bytes, err := schemas.RenderDocument(document, sourceLocation, yamlIn, yamlOut)
 	if err != nil {
 		return fmt.Errorf("failed to Render document: %w", err)
 	}
