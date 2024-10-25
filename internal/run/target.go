@@ -194,10 +194,16 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, *t.CodeSamples)
 		if err != nil {
-			return sourceRes, nil, err
+			// Block by default. Only warn if explicitly set to non-blocking
+			if t.CodeSamples.Blocking == nil || *t.CodeSamples.Blocking {
+				return sourceRes, nil, err
+			} else {
+				log.From(ctx).Warnf("failed to generate code samples: %s", err.Error())
+				codeSamplesStep.Skip("failed, but step set to non-blocking")
+			}
 		}
 
-		if !w.FrozenWorkflowLock {
+		if !w.FrozenWorkflowLock && err == nil {
 			namespaceName, digest, err := w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
 			if err != nil {
 				return sourceRes, nil, err

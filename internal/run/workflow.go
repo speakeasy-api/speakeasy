@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/registry"
 	"time"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -271,4 +272,12 @@ func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 			opts...,
 		)...,
 	)
+}
+
+func Migrate(ctx context.Context, wf *workflow.Workflow) {
+	if registry.IsRegistryEnabled(ctx) {
+		*wf = wf.Migrate()
+	} else {
+		*wf = wf.MigrateNoTelemetry()
+	}
 }
