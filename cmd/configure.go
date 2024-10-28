@@ -36,6 +36,7 @@ const (
 	appInstallationLink     = "https://github.com/apps/speakeasy-github/installations/new"
 	repositorySecretPath    = "Settings > Secrets & Variables > Actions"
 	actionsPath             = "Actions > Generate"
+	actionsSettingsPath     = "Settings > Actions > General"
 	githubSetupDocs         = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
 	appInstallURL           = "https://github.com/apps/speakeasy-github"
 	ErrWorkflowFileNotFound = spkErrors.Error("workflow.yaml file not found")
@@ -654,6 +655,11 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 		actionPath = fmt.Sprintf("%s/actions", remoteURL)
 	}
 
+	actionSettingsPath := actionsSettingsPath
+	if remoteURL != "" {
+		actionSettingsPath = fmt.Sprintf("%s/settings/actions", remoteURL)
+	}
+
 	if !autoConfigureRepoSuccess {
 		agenda = append(agenda, fmt.Sprintf("• Setup a Speakeasy API Key as a GitHub Secret - %s/org/%s/%s/settings/api-keys", core.GetServerURL(), orgSlug, workspaceSlug))
 	}
@@ -667,7 +673,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
-
+	agenda = append(agenda, fmt.Sprintf("• Navigate to %s, ensure `Workflow permissions: can create pull requests` is enabled.", actionSettingsPath))
 	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to view your generations.", actionPath))
 
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
