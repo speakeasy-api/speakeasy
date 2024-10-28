@@ -244,6 +244,8 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 
 // If the command is run from a workflow file, check if the desired version is different from the current version
 // If so, download the desired version and run the command with it as a subprocess
+// CAUTION: THIS CODE RUNS FOR EVERY EXECUTION OF `run` REGARDLESS OF VERSION PINNING. CHANGES HERE CAN
+//          BREAK EVEN SDKs THAT ARE PINNED TO A SPECIFIC VERSION.
 func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	ctx := cmd.Context()
 	logger := log.From(ctx)
