@@ -255,9 +255,11 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 	artifactArch := ctx.Value(updates.ArtifactArchContextKey).(string)
 
-	// Try to migrate existing workflows
-	run.Migrate(ctx, wf)
-	_ = updateWorkflowFile(wf, wfPath)
+	// Try to migrate existing workflows, but only if they aren't on a pinned version
+	if wf.SpeakeasyVersion.String() == "latest" {
+		run.Migrate(ctx, wf)
+		_ = updateWorkflowFile(wf, wfPath)
+	}
 
 	// Get the latest version, or use the pinned version
 	desiredVersion := wf.SpeakeasyVersion.String()
