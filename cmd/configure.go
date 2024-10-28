@@ -579,6 +579,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	secrets := make(map[string]string)
 	var generationWorkflowFilePaths []string
+	var isPRMode bool
 
 	if len(workflowFile.Targets) <= 1 {
 		generationWorkflow, generationWorkflowFilePath, err := writeGenerationFile(workflowFile, rootDir, actionWorkingDir, nil)
@@ -588,6 +589,10 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 
 		for key, val := range generationWorkflow.Jobs.Generate.Secrets {
 			secrets[key] = val
+		}
+
+		if mode, ok := generationWorkflow.Jobs.Generate.With[config.Mode].(string); ok && mode == "pr" {
+			isPRMode = true
 		}
 
 		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
@@ -600,6 +605,10 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 
 			for key, val := range generationWorkflow.Jobs.Generate.Secrets {
 				secrets[key] = val
+			}
+
+			if mode, ok := generationWorkflow.Jobs.Generate.With[config.Mode].(string); ok && mode == "pr" {
+				isPRMode = true
 			}
 
 			generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
@@ -673,7 +682,9 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
-	agenda = append(agenda, fmt.Sprintf("• Navigate to %s, ensure `Workflow permissions: can create pull requests` is enabled.", actionSettingsPath))
+	if isPRMode {
+		agenda = append(agenda, fmt.Sprintf("• Navigate to %s, ensure `Workflow permissions: can create pull requests` is enabled.", actionSettingsPath))
+	}
 	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to view your generations.", actionPath))
 
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
