@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -94,6 +97,18 @@ func SuggestOperationIDs(ctx context.Context, schema []byte, schemaPath string) 
 	summary, err := openapi.GetOASSummary(schema, schemaPath)
 	if err != nil || summary == nil {
 		return nil, fmt.Errorf("failed to get OAS summary: %w", err)
+	}
+
+	// Filter out any already-modified targets (generally through the studio)
+	alreadyModifiedTargets, _ := modifications.GetModifiedTargets(filepath.Dir(schemaPath), suggestions.ModificationTypeMethodName)
+	if len(alreadyModifiedTargets) > 0 {
+		var filteredOperations []openapi.Operation
+		for _, op := range summary.Operations {
+			if !slices.Contains(alreadyModifiedTargets, overlay.NewTargetSelector(op.Path, op.Method)) {
+				filteredOperations = append(filteredOperations, op)
+			}
+		}
+		summary.Operations = filteredOperations
 	}
 
 	diagnosis, err := suggestions.Diagnose(ctx, *summary)
