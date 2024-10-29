@@ -1,7 +1,7 @@
 <div align="left">
   <h1>Speakeasy</h1>
   <p>The platform to build, test, and distribute APIs your users ❤️</p>
-   <a href="https://speakeasy.com/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
+   <a href="https://speakeasy.com/docs"><img src="https://custom-icon-badges.demolab.com/badge/-Docs-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
    <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
   <h4><b>Trusted By:</b></h4>
   <h4>
