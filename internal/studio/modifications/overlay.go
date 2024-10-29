@@ -149,6 +149,28 @@ func MergeActions(actions []overlay.Action) []overlay.Action {
 	return deduped
 }
 
+func GetModifiedTargets(dir, modificationType string) ([]string, error) {
+	overlayLocation, err := GetOverlayPath(dir)
+	if err != nil {
+		return nil, err
+	}
+	overlay, err := loader.LoadOverlay(overlayLocation)
+	if err != nil {
+		return nil, err
+	}
+
+	var targets []string
+	for _, action := range overlay.Actions {
+		if mod := suggestions.GetModificationExtension(action); mod != nil {
+			if modificationType == mod.Type {
+				targets = append(targets, action.Target)
+			}
+		}
+	}
+
+	return targets, nil
+}
+
 // Return new suggestions that are not already in the list of suggestions
 func RemoveAlreadySuggested(alreadySuggested []overlay.Action, newSuggestions []overlay.Action) []overlay.Action {
 	getKey := func(x overlay.Action, index int) string {
@@ -162,7 +184,7 @@ func RemoveAlreadySuggested(alreadySuggested []overlay.Action, newSuggestions []
 
 	return lo.Filter(newSuggestions, func(x overlay.Action, index int) bool {
 		key := getKey(x, index)
-		return slices.Contains(alreadySuggestedKeys, key)
+		return !slices.Contains(alreadySuggestedKeys, key)
 	})
 }
 
