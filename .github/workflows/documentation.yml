@@ -48,11 +48,11 @@ jobs:
         working-directory: speakeasy
         run: |
           go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/marketing-site/src/pages/docs/speakeasy-cli -doc-site
-      - name: Commit and push changes to speakeasy repo
-        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
-        with:
-          repository: speakeasy
-          commit_message: "docs: update speakeasy cli docs [skip ci]"
+      # - name: Commit and push changes to speakeasy repo
+      #   uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
+      #   with:
+      #     repository: speakeasy
+      #     commit_message: "docs: update speakeasy cli docs [skip ci]"
       - name: Create PR against speakeasy-registry
         uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
         with:
