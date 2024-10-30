@@ -24,10 +24,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi-generation/v2 v2.442.11
+	github.com/speakeasy-api/openapi-generation/v2 v2.445.1
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.23.7
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.14.10
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.14.11
 	github.com/speakeasy-api/speakeasy-core v0.15.12
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.1
