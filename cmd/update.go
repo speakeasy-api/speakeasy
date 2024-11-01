@@ -15,7 +15,7 @@ func updateInit(version, artifactArch string) {
 		RunE:  update(version, artifactArch),
 	}
 
-	updateCmd.Flags().IntP("timeout", "t", 30, "timeout in seconds for the update to complete")
+	updateCmd.Flags().IntP("timeout", "t", 60, "timeout in seconds for the update to complete")
 
 	rootCmd.AddCommand(updateCmd)
 }
