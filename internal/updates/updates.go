@@ -74,7 +74,7 @@ func GetNewerVersion(ctx context.Context, artifactArch, currentVersion string) (
 }
 
 func Update(ctx context.Context, currentVersion, artifactArch string, timeout int) (string, error) {
-	release, asset, err := getLatestRelease(ctx, artifactArch, 30*time.Second)
+	release, asset, err := getLatestRelease(ctx, artifactArch, time.Duration(timeout)*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("failed to find latest release: %w", err)
 	}
@@ -167,7 +167,7 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 
 	downloadedPath, err := downloadCLI(dirName, downloadURL, timeout)
 	if err != nil {
-		return fmt.Errorf("failed to download artifact: %w", err)
+		return fmt.Errorf("you've encountered local network issues, please try again in a few moments: %w", err)
 	}
 
 	tmpLocation := filepath.Join(dirName, "extracted")
