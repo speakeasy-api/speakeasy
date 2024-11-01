@@ -141,6 +141,18 @@
   				<img width="100px" src="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c#gh-light-mode-only" alt="PHP">
   			</picture>
   		</a>
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
+        <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
+      </picture>
+      <a href="https://www.speakeasy.com/docs/sdk-design/ruby/methodology-ruby" target="_blank">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993">
+  				<img width="100px" src="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993#gh-light-mode-only" alt="Ruby">
+  			</picture>
+  		</a>
   	</p>
   </h1>
 </div>
