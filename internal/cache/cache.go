@@ -2,7 +2,9 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"os"
@@ -25,19 +27,42 @@ type FileCache[T any] struct {
 	key            string
 }
 
-func NewFileCache[T any](ctx context.Context, key string, dur time.Duration) (*FileCache[T], error) {
+type CacheSettings struct {
+	Key               string
+	Namespace         string
+	ClearOnNewVersion bool
+	Duration          time.Duration
+}
+
+func NewFileCache[T any](ctx context.Context, settings CacheSettings) (*FileCache[T], error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
 
 	cfgDir := filepath.Join(home, ".speakeasy", "cache")
-	DeleteOldCache(cfgDir, key, dur)
+	DeleteOldCache(cfgDir, settings.Namespace, settings.Duration)
+	builder := strings.Builder{}
+	builder.WriteString(settings.Namespace)
+	builder.WriteString(".")
+	builder.WriteString(encode(settings.Key))
+	if settings.ClearOnNewVersion {
+		builder.WriteString(".")
+		builder.WriteString(events.GetSpeakeasyVersionFromContext(ctx))
+	}
+	builder.WriteString(".tmp.json")
+
 	return &FileCache[T]{
-		dur: dur,
+		dur: settings.Duration,
 		dir: cfgDir,
-		key: key + "-" + events.GetSpeakeasyVersionFromContext(ctx) + ".tmp.json",
+		key: builder.String(),
 	}, nil
+}
+
+func encode(key string) string {
+	// hash it, trim it: we want this to be around 8 chars long
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+	return hash[:8]
 }
 
 func DeleteOldCache(dir string, key string, dur time.Duration) {
@@ -49,17 +74,25 @@ func DeleteOldCache(dir string, key string, dur time.Duration) {
 		if file.IsDir() {
 			continue
 		}
-		if !strings.HasPrefix(file.Name(), key) {
-			continue
-		}
 		fileInfo, err := file.Info()
 		if err != nil {
+			continue
+		}
+		if !strings.HasPrefix(file.Name(), key) {
+			// special case: we never expect cache items to live more than 1 week
+			if time.Since(fileInfo.ModTime()) > time.Hour*24*7 {
+				os.Remove(filepath.Join(dir, file.Name()))
+			}
 			continue
 		}
 		if time.Since(fileInfo.ModTime()) > dur {
 			os.Remove(filepath.Join(dir, file.Name()))
 		}
 	}
+}
+
+func (c *FileCache[T]) filePath() string {
+	return filepath.Join(c.dir, c.key)
 }
 
 func (c *FileCache[T]) Get() (*T, error) {
@@ -73,7 +106,7 @@ func (c *FileCache[T]) Get() (*T, error) {
 		return c.value, nil
 	}
 
-	filePath := filepath.Join(c.dir, c.key)
+	filePath := c.filePath()
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		return nil, ErrCacheMiss
@@ -128,4 +161,11 @@ func (c *FileCache[T]) Store(value *T) error {
 	c.valueExpiresAt = &expiresAt
 
 	return nil
+}
+
+func (c *FileCache[T]) Delete() error {
+	if c == nil {
+		return nil
+	}
+	return os.Remove(c.filePath())
 }

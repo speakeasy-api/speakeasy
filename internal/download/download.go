@@ -4,10 +4,12 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/download"
+	"github.com/speakeasy-api/speakeasy/internal/cache"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
@@ -28,8 +30,9 @@ import (
 )
 
 const (
-	maxAttempts = 3
-	baseDelay   = 1 * time.Second
+	maxAttempts     = 3
+	baseDelay       = 1 * time.Second
+	bundleCacheTime = time.Hour * 24 * 7
 )
 
 var allowedDocumentExtensions = []string{".yaml", ".yml", ".json"}
@@ -115,50 +118,116 @@ func DownloadFile(url, outPath, header, token string) error {
 	return nil
 }
 
+func documentHashKey(document workflow.SpeakeasyRegistryDocument) string {
+	builder := strings.Builder{}
+	builder.WriteString(document.WorkspaceSlug)
+	builder.WriteString(":")
+	builder.WriteString(document.OrganizationSlug)
+	builder.WriteString(":")
+	builder.WriteString(document.NamespaceName)
+	builder.WriteString(":")
+	builder.WriteString(document.NamespaceID)
+	builder.WriteString(":")
+	builder.WriteString(document.Reference)
+	return builder.String()
+}
+
+func canCache(document workflow.SpeakeasyRegistryDocument) bool {
+	return strings.HasPrefix(document.Reference, "sha256:")
+}
+
+type BundleResultCache struct {
+	// Body holds the bundle data
+	Body string
+	// MediaType represents the bundle's data
+	MediaType string
+	// Annotations alongside manifest data
+	BundleAnnotations map[string]string
+	// BlobDigest is the digest of the blob in the layer of the manifest
+	BlobDigest string
+	// ManifestDigest is the digest of the manifest
+	ManifestDigest string
+}
+
 // DownloadRegistryOpenAPIBundle Returns a file path within the downloaded bundle or error
 func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.SpeakeasyRegistryDocument, outPath string) (*DownloadedRegistryOpenAPIBundle, error) {
-	serverURL := auth.GetServerURL()
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
-	reg := strings.TrimPrefix(serverURL, "http://")
-	reg = strings.TrimPrefix(reg, "https://")
-
-	apiKey := config.GetWorkspaceAPIKey(document.OrganizationSlug, document.WorkspaceSlug)
-	if apiKey == "" {
-		apiKey = config.GetSpeakeasyAPIKey()
-	}
-
-	workspaceID, err := auth.GetWorkspaceIDFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	access := ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
-		Insecure: insecurePublish,
-	})
-	if (document.WorkspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) || document.OrganizationSlug != auth.GetOrgSlugFromContext(ctx)) && workspaceID == "self" {
-		access = ocicommon.NewRepositoryAccessAdmin(apiKey, document.NamespaceID, document.NamespaceName, ocicommon.RepositoryAccessOptions{
-			Insecure: insecurePublish,
+	var fileCache *cache.FileCache[BundleResultCache]
+	if canCache(document) {
+		fileCache, _ = cache.NewFileCache[BundleResultCache](ctx, cache.CacheSettings{
+			Key:               documentHashKey(document),
+			Namespace:         "oasbundle",
+			ClearOnNewVersion: false,
+			Duration:          bundleCacheTime,
 		})
 	}
-
-	bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
-		Registry: reg,
-		Access:   access,
-	})
-
-	bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, document.Reference)
+	bundleCache, err := fileCache.Get()
 	if err != nil {
-		return nil, err
+		serverURL := auth.GetServerURL()
+		insecurePublish := false
+		if strings.HasPrefix(serverURL, "http://") {
+			insecurePublish = true
+		}
+		reg := strings.TrimPrefix(serverURL, "http://")
+		reg = strings.TrimPrefix(reg, "https://")
+
+		apiKey := config.GetWorkspaceAPIKey(document.OrganizationSlug, document.WorkspaceSlug)
+		if apiKey == "" {
+			apiKey = config.GetSpeakeasyAPIKey()
+		}
+
+		workspaceID, err := auth.GetWorkspaceIDFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		access := ocicommon.NewRepositoryAccess(apiKey, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+			Insecure: insecurePublish,
+		})
+		if (document.WorkspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) || document.OrganizationSlug != auth.GetOrgSlugFromContext(ctx)) && workspaceID == "self" {
+			access = ocicommon.NewRepositoryAccessAdmin(apiKey, document.NamespaceID, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+				Insecure: insecurePublish,
+			})
+		}
+
+		bundleLoader := loader.NewLoader(loader.OCILoaderOptions{
+			Registry: reg,
+			Access:   access,
+		})
+
+		bundleResult, err := bundleLoader.LoadOpenAPIBundle(ctx, document.Reference)
+		if err != nil {
+			return nil, err
+		}
+
+		defer bundleResult.Body.Close()
+
+		buf, err := io.ReadAll(bundleResult.Body)
+		if err != nil {
+			return nil, err
+		}
+		bodyEncoded := base64.StdEncoding.EncodeToString(buf)
+
+		bundleCache = &BundleResultCache{
+			Body:              bodyEncoded,
+			MediaType:         bundleResult.MediaType,
+			BundleAnnotations: bundleResult.BundleAnnotations,
+			BlobDigest:        bundleResult.BlobDigest,
+			ManifestDigest:    bundleResult.ManifestDigest,
+		}
+
+		err = fileCache.Store(bundleCache)
+		if err == nil {
+			log.From(ctx).Infof("Stored bundle into global cache")
+		}
+	} else {
+		log.From(ctx).Infof("Loading bundle from cache")
 	}
-
-	defer bundleResult.Body.Close()
-
-	buf, err := io.ReadAll(bundleResult.Body)
+	buf, err := base64.StdEncoding.DecodeString(bundleCache.Body)
 	if err != nil {
-		return nil, err
+		if err = fileCache.Delete(); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("error loading bundle")
 	}
 
 	reader := bytes.NewReader(buf)
@@ -167,11 +236,11 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 		return nil, err
 	}
 
-	shortDigest := bundleResult.BlobDigest[8:14]
+	shortDigest := bundleCache.BlobDigest[8:14]
 	outPath = filepath.Join(outPath, shortDigest)
 
 	var outputFileName string
-	if fileName, _ := bundleResult.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
+	if fileName, _ := bundleCache.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
 		cleanName := filepath.Clean(fileName)
 		outputFileName = filepath.Join(outPath, cleanName)
 		err = os.MkdirAll(filepath.Dir(outputFileName), os.ModePerm)
@@ -190,8 +259,8 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 		LocalFilePath:     outputFileName,
 		NamespaceName:     document.NamespaceName,
 		ManifestReference: document.Reference,
-		ManifestDigest:    bundleResult.ManifestDigest,
-		BlobDigest:        bundleResult.BlobDigest,
+		ManifestDigest:    bundleCache.ManifestDigest,
+		BlobDigest:        bundleCache.BlobDigest,
 	}, nil
 }
 
