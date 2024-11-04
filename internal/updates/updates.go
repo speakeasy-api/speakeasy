@@ -271,7 +271,12 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 		Timeout: timeout,
 	})
 
-	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, "getLatestReleaseGitHub-"+artifactArch, GitHubReleaseRateLimitingLimit)
+	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, cache.CacheSettings{
+		Key:               artifactArch,
+		Namespace:         "getLatestReleaseGitHub",
+		ClearOnNewVersion: true,
+		Duration:          GitHubReleaseRateLimitingLimit,
+	})
 
 	cached, err := releaseCache.Get()
 	if err == nil {
@@ -309,7 +314,12 @@ func getReleaseForVersion(ctx context.Context, version version.Version, artifact
 
 	tag := "v" + version.String()
 
-	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, "repository-release-"+tag, GitHubReleaseRateLimitingLimit)
+	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, cache.CacheSettings{
+		Key:               tag,
+		Namespace:         "repository-release",
+		ClearOnNewVersion: true,
+		Duration:          GitHubReleaseRateLimitingLimit,
+	})
 	var release *github.RepositoryRelease
 	if cachedRelease, err := cache.Get(); err == nil {
 		release = cachedRelease
