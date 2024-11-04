@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"context"
-	"os"
-
+	"fmt"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/pkg/overlay"
+	"os"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -126,7 +127,23 @@ func runCompare(ctx context.Context, flags overlayCompareFlags) error {
 	}
 
 	schemas := []string{flags.Before, flags.After}
-	return overlay.Compare(schemas, out)
+	summary, err := overlay.Compare(schemas, out)
+	if err != nil {
+		return err
+	}
+
+	// Only print summary information if we aren't writing the overlay to stdout
+	if flags.Out != "" {
+		msg := styles.RenderSuccessMessage(
+			"Overlay Generated Successfully",
+			fmt.Sprintf("Comparing ^%s^ to ^%s^", flags.Before, flags.After),
+			fmt.Sprintf("Differences: `%d`", len(summary.ActionTargets)),
+			fmt.Sprintf("Overlay written to: `%s`", flags.Out),
+		)
+		log.From(ctx).Println(msg)
+	}
+
+	return nil
 }
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
@@ -144,5 +161,22 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		yamlOut = utils.HasYAMLExt(flags.Out)
 	}
 
-	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out, flags.Strict, len(flags.Out) > 0 && flags.Strict)
+	shouldWarn := len(flags.Out) > 0 && flags.Strict
+	summary, err := overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out, flags.Strict, shouldWarn)
+	if err != nil {
+		return err
+	}
+
+	// Only print summary information if we aren't writing the result to stdout
+	if flags.Out != "" {
+		msg := styles.RenderSuccessMessage(
+			"Overlay Applied Successfully",
+			fmt.Sprintf("Overlay ^%s^ applied to ^%s^", flags.Overlay, flags.Schema),
+			fmt.Sprintf("Actions applied: `%d`", len(summary.ActionTargets)),
+			fmt.Sprintf("Output written to: `%s`", flags.Out),
+		)
+		log.From(ctx).Println(msg)
+	}
+
+	return nil
 }

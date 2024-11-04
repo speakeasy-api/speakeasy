@@ -34,7 +34,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
@@ -42,6 +41,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
+	"github.com/speakeasy-api/speakeasy/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 )
@@ -738,7 +738,7 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 		}
 
 		// YamlOut param needs to be based on the eventual output file
-		if err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && !strings.Contains(err.Error(), "overlay must define at least one action") {
+		if _, err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && !strings.Contains(err.Error(), "overlay must define at least one action") {
 			return err
 		}
 
