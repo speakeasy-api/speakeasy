@@ -189,7 +189,7 @@ func TestInputOnlyWorkflow(t *testing.T) {
 	workflowFile.Sources["first-source"] = workflow.Source{
 		Inputs: []workflow.Document{
 			{
-				Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json",
+				Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/tags/3.1.0/examples/v3.0/petstore.json",
 			},
 		},
 	}
