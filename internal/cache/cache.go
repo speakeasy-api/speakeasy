@@ -42,20 +42,20 @@ func NewFileCache[T any](ctx context.Context, settings CacheSettings) (*FileCach
 
 	cfgDir := filepath.Join(home, ".speakeasy", "cache")
 	DeleteOldCache(cfgDir, settings.Namespace, settings.Duration)
-	builder := strings.Builder{}
-	builder.WriteString(settings.Namespace)
-	builder.WriteString(".")
-	builder.WriteString(encode(settings.Key))
+	filename := strings.Builder{}
+	filename.WriteString(settings.Namespace)
+	filename.WriteString(".")
+	filename.WriteString(encode(settings.Key))
 	if settings.ClearOnNewVersion {
-		builder.WriteString(".")
-		builder.WriteString(events.GetSpeakeasyVersionFromContext(ctx))
+		filename.WriteString(".")
+		filename.WriteString(events.GetSpeakeasyVersionFromContext(ctx))
 	}
-	builder.WriteString(".tmp.json")
+	filename.WriteString(".tmp.json")
 
 	return &FileCache[T]{
 		dur: settings.Duration,
 		dir: cfgDir,
-		key: builder.String(),
+		key: filename.String(),
 	}, nil
 }
 

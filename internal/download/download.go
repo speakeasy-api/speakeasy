@@ -118,18 +118,18 @@ func DownloadFile(url, outPath, header, token string) error {
 	return nil
 }
 
-func documentHashKey(document workflow.SpeakeasyRegistryDocument) string {
-	builder := strings.Builder{}
-	builder.WriteString(document.WorkspaceSlug)
-	builder.WriteString(":")
-	builder.WriteString(document.OrganizationSlug)
-	builder.WriteString(":")
-	builder.WriteString(document.NamespaceName)
-	builder.WriteString(":")
-	builder.WriteString(document.NamespaceID)
-	builder.WriteString(":")
-	builder.WriteString(document.Reference)
-	return builder.String()
+func documentKey(document workflow.SpeakeasyRegistryDocument) string {
+	hashKey := strings.Builder{}
+	hashKey.WriteString(document.WorkspaceSlug)
+	hashKey.WriteString(":")
+	hashKey.WriteString(document.OrganizationSlug)
+	hashKey.WriteString(":")
+	hashKey.WriteString(document.NamespaceName)
+	hashKey.WriteString(":")
+	hashKey.WriteString(document.NamespaceID)
+	hashKey.WriteString(":")
+	hashKey.WriteString(document.Reference)
+	return hashKey.String()
 }
 
 func canCache(document workflow.SpeakeasyRegistryDocument) bool {
@@ -154,7 +154,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 	var fileCache *cache.FileCache[BundleResultCache]
 	if canCache(document) {
 		fileCache, _ = cache.NewFileCache[BundleResultCache](ctx, cache.CacheSettings{
-			Key:               documentHashKey(document),
+			Key:               documentKey(document),
 			Namespace:         "oasbundle",
 			ClearOnNewVersion: false,
 			Duration:          bundleCacheTime,
