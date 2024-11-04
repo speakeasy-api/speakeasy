@@ -75,7 +75,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			outdirs: []string{
 				"go",
 			},
-			inputDoc: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml",
+			inputDoc: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/tags/3.1.0/examples/v3.0/petstore.json",
 		},
 		{
 			name: "multi-target generation with local document",
@@ -97,7 +97,7 @@ func TestGenerationWorkflows(t *testing.T) {
 			outdirs: []string{
 				"go",
 			},
-			inputDoc:        "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json",
+			inputDoc:        "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/tags/3.1.0/examples/v3.0/petstore.json",
 			withCodeSamples: true,
 		},
 		{

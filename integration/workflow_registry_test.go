@@ -115,7 +115,7 @@ func TestRegistryFlow(t *testing.T) {
 	require.NoError(t, workflow.Save(temp, workflowFile))
 
 	// Re-run the generation. It should work.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 }
 
@@ -164,7 +164,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 	require.NoError(t, workflow.Save(temp, workflowFile))
 
 	// Re-run the generation. It should work.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 }
 
