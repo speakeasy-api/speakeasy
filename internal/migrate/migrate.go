@@ -273,6 +273,7 @@ func buildNewPublishingWorkflow(pubWorkflow string) (*config.PublishWorkflow, er
 			Statuses:     config.GithubWritePermission,
 			Contents:     config.GithubWritePermission,
 			PullRequests: config.GithubWritePermission,
+			IDToken:      config.GithubWritePermission,
 		},
 		On: publishingWorkflow.On,
 		Jobs: config.Jobs{
