@@ -286,9 +286,12 @@ func formatTargetPath(target string) string {
 			continue
 		}
 
-		// Don't print too much detail
-		if i >= 3 {
-			break
+		// Don't print too much detail, except for the last part
+		if i >= 3 && i < len(parts)-1 {
+			if finalParts[len(finalParts)-1] != "..." {
+				finalParts = append(finalParts, "...")
+			}
+			continue
 		}
 
 		// Don't title case paths (e.g. /v1/pets)
