@@ -296,7 +296,7 @@ func TestSpecWorkflows(t *testing.T) {
 		{
 			name: "overlay with json document",
 			inputDocs: []string{
-				"https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json",
+				"https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/tags/3.1.0/examples/v3.0/petstore.json",
 			},
 			overlays: []string{
 				"codeSamples-JSON.yaml",
