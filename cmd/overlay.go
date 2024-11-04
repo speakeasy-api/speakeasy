@@ -10,8 +10,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/pkg/overlay"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"os"
 	"strings"
 )
@@ -192,29 +190,71 @@ func printSummary(ctx context.Context, summary *overlay.Summary) {
 	logger := log.From(ctx)
 
 	maxLines := 10
-	var lines []string
+	formattedTargetToCounts := make(map[string]struct{ updates, removes int })
 	for target, changeType := range summary.TargetToChangeType {
-		if len(lines) >= maxLines {
-			break
+		formatted := formatTargetPath(target)
+		update, remove := 0, 0
+		if changeType == overlay.Update {
+			update = 1
 		}
-
-		targetStr := formatTargetPath(target)
-		changeTypeStr := "🔀"
 		if changeType == overlay.Remove {
+			remove = 1
+		}
+		if current, ok := formattedTargetToCounts[formatted]; ok {
+			current.updates += update
+			current.removes += remove
+			formattedTargetToCounts[formatted] = current
+		} else {
+			formattedTargetToCounts[formatted] = struct {
+				updates int
+				removes int
+			}{
+				updates: update,
+				removes: remove,
+			}
+		}
+	}
+
+	var lines []string
+	for target, counts := range formattedTargetToCounts {
+		changeTypeStr := "🔀"
+		if counts.removes > 0 && counts.updates == 0 {
 			changeTypeStr = "❌"
 		}
-		action := fmt.Sprintf("%s %s", changeTypeStr, targetStr)
+
+		numChangesStr := ""
+
+		if counts.updates > 1 || (counts.updates == 1 && counts.removes > 0) {
+			numChangesStr += fmt.Sprintf("%d updated", counts.updates)
+		}
+
+		if counts.removes > 1 || (counts.removes == 1 && counts.updates > 0) {
+			if numChangesStr != "" {
+				numChangesStr += ", "
+			}
+			numChangesStr += fmt.Sprintf("%d removed", counts.removes)
+		}
+
+		if numChangesStr != "" {
+			numChangesStr = styles.DimmedItalic.Render(fmt.Sprintf("(%s)", numChangesStr))
+		}
+
+		action := fmt.Sprintf("%s %s %s", changeTypeStr, target, numChangesStr)
 		lines = append(lines, action)
 	}
 
-	logger.Println(styles.Info.Underline(true).Bold(true).Render("OpenAPI Paths 🔀Changed and ❌Removed"))
-	for _, line := range lines {
+	for i, line := range lines {
+		if i == maxLines {
+			break
+		}
 		logger.Println(line)
 	}
 
-	if len(summary.TargetToChangeType) > maxLines {
-		logger.Println(styles.DimmedItalic.Render(fmt.Sprintf("(showing %d of %d)\n", maxLines, len(summary.TargetToChangeType))))
+	if len(lines) > maxLines {
+		logger.Println(styles.DimmedItalic.Render(fmt.Sprintf("(and %d more changes)", len(lines)-maxLines)))
 	}
+
+	logger.Println("")
 }
 
 func formatTargetPath(target string) string {
@@ -236,11 +276,28 @@ func formatTargetPath(target string) string {
 	}
 
 	parts := strings.Split(target, ".")
+	isPath := parts[0] == "paths"
+
+	var finalParts []string
 
 	for i, part := range parts {
-		titleCased := cases.Title(language.English).String(part)
-		parts[i] = styles.MakeBold(titleCased)
+		// Don't print "Paths"
+		if isPath && i == 0 {
+			continue
+		}
+
+		// Don't print too much detail
+		if i >= 3 {
+			break
+		}
+
+		// Don't title case paths (e.g. /v1/pets)
+		if !strings.Contains(part, "/") {
+			finalParts = append(finalParts, styles.MakeBold(utils.CapitalizeFirst(part)))
+		} else {
+			finalParts = append(finalParts, styles.MakeBold(part))
+		}
 	}
 
-	return strings.Join(parts, styles.Dimmed.Render(" > "))
+	return strings.Join(finalParts, styles.Dimmed.Render(" > "))
 }
