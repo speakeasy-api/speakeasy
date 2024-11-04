@@ -10,7 +10,10 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/pkg/overlay"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"os"
+	"strings"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -134,10 +137,12 @@ func runCompare(ctx context.Context, flags overlayCompareFlags) error {
 
 	// Only print summary information if we aren't writing the overlay to stdout
 	if flags.Out != "" {
+		printSummary(ctx, summary)
+
 		msg := styles.RenderSuccessMessage(
 			"Overlay Generated Successfully",
 			fmt.Sprintf("Comparing ^%s^ to ^%s^", flags.Before, flags.After),
-			fmt.Sprintf("Differences: `%d`", len(summary.ActionTargets)),
+			fmt.Sprintf("Differences: `%d`", len(summary.TargetToChangeType)),
 			fmt.Sprintf("Overlay written to: `%s`", flags.Out),
 		)
 		log.From(ctx).Println(msg)
@@ -169,14 +174,73 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 
 	// Only print summary information if we aren't writing the result to stdout
 	if flags.Out != "" {
+		printSummary(ctx, summary)
+
 		msg := styles.RenderSuccessMessage(
 			"Overlay Applied Successfully",
 			fmt.Sprintf("Overlay ^%s^ applied to ^%s^", flags.Overlay, flags.Schema),
-			fmt.Sprintf("Actions applied: `%d`", len(summary.ActionTargets)),
+			fmt.Sprintf("Actions applied: `%d`", len(summary.TargetToChangeType)),
 			fmt.Sprintf("Output written to: `%s`", flags.Out),
 		)
 		log.From(ctx).Println(msg)
 	}
 
 	return nil
+}
+
+func printSummary(ctx context.Context, summary *overlay.Summary) {
+	logger := log.From(ctx)
+
+	maxLines := 10
+	var lines []string
+	for target, changeType := range summary.TargetToChangeType {
+		if len(lines) >= maxLines {
+			break
+		}
+
+		targetStr := formatTargetPath(target)
+		changeTypeStr := "🔀"
+		if changeType == overlay.Remove {
+			changeTypeStr = "❌"
+		}
+		action := fmt.Sprintf("%s %s", changeTypeStr, targetStr)
+		lines = append(lines, action)
+	}
+
+	logger.Println(styles.Info.Underline(true).Bold(true).Render("OpenAPI Paths 🔀Changed and ❌Removed"))
+	for _, line := range lines {
+		logger.Println(line)
+	}
+
+	if len(summary.TargetToChangeType) > maxLines {
+		logger.Println(styles.DimmedItalic.Render(fmt.Sprintf("(showing %d of %d)\n", maxLines, len(summary.TargetToChangeType))))
+	}
+}
+
+func formatTargetPath(target string) string {
+	// Remove leading $ if present
+	if len(target) > 0 && target[0] == '$' {
+		target = target[1:]
+	}
+
+	// Remove all [ and ] characters
+	target = strings.ReplaceAll(target, "[", ".")
+	target = strings.ReplaceAll(target, "]", "")
+
+	// Remove quotes
+	target = strings.ReplaceAll(target, "\"", "")
+
+	// Remove leading dot if present
+	if len(target) > 0 && target[0] == '.' {
+		target = target[1:]
+	}
+
+	parts := strings.Split(target, ".")
+
+	for i, part := range parts {
+		titleCased := cases.Title(language.English).String(part)
+		parts[i] = styles.MakeBold(titleCased)
+	}
+
+	return strings.Join(parts, styles.Dimmed.Render(" > "))
 }

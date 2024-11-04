@@ -12,8 +12,15 @@ import (
 	"io"
 )
 
-type OverlaySummary struct {
-	ActionTargets []string
+type ChangeType int
+
+const (
+	Update ChangeType = iota
+	Remove
+)
+
+type Summary struct {
+	TargetToChangeType map[string]ChangeType
 }
 
 func Validate(overlayFile string) error {
@@ -25,7 +32,7 @@ func Validate(overlayFile string) error {
 	return o.Validate()
 }
 
-func Compare(schemas []string, w io.Writer) (*OverlaySummary, error) {
+func Compare(schemas []string, w io.Writer) (*Summary, error) {
 	if len(schemas) != 2 {
 		return nil, fmt.Errorf("Exactly two --schemas must be passed to perform a comparison.")
 	}
@@ -54,7 +61,7 @@ func Compare(schemas []string, w io.Writer) (*OverlaySummary, error) {
 	return Summarize(o), nil
 }
 
-func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict bool, warn bool) (*OverlaySummary, error) {
+func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict bool, warn bool) (*Summary, error) {
 	o, err := loader.LoadOverlay(overlayFile)
 	if err != nil {
 		return nil, err
@@ -68,14 +75,20 @@ func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict 
 	return Summarize(o), ApplyWithSourceLocation(ys, o, specFile, yamlOut, w, strict)
 }
 
-func Summarize(o *overlay.Overlay) *OverlaySummary {
-	summary := OverlaySummary{
-		ActionTargets: make([]string, 0, len(o.Actions)),
-	}
+func Summarize(o *overlay.Overlay) *Summary {
+	targets := make(map[string]ChangeType)
+
 	for _, action := range o.Actions {
-		summary.ActionTargets = append(summary.ActionTargets, action.Target)
+		changeType := Update
+		if action.Remove {
+			changeType = Remove
+		}
+		targets[action.Target] = changeType
 	}
-	return &summary
+
+	return &Summary{
+		TargetToChangeType: targets,
+	}
 }
 
 func ApplyWithSourceLocation(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlOut bool, w io.Writer, strict bool) error {
