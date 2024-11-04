@@ -12,6 +12,17 @@ import (
 	"io"
 )
 
+type ChangeType int
+
+const (
+	Update ChangeType = iota
+	Remove
+)
+
+type Summary struct {
+	TargetToChangeType map[string]ChangeType
+}
+
 func Validate(overlayFile string) error {
 	o, err := loader.LoadOverlay(overlayFile)
 	if err != nil {
@@ -21,47 +32,63 @@ func Validate(overlayFile string) error {
 	return o.Validate()
 }
 
-func Compare(schemas []string, w io.Writer) error {
+func Compare(schemas []string, w io.Writer) (*Summary, error) {
 	if len(schemas) != 2 {
-		return fmt.Errorf("Exactly two --schemas must be passed to perform a comparison.")
+		return nil, fmt.Errorf("Exactly two --schemas must be passed to perform a comparison.")
 	}
 
 	y1, err := loader.LoadSpecification(schemas[0])
 	if err != nil {
-		return fmt.Errorf("failed to load %q: %w", schemas[0], err)
+		return nil, fmt.Errorf("failed to load %q: %w", schemas[0], err)
 	}
 
 	y2, err := loader.LoadSpecification(schemas[1])
 	if err != nil {
-		return fmt.Errorf("failed to load %q: %w", schemas[1], err)
+		return nil, fmt.Errorf("failed to load %q: %w", schemas[1], err)
 	}
 
 	title := fmt.Sprintf("Overlay %s => %s", schemas[0], schemas[1])
 
 	o, err := overlay.Compare(title, y1, *y2)
 	if err != nil {
-		return fmt.Errorf("failed to compare spec files %q and %q: %w", schemas[0], schemas[1], err)
+		return nil, fmt.Errorf("failed to compare spec files %q and %q: %w", schemas[0], schemas[1], err)
 	}
 
 	if err := o.Format(w); err != nil {
-		return fmt.Errorf("failed to format overlay: %w", err)
+		return nil, fmt.Errorf("failed to format overlay: %w", err)
 	}
 
-	return nil
+	return Summarize(o), nil
 }
 
-func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict bool, warn bool) error {
+func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict bool, warn bool) (*Summary, error) {
 	o, err := loader.LoadOverlay(overlayFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ys, specFile, err := loader.LoadEitherSpecification(schema, o)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return ApplyWithSourceLocation(ys, o, specFile, yamlOut, w, strict)
+	return Summarize(o), ApplyWithSourceLocation(ys, o, specFile, yamlOut, w, strict)
+}
+
+func Summarize(o *overlay.Overlay) *Summary {
+	targets := make(map[string]ChangeType)
+
+	for _, action := range o.Actions {
+		changeType := Update
+		if action.Remove {
+			changeType = Remove
+		}
+		targets[action.Target] = changeType
+	}
+
+	return &Summary{
+		TargetToChangeType: targets,
+	}
 }
 
 func ApplyWithSourceLocation(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlOut bool, w io.Writer, strict bool) error {
