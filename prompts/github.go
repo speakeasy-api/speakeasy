@@ -56,6 +56,11 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 		githubWorkflow = defaultGenerationFile()
 	}
 
+	// backfill id-token write permissions
+	if githubWorkflow.Permissions.IDToken != config.GithubWritePermission {
+		githubWorkflow.Permissions.IDToken = config.GithubWritePermission
+	}
+
 	if target != nil {
 		githubWorkflow.Name = fmt.Sprintf("Generate %s", strings.ToUpper(*target))
 		githubWorkflow.Jobs.Generate.With["target"] = *target
@@ -409,6 +414,11 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 		publishingFile := &config.PublishWorkflow{}
 		if err := readPublishingFile(publishingFile, filePath); err != nil {
 			publishingFile = defaultPublishingFile()
+		}
+
+		// backfill id-token write permissions
+		if publishingFile.Permissions.IDToken != config.GithubWritePermission {
+			publishingFile.Permissions.IDToken = config.GithubWritePermission
 		}
 
 		if len(wf.Targets) > 1 {
