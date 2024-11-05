@@ -86,14 +86,14 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	} else if len(source.Inputs) == 1 {
 		var singleLocation *string
 		// The output location should be the resolved location
-		if len(source.Overlays) == 0 {
+		if source.IsSingleInput() {
 			singleLocation = &outputLocation
 		}
 		currentDocument, err = schemas.ResolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
 		if err != nil {
 			return "", nil, err
 		}
-		if len(source.Overlays) == 0 {
+		if source.IsSingleInput() {
 			// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
 			if source.Inputs[0].IsSpeakeasyRegistry() {
 				outputLocation = currentDocument
