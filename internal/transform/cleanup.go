@@ -22,6 +22,16 @@ func CleanupDocument(ctx context.Context, schemaPath string, yamlOut bool, w io.
 	}.Do(ctx)
 }
 
+func CleanupFromReader(ctx context.Context, schema io.Reader, schemaPath string, w io.Writer, yamlOut bool) error {
+	return transformer[interface{}]{
+		r:           schema,
+		schemaPath:  schemaPath,
+		transformFn: Cleanup,
+		w:           w,
+		jsonOut:     !yamlOut,
+	}.Do(ctx)
+}
+
 func Cleanup(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	pathItems := model.Model.Paths.PathItems
 	var pathsToDelete []string

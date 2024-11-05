@@ -21,6 +21,16 @@ func RemoveUnused(ctx context.Context, schemaPath string, yamlOut bool, w io.Wri
 	}.Do(ctx)
 }
 
+func RemoveUnusedFromReader(ctx context.Context, schema io.Reader, schemaPath string, w io.Writer, yamlOut bool) error {
+	return transformer[interface{}]{
+		r:           schema,
+		schemaPath:  schemaPath,
+		transformFn: RemoveOrphans,
+		w:           w,
+		jsonOut:     !yamlOut,
+	}.Do(ctx)
+}
+
 func RemoveOrphans(ctx context.Context, doc libopenapi.Document, _ *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	logger := log.From(ctx)
 

@@ -44,7 +44,7 @@ type LintingError struct {
 }
 
 type SourceStep interface {
-	Do(ctx context.Context, inputPath, outputPath string) (string, error)
+	Do(ctx context.Context, inputPath string) (string, error)
 }
 
 func (e *LintingError) Error() string {
@@ -79,7 +79,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	var currentDocument string
 	if w.FrozenWorkflowLock {
-		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused", "unused")
+		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused")
 		if err != nil {
 			return "", nil, err
 		}
@@ -106,7 +106,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 		}
 	} else {
-		currentDocument, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument, outputLocation)
+		currentDocument, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
@@ -118,12 +118,23 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
-		currentDocument, err = NewOverlay(w, rootStep, source, outputLocation, rulesetToUse).Do(ctx, currentDocument, outputLocation)
+		currentDocument, err = NewOverlay(w, rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
 	}
 
+	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
+		currentDocument, err = NewTransform(w, rootStep, source).Do(ctx, currentDocument)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	if err := os.Rename(currentDocument, outputLocation); err != nil {
+		return "", nil, err
+	}
+	currentDocument = outputLocation
 	sourceRes.OutputPath = currentDocument
 
 	if !w.SkipLinting {

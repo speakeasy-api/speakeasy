@@ -24,7 +24,7 @@ func NewFrozenSource(w *Workflow, parentStep *workflowTracking.WorkflowStep, sou
 	}
 }
 
-func (f FrozenSource) Do(ctx context.Context, _, _ string) (string, error) {
+func (f FrozenSource) Do(ctx context.Context, _ string) (string, error) {
 	mergeStep := f.parentStep.NewSubstep("Download OAS from lockfile")
 
 	// Check lockfile exists, produce an error if not
