@@ -1,0 +1,7 @@
+overlay: 1.0.0
+info:
+  title: Change operationId for /pet/put
+  version: 0.0.0
+actions:
+  - target: $["paths"]["/pet"]["put"]["operationId"]
+    update: updatePetNew

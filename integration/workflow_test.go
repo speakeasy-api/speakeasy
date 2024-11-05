@@ -354,6 +354,38 @@ func TestSpecWorkflows(t *testing.T) {
 				"/store/inventory",
 			},
 		},
+		{
+			name:      "test overlay with transformation",
+			inputDocs: []string{"spec.yaml"},
+			overlays:  []string{"renameOperationOverlay.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "updatePetNew",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet/put",
+			},
+		},
+		{
+			name:      "test merge, overlay, and transformation",
+			inputDocs: []string{"part1.yaml", "part2.yaml"},
+			overlays:  []string{"renameOperationOverlay.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "updatePetNew",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet/put",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
