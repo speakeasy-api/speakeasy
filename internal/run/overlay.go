@@ -17,16 +17,14 @@ import (
 )
 
 type Overlay struct {
-	workflow   *Workflow
 	parentStep *workflowTracking.WorkflowStep
 	source     workflow.Source
 }
 
 var _ SourceStep = Overlay{}
 
-func NewOverlay(w *Workflow, parentStep *workflowTracking.WorkflowStep, source workflow.Source) Overlay {
+func NewOverlay(parentStep *workflowTracking.WorkflowStep, source workflow.Source) Overlay {
 	return Overlay{
-		workflow:   w,
 		parentStep: parentStep,
 		source:     source,
 	}

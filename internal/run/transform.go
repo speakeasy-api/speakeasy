@@ -14,16 +14,14 @@ import (
 )
 
 type Transform struct {
-	workflow   *Workflow
 	parentStep *workflowTracking.WorkflowStep
 	source     workflow.Source
 }
 
 var _ SourceStep = Transform{}
 
-func NewTransform(w *Workflow, parentStep *workflowTracking.WorkflowStep, source workflow.Source) Transform {
+func NewTransform(parentStep *workflowTracking.WorkflowStep, source workflow.Source) Transform {
 	return Transform{
-		workflow:   w,
 		parentStep: parentStep,
 		source:     source,
 	}

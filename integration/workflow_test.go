@@ -277,11 +277,12 @@ func (c *cmdRunner) Run() error {
 
 func TestSpecWorkflows(t *testing.T) {
 	tests := []struct {
-		name          string
-		inputDocs     []string
-		overlays      []string
-		out           string
-		expectedPaths []string
+		name            string
+		inputDocs       []string
+		overlays        []string
+		transformations []workflow.Transformation
+		out             string
+		expectedPaths   []string
 	}{
 		{
 			name: "overlay with local document",
@@ -322,6 +323,36 @@ func TestSpecWorkflows(t *testing.T) {
 				"https://petstore3.swagger.io/api/v3/openapi.yaml",
 			},
 			out: "output.yaml",
+		},
+		{
+			name:      "test simple transformation",
+			inputDocs: []string{"spec.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "updatePet",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet",
+			},
+		},
+		{
+			name:      "test merge with transformation",
+			inputDocs: []string{"part1.yaml", "part2.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "getInventory",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/store/inventory",
+			},
 		},
 	}
 	for _, tt := range tests {

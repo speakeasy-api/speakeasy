@@ -118,14 +118,14 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
-		currentDocument, err = NewOverlay(w, rootStep, source).Do(ctx, currentDocument)
+		currentDocument, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
 	}
 
 	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
-		currentDocument, err = NewTransform(w, rootStep, source).Do(ctx, currentDocument)
+		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
