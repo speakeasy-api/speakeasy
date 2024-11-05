@@ -536,6 +536,7 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 			Statuses:     config.GithubWritePermission,
 			Contents:     config.GithubWritePermission,
 			PullRequests: config.GithubWritePermission,
+			IDToken:      config.GithubWritePermission,
 		},
 	}
 }
@@ -548,6 +549,7 @@ func defaultPublishingFile() *config.PublishWorkflow {
 			Statuses:     config.GithubWritePermission,
 			Contents:     config.GithubWritePermission,
 			PullRequests: config.GithubWritePermission,
+			IDToken:      config.GithubWritePermission,
 		},
 		On: config.PublishOn{
 			Push: config.Push{
