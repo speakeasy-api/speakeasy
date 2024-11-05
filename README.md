@@ -161,7 +161,7 @@
 <h2>
 	<p>How it works</p>
 			<picture>
-				<img width="75%" height="350" src="https://github.com/user-attachments/assets/50a87bdc-5109-46a9-a1b5-082a2b26435e" alt="Speakeasy Workflow">
+				<img src="https://github.com/user-attachments/assets/50a87bdc-5109-46a9-a1b5-082a2b26435e" alt="Speakeasy Workflow">
 			</picture>
 		</a>
 </h2>
