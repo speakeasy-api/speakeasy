@@ -1,6 +1,6 @@
 <div align="left">
   <h1>Speakeasy</h1>
-  <p>The platform to build, test, and distribute APIs your users ❤️</p>
+  <p>The platform to build, test, and distribute APIs to your users ❤️. Building really high quality APIs is hard. Speakeasy is a set of OpenAPI tools to make it easier. </p>
    <a href="https://speakeasy.com/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
    <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
   <h4><b>Trusted By:</b></h4>
@@ -57,10 +57,11 @@
   </h4>
 </div>
 
-## Generate SDKs
+## Generate Polished and Type-Safe Client Libraries
 
-<p>Use Speakeasy to generate idiomatic, type-safe SDKs your users will love.</p>
+<p>Use Speakeasy to generate idiomatic, type-safe SDKs your users will love. 9 Languages and counting.</p>
 <a href="https://app.speakeasy.com/"><img src="https://custom-icon-badges.demolab.com/badge/-Start%20Generating%20-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
+<a href="https://youtu.be/-cSZGUvT5-8?si=VwJBPcOGq0g2R4cI"><img src="https://img.shields.io/static/v1?label=Docs&message=Watch Demo&color=000&style=for-the-badge" /></a>
 
 <div align="left">
   <h1>
@@ -157,6 +158,25 @@
   </h1>
 </div>
 
+<h2>
+	<p>How it works</p>
+			<picture>
+				<img width="75%" height="350" src="https://github.com/user-attachments/assets/50a87bdc-5109-46a9-a1b5-082a2b26435e" alt="Speakeasy Workflow">
+			</picture>
+		</a>
+</h2>
+
+### Features
+
+* SDK code that looks you wrote it. Optimised for performance, debuggability and modern idiomatics.
+* Complete Terraform Providers built on a Type-safe Go SDK. 
+* Contract Test generation with a pre built mock-server ([Powered by Arazzo](https://www.speakeasy.com/openapi/arazzo))
+* Generate clean code-samples for syncing with API docs.
+* Make `npm install your-api`. Manage versioning and publishing to package managers
+* Modern OpenAPI 3.X toolchain for linting, cleaning, diff-ing and editing specs. ([Powered by Overlays](https://www.speakeasy.com/openapi/overlays))
+
+Check out the [roadmap](https://www.speakeasyapi.dev/roadmap) for whats coming up soon!
+
 ## CLI installation
 
 ### Homebrew (macOS and Linux)
@@ -200,3 +220,7 @@ speakeasy update
 | `suggest`   | Use an LLM to autocorrect your spec validation failures.                                                                                             |
 | `merge`     | Work with your existing documentation workflows by merging your API specs into a single spec.                                                        |
 | `status`    | Review all SDK/targets in current workspace. |
+
+## Community
+
+We love chatting about OpenAPI and API Design. Come chat with us on [slack](https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw).
