@@ -29,8 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
-        test: [ TestWorkflowWithEnvVar, TestGenerationWorkflows, TestSpecWorkflows, TestFallbackCodeSamplesWorkflow, TestInputOnlyWorkflow ]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -71,7 +70,6 @@ jobs:
         run: go build ./...
 
       - name: ${{ matrix.test-group }}
-        run: go test -run ${{ matrix.test }} -json -v -p 1 ./... | gotestfmt
+        run: go test -json -v -p 1 ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
-
