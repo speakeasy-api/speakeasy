@@ -50,7 +50,7 @@ type SourceStep interface {
 func (e *LintingError) Error() string {
 	errString := e.Err.Error()
 	if strings.Contains(e.Err.Error(), "spec type not supported by libopenapi") {
-		errString = "speakeasy supports openapi 3.0+ specs of type yaml and json"
+		errString = "speakeasy supports openapi of versions 3.0+ specs of type yaml and json"
 	}
 	return fmt.Sprintf("linting failed: %s - %s", e.Document, errString)
 }
