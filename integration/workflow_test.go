@@ -218,11 +218,11 @@ type subprocessRunner struct {
 
 func (r *subprocessRunner) Run() error {
 	err := r.cmd.Run()
-	//if err != nil {
-	fmt.Println(r.out.String())
-	return err
-	//}
-	//return nil
+	if err != nil {
+		fmt.Println(r.out.String())
+		return err
+	}
+	return nil
 }
 
 func execute(t *testing.T, wd string, args ...string) Runnable {
