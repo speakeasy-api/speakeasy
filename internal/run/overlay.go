@@ -17,29 +17,23 @@ import (
 )
 
 type Overlay struct {
-	workflow       *Workflow
-	parentStep     *workflowTracking.WorkflowStep
-	source         workflow.Source
-	outputLocation string
-	ruleset        string
+	parentStep *workflowTracking.WorkflowStep
+	source     workflow.Source
 }
 
 var _ SourceStep = Overlay{}
 
-func NewOverlay(w *Workflow, parentStep *workflowTracking.WorkflowStep, source workflow.Source, outputLocation, ruleset string) Overlay {
+func NewOverlay(parentStep *workflowTracking.WorkflowStep, source workflow.Source) Overlay {
 	return Overlay{
-		workflow:       w,
-		parentStep:     parentStep,
-		source:         source,
-		outputLocation: outputLocation,
-		ruleset:        ruleset,
+		parentStep: parentStep,
+		source:     source,
 	}
 }
 
-func (o Overlay) Do(ctx context.Context, inputPath, outputPath string) (string, error) {
+func (o Overlay) Do(ctx context.Context, inputPath string) (string, error) {
 	overlayStep := o.parentStep.NewSubstep("Applying Overlays")
 
-	overlayLocation := outputPath
+	overlayLocation := o.source.GetTempOverlayLocation()
 
 	log.From(ctx).Infof("Applying %d overlays into %s...", len(o.source.Overlays), overlayLocation)
 

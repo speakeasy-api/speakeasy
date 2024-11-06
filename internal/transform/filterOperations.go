@@ -30,6 +30,21 @@ func FilterOperations(ctx context.Context, schemaPath string, includeOps []strin
 	}.Do(ctx)
 }
 
+func FilterOperationsFromReader(ctx context.Context, schema io.Reader, schemaPath string, includeOps []string, include bool, w io.Writer, yamlOut bool) error {
+	return transformer[args]{
+		r:           schema,
+		schemaPath:  schemaPath,
+		transformFn: filterOperations,
+		w:           w,
+		jsonOut:     !yamlOut,
+		args: args{
+			includeOps: includeOps,
+			include:    include,
+			schemaPath: schemaPath,
+		},
+	}.Do(ctx)
+}
+
 type args struct {
 	includeOps []string
 	include    bool

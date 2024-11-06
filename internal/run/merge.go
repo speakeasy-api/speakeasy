@@ -30,13 +30,10 @@ func NewMerge(w *Workflow, parentStep *workflowTracking.WorkflowStep, source wor
 	}
 }
 
-func (m Merge) Do(ctx context.Context, _, outputLocation string) (string, error) {
+func (m Merge) Do(ctx context.Context, _ string) (string, error) {
 	mergeStep := m.parentStep.NewSubstep("Merge Documents")
 
 	mergeLocation := m.source.GetTempMergeLocation()
-	if len(m.source.Overlays) == 0 {
-		mergeLocation = outputLocation
-	}
 
 	log.From(ctx).Infof("Merging %d schemas into %s...", len(m.source.Inputs), mergeLocation)
 

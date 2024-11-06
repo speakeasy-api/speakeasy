@@ -233,6 +233,7 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 	execCmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
 	execCmd.Env = os.Environ()
 	execCmd.Dir = wd
+
 	// store stdout and stderr in a buffer and output it all in one go if there's a failure
 	out := bytes.Buffer{}
 	execCmd.Stdout = &out
@@ -277,11 +278,13 @@ func (c *cmdRunner) Run() error {
 
 func TestSpecWorkflows(t *testing.T) {
 	tests := []struct {
-		name          string
-		inputDocs     []string
-		overlays      []string
-		out           string
-		expectedPaths []string
+		name            string
+		inputDocs       []string
+		overlays        []string
+		transformations []workflow.Transformation
+		out             string
+		expectedPaths   []string
+		unexpectedPaths []string
 	}{
 		{
 			name: "overlay with local document",
@@ -323,6 +326,80 @@ func TestSpecWorkflows(t *testing.T) {
 			},
 			out: "output.yaml",
 		},
+		{
+			name:      "test simple transformation",
+			inputDocs: []string{"spec.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "findPetsByTags",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet/findByTags",
+			},
+			unexpectedPaths: []string{
+				"/pet/findByStatus",
+			},
+		},
+		{
+			name:      "test merge with transformation",
+			inputDocs: []string{"part1.yaml", "part2.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "getInventory",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/store/inventory",
+			},
+			unexpectedPaths: []string{
+				"/store/order",
+			},
+		},
+		{
+			name:      "test overlay with transformation",
+			inputDocs: []string{"spec.yaml"},
+			overlays:  []string{"renameOperationOverlay.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "findByTagsNew",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet/findByTags",
+			},
+			unexpectedPaths: []string{
+				"/pet/findByStatus",
+			},
+		},
+		{
+			name:      "test merge, overlay, and transformation",
+			inputDocs: []string{"part1.yaml", "part2.yaml"},
+			overlays:  []string{"renameOperationOverlay.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					FilterOperations: &workflow.FilterOperationsOptions{
+						Operations: "findByTagsNew",
+					},
+				},
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet/findByTags",
+			},
+			unexpectedPaths: []string{
+				"/pet/findByStatus",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -340,6 +417,7 @@ func TestSpecWorkflows(t *testing.T) {
 				if isLocalFileReference(inputDoc) {
 					err := copyFile(fmt.Sprintf("resources/%s", inputDoc), fmt.Sprintf("%s/%s", temp, inputDoc))
 					require.NoError(t, err)
+					inputDoc = filepath.Join(temp, inputDoc)
 				}
 				inputs = append(inputs, workflow.Document{
 					Location: workflow.LocationString(inputDoc),
@@ -350,6 +428,7 @@ func TestSpecWorkflows(t *testing.T) {
 				if isLocalFileReference(overlay) {
 					err := copyFile(fmt.Sprintf("resources/%s", overlay), fmt.Sprintf("%s/%s", temp, overlay))
 					require.NoError(t, err)
+					overlay = filepath.Join(temp, overlay)
 				}
 				overlays = append(overlays, workflow.Overlay{
 					Document: &workflow.Document{
@@ -357,10 +436,13 @@ func TestSpecWorkflows(t *testing.T) {
 					},
 				})
 			}
+
+			outputFull := filepath.Join(temp, tt.out)
 			workflowFile.Sources["first-source"] = workflow.Source{
-				Inputs:   inputs,
-				Overlays: overlays,
-				Output:   &tt.out,
+				Inputs:          inputs,
+				Overlays:        overlays,
+				Transformations: tt.transformations,
+				Output:          &outputFull,
 			}
 
 			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
@@ -371,11 +453,12 @@ func TestSpecWorkflows(t *testing.T) {
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned", "--skip-compile"}
+
 			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
 
 			content, err := os.ReadFile(filepath.Join(temp, tt.out))
-			require.NoError(t, err, "No readable file %s exists", tt.out)
+			require.NoError(t, err, "No readable file %s exists", filepath.Join(temp, tt.out))
 
 			if len(tt.overlays) > 0 {
 				if !strings.Contains(string(content), "x-codeSamples") {
@@ -387,6 +470,14 @@ func TestSpecWorkflows(t *testing.T) {
 				for _, path := range tt.expectedPaths {
 					if !strings.Contains(string(content), path) {
 						t.Errorf("Expected path %s not found in output document", path)
+					}
+				}
+			}
+
+			if len(tt.unexpectedPaths) > 0 {
+				for _, path := range tt.unexpectedPaths {
+					if strings.Contains(string(content), path) {
+						t.Errorf("Unexpected path %s found in output document", path)
 					}
 				}
 			}

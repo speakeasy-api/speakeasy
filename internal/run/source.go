@@ -44,7 +44,7 @@ type LintingError struct {
 }
 
 type SourceStep interface {
-	Do(ctx context.Context, inputPath, outputPath string) (string, error)
+	Do(ctx context.Context, inputPath string) (string, error)
 }
 
 func (e *LintingError) Error() string {
@@ -83,21 +83,21 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	var currentDocument string
 	if w.FrozenWorkflowLock {
-		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused", "unused")
+		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused")
 		if err != nil {
 			return "", nil, err
 		}
 	} else if len(source.Inputs) == 1 {
 		var singleLocation *string
 		// The output location should be the resolved location
-		if len(source.Overlays) == 0 {
+		if source.IsSingleInput() {
 			singleLocation = &outputLocation
 		}
 		currentDocument, err = schemas.ResolveDocument(ctx, source.Inputs[0], singleLocation, rootStep)
 		if err != nil {
 			return "", nil, err
 		}
-		if len(source.Overlays) == 0 {
+		if source.IsSingleInput() {
 			// In registry bundles specifically we cannot know the exact file output location before pulling the bundle down
 			if source.Inputs[0].IsSpeakeasyRegistry() {
 				outputLocation = currentDocument
@@ -110,7 +110,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 		}
 	} else {
-		currentDocument, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument, outputLocation)
+		currentDocument, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
@@ -122,12 +122,23 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
-		currentDocument, err = NewOverlay(w, rootStep, source, outputLocation, rulesetToUse).Do(ctx, currentDocument, outputLocation)
+		currentDocument, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
 	}
 
+	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
+		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	if err := os.Rename(currentDocument, outputLocation); err != nil {
+		return "", nil, fmt.Errorf("failed to rename %s to %s: %w", currentDocument, outputLocation, err)
+	}
+	currentDocument = outputLocation
 	sourceRes.OutputPath = currentDocument
 
 	if !w.SkipLinting {
