@@ -453,7 +453,6 @@ func TestSpecWorkflows(t *testing.T) {
 
 			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
-			println()
 
 			content, err := os.ReadFile(filepath.Join(temp, tt.out))
 			require.NoError(t, err, "No readable file %s exists", filepath.Join(temp, tt.out))
