@@ -11,6 +11,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 type Transform struct {
@@ -33,6 +34,10 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 	outputPath := t.source.GetTempTransformLocation()
 
 	log.From(ctx).Infof("Applying %d transformations and writing to %s...", len(t.source.Transformations), outputPath)
+
+	if err := os.MkdirAll(filepath.Dir(outputPath), os.ModePerm); err != nil {
+		return "", err
+	}
 
 	yamlOut := utils.HasYAMLExt(outputPath)
 

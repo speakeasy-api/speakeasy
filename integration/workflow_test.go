@@ -218,11 +218,11 @@ type subprocessRunner struct {
 
 func (r *subprocessRunner) Run() error {
 	err := r.cmd.Run()
-	if err != nil {
-		fmt.Println(r.out.String())
-		return err
-	}
-	return nil
+	//if err != nil {
+	fmt.Println(r.out.String())
+	return err
+	//}
+	//return nil
 }
 
 func execute(t *testing.T, wd string, args ...string) Runnable {
@@ -233,6 +233,7 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 	execCmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
 	execCmd.Env = os.Environ()
 	execCmd.Dir = wd
+
 	// store stdout and stderr in a buffer and output it all in one go if there's a failure
 	out := bytes.Buffer{}
 	execCmd.Stdout = &out
@@ -283,6 +284,7 @@ func TestSpecWorkflows(t *testing.T) {
 		transformations []workflow.Transformation
 		out             string
 		expectedPaths   []string
+		unexpectedPaths []string
 	}{
 		{
 			name: "overlay with local document",
@@ -338,6 +340,9 @@ func TestSpecWorkflows(t *testing.T) {
 			expectedPaths: []string{
 				"/pet",
 			},
+			unexpectedPaths: []string{
+				"/pet/findByStatus",
+			},
 		},
 		{
 			name:      "test merge with transformation",
@@ -352,6 +357,9 @@ func TestSpecWorkflows(t *testing.T) {
 			out: "output.yaml",
 			expectedPaths: []string{
 				"/store/inventory",
+			},
+			unexpectedPaths: []string{
+				"/store/order",
 			},
 		},
 		{
@@ -368,6 +376,9 @@ func TestSpecWorkflows(t *testing.T) {
 			out: "output.yaml",
 			expectedPaths: []string{
 				"/pet/put",
+			},
+			unexpectedPaths: []string{
+				"/pet/findByStatus",
 			},
 		},
 		{
@@ -403,6 +414,7 @@ func TestSpecWorkflows(t *testing.T) {
 				if isLocalFileReference(inputDoc) {
 					err := copyFile(fmt.Sprintf("resources/%s", inputDoc), fmt.Sprintf("%s/%s", temp, inputDoc))
 					require.NoError(t, err)
+					inputDoc = filepath.Join(temp, inputDoc)
 				}
 				inputs = append(inputs, workflow.Document{
 					Location: workflow.LocationString(inputDoc),
@@ -413,6 +425,7 @@ func TestSpecWorkflows(t *testing.T) {
 				if isLocalFileReference(overlay) {
 					err := copyFile(fmt.Sprintf("resources/%s", overlay), fmt.Sprintf("%s/%s", temp, overlay))
 					require.NoError(t, err)
+					overlay = filepath.Join(temp, overlay)
 				}
 				overlays = append(overlays, workflow.Overlay{
 					Document: &workflow.Document{
@@ -420,10 +433,13 @@ func TestSpecWorkflows(t *testing.T) {
 					},
 				})
 			}
+
+			outputFull := filepath.Join(temp, tt.out)
 			workflowFile.Sources["first-source"] = workflow.Source{
-				Inputs:   inputs,
-				Overlays: overlays,
-				Output:   &tt.out,
+				Inputs:          inputs,
+				Overlays:        overlays,
+				Transformations: tt.transformations,
+				Output:          &outputFull,
 			}
 
 			err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
@@ -434,11 +450,13 @@ func TestSpecWorkflows(t *testing.T) {
 			err = workflow.Save(temp, workflowFile)
 			require.NoError(t, err)
 			args := []string{"run", "-s", "all", "--pinned", "--skip-compile"}
+
 			cmdErr := execute(t, temp, args...).Run()
 			require.NoError(t, cmdErr)
+			println()
 
 			content, err := os.ReadFile(filepath.Join(temp, tt.out))
-			require.NoError(t, err, "No readable file %s exists", tt.out)
+			require.NoError(t, err, "No readable file %s exists", filepath.Join(temp, tt.out))
 
 			if len(tt.overlays) > 0 {
 				if !strings.Contains(string(content), "x-codeSamples") {
@@ -450,6 +468,14 @@ func TestSpecWorkflows(t *testing.T) {
 				for _, path := range tt.expectedPaths {
 					if !strings.Contains(string(content), path) {
 						t.Errorf("Expected path %s not found in output document", path)
+					}
+				}
+			}
+
+			if len(tt.unexpectedPaths) > 0 {
+				for _, path := range tt.unexpectedPaths {
+					if strings.Contains(string(content), path) {
+						t.Errorf("Unexpected path %s found in output document", path)
 					}
 				}
 			}

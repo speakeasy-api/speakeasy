@@ -131,8 +131,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
+	println("rename: ", currentDocument, outputLocation)
 	if err := os.Rename(currentDocument, outputLocation); err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("failed to rename %s to %s: %w", currentDocument, outputLocation, err)
 	}
 	currentDocument = outputLocation
 	sourceRes.OutputPath = currentDocument
