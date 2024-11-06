@@ -48,7 +48,11 @@ type SourceStep interface {
 }
 
 func (e *LintingError) Error() string {
-	return fmt.Sprintf("linting failed: %s - %s", e.Document, e.Err.Error())
+	errString := e.Err.Error()
+	if strings.Contains(e.Err.Error(), "spec type not supported by libopenapi") {
+		errString = "speakeasy supports openapi 3.0+ specs of type yaml and json"
+	}
+	return fmt.Sprintf("linting failed: %s - %s", e.Document, errString)
 }
 
 func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string) (string, *SourceResult, error) {
