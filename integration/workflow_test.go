@@ -332,13 +332,13 @@ func TestSpecWorkflows(t *testing.T) {
 			transformations: []workflow.Transformation{
 				{
 					FilterOperations: &workflow.FilterOperationsOptions{
-						Operations: "updatePet",
+						Operations: "findPetsByTags",
 					},
 				},
 			},
 			out: "output.yaml",
 			expectedPaths: []string{
-				"/pet",
+				"/pet/findByTags",
 			},
 			unexpectedPaths: []string{
 				"/pet/findByStatus",
@@ -369,13 +369,13 @@ func TestSpecWorkflows(t *testing.T) {
 			transformations: []workflow.Transformation{
 				{
 					FilterOperations: &workflow.FilterOperationsOptions{
-						Operations: "updatePetNew",
+						Operations: "findByTagsNew",
 					},
 				},
 			},
 			out: "output.yaml",
 			expectedPaths: []string{
-				"/pet/put",
+				"/pet/findByTags",
 			},
 			unexpectedPaths: []string{
 				"/pet/findByStatus",
@@ -388,13 +388,16 @@ func TestSpecWorkflows(t *testing.T) {
 			transformations: []workflow.Transformation{
 				{
 					FilterOperations: &workflow.FilterOperationsOptions{
-						Operations: "updatePetNew",
+						Operations: "findByTagsNew",
 					},
 				},
 			},
 			out: "output.yaml",
 			expectedPaths: []string{
-				"/pet/put",
+				"/pet/findByTags",
+			},
+			unexpectedPaths: []string{
+				"/pet/findByStatus",
 			},
 		},
 	}

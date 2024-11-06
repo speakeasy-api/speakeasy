@@ -1,7 +1,14 @@
 overlay: 1.0.0
 info:
-  title: Change operationId for /pet/put
+  title: Change operationId for findByTags
   version: 0.0.0
 actions:
-  - target: $["paths"]["/pet"]["put"]["operationId"]
-    update: updatePetNew
+  - target: $["paths"]["/pet/findByTags"]["get"]["operationId"]
+    update: findByTagsNew
+  - target: $["paths"]["/pet/findByTags"]["get"]
+    update:
+      x-codeSamples:
+        - lang: go
+          label: updatePet
+          source: |-
+            package main
