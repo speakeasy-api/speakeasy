@@ -19,8 +19,10 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	invalidOperationToErr := make(map[string]error)
 	for _, err := range vErrs {
 		vErr := errors.GetValidationErr(err)
-		for _, op := range vErr.AffectedOperationIDs {
-			invalidOperationToErr[op] = err // TODO: support multiple errors per operation?
+		if vErr.Severity == errors.SeverityError {
+			for _, op := range vErr.AffectedOperationIDs {
+				invalidOperationToErr[op] = err // TODO: support multiple errors per operation?
+			}
 		}
 	}
 
