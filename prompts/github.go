@@ -432,6 +432,10 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 		}
 
 		publishingFile.On.Push.Paths = []string{filepath.Join(configDirectory, ".speakeasy/gen.lock")}
+		if publishingFile.Jobs.Publish.With == nil {
+			publishingFile.Jobs.Publish.With = make(map[string]interface{})
+		}
+		
 		publishingFile.Jobs.Publish.With["target"] = targetName
 
 		if workflowFileDir != "" {
