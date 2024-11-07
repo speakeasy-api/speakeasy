@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy-core/events"
+	"golang.org/x/exp/maps"
 	"io"
 	"os"
 	"path/filepath"
@@ -300,12 +301,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return errors.Wrapf(err, "failed to run generation workflow")
 	}
 
-	if len(wf.OperationsRemoved) > 0 {
-		// If we have modified the workflow with a minimum viable spec we should make sure that is saved
-		if err := workflow.Save(outDir, wf.GetWorkflowFile()); err != nil {
-			return errors.Wrapf(err, "failed to save workflow file")
-		}
-	}
+	// Print a message and save the workflow if there were MVS removals
+	handleMVSChanges(ctx, wf.GetWorkflowFile(), outDir)
 
 	if changeDirMsg != "" {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
@@ -411,6 +408,40 @@ func printSampleSpecMessage(absSchemaPath string) {
 			absSchemaPath,
 		) + "\n",
 	)
+}
+
+func handleMVSChanges(ctx context.Context, wf *workflow.Workflow, outDir string) {
+	// This is quickstart, so there should always be a single source
+	if len(wf.Sources) != 1 {
+		return
+	}
+
+	source := maps.Values(wf.Sources)[0]
+
+	anyRemoved := false
+
+	for _, transformation := range source.Transformations {
+		if transformation.FilterOperations != nil {
+			operationsRemoved := transformation.FilterOperations.ParseOperations()
+
+			msg := fmt.Sprintf("Your OpenAPI document has %d invalid operation(s)", len(operationsRemoved))
+			removedOperationsStr := strings.Join(operationsRemoved, ", ")
+			if len(operationsRemoved) > 3 {
+				removedOperationsStr = strings.Join(operationsRemoved[:3], ", ")
+				removedOperationsStr += ", ..."
+			}
+			nextSteps := "See .speakeasy/workflow.yaml for the full list of removed operations"
+			log.From(ctx).Println(styles.RenderWarningMessage(msg, "Removed OperationIDs: "+removedOperationsStr, nextSteps))
+
+			anyRemoved = true
+		}
+	}
+
+	if anyRemoved {
+		if err := workflow.Save(outDir, wf); err != nil {
+			log.From(ctx).Warnf("Failed to save workflow file: %s", err.Error())
+		}
+	}
 }
 
 func setDefaultOutDir(workingDir string, sdkClassName string, targetType string) string {
