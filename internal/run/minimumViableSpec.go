@@ -26,12 +26,19 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	substep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
 
-	source.Transformations = append(source.Transformations, workflow.Transformation{
-		FilterOperations: &workflow.FilterOperationsOptions{
-			Operations: strings.Join(invalidOperations, ","),
-			Exclude:    pointer.ToBool(true),
-		},
-	})
+	if len(invalidOperations) > 0 {
+		source.Transformations = append(source.Transformations, workflow.Transformation{
+			FilterOperations: &workflow.FilterOperationsOptions{
+				Operations: strings.Join(invalidOperations, ","),
+				Exclude:    pointer.ToBool(true),
+			},
+		})
+	} else {
+		// Sometimes the document has invalid, unused sections
+		source.Transformations = append(source.Transformations, workflow.Transformation{
+			RemoveUnused: pointer.ToBool(true),
+		})
+	}
 	w.workflow.Sources[sourceID] = source
 
 	sourcePath, sourceRes, err := w.RunSource(ctx, substep, sourceID, targetID)

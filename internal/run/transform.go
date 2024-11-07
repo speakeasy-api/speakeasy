@@ -47,20 +47,20 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 		return "", err
 	}
 
-	var out bytes.Buffer
+	var out *bytes.Buffer
 	for _, transformation := range t.source.Transformations {
-		out = bytes.Buffer{}
+		out = &bytes.Buffer{}
 
 		if transformation.Cleanup != nil {
 			transformStep.NewSubstep("Cleaning up document")
 
-			if err := transform.CleanupFromReader(ctx, in, inputPath, &out, yamlOut); err != nil {
+			if err := transform.CleanupFromReader(ctx, in, inputPath, out, yamlOut); err != nil {
 				return "", err
 			}
 		} else if transformation.RemoveUnused != nil {
 			transformStep.NewSubstep("Removing unused nodes")
 
-			if err := transform.RemoveUnusedFromReader(ctx, in, inputPath, &out, yamlOut); err != nil {
+			if err := transform.RemoveUnusedFromReader(ctx, in, inputPath, out, yamlOut); err != nil {
 				return "", err
 			}
 		} else if transformation.FilterOperations != nil {
@@ -78,12 +78,12 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 			}
 			transformStep.NewSubstep(fmt.Sprintf("Filtering %s %d operations", inOutString, len(operations)))
 
-			if err := transform.FilterOperationsFromReader(ctx, in, inputPath, operations, include, &out, yamlOut); err != nil {
+			if err := transform.FilterOperationsFromReader(ctx, in, inputPath, operations, include, out, yamlOut); err != nil {
 				return "", err
 			}
 		}
 
-		in = &out
+		in = bytes.NewReader(out.Bytes())
 	}
 
 	outFile, err := os.Create(outputPath)
@@ -91,7 +91,7 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := io.Copy(outFile, &out); err != nil {
+	if _, err := io.Copy(outFile, out); err != nil {
 		return "", err
 	}
 
