@@ -431,7 +431,7 @@ func handleMVSChanges(ctx context.Context, wf *workflow.Workflow, outDir string)
 				removedOperationsStr += ", ..."
 			}
 			nextSteps := "See .speakeasy/workflow.yaml for the full list of removed operations"
-			log.From(ctx).Println(styles.RenderWarningMessage(msg, "Removed operationIDs: "+removedOperationsStr, nextSteps))
+			log.From(ctx).Println(styles.RenderWarningMessage(msg, "Removed OperationIDs: "+removedOperationsStr, nextSteps))
 
 			anyRemoved = true
 		}
