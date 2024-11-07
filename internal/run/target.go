@@ -225,7 +225,9 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflowTracking.WorkflowStep, codeSamples workflow.CodeSamples, target, sourcePath string, baseOutputPath *string) (string, string, error) {
 	configPath := "."
 	outputPath := codeSamples.Output
-	if baseOutputPath != nil {
+	
+	// If an output path is specified, make sure it's relative to the base output path
+	if baseOutputPath != nil && outputPath != "" {
 		configPath = *baseOutputPath
 		outputPath = filepath.Join(*baseOutputPath, outputPath)
 	}
