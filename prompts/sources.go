@@ -400,8 +400,6 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 		return "", nil, err
 	}
 
-	println("FILE LOCATION: " + fileLocation)
-
 	document, err := formatDocument(fileLocation, authHeader, false)
 	if err != nil {
 		return "", nil, err
