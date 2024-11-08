@@ -261,16 +261,16 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return "", "", ocicommon.ErrAccessGated
 	}
 
-	orgSlug, workspaceSlug, namespaceName, _, err := registryLocation.ParseRegistryLocation()
-	if err != nil {
-		return "", "", fmt.Errorf("error parsing registry location %s: %w", string(registryLocation.Location), err)
+	registryBreakdown := registryLocation.Location.Parse()
+	if registryBreakdown == nil {
+		return "", "", fmt.Errorf("error parsing registry location %s", string(registryLocation.Location))
 	}
 
-	if orgSlug != auth.GetOrgSlugFromContext(ctx) {
+	if registryBreakdown.OrganizationSlug != auth.GetOrgSlugFromContext(ctx) {
 		return "", "", fmt.Errorf("current authenticated org %s does not match provided location %s", auth.GetOrgSlugFromContext(ctx), string(registryLocation.Location))
 	}
 
-	if workspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
+	if registryBreakdown.WorkspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) {
 		return "", "", fmt.Errorf("current authenticated workspace %s does not match provided location %s", auth.GetWorkspaceSlugFromContext(ctx), string(registryLocation.Location))
 	}
 

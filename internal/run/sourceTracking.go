@@ -123,16 +123,16 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	apiKey := config.GetSpeakeasyAPIKey()
 
 	if source.Registry != nil {
-		orgSlug, workspaceSlug, name, _, err := source.Registry.ParseRegistryLocation()
-		if err != nil {
+		registryBreakdown := source.Registry.Location.Parse()
+		if registryBreakdown == nil {
 			if env.IsGithubAction() {
-				return fmt.Errorf("error parsing registry location %s: %w", string(source.Registry.Location), err)
+				return fmt.Errorf("error parsing registry location %s", string(source.Registry.Location))
 			}
 
-			log.From(ctx).Warnf("error parsing registry location %s: %v", string(source.Registry.Location), err)
+			log.From(ctx).Warnf("error parsing registry location %s", string(source.Registry.Location))
 		}
 
-		skip, key, err := getAndValidateAPIKey(ctx, orgSlug, workspaceSlug, string(source.Registry.Location))
+		skip, key, err := getAndValidateAPIKey(ctx, registryBreakdown.OrganizationSlug, registryBreakdown.WorkspaceSlug, string(source.Registry.Location))
 
 		if skip {
 			registryStep.Skip("you are authenticated with speakeasy-self")
@@ -143,7 +143,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 			return err
 		}
 
-		namespaceName = name
+		namespaceName = registryBreakdown.NamespaceName
 		apiKey = key
 	}
 
