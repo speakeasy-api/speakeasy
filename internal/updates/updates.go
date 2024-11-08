@@ -74,7 +74,7 @@ func GetNewerVersion(ctx context.Context, artifactArch, currentVersion string) (
 }
 
 func Update(ctx context.Context, currentVersion, artifactArch string, timeout int) (string, error) {
-	release, asset, err := getLatestRelease(ctx, artifactArch, 30*time.Second)
+	release, asset, err := getLatestRelease(ctx, artifactArch, time.Duration(timeout)*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("failed to find latest release: %w", err)
 	}
@@ -167,7 +167,7 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 
 	downloadedPath, err := downloadCLI(dirName, downloadURL, timeout)
 	if err != nil {
-		return fmt.Errorf("failed to download artifact: %w", err)
+		return fmt.Errorf("you've encountered local network issues, please try again in a few moments: %w", err)
 	}
 
 	tmpLocation := filepath.Join(dirName, "extracted")
@@ -271,7 +271,12 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 		Timeout: timeout,
 	})
 
-	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, "getLatestReleaseGitHub-"+artifactArch, GitHubReleaseRateLimitingLimit)
+	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, cache.CacheSettings{
+		Key:               artifactArch,
+		Namespace:         "getLatestReleaseGitHub",
+		ClearOnNewVersion: true,
+		Duration:          GitHubReleaseRateLimitingLimit,
+	})
 
 	cached, err := releaseCache.Get()
 	if err == nil {
@@ -309,7 +314,12 @@ func getReleaseForVersion(ctx context.Context, version version.Version, artifact
 
 	tag := "v" + version.String()
 
-	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, "repository-release-"+tag, GitHubReleaseRateLimitingLimit)
+	cache, _ := cache.NewFileCache[github.RepositoryRelease](ctx, cache.CacheSettings{
+		Key:               tag,
+		Namespace:         "repository-release",
+		ClearOnNewVersion: true,
+		Duration:          GitHubReleaseRateLimitingLimit,
+	})
 	var release *github.RepositoryRelease
 	if cachedRelease, err := cache.Get(); err == nil {
 		release = cachedRelease

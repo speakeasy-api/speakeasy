@@ -2,14 +2,16 @@ package cmd
 
 import (
 	"context"
-	"os"
-
+	"fmt"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
-	"github.com/speakeasy-api/speakeasy/internal/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/pkg/overlay"
+	"os"
+	"strings"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -126,7 +128,25 @@ func runCompare(ctx context.Context, flags overlayCompareFlags) error {
 	}
 
 	schemas := []string{flags.Before, flags.After}
-	return overlay.Compare(schemas, out)
+	summary, err := overlay.Compare(schemas, out)
+	if err != nil {
+		return err
+	}
+
+	// Only print summary information if we aren't writing the overlay to stdout
+	if flags.Out != "" {
+		printSummary(ctx, summary)
+
+		msg := styles.RenderSuccessMessage(
+			"Overlay Generated Successfully",
+			fmt.Sprintf("Comparing ^%s^ to ^%s^", flags.Before, flags.After),
+			fmt.Sprintf("Differences: `%d`", len(summary.TargetToChangeType)),
+			fmt.Sprintf("Overlay written to: `%s`", flags.Out),
+		)
+		log.From(ctx).Println(msg)
+	}
+
+	return nil
 }
 
 func runApply(ctx context.Context, flags overlayApplyFlags) error {
@@ -144,5 +164,140 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 		yamlOut = utils.HasYAMLExt(flags.Out)
 	}
 
-	return overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out, flags.Strict, len(flags.Out) > 0 && flags.Strict)
+	shouldWarn := len(flags.Out) > 0 && flags.Strict
+	summary, err := overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out, flags.Strict, shouldWarn)
+	if err != nil {
+		return err
+	}
+
+	// Only print summary information if we aren't writing the result to stdout
+	if flags.Out != "" {
+		printSummary(ctx, summary)
+
+		msg := styles.RenderSuccessMessage(
+			"Overlay Applied Successfully",
+			fmt.Sprintf("Overlay ^%s^ applied to ^%s^", flags.Overlay, flags.Schema),
+			fmt.Sprintf("Actions applied: `%d`", len(summary.TargetToChangeType)),
+			fmt.Sprintf("Output written to: `%s`", flags.Out),
+		)
+		log.From(ctx).Println(msg)
+	}
+
+	return nil
+}
+
+func printSummary(ctx context.Context, summary *overlay.Summary) {
+	logger := log.From(ctx)
+
+	maxLines := 10
+	formattedTargetToCounts := make(map[string]struct{ updates, removes int })
+	for target, changeType := range summary.TargetToChangeType {
+		formatted := formatTargetPath(target)
+		update, remove := 0, 0
+		if changeType == overlay.Update {
+			update = 1
+		}
+		if changeType == overlay.Remove {
+			remove = 1
+		}
+		if current, ok := formattedTargetToCounts[formatted]; ok {
+			current.updates += update
+			current.removes += remove
+			formattedTargetToCounts[formatted] = current
+		} else {
+			formattedTargetToCounts[formatted] = struct {
+				updates int
+				removes int
+			}{
+				updates: update,
+				removes: remove,
+			}
+		}
+	}
+
+	var lines []string
+	for target, counts := range formattedTargetToCounts {
+		changeTypeStr := "🔀"
+		if counts.removes > 0 && counts.updates == 0 {
+			changeTypeStr = "❌"
+		}
+
+		numChangesStr := ""
+
+		if counts.updates > 1 || (counts.updates == 1 && counts.removes > 0) {
+			numChangesStr += fmt.Sprintf("%d updated", counts.updates)
+		}
+
+		if counts.removes > 1 || (counts.removes == 1 && counts.updates > 0) {
+			if numChangesStr != "" {
+				numChangesStr += ", "
+			}
+			numChangesStr += fmt.Sprintf("%d removed", counts.removes)
+		}
+
+		if numChangesStr != "" {
+			numChangesStr = styles.DimmedItalic.Render(fmt.Sprintf("(%s)", numChangesStr))
+		}
+
+		action := fmt.Sprintf("%s %s %s", changeTypeStr, target, numChangesStr)
+		lines = append(lines, action)
+	}
+
+	for i, line := range lines {
+		if i == maxLines {
+			break
+		}
+		logger.Println(line)
+	}
+
+	if len(lines) > maxLines {
+		logger.Println(styles.DimmedItalic.Render(fmt.Sprintf("(and %d more changes)", len(lines)-maxLines)))
+	}
+
+	logger.Println("")
+}
+
+func formatTargetPath(target string) string {
+	// Remove leading $ if present
+	if len(target) > 0 && target[0] == '$' {
+		target = target[1:]
+	}
+
+	// Remove all [ and ] characters
+	target = strings.ReplaceAll(target, "[", ".")
+	target = strings.ReplaceAll(target, "]", "")
+
+	// Remove quotes
+	target = strings.ReplaceAll(target, "\"", "")
+
+	// Remove leading dot if present
+	if len(target) > 0 && target[0] == '.' {
+		target = target[1:]
+	}
+
+	parts := strings.Split(target, ".")
+	isPath := parts[0] == "paths"
+
+	var finalParts []string
+
+	for i, part := range parts {
+		// Don't print "Paths"
+		if isPath && i == 0 {
+			continue
+		}
+
+		// Don't print too much detail
+		if i >= 3 {
+			break
+		}
+
+		// Don't title case paths (e.g. /v1/pets)
+		if !strings.Contains(part, "/") {
+			finalParts = append(finalParts, styles.MakeBold(utils.CapitalizeFirst(part)))
+		} else {
+			finalParts = append(finalParts, styles.MakeBold(part))
+		}
+	}
+
+	return strings.Join(finalParts, styles.Dimmed.Render(" > "))
 }

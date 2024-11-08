@@ -17,7 +17,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/codesamples"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/links"
@@ -26,6 +25,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
+	"github.com/speakeasy-api/speakeasy/pkg/codesamples"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
 )
@@ -155,27 +155,29 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	generationAccess, err := sdkgen.Generate(
 		ctx,
-		config.GetCustomerID(),
-		config.GetWorkspaceID(),
-		t.Target,
-		sourcePath,
-		"",
-		"",
-		outDir,
-		events.GetSpeakeasyVersionFromContext(ctx),
-		w.InstallationURLs[target],
-		w.Debug,
-		true,
-		published,
-		false,
-		w.Repo,
-		w.RepoSubDirs[target],
-		w.Verbose,
-		w.ShouldCompile,
-		w.ForceGeneration,
-		target,
-		w.SkipVersioning,
+		sdkgen.GenerateOptions{
+			CustomerID:      config.GetCustomerID(),
+			WorkspaceID:     config.GetWorkspaceID(),
+			Language:        t.Target,
+			SchemaPath:      sourcePath,
+			Header:          "",
+			Token:           "",
+			OutDir:          outDir,
+			CLIVersion:      events.GetSpeakeasyVersionFromContext(ctx),
+			InstallationURL: w.InstallationURLs[target],
+			Debug:           w.Debug,
+			AutoYes:         true,
+			Published:       published,
+			OutputTests:     false,
+			Repo:            w.Repo,
+			RepoSubDir:      w.RepoSubDirs[target],
+			Verbose:         w.Verbose,
+			Compile:         w.ShouldCompile,
+			TargetName:      target,
+			SkipVersioning:  w.SkipVersioning,
+		},
 	)
+
 	if err != nil {
 		return sourceRes, nil, err
 	}
@@ -183,26 +185,20 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	if t.CodeSamples != nil {
 		codeSamplesStep := rootStep.NewSubstep("Generating Code Samples")
-		configPath := "."
-		outputPath := t.CodeSamples.Output
-		if t.Output != nil {
-			configPath = *t.Output
-			outputPath = filepath.Join(*t.Output, outputPath)
-		}
+		namespaceName, digest, err := w.runCodeSamples(ctx, codeSamplesStep, *t.CodeSamples, t.Target, sourcePath, t.Output)
 
-		overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{t.Target}, true, *t.CodeSamples)
 		if err != nil {
-			return sourceRes, nil, err
+			// Block by default. Only warn if explicitly set to non-blocking
+			if t.CodeSamples.Blocking == nil || *t.CodeSamples.Blocking {
+				return sourceRes, nil, err
+			} else {
+				log.From(ctx).Warnf("failed to generate code samples: %s", err.Error())
+				codeSamplesStep.Skip("failed, but step set to non-blocking")
+			}
 		}
 
-		if !w.FrozenWorkflowLock {
-			namespaceName, digest, err := w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, *t.CodeSamples)
-			if err != nil {
-				return sourceRes, nil, err
-			}
-			targetLock.CodeSamplesNamespace = namespaceName
-			targetLock.CodeSamplesRevisionDigest = digest
-		}
+		targetLock.CodeSamplesNamespace = namespaceName
+		targetLock.CodeSamplesRevisionDigest = digest
 	}
 
 	rootStep.SucceedWorkflow()
@@ -223,6 +219,29 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	w.lockfile.Targets[target] = targetLock
 
 	return sourceRes, &targetResult, nil
+}
+
+// Returns codeSamples namespace name and digest
+func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflowTracking.WorkflowStep, codeSamples workflow.CodeSamples, target, sourcePath string, baseOutputPath *string) (string, string, error) {
+	configPath := "."
+	outputPath := codeSamples.Output
+	
+	// If an output path is specified, make sure it's relative to the base output path
+	if baseOutputPath != nil && outputPath != "" {
+		configPath = *baseOutputPath
+		outputPath = filepath.Join(*baseOutputPath, outputPath)
+	}
+
+	overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{target}, true, codeSamples)
+	if err != nil {
+		return "", "", err
+	}
+
+	if !w.FrozenWorkflowLock {
+		return w.snapshotCodeSamples(ctx, codeSamplesStep, overlayString, codeSamples)
+	}
+
+	return "", "", nil
 }
 
 func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflowTracking.WorkflowStep, overlayString string, codeSampleConfig workflow.CodeSamples) (namespaceName string, digest string, err error) {

@@ -23,7 +23,7 @@ func TestStability(t *testing.T) {
 		Sources: map[string]workflow.Source{
 			"test-source": {
 				Inputs: []workflow.Document{
-					{Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml"},
+					{Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/tags/3.1.0/examples/v3.0/petstore.yaml"},
 				},
 			},
 		},
@@ -84,7 +84,7 @@ func TestRegistryFlow(t *testing.T) {
 		Sources: map[string]workflow.Source{
 			"test-source": {
 				Inputs: []workflow.Document{
-					{Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml"},
+					{Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/tags/3.1.0/examples/v3.0/petstore.yaml"},
 				},
 			},
 		},
@@ -115,7 +115,7 @@ func TestRegistryFlow(t *testing.T) {
 	require.NoError(t, workflow.Save(temp, workflowFile))
 
 	// Re-run the generation. It should work.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 }
 
@@ -129,7 +129,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 		Sources: map[string]workflow.Source{
 			"test-source": {
 				Inputs: []workflow.Document{
-					{Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json"},
+					{Location: "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/refs/tags/3.1.0/examples/v3.0/petstore.json"},
 				},
 			},
 		},
@@ -164,7 +164,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 	require.NoError(t, workflow.Save(temp, workflowFile))
 
 	// Re-run the generation. It should work.
-	cmdErr = executeI(t, temp, initialArgs...).Run()
+	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 }
 

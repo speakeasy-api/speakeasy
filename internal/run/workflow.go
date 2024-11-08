@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/registry"
 	"time"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -34,11 +35,6 @@ type Workflow struct {
 	RepoSubDirs            map[string]string
 	InstallationURLs       map[string]string
 	RegistryTags           []string
-
-	// RulesetOverride is used to override the rulesets used for validating
-	// Will take precedence over the ruleset set in the workflow file for the
-	// source being run.
-	RulesetOverride string
 
 	// Internal
 	workflowName       string
@@ -141,18 +137,6 @@ func WithFrozenWorkflowLock(frozen bool) Opt {
 	}
 }
 
-// If we are in --watch mode (e.g explicitly running the studio), we want to
-// run the recommended ruleset that also includes additional rules such as
-// missing-examples, which are not enabled by default in the generation only
-// ruleset.
-func WithRulesetOverride(watchMode bool) Opt {
-	return func(w *Workflow) {
-		if watchMode {
-			w.RulesetOverride = "speakeasy-recommended"
-		}
-	}
-}
-
 func WithSkipVersioning(skipVersioning bool) Opt {
 	return func(w *Workflow) {
 		w.SkipVersioning = skipVersioning
@@ -198,12 +182,6 @@ func WithRepo(repo string) Opt {
 func WithShouldCompile(shouldCompile bool) Opt {
 	return func(w *Workflow) {
 		w.ShouldCompile = shouldCompile
-	}
-}
-
-func WithForceGeneration(forceGeneration bool) Opt {
-	return func(w *Workflow) {
-		w.ForceGeneration = forceGeneration
 	}
 }
 
@@ -282,7 +260,6 @@ func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 				WithSetVersion(w.SetVersion),
 				WithDebug(w.Debug),
 				WithShouldCompile(w.ShouldCompile),
-				WithForceGeneration(w.ForceGeneration),
 				WithSkipLinting(),
 				WithSkipChangeReport(w.SkipChangeReport),
 				WithSkipSnapshot(w.SkipSnapshot),
@@ -295,4 +272,12 @@ func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 			opts...,
 		)...,
 	)
+}
+
+func Migrate(ctx context.Context, wf *workflow.Workflow) {
+	if registry.IsRegistryEnabled(ctx) {
+		*wf = wf.Migrate()
+	} else {
+		*wf = wf.MigrateNoTelemetry()
+	}
 }

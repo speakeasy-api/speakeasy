@@ -337,7 +337,9 @@ func getValuesForField(
 }
 
 func addPromptForField(key, defaultValue, validateRegex, validateMessage string, descriptionFn func(v string) string) *huh.Group {
-	input := charm.NewInlineInput().
+	value := defaultValue
+
+	input := charm.NewInlineInput(&value).
 		Key(key).
 		Title(fmt.Sprintf("Choose a %s", key)).
 		Validate(func(s string) error {
@@ -355,9 +357,6 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 			}
 			return nil
 		})
-
-	value := defaultValue
-	input = input.Value(&value)
 
 	if descriptionFn != nil {
 		fn := func() string {

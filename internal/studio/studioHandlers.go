@@ -132,7 +132,6 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		run.WithSkipGenerateLintReport(),
 		run.WithSkipSnapshot(true),
 		run.WithSkipChangeReport(true),
-		run.WithRulesetOverride(true),
 	)
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
@@ -291,6 +290,7 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 		if err != nil {
 			log.From(ctx).Warnf("error loading existing overlay: %s", err.Error())
 		} else {
+			// Theoretically this shouldn't be necessary anymore because suggestions are filtered by suggest.SuggestOperationIDs
 			suggestOverlay.Actions = modifications.RemoveAlreadySuggested(existingOverlay.Actions, suggestOverlay.Actions)
 		}
 	}

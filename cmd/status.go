@@ -85,7 +85,7 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 		WorkspaceID: &workspaceID,
 	}
 
-	wsRes, err := client.Workspaces.GetWorkspace(ctx, wsReq)
+	wsRes, err := client.Workspaces.GetByID(ctx, wsReq)
 
 	if err != nil {
 		return result, fmt.Errorf("error getting Speakeasy workspace: %w", err)
@@ -103,7 +103,7 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 		OrganizationID: wsRes.Workspace.OrganizationID,
 	}
 
-	orgRes, err := client.Organizations.GetOrganization(ctx, orgReq)
+	orgRes, err := client.Organizations.Get(ctx, orgReq)
 
 	if err != nil {
 		return result, fmt.Errorf("error getting Speakeasy organization: %w", err)
@@ -186,12 +186,7 @@ func newStatusOrganizationModel(ctx context.Context, _ *speakeasyclientsdkgo.Spe
 		accountType:     string(organization.AccountType),
 		freeTrialExpiry: organization.FreeTrialExpiry,
 		name:            organization.Name,
-	}
-
-	if organization.Slug != nil {
-		result.slug = *organization.Slug
-	} else {
-		result.slug = core.GetOrgSlugFromContext(ctx)
+		slug:            organization.Slug,
 	}
 
 	return result, nil
@@ -221,11 +216,9 @@ func newStatusWorkspaceModel(ctx context.Context, client *speakeasyclientsdkgo.S
 		slug:           workspace.Slug,
 	}
 
-	wsTargetsreq := operations.GetWorkspaceTargetsRequest{
-		WorkspaceID: &workspace.ID,
-	}
+	wsTargetsreq := operations.GetWorkspaceTargetsRequest{}
 
-	wsTargetsRes, err := client.Events.GetWorkspaceTargets(ctx, wsTargetsreq)
+	wsTargetsRes, err := client.Events.GetTargets(ctx, wsTargetsreq)
 
 	if err != nil {
 		return result, fmt.Errorf("error getting Speakeasy workspace targets: %w", err)
@@ -524,7 +517,7 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 		WorkspaceID:       &workspace.id,
 	}
 
-	res, err := client.Events.SearchWorkspaceEvents(ctx, req)
+	res, err := client.Events.Search(ctx, req)
 
 	if err != nil {
 		return result, fmt.Errorf("error searching Speakeasy target events: %w", err)
@@ -550,7 +543,7 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 		WorkspaceID:       &workspace.id,
 	}
 
-	res, err = client.Events.SearchWorkspaceEvents(ctx, req)
+	res, err = client.Events.Search(ctx, req)
 
 	if err != nil {
 		return result, fmt.Errorf("error searching Speakeasy target events: %w", err)

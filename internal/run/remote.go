@@ -6,12 +6,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
@@ -42,7 +40,7 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 		return err
 	}
 
-	res, err := sdk.Github.CheckAccess(ctx, operations.CheckAccessRequest{
+	res, err := sdk.Github.CheckAccess(ctx, operations.CheckGithubAccessRequest{
 		Org:  org,
 		Repo: repo,
 	})
@@ -85,7 +83,7 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 		select {
 		case <-ticker.C:
 			// Perform the action check
-			actionRes, err := sdk.Github.GetAction(ctx, operations.GetActionRequest{
+			actionRes, err := sdk.Github.GetAction(ctx, operations.GetGitHubActionRequest{
 				Org:        org,
 				Repo:       repo,
 				TargetName: &target,
@@ -137,9 +135,7 @@ func getRepo(ctx context.Context, genLockID string) (string, string, error) {
 		return "", "", fmt.Errorf("failed to get sdk from context: %w", err)
 	}
 
-	targets, err := sdk.Events.GetWorkspaceTargets(ctx, operations.GetWorkspaceTargetsRequest{
-		WorkspaceID: pointer.ToString(config.GetWorkspaceID()),
-	})
+	targets, err := sdk.Events.GetTargets(ctx, operations.GetWorkspaceTargetsRequest{})
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get workspace targets: %w", err)
 	}

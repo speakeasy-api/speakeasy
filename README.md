@@ -1,6 +1,6 @@
-<div="left">
+<div align="left">
   <h1>Speakeasy</h1>
-  <p>The platform to build, test, and distribute APIs your users ❤️</p>
+  <p>The platform to build, test, and distribute APIs to your users ❤️. Building really high quality APIs is hard. Speakeasy is a set of OpenAPI tools to make it easier. </p>
    <a href="https://speakeasy.com/docs/create-client-sdks/"><img src="https://img.shields.io/static/v1?label=Docs&message=Quickstart&color=000&style=for-the-badge" /></a>
    <a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw"><img src="https://img.shields.io/static/v1?label=Slack&message=Join&color=7289da&style=for-the-badge" /></a>
   <h4><b>Trusted By:</b></h4>
@@ -57,10 +57,11 @@
   </h4>
 </div>
 
-## Generate SDKs
+## Generate Polished and Type-Safe Client Libraries
 
-<p>Use Speakeasy to generate idiomatic, type-safe SDKs your users will love.</p>
+<p>Use Speakeasy to generate idiomatic, type-safe SDKs your users will love. 9 Languages and counting.</p>
 <a href="https://app.speakeasy.com/"><img src="https://custom-icon-badges.demolab.com/badge/-Start%20Generating%20-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" /></a>
+<a href="https://youtu.be/-cSZGUvT5-8?si=VwJBPcOGq0g2R4cI"><img src="https://img.shields.io/static/v1?label=Docs&message=Watch Demo&color=000&style=for-the-badge" /></a>
 
 <div align="left">
   <h1>
@@ -141,66 +142,85 @@
   				<img width="100px" src="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c#gh-light-mode-only" alt="PHP">
   			</picture>
   		</a>
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
+        <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
+      </picture>
+      <a href="https://www.speakeasy.com/docs/sdk-design/ruby/methodology-ruby" target="_blank">
+  			<picture>
+  				<source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993">
+  				<source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993">
+  				<img width="100px" src="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993#gh-light-mode-only" alt="Ruby">
+  			</picture>
+  		</a>
   	</p>
   </h1>
 </div>
 
-## CLI  
-`speakeasy`  
+<h2>
+	<p>How it works</p>
+			<picture>
+				<img src="https://github.com/user-attachments/assets/50a87bdc-5109-46a9-a1b5-082a2b26435e" alt="Speakeasy Workflow">
+			</picture>
+		</a>
+</h2>
 
+### Features
 
-The Speakeasy CLI tool provides access to the Speakeasy.com platform  
+* SDK code that looks you wrote it. Optimised for performance, debuggability and modern idiomatics.
+* Complete Terraform Providers built on a Type-safe Go SDK. 
+* Contract Test generation with a pre built mock-server ([Powered by Arazzo](https://www.speakeasy.com/openapi/arazzo))
+* Generate clean code-samples for syncing with API docs.
+* Make `npm install your-api`. Manage versioning and publishing to package managers
+* Modern OpenAPI 3.X toolchain for linting, cleaning, diff-ing and editing specs. ([Powered by Overlays](https://www.speakeasy.com/openapi/overlays))
 
-### Details
+Check out the [roadmap](https://www.speakeasyapi.dev/roadmap) for whats coming up soon!
 
-# Speakeasy 
+## CLI installation
 
-A CLI tool for interacting with the [Speakeasy platform](https://www.speakeasy.com/) and its APIs.
+### Homebrew (macOS and Linux)
 
-Use this CLI to:
-- Lint and validate OpenAPI specs
-- Create, manage, and run Speakeasy workflows
-- Configure GitHub Actions for Speakeasy workflows
-- Suggest improvements to OpenAPI specs
-
-Generate from OpenAPI Specs:
-- Client and Server SDKs in GO, Python, TypeScript, Java, PHP, C#, Swift, Ruby
-- Postman collections
-- Terraform providers
-
-[Quickstart guide](https://www.speakeasy.com/docs/create-client-sdks)
-
-Visit [Speakeasy](https://www.speakeasy.com/) for more information
-
-
-### Usage
-
-```
-speakeasy [flags]
+```bash
+brew install speakeasy-api/homebrew-tap/speakeasy
 ```
 
-#### Options
+### Script (macOS and Linux)
 
+```bash
+curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
 ```
-  -h, --help              help for speakeasy
-      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
+
+### Chocolatey (Windows)
+
+```cmd
+choco install speakeasy
 ```
 
-#### Sub Commands
+### Manual installation
 
-* [speakeasy ask](docs/ask.md)	 - Starts a conversation with Speakeasy trained AI
-* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
-* [speakeasy bump](docs/bump.md)	 - Bumps the version of a Speakeasy Generation Target
-* [speakeasy clean](docs/clean.md)	 - Speakeasy clean can be used to clean up cache, stale temp folders, and old CLI binaries.
-* [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
-* [speakeasy generate](docs/generate/README.md)	 - One off Generations for client SDKs and more
-* [speakeasy lint](docs/lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
-* [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
-* [speakeasy openapi](docs/openapi/README.md)	 - Utilities for working with OpenAPI documents
-* [speakeasy overlay](docs/overlay/README.md)	 - Work with OpenAPI Overlays
-* [speakeasy quickstart](docs/quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
-* [speakeasy run](docs/run.md)	 - Run all the workflows defined in your workflow.yaml file. This can include multiple SDK generations from different OpenAPI sources
-* [speakeasy status](docs/status.md)	 - Review status of current workspace
-* [speakeasy suggest](docs/suggest/README.md)	 - Automatically improve your OpenAPI document with an LLM
-* [speakeasy tag](docs/tag/README.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
-* [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version
+Download the latest release for your platform from the [releases page](https://github.com/speakeasy-api/speakeasy/releases), extract, and add the binary to your path.
+
+### Keeping up to date
+
+The CLI will warn you if you're running an outdated version. To update the CLI run:
+
+```bash
+speakeasy update
+```
+
+## Common CLI commands
+
+|  Command    |    Description   |
+|:------------|:--------------------------------------------------|
+| `auth`      | Log in & out of your organization's workspace.                                                                                                  |
+| `quickstart`| Create an idiomatic client SDK or target, such as a Terraform Provider, from your API specs.                                                         |
+| `run`       | Regenerate existing SDK/target from your API specs.                                                                                                  |
+| `lint`      | Validate the correctness of your API specs. `speakeasy run` also includes a validation step before generation. |
+| `suggest`   | Use an LLM to autocorrect your spec validation failures.                                                                                             |
+| `merge`     | Work with your existing documentation workflows by merging your API specs into a single spec.                                                        |
+| `status`    | Review all SDK/targets in current workspace. |
+
+## Community
+
+We love chatting about OpenAPI and API Design. Come chat with us on [slack](https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw).

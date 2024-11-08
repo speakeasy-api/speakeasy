@@ -41,12 +41,29 @@ func FormatCommandDescription(description string) string {
 	return "\n" + descriptionStyle.Render(description)
 }
 
-func NewInlineInput() *huh.Input {
-	return huh.NewInput().Prompt(" ").Inline(true)
+func NewInput(value *string, opts ...InputOpt) *huh.Input {
+	input := huh.NewInput()
+
+	// On windows, enter will get processed as a space, so we need to trim it
+	input = input.Accessor(&TransformAccessor{value: value, transform: strings.TrimSpace})
+
+	// Setting the prompt to empty affects styling
+	input = input.Prompt("")
+
+	for _, opt := range opts {
+		input = opt(input)
+	}
+	return input
 }
 
-func NewInput() *huh.Input {
-	return huh.NewInput().Prompt("")
+func NewInlineInput(value *string) *huh.Input {
+	return NewInput(value, WithInline)
+}
+
+type InputOpt func(*huh.Input) *huh.Input
+
+func WithInline(input *huh.Input) *huh.Input {
+	return input.Prompt(" ").Inline(true)
 }
 
 func FormatEditOption(text string) string {

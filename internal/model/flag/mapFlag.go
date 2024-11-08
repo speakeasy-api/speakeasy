@@ -3,8 +3,9 @@ package flag
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 // MapFlag is a flag type for a map of strings
@@ -16,12 +17,19 @@ type MapFlag struct {
 	Name, Shorthand, Description string
 	Required, Hidden             bool
 	DefaultValue                 map[string]string
+	Deprecated                   bool
+	DeprecationMessage           string
 }
 
 func (f MapFlag) Init(cmd *cobra.Command) error {
 	cmd.Flags().StringP(f.Name, f.Shorthand, mapToString(f.DefaultValue), f.Description)
 	if err := setRequiredAndHidden(cmd, f.Name, f.Required, f.Hidden); err != nil {
 		return err
+	}
+	if f.Deprecated {
+		if err := setDeprecated(cmd, f.Name, f.DeprecationMessage); err != nil {
+			return err
+		}
 	}
 	return nil
 }

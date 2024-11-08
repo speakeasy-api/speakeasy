@@ -39,6 +39,7 @@ type RunFlags struct {
 	SetVersion         string            `json:"set-version"`
 	Watch              bool              `json:"watch"`
 	GitHub             bool              `json:"github"`
+	Minimal            bool              `json:"minimal"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -118,8 +119,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Hidden:       true, // we are unaware of any use cases for this flag outside of upgrade regression testing, which we execute internally
 		},
 		flag.BooleanFlag{
-			Name:        "force",
-			Description: "Force generation of SDKs even when no changes are present",
+			Name:               "force",
+			Description:        "Force generation of SDKs even when no changes are present",
+			Deprecated:         true,
+			DeprecationMessage: "as it is now the default behavior and will be removed in a future version",
 		},
 		flag.EnumFlag{
 			Name:          "output",
@@ -155,6 +158,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.BooleanFlag{
 			Name:        "github",
 			Description: "kick off a generation run in GitHub",
+		},
+		flag.BooleanFlag{
+			Name:        "minimal",
+			Description: "only run the steps that are strictly necessary to generate the SDK",
 		},
 	},
 }
@@ -286,6 +293,12 @@ func askForSource(sources []string) (string, error) {
 	return source, nil
 }
 
+var minimalOpts = []run.Opt{
+	run.WithSkipChangeReport(true),
+	run.WithSkipSnapshot(true),
+	run.WithSkipGenerateLintReport(),
+}
+
 func runNonInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
@@ -301,12 +314,14 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithSkipVersioning(flags.SkipVersioning),
 		run.WithVerbose(flags.Verbose),
-		run.WithForceGeneration(flags.Force),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
-		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+	}
+
+	if flags.Minimal {
+		opts = append(opts, minimalOpts...)
 	}
 
 	workflow, err := run.NewWorkflow(
@@ -354,13 +369,15 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithInstallationURLs(flags.InstallationURLs),
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
-		run.WithForceGeneration(flags.Force),
 		run.WithVerbose(flags.Verbose),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
-		run.WithRulesetOverride(flags.Watch),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+	}
+
+	if flags.Minimal {
+		opts = append(opts, minimalOpts...)
 	}
 
 	workflow, err := run.NewWorkflow(

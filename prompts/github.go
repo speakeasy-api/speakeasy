@@ -56,6 +56,11 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 		githubWorkflow = defaultGenerationFile()
 	}
 
+	// backfill id-token write permissions
+	if githubWorkflow.Permissions.IDToken != config.GithubWritePermission {
+		githubWorkflow.Permissions.IDToken = config.GithubWritePermission
+	}
+
 	if target != nil {
 		githubWorkflow.Name = fmt.Sprintf("Generate %s", strings.ToUpper(*target))
 		githubWorkflow.Jobs.Generate.With["target"] = *target
@@ -194,13 +199,11 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 	for prompt, value := range prompts {
 		var input *huh.Input
 		if prompt.entryType == publishingTypeSecret {
-			input = charm.NewInlineInput().
-				Title(fmt.Sprintf("Provide a name for your %s secret:", prompt.key)).
-				Value(value)
+			input = charm.NewInlineInput(value).
+				Title(fmt.Sprintf("Provide a name for your %s secret:", prompt.key))
 		} else {
-			input = charm.NewInlineInput().
-				Title(fmt.Sprintf("Provide the value of your %s:", prompt.key)).
-				Value(value)
+			input = charm.NewInlineInput(value).
+				Title(fmt.Sprintf("Provide the value of your %s:", prompt.key))
 		}
 		fields = append(fields,
 			input,
@@ -413,6 +416,11 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 			publishingFile = defaultPublishingFile()
 		}
 
+		// backfill id-token write permissions
+		if publishingFile.Permissions.IDToken != config.GithubWritePermission {
+			publishingFile.Permissions.IDToken = config.GithubWritePermission
+		}
+
 		if len(wf.Targets) > 1 {
 			publishingFile.Name = fmt.Sprintf("Publish %s", strings.ToUpper(targetName))
 		}
@@ -424,6 +432,10 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 		}
 
 		publishingFile.On.Push.Paths = []string{filepath.Join(configDirectory, ".speakeasy/gen.lock")}
+		if publishingFile.Jobs.Publish.With == nil {
+			publishingFile.Jobs.Publish.With = make(map[string]interface{})
+		}
+		
 		publishingFile.Jobs.Publish.With["target"] = targetName
 
 		if workflowFileDir != "" {
@@ -538,6 +550,7 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 			Statuses:     config.GithubWritePermission,
 			Contents:     config.GithubWritePermission,
 			PullRequests: config.GithubWritePermission,
+			IDToken:      config.GithubWritePermission,
 		},
 	}
 }
@@ -550,6 +563,7 @@ func defaultPublishingFile() *config.PublishWorkflow {
 			Statuses:     config.GithubWritePermission,
 			Contents:     config.GithubWritePermission,
 			PullRequests: config.GithubWritePermission,
+			IDToken:      config.GithubWritePermission,
 		},
 		On: config.PublishOn{
 			Push: config.Push{
