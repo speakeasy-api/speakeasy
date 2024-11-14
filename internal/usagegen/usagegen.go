@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"io/fs"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
@@ -69,8 +70,16 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 	}
 
 	if errs := g.Generate(ctx, schema, schemaPath, lang, configPath, isRemote, false); len(errs) > 0 {
+		isValidationError := false
 		for _, err := range errs {
+			if strings.Contains(err.Error(), "validation error:") {
+				isValidationError = true
+			}
 			l.Error("", zap.Error(err))
+		}
+
+		if isValidationError {
+			return fmt.Errorf("failed to generate usage snippets: the provided openapi spec is not valid for sdk generation")
 		}
 
 		return fmt.Errorf("failed to generate usage snippets for %s ✖", lang)
