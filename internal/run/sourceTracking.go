@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
 	"github.com/iancoleman/strcase"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -23,11 +29,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/registry"
 	"go.uber.org/zap"
-	"io/fs"
-	"os"
-	"path/filepath"
-	"slices"
-	"strings"
 )
 
 func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
@@ -334,10 +335,12 @@ func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]stri
 	if env.IsGithubAction() {
 		// implicitly add branch tag
 		var branch string
-		if strings.Contains(os.Getenv("GITHUB_REF"), "refs/heads/") {
-			branch = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+		if os.Getenv("SPEAKEASY_ACTIVE_BRANCH") != "" {
+			branch = os.Getenv("SPEAKEASY_ACTIVE_BRANCH")
 		} else if strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull/") {
 			branch = strings.TrimPrefix(os.Getenv("GITHUB_HEAD_REF"), "refs/heads/")
+		} else {
+			branch = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
 		}
 
 		// trim to fit docker tag format
