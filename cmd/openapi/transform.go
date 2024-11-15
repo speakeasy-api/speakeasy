@@ -2,18 +2,19 @@ package openapi
 
 import (
 	"context"
+	"os"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"os"
 )
 
 var transformCmd = &model.CommandGroup{
 	Usage:    "transform",
 	Short:    "Transform an OpenAPI spec using a well-defined function",
-	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd},
+	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd, convertSwaggerCmd},
 }
 
 type basicFlagsI struct {
@@ -40,6 +41,18 @@ var removeUnusedCmd = &model.ExecutableCommand[basicFlagsI]{
 	Usage: "remove-unused",
 	Short: "Given an OpenAPI file, remove all unused options",
 	Run:   runRemoveUnused,
+	Flags: basicFlags,
+}
+
+type convertSwaggerFlags struct {
+	Schema string `json:"schema"`
+	Out    string `json:"out"`
+}
+
+var convertSwaggerCmd = &model.ExecutableCommand[convertSwaggerFlags]{
+	Usage: "convert-swagger",
+	Short: "Given a Swagger 2.0 file, convert it to an OpenAPI 3.x file",
+	Run:   runConvertSwagger,
 	Flags: basicFlags,
 }
 
@@ -84,6 +97,16 @@ func runRemoveUnused(ctx context.Context, flags basicFlagsI) error {
 	}
 
 	return transform.RemoveUnused(ctx, flags.Schema, yamlOut, out)
+}
+
+func runConvertSwagger(ctx context.Context, flags convertSwaggerFlags) error {
+	out, yamlOut, err := setupOutput(ctx, flags.Out)
+	defer out.Close()
+	if err != nil {
+		return err
+	}
+
+	return transform.ConvertSwagger(ctx, flags.Schema, yamlOut, out)
 }
 
 func runFilterOperations(ctx context.Context, flags filterOperationsFlags) error {
