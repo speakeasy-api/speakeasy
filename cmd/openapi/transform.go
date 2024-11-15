@@ -2,18 +2,19 @@ package openapi
 
 import (
 	"context"
+	"os"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"os"
 )
 
 var transformCmd = &model.CommandGroup{
 	Usage:    "transform",
 	Short:    "Transform an OpenAPI spec using a well-defined function",
-	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd},
+	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd, formatCmd},
 }
 
 type basicFlagsI struct {
@@ -76,6 +77,13 @@ var cleanupCmd = &model.ExecutableCommand[basicFlagsI]{
 	Flags: basicFlags,
 }
 
+var formatCmd = &model.ExecutableCommand[basicFlagsI]{
+	Usage: "format",
+	Short: "Format a given OpenAPI document",
+	Run:   runFormat,
+	Flags: basicFlags,
+}
+
 func runRemoveUnused(ctx context.Context, flags basicFlagsI) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
 	defer out.Close()
@@ -104,6 +112,16 @@ func runCleanup(ctx context.Context, flags basicFlagsI) error {
 	}
 
 	return transform.CleanupDocument(ctx, flags.Schema, yamlOut, out)
+}
+
+func runFormat(ctx context.Context, flags basicFlagsI) error {
+	out, yamlOut, err := setupOutput(ctx, flags.Out)
+	defer out.Close()
+	if err != nil {
+		return err
+	}
+
+	return transform.FormatDocument(ctx, flags.Schema, yamlOut, out)
 }
 
 func setupOutput(ctx context.Context, out string) (*os.File, bool, error) {
