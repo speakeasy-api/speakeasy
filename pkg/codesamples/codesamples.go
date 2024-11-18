@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+
 	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -12,9 +16,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
-	"sort"
 )
 
 type CodeSamplesStyle int
@@ -24,9 +25,18 @@ const (
 	ReadMe
 )
 
-func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, opts workflow.CodeSamples) (string, error) {
+func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, isSilent bool, opts workflow.CodeSamples) (string, error) {
 	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
 	isJSON := filepath.Ext(schema) == ".json"
+
+	if isSilent {
+		logger := log.From(ctx)
+		var logs bytes.Buffer
+		warnings := make([]string, 0)
+
+		logCapture := logger.WithWriter(&logs).WithWarnCapture(&warnings)
+		ctx = log.With(ctx, logCapture)
+	}
 
 	for _, lang := range langs {
 		usageOutput := &bytes.Buffer{}
