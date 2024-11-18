@@ -32,9 +32,7 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	if isSilent {
 		logger := log.From(ctx)
 		var logs bytes.Buffer
-		warnings := make([]string, 0)
-
-		logCapture := logger.WithWriter(&logs).WithWarnCapture(&warnings)
+		logCapture := logger.WithWriter(&logs)
 		ctx = log.With(ctx, logCapture)
 	}
 
