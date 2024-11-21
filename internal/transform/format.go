@@ -13,36 +13,49 @@ import (
 )
 
 // NodeType represents the type of YAML node structure we're dealing with
-type NodeType int
+type NodeType string
 
 const (
-	RootNode NodeType = iota
-	ComponentsNode
-	PathNode
-	InfoNode
-	OperationNode
-	SchemaNode
-	ResponseNode
-	SecurityNode
-	UrlNode
-	TagNode
-	UnknownNode
+	RootNode       NodeType = "RootNode"
+	ComponentsNode NodeType = "ComponentsNode"
+	PathNode       NodeType = "PathNode"
+	InfoNode       NodeType = "InfoNode"
+	OperationNode  NodeType = "OperationNode"
+	SchemaNode     NodeType = "SchemaNode"
+	ResponseNode   NodeType = "ResponseNode"
+	SecurityNode   NodeType = "SecurityNode"
+	UrlNode        NodeType = "UrlNode"
+	TagNode        NodeType = "TagNode"
+	UnknownNode    NodeType = "UnknownNode"
 )
 
 func (n NodeType) String() string {
-	return [...]string{
-		"RootNode",
-		"ComponentsNode",
-		"PathNode",
-		"InfoNode",
-		"OperationNode",
-		"SchemaNode",
-		"ResponseNode",
-		"SecurityNode",
-		"UrlNode",
-		"TagNode",
-		"UnknownNode",
-	}[n]
+	switch n {
+	case RootNode:
+		return "RootNode"
+	case ComponentsNode:
+		return "ComponentsNode"
+	case PathNode:
+		return "PathNode"
+	case InfoNode:
+		return "InfoNode"
+	case OperationNode:
+		return "OperationNode"
+	case SchemaNode:
+		return "SchemaNode"
+	case ResponseNode:
+		return "ResponseNode"
+	case SecurityNode:
+		return "SecurityNode"
+	case UrlNode:
+		return "UrlNode"
+	case TagNode:
+		return "TagNode"
+	case UnknownNode:
+		return "UnknownNode"
+	default:
+		return "UnknownNode"
+	}
 }
 
 // Define the desired order of keys for different levels
