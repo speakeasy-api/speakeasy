@@ -3,48 +3,64 @@ package transform
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi2conv"
+	"github.com/pb33f/libopenapi"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"gopkg.in/yaml.v2"
 )
 
 func ConvertSwagger(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
-	input, err := os.ReadFile(schemaPath)
+	return transformer[interface{}]{
+		schemaPath:  schemaPath,
+		transformFn: convertSwaggerDoc,
+		w:           w,
+		jsonOut:     !yamlOut,
+	}.Do(ctx)
+}
+
+func ConvertSwaggerFromReader(ctx context.Context, schema io.Reader, schemaPath string, w io.Writer, yamlOut bool) error {
+	return transformer[interface{}]{
+		r:           schema,
+		schemaPath:  schemaPath,
+		transformFn: convertSwaggerDoc,
+		w:           w,
+		jsonOut:     !yamlOut,
+	}.Do(ctx)
+}
+
+func convertSwaggerDoc(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+	root := model.Index.GetRootNode()
+
+	rawDoc, err := yaml.Marshal(root)
 	if err != nil {
-		panic(err)
+		return doc, model, fmt.Errorf("failed to marshal document: %w", err)
 	}
 
-	var format = filepath.Ext(schemaPath)
 	var swaggerDoc openapi2.T
-
-	switch format {
-	case ".json":
-		if err = json.Unmarshal(input, &swaggerDoc); err != nil {
-			panic(err)
-		}
-	case ".yaml":
-		if err = yaml.Unmarshal(input, &swaggerDoc); err != nil {
-			panic(err)
-		}
+	if err := yaml.Unmarshal(rawDoc, &swaggerDoc); err != nil {
+		return doc, model, fmt.Errorf("failed to unmarshal document: %w", err)
 	}
 
 	openapiSpec, err := openapi2conv.ToV3(&swaggerDoc)
 	if err != nil {
-		panic(err)
+		return doc, model, err
 	}
 
-	if yamlOut {
-		enc := yaml.NewEncoder(w)
-		enc.Encode(openapiSpec)
-	} else {
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		enc.Encode(openapiSpec)
+	rawDoc, err = json.MarshalIndent(openapiSpec, "", "  ")
+	if err != nil {
+		return doc, model, fmt.Errorf("failed to marshal document: %w", err)
 	}
 
-	return nil
+	// Load the converted spec into a libopenapi document
+	docNew, model, err := openapi.Load(rawDoc, doc.GetConfiguration().BasePath)
+	if err != nil {
+		return doc, model, err
+	}
+
+	return *docNew, model, nil
 }
