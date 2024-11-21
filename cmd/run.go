@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/studio"
 	"github.com/spf13/cobra"
@@ -337,7 +338,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 
 	defer func() {
 		// we should leave temp directories for debugging if run fails
-		if err == nil {
+		if err == nil || env.IsGithubAction() {
 			workflow.Cleanup()
 		}
 	}()
@@ -414,7 +415,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 	defer func() {
 		// we should leave temp directories for debugging if run fails
-		if err == nil {
+		if err == nil || env.IsGithubAction() {
 			workflow.Cleanup()
 		}
 	}()

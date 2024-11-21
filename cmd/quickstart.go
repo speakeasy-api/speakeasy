@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"golang.org/x/exp/maps"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -272,7 +273,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	defer func() {
 		// we should leave temp directories for debugging if run fails
-		if err == nil {
+		if err == nil || env.IsGithubAction() {
 			wf.Cleanup()
 		}
 	}()
