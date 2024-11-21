@@ -135,8 +135,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	if err := os.Rename(currentDocument, outputLocation); err != nil {
-		return "", nil, fmt.Errorf("failed to rename %s to %s: %w", currentDocument, outputLocation, err)
+	if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
+		return "", nil, fmt.Errorf("failed to write to output location: %w", err)
 	}
 	currentDocument = outputLocation
 	sourceRes.OutputPath = currentDocument
@@ -269,6 +269,22 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(path)))
+}
+
+// Reformats yaml to json if necessary and writes to the output location
+func writeToOutputLocation(ctx context.Context, documentPath string, outputLocation string) error {
+	// If we have yaml and need json, convert it
+	if utils.HasYAMLExt(documentPath) && !utils.HasYAMLExt(outputLocation) {
+		jsonBytes, err := schemas.Format(ctx, documentPath, false)
+		if err != nil {
+			return fmt.Errorf("failed to format document: %w", err)
+		}
+
+		return os.WriteFile(outputLocation, jsonBytes, 0o644)
+	} else {
+		// Otherwise, just rename the file
+		return os.Rename(documentPath, outputLocation)
+	}
 }
 
 func maybeReformatDocument(ctx context.Context, documentPath string, rootStep *workflowTracking.WorkflowStep) (string, bool, error) {

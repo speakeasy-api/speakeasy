@@ -3,7 +3,9 @@ package integration_tests
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -400,6 +402,23 @@ func TestSpecWorkflows(t *testing.T) {
 				"/pet/findByStatus",
 			},
 		},
+		{
+			name:      "test simple json conversion",
+			inputDocs: []string{"part1.yaml"},
+			out:       "output.json",
+			expectedPaths: []string{
+				"/pet/findByTags",
+			},
+		},
+		{
+			name:      "test json conversion with overlay",
+			inputDocs: []string{"part1.yaml"},
+			overlays:  []string{"renameOperationOverlay.yaml"},
+			out:       "output.json",
+			expectedPaths: []string{
+				"/pet/findByTags",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -480,6 +499,10 @@ func TestSpecWorkflows(t *testing.T) {
 						t.Errorf("Unexpected path %s found in output document", path)
 					}
 				}
+			}
+
+			if !utils.HasYAMLExt(tt.out) {
+				require.True(t, json.Valid(content))
 			}
 		})
 	}

@@ -3,6 +3,7 @@ package generate
 import (
 	"context"
 	"fmt"
+
 	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/pkg/codesamples"
@@ -70,7 +71,7 @@ func runCodeSamples(ctx context.Context, flags codeSamplesFlags) error {
 		//Nothing to do in default case, rely on code samples default
 	}
 
-	result, err := codesamples.GenerateOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs, false, opts)
+	result, err := codesamples.GenerateOverlay(ctx, flags.Schema, flags.Header, flags.Token, flags.ConfigPath, flags.Out, flags.Langs, false, false, opts)
 
 	if flags.Out == "" {
 		fmt.Println(result)
