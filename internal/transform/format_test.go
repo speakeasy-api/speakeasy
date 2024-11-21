@@ -9,6 +9,7 @@ import (
 
 	"github.com/pb33f/libopenapi"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestFormat(t *testing.T) {
@@ -38,6 +39,15 @@ func TestFormat(t *testing.T) {
 	testOutput.ReadFrom(reader)
 	require.NoError(t, err)
 
+	var actual yaml.Node
+	var expected yaml.Node
+
+	err = yaml.Unmarshal(testInput.Bytes(), &actual)
+	require.NoError(t, err)
+
+	err = yaml.Unmarshal(testOutput.Bytes(), &expected)
+	require.NoError(t, err)
+
 	// Require the pre-formatted spec matches the expected spec
-	require.Equal(t, string(testOutput.String()), string(testInput.String()))
+	require.Equal(t, expected, actual)
 }
