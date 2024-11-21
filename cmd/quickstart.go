@@ -4,12 +4,13 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/events"
-	"golang.org/x/exp/maps"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/events"
+	"golang.org/x/exp/maps"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -270,7 +271,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	)
 
 	defer func() {
-		wf.Cleanup()
+		// we should leave temp directories for debugging if run fails
+		if err == nil {
+			wf.Cleanup()
+		}
 	}()
 
 	if err != nil {
