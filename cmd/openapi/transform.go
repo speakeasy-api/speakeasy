@@ -79,7 +79,8 @@ var cleanupCmd = &model.ExecutableCommand[basicFlagsI]{
 
 var formatCmd = &model.ExecutableCommand[basicFlagsI]{
 	Usage: "format",
-	Short: "Format a given OpenAPI document",
+	Short: "Format an OpenAPI document to be more human-readable",
+	Long:  "Format an OpenAPI document to be more human-readable by sorting the keys in a specific order best suited for each level in the OpenAPI specification",
 	Run:   runFormat,
 	Flags: basicFlags,
 }
