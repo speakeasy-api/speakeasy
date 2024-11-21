@@ -271,6 +271,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	)
 
 	defer func() {
+		// we should leave temp directories for debugging if run fails
 		if err == nil {
 			wf.Cleanup()
 		}
