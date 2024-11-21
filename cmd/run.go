@@ -329,15 +329,18 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		opts...,
 	)
 
-	defer func() {
-		workflow.Cleanup()
-	}()
-
 	if err != nil {
 		return err
 	}
 
 	err = workflow.Run(ctx)
+
+	defer func() {
+		// we should leave temp directories for debugging if run fails
+		if err == nil {
+			workflow.Cleanup()
+		}
+	}()
 
 	// We don't return the error here because we want to try to launch the studio to help fix the issue, if possible
 	if err != nil {
@@ -385,10 +388,6 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		opts...,
 	)
 
-	defer func() {
-		workflow.Cleanup()
-	}()
-
 	if err != nil {
 		return err
 	}
@@ -412,6 +411,13 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		err = workflow.Run(ctx)
 		workflow.RootStep.Finalize(err == nil)
 	}
+
+	defer func() {
+		// we should leave temp directories for debugging if run fails
+		if err == nil {
+			workflow.Cleanup()
+		}
+	}()
 
 	// We don't return the error here because we want to try to launch the studio to help fix the issue, if possible
 	if err != nil {
