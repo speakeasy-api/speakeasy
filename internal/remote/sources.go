@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/samber/lo"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 
+	speakeasyclientsdkgo "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 )
@@ -16,14 +18,14 @@ import (
 // The source of this data is our CLI event stream, which is updated every time
 // a target is generated.
 type RecentGeneration struct {
-	CreatedAt            time.Time
-	ID                   string
-	TargetName           string
-	Target               string
-	SourceNamespace      string
-	SourceRevisionDigest string
-	Success              bool
-	Published            bool
+	CreatedAt       time.Time
+	ID              string
+	TargetName      string
+	Target          string
+	SourceNamespace string
+	Success         bool
+	Published       bool
+	RegistryUri     string
 
 	// May not be set
 	GitRepoOrg *string
@@ -53,7 +55,7 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 	}
 
 	// The event stream is limited to the most recent 250 events
-	res, err := speakeasyClient.Events.SearchWorkspaceEvents(ctx, operations.SearchWorkspaceEventsRequest{
+	res, err := speakeasyClient.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
 		WorkspaceID:     &workspaceId,
 		InteractionType: shared.InteractionTypeTargetGenerate.ToPointer(),
 	})
@@ -81,19 +83,28 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 			continue
 		}
 
+		if !hasMainRevision(ctx, speakeasyClient, *event.SourceNamespaceName) {
+			continue
+		}
+
 		seenUniqueNamespaces[*event.SourceNamespaceName] = true
 
+		registryUri, err := GetRegistryUriForSource(ctx, *event.SourceNamespaceName)
+		if err != nil {
+			return nil, err
+		}
+
 		generations = append(generations, RecentGeneration{
-			ID:                   event.ID,
-			CreatedAt:            event.CreatedAt,
-			TargetName:           *event.GenerateTargetName,
-			Target:               *event.GenerateTarget,
-			GitRepoOrg:           event.GitRemoteDefaultOwner,
-			GitRepo:              event.GitRemoteDefaultRepo,
-			SourceNamespace:      *event.SourceNamespaceName,
-			SourceRevisionDigest: *event.SourceRevisionDigest,
-			GenerateConfig:       event.GenerateConfigPreRaw,
-			Success:              event.Success,
+			ID:              event.ID,
+			CreatedAt:       event.CreatedAt,
+			TargetName:      *event.GenerateTargetName,
+			Target:          *event.GenerateTarget,
+			GitRepoOrg:      event.GitRemoteDefaultOwner,
+			GitRepo:         event.GitRemoteDefaultRepo,
+			SourceNamespace: *event.SourceNamespaceName,
+			GenerateConfig:  event.GenerateConfigPreRaw,
+			RegistryUri:     registryUri,
+			Success:         event.Success,
 		})
 
 		if len(seenUniqueNamespaces) >= recentGenerationsToShow {
@@ -121,7 +132,36 @@ func isRelevantGenerationEvent(event shared.CliEvent) bool {
 	return true
 }
 
-func GetRegistryUriForSource(ctx context.Context, sourceNamespace, sourceRevisionDigest string) (string, error) {
+const (
+	mainRevisionTag = "main"
+)
+
+func hasMainRevision(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, namespace string) bool {
+	revisions, err := client.Artifacts.GetRevisions(ctx, operations.GetRevisionsRequest{
+		NamespaceName: namespace,
+	})
+
+	if err != nil {
+		return false
+	}
+
+	if len(revisions.GetRevisionsResponse.GetItems()) == 0 {
+		return false
+	}
+
+	foundMainTag := false
+
+	for _, revision := range revisions.GetRevisionsResponse.GetItems() {
+		if lo.Contains(revision.GetTags(), mainRevisionTag) {
+			foundMainTag = true
+			break
+		}
+	}
+
+	return foundMainTag
+}
+
+func GetRegistryUriForSource(ctx context.Context, sourceNamespace string) (string, error) {
 	orgSlug := core.GetOrgSlugFromContext(ctx)
 	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
 
@@ -129,5 +169,5 @@ func GetRegistryUriForSource(ctx context.Context, sourceNamespace, sourceRevisio
 		return "", fmt.Errorf("could not generate registry uri: missing organization or workspace slug")
 	}
 
-	return fmt.Sprintf("registry.speakeasyapi.dev/%s/%s/%s@%s", orgSlug, workspaceSlug, sourceNamespace, sourceRevisionDigest), nil
+	return fmt.Sprintf("registry.speakeasyapi.dev/%s/%s/%s:main", orgSlug, workspaceSlug, sourceNamespace), nil
 }

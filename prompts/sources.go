@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
@@ -197,12 +198,10 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 			useRemoteSource = false
 		}
 
-		if err == nil && selectedRecentGeneration != nil {
-			selectedRegistryUri, err = remote.GetRegistryUriForSource(ctx, selectedRecentGeneration.SourceNamespace, selectedRecentGeneration.SourceRevisionDigest)
-
-			if err != nil {
-				useRemoteSource = false
-			}
+		if selectedRecentGeneration != nil {
+			selectedRegistryUri = selectedRecentGeneration.RegistryUri
+		} else {
+			useRemoteSource = false
 		}
 	}
 
@@ -573,16 +572,22 @@ func validateOpenApiFileLocation(s string, allowEmpty bool) error {
 	return validateDocumentLocation(s, charm_internal.OpenAPIFileExtensions)
 }
 
+var (
+	MutedStyle      = lipgloss.NewStyle().Foreground(styles.Dimmed.GetForeground())
+	TargetNameStyle = lipgloss.NewStyle().Bold(true).Foreground(styles.Emphasized.GetForeground())
+)
+
 // selectRecentGeneration handles the user interaction for selecting a namespace/recent generation
 // which will be used as the template for the new target.
 func selectRecentGeneration(ctx context.Context, generations []remote.RecentGeneration) (*remote.RecentGeneration, error) {
 	opts := make([]huh.Option[string], len(generations))
 
 	for i, generation := range generations {
-		label := fmt.Sprintf("%s (%s)", generation.TargetName, generation.Target)
+		label := fmt.Sprintf("%s ⋅ %s", TargetNameStyle.Render(generation.TargetName), MutedStyle.Render(generation.Target))
 
 		if generation.GitRepo != nil && generation.GitRepoOrg != nil {
-			label += fmt.Sprintf(" %s/%s", *generation.GitRepoOrg, *generation.GitRepo)
+			repo := MutedStyle.Italic(true).Render(fmt.Sprintf("https://github.com/%s/%s", *generation.GitRepoOrg, *generation.GitRepo))
+			label += " ⋅ " + repo
 		}
 
 		opts[i] = huh.NewOption(label, generation.ID)
