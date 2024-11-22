@@ -3,6 +3,7 @@ package remote
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/samber/lo"
@@ -68,6 +69,11 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 	seenUniqueNamespaces := make(map[string]bool)
 
 	var generations []RecentGeneration
+
+	// sort by most recent
+	sort.Slice(res.TargetSDKList, func(i, j int) bool {
+		return res.TargetSDKList[i].LastEventCreatedAt.After(res.TargetSDKList[j].LastEventCreatedAt)
+	})
 
 	for _, target := range res.TargetSDKList {
 		// Filter out cli events that aren't generation based, or lack the required
