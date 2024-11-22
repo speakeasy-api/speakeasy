@@ -126,7 +126,7 @@ func (r *Runner) checkAccountType(ctx context.Context) error {
 	}
 
 	if *accountType != shared.AccountTypeEnterprise {
-		return fmt.Errorf("Testing is not supported on the %s account tier. Contact support@speakeasy.com for more information.", *accountType)
+		return fmt.Errorf("Testing is not supported on the %s account tier. Contact %s for more information.", *accountType, styles.RenderSupportEmail())
 	}
 
 	return nil
