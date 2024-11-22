@@ -28,6 +28,7 @@ const (
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
 	packagistTokenDefault            = "PACKAGIST_TOKEN"
 	ossrhPasswordDefault             = "OSSRH_PASSWORD"
+	osshrUsernameDefault             = "OSSRH_USERNAME"
 	gpgSecretKeyDefault              = "JAVA_GPG_SECRET_KEY"
 	gpgPassPhraseDefault             = "JAVA_GPG_PASSPHRASE"
 	terraformGPGPrivateKeyDefault    = "TERRAFORM_GPG_PRIVATE_KEY"
@@ -149,15 +150,6 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 		}
 	case "java":
 		sonatypeLegacy := target.Publishing != nil && target.Publishing.Java != nil && target.Publishing.Java.UseSonatypeLegacy
-		currentossrhUsername := ""
-		if target.Publishing != nil && target.Publishing.Java != nil {
-			currentossrhUsername = target.Publishing.Java.OSSRHUsername
-		}
-		ossrhUsername := &currentossrhUsername
-		promptMap[publishingPrompt{
-			key:       "OSSRH Username",
-			entryType: publishingTypeValue,
-		}] = ossrhUsername
 		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
 			return nil, err
 		}
@@ -166,7 +158,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 				GPGSecretKey:      formatWorkflowSecret(gpgSecretKeyDefault),
 				GPGPassPhrase:     formatWorkflowSecret(gpgPassPhraseDefault),
 				OSSHRPassword:     formatWorkflowSecret(ossrhPasswordDefault),
-				OSSRHUsername:     *ossrhUsername,
+				OSSRHUsername:     formatWorkflowSecret(osshrUsernameDefault),
 				UseSonatypeLegacy: sonatypeLegacy,
 			},
 		}
@@ -350,6 +342,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 		secrets = append(secrets, publishing.Java.GPGSecretKey)
 		secrets = append(secrets, publishing.Java.GPGPassPhrase)
 		secrets = append(secrets, publishing.Java.OSSHRPassword)
+		secrets = append(secrets, publishing.Java.OSSRHUsername)
 	}
 
 	if publishing.Terraform != nil {
@@ -435,7 +428,7 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 		if publishingFile.Jobs.Publish.With == nil {
 			publishingFile.Jobs.Publish.With = make(map[string]interface{})
 		}
-		
+
 		publishingFile.Jobs.Publish.With["target"] = targetName
 
 		if workflowFileDir != "" {
