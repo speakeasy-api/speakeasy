@@ -18,6 +18,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -106,7 +107,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}, fmt.Errorf("failed to get schema contents: %w", err)
 	}
 
-	runLocation := os.Getenv("SPEAKEASY_RUN_LOCATION")
+	runLocation := env.SpeakeasyRunLocation()
 	if runLocation == "" {
 		runLocation = "cli"
 	}

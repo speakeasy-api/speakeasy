@@ -28,3 +28,9 @@ func GoArch() string {
 func IsLocalDev() bool {
 	return os.Getenv("SPEAKEASY_ENVIRONMENT") == "local"
 }
+
+// Returns the SPEAKEASY_RUN_LOCATION environment variable value. For example,
+// this is set by Speakeasy maintained GitHub Actions to "action".
+func SpeakeasyRunLocation() string {
+	return os.Getenv("SPEAKEASY_RUN_LOCATION")
+}
