@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/run"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/run"
 
 	"github.com/speakeasy-api/speakeasy-core/errors"
 
@@ -66,13 +67,29 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 // ExecutableCommand is a runnable "leaf" command that can be executed directly and has no subcommands
 // F is a struct type that represents the flags for the command. The json tags on the struct fields are used to map to the command line flags
 type ExecutableCommand[F interface{}] struct {
-	Usage, Short, Long                     string
-	Aliases                                []string
-	Flags                                  []flag.Flag
-	PreRun                                 func(cmd *cobra.Command, flags *F) error
-	Run                                    func(ctx context.Context, flags F) error
-	RunInteractive                         func(ctx context.Context, flags F) error
-	Hidden, RequiresAuth, UsesWorkflowFile bool
+	Usage, Short, Long string
+	Aliases            []string
+	Flags              []flag.Flag
+	PreRun             func(cmd *cobra.Command, flags *F) error
+	Run                func(ctx context.Context, flags F) error
+	RunInteractive     func(ctx context.Context, flags F) error
+
+	// When enabled, this command is not included in the list of available
+	// commands.
+	Hidden bool
+
+	// When enabled, the command requires authentication. If not authenticated
+	// and the execution environment is local, the user will be prompted to
+	// authenticate. If not authenticated and the execution environment is not
+	// local, an error will be returned. Authentication information, such as
+	// workspace identifier and account type, will be added to the command
+	// context.
+	RequiresAuth bool
+
+	// When enabled, the command uses a workflow file. If the "pinned" CLI flag
+	// is not present or set to false and the execution environment is not
+	// local, run using the CLI version specified in the workflow file.
+	UsesWorkflowFile bool
 
 	// Deprecated: try to avoid using this. It is only present for backwards compatibility with the old CLI
 	NonInteractiveSubcommands []Command
@@ -245,7 +262,7 @@ func (c ExecutableCommand[F]) GetFlagValues(cmd *cobra.Command) (*F, error) {
 // If the command is run from a workflow file, check if the desired version is different from the current version
 // If so, download the desired version and run the command with it as a subprocess
 // CAUTION: THIS CODE RUNS FOR EVERY EXECUTION OF `run` REGARDLESS OF VERSION PINNING. CHANGES HERE CAN
-//          BREAK EVEN SDKs THAT ARE PINNED TO A SPECIFIC VERSION.
+// BREAK EVEN SDKs THAT ARE PINNED TO A SPECIFIC VERSION.
 func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	ctx := cmd.Context()
 	logger := log.From(ctx)
