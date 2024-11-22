@@ -55,16 +55,13 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 	}
 
 	// The event stream is limited to the most recent 250 events
-	res, err := speakeasyClient.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
-		WorkspaceID:     &workspaceId,
-		InteractionType: shared.InteractionTypeTargetGenerate.ToPointer(),
-	})
+	res, err := speakeasyClient.Events.GetTargets(ctx, operations.GetWorkspaceTargetsRequest{})
 
 	if err != nil {
 		return nil, err
 	}
 
-	if len(res.CliEventBatch) == 0 {
+	if len(res.TargetSDKList) == 0 {
 		return nil, fmt.Errorf("no events found for workspace %s", workspaceId)
 	}
 
@@ -72,39 +69,39 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 
 	var generations []RecentGeneration
 
-	for _, event := range res.CliEventBatch {
+	for _, target := range res.TargetSDKList {
 		// Filter out cli events that aren't generation based, or lack the required
 		// fields.
-		if !isRelevantGenerationEvent(event) {
+		if !isRelevantGenerationTarget(target) {
 			continue
 		}
 
-		if seenUniqueNamespaces[*event.SourceNamespaceName] {
+		if seenUniqueNamespaces[*target.SourceNamespaceName] {
 			continue
 		}
 
-		if !hasMainRevision(ctx, speakeasyClient, *event.SourceNamespaceName) {
+		if !hasMainRevision(ctx, speakeasyClient, *target.SourceNamespaceName) {
 			continue
 		}
 
-		seenUniqueNamespaces[*event.SourceNamespaceName] = true
+		seenUniqueNamespaces[*target.SourceNamespaceName] = true
 
-		registryUri, err := GetRegistryUriForSource(ctx, *event.SourceNamespaceName)
+		registryUri, err := GetRegistryUriForSource(ctx, *target.SourceNamespaceName)
 		if err != nil {
 			return nil, err
 		}
 
 		generations = append(generations, RecentGeneration{
-			ID:              event.ID,
-			CreatedAt:       event.CreatedAt,
-			TargetName:      *event.GenerateTargetName,
-			Target:          *event.GenerateTarget,
-			GitRepoOrg:      event.GitRemoteDefaultOwner,
-			GitRepo:         event.GitRemoteDefaultRepo,
-			SourceNamespace: *event.SourceNamespaceName,
-			GenerateConfig:  event.GenerateConfigPreRaw,
+			ID:              target.ID,
+			CreatedAt:       target.LastEventCreatedAt,
+			TargetName:      *target.GenerateTargetName,
+			Target:          target.GenerateTarget,
+			GitRepoOrg:      target.GhActionOrganization,
+			GitRepo:         target.GhActionRepository,
+			SourceNamespace: *target.SourceNamespaceName,
+			GenerateConfig:  target.GenerateConfigPostVersion,
 			RegistryUri:     registryUri,
-			Success:         event.Success,
+			Success:         *target.Success,
 		})
 
 		if len(seenUniqueNamespaces) >= recentGenerationsToShow {
@@ -115,17 +112,22 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 	return generations, nil
 }
 
-func isRelevantGenerationEvent(event shared.CliEvent) bool {
-	if event.SourceRevisionDigest == nil {
+func isRelevantGenerationTarget(target shared.TargetSDK) bool {
+	if target.GenerateTarget == "" {
 		return false
 	}
-	if event.GenerateTarget == nil {
+	if target.GhActionRunLink == nil {
 		return false
 	}
-	if event.GenerateTargetName == nil {
+	if target.GhActionOrganization == nil || target.GhActionRepository == nil ||
+		*target.GhActionOrganization == "" || *target.GhActionRepository == "" {
 		return false
 	}
-	if event.SourceNamespaceName == nil {
+
+	if target.GenerateTargetName == nil {
+		return false
+	}
+	if target.SourceNamespaceName == nil {
 		return false
 	}
 

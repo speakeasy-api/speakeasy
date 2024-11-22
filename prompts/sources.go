@@ -8,11 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
+	timeAgo "github.com/dustin/go-humanize"
 	humanize "github.com/dustin/go-humanize/english"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/remote"
@@ -170,7 +172,9 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	source := &workflow.Source{}
 	var sourceName, fileLocation, authHeader, selectedRemoteNamespace string
 
-	recentGenerations, err := remote.GetRecentWorkspaceGenerations(ctx)
+	timeout, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	recentGenerations, err := remote.GetRecentWorkspaceGenerations(timeout)
 
 	// Retrieve recent namespaces and check if there are any available.
 	hasRecentGenerations := err == nil && len(recentGenerations) > 0
@@ -589,6 +593,8 @@ func selectRecentGeneration(ctx context.Context, generations []remote.RecentGene
 			repo := MutedStyle.Italic(true).Render(fmt.Sprintf("https://github.com/%s/%s", *generation.GitRepoOrg, *generation.GitRepo))
 			label += " ⋅ " + repo
 		}
+
+		label += " ⋅ " + MutedStyle.Render(timeAgo.Time(generation.CreatedAt))
 
 		opts[i] = huh.NewOption(label, generation.ID)
 	}
