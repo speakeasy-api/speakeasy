@@ -5,13 +5,14 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
-	"golang.org/x/exp/maps"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -421,7 +422,7 @@ func handleMVSChanges(ctx context.Context, wf *workflow.Workflow, outDir string)
 		return
 	}
 
-	source := maps.Values(wf.Sources)[0]
+	source := slices.Collect(maps.Values(wf.Sources))[0]
 
 	anyRemoved := false
 

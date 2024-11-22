@@ -6,23 +6,22 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"syscall"
 	"time"
 
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"golang.org/x/exp/maps"
-
 	"github.com/speakeasy-api/speakeasy-core/auth"
-
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +32,7 @@ func CanLaunch(ctx context.Context, wf *run.Workflow) bool {
 		return false
 	}
 
-	sourceResult := maps.Values(wf.SourceResults)[0]
+	sourceResult := slices.Collect(maps.Values(wf.SourceResults))[0]
 
 	if !utils.IsInteractive() || env.IsGithubAction() {
 		return false
