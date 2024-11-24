@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/speakeasy-api/huh"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"net/http"
 	"net/url"
 	"os"
@@ -175,6 +176,14 @@ func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*Quickstar
 		}
 	}
 
+
+	var summary *openapi.Summary
+	if authHeader == "" {
+		_, contents, _ := openapi.GetSchemaContents(ctx, fileLocation, "", "")
+		summary, _ = openapi.GetOASSummary(contents, fileLocation)
+	}
+
+
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
@@ -192,7 +201,11 @@ func quickstartBaseForm(ctx context.Context, quickstart *Quickstart) (*Quickstar
 		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
-		sourceName = quickstart.SDKName + "-OAS"
+		if summary != nil {
+			sourceName = summary.Info.Title
+		} else {
+			sourceName = quickstart.SDKName + "-OAS"
+		}
 	}
 
 	document, err := formatDocument(fileLocation, authHeader, false)
