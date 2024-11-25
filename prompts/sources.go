@@ -223,7 +223,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	}
 
 	var summary *openapi.Summary
-	if authHeader == "" {
+	if authHeader == "" && len(fileLocation) > 0 {
 		_, contents, _ := openapi.GetSchemaContents(ctx, fileLocation, "", "")
 		summary, _ = openapi.GetOASSummary(contents, fileLocation)
 	}
