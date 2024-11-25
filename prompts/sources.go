@@ -225,7 +225,9 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	var summary *openapi.Summary
 	if authHeader == "" && len(fileLocation) > 0 {
 		_, contents, _ := openapi.GetSchemaContents(ctx, fileLocation, "", "")
-		summary, _ = openapi.GetOASSummary(contents, fileLocation)
+		if len(contents) > 0 {
+			summary, _ = openapi.GetOASSummary(contents, fileLocation)
+		}
 	}
 
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
