@@ -324,7 +324,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
 	vLocation, err := updates.InstallVersion(cmd.Context(), desiredVersion, artifactArch, 30)
 	if err != nil {
-		return err
+		return ErrDownloadFailed.Wrap(err)
 	}
 
 	cmdParts := utils.GetCommandParts(cmd)
