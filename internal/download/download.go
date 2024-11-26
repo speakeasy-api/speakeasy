@@ -184,7 +184,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 			Insecure: insecurePublish,
 		})
 		if (document.WorkspaceSlug != auth.GetWorkspaceSlugFromContext(ctx) || document.OrganizationSlug != auth.GetOrgSlugFromContext(ctx)) && workspaceID == "self" {
-			access = ocicommon.NewRepositoryAccessAdmin(apiKey, document.NamespaceID, document.NamespaceName, ocicommon.RepositoryAccessOptions{
+			access = ocicommon.NewRepositoryAccessAdmin(apiKey, document.NamespaceID, document.NamespaceName, false, ocicommon.RepositoryAccessOptions{
 				Insecure: insecurePublish,
 			})
 		}
