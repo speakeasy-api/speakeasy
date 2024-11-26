@@ -32,7 +32,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ErrDownloadFailed = errors.Error("failed to download Speakeasy version")
+const ErrInstallFailed = errors.Error("failed to install Speakeasy version")
 
 type Command interface {
 	Init() (*cobra.Command, error) // TODO: make private when rootCmd is refactored?
@@ -137,7 +137,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				err := runWithVersionFromWorkflowFile(cmd)
 				if err == nil {
 					return nil
-				} else if !errors.Is(err, ErrDownloadFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+				} else if !errors.Is(err, ErrInstallFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
 					return err
 				}
 				logger := log.From(cmd.Context())
@@ -285,7 +285,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	if desiredVersion == "latest" {
 		latest, err := updates.GetLatestVersion(ctx, artifactArch)
 		if err != nil {
-			return ErrDownloadFailed
+			return ErrInstallFailed
 		}
 		desiredVersion = latest.String()
 
@@ -324,7 +324,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
 	vLocation, err := updates.InstallVersion(cmd.Context(), desiredVersion, artifactArch, 30)
 	if err != nil {
-		return ErrDownloadFailed.Wrap(err)
+		return ErrInstallFailed.Wrap(err)
 	}
 
 	cmdParts := utils.GetCommandParts(cmd)
