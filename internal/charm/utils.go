@@ -15,11 +15,12 @@ const AutoCompleteAnnotation = "autocomplete_extensions"
 
 var OpenAPIFileExtensions = []string{".yaml", ".yml", ".json"}
 
-func NewBranchPrompt(title string, output *bool) *huh.Group {
+func NewBranchPrompt(title, description string, output *bool) *huh.Group {
 	return huh.NewGroup(huh.NewConfirm().
 		Title(title).
 		Affirmative("Yes.").
 		Negative("No.").
+		Description(description).
 		Value(output))
 }
 

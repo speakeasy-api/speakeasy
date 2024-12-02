@@ -9,7 +9,7 @@ func SimpleConfirm(message string, defaultValue bool) bool {
 	confirm := defaultValue
 
 	if _, err := charm_internal.NewForm(
-		huh.NewForm(charm_internal.NewBranchPrompt(message, &confirm)),
+		huh.NewForm(charm_internal.NewBranchPrompt(message, "", &confirm)),
 	).
 		ExecuteForm(); err != nil {
 		return false

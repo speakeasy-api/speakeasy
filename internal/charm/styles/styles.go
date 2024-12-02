@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/term"
 )
@@ -189,4 +190,14 @@ func RenderKeymapLegend(keys []string, descriptions []string) string {
 		s += key + " " + Dimmed.Render(descriptions[i]) + "  "
 	}
 	return s
+}
+
+// Renders the support@speakeasy.com email address with emphasis for interactive
+// output and as a normal string in GitHub Actions.
+func RenderSupportEmail() string {
+	if env.IsGithubAction() {
+		return "support@speakeasy.com"
+	}
+
+	return Emphasized.Render("support@speakeasy.com")
 }

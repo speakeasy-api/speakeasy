@@ -3,6 +3,7 @@ package generate
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -11,8 +12,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-
-	"golang.org/x/exp/slices"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"

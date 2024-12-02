@@ -35,7 +35,7 @@ const (
 
 // TODO: Add Github Configuration Next
 var StateMapping map[QuickstartState]formFunction = map[QuickstartState]formFunction{
-	SourceBase: quickstartBaseForm,
+	SourceBase: sourceBaseForm,
 	TargetBase: targetBaseForm,
 	ConfigBase: configBaseForm,
 }

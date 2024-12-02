@@ -4,12 +4,15 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/events"
-	"golang.org/x/exp/maps"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -270,7 +273,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	)
 
 	defer func() {
-		wf.Cleanup()
+		// we should leave temp directories for debugging if run fails
+		if err == nil || env.IsGithubAction() {
+			wf.Cleanup()
+		}
 	}()
 
 	if err != nil {
@@ -416,7 +422,7 @@ func handleMVSChanges(ctx context.Context, wf *workflow.Workflow, outDir string)
 		return
 	}
 
-	source := maps.Values(wf.Sources)[0]
+	source := slices.Collect(maps.Values(wf.Sources))[0]
 
 	anyRemoved := false
 
