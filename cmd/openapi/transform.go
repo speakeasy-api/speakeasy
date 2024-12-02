@@ -14,7 +14,7 @@ import (
 var transformCmd = &model.CommandGroup{
 	Usage:    "transform",
 	Short:    "Transform an OpenAPI spec using a well-defined function",
-	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd, convertSwaggerCmd},
+	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd, formatCmd, convertSwaggerCmd},
 }
 
 type basicFlagsI struct {
@@ -89,6 +89,14 @@ var cleanupCmd = &model.ExecutableCommand[basicFlagsI]{
 	Flags: basicFlags,
 }
 
+var formatCmd = &model.ExecutableCommand[basicFlagsI]{
+	Usage: "format",
+	Short: "Format an OpenAPI document to be more human-readable",
+	Long:  "Format an OpenAPI document to be more human-readable by sorting the keys in a specific order best suited for each level in the OpenAPI specification",
+	Run:   runFormat,
+	Flags: basicFlags,
+}
+
 func runRemoveUnused(ctx context.Context, flags basicFlagsI) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
 	defer out.Close()
@@ -127,6 +135,16 @@ func runCleanup(ctx context.Context, flags basicFlagsI) error {
 	}
 
 	return transform.CleanupDocument(ctx, flags.Schema, yamlOut, out)
+}
+
+func runFormat(ctx context.Context, flags basicFlagsI) error {
+	out, yamlOut, err := setupOutput(ctx, flags.Out)
+	defer out.Close()
+	if err != nil {
+		return err
+	}
+
+	return transform.FormatDocument(ctx, flags.Schema, yamlOut, out)
 }
 
 func setupOutput(ctx context.Context, out string) (*os.File, bool, error) {
