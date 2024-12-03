@@ -312,7 +312,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 			if lockfileVersion != "" && lockfileVersion != desiredVersion {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version: %s\n", lockfileVersion)
 				if env.IsGithubAction() {
-					files, _ := filepath.Glob("*/gen.lock")
+					files, _ := filepath.Glob("**/gen.lock")
 
 					if len(files) > 0 {
 						args := append([]string{"checkout", "--"}, files...)
