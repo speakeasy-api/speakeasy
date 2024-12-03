@@ -322,7 +322,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 						gitCmd.Stderr = os.Stderr
 
 						if err = gitCmd.Run(); err != nil {
-							logger.PrintfStyled(styles.DimmedItalic, "failed resetting gen.lock to previous state")
+							logger.PrintfStyled(styles.DimmedItalic, "failed resetting gen.lock files to previous state")
 						}
 					}
 				}
