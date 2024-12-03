@@ -2,11 +2,6 @@ name: Validate
 
 on:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - edited
-      - synchronize
 
 jobs:
   build:
