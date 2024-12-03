@@ -11,7 +11,8 @@ permissions:
 jobs:
   release:
     name: Release
-    runs-on: windows-latest-16-cores
+    runs-on:
+      group: windows-latest-large
     steps:
       - name: Setup environment
         run: |-

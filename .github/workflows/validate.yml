@@ -30,7 +30,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on:
+      group: "${{ matrix.os }}-large"
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -69,7 +70,6 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - name: ${{ matrix.test-group }}
-        run: go test -json -v -p 1 ./... | gotestfmt
+      - run: go test -json -v -p 1 ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
