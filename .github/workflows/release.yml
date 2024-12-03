@@ -11,7 +11,8 @@ permissions:
 jobs:
   release:
     name: Release
-    runs-on: windows-latest-16-cores
+    runs-on:
+      group: windows-latest-large
     steps:
       - name: Setup environment
         run: |-
@@ -32,6 +33,8 @@ jobs:
       - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
         with:
           go-version-file: "go.mod"
+          # Reference: https://github.com/actions/setup-go/issues/495
+          cache: false
       # More assembly might be required: Docker logins, GPG, etc. It all depends
       # on your needs.
       - name: Configure git for private modules
