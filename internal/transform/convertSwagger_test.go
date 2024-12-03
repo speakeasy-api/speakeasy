@@ -32,7 +32,10 @@ func TestConvertSwaggerYAML(t *testing.T) {
 	converted, err := os.ReadFile("../../integration/resources/converted.yaml")
 	require.NoError(t, err)
 
-	require.Equal(t, string(converted), buf.String())
+	// Normalize and compare as bytes
+	normalizedConverted := bytes.ReplaceAll(converted, []byte("\r\n"), []byte("\n"))
+	normalizedBuf := bytes.ReplaceAll(buf.Bytes(), []byte("\r\n"), []byte("\n"))
+	require.Equal(t, normalizedConverted, normalizedBuf)
 }
 
 func TestConvertSwaggerJSON(t *testing.T) {
