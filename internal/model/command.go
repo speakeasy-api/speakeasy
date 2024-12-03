@@ -314,7 +314,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 				if env.IsGithubAction() {
 					files, _ := filepath.Glob("*/gen.lock")
 
-					if len(files) == 0 {
+					if len(files) > 0 {
 						args := append([]string{"checkout", "--"}, files...)
 						gitCmd := exec.Command("git", args...)
 						gitCmd.Stdin = os.Stdin
