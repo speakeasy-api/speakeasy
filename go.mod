@@ -47,7 +47,9 @@ require (
 	github.com/charmbracelet/huh v0.5.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
+	github.com/getkin/kin-openapi v0.128.0
 	github.com/inkeep/ai-api-go v0.3.1
+	github.com/invopop/yaml v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/samber/lo v1.47.0
 	github.com/speakeasy-api/openapi v0.1.3
@@ -123,6 +125,8 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.1 // indirect
@@ -182,6 +186,7 @@ require (
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
@@ -194,6 +199,7 @@ require (
 	github.com/pb33f/doctor v0.0.12 // indirect
 	github.com/pb33f/libopenapi-validator v0.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
+	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
