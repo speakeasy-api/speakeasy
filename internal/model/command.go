@@ -305,19 +305,21 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 			_ = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil)
 			logger.PrintfStyled(styles.DimmedItalic, msg)
 			if env.IsGithubAction() {
-				gitCmd := exec.Command("git", "checkout", "--", ".speakeasy/gen.lock")
-				gitCmd.Stdin = os.Stdin
-				gitCmd.Stdout = os.Stdout
-				gitCmd.Stderr = os.Stderr
-
-				if err = gitCmd.Run(); err != nil {
-					logger.PrintfStyled(styles.DimmedItalic, "failed resetting gen.lock to previous state")
-				}
 				githubactions.AddStepSummary("# Speakeasy Version upgrade failure\n" + msg)
 			}
 
 			if lockfileVersion != "" && lockfileVersion != desiredVersion {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version: %s\n", lockfileVersion)
+				if env.IsGithubAction() {
+					gitCmd := exec.Command("git", "checkout", "--", ".speakeasy/gen.lock")
+					gitCmd.Stdin = os.Stdin
+					gitCmd.Stdout = os.Stdout
+					gitCmd.Stderr = os.Stderr
+
+					if err = gitCmd.Run(); err != nil {
+						logger.PrintfStyled(styles.DimmedItalic, "failed resetting gen.lock to previous state")
+					}
+				}
 				return runWithVersion(cmd, artifactArch, lockfileVersion)
 			}
 		}
