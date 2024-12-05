@@ -3,8 +3,9 @@ package run
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/registry"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy/registry"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -35,6 +36,10 @@ type Workflow struct {
 	RepoSubDirs            map[string]string
 	InstallationURLs       map[string]string
 	RegistryTags           []string
+
+	// Enable if target testing should be explicitly disabled, regardless of the
+	// workflow configuration enabling testing.
+	SkipTesting bool
 
 	// Internal
 	workflowName       string
@@ -215,6 +220,14 @@ func WithSkipCleanup() Opt {
 	}
 }
 
+// Prevents target testing from running even if the workflow configuration
+// enables it.
+func WithSkipTesting(skipTesting bool) Opt {
+	return func(w *Workflow) {
+		w.SkipTesting = skipTesting
+	}
+}
+
 func WithFromQuickstart(fromQuickstart bool) Opt {
 	return func(w *Workflow) {
 		w.FromQuickstart = fromQuickstart
@@ -263,6 +276,7 @@ func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 				WithSkipLinting(),
 				WithSkipChangeReport(w.SkipChangeReport),
 				WithSkipSnapshot(w.SkipSnapshot),
+				WithSkipTesting(w.SkipTesting),
 				WithFromQuickstart(w.FromQuickstart),
 				WithRepo(w.Repo),
 				WithRepoSubDirs(w.RepoSubDirs),

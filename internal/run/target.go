@@ -201,6 +201,16 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		targetLock.CodeSamplesRevisionDigest = digest
 	}
 
+	if targetEnablesTesting(t) {
+		testingStep := rootStep.NewSubstep(fmt.Sprintf("Running %s Testing", utils.CapitalizeFirst(t.Target)))
+
+		if w.SkipTesting {
+			testingStep.Skip("explicitly disabled")
+		} else if err := w.runTesting(ctx, target, t, testingStep, outDir); err != nil {
+			return sourceRes, nil, err
+		}
+	}
+
 	rootStep.SucceedWorkflow()
 
 	if sourceLock, ok := w.lockfile.Sources[t.Source]; ok {
