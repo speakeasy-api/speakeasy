@@ -314,10 +314,9 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 	annotations.BundleRoot = overlayPath
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-		Tags:         tags,
-		Reproducible: true,
-		Annotations:  annotations,
-		MediaType:    ocicommon.MediaTypeOpenAPIOverlayV0,
+		Tags:        tags,
+		Annotations: annotations,
+		MediaType:   ocicommon.MediaTypeOpenAPIOverlayV0,
 	})
 
 	if err != nil {
