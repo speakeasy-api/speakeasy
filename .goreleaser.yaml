@@ -95,13 +95,13 @@ winget:
       Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages.
       Authenticating with the platform and managing API keys.
     copyright: 2024 Speakeasy, Inc
-    skip_upload: true
     release_notes: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
     release_notes_url: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
 
     repository:
       owner: speakeasy-api
       name: winget-pkgs
+      branch: "speakeasy-{{.Version}}"
       pull_request:
         enabled: true
         draft: false
