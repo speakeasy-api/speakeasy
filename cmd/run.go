@@ -30,6 +30,7 @@ type RunFlags struct {
 	RepoSubdir         string            `json:"repo-subdir"`
 	RepoSubdirs        map[string]string `json:"repo-subdirs"`
 	SkipCompile        bool              `json:"skip-compile"`
+	SkipTesting        bool              `json:"skip-testing"`
 	SkipVersioning     bool              `json:"skip-versioning"`
 	FrozenWorkflowLock bool              `json:"frozen-workflow-lockfile"`
 	Force              bool              `json:"force"`
@@ -107,6 +108,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.BooleanFlag{
 			Name:        "skip-compile",
 			Description: "skip compilation when generating the SDK",
+		},
+		flag.BooleanFlag{
+			Name:        "skip-testing",
+			Description: "skip testing after generating the SDK, if testing is configured in the workflow",
 		},
 		flag.BooleanFlag{
 			Name:         "skip-versioning",
@@ -297,6 +302,7 @@ func askForSource(sources []string) (string, error) {
 var minimalOpts = []run.Opt{
 	run.WithSkipChangeReport(true),
 	run.WithSkipSnapshot(true),
+	run.WithSkipTesting(true),
 	run.WithSkipGenerateLintReport(),
 }
 
@@ -313,6 +319,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithInstallationURLs(flags.InstallationURLs),
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithSkipTesting(flags.SkipTesting),
 		run.WithSkipVersioning(flags.SkipVersioning),
 		run.WithVerbose(flags.Verbose),
 		run.WithRegistryTags(flags.RegistryTags),
@@ -367,6 +374,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	opts := []run.Opt{
 		run.WithTarget(flags.Target),
 		run.WithSource(flags.Source),
+		run.WithSkipTesting(flags.SkipTesting),
 		run.WithSkipVersioning(flags.SkipVersioning),
 		run.WithRepo(flags.Repo),
 		run.WithRepoSubDirs(flags.RepoSubdirs),
