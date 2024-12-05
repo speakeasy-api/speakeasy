@@ -210,10 +210,9 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	tags = append(tags, annotations.Version)
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
-		Tags:         tags,
-		Reproducible: true,
-		Annotations:  annotations,
-		MediaType:    ocicommon.MediaTypeOpenAPIBundleV0,
+		Tags:        tags,
+		Annotations: annotations,
+		MediaType:   ocicommon.MediaTypeOpenAPIBundleV0,
 	})
 	if err != nil {
 		return fmt.Errorf("error bundling openapi artifact: %w", err)
