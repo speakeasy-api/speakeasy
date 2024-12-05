@@ -77,13 +77,12 @@ chocolateys:
 
 winget:
   - name: speakeasy
-    publisher: Speakeasy Inc
+    publisher: Speakeasy
     short_description: Speakeasy CLI makes validating API specs and generating idiomatic SDKs easy!
     license_url: "https://github.com/speakeasy-api/speakeasy/blob/main/LICENSE"
     license: "elastic"
     publisher_url: https://www.speakeasy.com
     publisher_support_url: https://github.com/speakeasy-api/speakeasy/issues
-    package_identifier: speakeasy.cli
     homepage: https://www.speakeasy.com
     description: |-
       This CLI is a tool for interacting with the Speakeasy platform - the CLI brings the functionality of Speakeasy into your development workflow. It can be run locally or in your CI/CD pipeline to validate your API specs, generate SDKs and more.
@@ -95,6 +94,7 @@ winget:
       Validating the correctness of OpenAPI3 specs. The CLI has a built in command to validate your spec and post helpful error messages.
       Authenticating with the platform and managing API keys.
     copyright: 2024 Speakeasy, Inc
+    skip_upload: auto
     release_notes: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
     release_notes_url: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
 
