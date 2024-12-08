@@ -191,6 +191,12 @@ brew install speakeasy-api/homebrew-tap/speakeasy
 curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
 ```
 
+### winget (Windows)
+
+```cmd
+winget install speakeasy
+```
+
 ### Chocolatey (Windows)
 
 ```cmd
@@ -211,15 +217,15 @@ speakeasy update
 
 ## Common CLI commands
 
-|  Command    |    Description   |
-|:------------|:--------------------------------------------------|
-| `auth`      | Log in & out of your organization's workspace.                                                                                                  |
-| `quickstart`| Create an idiomatic client SDK or target, such as a Terraform Provider, from your API specs.                                                         |
-| `run`       | Regenerate existing SDK/target from your API specs.                                                                                                  |
-| `lint`      | Validate the correctness of your API specs. `speakeasy run` also includes a validation step before generation. |
-| `suggest`   | Use an LLM to autocorrect your spec validation failures.                                                                                             |
-| `merge`     | Work with your existing documentation workflows by merging your API specs into a single spec.                                                        |
-| `status`    | Review all SDK/targets in current workspace. |
+| Command      | Description                                                                                                    |
+| :----------- | :------------------------------------------------------------------------------------------------------------- |
+| `auth`       | Log in & out of your organization's workspace.                                                                 |
+| `quickstart` | Create an idiomatic client SDK or target, such as a Terraform Provider, from your API specs.                   |
+| `run`        | Regenerate existing SDK/target from your API specs.                                                            |
+| `lint`       | Validate the correctness of your API specs. `speakeasy run` also includes a validation step before generation. |
+| `suggest`    | Use an LLM to autocorrect your spec validation failures.                                                       |
+| `merge`      | Work with your existing documentation workflows by merging your API specs into a single spec.                  |
+| `status`     | Review all SDK/targets in current workspace.                                                                   |
 
 ## Community
 
