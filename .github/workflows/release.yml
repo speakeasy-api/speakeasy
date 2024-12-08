@@ -13,6 +13,7 @@ jobs:
     name: Release
     runs-on:
       group: windows-latest-large
+    if: startsWith(github.event.head_commit.message, 'ci:') != true
     steps:
       - name: Setup environment
         run: |-
