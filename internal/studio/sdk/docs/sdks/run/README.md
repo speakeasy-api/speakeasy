@@ -58,10 +58,9 @@ func main() {
 
 ### Errors
 
-| Error Object       | Status Code        | Content Type       |
+| Error Type         | Status Code        | Content Type       |
 | ------------------ | ------------------ | ------------------ |
-| sdkerrors.SDKError | 4xx-5xx            | */*                |
-
+| sdkerrors.SDKError | 4XX, 5XX           | \*/\*              |
 
 ## ReRun
 
@@ -74,8 +73,8 @@ package main
 
 import(
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"log"
 )
 
@@ -83,9 +82,9 @@ func main() {
     s := sdk.New(
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
-    request := operations.RunRequestBody{}
+
     ctx := context.Background()
-    res, err := s.Run.ReRun(ctx, request)
+    res, err := s.Run.ReRun(ctx, operations.RunRequestBody{})
     if err != nil {
         log.Fatal(err)
     }
@@ -115,6 +114,6 @@ func main() {
 
 ### Errors
 
-| Error Object       | Status Code        | Content Type       |
+| Error Type         | Status Code        | Content Type       |
 | ------------------ | ------------------ | ------------------ |
-| sdkerrors.SDKError | 4xx-5xx            | */*                |
+| sdkerrors.SDKError | 4XX, 5XX           | \*/\*              |

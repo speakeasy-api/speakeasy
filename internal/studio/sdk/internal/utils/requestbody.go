@@ -66,15 +66,16 @@ func serializeRequestBody(request interface{}, nullable, optional bool, requestF
 		if tag != nil {
 			// request object (non-flattened)
 			requestVal := requestValType.FieldByName(requestFieldName)
+			val := reflect.ValueOf(requestVal.Interface())
 			if isNil(requestField.Type, requestVal) {
 				if !nullable && optional {
 					return nil, "", nil
 				}
 
-				return serializeContentType(requestFieldName, tag.MediaType, requestVal, string(requestField.Tag))
+				return serializeContentType(requestFieldName, tag.MediaType, val, string(requestField.Tag))
 			}
 
-			return serializeContentType(requestFieldName, tag.MediaType, requestVal, string(requestField.Tag))
+			return serializeContentType(requestFieldName, tag.MediaType, val, string(requestField.Tag))
 		}
 	}
 

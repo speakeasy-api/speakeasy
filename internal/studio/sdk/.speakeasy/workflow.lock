@@ -1,9 +1,9 @@
-speakeasyVersion: 1.377.1
+speakeasyVersion: 1.434.2
 sources:
     SpeakeasyStudio-OAS:
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:22959a5102700320cb02912c08183eb65b458b4bedb0323bb0ed5ef6d83380c7
-        sourceBlobDigest: sha256:45f804139bfdc947479c244b5e1d7f3a18b586e760766f176587328c5ed36025
+        sourceRevisionDigest: sha256:73d50982bbd2514fd057c8579618951d55c5b01dc8486db904e6e870fca69592
+        sourceBlobDigest: sha256:bb33405e124bee974dcaedc6079f15db95fced5f76cdfeac47db99706a9a44e5
         tags:
             - latest
     SpekaeasyStudio-OAS:
@@ -16,15 +16,13 @@ targets:
     speakeasy-studio:
         source: SpeakeasyStudio-OAS
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:22959a5102700320cb02912c08183eb65b458b4bedb0323bb0ed5ef6d83380c7
-        sourceBlobDigest: sha256:45f804139bfdc947479c244b5e1d7f3a18b586e760766f176587328c5ed36025
-        outLocation: /Users/da/code/speakeasy-cli/internal/studio/sdk
+        sourceRevisionDigest: sha256:73d50982bbd2514fd057c8579618951d55c5b01dc8486db904e6e870fca69592
+        sourceBlobDigest: sha256:bb33405e124bee974dcaedc6079f15db95fced5f76cdfeac47db99706a9a44e5
     spekaeasy-studio:
         source: SpekaeasyStudio-OAS
         sourceNamespace: spekaeasy-studio-oas
         sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
         sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
-        outLocation: /Users/da/code/speakeasy-cli/internal/run/studio/generated-studio-sdk
 workflow:
     workflowVersion: 1.0.0
     sources:

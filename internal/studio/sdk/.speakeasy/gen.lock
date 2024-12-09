@@ -1,18 +1,18 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: d8b1829d50d78d7706f5ba5deec98c94
+  docChecksum: 78fc16241dd246e41d72a8df4d9858a1
   docVersion: 1.0.0
-  speakeasyVersion: 0.0.1
-  generationVersion: 2.407.2
-  releaseVersion: 0.6.14
-  configChecksum: 458671c6f703684d6a4e026d6b639afe
+  speakeasyVersion: 1.434.2
+  generationVersion: 2.452.0
+  releaseVersion: 0.7.0
+  configChecksum: 614840c4df081840a49730a5617559c3
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.5.5
+    core: 3.5.15
     defaultEnabledRetries: 0.2.0
-    envVarSecurityUsage: 0.3.1
+    envVarSecurityUsage: 0.3.2
     globalSecurity: 2.82.10
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
@@ -25,20 +25,67 @@ features:
     sdkHooks: 0.1.0
     serverEvents: 0.1.2
     serverEventsSentinels: 0.1.0
-    unions: 2.85.9
+    tests: 0.6.0
+    unions: 2.85.10
 generatedFiles:
+  - /models/components/auth.go
+  - /models/components/codesamples.go
+  - /models/components/diagnostic.go
+  - /models/components/document.go
+  - /models/components/fallbackcodesamples.go
+  - /models/components/healthresponse.go
+  - /models/components/httpmetadata.go
+  - /models/components/overlay.go
+  - /models/components/publishing.go
+  - /models/components/runresponse.go
+  - /models/components/runresponsestreamevent.go
+  - /models/components/security.go
+  - /models/components/source.go
+  - /models/components/sourceregistry.go
+  - /models/components/sourceresponse.go
+  - /models/components/suggestresponse.go
+  - /models/components/target.go
+  - /models/components/targetrunsummary.go
+  - /models/components/workflow.go
+  - /models/operations/checkhealth.go
+  - /models/operations/getrun.go
+  - /models/operations/run.go
+  - /models/operations/suggestmethodnames.go
+  - CONTRIBUTING.md
+  - USAGE.md
+  - docs/models/components/auth.md
+  - docs/models/components/codesamples.md
+  - docs/models/components/data.md
+  - docs/models/components/diagnostic.md
+  - docs/models/components/document.md
+  - docs/models/components/fallbackcodesamples.md
+  - docs/models/components/healthresponse.md
+  - docs/models/components/httpmetadata.md
+  - docs/models/components/overlay.md
+  - docs/models/components/publishing.md
+  - docs/models/components/runresponse.md
+  - docs/models/components/runresponsestreamevent.md
+  - docs/models/components/security.md
+  - docs/models/components/source.md
+  - docs/models/components/sourceregistry.md
+  - docs/models/components/sourceresponse.md
+  - docs/models/components/suggestresponse.md
+  - docs/models/components/target.md
+  - docs/models/components/targetrunsummary.md
+  - docs/models/components/workflow.md
+  - docs/models/operations/checkhealthresponse.md
+  - docs/models/operations/getrunresponse.md
+  - docs/models/operations/option.md
+  - docs/models/operations/runrequestbody.md
+  - docs/models/operations/runresponse.md
+  - docs/models/operations/runresponsebody.md
+  - docs/models/operations/suggestmethodnamesresponse.md
+  - docs/sdks/health/README.md
+  - docs/sdks/run/README.md
+  - docs/sdks/sdk/README.md
+  - docs/sdks/suggest/README.md
   - health.go
-  - run.go
-  - suggest.go
-  - sdk.go
-  - models/sdkerrors/sdkerror.go
-  - retry/config.go
-  - types/bigint.go
-  - types/date.go
-  - types/datetime.go
-  - types/decimal.go
-  - types/pointers.go
-  - types/stream/stream.go
+  - internal/hooks/hooks.go
   - internal/utils/contenttype.go
   - internal/utils/form.go
   - internal/utils/headers.go
@@ -49,61 +96,24 @@ generatedFiles:
   - internal/utils/retries.go
   - internal/utils/security.go
   - internal/utils/utils.go
-  - /models/operations/checkhealth.go
-  - /models/operations/getrun.go
-  - /models/operations/run.go
-  - /models/operations/suggestmethodnames.go
-  - /models/components/healthresponse.go
-  - /models/components/httpmetadata.go
-  - /models/components/runresponsestreamevent.go
-  - /models/components/runresponse.go
-  - /models/components/workflow.go
-  - /models/components/target.go
-  - /models/components/codesamples.go
-  - /models/components/sourceregistry.go
-  - /models/components/publishing.go
-  - /models/components/source.go
-  - /models/components/overlay.go
-  - /models/components/document.go
-  - /models/components/auth.go
-  - /models/components/fallbackcodesamples.go
-  - /models/components/targetrunsummary.go
-  - /models/components/sourceresponse.go
-  - /models/components/diagnostic.go
-  - /models/components/suggestresponse.go
-  - /models/components/security.go
-  - docs/models/operations/checkhealthresponse.md
-  - docs/models/operations/getrunresponse.md
-  - docs/models/operations/runrequestbody.md
-  - docs/models/operations/runresponsebody.md
-  - docs/models/operations/runresponse.md
-  - docs/models/operations/suggestmethodnamesresponse.md
-  - docs/models/components/data.md
-  - docs/models/components/healthresponse.md
-  - docs/models/components/httpmetadata.md
-  - docs/models/components/runresponsestreamevent.md
-  - docs/models/components/runresponse.md
-  - docs/models/components/workflow.md
-  - docs/models/components/target.md
-  - docs/models/components/codesamples.md
-  - docs/models/components/sourceregistry.md
-  - docs/models/components/publishing.md
-  - docs/models/components/source.md
-  - docs/models/components/overlay.md
-  - docs/models/components/document.md
-  - docs/models/components/auth.md
-  - docs/models/components/fallbackcodesamples.md
-  - docs/models/components/targetrunsummary.md
-  - docs/models/components/sourceresponse.md
-  - docs/models/components/diagnostic.md
-  - docs/models/components/suggestresponse.md
-  - docs/models/components/security.md
-  - docs/sdks/sdk/README.md
-  - docs/models/operations/option.md
-  - docs/sdks/health/README.md
-  - docs/sdks/run/README.md
-  - docs/sdks/suggest/README.md
-  - USAGE.md
   - models/operations/options.go
-  - internal/hooks/hooks.go
-  - CONTRIBUTING.md
+  - models/sdkerrors/sdkerror.go
+  - retry/config.go
+  - run.go
+  - sdk.go
+  - suggest.go
+  - types/bigint.go
+  - types/date.go
+  - types/datetime.go
+  - types/decimal.go
+  - types/pointers.go
+  - types/stream/stream.go
+examples:
+  checkHealth: {}
+  getRun: {}
+  run: {}
+  suggestMethodNames:
+    speakeasy-default-suggest-method-names:
+      responses:
+        "200":
+          application/json: {"overlay": "<value>"}
