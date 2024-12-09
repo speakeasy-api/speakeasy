@@ -106,7 +106,7 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	if getTargetMaturity(target.Target) == "Alpha" {
 		msg := styles.RenderInfoMessage(
-			"This language is in `Alpha`!\n",
+			"This language is in `Alpha`!",
 			"Generation is supported but may not be fully featured.",
 			"Please contact `support@speakeasy.com` or reach out on `Slack` for access.")
 
