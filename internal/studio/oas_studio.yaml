@@ -14,15 +14,6 @@ paths:
       summary: Health Check
       description: Check the CLI health and return relevant information.
       operationId: checkHealth
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                tabID:
-                  type: string
-                  description: The tab ID of the studio
       responses:
         "200":
           description: Successful response
