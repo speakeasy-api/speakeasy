@@ -13,7 +13,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/sdkerrors"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/types/stream"
-	"io"
 	"net/http"
 	"net/url"
 )
@@ -183,28 +182,25 @@ func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*op
 			}, "")
 			res.RunResponseStreamEvent = out
 		default:
-			rawBody, err := io.ReadAll(httpRes.Body)
+			rawBody, err := utils.ConsumeRawBody(httpRes)
 			if err != nil {
-				return nil, fmt.Errorf("error reading response body: %w", err)
+				return nil, err
 			}
-
 			return nil, sdkerrors.NewSDKError(fmt.Sprintf("unknown content-type received: %s", httpRes.Header.Get("Content-Type")), httpRes.StatusCode, string(rawBody), httpRes)
 		}
 	case httpRes.StatusCode >= 400 && httpRes.StatusCode < 500:
 		fallthrough
 	case httpRes.StatusCode >= 500 && httpRes.StatusCode < 600:
-		rawBody, err := io.ReadAll(httpRes.Body)
+		rawBody, err := utils.ConsumeRawBody(httpRes)
 		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
+			return nil, err
 		}
-
 		return nil, sdkerrors.NewSDKError("API error occurred", httpRes.StatusCode, string(rawBody), httpRes)
 	default:
-		rawBody, err := io.ReadAll(httpRes.Body)
+		rawBody, err := utils.ConsumeRawBody(httpRes)
 		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
+			return nil, err
 		}
-
 		return nil, sdkerrors.NewSDKError("unknown status code returned", httpRes.StatusCode, string(rawBody), httpRes)
 	}
 
@@ -373,28 +369,25 @@ func (s *Run) ReRun(ctx context.Context, request operations.RunRequestBody, opts
 			}, "")
 			res.OneOf = out
 		default:
-			rawBody, err := io.ReadAll(httpRes.Body)
+			rawBody, err := utils.ConsumeRawBody(httpRes)
 			if err != nil {
-				return nil, fmt.Errorf("error reading response body: %w", err)
+				return nil, err
 			}
-
 			return nil, sdkerrors.NewSDKError(fmt.Sprintf("unknown content-type received: %s", httpRes.Header.Get("Content-Type")), httpRes.StatusCode, string(rawBody), httpRes)
 		}
 	case httpRes.StatusCode >= 400 && httpRes.StatusCode < 500:
 		fallthrough
 	case httpRes.StatusCode >= 500 && httpRes.StatusCode < 600:
-		rawBody, err := io.ReadAll(httpRes.Body)
+		rawBody, err := utils.ConsumeRawBody(httpRes)
 		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
+			return nil, err
 		}
-
 		return nil, sdkerrors.NewSDKError("API error occurred", httpRes.StatusCode, string(rawBody), httpRes)
 	default:
-		rawBody, err := io.ReadAll(httpRes.Body)
+		rawBody, err := utils.ConsumeRawBody(httpRes)
 		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
+			return nil, err
 		}
-
 		return nil, sdkerrors.NewSDKError("unknown status code returned", httpRes.StatusCode, string(rawBody), httpRes)
 	}
 

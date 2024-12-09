@@ -3,10 +3,12 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"math/big"
+	"net/http"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -227,4 +229,16 @@ func contains(arr []string, str string) bool {
 		}
 	}
 	return false
+}
+
+func ConsumeRawBody(res *http.Response) ([]byte, error) {
+	rawBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	res.Body.Close()
+	res.Body = io.NopCloser(bytes.NewBuffer(rawBody))
+
+	return rawBody, nil
 }

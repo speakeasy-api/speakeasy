@@ -4,6 +4,10 @@ package components
 
 // RunResponse - Map of target run summaries
 type RunResponse struct {
+	// Step of the run
+	Step string `json:"step"`
+	// Whether the run was partial
+	IsPartial bool `json:"isPartial"`
 	// Link to the linting report
 	LintingReportLink *string        `json:"lintingReportLink,omitempty"`
 	SourceResult      SourceResponse `json:"sourceResult"`
@@ -16,10 +20,20 @@ type RunResponse struct {
 	Took int64 `json:"took"`
 	// Error message if the run failed
 	Error *string `json:"error,omitempty"`
-	// Whether the run was partial
-	IsPartial bool `json:"isPartial"`
-	// Step of the run
-	Step string `json:"step"`
+}
+
+func (o *RunResponse) GetStep() string {
+	if o == nil {
+		return ""
+	}
+	return o.Step
+}
+
+func (o *RunResponse) GetIsPartial() bool {
+	if o == nil {
+		return false
+	}
+	return o.IsPartial
 }
 
 func (o *RunResponse) GetLintingReportLink() *string {
@@ -69,18 +83,4 @@ func (o *RunResponse) GetError() *string {
 		return nil
 	}
 	return o.Error
-}
-
-func (o *RunResponse) GetIsPartial() bool {
-	if o == nil {
-		return false
-	}
-	return o.IsPartial
-}
-
-func (o *RunResponse) GetStep() string {
-	if o == nil {
-		return ""
-	}
-	return o.Step
 }
