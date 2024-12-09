@@ -3,6 +3,8 @@ package prompts
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,6 +102,16 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	if err := target.Validate(generate.GetSupportedLanguages(), quickstart.WorkflowFile.Sources); err != nil {
 		return nil, errors.Wrap(err, "failed to validate target")
+	}
+
+	if getTargetMaturity(target.Target) == "Alpha" {
+		msg := styles.RenderInfoMessage(
+			"This language is in `Alpha`!\n",
+			"Generation is supported but may not be fully featured.",
+			"Please contact `support@speakeasy.com` or reach out on `Slack` for access.")
+
+		log.From(ctx).Println(msg)
+		os.Exit(0)
 	}
 
 	quickstart.WorkflowFile.Targets[targetName] = *target
