@@ -84,6 +84,7 @@ var GenerateCmd = &model.CommandGroup{
 	Long:           `The "generate" command provides a set of commands for one off generations of client SDKs and Terraform providers`,
 	InteractiveMsg: "What do you want to generate?",
 	Commands:       []model.Command{genSDKCmd, genUsageSnippetCmd, codeSamplesCmd, genSDKVersionCmd, genSDKChangelogCmd, suportedTargetsCmd},
+	Hidden:         true,
 }
 
 type GenerateSDKVersionFlags struct {
