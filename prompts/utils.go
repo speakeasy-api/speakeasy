@@ -66,6 +66,16 @@ func GetTargetOptions() []huh.Option[string] {
 	return options
 }
 
+func getTargetMaturity(target string) string {
+	for _, supportedTarget := range generate.GetSupportedTargets() {
+		if supportedTarget.Target == target {
+			return string(supportedTarget.Maturity)
+		}
+	}
+
+	return ""
+}
+
 func targetOption(target, maturity string) huh.Option[string] {
 	return huh.NewOption(fmt.Sprintf("%s %s", getTargetDisplay(target), getMaturityDisplay(maturity)), target)
 }
