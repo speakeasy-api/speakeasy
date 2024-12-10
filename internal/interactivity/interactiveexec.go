@@ -222,7 +222,7 @@ func isHidden(cmd *cobra.Command) bool {
 
 	qualifiedName := getFullyQualifiedName(cmd)
 
-	return slices.Contains(HiddenCommands, qualifiedName)
+	return slices.Contains(CommandsHiddenFromInteractivity, qualifiedName)
 }
 
 func getFullyQualifiedName(cmd *cobra.Command) string {

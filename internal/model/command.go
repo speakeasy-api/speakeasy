@@ -42,6 +42,7 @@ type CommandGroup struct {
 	Usage, Short, Long, InteractiveMsg string
 	Aliases                            []string
 	Commands                           []Command
+	Hidden                             bool
 }
 
 func (c CommandGroup) Init() (*cobra.Command, error) {
@@ -51,6 +52,7 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 		Long:    c.Long,
 		Aliases: c.Aliases,
 		RunE:    interactivity.InteractiveRunFn(c.InteractiveMsg),
+		Hidden:  c.Hidden,
 	}
 
 	for _, subcommand := range c.Commands {
