@@ -108,7 +108,7 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		msg := styles.RenderInfoMessage(
 			"This language is in `Alpha`!",
 			"Generation is supported but may not be fully featured.",
-			"Please contact `support@speakeasy.com` or reach out on `Slack` for access.")
+			"Chat with us for access: `https://calendly.com/d/5dm-wvm-2mx/chat-with-speakeasy-team`")
 
 		log.From(ctx).Println(msg)
 		os.Exit(0)
