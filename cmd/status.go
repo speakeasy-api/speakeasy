@@ -14,6 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -256,31 +257,50 @@ type statusWorkspaceTargetsModel struct {
 func newStatusWorkspaceTargetsModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, org statusOrganizationModel, workspace statusWorkspaceModel, targets []shared.TargetSDK) (statusWorkspaceTargetsModel, error) {
 	var result statusWorkspaceTargetsModel
 
-	for _, target := range targets {
+	targetModels := make([]*statusWorkspaceTargetModel, len(targets))
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for index, target := range targets {
 		// Archived
 		if target.LastEventInteractionType == shared.InteractionTypeTombstone {
 			continue
 		}
 
-		targetModel, err := newStatusWorkspaceTargetModel(ctx, client, org, workspace, target)
+		eg.Go(func() error {
+			targetModel, err := newStatusWorkspaceTargetModel(ctx, client, org, workspace, target)
 
-		if err != nil {
-			return result, err
+			if err != nil {
+				return err
+			}
+
+			targetModels[index] = targetModel
+
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return result, err
+	}
+
+	for _, targetModel := range targetModels {
+		if targetModel == nil {
+			continue
 		}
 
-		if target.GeneratePublished != nil && *target.GeneratePublished {
-			result.published = append(result.published, targetModel)
+		if targetModel.generatePublished != nil && *targetModel.generatePublished {
+			result.published = append(result.published, *targetModel)
 
 			continue
 		}
 
-		if target.GhActionOrganization != nil && target.GhActionRepository != nil {
-			result.configured = append(result.configured, targetModel)
+		if targetModel.ghActionOrganization != nil && targetModel.ghActionRepository != nil {
+			result.configured = append(result.configured, *targetModel)
 
 			continue
 		}
 
-		result.unconfigured = append(result.unconfigured, targetModel)
+		result.unconfigured = append(result.unconfigured, *targetModel)
 	}
 
 	sortFunc := func(a, b statusWorkspaceTargetModel) int {
@@ -370,8 +390,8 @@ type statusWorkspaceEventModel struct {
 	success                          bool
 }
 
-func newStatusWorkspaceEventModel(event shared.CliEvent) statusWorkspaceEventModel {
-	result := statusWorkspaceEventModel{
+func newStatusWorkspaceEventModel(event shared.CliEvent) *statusWorkspaceEventModel {
+	result := &statusWorkspaceEventModel{
 		continuousIntegrationEnvironment: event.ContinuousIntegrationEnvironment,
 		createdAt:                        event.CreatedAt,
 		ghActionRunLink:                  event.GhActionRunLink,
@@ -470,10 +490,12 @@ type statusWorkspaceTargetModel struct {
 	success                           *bool
 
 	// Generate events
-	generateEvents []statusWorkspaceEventModel
+	generateLastEvent        *statusWorkspaceEventModel
+	generateLastSuccessEvent *statusWorkspaceEventModel
 
 	// Publish events
-	publishEvents []statusWorkspaceEventModel
+	publishLastEvent        *statusWorkspaceEventModel
+	publishLastSuccessEvent *statusWorkspaceEventModel
 
 	// Speakeasy URL
 	speakeasyURL string
@@ -482,8 +504,8 @@ type statusWorkspaceTargetModel struct {
 	upgradeDocumentationURL *string
 }
 
-func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, org statusOrganizationModel, workspace statusWorkspaceModel, target shared.TargetSDK) (statusWorkspaceTargetModel, error) {
-	result := statusWorkspaceTargetModel{
+func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, org statusOrganizationModel, workspace statusWorkspaceModel, target shared.TargetSDK) (*statusWorkspaceTargetModel, error) {
+	result := &statusWorkspaceTargetModel{
 		continuousIntegrationEnvironment:  target.ContinuousIntegrationEnvironment,
 		generateConfigPostVersion:         target.GenerateConfigPostVersion,
 		generateGenLockPreVersion:         target.GenerateGenLockPreVersion,
@@ -510,56 +532,56 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 		result.upgradeDocumentationURL = &upgradeURL
 	}
 
-	interactionTypeTargetGenerate := shared.InteractionTypeTargetGenerate
-	req := operations.SearchWorkspaceEventsRequest{
-		GenerateGenLockID: &target.ID,
-		InteractionType:   &interactionTypeTargetGenerate,
-		WorkspaceID:       &workspace.id,
-	}
-
-	res, err := client.Events.Search(ctx, req)
+	lastGenerateEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypeTargetGenerate, false)
 
 	if err != nil {
-		return result, fmt.Errorf("error searching Speakeasy target events: %w", err)
+		return result, fmt.Errorf("error searching last Speakeasy target generate event: %w", err)
 	}
 
-	if res.StatusCode != 200 {
-		return result, fmt.Errorf("unexpected status code searching Speakeasy target events: %d", res.StatusCode)
+	if lastGenerateEvent != nil {
+		result.generateLastEvent = newStatusWorkspaceEventModel(*lastGenerateEvent)
+
+		if lastGenerateEvent.Success {
+			result.generateLastSuccessEvent = result.generateLastEvent
+		}
 	}
 
-	if len(res.CliEventBatch) == 0 {
-		return result, nil
+	if result.generateLastSuccessEvent == nil {
+		lastGenerateSuccessEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypeTargetGenerate, true)
+
+		if err != nil {
+			return result, fmt.Errorf("error searching last Speakeasy target generate success event: %w", err)
+		}
+
+		if lastGenerateSuccessEvent != nil {
+			result.generateLastSuccessEvent = newStatusWorkspaceEventModel(*lastGenerateSuccessEvent)
+		}
 	}
 
-	for _, event := range res.CliEventBatch {
-		eventModel := newStatusWorkspaceEventModel(event)
-		result.generateEvents = append(result.generateEvents, eventModel)
-	}
-
-	interactionTypePublish := shared.InteractionTypePublish
-	req = operations.SearchWorkspaceEventsRequest{
-		GenerateGenLockID: &target.ID,
-		InteractionType:   &interactionTypePublish,
-		WorkspaceID:       &workspace.id,
-	}
-
-	res, err = client.Events.Search(ctx, req)
+	lastPublishEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypePublish, false)
 
 	if err != nil {
-		return result, fmt.Errorf("error searching Speakeasy target events: %w", err)
+		return result, fmt.Errorf("error searching last Speakeasy target publish event: %w", err)
 	}
 
-	if res.StatusCode != 200 {
-		return result, fmt.Errorf("unexpected status code searching Speakeasy target events: %d", res.StatusCode)
+	if lastPublishEvent != nil {
+		result.publishLastEvent = newStatusWorkspaceEventModel(*lastPublishEvent)
+
+		if lastPublishEvent.Success {
+			result.publishLastSuccessEvent = result.publishLastEvent
+		}
 	}
 
-	if len(res.CliEventBatch) == 0 {
-		return result, nil
-	}
+	if result.publishLastSuccessEvent == nil {
+		lastPublishSuccessEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypePublish, true)
 
-	for _, event := range res.CliEventBatch {
-		eventModel := newStatusWorkspaceEventModel(event)
-		result.publishEvents = append(result.publishEvents, eventModel)
+		if err != nil {
+			return result, fmt.Errorf("error searching last Speakeasy target publish success event: %w", err)
+		}
+
+		if lastPublishSuccessEvent != nil {
+			result.publishLastSuccessEvent = newStatusWorkspaceEventModel(*lastPublishSuccessEvent)
+		}
 	}
 
 	return result, nil
@@ -592,50 +614,6 @@ func (m statusWorkspaceTargetModel) GenerateInfo() string {
 	return result.String()
 }
 
-func (m statusWorkspaceTargetModel) LastGenerateEvent() *statusWorkspaceEventModel {
-	if len(m.generateEvents) == 0 {
-		return nil
-	}
-
-	return &m.generateEvents[0]
-}
-
-func (m statusWorkspaceTargetModel) LastGenerateSuccessEvent() *statusWorkspaceEventModel {
-	if len(m.generateEvents) == 0 {
-		return nil
-	}
-
-	for _, event := range m.generateEvents {
-		if event.success {
-			return &event
-		}
-	}
-
-	return nil
-}
-
-func (m statusWorkspaceTargetModel) LastPublishEvent() *statusWorkspaceEventModel {
-	if len(m.publishEvents) == 0 {
-		return nil
-	}
-
-	return &m.publishEvents[0]
-}
-
-func (m statusWorkspaceTargetModel) LastPublishSuccessEvent() *statusWorkspaceEventModel {
-	if len(m.publishEvents) == 0 {
-		return nil
-	}
-
-	for _, event := range m.publishEvents {
-		if event.success {
-			return &event
-		}
-	}
-
-	return nil
-}
-
 func (m statusWorkspaceTargetModel) RenderFullWidth(ctx context.Context) int {
 	// Add 2 to account for box padding
 	return lipgloss.Width(strings.Join(m.TargetInfo(ctx), "\n")) + 2
@@ -650,11 +628,11 @@ func (m statusWorkspaceTargetModel) RepositoryURL() string {
 }
 
 func (m statusWorkspaceTargetModel) Success() bool {
-	if event := m.LastPublishEvent(); event != nil && !event.success {
+	if event := m.publishLastEvent; event != nil && !event.success {
 		return false
 	}
 
-	if event := m.LastGenerateEvent(); event != nil && !event.success {
+	if event := m.generateLastEvent; event != nil && !event.success {
 		return false
 	}
 
@@ -675,7 +653,7 @@ func (m statusWorkspaceTargetModel) TargetHeading() string {
 		result.WriteString("Unconfigured")
 	}
 
-	if event := m.LastPublishSuccessEvent(); event != nil && event.publishPackageName != nil && event.publishPackageVersion != nil {
+	if event := m.publishLastSuccessEvent; event != nil && event.publishPackageName != nil && event.publishPackageVersion != nil {
 		result.WriteString(": ")
 		result.WriteString(*event.publishPackageVersion)
 	} else if m.generateConfigPostVersion != nil {
@@ -692,34 +670,29 @@ func (m statusWorkspaceTargetModel) TargetHeading() string {
 }
 
 func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
-	lastGenerateEvent := m.LastGenerateEvent()
-	lastGenerateSuccessEvent := m.LastGenerateSuccessEvent()
-	lastPublishEvent := m.LastPublishEvent()
-	lastPublishSuccessEvent := m.LastPublishSuccessEvent()
-
 	var result []string
 
-	if lastPublishEvent != nil && !lastPublishEvent.success {
+	if m.publishLastEvent != nil && !m.publishLastEvent.success {
 		var message strings.Builder
 
 		message.WriteString(renderAlertErrorText("✖ Last Publish Failed"))
 
-		if lastPublishEvent.ghActionRunLink != nil {
+		if m.publishLastEvent.ghActionRunLink != nil {
 			message.WriteString(renderAlertErrorText(": "))
-			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *lastPublishEvent.ghActionRunLink)))
+			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *m.publishLastEvent.ghActionRunLink)))
 		}
 
 		result = append(result, message.String())
 	}
 
-	if lastGenerateEvent != nil && !lastGenerateEvent.success {
+	if m.generateLastEvent != nil && !m.generateLastEvent.success {
 		var message strings.Builder
 
 		message.WriteString(renderAlertErrorText("✖ Last Generate Failed"))
 
-		if lastGenerateEvent.ghActionRunLink != nil {
+		if m.generateLastEvent.ghActionRunLink != nil {
 			message.WriteString(renderAlertErrorText(": "))
-			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *lastGenerateEvent.ghActionRunLink)))
+			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *m.generateLastEvent.ghActionRunLink)))
 		}
 
 		result = append(result, message.String())
@@ -729,8 +702,8 @@ func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
 		result = append(result, renderAlertWarningText("⚠ Target Upgrade Available: ")+renderAlertWarningURL(*m.upgradeDocumentationURL))
 	}
 
-	if lastPublishSuccessEvent != nil && lastPublishSuccessEvent.publishPackageURL != nil {
-		result = append(result, renderInfoText("Publish URL: ")+renderInfoURL(*lastPublishSuccessEvent.publishPackageURL))
+	if m.publishLastSuccessEvent != nil && m.publishLastSuccessEvent.publishPackageURL != nil {
+		result = append(result, renderInfoText("Publish URL: ")+renderInfoURL(*m.publishLastSuccessEvent.publishPackageURL))
 	}
 
 	if m.RepositoryURL() != "" {
@@ -739,31 +712,31 @@ func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
 
 	result = append(result, renderInfoText("Speakeasy URL: "+renderInfoURL(m.speakeasyURL)))
 
-	if lastPublishEvent != nil {
-		if !lastPublishEvent.success {
-			result = append(result, renderInfoText("Last Publish Attempt: "+lastPublishEvent.PublishInfo()))
+	if m.publishLastEvent != nil {
+		if !m.publishLastEvent.success {
+			result = append(result, renderInfoText("Last Publish Attempt: "+m.publishLastEvent.PublishInfo()))
 
-			if lastPublishSuccessEvent != nil {
-				result = append(result, renderInfoText("Last Publish Success: "+lastPublishSuccessEvent.GenerateInfo()))
+			if m.publishLastSuccessEvent != nil {
+				result = append(result, renderInfoText("Last Publish Success: "+m.publishLastSuccessEvent.GenerateInfo()))
 			} else {
 				result = append(result, renderInfoText("Last Publish Success: Unknown"))
 			}
 		} else {
-			result = append(result, renderInfoText("Last Publish: "+lastPublishEvent.PublishInfo()))
+			result = append(result, renderInfoText("Last Publish: "+m.publishLastEvent.PublishInfo()))
 		}
 	}
 
-	if lastGenerateEvent != nil {
-		if !lastGenerateEvent.success {
-			result = append(result, renderInfoText("Last Generate Attempt: "+lastGenerateEvent.GenerateInfo()))
+	if m.generateLastEvent != nil {
+		if !m.generateLastEvent.success {
+			result = append(result, renderInfoText("Last Generate Attempt: "+m.generateLastEvent.GenerateInfo()))
 
-			if lastGenerateSuccessEvent != nil {
-				result = append(result, renderInfoText("Last Generate Success: "+lastGenerateSuccessEvent.GenerateInfo()))
+			if m.generateLastSuccessEvent != nil {
+				result = append(result, renderInfoText("Last Generate Success: "+m.generateLastSuccessEvent.GenerateInfo()))
 			} else {
 				result = append(result, renderInfoText("Last Generate Success: Unknown"))
 			}
 		} else {
-			result = append(result, renderInfoText("Last Generate: "+lastGenerateEvent.GenerateInfo()))
+			result = append(result, renderInfoText("Last Generate: "+m.generateLastEvent.GenerateInfo()))
 		}
 	} else {
 		result = append(result, renderInfoText("Last Generate: "+m.GenerateInfo()))
@@ -871,4 +844,38 @@ func renderTargetBox(width int, color lipgloss.AdaptiveColor, heading string, ad
 		AlignHorizontal(lipgloss.Left).
 		Width(width).
 		Render(s)
+}
+
+func searchWorkspaceTargetLastEvent(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, workspaceID string, targetID string, interactionType shared.InteractionType, successOnly bool) (*shared.CliEvent, error) {
+	limit := int64(1)
+	req := operations.SearchWorkspaceEventsRequest{
+		GenerateGenLockID: &targetID,
+		InteractionType:   &interactionType,
+		Limit:             &limit,
+		WorkspaceID:       &workspaceID,
+	}
+
+	if successOnly {
+		req.Success = &successOnly
+	}
+
+	res, err := client.Events.Search(ctx, req)
+
+	if err != nil {
+		return nil, fmt.Errorf("error calling Speakeasy API: %w", err)
+	}
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("expected status code 200, got: %d", res.StatusCode)
+	}
+
+	if len(res.CliEventBatch) == 0 {
+		return nil, nil
+	}
+
+	if len(res.CliEventBatch) > 1 {
+		return nil, fmt.Errorf("expected at most one event, got: %d", len(res.CliEventBatch))
+	}
+
+	return &res.CliEventBatch[0], nil
 }
