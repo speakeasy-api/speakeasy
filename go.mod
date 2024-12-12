@@ -18,7 +18,6 @@ require (
 	github.com/google/go-github/v58 v58.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
-	github.com/hexops/gotextdiff v1.0.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/pb33f/libopenapi v0.18.1
 	github.com/pkg/errors v0.9.1
@@ -27,7 +26,7 @@ require (
 	github.com/speakeasy-api/openapi-generation/v2 v2.477.1
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.29.1
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.16.4
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.17.0
 	github.com/speakeasy-api/speakeasy-core v0.17.3
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/spf13/cobra v1.8.1
@@ -55,6 +54,7 @@ require (
 	github.com/speakeasy-api/openapi v0.1.3
 	github.com/speakeasy-api/versioning-reports v0.6.0
 	github.com/stoewer/go-strcase v1.3.0
+	golang.org/x/sync v0.10.0
 )
 
 require (
@@ -269,7 +269,6 @@ require (
 	golang.org/x/image v0.10.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
