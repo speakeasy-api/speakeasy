@@ -149,7 +149,7 @@ func (m statusModel) Print(ctx context.Context) {
 	accountTypeLine.WriteString("Account Type: ")
 	accountTypeLine.WriteString(m.organization.accountType)
 
-	if m.organization.freeTrialExpiry != nil {
+	if m.organization.accountType == string(shared.AccountTypeFree) && m.organization.freeTrialExpiry != nil {
 		expiryDiff := time.Until(*m.organization.freeTrialExpiry)
 		expiryHours := int64(expiryDiff.Hours()) % 24
 		expiryDays := int64(expiryDiff.Hours() / 24)
