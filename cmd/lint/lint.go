@@ -2,7 +2,6 @@ package lint
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"os"
 	"slices"
@@ -140,10 +139,6 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 	if _, err := validation.ValidateOpenAPI(ctx, "", flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false, false); err != nil {
 		return err
 	}
-
-	uploadCommand := "speakeasy api register-schema --schema=" + flags.SchemaPath
-	msg := fmt.Sprintf("\nYou can upload your schema to Speakeasy using the following command:\n%s", uploadCommand)
-	log.From(ctx).Info(msg)
 
 	return nil
 }
