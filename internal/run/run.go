@@ -56,8 +56,6 @@ func (w *Workflow) GetWorkflowFile() *workflow.Workflow {
 }
 
 func (w *Workflow) RunWithVisualization(ctx context.Context) error {
-	var err, runErr error
-
 	logger := log.From(ctx)
 	var logs bytes.Buffer
 	warnings := make([]string, 0)
@@ -66,22 +64,22 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	updatesChannel := make(chan workflowTracking.UpdateMsg)
 	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", logCapture, updatesChannel)
 
+	var runErr error
 	runFnCli := func() error {
 		runCtx := log.With(ctx, logCapture)
-		err = w.Run(runCtx)
+		errInner := w.Run(runCtx)
 
-		w.RootStep.Finalize(err == nil)
+		w.RootStep.Finalize(errInner == nil)
 
-		if err != nil {
-			runErr = err
-			return err
+		if errInner != nil {
+			runErr = errInner
+			return errInner
 		}
 
 		return nil
 	}
 
-	err = w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
-
+	err := w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
@@ -96,7 +94,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 		var lintErr *LintingError
 		if errors.As(runErr, &lintErr) {
-			output += fmt.Sprintf("\nRun `speakeasy lint openapi -s %s` to lint the OpenAPI document in isolation for ease of debugging.", lintErr.Document)
+			output += styles.DimmedItalic.Render("\nRun `speakeasy lint openapi -s %s` to lint the OpenAPI document in isolation for ease of debugging.", lintErr.Document)
 		}
 
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow run logs", output, styles.Colors.Grey))
