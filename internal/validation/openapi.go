@@ -266,12 +266,12 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 	}
 
 	if defaultRuleset != "" {
-		lintConfig, _, err := lint.Load([]string{"."})
-		if err != nil {
-			return nil, fmt.Errorf("failed to load .speakeasy/lint.yaml: %w", err)
-		}
-
 		if !slices.Contains(validSpeakeasyRulesets, defaultRuleset) {
+			lintConfig, _, err := lint.Load([]string{"."})
+			if err != nil {
+				return nil, fmt.Errorf("failed to load .speakeasy/lint.yaml: %w", err)
+			}
+
 			if _, ok := lintConfig.Rulesets[defaultRuleset]; !ok {
 				return nil, fmt.Errorf("specified ruleset %s not found in .speakeasy/lint.yaml", defaultRuleset)
 			}
