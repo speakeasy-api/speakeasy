@@ -351,15 +351,11 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 	}()
 
 	// We don't return the error here because we want to try to launch the studio to help fix the issue, if possible
-	if err != nil {
-		log.From(ctx).Error(err.Error())
-	}
-
 	workflow.RootStep.Finalize(err == nil)
 
 	github.GenerateWorkflowSummary(ctx, workflow.RootStep)
 
-	if studioErr, studioLaunched := maybeLaunchStudio(ctx, workflow, flags); !studioLaunched {
+	if studioErr, studioLaunched := maybeLaunchStudio(ctx, workflow, flags, err); !studioLaunched {
 		return err // Now return the original error if we didn't launch the studio
 	} else {
 		return studioErr
@@ -429,21 +425,21 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	}()
 
 	// We don't return the error here because we want to try to launch the studio to help fix the issue, if possible
-	if err != nil {
-		log.From(ctx).Error(err.Error())
-	} else {
+	if err == nil {
 		workflow.PrintSuccessSummary(ctx)
 	}
 
-	if studioErr, studioLaunched := maybeLaunchStudio(ctx, workflow, flags); !studioLaunched {
+	if studioErr, studioLaunched := maybeLaunchStudio(ctx, workflow, flags, err); !studioLaunched {
 		return err // Now return the original error if we didn't launch the studio
 	} else {
 		return studioErr
 	}
 }
 
-func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags) (error, bool) {
+// We'll only print the runErr if we actually launch the studio. Otherwise, it will get printed when we return all the way out
+func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags, runErr error) (error, bool) {
 	if studio.CanLaunch(ctx, wf) && flags.Watch {
+		log.From(ctx).Error(runErr.Error())
 		return studio.LaunchStudio(ctx, wf), true
 	} else if wf.CountDiagnostics() > 1 {
 		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", wf.CountDiagnostics())

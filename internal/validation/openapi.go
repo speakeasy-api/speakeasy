@@ -3,7 +3,9 @@ package validation
 import (
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/sdk-gen-config/lint"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy-core/openapi"
@@ -41,6 +43,8 @@ type ValidationResult struct {
 	InvalidOperations []string
 	Report            *reports.ReportResult
 }
+
+var validSpeakeasyRulesets = []string{"speakeasy-recommended", "speakeasy-generation", "speakeasy-openapi", "vacuum", "owasp"}
 
 func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string, skipGenerateReport bool) (*ValidationResult, error) {
 	logger := log.From(ctx)
@@ -262,6 +266,17 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 	}
 
 	if defaultRuleset != "" {
+		if !slices.Contains(validSpeakeasyRulesets, defaultRuleset) {
+			lintConfig, _, err := lint.Load([]string{"."})
+			if err != nil {
+				return nil, fmt.Errorf("failed to load .speakeasy/lint.yaml: %w", err)
+			}
+
+			if _, ok := lintConfig.Rulesets[defaultRuleset]; !ok {
+				return nil, fmt.Errorf("specified ruleset %s not found in .speakeasy/lint.yaml", defaultRuleset)
+			}
+		}
+
 		opts = append(opts, generate.WithValidationRuleset(defaultRuleset))
 	}
 
