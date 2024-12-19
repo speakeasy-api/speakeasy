@@ -74,6 +74,7 @@ chocolateys:
     release_notes: "https://github.com/speakeasy-api/speakeasy/releases/tag/v{{ .Version }}"
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
+
 winget:
   - name: speakeasy
     publisher: Speakeasy
@@ -108,3 +109,13 @@ winget:
           owner: microsoft
           name: winget-pkgs
           branch: master
+
+nix:
+  - name: speakeasy
+    homepage: https://www.speakeasy.com
+    description: The Speakeasy CLI for interacting with the Speakeasy Platform
+    path: pkgs/speakeasy/default.nix
+    license: Apache-2.0
+    repository:
+      owner: speakeasy-api
+      name: nur
