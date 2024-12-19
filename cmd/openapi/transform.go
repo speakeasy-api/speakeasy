@@ -14,7 +14,7 @@ import (
 var transformCmd = &model.CommandGroup{
 	Usage:    "transform",
 	Short:    "Transform an OpenAPI spec using a well-defined function",
-	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd, formatCmd, convertSwaggerCmd},
+	Commands: []model.Command{removeUnusedCmd, filterOperationsCmd, cleanupCmd, formatCmd, convertSwaggerCmd, normalizeCmd},
 }
 
 type basicFlagsI struct {
@@ -95,6 +95,37 @@ var formatCmd = &model.ExecutableCommand[basicFlagsI]{
 	Long:  "Format an OpenAPI document to be more human-readable by sorting the keys in a specific order best suited for each level in the OpenAPI specification",
 	Run:   runFormat,
 	Flags: basicFlags,
+}
+
+var normalizeCmd = &model.ExecutableCommand[normalizeFlags]{
+	Usage: "normalize",
+	Short: "Normalize an OpenAPI document to be more human-readable",
+	Run:   runNormalize,
+	Flags: append(basicFlags, []flag.Flag{
+		flag.BooleanFlag{
+			Name:         "prefixItems",
+			Description:  "Normalize prefixItems to be a simple string",
+			DefaultValue: false,
+		},
+	}...),
+}
+
+type normalizeFlags struct {
+	Schema      string `json:"schema"`
+	Out         string `json:"out"`
+	PrefixItems bool   `json:"prefixItems"`
+}
+
+func runNormalize(ctx context.Context, flags normalizeFlags) error {
+	out, yamlOut, err := setupOutput(ctx, flags.Out)
+	defer out.Close()
+	if err != nil {
+		return err
+	}
+
+	return transform.NormalizeDocument(ctx, flags.Schema, transform.NormalizeOptions{
+		PrefixItems: flags.PrefixItems,
+	}, yamlOut, out)
 }
 
 func runRemoveUnused(ctx context.Context, flags basicFlagsI) error {
