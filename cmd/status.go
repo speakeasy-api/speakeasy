@@ -606,21 +606,6 @@ func (m statusWorkspaceTargetModel) TargetHeading() string {
 
 func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
 	var result []string
-
-	// TODO: Include publishing failures and success in target SDK return
-	//if m.publishLastEvent != nil && !m.publishLastEvent.success {
-	//	var message strings.Builder
-	//
-	//	message.WriteString(renderAlertErrorText("✖ Last Publish Failed"))
-	//
-	//	if m.publishLastEvent.ghActionRunLink != nil {
-	//		message.WriteString(renderAlertErrorText(": "))
-	//		message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *m.publishLastEvent.ghActionRunLink)))
-	//	}
-	//
-	//	result = append(result, message.String())
-	//}
-
 	if m.workspaceEventCompilation != nil && !m.workspaceEventCompilation.success {
 		var message strings.Builder
 
