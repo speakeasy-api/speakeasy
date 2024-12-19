@@ -1,0 +1,27 @@
+openapi: 3.1.0
+info:
+  title: Normalize-Test
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                prefixItems:
+                  - type: string
+                  - type: string
+                minItems: 1
+                maxItems: 1
+                type: array
+components:
+  schemas:
+    test:
+      prefixItems:
+        - type: string
+        - type: string
+      minItems: 1
+      maxItems: 1
+      type: array
