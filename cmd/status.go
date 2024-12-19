@@ -390,19 +390,19 @@ type statusWorkspaceEventModel struct {
 	success                          bool
 }
 
-func newStatusWorkspaceEventModel(event shared.CliEvent) *statusWorkspaceEventModel {
+func newStatusWorkspaceEventModel(target shared.TargetSDK) *statusWorkspaceEventModel {
 	result := &statusWorkspaceEventModel{
-		continuousIntegrationEnvironment: event.ContinuousIntegrationEnvironment,
-		createdAt:                        event.CreatedAt,
-		ghActionRunLink:                  event.GhActionRunLink,
-		gitUserEmail:                     event.GitUserEmail,
-		gitUserName:                      event.GitUserName,
-		hostname:                         event.Hostname,
-		publishPackageName:               event.PublishPackageName,
-		publishPackageRegistryName:       event.PublishPackageRegistryName,
-		publishPackageURL:                event.PublishPackageURL,
-		publishPackageVersion:            event.PublishPackageVersion,
-		success:                          event.Success,
+		continuousIntegrationEnvironment: target.ContinuousIntegrationEnvironment,
+		createdAt:                        target.LastEventCreatedAt,
+		ghActionRunLink:                  target.GhActionRunLink,
+		gitUserEmail:                     target.GitUserEmail,
+		gitUserName:                      target.GitUserName,
+		hostname:                         target.Hostname,
+		publishPackageName:               target.PublishPackageName,
+		publishPackageRegistryName:       target.PublishPackageRegistryName,
+		publishPackageURL:                target.PublishPackageURL,
+		publishPackageVersion:            target.PublishPackageVersion,
+		success:                          target.Success != nil && *target.Success,
 	}
 
 	return result
@@ -489,13 +489,7 @@ type statusWorkspaceTargetModel struct {
 	lastEventCreatedAt                time.Time
 	success                           *bool
 
-	// Generate events
-	generateLastEvent        *statusWorkspaceEventModel
-	generateLastSuccessEvent *statusWorkspaceEventModel
-
-	// Publish events
-	publishLastEvent        *statusWorkspaceEventModel
-	publishLastSuccessEvent *statusWorkspaceEventModel
+	workspaceEventCompilation *statusWorkspaceEventModel
 
 	// Speakeasy URL
 	speakeasyURL string
@@ -532,58 +526,7 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 		result.upgradeDocumentationURL = &upgradeURL
 	}
 
-	lastGenerateEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypeTargetGenerate, false)
-
-	if err != nil {
-		return result, fmt.Errorf("error searching last Speakeasy target generate event: %w", err)
-	}
-
-	if lastGenerateEvent != nil {
-		result.generateLastEvent = newStatusWorkspaceEventModel(*lastGenerateEvent)
-
-		if lastGenerateEvent.Success {
-			result.generateLastSuccessEvent = result.generateLastEvent
-		}
-	}
-
-	if result.generateLastSuccessEvent == nil {
-		lastGenerateSuccessEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypeTargetGenerate, true)
-
-		if err != nil {
-			return result, fmt.Errorf("error searching last Speakeasy target generate success event: %w", err)
-		}
-
-		if lastGenerateSuccessEvent != nil {
-			result.generateLastSuccessEvent = newStatusWorkspaceEventModel(*lastGenerateSuccessEvent)
-		}
-	}
-
-	lastPublishEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypePublish, false)
-
-	if err != nil {
-		return result, fmt.Errorf("error searching last Speakeasy target publish event: %w", err)
-	}
-
-	if lastPublishEvent != nil {
-		result.publishLastEvent = newStatusWorkspaceEventModel(*lastPublishEvent)
-
-		if lastPublishEvent.Success {
-			result.publishLastSuccessEvent = result.publishLastEvent
-		}
-	}
-
-	if result.publishLastSuccessEvent == nil {
-		lastPublishSuccessEvent, err := searchWorkspaceTargetLastEvent(ctx, client, workspace.id, target.ID, shared.InteractionTypePublish, true)
-
-		if err != nil {
-			return result, fmt.Errorf("error searching last Speakeasy target publish success event: %w", err)
-		}
-
-		if lastPublishSuccessEvent != nil {
-			result.publishLastSuccessEvent = newStatusWorkspaceEventModel(*lastPublishSuccessEvent)
-		}
-	}
-
+	result.workspaceEventCompilation = newStatusWorkspaceEventModel(target)
 	return result, nil
 }
 
@@ -628,15 +571,7 @@ func (m statusWorkspaceTargetModel) RepositoryURL() string {
 }
 
 func (m statusWorkspaceTargetModel) Success() bool {
-	if event := m.publishLastEvent; event != nil && !event.success {
-		return false
-	}
-
-	if event := m.generateLastEvent; event != nil && !event.success {
-		return false
-	}
-
-	return true
+	return m.workspaceEventCompilation.success
 }
 
 func (m statusWorkspaceTargetModel) TargetHeading() string {
@@ -653,7 +588,7 @@ func (m statusWorkspaceTargetModel) TargetHeading() string {
 		result.WriteString("Unconfigured")
 	}
 
-	if event := m.publishLastSuccessEvent; event != nil && event.publishPackageName != nil && event.publishPackageVersion != nil {
+	if event := m.workspaceEventCompilation; event != nil && event.publishPackageName != nil && event.publishPackageVersion != nil {
 		result.WriteString(": ")
 		result.WriteString(*event.publishPackageVersion)
 	} else if m.generateConfigPostVersion != nil {
@@ -672,27 +607,28 @@ func (m statusWorkspaceTargetModel) TargetHeading() string {
 func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
 	var result []string
 
-	if m.publishLastEvent != nil && !m.publishLastEvent.success {
-		var message strings.Builder
+	// TODO: Include publishing failures and success in target SDK return
+	//if m.publishLastEvent != nil && !m.publishLastEvent.success {
+	//	var message strings.Builder
+	//
+	//	message.WriteString(renderAlertErrorText("✖ Last Publish Failed"))
+	//
+	//	if m.publishLastEvent.ghActionRunLink != nil {
+	//		message.WriteString(renderAlertErrorText(": "))
+	//		message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *m.publishLastEvent.ghActionRunLink)))
+	//	}
+	//
+	//	result = append(result, message.String())
+	//}
 
-		message.WriteString(renderAlertErrorText("✖ Last Publish Failed"))
-
-		if m.publishLastEvent.ghActionRunLink != nil {
-			message.WriteString(renderAlertErrorText(": "))
-			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *m.publishLastEvent.ghActionRunLink)))
-		}
-
-		result = append(result, message.String())
-	}
-
-	if m.generateLastEvent != nil && !m.generateLastEvent.success {
+	if m.workspaceEventCompilation != nil && !m.workspaceEventCompilation.success {
 		var message strings.Builder
 
 		message.WriteString(renderAlertErrorText("✖ Last Generate Failed"))
 
-		if m.generateLastEvent.ghActionRunLink != nil {
+		if m.workspaceEventCompilation.ghActionRunLink != nil {
 			message.WriteString(renderAlertErrorText(": "))
-			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *m.generateLastEvent.ghActionRunLink)))
+			message.WriteString(renderAlertErrorURL(links.Shorten(ctx, *m.workspaceEventCompilation.ghActionRunLink)))
 		}
 
 		result = append(result, message.String())
@@ -702,8 +638,8 @@ func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
 		result = append(result, renderAlertWarningText("⚠ Target Upgrade Available: ")+renderAlertWarningURL(*m.upgradeDocumentationURL))
 	}
 
-	if m.publishLastSuccessEvent != nil && m.publishLastSuccessEvent.publishPackageURL != nil {
-		result = append(result, renderInfoText("Publish URL: ")+renderInfoURL(*m.publishLastSuccessEvent.publishPackageURL))
+	if m.workspaceEventCompilation != nil && m.workspaceEventCompilation.publishPackageURL != nil {
+		result = append(result, renderInfoText("Publish URL: ")+renderInfoURL(*m.workspaceEventCompilation.publishPackageURL))
 	}
 
 	if m.RepositoryURL() != "" {
@@ -712,33 +648,11 @@ func (m statusWorkspaceTargetModel) TargetInfo(ctx context.Context) []string {
 
 	result = append(result, renderInfoText("Speakeasy URL: "+renderInfoURL(m.speakeasyURL)))
 
-	if m.publishLastEvent != nil {
-		if !m.publishLastEvent.success {
-			result = append(result, renderInfoText("Last Publish Attempt: "+m.publishLastEvent.PublishInfo()))
-
-			if m.publishLastSuccessEvent != nil {
-				result = append(result, renderInfoText("Last Publish Success: "+m.publishLastSuccessEvent.GenerateInfo()))
-			} else {
-				result = append(result, renderInfoText("Last Publish Success: Unknown"))
-			}
-		} else {
-			result = append(result, renderInfoText("Last Publish: "+m.publishLastEvent.PublishInfo()))
-		}
+	if m.workspaceEventCompilation != nil && m.workspaceEventCompilation.publishPackageName != nil {
+		result = append(result, renderInfoText("Last Publish: "+m.workspaceEventCompilation.PublishInfo()))
 	}
 
-	if m.generateLastEvent != nil {
-		if !m.generateLastEvent.success {
-			result = append(result, renderInfoText("Last Generate Attempt: "+m.generateLastEvent.GenerateInfo()))
-
-			if m.generateLastSuccessEvent != nil {
-				result = append(result, renderInfoText("Last Generate Success: "+m.generateLastSuccessEvent.GenerateInfo()))
-			} else {
-				result = append(result, renderInfoText("Last Generate Success: Unknown"))
-			}
-		} else {
-			result = append(result, renderInfoText("Last Generate: "+m.generateLastEvent.GenerateInfo()))
-		}
-	} else {
+	if m.workspaceEventCompilation != nil {
 		result = append(result, renderInfoText("Last Generate: "+m.GenerateInfo()))
 	}
 
