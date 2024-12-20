@@ -387,6 +387,7 @@ type statusWorkspaceEventModel struct {
 	publishPackageRegistryName       *string
 	publishPackageURL                *string
 	publishPackageVersion            *string
+	lastPublishCreatedAt             time.Time
 	success                          bool
 }
 
@@ -403,6 +404,10 @@ func newStatusWorkspaceEventModel(target shared.TargetSDK) *statusWorkspaceEvent
 		publishPackageURL:                target.PublishPackageURL,
 		publishPackageVersion:            target.PublishPackageVersion,
 		success:                          target.Success != nil && *target.Success,
+	}
+
+	if target.LastPublishCreatedAt != nil {
+		result.lastPublishCreatedAt = *target.LastPublishCreatedAt
 	}
 
 	return result
@@ -447,7 +452,7 @@ func (m statusWorkspaceEventModel) PublishInfo() string {
 		result.WriteString("locally at ")
 	}
 
-	result.WriteString(m.createdAt.Format(time.RFC3339))
+	result.WriteString(m.lastPublishCreatedAt.Format(time.RFC3339))
 	result.WriteString(" by ")
 
 	if m.ghActionRunLink != nil {
