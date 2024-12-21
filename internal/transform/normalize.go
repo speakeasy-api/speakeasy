@@ -12,24 +12,26 @@ import (
 )
 
 type normalizeArgs struct {
-	schemaPath       string
-	normalizeOptions NormalizeOptions
+	schemaPath string
+	NormalizeOptions
 }
 
-func NormalizeDocument(ctx context.Context, schemaPath string, normalizeOptions NormalizeOptions, yamlOut bool, w io.Writer) error {
+func NormalizeDocument(ctx context.Context, schemaPath string, prefixItems, yamlOut bool, w io.Writer) error {
 	return transformer[normalizeArgs]{
 		schemaPath:  schemaPath,
 		transformFn: Normalize,
 		w:           w,
 		jsonOut:     !yamlOut,
 		args: normalizeArgs{
-			schemaPath:       schemaPath,
-			normalizeOptions: normalizeOptions,
+			schemaPath: schemaPath,
+			NormalizeOptions: NormalizeOptions{
+				PrefixItems: prefixItems,
+			},
 		},
 	}.Do(ctx)
 }
 
-func NormalizeFromReader(ctx context.Context, schema io.Reader, schemaPath string, normalizeOptions NormalizeOptions, w io.Writer, yamlOut bool) error {
+func NormalizeFromReader(ctx context.Context, schema io.Reader, schemaPath string, prefixItems bool, w io.Writer, yamlOut bool) error {
 	return transformer[normalizeArgs]{
 		r:           schema,
 		schemaPath:  schemaPath,
@@ -37,8 +39,10 @@ func NormalizeFromReader(ctx context.Context, schema io.Reader, schemaPath strin
 		w:           w,
 		jsonOut:     !yamlOut,
 		args: normalizeArgs{
-			schemaPath:       schemaPath,
-			normalizeOptions: normalizeOptions,
+			schemaPath: schemaPath,
+			NormalizeOptions: NormalizeOptions{
+				PrefixItems: prefixItems,
+			},
 		},
 	}.Do(ctx)
 }
@@ -46,7 +50,7 @@ func NormalizeFromReader(ctx context.Context, schema io.Reader, schemaPath strin
 func Normalize(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args normalizeArgs) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
 	root := model.Index.GetRootNode()
 
-	walkAndNormalizeDocument(root, args.normalizeOptions)
+	walkAndNormalizeDocument(root, args.NormalizeOptions)
 
 	updatedDoc, err := yaml.Marshal(root)
 	if err != nil {

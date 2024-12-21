@@ -19,9 +19,7 @@ func TestNormalize(t *testing.T) {
 	var testOutput bytes.Buffer
 
 	// Call FormatDocument to format the spec
-	err := NormalizeDocument(context.Background(), "../../integration/resources/normalize-input.yaml", NormalizeOptions{
-		PrefixItems: true,
-	}, true, &testInput)
+	err := NormalizeDocument(context.Background(), "../../integration/resources/normalize-input.yaml", true, true, &testInput)
 	require.NoError(t, err)
 
 	// Parse the normalized spec
@@ -62,9 +60,7 @@ func TestNormalizeNoPrefixItems(t *testing.T) {
 	var testOutput bytes.Buffer
 
 	// Call FormatDocument to format the spec
-	err := NormalizeDocument(context.Background(), "../../integration/resources/normalize-input.yaml", NormalizeOptions{
-		PrefixItems: false,
-	}, true, &testInput)
+	err := NormalizeDocument(context.Background(), "../../integration/resources/normalize-input.yaml", false, true, &testInput)
 	require.NoError(t, err)
 
 	// Parse the normalized spec

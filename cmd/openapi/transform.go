@@ -123,9 +123,7 @@ func runNormalize(ctx context.Context, flags normalizeFlags) error {
 		return err
 	}
 
-	return transform.NormalizeDocument(ctx, flags.Schema, transform.NormalizeOptions{
-		PrefixItems: flags.PrefixItems,
-	}, yamlOut, out)
+	return transform.NormalizeDocument(ctx, flags.Schema, flags.PrefixItems, yamlOut, out)
 }
 
 func runRemoveUnused(ctx context.Context, flags basicFlagsI) error {
