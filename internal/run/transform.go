@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/transform"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
-	"io"
-	"os"
-	"path/filepath"
 )
 
 type Transform struct {
@@ -79,6 +80,18 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 			transformStep.NewSubstep(fmt.Sprintf("Filtering %s %d operations", inOutString, len(operations)))
 
 			if err := transform.FilterOperationsFromReader(ctx, in, inputPath, operations, include, out, yamlOut); err != nil {
+				return "", err
+			}
+		} else if transformation.Format != nil {
+			transformStep.NewSubstep("Formatting document")
+
+			if err := transform.FormatFromReader(ctx, in, inputPath, out, yamlOut); err != nil {
+				return "", err
+			}
+		} else if transformation.Normalize != nil {
+			transformStep.NewSubstep("Normalizing document")
+
+			if err := transform.NormalizeFromReader(ctx, in, inputPath, *transformation.Normalize.PrefixItems, out, yamlOut); err != nil {
 				return "", err
 			}
 		}
