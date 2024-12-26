@@ -12,6 +12,8 @@
    <a href="https://speakeasy.com/docs/create-client-sdks/" target="_blank"><b>Docs Quickstart</b></a>&nbsp;&nbsp;//&nbsp;&nbsp;<a href="https://join.slack.com/t/speakeasy-dev/shared_invite/zt-1cwb3flxz-lS5SyZxAsF_3NOq5xc8Cjw" target="_blank"><b>Join us on Slack</b></a>
   </div>
  <br />
+
+[![LW24 participant](https://img.shields.io/badge/featured-LW24-8957E5.svg?style=flat-square&labelColor=0D1117&logo=data:image/svg%2bxml;base64,PHN2ZyB3aWR0aD0iMzYwIiBoZWlnaHQ9IjM2MCIgdmlld0JveD0iMCAwIDM2MCAzNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+IDxyZWN0IHdpZHRoPSI2MCIgaGVpZ2h0PSIzMDAiIGZpbGw9IndoaXRlIi8+IDxyZWN0IHg9IjYwIiB5PSIzMDAiIHdpZHRoPSIxMjAiIGhlaWdodD0iNjAiIGZpbGw9IndoaXRlIi8+IDxyZWN0IHg9IjI0MCIgeT0iMzAwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IndoaXRlIi8+IDxyZWN0IHg9IjMwMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjMwMCIgZmlsbD0id2hpdGUiLz4gPHJlY3QgeD0iMTgwIiB3aWR0aD0iNjAiIGhlaWdodD0iMzAwIiBmaWxsPSJ3aGl0ZSIvPiA8L3N2Zz4=)](https://launchweek.dev/lw/2024/mega#participants)
   
 </div>
 
@@ -72,9 +74,9 @@
   </h4>
 </div>
 
-## Generate Polished and Type-Safe Client Libraries
+## A Modern OpenAPI Native Toolchain
 
-<p>Use Speakeasy to generate idiomatic, type-safe SDKs your users will love. 9 Languages and counting.</p>
+<p>Polished and type-safe SDKs, Terraform providers and Contract Tests for your API. 9 Languages and counting.</p>
 <a href="https://app.speakeasy.com/"><img src="https://custom-icon-badges.demolab.com/badge/-Start%20Generating%20-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" alt="Start Generating"/></a>
 <a href="https://youtu.be/-cSZGUvT5-8?si=VwJBPcOGq0g2R4cI"><img src="https://img.shields.io/static/v1?label=Docs&message=Watch Demo&color=000&style=for-the-badge" alt="Watch Demo" /></a>
 
