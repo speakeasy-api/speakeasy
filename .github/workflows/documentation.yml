@@ -54,7 +54,7 @@ jobs:
       #     repository: speakeasy
       #     commit_message: "docs: update speakeasy cli docs [skip ci]"
       - name: Create PR against speakeasy-registry
-        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
           path: speakeasy-registry
           token: ${{ secrets.DOCUMENTATION_PAT }}
