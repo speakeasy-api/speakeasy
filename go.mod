@@ -23,7 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi-generation/v2 v2.484.4
+	github.com/speakeasy-api/openapi-generation/v2 v2.486.1
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.29.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.18.1
@@ -51,7 +51,7 @@ require (
 	github.com/invopop/yaml v0.3.1
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/samber/lo v1.47.0
-	github.com/speakeasy-api/openapi v0.1.3
+	github.com/speakeasy-api/openapi v0.1.5
 	github.com/speakeasy-api/versioning-reports v0.6.0
 	github.com/stoewer/go-strcase v1.3.0
 	golang.org/x/sync v0.10.0
