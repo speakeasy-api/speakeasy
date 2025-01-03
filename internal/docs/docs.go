@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var docSiteRoot = "/docs/speakeasy-cli"
+var docSiteRoot = "/docs/speakeasy-reference/cli"
 
 func GenerateDocs(cmd *cobra.Command, outDir string, docSiteLinks bool) error {
 	docosaurusPositioning := map[string]int{}
@@ -178,7 +178,7 @@ func getDocSiteLink(cmd *cobra.Command) string {
 	fullPath := strings.TrimPrefix(strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name()), " ")
 
 	if strings.TrimSpace(fullPath) == "" {
-		return docSiteRoot
+		return docSiteRoot + "/getting-started"
 	}
 
 	return fmt.Sprintf("%s/%s", docSiteRoot, strings.ReplaceAll(fullPath, " ", "/"))
