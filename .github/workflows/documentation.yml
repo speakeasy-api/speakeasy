@@ -59,8 +59,7 @@ jobs:
         name: Notify Slack on Failure
         uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
         with:
-          # Slack #docs channel webhook URL
-          webhook: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }}
+          webhook: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }} # URL for docs channel
           webhook-type: incoming-webhook
           payload: |
             text: "*CLI to Website Documentation Failure*:"
