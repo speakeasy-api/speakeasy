@@ -29,7 +29,7 @@ func main() {
 
 	exclusionList := []string{
 		filepath.Join(*outDir, "getting-started.mdx"),
-		filepath.Join(*outDir, "_meta.json"),
+		filepath.Join(*outDir, "_meta.tsx"),
 	}
 
 	if _, err := removeDocs(*outDir, exclusionList); err != nil {
