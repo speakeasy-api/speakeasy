@@ -47,12 +47,7 @@ jobs:
       - name: Generate speakeasy-registry doc-site docs
         working-directory: speakeasy
         run: |
-          go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/marketing-site/src/pages/docs/speakeasy-cli -doc-site
-      # - name: Commit and push changes to speakeasy repo
-      #   uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5.0.1
-      #   with:
-      #     repository: speakeasy
-      #     commit_message: "docs: update speakeasy cli docs [skip ci]"
+          go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/marketing-site/src/pages/docs/speakeasy-reference/cli -doc-site
       - name: Create PR against speakeasy-registry
         uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
@@ -60,3 +55,17 @@ jobs:
           token: ${{ secrets.DOCUMENTATION_PAT }}
           commit-message: "docs: update speakeasy cli docs"
           title: "docs: update speakeasy cli docs"
+      - if: failure()
+        name: Notify Slack on Failure
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        with:
+          # Slack #docs channel webhook URL
+          webhook: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "*CLI to Website Documentation Failure*:"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*GitHub Actions Logs*: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
