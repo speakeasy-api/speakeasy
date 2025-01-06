@@ -310,20 +310,29 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	// Print a message and save the workflow if there were MVS removals
 	handleMVSChanges(ctx, wf.GetWorkflowFile(), outDir)
 
-	if changeDirMsg != "" {
-		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
+	// Prompt the user to determine if they want to initialize a new git repository
+	initialiseRepo := false
+	prompt := charm.NewBranchPrompt(
+		"Do you want to initialize a new git repository?",
+		"Selecting 'Yes' will initialize a new git repository in the output directory",
+		&initialiseRepo,
+	)
+	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
+		initialiseRepo = false
+	}
+	if initialiseRepo {
+		_, err = git.InitLocalRepository(outDir)
+		if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
+			log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
+		} else if err == nil {
+			log.From(ctx).Infof("Initialized new git repository at %s", outDir)
+		} else { // If the error is ErrRepositoryAlreadyExists, ignore it
+			err = nil
+		}
 	}
 
-	// Initialize a new git repository in the output directory if one
-	// doesn't already exist
-	_, err = git.InitLocalRepository(outDir)
-
-	if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
-		log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
-	} else if err == nil {
-		log.From(ctx).Infof("Initialized new git repository at %s", outDir)
-	} else { // If the error is ErrRepositoryAlreadyExists, ignore it
-		err = nil
+	if changeDirMsg != "" {
+		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
 	}
 
 	// Flush event before launching studio so that we don't wait until the studio is closed to send telemetry
