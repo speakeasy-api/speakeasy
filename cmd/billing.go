@@ -49,7 +49,7 @@ func activateWebhooksExec(ctx context.Context, flags ActivateWebhooksFlags) erro
 	)
 
 	logger.Println("For more information, see:")
-	logger.Println("https://www.speakeasyapi.dev/docs/advanced-setup/webhooks")
+	logger.Println("https://www.speakeasy.com/docs/customize/webhooks")
 
 	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
 		return fmt.Errorf("failed to get user confirmation: %w", err)
@@ -89,7 +89,5 @@ func activateWebhooksExec(ctx context.Context, flags ActivateWebhooksFlags) erro
 	}
 
 	logger.Println("Successfully upgraded - webhooks are now enabled")
-	logger.Println("For more information, see:")
-	logger.Println("https://www.speakeasyapi.dev/docs/advanced-setup/webhooks")
 	return nil
 }
