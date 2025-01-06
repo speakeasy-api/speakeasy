@@ -439,7 +439,9 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 // We'll only print the runErr if we actually launch the studio. Otherwise, it will get printed when we return all the way out
 func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags, runErr error) (error, bool) {
 	if studio.CanLaunch(ctx, wf) && flags.Watch {
-		log.From(ctx).Error(runErr.Error())
+		if runErr != nil {
+			log.From(ctx).Error(runErr.Error())
+		}
 		return studio.LaunchStudio(ctx, wf), true
 	} else if wf.CountDiagnostics() > 1 {
 		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", wf.CountDiagnostics())
