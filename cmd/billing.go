@@ -25,7 +25,6 @@ var activateWebhooksCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := log.From(cmd.Context())
 
-		// Show warning and confirmation prompt
 		logger.Println(styles.RenderWarningMessage(
 			"Webhooks are a paid feature",
 			"Activating webhooks will enable billing for this feature",
@@ -50,7 +49,6 @@ var activateWebhooksCmd = &cobra.Command{
 			return nil
 		}
 
-		// Load the SDK generation config
 		workingDir, err := os.Getwd()
 		if err != nil {
 			return fmt.Errorf("failed to get working directory: %w", err)
@@ -60,17 +58,13 @@ var activateWebhooksCmd = &cobra.Command{
 			return fmt.Errorf("failed to load SDK generation config: %w", err)
 		}
 
-		// Track if we found any languages to update
 		updated := false
 
-		// Enable webhooks for each configured language
 		for _, lang := range cfg.Config.Languages {
-			// Create webhooks config if it doesn't exist
 			if lang.Cfg["webhooks"] == nil {
 				lang.Cfg["webhooks"] = map[string]any{}
 			}
 
-			// Enable webhooks
 			lang.Cfg["webhooks"].(map[string]any)["enabled"] = true
 			updated = true
 		}
@@ -79,7 +73,6 @@ var activateWebhooksCmd = &cobra.Command{
 			return fmt.Errorf("no supported language configuration found in gen.yaml")
 		}
 
-		// Save the updated config
 		if err := sdkGenConfig.SaveConfig(workingDir, cfg.Config); err != nil {
 			return fmt.Errorf("failed to save SDK generation config: %w", err)
 		}
