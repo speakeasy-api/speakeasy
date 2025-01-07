@@ -72,6 +72,7 @@ func Init(version, artifactArch string) {
 	// TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
 	addCommand(rootCmd, statusCmd)
 	addCommand(rootCmd, quickstartCmd)
+	addCommand(rootCmd, billingCmd)
 	addCommand(rootCmd, runCmd)
 	addCommand(rootCmd, configureCmd)
 	addCommand(rootCmd, generate.GenerateCmd)
