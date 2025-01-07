@@ -31,8 +31,8 @@ func Test_merge_determinism(t *testing.T) {
 	}
 
 	// Run merge twice and ensure the output is the same.
-	got1, err := merge(absSchemas)
-	got2, err := merge(absSchemas)
+	got1, err := merge(absSchemas, true)
+	got2, err := merge(absSchemas, true)
 	doc1, err := libopenapi.NewDocumentWithConfiguration(got1, &datamodel.DocumentConfiguration{
 		AllowFileReferences:                 true,
 		IgnorePolymorphicCircularReferences: true,
@@ -57,9 +57,10 @@ func Test_merge_Success(t *testing.T) {
 		inSchemas [][]byte
 	}
 	tests := []struct {
-		name string
-		args args
-		want string
+		name    string
+		args    args
+		want    string
+		jsonOut bool
 	}{
 		{
 			name: "largest doc version wins",
@@ -265,6 +266,30 @@ tags:
       description: test tag
       x-test: test
 `,
+		},
+		{
+			name:    "output is json",
+			jsonOut: true,
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: test
+    description: test tag
+    x-test: test`),
+				},
+			},
+			want: `{
+  "openapi": "3.1",
+  "tags": [
+    {
+      "name": "test",
+      "description": "test tag",
+      "x-test": "test"
+    }
+  ]
+}`,
 		},
 		{
 			name: "tags are merged",
@@ -763,7 +788,7 @@ externalDocs:
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := merge(tt.args.inSchemas)
+			got, _ := merge(tt.args.inSchemas, !tt.jsonOut)
 
 			assert.Equal(t, tt.want, string(got))
 		})
