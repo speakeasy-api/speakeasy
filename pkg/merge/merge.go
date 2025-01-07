@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	utils2 "github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 	"reflect"
 
@@ -39,7 +40,7 @@ func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile, defau
 		inSchemas[i] = data
 	}
 
-	mergedSchema, err := merge(inSchemas)
+	mergedSchema, err := merge(inSchemas, utils2.HasYAMLExt(outFile))
 	if mergedSchema == nil {
 		return err
 	} else if err != nil {
@@ -85,7 +86,7 @@ func validate(ctx context.Context, schemaPath string, schema []byte, defaultRule
 	return nil
 }
 
-func merge(inSchemas [][]byte) ([]byte, error) {
+func merge(inSchemas [][]byte, yamlOut bool) ([]byte, error) {
 	var mergedDoc *v3.Document
 	var warnings []error
 
@@ -108,9 +109,19 @@ func merge(inSchemas [][]byte) ([]byte, error) {
 	if mergedDoc == nil {
 		return nil, errors.New("no documents to merge")
 	}
-	rendered, err := mergedDoc.Render()
-	if err != nil {
-		return nil, err
+
+	var rendered []byte
+	var err error
+	if yamlOut {
+		rendered, err = mergedDoc.Render()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		rendered, err = mergedDoc.RenderJSON("  ")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(warnings) > 0 {
