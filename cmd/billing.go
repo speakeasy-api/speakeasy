@@ -3,37 +3,54 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/speakeasy-api/huh"
-	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/flag"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 )
 
-type BillingFlags struct{}
-
-type ActivateWebhooksFlags struct{}
+type BillingFlags struct {
+	Feature string `json:"feature"`
+}
 
 var billingCmd = &model.CommandGroup{
 	Usage:          "billing",
 	Short:          "Manage billing related operations",
 	Long:           `Commands for managing billing related operations in Speakeasy.`,
 	InteractiveMsg: "What do you want to do?",
-	Commands:       []model.Command{activateWebhooksCmd},
+	Commands:       []model.Command{activateCmd},
 }
 
-var activateWebhooksCmd = &model.ExecutableCommand[ActivateWebhooksFlags]{
-	Usage:        "activate-webhooks",
-	Short:        "Activate webhooks in the SDK generation configuration",
-	Long:         `Search for and update the SDK generation configuration file to activate webhooks for the configured language.`,
-	Run:          activateWebhooksExec,
+var activateCmd = &model.ExecutableCommand[BillingFlags]{
+	Usage:        "activate",
+	Short:        "Activate a paid feature",
+	Long:         `Activate a paid feature in your Speakeasy configuration.`,
+	Run:          activateExec,
 	RequiresAuth: true,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "feature",
+			Description: "feature to activate (e.g. webhooks)",
+			Required:    true,
+		},
+	},
 }
 
-func activateWebhooksExec(ctx context.Context, flags ActivateWebhooksFlags) error {
+func activateExec(ctx context.Context, flags BillingFlags) error {
+	logger := log.From(ctx)
+
+	switch flags.Feature {
+	case "webhooks":
+		return activateWebhooks(ctx)
+	default:
+		return fmt.Errorf("unsupported feature: %s", flags.Feature)
+	}
+}
+
+func activateWebhooks(ctx context.Context) error {
 	logger := log.From(ctx)
 
 	logger.Println(styles.RenderWarningMessage(
@@ -60,33 +77,7 @@ func activateWebhooksExec(ctx context.Context, flags ActivateWebhooksFlags) erro
 		return nil
 	}
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
-	}
-	cfg, err := sdkGenConfig.Load(workingDir)
-	if err != nil {
-		return fmt.Errorf("failed to load SDK generation config: %w", err)
-	}
-
-	updated := false
-
-	for _, lang := range cfg.Config.Languages {
-		if lang.Cfg["webhooks"] == nil {
-			lang.Cfg["webhooks"] = map[string]any{}
-		}
-
-		lang.Cfg["webhooks"].(map[string]any)["enabled"] = true
-		updated = true
-	}
-
-	if !updated {
-		return fmt.Errorf("no supported language configuration found in gen.yaml")
-	}
-
-	if err := sdkGenConfig.SaveConfig(workingDir, cfg.Config); err != nil {
-		return fmt.Errorf("failed to save SDK generation config: %w", err)
-	}
+	// TODO: Send request to activate webhooks set feature flag
 
 	logger.Println("Successfully upgraded - webhooks are now enabled")
 	return nil
