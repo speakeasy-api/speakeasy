@@ -81,7 +81,6 @@ func activateWebhooks(ctx context.Context) error {
 		return nil
 	}
 
-	// TODO: Send request to activate webhooks set feature flag
 	sdk, err := auth.GetSDKFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get sdk from context: %w", err)
