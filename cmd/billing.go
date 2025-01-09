@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"github.com/speakeasy-api/huh"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/flag"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
+	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
 
 type BillingFlags struct {
@@ -31,17 +33,18 @@ var activateCmd = &model.ExecutableCommand[BillingFlags]{
 	Run:          activateExec,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
-		flag.StringFlag{
+		flag.EnumFlag{
 			Name:        "feature",
 			Description: "feature to activate (e.g. webhooks)",
 			Required:    true,
+			AllowedValues: []string{
+				"webhooks",
+			},
 		},
 	},
 }
 
 func activateExec(ctx context.Context, flags BillingFlags) error {
-	logger := log.From(ctx)
-
 	switch flags.Feature {
 	case "webhooks":
 		return activateWebhooks(ctx)
@@ -78,6 +81,18 @@ func activateWebhooks(ctx context.Context) error {
 	}
 
 	// TODO: Send request to activate webhooks set feature flag
+	sdk, err := auth.GetSDKFromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get sdk from context: %w", err)
+	}
+
+	if _, err = sdk.Workspaces.SetFeatureFlags(ctx, shared.WorkspaceFeatureFlagRequest{
+		FeatureFlags: []shared.WorkspaceFeatureFlag{
+			shared.WorkspaceFeatureFlagWebhooks,
+		},
+	}); err != nil {
+		return fmt.Errorf("failed to set feature flags: %w", err)
+	}
 
 	logger.Println("Successfully upgraded - webhooks are now enabled")
 	return nil
