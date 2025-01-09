@@ -35,6 +35,7 @@ var activateCmd = &model.ExecutableCommand[BillingFlags]{
 	Flags: []flag.Flag{
 		flag.EnumFlag{
 			Name:        "feature",
+			Shorthand:   "f",
 			Description: "feature to activate (e.g. webhooks)",
 			Required:    true,
 			AllowedValues: []string{
