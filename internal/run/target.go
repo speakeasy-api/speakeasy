@@ -313,14 +313,6 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return "", "", fmt.Errorf("error extracting annotations from openapi document: %w", err)
 	}
 
-	revision := ""
-	if gitRepo != nil {
-		revision, err = gitRepo.HeadHash()
-		if err != nil {
-			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
-		}
-	}
-	annotations.Revision = revision
 	annotations.BundleRoot = overlayPath
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{

@@ -197,14 +197,6 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
 	}
 
-	revision := ""
-	if gitRepo != nil {
-		revision, err = gitRepo.HeadHash()
-		if err != nil {
-			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
-		}
-	}
-	annotations.Revision = revision
 	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
 	// Always add the openapi document version as a tag
 	tags = append(tags, annotations.Version)
