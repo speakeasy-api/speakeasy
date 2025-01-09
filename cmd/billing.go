@@ -29,7 +29,7 @@ var billingCmd = &model.CommandGroup{
 var activateCmd = &model.ExecutableCommand[BillingFlags]{
 	Usage:        "activate",
 	Short:        "Activate a paid feature",
-	Long:         `Activate a paid feature in your Speakeasy configuration.`,
+	Long:         `Activate a paid feature in your Speakeasy workspace.`,
 	Run:          activateExec,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
