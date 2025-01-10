@@ -420,7 +420,7 @@ func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 }
 
 func isGithubPATMissingBearer(location string, token string) bool {
-	if strings.HasPrefix(token, "bearer") || strings.Contains(token, "Bearer") {
+	if strings.HasPrefix(token, "bearer") || strings.HasPrefix(token, "Bearer") {
 		return false
 	}
 
