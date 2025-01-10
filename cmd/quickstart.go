@@ -205,15 +205,21 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
-	// Prompt the user to determine if they want to initialize a new git repository
-	initialiseRepo := true
-	prompt := charm.NewBranchPrompt(
-		"Do you want to initialize a new git repository?",
-		"Selecting 'Yes' will initialize a new git repository in the output directory",
-		&initialiseRepo,
-	)
-	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
-		initialiseRepo = false
+	initialiseRepo := false
+	// Try to plain open the git repo in the output directory
+	_, err = gitc.PlainOpenWithOptions(outDir, &gitc.PlainOpenOptions{
+		DetectDotGit: true,
+	})
+	if errors.Is(err, gitc.ErrRepositoryNotExists) {
+		initialiseRepo = true
+		prompt := charm.NewBranchPrompt(
+			"Do you want to initialize a new git repository?",
+			"Selecting 'Yes' will initialize a new git repository in the output directory",
+			&initialiseRepo,
+		)
+		if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
+			initialiseRepo = false
+		}
 	}
 
 	var resolvedSchema string
