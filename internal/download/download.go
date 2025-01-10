@@ -6,12 +6,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-core/download"
-	"github.com/speakeasy-api/speakeasy/internal/cache"
-	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"io"
 	"math/rand"
 	"mime"
@@ -22,6 +16,13 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/download"
+	"github.com/speakeasy-api/speakeasy/internal/cache"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/loader"
@@ -371,15 +372,25 @@ func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 		token = os.Getenv(strings.ToUpper(envVar))
 	}
 
-	res, err := download.Fetch(d.Location.Resolve(), header, token)
+	var fileResponse *http.Response
+	var err error
+	fileResponse, err = download.Fetch(d.Location.Resolve(), header, token)
 	if err != nil {
+		// Retry with bearer in case this is a github PAT and the user forgot
+		if env.IsGithubAction() && !strings.HasPrefix(token, "bearer") {
+			fileResponse, err = download.Fetch(d.Location.Resolve(), header, fmt.Sprintf("bearer %s", token))
+			if err != nil {
+				return "", err
+			}
+		}
+
 		return "", err
 	}
-	defer res.Body.Close()
+	defer fileResponse.Body.Close()
 
 	ext := filepath.Ext(outPath)
 	if !slices.Contains([]string{".yaml", ".yml", ".json"}, ext) {
-		ext, err := download.SniffDocumentExtension(res)
+		ext, err := download.SniffDocumentExtension(fileResponse)
 		if errors.Is(err, download.ErrUnknownDocumentType) {
 			ext = ".yaml"
 		} else if err != nil {
@@ -399,7 +410,7 @@ func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	}
 	defer outFile.Close()
 
-	if _, err := io.Copy(outFile, res.Body); err != nil {
+	if _, err := io.Copy(outFile, fileResponse.Body); err != nil {
 		return "", fmt.Errorf("failed to save response to location: %w", err)
 	}
 
