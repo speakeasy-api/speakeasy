@@ -116,7 +116,8 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		}
 
 		if err != nil {
-			registryStep.Skip("failed to track OpenAPI changes")
+			log.From(ctx).Warnf("registry tracking failed: %s", err.Error())
+			registryStep.Skip("failed to upload OpenAPI to Speakeasy Registry")
 		}
 	}()
 
