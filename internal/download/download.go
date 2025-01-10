@@ -382,9 +382,9 @@ func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 			if err != nil {
 				return "", err
 			}
+		} else {
+			return "", err
 		}
-
-		return "", err
 	}
 	defer fileResponse.Body.Close()
 
