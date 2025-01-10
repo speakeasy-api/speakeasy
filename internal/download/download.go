@@ -377,7 +377,7 @@ func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	fileResponse, err = download.Fetch(d.Location.Resolve(), header, token)
 	if err != nil {
 		// Retry with bearer in case this is a github PAT and the user forgot
-		if env.IsGithubAction() && !strings.HasPrefix(token, "bearer") {
+		if isGithubPATMissingBearer(d.Location.Resolve(), token) {
 			fileResponse, err = download.Fetch(d.Location.Resolve(), header, fmt.Sprintf("bearer %s", token))
 			if err != nil {
 				return "", err
@@ -417,4 +417,12 @@ func ResolveRemoteDocument(ctx context.Context, d workflow.Document, outPath str
 	log.From(ctx).Infof("Downloaded %s to %s\n", d.Location, outPath)
 
 	return outPath, nil
+}
+
+func isGithubPATMissingBearer(location string, token string) bool {
+	if strings.HasPrefix(token, "bearer") || strings.Contains(token, "Bearer") {
+		return false
+	}
+
+	return strings.HasPrefix(token, "ghp_") || strings.Contains(location, "github.com")
 }
