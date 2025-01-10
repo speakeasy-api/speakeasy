@@ -205,6 +205,17 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
+	// Prompt the user to determine if they want to initialize a new git repository
+	initialiseRepo := true
+	prompt := charm.NewBranchPrompt(
+		"Do you want to initialize a new git repository?",
+		"Selecting 'Yes' will initialize a new git repository in the output directory",
+		&initialiseRepo,
+	)
+	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
+		initialiseRepo = false
+	}
+
 	var resolvedSchema string
 	var sourceName string
 	for name, source := range quickstartObj.WorkflowFile.Sources {
@@ -310,16 +321,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	// Print a message and save the workflow if there were MVS removals
 	handleMVSChanges(ctx, wf.GetWorkflowFile(), outDir)
 
-	// Prompt the user to determine if they want to initialize a new git repository
-	initialiseRepo := false
-	prompt := charm.NewBranchPrompt(
-		"Do you want to initialize a new git repository?",
-		"Selecting 'Yes' will initialize a new git repository in the output directory",
-		&initialiseRepo,
-	)
-	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
-		initialiseRepo = false
-	}
 	if initialiseRepo {
 		_, err = git.InitLocalRepository(outDir)
 		if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
