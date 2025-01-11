@@ -7,3 +7,4 @@ summary.md
 temp/
 integration/temp
 .DS_Store
+.vscode/launch.json
