@@ -75,16 +75,6 @@ func FormatNewOption(text string) string {
 	return fmt.Sprintf("+ %s", text)
 }
 
-func ExpandTilde(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		if homeDir, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(homeDir, path[2:])
-		}
-	}
-
-	return path
-}
-
 // Populates tab complete for schema files in the relative directory
 func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []string {
 	var validFiles []string
@@ -93,7 +83,7 @@ func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []stri
 		return validFiles
 	}
 
-	targetDir := ExpandTilde(relativeDir)
+	targetDir := relativeDir
 	if !filepath.IsAbs(targetDir) {
 		targetDir = filepath.Join(workingDir, targetDir)
 	}
@@ -128,7 +118,7 @@ func DirsInCurrentDir(relativeDir string) []string {
 		return validDirs
 	}
 
-	targetDir := ExpandTilde(relativeDir)
+	targetDir := relativeDir
 	if !filepath.IsAbs(targetDir) {
 		targetDir = filepath.Join(workingDir, targetDir)
 	}
@@ -160,9 +150,7 @@ type SuggestionCallbackConfig struct {
 func SuggestionCallback(cfg SuggestionCallbackConfig) func(val string) []string {
 	return func(val string) []string {
 		var files []string
-		potentialDir := ExpandTilde(val)
-
-		if info, err := os.Stat(potentialDir); err == nil && info.IsDir() {
+		if info, err := os.Stat(val); err == nil && info.IsDir() {
 			if len(cfg.FileExtensions) > 0 {
 				files = SchemaFilesInCurrentDir(val, cfg.FileExtensions)
 			} else if cfg.IsDirectories {

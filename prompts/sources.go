@@ -506,11 +506,12 @@ func formatDocument(fileLocation, authHeader string, validate bool) (*workflow.D
 }
 
 const (
-	ErrMsgInvalidFilePath = "please provide a valid file path"
-	ErrMsgNonExistentFile = "file does not exist"
-	ErrMessageFileIsDir   = "path is a directory, not a file"
-	ErrMessageFileExt     = "file extension '%s' is invalid. Valid extensions are %s"
-	ErrMsgInvalidURL      = "please provide a valid URL"
+	ErrMsgInvalidFilePath   = "please provide a valid file path"
+	ErrMsgNonExistentFile   = "file does not exist"
+	ErrMsgTildeNotPermitted = "~ paths are not permitted. Please provide the exact path to your file"
+	ErrMessageFileIsDir     = "path is a directory, not a file"
+	ErrMessageFileExt       = "file extension '%s' is invalid. Valid extensions are %s"
+	ErrMsgInvalidURL        = "please provide a valid URL"
 )
 
 func validateDocumentLocation(input string, permittedFileExtensions []string) error {
@@ -544,6 +545,10 @@ func validateURL(parsedURL *url.URL) error {
 }
 
 func validateFilePath(input string, permittedFileExtensions []string) error {
+	if strings.HasPrefix(input, "~/") {
+		return errors.New(ErrMsgTildeNotPermitted)
+	}
+
 	absPath, err := filepath.Abs(input)
 	if err != nil {
 		return errors.New(ErrMsgInvalidFilePath)
