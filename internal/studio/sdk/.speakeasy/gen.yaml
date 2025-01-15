@@ -13,10 +13,11 @@ generation:
     oAuth2ClientCredentialsEnabled: false
     oAuth2PasswordEnabled: false
 go:
-  version: 0.7.0
+  version: 0.8.1
   additionalDependencies: {}
   allowUnknownFieldsInWeakUnions: false
   clientServerStatusCodesAsErrors: true
+  defaultErrorName: SDKError
   flattenGlobalSecurity: true
   imports:
     option: openapi

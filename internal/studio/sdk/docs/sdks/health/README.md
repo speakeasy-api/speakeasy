@@ -17,17 +17,18 @@ Check the CLI health and return relevant information.
 package main
 
 import(
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
 )
 
 func main() {
+    ctx := context.Background()
+    
     s := sdk.New(
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
-    ctx := context.Background()
     res, err := s.Health.Check(ctx)
     if err != nil {
         log.Fatal(err)

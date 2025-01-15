@@ -25,6 +25,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
@@ -264,6 +265,47 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 		if err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
 		}
+	}
+
+	return nil
+}
+
+func (h *StudioHandlers) compareOverlay(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	var requestBody operations.GenerateOverlayRequestBody
+
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
+	}
+
+	var before *yaml.Node
+	var after *yaml.Node
+
+	err = yaml.Unmarshal([]byte(requestBody.Before), before)
+	if err != nil || before == nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error unmarshalling before overlay: %w", err))
+	}
+	err = yaml.Unmarshal([]byte(requestBody.After), after)
+	if err != nil || after == nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error unmarshalling after overlay: %w", err))
+	}
+
+	res, err := overlay.Compare("Studio Overlay Diff", before, *after)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error comparing overlays: %w", err))
+	}
+
+	resBytes, err := yaml.Marshal(res)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error marshalling response: %w", err))
+	}
+
+	var response operations.GenerateOverlayResponseBody
+	response.Overlay = string(resBytes)
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error encoding response: %w", err))
 	}
 
 	return nil

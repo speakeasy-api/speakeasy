@@ -59,6 +59,41 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/RunResponseStreamEvent"
+
+  /overlays/compare:
+    post:
+      summary: Generate an overlay from two yaml files
+      description: Generate an overlay from two yaml files
+      operationId: generateOverlay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                before:
+                  type: string
+                  description: The first yaml file
+                after:
+                  type: string
+                  description: The second yaml file
+              required:
+                - before
+                - after
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overlay:
+                    type: string
+                    description: The studio modifications overlay contents - this should be an overlay YAML document
+                required:
+                  - overlay
   /suggest/method-names:
     get:
       summary: Suggest Method Names
@@ -88,8 +123,8 @@ components:
       description: Map of target run summaries
       properties:
         step:
-            type: string
-            description: Step of the run
+          type: string
+          description: Step of the run
         isPartial:
           type: boolean
           description: Whether the run was partial

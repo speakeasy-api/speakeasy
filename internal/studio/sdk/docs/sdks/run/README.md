@@ -18,17 +18,18 @@ Get the output of the last run.
 package main
 
 import(
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"log"
 )
 
 func main() {
+    ctx := context.Background()
+    
     s := sdk.New(
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
-    ctx := context.Background()
     res, err := s.Run.GetLastResult(ctx)
     if err != nil {
         log.Fatal(err)
@@ -72,18 +73,19 @@ Regenerate the currently selected targets.
 package main
 
 import(
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"log"
 )
 
 func main() {
+    ctx := context.Background()
+    
     s := sdk.New(
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
-    ctx := context.Background()
     res, err := s.Run.ReRun(ctx, operations.RunRequestBody{})
     if err != nil {
         log.Fatal(err)

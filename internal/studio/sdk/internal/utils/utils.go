@@ -127,6 +127,7 @@ func parseStructTag(tagKey string, field reflect.StructField) map[string]string 
 
 func parseParamTag(tagKey string, field reflect.StructField, defaultStyle string, defaultExplode bool) *paramTag {
 	// example `{tagKey}:"style=simple,explode=false,name=apiID"`
+	// example `{tagKey}:"inline"`
 	values := parseStructTag(tagKey, field)
 	if values == nil {
 		return nil
@@ -140,6 +141,8 @@ func parseParamTag(tagKey string, field reflect.StructField, defaultStyle string
 
 	for k, v := range values {
 		switch k {
+		case "inline":
+			tag.Inline = v == "true"
 		case "style":
 			tag.Style = v
 		case "explode":

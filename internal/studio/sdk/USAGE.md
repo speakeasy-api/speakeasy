@@ -5,27 +5,26 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"log"
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx)
+	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.HealthResponse != nil {
-		defer res.HealthResponse.Close()
-
-		for res.HealthResponse.Next() {
-			event := res.HealthResponse.Value()
-			log.Print(event)
-			// Handle the event
-		}
+	if res.Object != nil {
+		// handle response
 	}
 }
 

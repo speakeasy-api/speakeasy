@@ -75,6 +75,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+	mux.HandleFunc("/overlay/compare", handler(handlers.compareOverlay))
 
 	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
 

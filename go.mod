@@ -8,6 +8,10 @@ replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
 
+replace github.com/speakeasy-api/openapi-generation/v2 => ../speakeasy-openapi-generation
+
+replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
+
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.20.0
@@ -41,7 +45,6 @@ require (
 
 require (
 	github.com/AlekSi/pointer v1.2.0
-	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/charmbracelet/glamour v0.7.0
 	github.com/charmbracelet/huh v0.5.1
 	github.com/dustin/go-humanize v1.0.1
@@ -80,6 +83,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/charmbracelet/x/ansi v0.2.3 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240617190524-788ec55faed1 // indirect
 	github.com/charmbracelet/x/term v0.2.0 // indirect
