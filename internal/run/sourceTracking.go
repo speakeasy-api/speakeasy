@@ -159,6 +159,8 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		if err != nil {
 			return err
 		}
+
+		namespaceName = document.NamespaceName
 		w.lockfile.Sources[sourceID] = workflow.SourceLock{
 			SourceNamespace:      namespaceName,
 			SourceRevisionDigest: document.ManifestDigest,
