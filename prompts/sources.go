@@ -100,6 +100,10 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 				Value(&requiresAuthentication),
 		).WithHideFunc(func() bool {
 			if fileLocation != nil && *fileLocation != "" {
+				// If it's a local file, skip the authentication prompt
+				if _, err := os.Open(*fileLocation); err == nil {
+					return true
+				}
 				if parsedUrl, err := url.ParseRequestURI(*fileLocation); err == nil {
 					resp, err := http.Get(parsedUrl.String())
 					if err != nil {
