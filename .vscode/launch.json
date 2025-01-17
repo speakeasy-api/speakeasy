@@ -7,7 +7,7 @@
       "program": "main.go",
       // "cwd": "/tmp/studio-test-6840674974721771490",
       "cwd": "~/code/misc/comfy-deploy-python",
-      "args": ["run"]
+      "args": ["run", "--watch"]
     },
     {
       "name": "Debug CLI headless",

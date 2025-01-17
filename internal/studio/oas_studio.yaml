@@ -59,7 +59,6 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/RunResponseStreamEvent"
-
   /overlays/compare:
     post:
       summary: Generate an overlay from two yaml files
@@ -106,7 +105,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuggestResponse"
-
+  /exit:
+    post:
+      summary: Exit
+      description: Exit the CLI
+      operationId: exit
+      responses:
+        "200":
+          description: Successful response
 components:
   schemas:
     HealthResponse:

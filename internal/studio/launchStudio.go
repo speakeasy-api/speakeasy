@@ -75,9 +75,9 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/overlay/compare", handler(handlers.compareOverlay))
-
+	mux.HandleFunc("/overlays/compare", handler(handlers.compareOverlay))
 	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
+	mux.HandleFunc("/exit", handler(handlers.exit))
 
 	port, err := searchForAvailablePort()
 	if err != nil {
@@ -92,6 +92,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	serverURL := auth.GetWorkspaceBaseURL(ctx)
 
 	handlers.StudioURL = fmt.Sprintf("%s/studio/%d#%s", serverURL, port, secret)
+	handlers.Server = server
 
 	listeningMessage := fmt.Sprintf("Listening on http://localhost:%d\n", port)
 

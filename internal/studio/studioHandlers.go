@@ -37,6 +37,7 @@ type StudioHandlers struct {
 	OverlayPath    string
 	Ctx            context.Context
 	StudioURL      string
+	Server         *http.Server
 
 	mutex           sync.Mutex
 	mutexCondition  *sync.Cond
@@ -278,19 +279,19 @@ func (h *StudioHandlers) compareOverlay(ctx context.Context, w http.ResponseWrit
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
 	}
 
-	var before *yaml.Node
-	var after *yaml.Node
+	var before yaml.Node
+	var after yaml.Node
 
-	err = yaml.Unmarshal([]byte(requestBody.Before), before)
-	if err != nil || before == nil {
+	err = yaml.Unmarshal([]byte(requestBody.Before), &before)
+	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error unmarshalling before overlay: %w", err))
 	}
-	err = yaml.Unmarshal([]byte(requestBody.After), after)
-	if err != nil || after == nil {
+	err = yaml.Unmarshal([]byte(requestBody.After), &after)
+	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error unmarshalling after overlay: %w", err))
 	}
 
-	res, err := overlay.Compare("Studio Overlay Diff", before, *after)
+	res, err := overlay.Compare("Studio Overlay Diff", &before, after)
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error comparing overlays: %w", err))
 	}
@@ -350,6 +351,14 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 		return fmt.Errorf("error encoding method name suggestions: %w", err)
 	}
 
+	return nil
+}
+
+func (h *StudioHandlers) exit(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	err := h.Server.Shutdown(ctx)
+	if err != nil {
+		return fmt.Errorf("error shutting down server: %w", err)
+	}
 	return nil
 }
 
