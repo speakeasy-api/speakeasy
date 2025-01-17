@@ -27,6 +27,7 @@ const (
 	nugetTokenDefault                = "NUGET_API_KEY"
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
 	packagistTokenDefault            = "PACKAGIST_TOKEN"
+	packagistUsernameDefault         = "PACKAGIST_USERNAME"
 	ossrhPasswordDefault             = "OSSRH_PASSWORD"
 	osshrUsernameDefault             = "OSSRH_USERNAME"
 	gpgSecretKeyDefault              = "JAVA_GPG_SECRET_KEY"
@@ -130,22 +131,10 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 			},
 		}
 	case "php":
-		currentPackagistUserName := ""
-		if target.Publishing != nil && target.Publishing.Packagist != nil {
-			currentPackagistUserName = target.Publishing.Packagist.Username
-		}
-		packagistUsername := &currentPackagistUserName
-		promptMap[publishingPrompt{
-			key:       "Packagist Username",
-			entryType: publishingTypeValue,
-		}] = packagistUsername
-		if err := executePromptsForPublishing(promptMap, target, name); err != nil {
-			return nil, err
-		}
 		target.Publishing = &workflow.Publishing{
 			Packagist: &workflow.Packagist{
 				Token:    formatWorkflowSecret(packagistTokenDefault),
-				Username: *packagistUsername,
+				Username: formatWorkflowSecret(packagistUsernameDefault),
 			},
 		}
 	case "java":
@@ -336,6 +325,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 
 	if publishing.Packagist != nil {
 		secrets = append(secrets, publishing.Packagist.Token)
+		secrets = append(secrets, publishing.Packagist.Username)
 	}
 
 	if publishing.Java != nil {
