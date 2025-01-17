@@ -6,12 +6,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/internal/hooks"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/sdkerrors"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/types/stream"
 	"net/http"
 	"net/url"
@@ -49,7 +49,12 @@ func (s *Health) Check(ctx context.Context, opts ...operations.Option) (*operati
 		}
 	}
 
-	baseURL := utils.ReplaceParameters(s.sdkConfiguration.GetServerDetails())
+	var baseURL string
+	if o.ServerURL == nil {
+		baseURL = utils.ReplaceParameters(s.sdkConfiguration.GetServerDetails())
+	} else {
+		baseURL = *o.ServerURL
+	}
 	opURL, err := url.JoinPath(baseURL, "/health")
 	if err != nil {
 		return nil, fmt.Errorf("error generating URL: %w", err)
@@ -75,6 +80,10 @@ func (s *Health) Check(ctx context.Context, opts ...operations.Option) (*operati
 
 	if err := utils.PopulateSecurity(ctx, req, s.sdkConfiguration.Security); err != nil {
 		return nil, err
+	}
+
+	for k, v := range o.SetHeaders {
+		req.Header.Set(k, v)
 	}
 
 	globalRetryConfig := s.sdkConfiguration.RetryConfig
@@ -107,7 +116,11 @@ func (s *Health) Check(ctx context.Context, opts ...operations.Option) (*operati
 
 			req, err = s.sdkConfiguration.Hooks.BeforeRequest(hooks.BeforeRequestContext{HookContext: hookCtx}, req)
 			if err != nil {
-				return nil, backoff.Permanent(err)
+				if retry.IsPermanentError(err) || retry.IsTemporaryError(err) {
+					return nil, err
+				}
+
+				return nil, retry.Permanent(err)
 			}
 
 			httpRes, err := s.sdkConfiguration.Client.Do(req)
