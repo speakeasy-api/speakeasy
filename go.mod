@@ -23,11 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-<<<<<<< HEAD
-	github.com/speakeasy-api/openapi-generation/v2 v2.493.4
-=======
 	github.com/speakeasy-api/openapi-generation/v2 v2.493.21
->>>>>>> 7133ff78aefdad1a1bdd8ca78da477677d12b7aa
 	github.com/speakeasy-api/openapi-overlay v0.9.0
 	github.com/speakeasy-api/sdk-gen-config v1.30.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.19.1
@@ -45,7 +41,6 @@ require (
 
 require (
 	github.com/AlekSi/pointer v1.2.0
-	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/charmbracelet/glamour v0.7.0
 	github.com/charmbracelet/huh v0.5.1
 	github.com/dustin/go-humanize v1.0.1
@@ -84,6 +79,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/charmbracelet/x/ansi v0.2.3 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240617190524-788ec55faed1 // indirect
 	github.com/charmbracelet/x/term v0.2.0 // indirect
