@@ -336,6 +336,7 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 
 	if publishing.Packagist != nil {
 		secrets = append(secrets, publishing.Packagist.Token)
+		secrets = append(secrets, publishing.Packagist.Username)
 	}
 
 	if publishing.Java != nil {
