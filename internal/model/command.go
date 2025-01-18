@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -312,6 +313,21 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 			if lockfileVersion != "" && lockfileVersion != desiredVersion {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version: %s\n", lockfileVersion)
+				if env.IsGithubAction() {
+					files, _ := filepath.Glob("**/gen.lock")
+
+					if len(files) > 0 {
+						args := append([]string{"checkout", "--"}, files...)
+						gitCmd := exec.Command("git", args...)
+						gitCmd.Stdin = os.Stdin
+						gitCmd.Stdout = os.Stdout
+						gitCmd.Stderr = os.Stderr
+
+						if err = gitCmd.Run(); err != nil {
+							logger.PrintfStyled(styles.DimmedItalic, "failed resetting gen.lock files to previous state")
+						}
+					}
+				}
 				return runWithVersion(cmd, artifactArch, lockfileVersion)
 			}
 		}
