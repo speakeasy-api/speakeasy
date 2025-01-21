@@ -24,16 +24,22 @@ It has been generated successfully based on your OpenAPI spec. However, it is no
 
 <!-- Start Table of Contents [toc] -->
 ## Table of Contents
+<!-- $toc-max-depth=2 -->
+* [github.com/speakeasy-api/speakeasy/internal/run/studio/generated-studio-sdk](#githubcomspeakeasy-apispeakeasyinternalrunstudiogenerated-studio-sdk)
+  * [🏗 **Welcome to your new SDK!** 🏗](#welcome-to-your-new-sdk)
+  * [SDK Installation](#sdk-installation)
+  * [SDK Example Usage](#sdk-example-usage)
+  * [Available Resources and Operations](#available-resources-and-operations)
+  * [Retries](#retries)
+  * [Error Handling](#error-handling)
+  * [Server Selection](#server-selection)
+  * [Custom HTTP Client](#custom-http-client)
+  * [Authentication](#authentication)
+  * [Server-sent event streaming](#server-sent-event-streaming)
+* [Development](#development)
+  * [Maturity](#maturity)
+  * [Contributions](#contributions)
 
-* [SDK Installation](#sdk-installation)
-* [SDK Example Usage](#sdk-example-usage)
-* [Available Resources and Operations](#available-resources-and-operations)
-* [Server-sent event streaming](#server-sent-event-streaming)
-* [Retries](#retries)
-* [Error Handling](#error-handling)
-* [Server Selection](#server-selection)
-* [Custom HTTP Client](#custom-http-client)
-* [Authentication](#authentication)
 <!-- End Table of Contents [toc] -->
 
 <!-- Start SDK Installation [installation] -->
@@ -56,27 +62,26 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"log"
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx)
+	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.HealthResponse != nil {
-		defer res.HealthResponse.Close()
-
-		for res.HealthResponse.Next() {
-			event := res.HealthResponse.Value()
-			log.Print(event)
-			// Handle the event
-		}
+	if res.Object != nil {
+		// handle response
 	}
 }
 
@@ -98,6 +103,9 @@ func main() {
 * [GetLastResult](docs/sdks/run/README.md#getlastresult) - Run
 * [ReRun](docs/sdks/run/README.md#rerun) - Run
 
+### [SDK](docs/sdks/sdk/README.md)
+
+* [GenerateOverlay](docs/sdks/sdk/README.md#generateoverlay) - Generate an overlay from two yaml files
 
 ### [Suggest](docs/sdks/suggest/README.md)
 
@@ -118,18 +126,23 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
 	"models/operations"
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx, operations.WithRetries(
+	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	}, operations.WithRetries(
 		retry.Config{
 			Strategy: "backoff",
 			Backoff: &retry.BackoffStrategy{
@@ -143,14 +156,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.HealthResponse != nil {
-		defer res.HealthResponse.Close()
-
-		for res.HealthResponse.Next() {
-			event := res.HealthResponse.Value()
-			log.Print(event)
-			// Handle the event
-		}
+	if res.Object != nil {
+		// handle response
 	}
 }
 
@@ -163,11 +170,14 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
 		sdk.WithRetryConfig(
 			retry.Config{
@@ -183,19 +193,15 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx)
+	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.HealthResponse != nil {
-		defer res.HealthResponse.Close()
-
-		for res.HealthResponse.Next() {
-			event := res.HealthResponse.Value()
-			log.Print(event)
-			// Handle the event
-		}
+	if res.Object != nil {
+		// handle response
 	}
 }
 
@@ -209,11 +215,11 @@ Handling errors in this SDK should largely match your expectations. All operatio
 
 By Default, an API error will return `sdkerrors.SDKError`. When custom error responses are specified for an operation, the SDK may also return their associated error. You can refer to respective *Errors* tables in SDK docs for more details on possible error types for each operation.
 
-For example, the `Check` function may return the following errors:
+For example, the `GenerateOverlay` function may return the following errors:
 
-| Error Type         | Status Code        | Content Type       |
-| ------------------ | ------------------ | ------------------ |
-| sdkerrors.SDKError | 4XX, 5XX           | \*/\*              |
+| Error Type         | Status Code | Content Type |
+| ------------------ | ----------- | ------------ |
+| sdkerrors.SDKError | 4XX, 5XX    | \*/\*        |
 
 ### Example
 
@@ -224,17 +230,22 @@ import (
 	"context"
 	"errors"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/sdkerrors"
 	"log"
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx)
+	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	})
 	if err != nil {
 
 		var e *sdkerrors.SDKError
@@ -251,85 +262,41 @@ func main() {
 <!-- Start Server Selection [server] -->
 ## Server Selection
 
-### Select Server by Index
+### Server Variables
 
-You can override the default server globally using the `WithServerIndex` option when initializing the SDK client instance. The selected server will then be used as the default on the operations that use it. This table lists the indexes associated with the available servers:
-
-| # | Server | Variables |
-| - | ------ | --------- |
-| 0 | `http://localhost:{port}` | `port` (default is `8080`) |
-
-#### Example
-
-```go
-package main
-
-import (
-	"context"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"log"
-)
-
-func main() {
-	s := sdk.New(
-		sdk.WithServerIndex(0),
-		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
-	)
-
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if res.HealthResponse != nil {
-		defer res.HealthResponse.Close()
-
-		for res.HealthResponse.Next() {
-			event := res.HealthResponse.Value()
-			log.Print(event)
-			// Handle the event
-		}
-	}
-}
-
-```
-
-#### Variables
-
-Some of the server options above contain variables. If you want to set the values of those variables, the following options are provided for doing so:
- * `WithPort string`
+The default server `http://localhost:{port}` contains variables and is set to `http://localhost:8080` by default. To override default values, the following options are available when initializing the SDK client instance:
+ * `WithPort(port string)`
 
 ### Override Server URL Per-Client
 
-The default server can also be overridden globally using the `WithServerURL` option when initializing the SDK client instance. For example:
+The default server can also be overridden globally using the `WithServerURL(serverURL string)` option when initializing the SDK client instance. For example:
 ```go
 package main
 
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"log"
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
-		sdk.WithServerURL("http://localhost:{port}"),
+		sdk.WithServerURL("http://localhost:8080"),
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx)
+	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.HealthResponse != nil {
-		defer res.HealthResponse.Close()
-
-		for res.HealthResponse.Next() {
-			event := res.HealthResponse.Value()
-			log.Print(event)
-			// Handle the event
-		}
+	if res.Object != nil {
+		// handle response
 	}
 }
 
@@ -372,9 +339,9 @@ This can be a convenient way to configure timeouts, cookies, proxies, custom hea
 
 This SDK supports the following security scheme globally:
 
-| Name     | Type     | Scheme   |
-| -------- | -------- | -------- |
-| `Secret` | apiKey   | API key  |
+| Name     | Type   | Scheme  |
+| -------- | ------ | ------- |
+| `Secret` | apiKey | API key |
 
 You can configure it using the `WithSecurity` option when initializing the SDK client instance. For example:
 ```go
@@ -383,27 +350,26 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"log"
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
-	res, err := s.Health.Check(ctx)
+	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.HealthResponse != nil {
-		defer res.HealthResponse.Close()
-
-		for res.HealthResponse.Next() {
-			event := res.HealthResponse.Value()
-			log.Print(event)
-			// Handle the event
-		}
+	if res.Object != nil {
+		// handle response
 	}
 }
 
@@ -429,11 +395,12 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
 	s := sdk.New(
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	ctx := context.Background()
 	res, err := s.Health.Check(ctx)
 	if err != nil {
 		log.Fatal(err)

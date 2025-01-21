@@ -39,7 +39,7 @@ const (
 
 // RunResponseBody - Successful response
 type RunResponseBody struct {
-	RunResponseStreamEvent *components.RunResponseStreamEvent
+	RunResponseStreamEvent *components.RunResponseStreamEvent `queryParam:"inline"`
 
 	Type RunResponseBodyType
 }

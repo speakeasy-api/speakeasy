@@ -1,11 +1,12 @@
-speakeasyVersion: 1.434.2
+speakeasyVersion: 1.468.2
 sources:
     SpeakeasyStudio-OAS:
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:73d50982bbd2514fd057c8579618951d55c5b01dc8486db904e6e870fca69592
-        sourceBlobDigest: sha256:bb33405e124bee974dcaedc6079f15db95fced5f76cdfeac47db99706a9a44e5
+        sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
+        sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
         tags:
             - latest
+            - 1.0.0
     SpekaeasyStudio-OAS:
         sourceNamespace: spekaeasy-studio-oas
         sourceRevisionDigest: sha256:f5da666ea15ed240ee9a4db4fdb3657ac19de906e474adeb0a84af9ffa6b9aa9
@@ -16,8 +17,8 @@ targets:
     speakeasy-studio:
         source: SpeakeasyStudio-OAS
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:73d50982bbd2514fd057c8579618951d55c5b01dc8486db904e6e870fca69592
-        sourceBlobDigest: sha256:bb33405e124bee974dcaedc6079f15db95fced5f76cdfeac47db99706a9a44e5
+        sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
+        sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
     spekaeasy-studio:
         source: SpekaeasyStudio-OAS
         sourceNamespace: spekaeasy-studio-oas

@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 78fc16241dd246e41d72a8df4d9858a1
+  docChecksum: d6ceae1077bd594eeb6946972f02d120
   docVersion: 1.0.0
-  speakeasyVersion: 1.434.2
-  generationVersion: 2.452.0
-  releaseVersion: 0.7.0
-  configChecksum: 614840c4df081840a49730a5617559c3
+  speakeasyVersion: 1.468.2
+  generationVersion: 2.493.4
+  releaseVersion: 0.8.1
+  configChecksum: 4376127e76f1d562f68e9cb5e0b2102a
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.5.15
+    core: 3.6.2
     defaultEnabledRetries: 0.2.0
     envVarSecurityUsage: 0.3.2
     globalSecurity: 2.82.10
@@ -21,11 +21,10 @@ features:
     intellisenseMarkdownSupport: 0.1.0
     nameOverrides: 2.81.2
     responseFormat: 0.1.2
-    retries: 2.83.0
+    retries: 2.83.2
     sdkHooks: 0.1.0
     serverEvents: 0.1.2
     serverEventsSentinels: 0.1.0
-    tests: 0.6.0
     unions: 2.85.10
 generatedFiles:
   - /models/components/auth.go
@@ -48,10 +47,10 @@ generatedFiles:
   - /models/components/targetrunsummary.go
   - /models/components/workflow.go
   - /models/operations/checkhealth.go
+  - /models/operations/generateoverlay.go
   - /models/operations/getrun.go
   - /models/operations/run.go
   - /models/operations/suggestmethodnames.go
-  - CONTRIBUTING.md
   - USAGE.md
   - docs/models/components/auth.md
   - docs/models/components/codesamples.md
@@ -74,6 +73,9 @@ generatedFiles:
   - docs/models/components/targetrunsummary.md
   - docs/models/components/workflow.md
   - docs/models/operations/checkhealthresponse.md
+  - docs/models/operations/generateoverlayrequestbody.md
+  - docs/models/operations/generateoverlayresponse.md
+  - docs/models/operations/generateoverlayresponsebody.md
   - docs/models/operations/getrunresponse.md
   - docs/models/operations/option.md
   - docs/models/operations/runrequestbody.md
@@ -87,6 +89,7 @@ generatedFiles:
   - health.go
   - internal/hooks/hooks.go
   - internal/utils/contenttype.go
+  - internal/utils/env.go
   - internal/utils/form.go
   - internal/utils/headers.go
   - internal/utils/json.go
@@ -117,3 +120,11 @@ examples:
       responses:
         "200":
           application/json: {"overlay": "<value>"}
+  generateOverlay:
+    speakeasy-default-generate-overlay:
+      requestBody:
+        application/json: {"before": "<value>", "after": "<value>"}
+      responses:
+        "200":
+          application/json: {"overlay": "<value>"}
+generatedTests: {}
