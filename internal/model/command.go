@@ -143,7 +143,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 					return err
 				}
 				logger := log.From(cmd.Context())
-				logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version")
+				logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
 				logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
 			}
 		}
@@ -291,15 +291,18 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		}
 		desiredVersion = latest.String()
 
-		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version: %s\n", desiredVersion)
+		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
 	} else {
-		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion from workflow.yaml: %s\n", desiredVersion)
+		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
 	}
 
 	// Get lockfile version before running the command, in case it gets overwritten
 	lockfileVersion := getSpeakeasyVersionFromLockfile()
 
-	runErr := runWithVersion(cmd, artifactArch, desiredVersion)
+	// If the workflow succeeds on latest, promote that version to the default
+	shouldPromote := wf.SpeakeasyVersion == "latest"
+
+	runErr := runWithVersion(cmd, artifactArch, desiredVersion, shouldPromote)
 	if runErr != nil {
 		// If the command failed to run with the latest version, try to run with the version from the lock file
 		if wf.SpeakeasyVersion == "latest" {
@@ -311,8 +314,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 			}
 
 			if lockfileVersion != "" && lockfileVersion != desiredVersion {
-				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version: %s\n", lockfileVersion)
-				return runWithVersion(cmd, artifactArch, lockfileVersion)
+				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version")
+				return runWithVersion(cmd, artifactArch, lockfileVersion, false)
 			}
 		}
 
@@ -323,7 +326,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	return nil
 }
 
-func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) error {
+// If promote is true, the version will be promoted to the default version (ie when running `speakeasy`)
+func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, promote bool) error {
 	vLocation, err := updates.InstallVersion(cmd.Context(), desiredVersion, artifactArch, 30)
 	if err != nil {
 		return ErrInstallFailed.Wrap(err)
@@ -347,6 +351,20 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string) err
 
 	if err = newCmd.Run(); err != nil {
 		return fmt.Errorf("failed to run with version %s: %w", desiredVersion, err)
+	}
+
+	// If the workflow succeeded, make the used version the default
+	if promote && !env.IsGithubAction() && !env.IsLocalDev() {
+		currentExecPath, err := os.Executable()
+		if err != nil {
+			log.From(cmd.Context()).Warnf("failed to promote version: %s", err.Error())
+			return nil
+		}
+
+		if err := os.Rename(vLocation, currentExecPath); err != nil {
+			log.From(cmd.Context()).Warnf("failed to promote version: %s", err.Error())
+			return nil
+		}
 	}
 
 	return nil

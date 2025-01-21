@@ -123,10 +123,12 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 	}
 
 	if _, err := os.Stat(dst); err == nil {
+		// It's important that these logs remain. We rely on them as part of `run` output
 		log.From(ctx).PrintfStyled(styles.DimmedItalic, "Found existing install for Speakeasy version %s\n", desiredVersion)
 		return dst, nil
 	}
 
+	// It's important that these logs remain. We rely on them as part of `run` output
 	log.From(ctx).PrintfStyled(styles.DimmedItalic, "Downloading Speakeasy version %s\n", desiredVersion)
 
 	return dst, install(artifactArch, asset.GetBrowserDownloadURL(), dst, timeout)
