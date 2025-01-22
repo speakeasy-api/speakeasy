@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: d6ceae1077bd594eeb6946972f02d120
+  docChecksum: 57a863ad69f7904df958f798a79b71a6
   docVersion: 1.0.0
-  speakeasyVersion: 1.468.2
-  generationVersion: 2.493.4
-  releaseVersion: 0.8.1
-  configChecksum: 4376127e76f1d562f68e9cb5e0b2102a
+  speakeasyVersion: 1.470.1
+  generationVersion: 2.493.34
+  releaseVersion: 0.8.3
+  configChecksum: 37d806047972bf172aae774b4e0c43cc
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.6.2
+    core: 3.6.9
     defaultEnabledRetries: 0.2.0
     envVarSecurityUsage: 0.3.2
     globalSecurity: 2.82.10
@@ -47,6 +47,7 @@ generatedFiles:
   - /models/components/targetrunsummary.go
   - /models/components/workflow.go
   - /models/operations/checkhealth.go
+  - /models/operations/exit.go
   - /models/operations/generateoverlay.go
   - /models/operations/getrun.go
   - /models/operations/run.go
@@ -73,6 +74,8 @@ generatedFiles:
   - docs/models/components/targetrunsummary.md
   - docs/models/components/workflow.md
   - docs/models/operations/checkhealthresponse.md
+  - docs/models/operations/config.md
+  - docs/models/operations/exitresponse.md
   - docs/models/operations/generateoverlayrequestbody.md
   - docs/models/operations/generateoverlayresponse.md
   - docs/models/operations/generateoverlayresponsebody.md
@@ -112,14 +115,6 @@ generatedFiles:
   - types/pointers.go
   - types/stream/stream.go
 examples:
-  checkHealth: {}
-  getRun: {}
-  run: {}
-  suggestMethodNames:
-    speakeasy-default-suggest-method-names:
-      responses:
-        "200":
-          application/json: {"overlay": "<value>"}
   generateOverlay:
     speakeasy-default-generate-overlay:
       requestBody:
@@ -127,4 +122,17 @@ examples:
       responses:
         "200":
           application/json: {"overlay": "<value>"}
+  exit: {}
+  checkHealth: {}
+  getRun: {}
+  run:
+    speakeasy-default-run:
+      requestBody:
+        application/json: {}
+  suggestMethodNames:
+    speakeasy-default-suggest-method-names:
+      responses:
+        "200":
+          application/json: {"overlay": "<value>"}
+examplesVersion: 1.0.0
 generatedTests: {}

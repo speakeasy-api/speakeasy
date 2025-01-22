@@ -7,6 +7,8 @@ type TargetRunSummary struct {
 	Readme string `json:"readme"`
 	// Contents of the gen.yaml file for this target
 	GenYaml string `json:"gen_yaml"`
+	// The path to the gen.yaml file for this target
+	GenYamlPath string `json:"gen_yaml_path"`
 	// Output directory for this target
 	OutputDirectory string `json:"output_directory"`
 	// Language for this target
@@ -29,6 +31,13 @@ func (o *TargetRunSummary) GetGenYaml() string {
 		return ""
 	}
 	return o.GenYaml
+}
+
+func (o *TargetRunSummary) GetGenYamlPath() string {
+	if o == nil {
+		return ""
+	}
+	return o.GenYamlPath
 }
 
 func (o *TargetRunSummary) GetOutputDirectory() string {

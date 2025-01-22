@@ -10,11 +10,33 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/types/stream"
 )
 
+type Config struct {
+	// The config edit for the source
+	Data string `json:"data"`
+	// The local path to config file
+	Path string `json:"path"`
+}
+
+func (o *Config) GetData() string {
+	if o == nil {
+		return ""
+	}
+	return o.Data
+}
+
+func (o *Config) GetPath() string {
+	if o == nil {
+		return ""
+	}
+	return o.Path
+}
+
 type RunRequestBody struct {
 	// The studio modifications overlay contents - this should be an overlay YAML document
 	Overlay *string `json:"overlay,omitempty"`
 	// The input spec for the source
-	Input *string `json:"input,omitempty"`
+	Input  *string `json:"input,omitempty"`
+	Config *Config `json:"config,omitempty"`
 }
 
 func (o *RunRequestBody) GetOverlay() *string {
@@ -29,6 +51,13 @@ func (o *RunRequestBody) GetInput() *string {
 		return nil
 	}
 	return o.Input
+}
+
+func (o *RunRequestBody) GetConfig() *Config {
+	if o == nil {
+		return nil
+	}
+	return o.Config
 }
 
 type RunResponseBodyType string

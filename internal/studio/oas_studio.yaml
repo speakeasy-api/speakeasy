@@ -51,6 +51,18 @@ paths:
                 input:
                   type: string
                   description: The input spec for the source
+                config:
+                  type: object
+                  properties:
+                    data:
+                      type: string
+                      description: The config edit for the source
+                    path:
+                      type: string
+                      description: The local path to config file
+                  required:
+                    - data
+                    - path
       responses:
         "200":
           description: Successful response
@@ -173,6 +185,9 @@ components:
         gen_yaml:
           type: string
           description: Contents of the gen.yaml file for this target
+        gen_yaml_path:
+          type: string
+          description: The path to the gen.yaml file for this target
         output_directory:
           type: string
           description: Output directory for this target
@@ -190,6 +205,7 @@ components:
         - sourceID
         - readme
         - gen_yaml
+        - gen_yaml_path
         - output_directory
         - language
     SourceResponse:

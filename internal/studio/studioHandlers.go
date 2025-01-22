@@ -127,6 +127,11 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error updating source: %w", err)
 	}
 
+	err = h.updateConfig(r)
+	if err != nil {
+		return fmt.Errorf("error updating config: %w", err)
+	}
+
 	cloned, err := h.WorkflowRunner.Clone(
 		h.Ctx,
 		run.WithSkipCleanup(),
@@ -271,6 +276,44 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 	return nil
 }
 
+func (h *StudioHandlers) updateConfig(r *http.Request) error {
+	var err error
+
+	type config struct {
+		Data string `json:"data"`
+		Path string `json:"path"`
+	}
+
+	var reqBody struct {
+		Config *config `json:"config"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&reqBody)
+	if err != nil {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
+	}
+
+	if reqBody.Config != nil {
+		configPath := reqBody.Config.Path
+
+		// if it's absolute that's fine, otherwise it's relative to the project directory
+		if !filepath.IsAbs(configPath) {
+			configPath = filepath.Join(h.WorkflowRunner.ProjectDir, configPath)
+		}
+
+		if _, err := os.Stat(configPath); err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("cannot find config file: %w", err))
+		}
+
+		err = utils.WriteStringToFile(configPath, reqBody.Config.Data)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
+		}
+	}
+
+	return nil
+}
+
 func (h *StudioHandlers) compareOverlay(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var requestBody operations.GenerateOverlayRequestBody
 
@@ -395,6 +438,10 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 		if err != nil {
 			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
 		}
+		absGenYamlPath, err := filepath.Abs(v.GenYamlPath)
+		if err != nil {
+			return &ret, fmt.Errorf("error getting absolute path to gen.yaml: %w", err)
+		}
 		readMePath := filepath.Join(v.OutputPath, "README.md")
 		readMeContents, err := utils.ReadFileToString(readMePath)
 		if err != nil {
@@ -416,6 +463,7 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 			SourceID:        h.SourceID,
 			Readme:          readMeContents,
 			GenYaml:         genYamlContents,
+			GenYamlPath:     absGenYamlPath,
 			Language:        targetConfig.Target,
 			OutputDirectory: outputDirectory,
 		}
