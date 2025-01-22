@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"io"
 	"net/http"
 	"os"
@@ -112,6 +113,13 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 		return "", err
 	}
 
+	currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
+	curVer, err := version.NewVersion(currentVersion)
+	// If the current version is the same as the desired version, just return the current executable location
+	if err == nil && curVer.Equal(v) {
+		return os.Executable()
+	}
+
 	release, asset, err := getReleaseForVersion(ctx, *v, artifactArch, 30*time.Second)
 	if err != nil || release == nil {
 		return "", fmt.Errorf("failed to find release for version %s: %w", v.String(), err)
@@ -123,10 +131,12 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 	}
 
 	if _, err := os.Stat(dst); err == nil {
+		// It's important that these logs remain. We rely on them as part of `run` output
 		log.From(ctx).PrintfStyled(styles.DimmedItalic, "Found existing install for Speakeasy version %s\n", desiredVersion)
 		return dst, nil
 	}
 
+	// It's important that these logs remain. We rely on them as part of `run` output
 	log.From(ctx).PrintfStyled(styles.DimmedItalic, "Downloading Speakeasy version %s\n", desiredVersion)
 
 	return dst, install(artifactArch, asset.GetBrowserDownloadURL(), dst, timeout)
