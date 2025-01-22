@@ -327,7 +327,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 }
 
 // If promote is true, the version will be promoted to the default version (ie when running `speakeasy`)
-func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, promote bool) error {
+func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, shouldPromote bool) error {
 	vLocation, err := updates.InstallVersion(cmd.Context(), desiredVersion, artifactArch, 30)
 	if err != nil {
 		return ErrInstallFailed.Wrap(err)
@@ -354,7 +354,7 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, pro
 	}
 
 	// If the workflow succeeded, make the used version the default
-	if promote && !env.IsGithubAction() && !env.IsLocalDev() {
+	if shouldPromote && !env.IsGithubAction() && !env.IsLocalDev() {
 		currentExecPath, err := os.Executable()
 		if err != nil {
 			log.From(cmd.Context()).Warnf("failed to promote version: %s", err.Error())
