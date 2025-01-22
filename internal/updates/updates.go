@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"io"
 	"net/http"
 	"os"
@@ -110,6 +111,17 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 	v, err := version.NewVersion(desiredVersion)
 	if err != nil {
 		return "", err
+	}
+
+	currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
+	curVer, err := version.NewVersion(currentVersion)
+	if err != nil {
+		return "", err
+	}
+
+	// If the current version is the same as the desired version, just return the current executable location
+	if curVer.Equal(v) {
+		return os.Executable()
 	}
 
 	release, asset, err := getReleaseForVersion(ctx, *v, artifactArch, 30*time.Second)
