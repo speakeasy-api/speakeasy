@@ -228,7 +228,7 @@ func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 	var reqBody struct {
 		Overlay string                                     `json:"overlay"`
 		Input   string                                     `json:"input"`
-		Targets map[string]components.TargetSpecificInputs // this is only present if a target input is modified
+		Targets map[string]components.TargetSpecificInputs `json:targets` // this is only present if a target input is modified
 	}
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
