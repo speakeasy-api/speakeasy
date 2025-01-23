@@ -12,6 +12,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
@@ -127,7 +128,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error updating source: %w", err)
 	}
 
-	err = h.updateConfig(r)
+	err = h.updateTarget(r)
 	if err != nil {
 		return fmt.Errorf("error updating config: %w", err)
 	}
@@ -276,16 +277,16 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 	return nil
 }
 
-func (h *StudioHandlers) updateConfig(r *http.Request) error {
+func (h *StudioHandlers) updateTarget(r *http.Request) error {
 	var err error
 
-	type config struct {
-		Data string `json:"data"`
-		Path string `json:"path"`
+	type target struct {
+		ID     string `json:"id"`
+		Config string `json:"config"`
 	}
 
 	var reqBody struct {
-		Config *config `json:"config"`
+		Target *target `json:"target"`
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
@@ -293,19 +294,27 @@ func (h *StudioHandlers) updateConfig(r *http.Request) error {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
 	}
 
-	if reqBody.Config != nil {
-		configPath := reqBody.Config.Path
-
-		// if it's absolute that's fine, otherwise it's relative to the project directory
-		if !filepath.IsAbs(configPath) {
-			configPath = filepath.Join(h.WorkflowRunner.ProjectDir, configPath)
+	if reqBody.Target != nil {
+		configPath := ""
+		for name, wfTarget := range h.WorkflowRunner.GetWorkflowFile().Targets {
+			if name == reqBody.Target.ID {
+				configPath = h.WorkflowRunner.ProjectDir
+				if wfTarget.Output != nil {
+					configPath = filepath.Join(configPath, *wfTarget.Output)
+				}
+				break
+			}
 		}
 
-		if _, err := os.Stat(configPath); err != nil {
+		if configPath == "" {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", reqBody.Target.ID))
+		}
+
+		if _, err := sdkGenConfig.Load(configPath); err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("cannot find config file: %w", err))
 		}
 
-		err = utils.WriteStringToFile(configPath, reqBody.Config.Data)
+		err = utils.WriteStringToFile(configPath, reqBody.Target.Config)
 		if err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
 		}

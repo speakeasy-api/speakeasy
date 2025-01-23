@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 57a863ad69f7904df958f798a79b71a6
+  docChecksum: e15175ebf0ee7e3d6c78028f763ea725
   docVersion: 1.0.0
   speakeasyVersion: 1.470.1
   generationVersion: 2.493.34
-  releaseVersion: 0.8.3
-  configChecksum: 37d806047972bf172aae774b4e0c43cc
+  releaseVersion: 0.8.4
+  configChecksum: 1c7e0d4c91f45174ca15d10eb6303a73
 features:
   go:
     additionalDependencies: 0.1.0
@@ -74,7 +74,6 @@ generatedFiles:
   - docs/models/components/targetrunsummary.md
   - docs/models/components/workflow.md
   - docs/models/operations/checkhealthresponse.md
-  - docs/models/operations/config.md
   - docs/models/operations/exitresponse.md
   - docs/models/operations/generateoverlayrequestbody.md
   - docs/models/operations/generateoverlayresponse.md
@@ -85,6 +84,7 @@ generatedFiles:
   - docs/models/operations/runresponse.md
   - docs/models/operations/runresponsebody.md
   - docs/models/operations/suggestmethodnamesresponse.md
+  - docs/models/operations/target.md
   - docs/sdks/health/README.md
   - docs/sdks/run/README.md
   - docs/sdks/sdk/README.md

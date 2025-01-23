@@ -10,33 +10,42 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/types/stream"
 )
 
-type Config struct {
-	// The config edit for the source
-	Data string `json:"data"`
-	// The local path to config file
-	Path string `json:"path"`
+type Target struct {
+	// The name of the target
+	ID string `json:"id"`
+	// the config file data
+	Config string `json:"config"`
 }
 
-func (o *Config) GetData() string {
+func (o *Target) GetID() string {
 	if o == nil {
 		return ""
 	}
-	return o.Data
+	return o.ID
 }
 
-func (o *Config) GetPath() string {
+func (o *Target) GetConfig() string {
 	if o == nil {
 		return ""
 	}
-	return o.Path
+	return o.Config
 }
 
 type RunRequestBody struct {
+	// The target ID to run
+	TargetID *string `json:"target_id,omitempty"`
 	// The studio modifications overlay contents - this should be an overlay YAML document
 	Overlay *string `json:"overlay,omitempty"`
 	// The input spec for the source
 	Input  *string `json:"input,omitempty"`
-	Config *Config `json:"config,omitempty"`
+	Target *Target `json:"target,omitempty"`
+}
+
+func (o *RunRequestBody) GetTargetID() *string {
+	if o == nil {
+		return nil
+	}
+	return o.TargetID
 }
 
 func (o *RunRequestBody) GetOverlay() *string {
@@ -53,11 +62,11 @@ func (o *RunRequestBody) GetInput() *string {
 	return o.Input
 }
 
-func (o *RunRequestBody) GetConfig() *Config {
+func (o *RunRequestBody) GetTarget() *Target {
 	if o == nil {
 		return nil
 	}
-	return o.Config
+	return o.Target
 }
 
 type RunResponseBodyType string
