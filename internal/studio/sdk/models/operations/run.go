@@ -32,20 +32,11 @@ func (o *Target) GetConfig() string {
 }
 
 type RunRequestBody struct {
-	// The target ID to run
-	TargetID *string `json:"target_id,omitempty"`
 	// The studio modifications overlay contents - this should be an overlay YAML document
 	Overlay *string `json:"overlay,omitempty"`
 	// The input spec for the source
 	Input  *string `json:"input,omitempty"`
 	Target *Target `json:"target,omitempty"`
-}
-
-func (o *RunRequestBody) GetTargetID() *string {
-	if o == nil {
-		return nil
-	}
-	return o.TargetID
 }
 
 func (o *RunRequestBody) GetOverlay() *string {
