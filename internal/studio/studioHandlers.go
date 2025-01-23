@@ -12,6 +12,7 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
@@ -122,7 +123,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return ctx.Err()
 	}
 
-	err := h.updateSource(r)
+	err := h.updateSourceAndTarget(r)
 	if err != nil {
 		return fmt.Errorf("error updating source: %w", err)
 	}
@@ -215,13 +216,19 @@ func (h *StudioHandlers) root(ctx context.Context, w http.ResponseWriter, r *htt
 	return nil
 }
 
-func (h *StudioHandlers) updateSource(r *http.Request) error {
+func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 	var err error
+
+	type target struct {
+		ID     string `json:"id"`
+		Config string `json:"config"`
+	}
 
 	// Destructure the request body which is a json object with a single key "overlay" which is a string
 	var reqBody struct {
-		Overlay string `json:"overlay"`
-		Input   string `json:"input"`
+		Overlay string  `json:"overlay"`
+		Input   string  `json:"input"`
+		Target  *target `json:"target"`
 	}
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
@@ -265,6 +272,33 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 		err = h.upsertOverlay(overlay)
 		if err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
+		}
+	}
+
+	if reqBody.Target != nil {
+		sdkPath := ""
+		for name, wfTarget := range h.WorkflowRunner.GetWorkflowFile().Targets {
+			if name == reqBody.Target.ID {
+				sdkPath = h.WorkflowRunner.ProjectDir
+				if wfTarget.Output != nil {
+					sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
+				}
+				break
+			}
+		}
+
+		if sdkPath == "" {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", reqBody.Target.ID))
+		}
+
+		cfg, err := sdkGenConfig.Load(sdkPath)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
+		}
+
+		err = utils.WriteStringToFile(cfg.ConfigPath, reqBody.Target.Config)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
 		}
 	}
 
@@ -395,6 +429,10 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 		if err != nil {
 			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
 		}
+		absGenYamlPath, err := filepath.Abs(v.GenYamlPath)
+		if err != nil {
+			return &ret, fmt.Errorf("error getting absolute path to gen.yaml: %w", err)
+		}
 		readMePath := filepath.Join(v.OutputPath, "README.md")
 		readMeContents, err := utils.ReadFileToString(readMePath)
 		if err != nil {
@@ -416,6 +454,7 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 			SourceID:        h.SourceID,
 			Readme:          readMeContents,
 			GenYaml:         genYamlContents,
+			GenYamlPath:     absGenYamlPath,
 			Language:        targetConfig.Target,
 			OutputDirectory: outputDirectory,
 		}
