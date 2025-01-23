@@ -83,7 +83,10 @@ func SchemaFilesInCurrentDir(relativeDir string, fileExtensions []string) []stri
 		return validFiles
 	}
 
-	targetDir := filepath.Join(workingDir, relativeDir)
+	targetDir := relativeDir
+	if !filepath.IsAbs(targetDir) {
+		targetDir = filepath.Join(workingDir, targetDir)
+	}
 
 	files, err := os.ReadDir(targetDir)
 	if err != nil {
@@ -115,9 +118,9 @@ func DirsInCurrentDir(relativeDir string) []string {
 		return validDirs
 	}
 
-	targetDir := filepath.Join(workingDir, relativeDir)
-	if filepath.IsAbs(relativeDir) {
-		targetDir = relativeDir
+	targetDir := relativeDir
+	if !filepath.IsAbs(targetDir) {
+		targetDir = filepath.Join(workingDir, targetDir)
 	}
 
 	files, err := os.ReadDir(targetDir)
