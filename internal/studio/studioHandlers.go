@@ -226,9 +226,9 @@ func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 
 	// Destructure the request body which is a json object with a single key "overlay" which is a string
 	var reqBody struct {
-		Overlay string  `json:"overlay"`
-		Input   string  `json:"input"`
-		Target  *target `json:"target"`
+		Overlay string                                     `json:"overlay"`
+		Input   string                                     `json:"input"`
+		Targets map[string]components.TargetSpecificInputs `json:"targets"` // this is only present if a target input is modified
 	}
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
@@ -275,20 +275,16 @@ func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 		}
 	}
 
-	if reqBody.Target != nil {
+	for targetID, input := range reqBody.Targets {
 		sdkPath := ""
-		for name, wfTarget := range h.WorkflowRunner.GetWorkflowFile().Targets {
-			if name == reqBody.Target.ID {
-				sdkPath = h.WorkflowRunner.ProjectDir
-				if wfTarget.Output != nil {
-					sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
-				}
-				break
-			}
-		}
 
-		if sdkPath == "" {
-			return errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", reqBody.Target.ID))
+		wfTarget, ok := h.WorkflowRunner.GetWorkflowFile().Targets[targetID]
+		if !ok {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", targetID))
+		}
+		sdkPath = h.WorkflowRunner.ProjectDir
+		if wfTarget.Output != nil {
+			sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
 		}
 
 		cfg, err := sdkGenConfig.Load(sdkPath)
@@ -296,9 +292,19 @@ func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
 		}
 
-		err = utils.WriteStringToFile(cfg.ConfigPath, reqBody.Target.Config)
+		currentFileContent, err := os.ReadFile(cfg.ConfigPath)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
+		}
+
+		err = utils.WriteStringToFile(cfg.ConfigPath, input.Config)
 		if err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
+		}
+
+		if _, err := sdkGenConfig.Load(sdkPath); err != nil {
+			err = utils.WriteStringToFile(cfg.ConfigPath, string(currentFileContent))
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("invalid config file changes rolling back: %w", err))
 		}
 	}
 

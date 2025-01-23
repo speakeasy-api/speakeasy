@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 2cd5357c863293b0679c94d3163eb830
+  docChecksum: bc61a40181edeadc90fdb62a9760551c
   docVersion: 1.0.0
-  speakeasyVersion: 1.470.1
+  speakeasyVersion: 1.472.1
   generationVersion: 2.493.34
-  releaseVersion: 0.8.5
-  configChecksum: eb6b3661fafa45fa14bf3bd0613cda26
+  releaseVersion: 0.8.6
+  configChecksum: 7d8c20893338b34a3aacd2538062ddf7
 features:
   go:
     additionalDependencies: 0.1.0
@@ -45,6 +45,7 @@ generatedFiles:
   - /models/components/suggestresponse.go
   - /models/components/target.go
   - /models/components/targetrunsummary.go
+  - /models/components/targetspecificinputs.go
   - /models/components/workflow.go
   - /models/operations/checkhealth.go
   - /models/operations/exit.go
@@ -72,6 +73,7 @@ generatedFiles:
   - docs/models/components/suggestresponse.md
   - docs/models/components/target.md
   - docs/models/components/targetrunsummary.md
+  - docs/models/components/targetspecificinputs.md
   - docs/models/components/workflow.md
   - docs/models/operations/checkhealthresponse.md
   - docs/models/operations/exitresponse.md
@@ -84,7 +86,6 @@ generatedFiles:
   - docs/models/operations/runresponse.md
   - docs/models/operations/runresponsebody.md
   - docs/models/operations/suggestmethodnamesresponse.md
-  - docs/models/operations/target.md
   - docs/sdks/health/README.md
   - docs/sdks/run/README.md
   - docs/sdks/sdk/README.md
