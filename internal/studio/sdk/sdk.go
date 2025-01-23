@@ -167,9 +167,9 @@ func New(opts ...SDKOption) *SDK {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.8.6",
-			GenVersion:        "2.493.34",
-			UserAgent:         "speakeasy-sdk/go 0.8.6 2.493.34 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			SDKVersion:        "0.8.7",
+			GenVersion:        "2.495.0",
+			UserAgent:         "speakeasy-sdk/go 0.8.7 2.495.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
