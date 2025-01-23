@@ -106,6 +106,7 @@ func main() {
 ### [SDK](docs/sdks/sdk/README.md)
 
 * [GenerateOverlay](docs/sdks/sdk/README.md#generateoverlay) - Generate an overlay from two yaml files
+* [Exit](docs/sdks/sdk/README.md#exit) - Exit
 
 ### [Suggest](docs/sdks/suggest/README.md)
 

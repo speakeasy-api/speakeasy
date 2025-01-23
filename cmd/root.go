@@ -130,7 +130,7 @@ func setupRootCmd(version, artifactArch string) {
 		cmd.SetContext(ctx)
 
 		if !slices.Contains([]string{"update", "language-server"}, cmd.Name()) {
-			checkForUpdate(ctx, version, artifactArch)
+			checkForUpdate(ctx, version, artifactArch, cmd)
 		}
 
 		return setLogLevel(cmd)
@@ -143,13 +143,18 @@ func GetRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func checkForUpdate(ctx context.Context, currentVersion, artifactArch string) {
+func checkForUpdate(ctx context.Context, currentVersion, artifactArch string, cmd *cobra.Command) {
 	// Don't display if piping to a file for example
 	if !utils.IsInteractive() {
 		return
 	}
 
 	if env.IsLocalDev() {
+		return
+	}
+
+	// When using the --pinned flag, don't display update notifications
+	if flag := cmd.Flag("pinned"); flag != nil && flag.Value.String() == "true" {
 		return
 	}
 
