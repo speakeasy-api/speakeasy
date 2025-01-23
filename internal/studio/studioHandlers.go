@@ -123,14 +123,9 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return ctx.Err()
 	}
 
-	err := h.updateSource(r)
+	err := h.updateSourceAndTarget(r)
 	if err != nil {
 		return fmt.Errorf("error updating source: %w", err)
-	}
-
-	err = h.updateTarget(r)
-	if err != nil {
-		return fmt.Errorf("error updating config: %w", err)
 	}
 
 	cloned, err := h.WorkflowRunner.Clone(
@@ -221,13 +216,19 @@ func (h *StudioHandlers) root(ctx context.Context, w http.ResponseWriter, r *htt
 	return nil
 }
 
-func (h *StudioHandlers) updateSource(r *http.Request) error {
+func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 	var err error
+
+	type target struct {
+		ID     string `json:"id"`
+		Config string `json:"config"`
+	}
 
 	// Destructure the request body which is a json object with a single key "overlay" which is a string
 	var reqBody struct {
-		Overlay string `json:"overlay"`
-		Input   string `json:"input"`
+		Overlay string  `json:"overlay"`
+		Input   string  `json:"input"`
+		Target  *target `json:"target"`
 	}
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
@@ -274,47 +275,28 @@ func (h *StudioHandlers) updateSource(r *http.Request) error {
 		}
 	}
 
-	return nil
-}
-
-func (h *StudioHandlers) updateTarget(r *http.Request) error {
-	var err error
-
-	type target struct {
-		ID     string `json:"id"`
-		Config string `json:"config"`
-	}
-
-	var reqBody struct {
-		Target *target `json:"target"`
-	}
-
-	err = json.NewDecoder(r.Body).Decode(&reqBody)
-	if err != nil {
-		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))
-	}
-
 	if reqBody.Target != nil {
-		configPath := ""
+		sdkPath := ""
 		for name, wfTarget := range h.WorkflowRunner.GetWorkflowFile().Targets {
 			if name == reqBody.Target.ID {
-				configPath = h.WorkflowRunner.ProjectDir
+				sdkPath = h.WorkflowRunner.ProjectDir
 				if wfTarget.Output != nil {
-					configPath = filepath.Join(configPath, *wfTarget.Output)
+					sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
 				}
 				break
 			}
 		}
 
-		if configPath == "" {
+		if sdkPath == "" {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", reqBody.Target.ID))
 		}
 
-		if _, err := sdkGenConfig.Load(configPath); err != nil {
-			return errors.ErrBadRequest.Wrap(fmt.Errorf("cannot find config file: %w", err))
+		cfg, err := sdkGenConfig.Load(sdkPath)
+		if err != nil {
+			return errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
 		}
 
-		err = utils.WriteStringToFile(configPath, reqBody.Target.Config)
+		err = utils.WriteStringToFile(cfg.ConfigPath, reqBody.Target.Config)
 		if err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
 		}

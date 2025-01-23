@@ -45,9 +45,6 @@ paths:
             schema:
               type: object
               properties:
-                target_id:
-                  type: string
-                  description: The target ID to run
                 overlay:
                   type: string
                   description: The studio modifications overlay contents - this should be an overlay YAML document
