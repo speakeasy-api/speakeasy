@@ -225,7 +225,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.11.1 // indirect
-	github.com/speakeasy-api/jsonpath v0.5.0 // indirect
+	github.com/speakeasy-api/jsonpath v0.5.2 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect

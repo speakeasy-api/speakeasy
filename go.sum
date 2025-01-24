@@ -573,6 +573,10 @@ github.com/speakeasy-api/huh v1.1.2 h1:5unC7BZBwq35D45ZUMnNPdiK4c+yFsGFQcnsfNHZ+
 github.com/speakeasy-api/huh v1.1.2/go.mod h1:iBavR3Ieq/4upEcdq+VXQyeShcoC9cOhsQbhc/cMuLU=
 github.com/speakeasy-api/jsonpath v0.5.0 h1:hc6XlmFROc2a14XyQAZmSUQO+cuShq9TyevPEElINII=
 github.com/speakeasy-api/jsonpath v0.5.0/go.mod h1:ymb2iSkyOycmzKwbEAYPJV/yi2rSmvBCLZJcyD+VVWw=
+github.com/speakeasy-api/jsonpath v0.5.1 h1:4OYrvHkuvibEcNKHlOykEldDS0u1xsZVRK822VhbQss=
+github.com/speakeasy-api/jsonpath v0.5.1/go.mod h1:ymb2iSkyOycmzKwbEAYPJV/yi2rSmvBCLZJcyD+VVWw=
+github.com/speakeasy-api/jsonpath v0.5.2 h1:6cn/KuJCOwN5tz6xPNW64/4lyWeYnpa71FoXELOiaR0=
+github.com/speakeasy-api/jsonpath v0.5.2/go.mod h1:ymb2iSkyOycmzKwbEAYPJV/yi2rSmvBCLZJcyD+VVWw=
 github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939 h1:LGtzWUvGEZyMSZW34RHqE85HBsGRYgYP7L7Hh+4FSP4=
 github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939/go.mod h1:9ap4lXBHgxGyFwxtOfa+B1C3IQ0rvnqteqjJvJ11oiQ=
 github.com/speakeasy-api/openapi v0.1.6 h1:bpBiJ9P4hSVv2Vddk+ny6zeytPsDq0ttxl6DLAwC0zo=
