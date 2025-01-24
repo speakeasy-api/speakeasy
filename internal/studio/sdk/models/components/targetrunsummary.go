@@ -8,7 +8,7 @@ type TargetRunSummary struct {
 	// Contents of the gen.yaml file for this target
 	GenYaml string `json:"gen_yaml"`
 	// The path to the gen.yaml file for this target
-	GenYamlPath string `json:"gen_yaml_path"`
+	GenYamlPath *string `json:"gen_yaml_path,omitempty"`
 	// Output directory for this target
 	OutputDirectory string `json:"output_directory"`
 	// Language for this target
@@ -33,9 +33,9 @@ func (o *TargetRunSummary) GetGenYaml() string {
 	return o.GenYaml
 }
 
-func (o *TargetRunSummary) GetGenYamlPath() string {
+func (o *TargetRunSummary) GetGenYamlPath() *string {
 	if o == nil {
-		return ""
+		return nil
 	}
 	return o.GenYamlPath
 }
