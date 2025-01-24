@@ -5,10 +5,25 @@ info:
   summary: "Test Summary"
   description: "Some test description.\nAbout our test document."
 paths:
-  "/anything/selectGlobalServer":
-    x-my-ignore: {"servers": [{"url": "http://localhost:35123", "description": "The default server."}]}
+  "/anything/ignored":
+    x-my-ignore: true
     get:
-      operationId: "selectGlobalServer"
+      operationId: "iAmIgnored"
+      responses:
+        "200":
+          description: "OK"
+          headers:
+            "X-Optional-Header":
+              schema:
+                type: "string"
+        "404":
+          description: "Not found"
+          content:
+            "application/json":
+              schema: {"$ref": "./components.yaml#/components/schemas/Products"}
+  "/anything/not-ignored":
+    get:
+      operationId: "iAmSelected"
       responses:
         "200":
           description: "OK"
