@@ -35,7 +35,7 @@ actions:
     update:
       - name: Testing
         description: just a description
-  - target: $.paths["/anything/selectGlobalServer"]["x-my-ignore"]
+  - target: $.paths["/anything/selectGlobalServer"].x-my-ignore
     update:
       servers:
         - url: http://localhost:35123
