@@ -7,37 +7,17 @@
     "description": "Some test description.\nAbout our test document."
   },
   "paths": {
-    "/anything/ignored": {
-      "x-my-ignore": true,
-      "get": {
-        "operationId": "iAmIgnored",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "headers": {
-              "X-Optional-Header": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./components.yaml#/components/schemas/Products"
-                }
-              }
-            }
+    "/anything/selectGlobalServer": {
+      "x-my-ignore": {
+        "servers": [
+          {
+            "url": "http://localhost:35123",
+            "description": "The default server."
           }
-        }
-      }
-    },
-    "/anything/not-ignored": {
+        ]
+      },
       "get": {
-        "operationId": "iAmSelected",
+        "operationId": "selectGlobalServer",
         "responses": {
           "200": {
             "description": "OK",

@@ -11,8 +11,9 @@ import (
 
 const (
 	schemaFile               = "testdata/base.yaml"
-	schemaJSON               = "testdata/base.json"
-	overlayFile              = "testdata/overlay.yaml"
+	schemaJSON    = "testdata/base.json"
+	overlayFileV1 = "testdata/overlay.yaml"
+	overlayFileV2 = "testdata/overlay-v2.yaml"
 	overlayStrictFailure     = "testdata/strict-failure.yaml"
 	expectedFile             = "testdata/expected.yaml"
 	expectedFileJSON         = "testdata/expected.json"
@@ -20,19 +21,35 @@ const (
 )
 
 func TestApply_inYAML_outYAML(t *testing.T) {
-	test(t, schemaFile, expectedFile, true)
+	test(t, schemaFile, overlayFileV1, expectedFile, true)
 }
 
 func TestApply_inJSON_outJSON(t *testing.T) {
-	test(t, schemaJSON, expectedFileJSON, false)
+	test(t, schemaJSON, overlayFileV1, expectedFileJSON, false)
 }
 
 func TestApply_inYAML_outJSON(t *testing.T) {
-	test(t, schemaFile, expectedFileJSON, false)
+	test(t, schemaFile, overlayFileV1, expectedFileJSON, false)
 }
 
 func TestApply_inJSON_outYAML(t *testing.T) {
-	test(t, schemaJSON, expectedFileYAMLFromJSON, true)
+	test(t, schemaJSON, overlayFileV1, expectedFileYAMLFromJSON, true)
+}
+
+func TestApply_inYAML_outYAML_v2(t *testing.T) {
+	test(t, schemaFile, overlayFileV2, expectedFile, true)
+}
+
+func TestApply_inJSON_outJSON_v2(t *testing.T) {
+	test(t, schemaJSON, overlayFileV2, expectedFileJSON, false)
+}
+
+func TestApply_inYAML_outJSON_v2(t *testing.T) {
+	test(t, schemaFile, overlayFileV2, expectedFileJSON, false)
+}
+
+func TestApply_inJSON_outYAML_v2(t *testing.T) {
+	test(t, schemaJSON, overlayFileV2, expectedFileYAMLFromJSON, true)
 }
 
 func TestApply_StrictFailure(t *testing.T) {
@@ -42,7 +59,7 @@ func TestApply_StrictFailure(t *testing.T) {
 	assert.Errorf(t, err, "unknown-element")
 }
 
-func test(t *testing.T, schemaFile string, expectedFile string, yamlOut bool) {
+func test(t *testing.T, schemaFile string, overlayFile string, expectedFile string, yamlOut bool) {
 	ext := "json"
 	if yamlOut {
 		ext = "yaml"
