@@ -3,7 +3,7 @@ info:
   title: Overlay
   version: 0.0.0
 actions:
-  - target: $.paths.*.*[?(!@.servers)]
+  - target: $.paths[?!@["x-my-ignore"]].*
     update:
       servers:
         - url: http://localhost:35123
