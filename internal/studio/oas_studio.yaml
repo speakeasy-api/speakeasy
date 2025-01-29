@@ -198,7 +198,6 @@ components:
         - sourceID
         - readme
         - gen_yaml
-        - gen_yaml_path
         - output_directory
         - language
     TargetSpecificInputs:

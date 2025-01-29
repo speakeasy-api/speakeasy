@@ -463,7 +463,7 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 			SourceID:        h.SourceID,
 			Readme:          readMeContents,
 			GenYaml:         genYamlContents,
-			GenYamlPath:     absGenYamlPath,
+			GenYamlPath:     &absGenYamlPath,
 			Language:        targetConfig.Target,
 			OutputDirectory: outputDirectory,
 		}
