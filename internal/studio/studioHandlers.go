@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
@@ -26,12 +27,18 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 )
+
+type reRunOptions struct {
+	skipProgress bool
+	skipCompile  bool
+}
 
 type StudioHandlers struct {
 	WorkflowRunner run.Workflow
@@ -45,6 +52,8 @@ type StudioHandlers struct {
 	mutexCondition  *sync.Cond
 	running         bool
 	healthCheckSeen bool
+
+	reRunOptions reRunOptions
 }
 
 func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*StudioHandlers, error) {
@@ -136,12 +145,14 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		run.WithSkipGenerateLintReport(),
 		run.WithSkipSnapshot(true),
 		run.WithSkipChangeReport(true),
+		run.WithShouldCompile(!h.reRunOptions.skipCompile),
 	)
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
 	h.WorkflowRunner = *cloned
 
+	// RunSource updates
 	h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult, step string) {
 		if sourceResult.Source == h.SourceID {
 			sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, h.OverlayPath)
@@ -174,6 +185,18 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	defer func() {
 		h.WorkflowRunner.OnSourceResult = func(*run.SourceResult, string) {}
 	}()
+
+	if !h.reRunOptions.skipProgress {
+		h.enableGenerationProgress()
+		defer h.disableGenerationProgress()
+
+		// v QYNN TEST v
+		go func() {
+			time.Sleep(3 * time.Second)
+			h.cancel(ctx, w, r)
+		}()
+		// ^ QYNN TEST ^
+	}
 
 	err = h.WorkflowRunner.RunWithVisualization(h.Ctx)
 	if err != nil {
@@ -400,6 +423,15 @@ func (h *StudioHandlers) exit(ctx context.Context, w http.ResponseWriter, r *htt
 	if err != nil {
 		return fmt.Errorf("error shutting down server: %w", err)
 	}
+	return nil
+}
+
+func (h *StudioHandlers) cancel(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	if !h.isGenerationCancellable() {
+		return errors.ErrBadRequest.Wrap(fmt.Errorf("Generation is not cancellable."))
+	}
+
+	h.cancelGeneration()
 	return nil
 }
 
@@ -721,4 +753,76 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 	}
 
 	return asString, nil
+}
+
+// ---------------------------------
+// Progress updates
+// ---------------------------------
+
+func (h *StudioHandlers) enableGenerationProgress() {
+
+	// v QYNN TEST v
+	h.WorkflowRunner.Debug = true
+	// ^ QYNN TEST ^
+
+	onProgressUpdate := func(progressUpdate sdkgen.ProgressUpdate) {
+		if h.WorkflowRunner.Debug {
+			h.logGenerationProgress(progressUpdate)
+		}
+
+		// v QYNN TEST v
+		time.Sleep(1 * time.Second)
+		// ^ QYNN TEST ^
+	}
+
+	generationProgress := sdkgen.GenerationProgress{
+		OnProgressUpdate: onProgressUpdate,
+		SkipDiffs:        false,
+		SkipSteps:        false,
+	}
+	h.WorkflowRunner.GenerationProgress = &generationProgress
+}
+
+func (h *StudioHandlers) logGenerationProgress(progressUpdate sdkgen.ProgressUpdate) {
+	logChan := h.WorkflowRunner.GenerationProgress.LogListener
+	if logChan == nil {
+		return
+	}
+
+	var msg string
+	switch {
+	case progressUpdate.File != nil:
+		diffLength := 0
+		if progressUpdate.File.Diffs != nil {
+			diffLength = len(*progressUpdate.File.Diffs)
+		}
+		msg = fmt.Sprintf(
+			"[%s] %s (%v)",
+			progressUpdate.File.Status,
+			progressUpdate.File.Path,
+			diffLength,
+		)
+
+	case progressUpdate.Readme != nil:
+		msg = fmt.Sprintf(
+			"[README] (%v bytes)",
+			len(progressUpdate.Readme.Content.Bytes()),
+		)
+	case progressUpdate.Step != nil:
+		msg = fmt.Sprintf("[%s] %s", progressUpdate.Step.ID, progressUpdate.Step.Message)
+	}
+
+	logChan <- log.Msg{Type: "studio", Msg: fmt.Sprintf("──DEBUG %s", msg)}
+}
+
+func (h *StudioHandlers) disableGenerationProgress() {
+	h.WorkflowRunner.GenerationProgress = nil
+}
+
+func (h *StudioHandlers) isGenerationCancellable() bool {
+	return h.WorkflowRunner.GenerationProgress != nil && h.WorkflowRunner.GenerationProgress.CancelGeneration != nil
+}
+
+func (h *StudioHandlers) cancelGeneration() {
+	h.WorkflowRunner.GenerationProgress.CancelGeneration()
 }

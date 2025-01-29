@@ -8,6 +8,8 @@ replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
 
+replace github.com/speakeasy-api/openapi-generation/v2 v2.503.2 => /home/qynn/SpeakEasy/openapi-generation
+
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.20.0

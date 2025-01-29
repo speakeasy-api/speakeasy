@@ -60,6 +60,9 @@ type Workflow struct {
 	Duration        time.Duration
 	criticalWarns   []string
 	Error           error
+
+	// Studio
+	GenerationProgress *sdkgen.GenerationProgress
 }
 
 type Opt func(w *Workflow)
@@ -88,21 +91,22 @@ func NewWorkflow(
 
 	// Default values
 	w := &Workflow{
-		workflowName:     "Workflow",
-		RepoSubDirs:      make(map[string]string),
-		InstallationURLs: make(map[string]string),
-		SDKOverviewURLs:  make(map[string]string),
-		Debug:            false,
-		ShouldCompile:    true,
-		workflow:         *wf,
-		ProjectDir:       projectDir,
-		ForceGeneration:  false,
-		SourceResults:    make(map[string]*SourceResult),
-		TargetResults:    make(map[string]*TargetResult),
-		OnSourceResult:   func(*SourceResult, string) {},
-		computedChanges:  make(map[string]bool),
-		lockfile:         lockfile,
-		lockfileOld:      lockfileOld,
+		workflowName:       "Workflow",
+		RepoSubDirs:        make(map[string]string),
+		InstallationURLs:   make(map[string]string),
+		SDKOverviewURLs:    make(map[string]string),
+		Debug:              false,
+		ShouldCompile:      true,
+		workflow:           *wf,
+		ProjectDir:         projectDir,
+		ForceGeneration:    false,
+		SourceResults:      make(map[string]*SourceResult),
+		TargetResults:      make(map[string]*TargetResult),
+		OnSourceResult:     func(*SourceResult, string) {},
+		computedChanges:    make(map[string]bool),
+		lockfile:           lockfile,
+		lockfileOld:        lockfileOld,
+		GenerationProgress: nil,
 	}
 
 	for _, opt := range opts {
@@ -249,6 +253,16 @@ func WithInstallationURLs(installationURLs map[string]string) Opt {
 func WithRegistryTags(registryTags []string) Opt {
 	return func(w *Workflow) {
 		w.RegistryTags = registryTags
+	}
+}
+
+// func WithGenerationProgress(onProgressUpdate func(sdkgen.ProgressUpdate), cancelGeneration context.CancelFunc) Opt {
+func WithGenerationProgress(onProgressUpdate func(sdkgen.ProgressUpdate)) Opt {
+	return func(w *Workflow) {
+		generationProgress := sdkgen.GenerationProgress{
+			OnProgressUpdate: onProgressUpdate,
+		}
+		w.GenerationProgress = &generationProgress
 	}
 }
 

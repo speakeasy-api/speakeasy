@@ -33,6 +33,18 @@ type GenerationAccess struct {
 	Level         *shared.Level
 }
 
+type ProgressUpdate = generate.ProgressUpdate
+type ProgressStep = generate.ProgressStep
+
+type GenerationProgress struct {
+	OnProgressUpdate   func(ProgressUpdate)
+	CancellableContext context.Context
+	CancelGeneration   context.CancelFunc
+	LogListener        chan log.Msg
+	SkipDiffs          bool
+	SkipSteps          bool
+}
+
 type GenerateOptions struct {
 	CustomerID      string
 	WorkspaceID     string
@@ -53,6 +65,10 @@ type GenerateOptions struct {
 	Compile         bool
 	TargetName      string
 	SkipVersioning  bool
+
+	// if GenerationProgress is not nil, the generation will be cancellable
+	// and progress updates may be sent to the OnProgressUpdate callback
+	GenerationProgress *GenerationProgress
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
@@ -146,6 +162,19 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generatorOpts = append(generatorOpts, generate.WithSkipVersioning(opts.SkipVersioning))
 	}
 
+	var progressChan chan generate.ProgressUpdate
+	if opts.GenerationProgress != nil {
+		progressChan = make(chan generate.ProgressUpdate)
+		generatorOpts = append(
+			generatorOpts,
+			generate.WithProgressUpdates(
+				progressChan,
+				opts.GenerationProgress.SkipDiffs,
+				opts.GenerationProgress.SkipSteps,
+			),
+		)
+	}
+
 	g, err := generate.New(generatorOpts...)
 	if err != nil {
 		return &GenerationAccess{
@@ -157,15 +186,68 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
-		if errs := g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile); len(errs) > 0 {
-			for _, err := range errs {
+
+		var genErrs []error
+		genAborted := false
+
+		if opts.GenerationProgress != nil && opts.GenerationProgress.CancellableContext != nil {
+			genErrsChan := make(chan []error)
+			go func(cancellableContext context.Context) {
+				defer close(progressChan)
+				errs := g.Generate(cancellableContext, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+				var nonHaltErrs []error
+				for _, err := range errs {
+					if haltErr, ok := generate.IsRunScriptHaltError(err); ok {
+						progressChan <- ProgressUpdate{
+							ID: "",
+							Step: &ProgressStep{
+								ID:      "cancel",
+								Message: fmt.Sprintf("Generation halted at %s", haltErr.Location),
+							},
+						}
+					} else {
+						nonHaltErrs = append(nonHaltErrs, err)
+					}
+				}
+
+				genErrsChan <- nonHaltErrs
+			}(opts.GenerationProgress.CancellableContext)
+
+		receiveProgressUpdates:
+			for {
+				select {
+				case <-opts.GenerationProgress.CancellableContext.Done():
+					genAborted = true
+					// waiting for the generator to exit
+				case progressUpdate := <-progressChan:
+					if opts.GenerationProgress.OnProgressUpdate != nil {
+						opts.GenerationProgress.OnProgressUpdate(progressUpdate)
+					}
+
+				case genErrs = <-genErrsChan:
+					close(genErrsChan)
+					break receiveProgressUpdates
+				}
+			}
+		} else {
+			genErrs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+		}
+
+		if len(genErrs) > 0 {
+			for _, err := range genErrs {
 				logger.Error("", zap.Error(err))
 			}
 
 			return fmt.Errorf("failed to generate SDKs for %s ✖", opts.Language)
 		}
+
+		if genAborted {
+			logger.Warn("Generation was aborted!")
+		}
+
 		return nil
 	})
+
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,

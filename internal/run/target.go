@@ -153,28 +153,36 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	ctx = log.With(ctx, logger)
 	go genStep.ListenForSubsteps(logListener)
 
+	if w.GenerationProgress != nil {
+		cancelCtx, cancelFunc := context.WithCancel(ctx)
+		w.GenerationProgress.CancellableContext = cancelCtx
+		w.GenerationProgress.CancelGeneration = cancelFunc
+		w.GenerationProgress.LogListener = logListener
+	}
+
 	generationAccess, err := sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{
-			CustomerID:      config.GetCustomerID(),
-			WorkspaceID:     config.GetWorkspaceID(),
-			Language:        t.Target,
-			SchemaPath:      sourcePath,
-			Header:          "",
-			Token:           "",
-			OutDir:          outDir,
-			CLIVersion:      events.GetSpeakeasyVersionFromContext(ctx),
-			InstallationURL: w.InstallationURLs[target],
-			Debug:           w.Debug,
-			AutoYes:         true,
-			Published:       published,
-			OutputTests:     false,
-			Repo:            w.Repo,
-			RepoSubDir:      w.RepoSubDirs[target],
-			Verbose:         w.Verbose,
-			Compile:         w.ShouldCompile,
-			TargetName:      target,
-			SkipVersioning:  w.SkipVersioning,
+			CustomerID:         config.GetCustomerID(),
+			WorkspaceID:        config.GetWorkspaceID(),
+			Language:           t.Target,
+			SchemaPath:         sourcePath,
+			Header:             "",
+			Token:              "",
+			OutDir:             outDir,
+			CLIVersion:         events.GetSpeakeasyVersionFromContext(ctx),
+			InstallationURL:    w.InstallationURLs[target],
+			Debug:              w.Debug,
+			AutoYes:            true,
+			Published:          published,
+			OutputTests:        false,
+			Repo:               w.Repo,
+			RepoSubDir:         w.RepoSubDirs[target],
+			Verbose:            w.Verbose,
+			Compile:            w.ShouldCompile,
+			TargetName:         target,
+			SkipVersioning:     w.SkipVersioning,
+			GenerationProgress: w.GenerationProgress,
 		},
 	)
 

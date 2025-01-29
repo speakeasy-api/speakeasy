@@ -147,6 +147,8 @@ func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
 		stepName := strings.TrimPrefix(msg.Msg, "::group::")
 		stepName = strings.TrimSpace(stepName)
 		w.NewSubstep(stepName)
+	} else if msg.Type == log.MsgStudio {
+		w.NewSubstep(msg.Msg)
 	}
 	w.ListenForSubsteps(c)
 }
