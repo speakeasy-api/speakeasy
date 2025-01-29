@@ -14,6 +14,7 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/schemas"
 
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 
@@ -566,9 +567,28 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 		finalOverlayPath, _ = filepath.Abs(overlayPath)
 	}
 
+	inputSpec := sourceResult.InputSpec
+
+	isJSON := json.Valid([]byte(inputSpec))
+	inputPath := "openapi.yaml"
+	if isJSON {
+		inputPath = "openapi.json"
+	}
+
+	inputNode := &yaml.Node{}
+	err = yaml.Unmarshal([]byte(inputSpec), inputNode)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling input spec: %w", err)
+	}
+
+	formattedInputSpec, err := schemas.RenderDocument(inputNode, inputPath, !isJSON, !isJSON)
+	if err != nil {
+		return nil, fmt.Errorf("error formatting input spec: %w", err)
+	}
+
 	return &components.SourceResponse{
 		SourceID:    sourceID,
-		Input:       sourceResult.InputSpec,
+		Input:       string(formattedInputSpec),
 		Overlay:     overlayContents,
 		OverlayPath: finalOverlayPath,
 		Output:      outputDocumentString,
