@@ -567,20 +567,18 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 		finalOverlayPath, _ = filepath.Abs(overlayPath)
 	}
 
-	inputSpec := sourceResult.InputSpec
-
-	isJSON := json.Valid([]byte(inputSpec))
+	// Reformat the input spec - this is so there are minimal diffs after overlay
+	inputSpecBytes := []byte(sourceResult.InputSpec)
+	isJSON := json.Valid(inputSpecBytes)
 	inputPath := "openapi.yaml"
 	if isJSON {
 		inputPath = "openapi.json"
 	}
-
 	inputNode := &yaml.Node{}
-	err = yaml.Unmarshal([]byte(inputSpec), inputNode)
+	err = yaml.Unmarshal(inputSpecBytes, inputNode)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling input spec: %w", err)
 	}
-
 	formattedInputSpec, err := schemas.RenderDocument(inputNode, inputPath, !isJSON, !isJSON)
 	if err != nil {
 		return nil, fmt.Errorf("error formatting input spec: %w", err)
