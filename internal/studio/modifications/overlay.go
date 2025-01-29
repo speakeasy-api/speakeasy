@@ -9,7 +9,6 @@ import (
 
 	lo "github.com/samber/lo"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"gopkg.in/yaml.v3"
 
 	"github.com/hashicorp/go-version"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
@@ -18,8 +17,9 @@ import (
 )
 
 const (
-	overlayTitle = "Speakeasy Modifications"
-	OverlayPath  = ".speakeasy/speakeasy-modifications-overlay.yaml"
+	overlayTitle       = "Speakeasy Modifications"
+	overlayDescription = "Modifications made by the Speakeasy Studio or CLI"
+	OverlayPath        = ".speakeasy/speakeasy-modifications-overlay.yaml"
 )
 
 func GetOverlayPath(dir string) (string, error) {
@@ -56,7 +56,8 @@ func UpsertOverlay(overlayPath string, source *workflow.Source, o overlay.Overla
 		}
 	} else if os.IsNotExist(err) {
 		baseOverlay = &overlay.Overlay{
-			Version: "1.0.0",
+			Version:         "1.0.0",
+			JSONPathVersion: "rfc9535",
 			Info: overlay.Info{
 				Title:   overlayTitle,
 				Version: "0.0.0", // bumped later
@@ -71,8 +72,7 @@ func UpsertOverlay(overlayPath string, source *workflow.Source, o overlay.Overla
 		return overlayPath, err
 	}
 
-	allActions := append(baseOverlay.Actions, o.Actions...)
-	baseOverlay.Actions = MergeActions(allActions)
+	baseOverlay.Actions = o.Actions
 	baseOverlay.Info.Version = bumpVersion(baseOverlay.Info.Version, o.Info.Version)
 
 	// Now open it and truncate the existing contents
@@ -103,50 +103,6 @@ func UpsertOverlayIntoSource(source *workflow.Source, overlayPath string) {
 type actionAndModification struct {
 	action overlay.Action
 	m      suggestions.ModificationExtension
-}
-
-// Keep the first action for each target and modification type
-func MergeActions(actions []overlay.Action) []overlay.Action {
-	seen := map[string][]*actionAndModification{}
-	var deduped []overlay.Action
-
-	for _, action := range actions {
-		newModification := suggestions.GetModificationExtension(action)
-		if newModification == nil {
-			deduped = append(deduped, action)
-			continue
-		}
-
-		// If we've already seen a modification of this type, merge the reviewedAt and disabled fields
-		if i := slices.IndexFunc(seen[action.Target], func(a *actionAndModification) bool {
-			return a.m.Type == newModification.Type
-		}); i != -1 {
-			existingAction := seen[action.Target][i]
-
-			// We get here when changes have been made in the UI, such as reviewing or disabling a suggestion
-			if newModification.ReviewedAt != 0 {
-				existingAction.m.ReviewedAt = newModification.ReviewedAt
-			}
-			if newModification.Disabled {
-				existingAction.m.Disabled = newModification.Disabled
-				existingAction.action.Update = yaml.Node{} // This makes the action a no-op, disabling it without removing it
-			}
-		} else {
-			// Otherwise, add the modification
-			seen[action.Target] = append(seen[action.Target], &actionAndModification{action, *newModification})
-			// Don't add it to the deduped list until we're done editing it
-		}
-	}
-
-	for _, actions := range seen {
-		for _, action := range actions {
-			// Update with the merged modification extension
-			action.action.Extensions["x-speakeasy-metadata"] = action.m
-			deduped = append(deduped, action.action)
-		}
-	}
-
-	return deduped
 }
 
 func GetModifiedTargets(dir, modificationType string) ([]string, error) {
