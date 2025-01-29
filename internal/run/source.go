@@ -66,7 +66,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		w.SourceResults[sourceID] = sourceRes
 		w.OnSourceResult(sourceRes, "")
 	}()
-	w.OnSourceResult(sourceRes, "Overlaying")
+	w.OnSourceResult(sourceRes, "Fetching spec")
 
 	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
@@ -122,6 +122,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
+		w.OnSourceResult(sourceRes, "Overlaying")
 		currentDocument, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -129,6 +130,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
+		w.OnSourceResult(sourceRes, "Transforming")
 		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
