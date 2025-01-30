@@ -129,6 +129,42 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	return overlayString, nil
 }
 
+func GenerateUsageSnippets(ctx context.Context, schema, header, token, configPath, lang string, isSilent bool, operationID string) ([]usagegen.UsageSnippet, error) {
+	if isSilent {
+		logger := log.From(ctx)
+		var logs bytes.Buffer
+		logCapture := logger.WithWriter(&logs)
+		ctx = log.With(ctx, logCapture)
+	}
+
+	usageOutput := &bytes.Buffer{}
+
+	if err := usagegen.Generate(
+		ctx,
+		config.GetCustomerID(),
+		lang,
+		schema,
+		header,
+		token,
+		"",
+		operationID,
+		"",
+		filepath.Join(configPath, "speakeasyusagegen"),
+		true,
+		usageOutput,
+	); err != nil {
+		return nil, err
+	}
+
+	log.From(ctx).Infof("\nGenerated usage snippets for %s\n\n", lang)
+
+	snippets, err := usagegen.ParseUsageOutput(lang, usageOutput.String())
+	if err != nil {
+		return nil, err
+	}
+	return snippets, nil
+}
+
 func getStyle(opts workflow.CodeSamples) CodeSamplesStyle {
 	if opts.Style != nil {
 		switch *opts.Style {
