@@ -129,7 +129,7 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	return overlayString, nil
 }
 
-func GenerateUsageSnippets(ctx context.Context, schema, header, token, configPath, lang string, isSilent bool, operationID string) ([]usagegen.UsageSnippet, error) {
+func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath, lang string, isSilent bool, operationID *string) ([]usagegen.UsageSnippet, error) {
 	if isSilent {
 		logger := log.From(ctx)
 		var logs bytes.Buffer
@@ -137,8 +137,12 @@ func GenerateUsageSnippets(ctx context.Context, schema, header, token, configPat
 		ctx = log.With(ctx, logCapture)
 	}
 
-	usageOutput := &bytes.Buffer{}
+	specifiedOperation := ""
+	if operationID != nil {
+		specifiedOperation = *operationID
+	}
 
+	usageOutput := &bytes.Buffer{}
 	if err := usagegen.Generate(
 		ctx,
 		config.GetCustomerID(),
@@ -147,7 +151,7 @@ func GenerateUsageSnippets(ctx context.Context, schema, header, token, configPat
 		header,
 		token,
 		"",
-		operationID,
+		specifiedOperation,
 		"",
 		filepath.Join(configPath, "speakeasyusagegen"),
 		true,
