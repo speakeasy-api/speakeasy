@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/testcmd"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
 // testCmd is the command for running target tests.
@@ -48,7 +51,10 @@ type testCmdFlags struct {
 
 // Non-interactive command logic for testCmd.
 func testCmdRun(ctx context.Context, flags testCmdFlags) error {
-	runnerOpts := testCmdRunnerOpts(flags)
+	runnerOpts, err := testCmdRunnerOpts(flags)
+	if err != nil {
+		return err
+	}
 	runner := testcmd.NewRunner(ctx, runnerOpts...)
 
 	return runner.Run(ctx)
@@ -56,7 +62,10 @@ func testCmdRun(ctx context.Context, flags testCmdFlags) error {
 
 // Interactive command logic for testCmd.
 func testCmdRunInteractive(ctx context.Context, flags testCmdFlags) error {
-	runnerOpts := testCmdRunnerOpts(flags)
+	runnerOpts, err := testCmdRunnerOpts(flags)
+	if err != nil {
+		return err
+	}
 	runner := testcmd.NewRunner(ctx, runnerOpts...)
 
 	if flags.Verbose {
@@ -67,9 +76,40 @@ func testCmdRunInteractive(ctx context.Context, flags testCmdFlags) error {
 }
 
 // Returns the test command runner options based on the flags.
-func testCmdRunnerOpts(flags testCmdFlags) []testcmd.RunnerOpt {
+func testCmdRunnerOpts(flags testCmdFlags) ([]testcmd.RunnerOpt, error) {
+	wf, _, err := utils.GetWorkflowAndDir()
+	if err != nil {
+		return nil, err
+	}
+
+	_, targets, err := run.ParseSourcesAndTargets()
+	if err != nil {
+		return nil, err
+	}
+
+	target := ""
+
+	if flags.Target == "" {
+		if len(wf.Targets) == 1 {
+			target = targets[0]
+		} else if len(wf.Targets) == 0 {
+			return nil, fmt.Errorf("No targets found in workflow configuration.")
+		} else {
+			target, err = askForTarget("What target would you like to test?", "You may choose an individual target or 'all'.", "Let's choose a target to run tests againsts.", targets, true)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		target = flags.Target
+	}
+
+	if target == "all" && len(targets) == 1 {
+		target = targets[0]
+	}
+
 	runnerOpts := []testcmd.RunnerOpt{
-		testcmd.WithWorkflowTarget(flags.Target),
+		testcmd.WithWorkflowTarget(target),
 	}
 
 	if flags.DisableMockserver {
@@ -80,5 +120,5 @@ func testCmdRunnerOpts(flags testCmdFlags) []testcmd.RunnerOpt {
 		runnerOpts = append(runnerOpts, testcmd.WithVerboseOutput())
 	}
 
-	return runnerOpts
+	return runnerOpts, nil
 }
