@@ -236,10 +236,13 @@ func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflow
 	configPath := "."
 	outputPath := codeSamples.Output
 
-	// If an output path is specified, make sure it's relative to the base output path
-	if baseOutputPath != nil && outputPath != "" {
+	if baseOutputPath != nil {
+		// configPath should be relative to the output path for nested SDKs
 		configPath = *baseOutputPath
-		outputPath = filepath.Join(*baseOutputPath, outputPath)
+		// If an output path is specified, make sure it's relative to the base output path
+		if outputPath != "" {
+			outputPath = filepath.Join(*baseOutputPath, outputPath)
+		}
 	}
 
 	overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{target}, true, false, codeSamples)
