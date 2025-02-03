@@ -232,7 +232,7 @@ func (r *Runner) runSingleWorkflowTargetTesting(ctx context.Context, workflowTar
 		return err
 	}
 
-	if err := generator.RunTargetTesting(testingCtx, workflowTarget.Target, outputDir); err != nil {
+	if err := ExecuteTargetTesting(testingCtx, generator, workflowTarget, workflowTargetName, outputDir); err != nil {
 		return fmt.Errorf("error running workflow target %s (%s) testing: %w", workflowTargetName, workflowTarget.Target, err)
 	}
 
