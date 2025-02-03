@@ -7,6 +7,7 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 )
@@ -18,12 +19,24 @@ func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, wo
 			formattedPr := reformatPullRequestURL(prReference)
 			event.GhPullRequest = &formattedPr
 		}
+
 		err := generator.RunTargetTesting(ctx, workflowTarget.Target, outDir)
-		// TODO: Determine whether we will parse the test report here or in the generator
+
+		populateRawTestReport(ctx, outDir, event)
 		return err
 	})
 
 	return err
+}
+
+func populateRawTestReport(ctx context.Context, outDir string, event *shared.CliEvent) {
+	if res, _ := workspace.FindWorkspace(outDir, workspace.FindWorkspaceOptions{
+		FindFile:  "reports/tests.xml",
+		Recursive: true,
+	}); res != nil && len(res.Data) > 0 {
+		testReportContent := string(res.Data)
+		event.TestReportRaw = &testReportContent
+	}
 }
 
 func reformatPullRequestURL(url string) string {
