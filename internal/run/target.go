@@ -232,17 +232,20 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 }
 
 // Returns codeSamples namespace name and digest
-func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflowTracking.WorkflowStep, codeSamples workflow.CodeSamples, target, sourcePath string, baseOutputPath *string) (string, string, error) {
+func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflowTracking.WorkflowStep, codeSamples workflow.CodeSamples, target, sourcePath string, targetOutputPath *string) (string, string, error) {
 	configPath := "."
-	outputPath := codeSamples.Output
+	writeFileLocation := codeSamples.Output
 
-	// If an output path is specified, make sure it's relative to the base output path
-	if baseOutputPath != nil && outputPath != "" {
-		configPath = *baseOutputPath
-		outputPath = filepath.Join(*baseOutputPath, outputPath)
+	if targetOutputPath != nil {
+		// configPath should be relative to the target output path for nested SDKs
+		configPath = *targetOutputPath
+		// If a write file location is specified, make sure it's relative to the target output path
+		if writeFileLocation != "" {
+			writeFileLocation = filepath.Join(*targetOutputPath, writeFileLocation)
+		}
 	}
 
-	overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, outputPath, []string{target}, true, false, codeSamples)
+	overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, writeFileLocation, []string{target}, true, false, codeSamples)
 	if err != nil {
 		return "", "", err
 	}
