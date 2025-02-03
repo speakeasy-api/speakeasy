@@ -8,6 +8,7 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/testcmd"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
 
@@ -59,7 +60,7 @@ func (w Workflow) runTesting(ctx context.Context, workflowTargetName string, tar
 		return err
 	}
 
-	if err := generator.RunTargetTesting(testingCtx, target.Target, outputDir); err != nil {
+	if err := testcmd.ExecuteTargetTesting(testingCtx, generator, target, workflowTargetName, outputDir); err != nil {
 		return fmt.Errorf("error running workflow target %s (%s) testing: %w", workflowTargetName, target.Target, err)
 	}
 
