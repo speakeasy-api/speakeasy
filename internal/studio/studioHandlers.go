@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/samber/lo"
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
@@ -189,13 +188,6 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	if !h.reRunOptions.skipProgress {
 		h.enableGenerationProgress()
 		defer h.disableGenerationProgress()
-
-		// v QYNN TEST v
-		go func() {
-			time.Sleep(3 * time.Second)
-			h.cancel(ctx, w, r)
-		}()
-		// ^ QYNN TEST ^
 	}
 
 	err = h.WorkflowRunner.RunWithVisualization(h.Ctx)
@@ -760,19 +752,10 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 // ---------------------------------
 
 func (h *StudioHandlers) enableGenerationProgress() {
-
-	// v QYNN TEST v
-	h.WorkflowRunner.Debug = true
-	// ^ QYNN TEST ^
-
 	onProgressUpdate := func(progressUpdate sdkgen.ProgressUpdate) {
 		if h.WorkflowRunner.Debug {
 			h.logGenerationProgress(progressUpdate)
 		}
-
-		// v QYNN TEST v
-		time.Sleep(1 * time.Second)
-		// ^ QYNN TEST ^
 	}
 
 	generationProgress := sdkgen.GenerationProgress{
