@@ -201,7 +201,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		targetLock.CodeSamplesRevisionDigest = digest
 	}
 
-	if targetEnablesTesting(t) {
+	if targetEnablesTesting(ctx, t) {
 		testingStep := rootStep.NewSubstep(fmt.Sprintf("Running %s Testing", utils.CapitalizeFirst(t.Target)))
 
 		if w.SkipTesting {
