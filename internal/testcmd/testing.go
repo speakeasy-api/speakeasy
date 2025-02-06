@@ -3,6 +3,7 @@ package testcmd
 import (
 	"context"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -27,6 +28,10 @@ func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, wo
 	})
 
 	return err
+}
+
+func CheckTestingAccountType(accountType shared.AccountType) bool {
+	return slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, accountType)
 }
 
 func populateRawTestReport(ctx context.Context, outDir string, event *shared.CliEvent) {

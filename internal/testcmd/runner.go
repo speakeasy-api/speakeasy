@@ -10,7 +10,6 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -125,7 +124,7 @@ func (r *Runner) checkAccountType(ctx context.Context) error {
 		return fmt.Errorf("Account type not found. Ensure you are logged in via the `speakeasy auth login` command or SPEAKEASY_API_KEY environment variable.")
 	}
 
-	if *accountType != shared.AccountTypeEnterprise {
+	if !CheckTestingAccountType(*accountType) {
 		return fmt.Errorf("Testing is not supported on the %s account tier. Contact %s for more information.", *accountType, styles.RenderSupportEmail())
 	}
 

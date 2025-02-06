@@ -6,6 +6,7 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/testcmd"
@@ -70,11 +71,17 @@ func (w Workflow) runTesting(ctx context.Context, workflowTargetName string, tar
 }
 
 // Returns true if target configuration enables testing.
-func targetEnablesTesting(target workflow.Target) bool {
+func targetEnablesTesting(ctx context.Context, target workflow.Target) bool {
 	// Testing should only run if the target explicitly has testing enabled.
 	if target.Testing == nil || target.Testing.Enabled == nil {
 		return false
 	}
 
-	return *target.Testing.Enabled
+	accountType := auth.GetAccountTypeFromContext(ctx)
+	// This should never occur, run is always authenticated
+	if accountType == nil {
+		return false
+	}
+
+	return testcmd.CheckTestingAccountType(*accountType) && *target.Testing.Enabled
 }
