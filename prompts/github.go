@@ -105,6 +105,44 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 
 func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target, error) {
 	promptMap := make(map[publishingPrompt]*string)
+
+	// If the target already has a publishing definition for the package manager
+	// for the target language, return the target unmodified.
+	hasPublishingDefined := target.Publishing != nil
+
+	if hasPublishingDefined {
+		switch target.Target {
+		case "typescript":
+			if target.Publishing.NPM != nil {
+				return target, nil
+			}
+		case "python":
+			if target.Publishing.PyPi != nil {
+				return target, nil
+			}
+		case "csharp":
+			if target.Publishing.Nuget != nil {
+				return target, nil
+			}
+		case "ruby":
+			if target.Publishing.RubyGems != nil {
+				return target, nil
+			}
+		case "php":
+			if target.Publishing.Packagist != nil {
+				return target, nil
+			}
+		case "java":
+			if target.Publishing.Java != nil {
+				return target, nil
+			}
+		case "terraform":
+			if target.Publishing.Terraform != nil {
+				return target, nil
+			}
+		}
+	}
+
 	switch target.Target {
 	case "typescript":
 		target.Publishing = &workflow.Publishing{
