@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -23,7 +24,8 @@ func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, wo
 
 		err := generator.RunTargetTesting(ctx, workflowTarget.Target, outDir)
 
-		populateRawTestReport(ctx, outDir, event)
+		populateRawTestReport(outDir, event)
+		populateGenLockDetails(outDir, event)
 		return err
 	})
 
@@ -34,13 +36,22 @@ func CheckTestingAccountType(accountType shared.AccountType) bool {
 	return slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, accountType)
 }
 
-func populateRawTestReport(ctx context.Context, outDir string, event *shared.CliEvent) {
+func populateRawTestReport(outDir string, event *shared.CliEvent) {
 	if res, _ := workspace.FindWorkspace(outDir, workspace.FindWorkspaceOptions{
 		FindFile:  "reports/tests.xml",
 		Recursive: true,
 	}); res != nil && len(res.Data) > 0 {
 		testReportContent := string(res.Data)
 		event.TestReportRaw = &testReportContent
+	}
+}
+
+func populateGenLockDetails(outDir string, event *shared.CliEvent) {
+	if cfg, err := config.Load(outDir); err == nil && cfg.LockFile != nil {
+		// The generator marks a testing run's version as internal to avoid a bump
+		// So we pull current version of the SDK from the lock file
+		currentVersion := cfg.LockFile.Management.ReleaseVersion
+		event.GenerateVersion = &currentVersion
 	}
 }
 
