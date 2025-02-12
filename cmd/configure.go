@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -647,7 +648,17 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 	}
 
-	// TODO: Execute run to generate tests
+	wf, err := run.NewWorkflow(
+		ctx,
+		run.WithShouldCompile(false),
+		run.WithSkipTesting(true), // we only generate tests here, they will execute them on `speakeasy test`
+		run.WithSkipVersioning(true),
+	)
+
+	if err = wf.RunWithVisualization(ctx); err != nil {
+		return errors.Wrapf(err, "failed to generate tests")
+	}
+
 	// TODO: Output configure output
 
 	return nil
