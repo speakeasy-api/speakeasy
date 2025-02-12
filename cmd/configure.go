@@ -149,7 +149,7 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 }
 
 var configureTestingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
-	Usage: "testing",
+	Usage: "tests",
 	Short: "Configure Speakeasy SDK for SDK tests.",
 	Long:  "Configure your Speakeasy workflow to generate and run SDK tests..",
 	Run:   configureTesting,
