@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	appInstallationLink     = "https://github.com/apps/speakeasy-github/installations/new"
 	repositorySecretPath    = "Settings > Secrets & Variables > Actions"
 	actionsPath             = "Actions > Generate"
 	actionsSettingsPath     = "Settings > Actions > General"
@@ -52,6 +51,8 @@ Configure your Speakeasy workflow file.
 
 [Publishing](https://www.speakeasy.com/docs/publish-sdks/publish-sdks)
 
+[Testing](https://www.speakeasy.com/docs/customize-testing/bootstrapping-test-generation)
+
 `
 
 var configureCmd = &model.CommandGroup{
@@ -59,7 +60,7 @@ var configureCmd = &model.CommandGroup{
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           utils.RenderMarkdown(configureLong),
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd},
 }
 
 type ConfigureSourcesFlags struct {
@@ -136,6 +137,21 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	Short: "Configure Speakeasy for publishing.",
 	Long:  "Configure your Speakeasy workflow to publish to package managers from your github repo.",
 	Run:   configurePublishing,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "workflow-directory",
+			Shorthand:   "d",
+			Description: "directory of speakeasy workflow file",
+		},
+	},
+	RequiresAuth: true,
+}
+
+var configureTestingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+	Usage: "testing",
+	Short: "Configure Speakeasy SDK for SDK tests.",
+	Long:  "Configure your Speakeasy workflow to generate and run SDK tests..",
+	Run:   configureTesting,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "workflow-directory",
@@ -523,6 +539,116 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 			agenda...)
 		logger.Println(msg)
 	}
+
+	return nil
+}
+
+func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
+	logger := log.From(ctx)
+
+	rootDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
+
+	workflowFile, _, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
+	if workflowFile == nil {
+		return renderAndPrintWorkflowNotFound("testing", logger)
+	}
+
+	// TODO: Add feature add-on prompt here during add-ons project
+
+	var testingOptions []huh.Option[string]
+	for name, target := range workflowFile.Targets {
+		if slices.Contains(prompts.SupportedTestingTargets, target.Target) {
+			testingOptions = append(testingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
+		}
+	}
+
+	var chosenTargets []string
+	if len(testingOptions) == 0 {
+		logger.Println(styles.Info.Render("No existing SDK targets support sdk testing."))
+		return nil
+	} else if len(testingOptions) == 1 {
+		chosenTargets = []string{testingOptions[0].Value}
+	} else {
+		chosenTargets, err = prompts.SelectTestingTargets(testingOptions, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(chosenTargets) == 0 {
+		logger.Println(styles.Info.Render("No targets selected. Exiting."))
+		return nil
+	}
+
+	for _, name := range chosenTargets {
+		target := workflowFile.Targets[name]
+		testingEnabled := true
+		target.Testing.Enabled = &testingEnabled
+		workflowFile.Targets[name] = target
+		outDir := ""
+		if target.Output != nil {
+			outDir = *target.Output
+		}
+		cfg, err := config.Load(filepath.Join(rootDir, actionWorkingDir, outDir))
+		if err != nil {
+			return errors.Wrapf(err, fmt.Sprintf("failed to load config file for target %s", name))
+		}
+
+		cfg.Config.Generation.Tests.GenerateNewTests = true
+		if err := config.SaveConfig(cfg.ConfigPath, cfg.Config); err != nil {
+			return errors.Wrapf(err, fmt.Sprintf("failed to save config file for target %s", name))
+		}
+	}
+
+	if err := workflow.Save(filepath.Join(rootDir, actionWorkingDir), workflowFile); err != nil {
+		return errors.Wrapf(err, "failed to save workflow file")
+	}
+
+	generationWorkflowFilePath := filepath.Join(rootDir, ".github/workflows/sdk_generation.yaml")
+	if len(workflowFile.Targets) > 1 {
+		sanitizedName := strings.ReplaceAll(strings.ToLower(chosenTargets[0]), "-", "_")
+		generationWorkflowFilePath = filepath.Join(rootDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
+	}
+
+	generationWorkflow := &config.GenerateWorkflow{}
+	// configure github has been completed already and we have a PR mode workflow
+	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err == nil {
+		if mode, ok := generationWorkflow.Jobs.Generate.With[config.Mode].(string); ok && mode == "pr" {
+			event := shared.CliEvent{}
+			events.EnrichEventWithGitMetadata(ctx, &event)
+			hasAppAccess := false
+			selectsAppInstall := false
+			if event.GitRemoteDefaultOwner != nil && *event.GitRemoteDefaultOwner != "" && event.GitRemoteDefaultRepo != nil && *event.GitRemoteDefaultRepo != "" {
+				hasAppAccess = checkGithubAppAccess(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
+				if !hasAppAccess {
+					_, err := charm.NewForm(huh.NewForm(
+						huh.NewGroup(
+							huh.NewSelect[bool]().
+								Title("\n\nFor testing checks to run on PR creation you must install the Speakeasy Github app or setup your own Github Actions PAT.\nTo learn more about each option see - https://www.speakeasy.com/docs/customize-testing/github-actions#ensuring-tests-run-on-automated-pr-creation\n").
+								Options(
+									huh.NewOption("Install Speakeasy App", true),
+									huh.NewOption("Setup Github PAT", false),
+								).
+								Value(&selectsAppInstall),
+						),
+					)).ExecuteForm()
+					if err != nil {
+						return err
+					}
+				}
+
+				// TODO: Write file based on selected option
+			}
+		}
+	}
+
+	// TODO: Execute run to generate tests
+	// TODO: Output configure output
 
 	return nil
 }

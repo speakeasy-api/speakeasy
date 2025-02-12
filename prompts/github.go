@@ -47,6 +47,12 @@ var SupportedPublishingTargets = []string{
 	"terraform",
 }
 
+var SupportedTestingTargets = []string{
+	"typescript",
+	"python",
+	"go",
+}
+
 //go:embed terraform_release.yaml
 var terraformReleaseAction string
 
@@ -618,6 +624,29 @@ func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect 
 			Title("Select targets to configure publishing configs for.").
 			Description("Setup variables to configure publishing directly from Speakeasy.\n").
 			Options(publishingOptions...).
+			Value(&chosenTargets),
+	)), charm.WithKey("x/space", "toggle"))
+
+	if _, err := form.ExecuteForm(); err != nil {
+		return nil, err
+	}
+
+	return chosenTargets, nil
+}
+
+func SelectTestingTargets(testingOptions []huh.Option[string], autoSelect bool) ([]string, error) {
+	chosenTargets := make([]string, 0)
+	if autoSelect {
+		for _, option := range testingOptions {
+			chosenTargets = append(chosenTargets, option.Value)
+		}
+	}
+
+	form := charm.NewForm(huh.NewForm(huh.NewGroup(
+		huh.NewMultiSelect[string]().
+			Title("Select targets to configure sdk tests for.").
+			Description("Bootstrap tests for Speakeasy SDKs.\n").
+			Options(testingOptions...).
 			Value(&chosenTargets),
 	)), charm.WithKey("x/space", "toggle"))
 
