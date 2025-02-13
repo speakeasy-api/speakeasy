@@ -3,8 +3,9 @@ package log
 import (
 	"context"
 	"encoding/json"
-	"github.com/spf13/cobra"
 	"reflect"
+
+	"github.com/spf13/cobra"
 )
 
 func PrintArray[K any](cmd *cobra.Command, arr []K, fieldNameReplacements map[string]string) {
@@ -12,7 +13,7 @@ func PrintArray[K any](cmd *cobra.Command, arr []K, fieldNameReplacements map[st
 
 	if printJson {
 		data, _ := json.Marshal(arr)
-		From(cmd.Context()).Printf(string(data))
+		From(cmd.Context()).Print(string(data))
 	} else {
 		PrettyPrintArray(cmd.Context(), arr, fieldNameReplacements)
 	}
@@ -24,9 +25,9 @@ func PrintValue(cmd *cobra.Command, value interface{}, fieldNameReplacements map
 
 	if printJson {
 		data, _ := json.Marshal(value)
-		l.Printf(string(data))
+		l.Print(string(data))
 	} else {
-		l.Printf("--------------------------------------")
+		l.Print("--------------------------------------")
 		PrettyPrint(cmd.Context(), value, fieldNameReplacements)
 	}
 }
@@ -35,14 +36,14 @@ func PrettyPrintArray[K any](ctx context.Context, arr []K, fieldNameReplacements
 	l := From(ctx)
 
 	if len(arr) == 0 {
-		l.Printf("NO RESULTS")
+		l.Print("NO RESULTS")
 		return
 	}
 
-	l.Printf("--------------------------------------")
+	l.Print("--------------------------------------")
 	for _, item := range arr {
 		PrettyPrint(ctx, item, fieldNameReplacements)
-		l.Printf("--------------------------------------")
+		l.Print("--------------------------------------")
 	}
 }
 

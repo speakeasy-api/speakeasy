@@ -102,7 +102,7 @@ func printWithFootnotes(ctx context.Context, text string) {
 	// Transform footnotes
 	matches := linkRegex.FindAllStringSubmatch(text, -1)
 	if len(matches) == 0 {
-		logger.Printf(text)
+		logger.Print(text)
 		return
 	}
 

@@ -166,14 +166,14 @@ func getLatestVersionInfo(ctx context.Context, flags GenerateSDKVersionFlags) er
 			return fmt.Errorf("failed to get latest versions for language %s: %w", lang, err)
 		}
 
-		logger.Printf("Features:")
+		logger.Print("Features:")
 
 		for feature, version := range latestVersions {
 			logger.Printf("  %s: %s", feature, version)
 		}
 
 		if len(latestVersions) > 0 {
-			logger.Printf("\n")
+			logger.Print("\n")
 		}
 
 		changeLog, err = changelogs.GetChangeLog(lang, latestVersions, nil)
@@ -184,7 +184,7 @@ func getLatestVersionInfo(ctx context.Context, flags GenerateSDKVersionFlags) er
 		changeLog = changelog.GetChangeLog(changelog.WithSpecificVersion(version))
 	}
 
-	logger.Printf(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	logger.Print(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
 
 	return nil
 }
@@ -251,10 +251,10 @@ func getChangelogs(ctx context.Context, flags GenerateSDKChangelogFlags) error {
 	logger := log.From(ctx)
 
 	if raw {
-		logger.Printf(changeLog)
+		logger.Print(changeLog)
 		return nil
 	}
 
-	logger.Printf(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	logger.Print(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
 	return nil
 }
