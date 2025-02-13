@@ -597,7 +597,9 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
 		testingEnabled := true
-		target.Testing.Enabled = &testingEnabled
+		target.Testing = &workflow.Testing{
+			Enabled: &testingEnabled,
+		}
 		workflowFile.Targets[name] = target
 		outDir := ""
 		if target.Output != nil {
@@ -609,7 +611,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 
 		cfg.Config.Generation.Tests.GenerateNewTests = true
-		if err := config.SaveConfig(cfg.ConfigPath, cfg.Config); err != nil {
+		if err := config.SaveConfig(filepath.Dir(cfg.ConfigPath), cfg.Config); err != nil {
 			return errors.Wrapf(err, fmt.Sprintf("failed to save config file for target %s", name))
 		}
 	}
@@ -635,27 +637,27 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 			events.EnrichEventWithGitMetadata(ctx, &event)
 			if event.GitRemoteDefaultOwner != nil && *event.GitRemoteDefaultOwner != "" && event.GitRemoteDefaultRepo != nil && *event.GitRemoteDefaultRepo != "" {
 				hasAppAccess = checkGithubAppAccess(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
-				if !hasAppAccess {
-					_, err := charm.NewForm(huh.NewForm(
-						huh.NewGroup(
-							huh.NewSelect[bool]().
-								Title("\n\nFor testing checks to run on PR creation you must install the Speakeasy Github app or setup your own Github Actions PAT.\nTo learn more about each option see - https://www.speakeasy.com/docs/customize-testing/github-actions#ensuring-tests-run-on-automated-pr-creation\n").
-								Options(
-									huh.NewOption("Install Speakeasy App", true),
-									huh.NewOption("Setup Github PAT", false),
-								).
-								Value(&selectedAppInstall),
-						),
-					)).ExecuteForm()
-					if err != nil {
-						return err
-					}
-				}
-
-				testingFilePaths, err = prompts.WriteTestingFiles(ctx, workflowFile, rootDir, actionWorkingDir, chosenTargets, !hasAppAccess && !selectedAppInstall)
+			}
+			if !hasAppAccess {
+				_, err := charm.NewForm(huh.NewForm(
+					huh.NewGroup(
+						huh.NewSelect[bool]().
+							Title("\n\nFor testing checks to run on PR creation you must install the Speakeasy Github app or setup your own Github Actions PAT.\nTo learn more about each option see - https://www.speakeasy.com/docs/customize-testing/github-actions#ensuring-tests-run-on-automated-pr-creation\n").
+							Options(
+								huh.NewOption("Install Speakeasy App", true),
+								huh.NewOption("Setup Github PAT", false),
+							).
+							Value(&selectedAppInstall),
+					),
+				)).ExecuteForm()
 				if err != nil {
 					return err
 				}
+			}
+
+			testingFilePaths, err = prompts.WriteTestingFiles(ctx, workflowFile, rootDir, actionWorkingDir, chosenTargets, !hasAppAccess && !selectedAppInstall)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -691,11 +693,13 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		agenda = append(agenda, fmt.Sprintf("• For more information see %s", testingSetupDocs))
 	}
 
-	logger.Println(styles.Info.Render("Files successfully generated!\n"))
-	for _, statusMsg := range status {
-		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
+	if len(status) > 0 {
+		logger.Println(styles.Info.Render("Files successfully generated!\n"))
+		for _, statusMsg := range status {
+			logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
+		}
+		logger.Println(styles.Info.Render("\n"))
 	}
-	logger.Println(styles.Info.Render("\n"))
 
 	msg := styles.RenderInstructionalMessage("For your testing setup to complete perform the following steps.",
 		agenda...)
