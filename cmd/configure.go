@@ -643,7 +643,10 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 					}
 				}
 
-				// TODO: Write file based on selected option
+				_, err = prompts.WriteTestingFiles(ctx, workflowFile, rootDir, actionWorkingDir, chosenTargets, !selectsAppInstall)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -659,7 +662,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		return errors.Wrapf(err, "failed to generate tests")
 	}
 
-	// TODO: Output configure output
+	// TODO: Write agenda and files modified summary
 
 	return nil
 }
