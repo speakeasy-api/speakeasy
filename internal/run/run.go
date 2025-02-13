@@ -62,7 +62,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 
 	logCapture := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
 	updatesChannel := make(chan workflowTracking.UpdateMsg)
-	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", logCapture, updatesChannel)
+	w.RootStep = workflowTracking.NewWorkflowStep("Workflows", logCapture, updatesChannel)
 
 	var runErr error
 	runFnCli := func() error {
