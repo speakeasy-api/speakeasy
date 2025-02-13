@@ -1,6 +1,6 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.23.0
+go 1.24.0
 
 replace github.com/pb33f/doctor v0.0.8 => github.com/speakeasy-api/doctor v0.0.0-20240920145439-74ab55243125
 
@@ -9,51 +9,47 @@ replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
 
 require (
+	github.com/AlekSi/pointer v1.2.0
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.1
+	github.com/charmbracelet/glamour v0.7.0
+	github.com/charmbracelet/huh v0.5.1
 	github.com/charmbracelet/lipgloss v0.13.0
+	github.com/dustin/go-humanize v1.0.1
+	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/fatih/structs v1.1.0
+	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-github/v58 v58.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
 	github.com/iancoleman/strcase v0.3.0
+	github.com/inkeep/ai-api-go v0.3.1
+	github.com/invopop/yaml v0.3.1
 	github.com/pb33f/libopenapi v0.18.1
+	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/errors v0.9.1
+	github.com/samber/lo v1.47.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi-generation/v2 v2.512.0
+	github.com/speakeasy-api/openapi v0.1.6
+	github.com/speakeasy-api/openapi-generation/v2 v2.512.4
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.30.2
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.22.1
 	github.com/speakeasy-api/speakeasy-core v0.19.2
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
+	github.com/speakeasy-api/versioning-reports v0.6.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
+	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
+	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.25.0
 	gopkg.in/yaml.v3 v3.0.1
-)
-
-require (
-	github.com/AlekSi/pointer v1.2.0
-	github.com/charmbracelet/glamour v0.7.0
-	github.com/charmbracelet/huh v0.5.1
-	github.com/dustin/go-humanize v1.0.1
-	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
-	github.com/getkin/kin-openapi v0.128.0
-	github.com/inkeep/ai-api-go v0.3.1
-	github.com/invopop/yaml v0.3.1
-	github.com/pb33f/openapi-changes v0.0.61
-	github.com/samber/lo v1.47.0
-	github.com/speakeasy-api/openapi v0.1.6
-	github.com/speakeasy-api/versioning-reports v0.6.0
-	github.com/stoewer/go-strcase v1.3.0
-	golang.org/x/sync v0.10.0
 )
 
 require (
@@ -266,6 +262,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/image v0.10.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect

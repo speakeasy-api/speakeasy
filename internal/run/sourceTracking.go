@@ -316,7 +316,7 @@ func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryL
 		if !env.IsGithubAction() {
 			message += " run `speakeasy auth logout`"
 		}
-		err = fmt.Errorf(message)
+		err = errors.New(message)
 		return
 	}
 
@@ -325,7 +325,7 @@ func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryL
 		if !env.IsGithubAction() {
 			message += " run `speakeasy auth logout`"
 		}
-		err = fmt.Errorf(message)
+		err = errors.New(message)
 		return
 	}
 
