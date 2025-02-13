@@ -2,6 +2,7 @@ package prompts
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -16,6 +17,7 @@ import (
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,6 +47,12 @@ var SupportedPublishingTargets = []string{
 	"java",
 	"go",
 	"terraform",
+}
+
+var SupportedTestingTargets = []string{
+	"typescript",
+	"python",
+	"go",
 }
 
 //go:embed terraform_release.yaml
@@ -381,6 +389,50 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	return secrets
 }
 
+func WriteTestingFiles(ctx context.Context, wf *workflow.Workflow, currentWorkingDir, workflowFileDir string, selectedTargets []string, isPatBased bool) ([]string, error) {
+	secrets := make(map[string]string)
+	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
+	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
+	var filePaths []string
+	// Write the appropriate testing files
+	for _, name := range selectedTargets {
+		testingFile := defaultTestingFile(wf.Targets[name].Output, workflowFileDir, secrets)
+		filePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_test.yaml")
+		if len(wf.Targets) > 1 {
+			testingFile.Name = fmt.Sprintf("Test %s", strings.ToUpper(name))
+			sanitizedName := strings.ReplaceAll(strings.ToLower(name), "-", "_")
+			filePath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_test_%s.yaml", sanitizedName))
+		}
+
+		if err := writeTestingFile(testingFile, filePath); err != nil {
+			return nil, err
+		}
+
+		filePaths = append(filePaths, filePath)
+	}
+
+	// Attempt to update the appropriate generation workflow if they choose a PAT based approach
+	if isPatBased {
+		for name, _ := range wf.Targets {
+			generationWorkflow := &config.GenerateWorkflow{}
+			generationWorkflowFilePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_generation.yaml")
+			if len(wf.Targets) > 1 {
+				sanitizedName := strings.ReplaceAll(strings.ToLower(name), "-", "_")
+				generationWorkflowFilePath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
+			}
+			if err := ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err == nil {
+				generationWorkflow.Jobs.Generate.Secrets["pr_creation_pat"] = formatGithubSecretName("pr_creation_pat")
+			}
+
+			if err := WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
+				log.From(ctx).Warnf("failed to to update %s with pr_creation_pat", generationWorkflowFilePath)
+			}
+		}
+	}
+
+	return filePaths, nil
+}
+
 // WritePublishing writes a github action file for a given target for publishing to a package manager.
 // If filenameAddendum is provided, it will be appended to the filename (i.e. sdk_publish_lending.yaml).
 // Returns the paths to the files written.
@@ -500,6 +552,21 @@ func WriteGenerationFile(generationWorkflow *config.GenerateWorkflow, generation
 	return nil
 }
 
+func writeTestingFile(testingWorkflow *config.TestingWorkflow, testingWorkflowFilePath string) error {
+	var genWorkflowBuf bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&genWorkflowBuf)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(testingWorkflow); err != nil {
+		return errors.Wrapf(err, "failed to encode workflow file")
+	}
+
+	if err := os.WriteFile(testingWorkflowFilePath, genWorkflowBuf.Bytes(), 0o644); err != nil {
+		return errors.Wrapf(err, "failed to write github workflow file")
+	}
+
+	return nil
+}
+
 func ReadGenerationFile(generationWorkflow *config.GenerateWorkflow, generationWorkflowFilePath string) error {
 	if _, err := os.Stat(generationWorkflowFilePath); err != nil {
 		return err
@@ -605,6 +672,56 @@ func defaultPublishingFile() *config.PublishWorkflow {
 	}
 }
 
+func defaultTestingFile(sdkOutputDir *string, workflowFileDir string, secrets map[string]string) *config.TestingWorkflow {
+	sdkPath := "**"
+	if sdkOutputDir != nil && *sdkOutputDir != "." && *sdkOutputDir != "./" {
+		sdkPath = fmt.Sprintf("%s/**", filepath.Join(workflowFileDir, strings.TrimPrefix(*sdkOutputDir, "/")))
+	}
+	testingAction := &config.TestingWorkflow{
+		Name: "Test",
+		Permissions: config.Permissions{
+			Checks:       config.GithubWritePermission,
+			Statuses:     config.GithubWritePermission,
+			Contents:     config.GithubWritePermission,
+			PullRequests: config.GithubWritePermission,
+			IDToken:      config.GithubWritePermission,
+		},
+		On: config.TestingOn{
+			PullRequest: config.Push{
+				Paths: []string{
+					sdkPath,
+				},
+				Branches: []string{
+					"main",
+				},
+			},
+			WorkflowDispatch: config.WorkflowDispatchTesting{
+				Inputs: config.InputsTesting{
+					Target: config.Target{
+						Description: "Provided SDK target to run tests for, (all) is valid",
+						Type:        "string",
+					},
+				},
+			},
+		},
+		Jobs: config.Jobs{
+			Test: config.Job{
+				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/sdk-test.yaml@v15",
+				With: map[string]any{
+					"target": "${{ github.event.inputs.target }}",
+				},
+				Secrets: secrets,
+			},
+		},
+	}
+
+	if workflowFileDir != "" {
+		testingAction.Jobs.Test.With["working_directory"] = workflowFileDir
+	}
+
+	return testingAction
+}
+
 func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect bool) ([]string, error) {
 	chosenTargets := make([]string, 0)
 	if autoSelect {
@@ -618,6 +735,29 @@ func SelectPublishingTargets(publishingOptions []huh.Option[string], autoSelect 
 			Title("Select targets to configure publishing configs for.").
 			Description("Setup variables to configure publishing directly from Speakeasy.\n").
 			Options(publishingOptions...).
+			Value(&chosenTargets),
+	)), charm.WithKey("x/space", "toggle"))
+
+	if _, err := form.ExecuteForm(); err != nil {
+		return nil, err
+	}
+
+	return chosenTargets, nil
+}
+
+func SelectTestingTargets(testingOptions []huh.Option[string], autoSelect bool) ([]string, error) {
+	chosenTargets := make([]string, 0)
+	if autoSelect {
+		for _, option := range testingOptions {
+			chosenTargets = append(chosenTargets, option.Value)
+		}
+	}
+
+	form := charm.NewForm(huh.NewForm(huh.NewGroup(
+		huh.NewMultiSelect[string]().
+			Title("Select targets to configure sdk tests for.").
+			Description("Bootstrap tests for Speakeasy SDKs.\n").
+			Options(testingOptions...).
 			Value(&chosenTargets),
 	)), charm.WithKey("x/space", "toggle"))
 

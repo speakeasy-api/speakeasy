@@ -10,7 +10,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
+	"github.com/speakeasy-api/speakeasy/internal/run"
+	"github.com/speakeasy-api/speakeasy/internal/testcmd"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -33,13 +36,13 @@ import (
 )
 
 const (
-	appInstallationLink     = "https://github.com/apps/speakeasy-github/installations/new"
 	repositorySecretPath    = "Settings > Secrets & Variables > Actions"
 	actionsPath             = "Actions > Generate"
 	actionsSettingsPath     = "Settings > Actions > General"
 	githubSetupDocs         = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
 	appInstallURL           = "https://github.com/apps/speakeasy-github"
 	ErrWorkflowFileNotFound = spkErrors.Error("workflow.yaml file not found")
+	testingSetupDocs        = "https://www.speakeasy.com/docs/customize-testing/github-actions"
 )
 
 const configureLong = `# Configure
@@ -52,6 +55,8 @@ Configure your Speakeasy workflow file.
 
 [Publishing](https://www.speakeasy.com/docs/publish-sdks/publish-sdks)
 
+[Testing](https://www.speakeasy.com/docs/customize-testing/bootstrapping-test-generation)
+
 `
 
 var configureCmd = &model.CommandGroup{
@@ -59,7 +64,7 @@ var configureCmd = &model.CommandGroup{
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           utils.RenderMarkdown(configureLong),
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd},
 }
 
 type ConfigureSourcesFlags struct {
@@ -136,6 +141,21 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	Short: "Configure Speakeasy for publishing.",
 	Long:  "Configure your Speakeasy workflow to publish to package managers from your github repo.",
 	Run:   configurePublishing,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "workflow-directory",
+			Shorthand:   "d",
+			Description: "directory of speakeasy workflow file",
+		},
+	},
+	RequiresAuth: true,
+}
+
+var configureTestingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+	Usage: "tests",
+	Short: "Configure Speakeasy SDK for SDK tests.",
+	Long:  "Configure your Speakeasy workflow to generate and run SDK tests..",
+	Run:   configureTesting,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "workflow-directory",
@@ -523,6 +543,176 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 			agenda...)
 		logger.Println(msg)
 	}
+
+	return nil
+}
+
+func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
+	logger := log.From(ctx)
+
+	rootDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	accountType := auth.GetAccountTypeFromContext(ctx)
+	if !testcmd.CheckTestingAccountType(*accountType) {
+		return fmt.Errorf("testing is not supported on the %s account tier. Contact %s for more information", *accountType, styles.RenderSalesEmail())
+	}
+
+	// TODO: Add feature add-on prompt here during add-ons project
+
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
+
+	workflowFile, _, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
+	if workflowFile == nil {
+		return renderAndPrintWorkflowNotFound("testing", logger)
+	}
+
+	var testingOptions []huh.Option[string]
+	for name, target := range workflowFile.Targets {
+		if slices.Contains(prompts.SupportedTestingTargets, target.Target) {
+			testingOptions = append(testingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
+		}
+	}
+
+	var chosenTargets []string
+	if len(testingOptions) == 0 {
+		logger.Println(styles.Info.Render("No existing SDK targets support sdk testing."))
+		return nil
+	} else if len(testingOptions) == 1 {
+		chosenTargets = []string{testingOptions[0].Value}
+	} else {
+		chosenTargets, err = prompts.SelectTestingTargets(testingOptions, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(chosenTargets) == 0 {
+		logger.Println(styles.Info.Render("No targets selected. Exiting."))
+		return nil
+	}
+
+	for _, name := range chosenTargets {
+		target := workflowFile.Targets[name]
+		testingEnabled := true
+		target.Testing = &workflow.Testing{
+			Enabled: &testingEnabled,
+		}
+		workflowFile.Targets[name] = target
+		outDir := ""
+		if target.Output != nil {
+			outDir = *target.Output
+		}
+		cfg, err := config.Load(filepath.Join(rootDir, actionWorkingDir, outDir))
+		if err != nil {
+			return errors.Wrapf(err, "failed to load config file for target %s", name)
+		}
+
+		cfg.Config.Generation.Tests.GenerateNewTests = true
+		if err := config.SaveConfig(filepath.Dir(cfg.ConfigPath), cfg.Config); err != nil {
+			return errors.Wrapf(err, "failed to save config file for target %s", name)
+		}
+	}
+
+	if err := workflow.Save(filepath.Join(rootDir, actionWorkingDir), workflowFile); err != nil {
+		return errors.Wrapf(err, "failed to save workflow file")
+	}
+
+	generationWorkflowFilePath := filepath.Join(rootDir, ".github/workflows/sdk_generation.yaml")
+	if len(workflowFile.Targets) > 1 {
+		sanitizedName := strings.ReplaceAll(strings.ToLower(chosenTargets[0]), "-", "_")
+		generationWorkflowFilePath = filepath.Join(rootDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
+	}
+
+	generationWorkflow := &config.GenerateWorkflow{}
+	var testingFilePaths []string
+	hasAppAccess := false
+	selectedAppInstall := false
+	// configure github has been completed already and we have a PR mode workflow
+	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err == nil {
+		if mode, ok := generationWorkflow.Jobs.Generate.With[config.Mode].(string); ok && mode == "pr" {
+			event := shared.CliEvent{}
+			events.EnrichEventWithGitMetadata(ctx, &event)
+			if event.GitRemoteDefaultOwner != nil && *event.GitRemoteDefaultOwner != "" && event.GitRemoteDefaultRepo != nil && *event.GitRemoteDefaultRepo != "" {
+				hasAppAccess = checkGithubAppAccess(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
+			}
+			if !hasAppAccess {
+				// Default to installing the app
+				selectedAppInstall = true
+				_, err := charm.NewForm(huh.NewForm(
+					huh.NewGroup(
+						huh.NewSelect[bool]().
+							Title("To run automated PR checks install the Speakeasy Github app or setup your own Github Actions PAT.").
+							Description("https://www.speakeasy.com/docs/customize-testing/github-actions").
+							Options(
+								huh.NewOption("Install Speakeasy App", true),
+								huh.NewOption("Setup Github PAT", false),
+							).
+							Value(&selectedAppInstall),
+					),
+				)).ExecuteForm()
+				if err != nil {
+					return err
+				}
+			}
+
+			testingFilePaths, err = prompts.WriteTestingFiles(ctx, workflowFile, rootDir, actionWorkingDir, chosenTargets, !hasAppAccess && !selectedAppInstall)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	var status []string
+	if len(testingFilePaths) > 0 {
+		status = append(status, "GitHub action (test) files written to:")
+		for _, path := range testingFilePaths {
+			status = append(status, fmt.Sprintf("\t- %s", path))
+		}
+	}
+
+	agenda := []string{"• Execute `speakeasy test` to run your tests locally."}
+	if len(testingFilePaths) > 0 {
+		if !hasAppAccess && selectedAppInstall {
+			agenda = append(agenda, fmt.Sprintf("• Install the Speakeasy Github App at %s.", appInstallURL))
+		}
+		if !hasAppAccess && !selectedAppInstall {
+			agenda = append(agenda, fmt.Sprintf("• Follow documentation to create your Github PAT and store it under repository secrets as %s.", styles.MakeBold("PR_CREATION_PAT")))
+		}
+		agenda = append(agenda, fmt.Sprintf("• Push your tests and file updates to github!"))
+		agenda = append(agenda, fmt.Sprintf("• For more information see %s", testingSetupDocs))
+	}
+
+	if actionWorkingDir != "" {
+		if err = os.Chdir(filepath.Join(rootDir, actionWorkingDir)); err != nil {
+			return errors.Wrapf(err, "failed to change directory for run %s", filepath.Join(rootDir, actionWorkingDir))
+		}
+	}
+	wf, err := run.NewWorkflow(
+		ctx,
+		run.WithTarget("all"),
+		run.WithShouldCompile(false),
+		run.WithSkipTesting(true), // we only generate tests here, they will execute them on `speakeasy test`
+		run.WithSkipVersioning(true),
+	)
+
+	if err = wf.RunWithVisualization(ctx); err != nil {
+		return errors.Wrapf(err, "failed to generate tests")
+	}
+
+	if len(status) > 0 {
+		logger.Println(styles.Info.Render("Files successfully generated!\n"))
+		for _, statusMsg := range status {
+			logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
+		}
+		logger.Println(styles.Info.Render("\n"))
+	}
+
+	msg := styles.RenderInstructionalMessage("For your testing setup to complete perform the following steps.",
+		agenda...)
+	logger.Println(msg)
 
 	return nil
 }
