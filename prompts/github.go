@@ -675,7 +675,7 @@ func defaultPublishingFile() *config.PublishWorkflow {
 func defaultTestingFile(sdkOutputDir *string, workflowFileDir string, secrets map[string]string) *config.TestingWorkflow {
 	sdkPath := "**"
 	if sdkOutputDir != nil && *sdkOutputDir != "." && *sdkOutputDir != "./" {
-		sdkPath = fmt.Sprintf("**/%s", filepath.Join(workflowFileDir, strings.TrimPrefix(*sdkOutputDir, "/")))
+		sdkPath = fmt.Sprintf("%s/**", filepath.Join(workflowFileDir, strings.TrimPrefix(*sdkOutputDir, "/")))
 	}
 	testingAction := &config.TestingWorkflow{
 		Name: "Test",
