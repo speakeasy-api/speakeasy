@@ -639,6 +639,8 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 				hasAppAccess = checkGithubAppAccess(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
 			}
 			if !hasAppAccess {
+				// Default to installing the app
+				selectedAppInstall = true
 				_, err := charm.NewForm(huh.NewForm(
 					huh.NewGroup(
 						huh.NewSelect[bool]().
@@ -690,7 +692,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		if !hasAppAccess && !selectedAppInstall {
 			agenda = append(agenda, fmt.Sprintf("• Follow documentation to create your Github PAT and store it under repository secrets as %s.", styles.MakeBold("PR_CREATION_PAT")))
 		}
-		agenda = append(agenda, fmt.Sprintf("• Push your file updates to github!"))
+		agenda = append(agenda, fmt.Sprintf("• Push your tests and file updates to github!"))
 		agenda = append(agenda, fmt.Sprintf("• For more information see %s", testingSetupDocs))
 	}
 
