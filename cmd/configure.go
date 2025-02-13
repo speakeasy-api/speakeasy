@@ -40,6 +40,7 @@ const (
 	githubSetupDocs         = "https://www.speakeasy.com/docs/advanced-setup/github-setup"
 	appInstallURL           = "https://github.com/apps/speakeasy-github"
 	ErrWorkflowFileNotFound = spkErrors.Error("workflow.yaml file not found")
+	testingSetupDocs        = "https://www.speakeasy.com/docs/customize-testing/github-actions"
 )
 
 const configureLong = `# Configure
@@ -617,13 +618,14 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
+	var testingFilePaths []string
+	hasAppAccess := false
+	selectedAppInstall := false
 	// configure github has been completed already and we have a PR mode workflow
 	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err == nil {
 		if mode, ok := generationWorkflow.Jobs.Generate.With[config.Mode].(string); ok && mode == "pr" {
 			event := shared.CliEvent{}
 			events.EnrichEventWithGitMetadata(ctx, &event)
-			hasAppAccess := false
-			selectsAppInstall := false
 			if event.GitRemoteDefaultOwner != nil && *event.GitRemoteDefaultOwner != "" && event.GitRemoteDefaultRepo != nil && *event.GitRemoteDefaultRepo != "" {
 				hasAppAccess = checkGithubAppAccess(ctx, *event.GitRemoteDefaultOwner, *event.GitRemoteDefaultRepo)
 				if !hasAppAccess {
@@ -635,7 +637,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 									huh.NewOption("Install Speakeasy App", true),
 									huh.NewOption("Setup Github PAT", false),
 								).
-								Value(&selectsAppInstall),
+								Value(&selectedAppInstall),
 						),
 					)).ExecuteForm()
 					if err != nil {
@@ -643,7 +645,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 					}
 				}
 
-				_, err = prompts.WriteTestingFiles(ctx, workflowFile, rootDir, actionWorkingDir, chosenTargets, !selectsAppInstall)
+				testingFilePaths, err = prompts.WriteTestingFiles(ctx, workflowFile, rootDir, actionWorkingDir, chosenTargets, !hasAppAccess && !selectedAppInstall)
 				if err != nil {
 					return err
 				}
@@ -662,7 +664,35 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		return errors.Wrapf(err, "failed to generate tests")
 	}
 
-	// TODO: Write agenda and files modified summary
+	var status []string
+	if len(testingFilePaths) > 0 {
+		status = append(status, "GitHub action (test) files written to:")
+		for _, path := range testingFilePaths {
+			status = append(status, fmt.Sprintf("\t- %s", path))
+		}
+	}
+
+	agenda := []string{"• Execute `speakeasy test` to run your tests locally."}
+	if len(testingFilePaths) > 0 {
+		if !hasAppAccess && selectedAppInstall {
+			agenda = append(agenda, fmt.Sprintf("• Install the Speakeasy Github App at %s.", appInstallURL))
+		}
+		if !hasAppAccess && !selectedAppInstall {
+			agenda = append(agenda, fmt.Sprintf("• Follow documentation to create your Github PAT and store it under repository secrets as %s.", styles.MakeBold("PR_CREATION_PAT")))
+		}
+		agenda = append(agenda, fmt.Sprintf("• Push your file updates to github!"))
+		agenda = append(agenda, fmt.Sprintf("• For more information see %s", testingSetupDocs))
+	}
+
+	logger.Println(styles.Info.Render("Files successfully generated!\n"))
+	for _, statusMsg := range status {
+		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
+	}
+	logger.Println(styles.Info.Render("\n"))
+
+	msg := styles.RenderInstructionalMessage("For your testing setup to complete perform the following steps.",
+		agenda...)
+	logger.Println(msg)
 
 	return nil
 }
