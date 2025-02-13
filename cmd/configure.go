@@ -556,7 +556,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 	}
 
 	accountType := auth.GetAccountTypeFromContext(ctx)
-	if testcmd.CheckTestingAccountType(*accountType) {
+	if !testcmd.CheckTestingAccountType(*accountType) {
 		return fmt.Errorf("testing is not supported on the %s account tier. Contact %s for more information", *accountType, styles.RenderSalesEmail())
 	}
 
