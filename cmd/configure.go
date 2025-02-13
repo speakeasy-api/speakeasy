@@ -607,12 +607,12 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 		cfg, err := config.Load(filepath.Join(rootDir, actionWorkingDir, outDir))
 		if err != nil {
-			return errors.Wrapf(err, fmt.Sprintf("failed to load config file for target %s", name))
+			return errors.Wrapf(err, "failed to load config file for target %s", name)
 		}
 
 		cfg.Config.Generation.Tests.GenerateNewTests = true
 		if err := config.SaveConfig(filepath.Dir(cfg.ConfigPath), cfg.Config); err != nil {
-			return errors.Wrapf(err, fmt.Sprintf("failed to save config file for target %s", name))
+			return errors.Wrapf(err, "failed to save config file for target %s", name)
 		}
 	}
 
