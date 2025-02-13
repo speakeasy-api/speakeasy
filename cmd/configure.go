@@ -665,18 +665,6 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 	}
 
-	wf, err := run.NewWorkflow(
-		ctx,
-		run.WithTarget("all"),
-		run.WithShouldCompile(false),
-		run.WithSkipTesting(true), // we only generate tests here, they will execute them on `speakeasy test`
-		run.WithSkipVersioning(true),
-	)
-
-	if err = wf.RunWithVisualization(ctx); err != nil {
-		return errors.Wrapf(err, "failed to generate tests")
-	}
-
 	var status []string
 	if len(testingFilePaths) > 0 {
 		status = append(status, "GitHub action (test) files written to:")
@@ -695,6 +683,23 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 		agenda = append(agenda, fmt.Sprintf("• Push your tests and file updates to github!"))
 		agenda = append(agenda, fmt.Sprintf("• For more information see %s", testingSetupDocs))
+	}
+
+	if actionWorkingDir != "" {
+		if err = os.Chdir(filepath.Join(rootDir, actionWorkingDir)); err != nil {
+			return errors.Wrapf(err, "failed to change directory for run %s", filepath.Join(rootDir, actionWorkingDir))
+		}
+	}
+	wf, err := run.NewWorkflow(
+		ctx,
+		run.WithTarget("all"),
+		run.WithShouldCompile(false),
+		run.WithSkipTesting(true), // we only generate tests here, they will execute them on `speakeasy test`
+		run.WithSkipVersioning(true),
+	)
+
+	if err = wf.RunWithVisualization(ctx); err != nil {
+		return errors.Wrapf(err, "failed to generate tests")
 	}
 
 	if len(status) > 0 {
