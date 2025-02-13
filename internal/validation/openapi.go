@@ -3,10 +3,11 @@ package validation
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/sdk-gen-config/lint"
 	"io"
 	"slices"
 	"strings"
+
+	"github.com/speakeasy-api/sdk-gen-config/lint"
 
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
@@ -140,7 +141,7 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 	})
 
 	if len(res.Errors) > 0 {
-		return res, fmt.Errorf(res.Status)
+		return res, errors.New(res.Status)
 	}
 
 	if len(res.Warnings) > 0 {

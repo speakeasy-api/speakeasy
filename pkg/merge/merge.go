@@ -5,9 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	utils2 "github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 	"reflect"
+
+	utils2 "github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-version"
@@ -78,7 +79,7 @@ func validate(ctx context.Context, schemaPath string, schema []byte, defaultRule
 
 	if len(res.Errors) > 0 {
 		status := "\nOpenAPI spec invalid ✖"
-		return fmt.Errorf(status)
+		return errors.New(status)
 	}
 
 	log.From(ctx).Success(fmt.Sprintf("Successfully validated %s", schemaPath))

@@ -259,6 +259,10 @@ func (l Logger) Print(s string) {
 	l.Fprint(l.writer, s)
 }
 
+func (l Logger) PrintStyled(style lipgloss.Style, s string) {
+	l.Fprintln(l.writer, style.Render(s))
+}
+
 func (l Logger) Fprint(w io.Writer, s string) {
 	if w == nil {
 		return

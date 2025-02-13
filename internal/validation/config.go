@@ -173,7 +173,7 @@ func ValidateTarget(target string, config map[string]any, publishingEnabled bool
 				msg += ". Field description: " + *field.Description
 			}
 
-			errs = append(errs, fmt.Errorf(msg))
+			errs = append(errs, errors.New(msg))
 		}
 	}
 

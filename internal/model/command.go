@@ -308,7 +308,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		if wf.SpeakeasyVersion == "latest" {
 			msg := fmt.Sprintf("Failed to run with Speakeasy version %s: %s\n", desiredVersion, runErr.Error())
 			_ = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil)
-			logger.PrintfStyled(styles.DimmedItalic, msg)
+			logger.PrintStyled(styles.DimmedItalic, msg)
 			if env.IsGithubAction() {
 				githubactions.AddStepSummary("# Speakeasy Version upgrade failure\n" + msg)
 			}
