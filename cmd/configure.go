@@ -664,6 +664,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	wf, err := run.NewWorkflow(
 		ctx,
+		run.WithTarget("all"),
 		run.WithShouldCompile(false),
 		run.WithSkipTesting(true), // we only generate tests here, they will execute them on `speakeasy test`
 		run.WithSkipVersioning(true),
