@@ -644,7 +644,8 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 				_, err := charm.NewForm(huh.NewForm(
 					huh.NewGroup(
 						huh.NewSelect[bool]().
-							Title("\n\nFor testing checks to run on PR creation you must install the Speakeasy Github app or setup your own Github Actions PAT.\nTo learn more about each option see - https://www.speakeasy.com/docs/customize-testing/github-actions#ensuring-tests-run-on-automated-pr-creation\n").
+							Title("To run automated PR checks install the Speakeasy Github app or setup your own Github Actions PAT.").
+							Description("https://www.speakeasy.com/docs/customize-testing/github-actions").
 							Options(
 								huh.NewOption("Install Speakeasy App", true),
 								huh.NewOption("Setup Github PAT", false),
