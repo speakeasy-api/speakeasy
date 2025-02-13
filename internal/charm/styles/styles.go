@@ -201,3 +201,11 @@ func RenderSupportEmail() string {
 
 	return Emphasized.Render("support@speakeasy.com")
 }
+
+func RenderSalesEmail() string {
+	if env.IsGithubAction() {
+		return "sales@speakeasy.com"
+	}
+
+	return Emphasized.Render("sales@speakeasy.com")
+}

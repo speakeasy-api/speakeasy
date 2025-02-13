@@ -10,8 +10,10 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"github.com/speakeasy-api/speakeasy/internal/testcmd"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -553,14 +555,19 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		return err
 	}
 
+	accountType := auth.GetAccountTypeFromContext(ctx)
+	if testcmd.CheckTestingAccountType(*accountType) {
+		return fmt.Errorf("testing is not supported on the %s account tier. Contact %s for more information", *accountType, styles.RenderSalesEmail())
+	}
+
+	// TODO: Add feature add-on prompt here during add-ons project
+
 	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
 
 	workflowFile, _, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
 		return renderAndPrintWorkflowNotFound("testing", logger)
 	}
-
-	// TODO: Add feature add-on prompt here during add-ons project
 
 	var testingOptions []huh.Option[string]
 	for name, target := range workflowFile.Targets {
