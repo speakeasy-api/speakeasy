@@ -397,10 +397,9 @@ func WriteTestingFiles(ctx context.Context, wf *workflow.Workflow, currentWorkin
 	// Write the appropriate testing files
 	for _, name := range selectedTargets {
 		testingFile := defaultTestingFile(wf.Targets[name].Output, workflowFileDir, secrets)
-		testingFile.Name = fmt.Sprintf("Test %s", strings.ToUpper(name))
-
 		filePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_test.yaml")
 		if len(wf.Targets) > 1 {
+			testingFile.Name = fmt.Sprintf("Test %s", strings.ToUpper(name))
 			sanitizedName := strings.ReplaceAll(strings.ToLower(name), "-", "_")
 			filePath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_test_%s.yaml", sanitizedName))
 		}
