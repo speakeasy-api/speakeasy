@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 
@@ -59,6 +60,11 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 	logger := log.From(ctx)
 	var logs bytes.Buffer
 	warnings := make([]string, 0)
+
+	if w.BoostrapTests {
+		msg := styles.MakeBoxed(styles.MakeBold(fmt.Sprintf("🚀 %s 🚀", styles.Info.Render("Bootstrapping Tests"))), styles.Colors.Green, lipgloss.Center)
+		logger.Println(msg)
+	}
 
 	logCapture := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
 	updatesChannel := make(chan workflowTracking.UpdateMsg)

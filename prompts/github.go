@@ -396,7 +396,7 @@ func WriteTestingFiles(ctx context.Context, wf *workflow.Workflow, currentWorkin
 	var filePaths []string
 	// Write the appropriate testing files
 	for _, name := range selectedTargets {
-		testingFile := defaultTestingFile(wf.Targets[name].Output, workflowFileDir, secrets)
+		testingFile := defaultTestingFile(name, wf.Targets[name].Output, workflowFileDir, secrets)
 		filePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_test.yaml")
 		if len(wf.Targets) > 1 {
 			testingFile.Name = fmt.Sprintf("Test %s", strings.ToUpper(name))
@@ -672,7 +672,7 @@ func defaultPublishingFile() *config.PublishWorkflow {
 	}
 }
 
-func defaultTestingFile(sdkOutputDir *string, workflowFileDir string, secrets map[string]string) *config.TestingWorkflow {
+func defaultTestingFile(sdkName string, sdkOutputDir *string, workflowFileDir string, secrets map[string]string) *config.TestingWorkflow {
 	sdkPath := "**"
 	if sdkOutputDir != nil && *sdkOutputDir != "." && *sdkOutputDir != "./" {
 		sdkPath = fmt.Sprintf("%s/**", filepath.Join(workflowFileDir, strings.TrimPrefix(*sdkOutputDir, "/")))
@@ -708,7 +708,7 @@ func defaultTestingFile(sdkOutputDir *string, workflowFileDir string, secrets ma
 			Test: config.Job{
 				Uses: "speakeasy-api/sdk-generation-action/.github/workflows/sdk-test.yaml@v15",
 				With: map[string]any{
-					"target": "${{ github.event.inputs.target }}",
+					"target": fmt.Sprintf("${{ github.event.inputs.target || '%s' }}", sdkName),
 				},
 				Secrets: secrets,
 			},

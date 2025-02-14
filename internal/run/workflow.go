@@ -39,7 +39,8 @@ type Workflow struct {
 
 	// Enable if target testing should be explicitly disabled, regardless of the
 	// workflow configuration enabling testing.
-	SkipTesting bool
+	SkipTesting   bool
+	BoostrapTests bool
 
 	// Internal
 	workflowName       string
@@ -151,6 +152,15 @@ func WithSkipVersioning(skipVersioning bool) Opt {
 func WithTarget(target string) Opt {
 	return func(w *Workflow) {
 		w.Target = target
+	}
+}
+
+func WithBoostrapTests() Opt {
+	return func(w *Workflow) {
+		w.BoostrapTests = true
+		w.ShouldCompile = false
+		w.SkipTesting = true
+		w.SkipVersioning = true
 	}
 }
 
