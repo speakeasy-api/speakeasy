@@ -565,7 +565,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
 
-	workflowFile, _, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
+	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
 		return renderAndPrintWorkflowNotFound("testing", logger)
 	}
@@ -668,7 +668,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 	}
 
-	var status []string
+	status := []string{"Test definitions written to:", fmt.Sprintf("\t- %s", filepath.Join(filepath.Dir(workflowFilePath), "tests.arazzo.yaml"))}
 	if len(testingFilePaths) > 0 {
 		status = append(status, "GitHub action (test) files written to:")
 		for _, path := range testingFilePaths {
@@ -696,22 +696,20 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 	wf, err := run.NewWorkflow(
 		ctx,
 		run.WithTarget("all"),
-		run.WithShouldCompile(false),
-		run.WithSkipTesting(true), // we only generate tests here, they will execute them on `speakeasy test`
-		run.WithSkipVersioning(true),
+		run.WithBoostrapTests(),
 	)
 
 	if err = wf.RunWithVisualization(ctx); err != nil {
 		return errors.Wrapf(err, "failed to generate tests")
 	}
 
-	if len(status) > 0 {
-		logger.Println(styles.Info.Render("Files successfully generated!\n"))
-		for _, statusMsg := range status {
-			logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
-		}
-		logger.Println(styles.Info.Render("\n"))
+	success := styles.MakeBoxed(styles.MakeBold(fmt.Sprintf("✅ %s ✅", styles.Info.Render("Tests Successfully Generated"))), styles.Colors.Green, lipgloss.Center)
+	logger.Println(success + "\n")
+
+	for _, statusMsg := range status {
+		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
 	}
+	logger.Println(styles.Info.Render("\n"))
 
 	msg := styles.RenderInstructionalMessage("For your testing setup to complete perform the following steps.",
 		agenda...)
