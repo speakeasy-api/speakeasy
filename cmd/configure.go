@@ -707,7 +707,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 	logger.Println(success + "\n")
 
 	for _, statusMsg := range status {
-		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
+		logger.Println(styles.Info.Render(statusMsg))
 	}
 	logger.Println(styles.Info.Render("\n"))
 
