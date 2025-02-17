@@ -1,0 +1,37 @@
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  disable-all: true
+  enable:
+    # - copyloopvar
+    # - durationcheck
+    # - errcheck
+    # - forcetypeassert
+    # - gocheckcompilerdirectives
+    # - gofmt
+    # - gosimple
+    - govet
+    # - ineffassign
+    # - intrange
+    # - loggercheck
+    # - makezero
+    # - mirror
+    - misspell
+    # - nilerr
+    # - nolintlint
+    # - paralleltest
+    # - perfsprint
+    # - prealloc
+    # - predeclared
+    # - spancheck
+    # - staticcheck
+    # - tenv
+    # - thelper
+    # - testifylint
+    # - unconvert
+    # - unparam
+    # - unused
+    # - usestdlibvars
+    # - wastedassign
