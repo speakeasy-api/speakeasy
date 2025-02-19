@@ -127,9 +127,9 @@ func (r *Runner) RunWithVisualization(ctx context.Context) error {
 			shortenedURLs = append(shortenedURLs, links.Shorten(ctx, url))
 		}
 		if runErr != nil {
-			logger.Println("\n\n" + styles.RenderErrorMessage(msg, lipgloss.Center, shortenedURLs...))
+			logger.Println("\n\n" + styles.RenderErrorMessage("Tests Failed "+msg, lipgloss.Center, shortenedURLs...))
 		} else {
-			logger.Println("\n\n" + styles.RenderSuccessMessage(msg, shortenedURLs...))
+			logger.Println("\n\n" + styles.RenderSuccessMessage("Tests Succeeded "+msg, shortenedURLs...))
 		}
 	}
 
