@@ -118,18 +118,18 @@ func (r *Runner) RunWithVisualization(ctx context.Context) error {
 	}
 
 	if len(r.testReportURLs) > 0 {
-		msg := "View your test report here"
+		msg := "view your test report here"
 		if len(r.testReportURLs) > 1 {
-			msg = "View your test reports here"
+			msg = "view your test reports here"
 		}
 		shortenedURLs := make([]string, 0, len(r.testReportURLs))
 		for _, url := range r.testReportURLs {
 			shortenedURLs = append(shortenedURLs, links.Shorten(ctx, url))
 		}
 		if runErr != nil {
-			logger.Println("\n\n" + styles.RenderErrorMessage("Tests Failed "+msg, lipgloss.Center, shortenedURLs...))
+			logger.Println("\n\n" + styles.RenderErrorMessage("Tests Failed - "+msg, lipgloss.Center, shortenedURLs...))
 		} else {
-			logger.Println("\n\n" + styles.RenderSuccessMessage("Tests Succeeded "+msg, shortenedURLs...))
+			logger.Println("\n\n" + styles.RenderSuccessMessage("Tests Succeeded - "+msg, shortenedURLs...))
 		}
 	}
 
