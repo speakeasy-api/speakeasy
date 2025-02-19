@@ -258,7 +258,7 @@ func (r *Runner) runSingleWorkflowTargetTesting(ctx context.Context, workflowTar
 	}
 
 	if err != nil {
-		return fmt.Errorf("error running workflow target %s (%s) testing: %w", workflowTargetName, workflowTarget.Target, err)
+		return fmt.Errorf("error running tests for target %s (%s): %w", workflowTargetName, workflowTarget.Target, err)
 	}
 
 	targetTracker.SucceedWorkflow()
