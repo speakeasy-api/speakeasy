@@ -158,7 +158,7 @@ func WithTarget(target string) Opt {
 func WithBoostrapTests() Opt {
 	return func(w *Workflow) {
 		w.BoostrapTests = true
-		w.ShouldCompile = false
+		w.ShouldCompile = true
 		w.SkipTesting = true
 		w.SkipVersioning = true
 	}
