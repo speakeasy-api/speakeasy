@@ -14,62 +14,29 @@ import (
 
 var docSiteRoot = "/docs/speakeasy-reference/cli"
 
-func GenerateDocs(cmd *cobra.Command, outDir string, docSiteLinks bool) error {
-	docosaurusPositioning := map[string]int{}
-
-	if docSiteLinks {
-		docosaurusPositioning = map[string]int{
-			filepath.Join(outDir, "README.md"):  2,
-			filepath.Join(outDir, "auth"):       3,
-			filepath.Join(outDir, "validate"):   4,
-			filepath.Join(outDir, "suggest.md"): 5,
-			filepath.Join(outDir, "generate"):   6,
-			filepath.Join(outDir, "merge.md"):   7,
-			filepath.Join(outDir, "api"):        8,
-			filepath.Join(outDir, "proxy.md"):   9,
-			filepath.Join(outDir, "update.md"):  10,
-			filepath.Join(outDir, "usage.md"):   11,
-		}
-	}
-
-	return genDocs(cmd, outDir, docSiteLinks, docosaurusPositioning)
+func GenerateDocs(cmd *cobra.Command, outDir string) error {
+	return genDocs(cmd, outDir)
 }
 
-func genDocs(cmd *cobra.Command, outDir string, docSiteLinks bool, docosaurusPositioning map[string]int) error {
+func genDocs(cmd *cobra.Command, outDir string) error {
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
-		if err := genDocs(c, outDir, docSiteLinks, docosaurusPositioning); err != nil {
+		if err := genDocs(c, outDir); err != nil {
 			return err
 		}
 	}
 
 	outFile := filepath.Join(outDir, getPath(cmd))
 
-	doc, err := genDoc(cmd, docSiteLinks)
+	doc, err := genDoc(cmd)
 	if err != nil {
 		return err
 	}
 
 	if err := utils.CreateDirectory(outFile); err != nil {
 		return err
-	}
-
-	dir := filepath.Dir(outFile)
-
-	if pos, ok := docosaurusPositioning[dir]; ok {
-		if err := os.WriteFile(filepath.Join(dir, "_category_.json"), []byte(fmt.Sprintf(`{"position": %d}`, pos)), 0o644); err != nil {
-			return err
-		}
-	}
-
-	if pos, ok := docosaurusPositioning[outFile]; ok {
-		doc = fmt.Sprintf(`---
-sidebar_position: %d
----
-
-`, pos) + doc
 	}
 
 	if err := os.WriteFile(outFile, []byte(doc), 0o644); err != nil {
@@ -79,7 +46,7 @@ sidebar_position: %d
 	return nil
 }
 
-func genDoc(cmd *cobra.Command, docSiteLinks bool) (string, error) {
+func genDoc(cmd *cobra.Command) (string, error) {
 	cmd.InitDefaultHelpCmd()
 	cmd.InitDefaultHelpFlag()
 
@@ -110,16 +77,7 @@ func genDoc(cmd *cobra.Command, docSiteLinks bool) (string, error) {
 	if cmd.HasParent() {
 		builder.WriteString("### Parent Command\n\n")
 		parent := cmd.Parent()
-
-		link := ""
-		if docSiteLinks {
-			link = getDocSiteLink(parent)
-		} else {
-			link = "README.md"
-			if cmd.HasAvailableSubCommands() {
-				link = "../README.md"
-			}
-		}
+		link := getDocSiteLink(parent)
 
 		builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", parent.CommandPath(), link, parent.Short))
 	}
@@ -137,16 +95,7 @@ func genDoc(cmd *cobra.Command, docSiteLinks bool) (string, error) {
 				continue
 			}
 
-			link := ""
-
-			if docSiteLinks {
-				link = getDocSiteLink(child)
-			} else {
-				link = fmt.Sprintf("%s.md", child.Name())
-				if child.HasAvailableSubCommands() {
-					link = fmt.Sprintf("%s/README.md", child.Name())
-				}
-			}
+			link := getDocSiteLink(child)
 
 			builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", child.CommandPath(), link, child.Short))
 		}

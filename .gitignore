@@ -1,4 +1,5 @@
 dist/
+/docs/
 bin/
 .idea/
 *.iml
