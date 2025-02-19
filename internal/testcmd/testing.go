@@ -2,6 +2,7 @@ package testcmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"slices"
 	"strings"
@@ -11,10 +12,12 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/events"
 )
 
-func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, workflowTarget workflow.Target, targetName, outDir string) error {
+func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, workflowTarget workflow.Target, targetName, outDir string) (string, error) {
+	testReportURL := ""
 	err := events.Telemetry(ctx, shared.InteractionTypeTest, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &targetName
 		if prReference := os.Getenv("GH_PULL_REQUEST"); prReference != "" {
@@ -24,35 +27,46 @@ func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, wo
 
 		err := generator.RunTargetTesting(ctx, workflowTarget.Target, outDir)
 
-		populateRawTestReport(outDir, event)
-		populateGenLockDetails(outDir, event)
+		foundTestReport := populateRawTestReport(outDir, event)
+		genLockID := populateGenLockDetails(outDir, event)
+		orgSlug := auth.GetOrgSlugFromContext(ctx)
+		workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+		if foundTestReport && genLockID != "" {
+			testReportURL = fmt.Sprintf("https://app.speakeasy.com/org/%s/%s/targets/%s/tests/%s", orgSlug, workspaceSlug, genLockID, event.ExecutionID)
+		}
 		return err
 	})
 
-	return err
+	return testReportURL, err
 }
 
 func CheckTestingAccountType(accountType shared.AccountType) bool {
 	return slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, accountType)
 }
 
-func populateRawTestReport(outDir string, event *shared.CliEvent) {
+func populateRawTestReport(outDir string, event *shared.CliEvent) bool {
+	foundTestReport := false
 	if res, _ := workspace.FindWorkspace(outDir, workspace.FindWorkspaceOptions{
 		FindFile:  "reports/tests.xml",
 		Recursive: true,
 	}); res != nil && len(res.Data) > 0 {
 		testReportContent := string(res.Data)
 		event.TestReportRaw = &testReportContent
+		foundTestReport = true
 	}
+	return foundTestReport
 }
 
-func populateGenLockDetails(outDir string, event *shared.CliEvent) {
+func populateGenLockDetails(outDir string, event *shared.CliEvent) string {
 	if cfg, err := config.Load(outDir); err == nil && cfg.LockFile != nil {
 		// The generator marks a testing run's version as internal to avoid a bump
 		// So we pull current version of the SDK from the lock file
 		currentVersion := cfg.LockFile.Management.ReleaseVersion
 		event.GenerateVersion = &currentVersion
+		return cfg.LockFile.ID
 	}
+
+	return ""
 }
 
 func reformatPullRequestURL(url string) string {

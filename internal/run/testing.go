@@ -61,7 +61,7 @@ func (w Workflow) runTesting(ctx context.Context, workflowTargetName string, tar
 		return err
 	}
 
-	if err := testcmd.ExecuteTargetTesting(testingCtx, generator, target, workflowTargetName, outputDir); err != nil {
+	if _, err := testcmd.ExecuteTargetTesting(testingCtx, generator, target, workflowTargetName, outputDir); err != nil {
 		return fmt.Errorf("error running workflow target %s (%s) testing: %w", workflowTargetName, target.Target, err)
 	}
 
