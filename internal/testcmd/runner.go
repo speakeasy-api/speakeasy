@@ -8,11 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
@@ -42,6 +44,8 @@ type Runner struct {
 
 	// Enhanced CLI visualization tracker for the workflow.
 	workflowTracker *workflowTracking.WorkflowStep
+
+	testReportURLs []string
 }
 
 // NewRunner creates a new Runner with the given options.
@@ -111,6 +115,22 @@ func (r *Runner) RunWithVisualization(ctx context.Context) error {
 		output := strings.TrimSpace(logCaptureBuffer.String())
 
 		logger.PrintlnUnstyled(styles.MakeSection("Workflow testing run logs", output, styles.Colors.Grey))
+	}
+
+	if len(r.testReportURLs) > 0 {
+		msg := "View your test report here"
+		if len(r.testReportURLs) > 1 {
+			msg = "View your test reports here"
+		}
+		shortenedURLs := make([]string, 0, len(r.testReportURLs))
+		for _, url := range r.testReportURLs {
+			shortenedURLs = append(shortenedURLs, links.Shorten(ctx, url))
+		}
+		if runErr != nil {
+			logger.Println("\n\n" + styles.RenderErrorMessage(msg, lipgloss.Center, shortenedURLs...))
+		} else {
+			logger.Println("\n\n" + styles.RenderSuccessMessage(msg, shortenedURLs...))
+		}
 	}
 
 	return errors.Join(err, runErr)
@@ -231,7 +251,13 @@ func (r *Runner) runSingleWorkflowTargetTesting(ctx context.Context, workflowTar
 		return err
 	}
 
-	if err := ExecuteTargetTesting(testingCtx, generator, workflowTarget, workflowTargetName, outputDir); err != nil {
+	testReportURL, err := ExecuteTargetTesting(testingCtx, generator, workflowTarget, workflowTargetName, outputDir)
+
+	if testReportURL != "" {
+		r.testReportURLs = append(r.testReportURLs, testReportURL)
+	}
+
+	if err != nil {
 		return fmt.Errorf("error running workflow target %s (%s) testing: %w", workflowTargetName, workflowTarget.Target, err)
 	}
 
