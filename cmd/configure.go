@@ -120,8 +120,8 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 }
 
 type ConfigureTestsFlags struct {
-	Rebuild bool `json:"rebuild"`
-	ConfigureGithubFlags
+	Rebuild           bool   `json:"rebuild"`
+	WorkflowDirectory string `json:"workflow-directory"`
 }
 
 type ConfigureGithubFlags struct {
@@ -434,7 +434,7 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 		return err
 	}
 
-	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags.WorkflowDirectory)
 
 	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
@@ -573,7 +573,7 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 
 	// TODO: Add feature add-on prompt here during add-ons project
 
-	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags.ConfigureGithubFlags)
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags.WorkflowDirectory)
 
 	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
@@ -753,7 +753,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	orgSlug := core.GetOrgSlugFromContext(ctx)
 	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
-	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags.WorkflowDirectory)
 
 	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
@@ -1044,10 +1044,10 @@ func configureGithubRepo(ctx context.Context, org, repo string) bool {
 	return res.StatusCode == http.StatusOK
 }
 
-func getActionWorkingDirectoryFromFlag(rootDir string, flags ConfigureGithubFlags) string {
+func getActionWorkingDirectoryFromFlag(rootDir string, workflowDir string) string {
 	var actionWorkingDir string
-	if flags.WorkflowDirectory != "" {
-		if workflowFileDir, err := filepath.Abs(flags.WorkflowDirectory); err == nil {
+	if workflowDir != "" {
+		if workflowFileDir, err := filepath.Abs(workflowDir); err == nil {
 			if filepath.Base(workflowFileDir) == "workflow.yaml" {
 				workflowFileDir = filepath.Dir(workflowFileDir)
 			}
