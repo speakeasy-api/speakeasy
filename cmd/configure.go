@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
@@ -118,6 +119,11 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 	},
 }
 
+type ConfigureTestsFlags struct {
+	Rebuild bool `json:"rebuild"`
+	ConfigureGithubFlags
+}
+
 type ConfigureGithubFlags struct {
 	WorkflowDirectory string `json:"workflow-directory"`
 }
@@ -152,7 +158,7 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	RequiresAuth: true,
 }
 
-var configureTestingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+var configureTestingCmd = &model.ExecutableCommand[ConfigureTestsFlags]{
 	Usage: "tests",
 	Short: "Configure Speakeasy SDK tests.",
 	Long:  "Configure your Speakeasy workflow to generate and run SDK tests..",
@@ -162,6 +168,10 @@ var configureTestingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 			Name:        "workflow-directory",
 			Shorthand:   "d",
 			Description: "directory of speakeasy workflow file",
+		},
+		flag.BooleanFlag{
+			Name:        "rebuild",
+			Description: "clears out all existing tests and regenerates them from scratch",
 		},
 	},
 	RequiresAuth: true,
@@ -548,7 +558,7 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	return nil
 }
 
-func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
+func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 	logger := log.From(ctx)
 
 	rootDir, err := os.Getwd()
@@ -563,7 +573,7 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	// TODO: Add feature add-on prompt here during add-ons project
 
-	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags)
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags.ConfigureGithubFlags)
 
 	workflowFile, workflowFilePath, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
 	if workflowFile == nil {
@@ -610,10 +620,26 @@ func configureTesting(ctx context.Context, flags ConfigureGithubFlags) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to load config file for target %s", name)
 		}
-
 		cfg.Config.Generation.Tests.GenerateNewTests = true
 		if err := config.SaveConfig(filepath.Dir(cfg.ConfigPath), cfg.Config); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", name)
+		}
+
+		// We clear out the existing generated tests gen.lock entry and arazzo file, so we can rebuild from scratch.
+		if flags.Rebuild && cfg.LockFile != nil {
+			cfg.LockFile.GeneratedTests = nil
+			if err := config.SaveLockFile(filepath.Dir(cfg.ConfigPath), cfg.LockFile); err != nil {
+				return errors.Wrapf(err, "failed to update lock file for target %s", name)
+			}
+			if res, _ := workspace.FindWorkspace(filepath.Dir(cfg.ConfigPath), workspace.FindWorkspaceOptions{
+				FindFile:  "tests.arazzo.yaml",
+				Recursive: true,
+			}); res != nil {
+				err := os.Remove(res.Path)
+				if err != nil {
+					return errors.Wrapf(err, "failed to remove tests.arazzo.yaml file for target %s", name)
+				}
+			}
 		}
 	}
 
