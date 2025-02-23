@@ -12,4 +12,5 @@ var (
 	MsgWarn   MsgType = "warn"
 	MsgError  MsgType = "error"
 	MsgGithub MsgType = "github"
+	MsgStudio MsgType = "studio"
 )
