@@ -16,12 +16,7 @@ paths:
       operationId: checkHealth
       responses:
         "200":
-          description: Successful response
-          content:
-            text/event-stream:
-              x-speakeasy-sse-sentinel: "[DONE]"
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
+          $ref: "#/components/responses/HealthResponse"
   /run:
     get:
       summary: Run
@@ -29,11 +24,7 @@ paths:
       operationId: getRun
       responses:
         "200":
-          description: Successful response
-          content:
-            text/event-stream:
-              schema:
-                $ref: "#/components/schemas/RunResponseStreamEvent"
+          $ref: "#/components/responses/RunResponse"
     post:
       summary: Run
       description: Regenerate the currently selected targets.
@@ -43,27 +34,10 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                overlay:
-                  type: string
-                  description: The studio modifications overlay contents - this should be an overlay YAML document
-                input:
-                  type: string
-                  description: The input spec for the source
-                targets:
-                  type: object
-                  additionalProperties:
-                    $ref: "#/components/schemas/TargetSpecificInputs"
-                  description: Map of target specific inputs keyed on target name
+                $ref: "#/components/schemas/RunRequestBody"
       responses:
         "200":
-          description: Successful response
-          content:
-            text/event-stream:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/RunResponseStreamEvent"
+          $ref: "#/components/responses/RunResponse"
   /overlays/compare:
     post:
       summary: Generate an overlay from two yaml files
@@ -74,30 +48,10 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                before:
-                  type: string
-                  description: The first yaml file
-                after:
-                  type: string
-                  description: The second yaml file
-              required:
-                - before
-                - after
+              $ref: "#/components/schemas/OverlayCompareRequestBody"
       responses:
         "200":
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  overlay:
-                    type: string
-                    description: The studio modifications overlay contents - this should be an overlay YAML document
-                required:
-                  - overlay
+          $ref: "#/components/responses/OverlayCompareResponse"
   /suggest/method-names:
     get:
       summary: Suggest Method Names
@@ -105,11 +59,7 @@ paths:
       operationId: suggestMethodNames
       responses:
         "200":
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SuggestResponse"
+          $ref: "#/components/responses/SuggestResponse"
   /exit:
     post:
       summary: Exit
@@ -119,17 +69,76 @@ paths:
         "200":
           description: Successful response
 components:
-  schemas:
+  responses:
+    SuggestResponse:
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              overlay:
+                type: string
+                description: The studio modifications overlay contents - this should be an overlay YAML document
+            required:
+              - overlay
     HealthResponse:
+      description: Successful response
+      content:
+        text/event-stream:
+          x-speakeasy-sse-sentinel: "[DONE]"
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: Status of the CLI
+    RunResponse:
+      description: Successful response
+      content:
+        text/event-stream:
+          schema:
+            type: object
+            required:
+              - event
+              - data
+            properties:
+              event:
+                type: string
+                description: Type of the stream
+              data:
+                $ref: "#/components/schemas/RunResponseData"
+    OverlayCompareResponse:
+      description: Successful response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              overlay:
+                type: string
+                description: The studio modifications overlay contents - this should be an overlay YAML document
+            required:
+              - overlay
+  schemas:
+    RunRequestBody:
       type: object
       properties:
-        data:
+        overlay:
+          type: string
+          description: The studio modifications overlay contents - this should be an overlay YAML document
+        input:
+          type: string
+          description: The input spec for the source
+        targets:
           type: object
-          properties:
-            status:
-              type: string
-              description: Status of the CLI
-    RunResponse:
+          additionalProperties:
+            $ref: "#/components/schemas/TargetSpecificInputs"
+          description: Map of target specific inputs keyed on target name
+    RunResponseData:
       type: object
       description: Map of target run summaries
       properties:
@@ -143,7 +152,7 @@ components:
           type: string
           description: Link to the linting report
         sourceResult:
-          $ref: "#/components/schemas/SourceResponse"
+          $ref: "#/components/schemas/SourceResponseData"
         targetResults:
           type: object
           additionalProperties:
@@ -169,6 +178,47 @@ components:
         - took
         - isPartial
         - step
+    SourceResponseData:
+      type: object
+      properties:
+        sourceID:
+          type: string
+          description: Source ID in the workflow file
+        input:
+          type: string
+          description: The merged input specs for the source
+        overlay:
+          type: string
+          description: Studio modifications overlay contents (could be empty string)
+        overlayPath:
+          type: string
+          description: Studio modifications overlay path
+        output:
+          type: string
+          description: Result of running the source in the workflow
+        diagnosis:
+          type: array
+          items:
+            $ref: "#/components/schemas/Diagnostic"
+          description: List of validation errors
+      required:
+        - sourceID
+        - input
+        - overlay
+        - overlayPath
+        - output
+    OverlayCompareRequestBody:
+      type: object
+      properties:
+        before:
+          type: string
+          description: The first yaml file
+        after:
+          type: string
+          description: The second yaml file
+      required:
+        - before
+        - after
     TargetRunSummary:
       type: object
       properties:
@@ -208,43 +258,6 @@ components:
           description: New contents of the gen.yaml file for this target
       required:
         - config
-    SourceResponse:
-      type: object
-      properties:
-        sourceID:
-          type: string
-          description: Source ID in the workflow file
-        input:
-          type: string
-          description: The merged input specs for the source
-        overlay:
-          type: string
-          description: Studio modifications overlay contents (could be empty string)
-        overlayPath:
-          type: string
-          description: Studio modifications overlay path
-        output:
-          type: string
-          description: Result of running the source in the workflow
-        diagnosis:
-          type: array
-          items:
-            $ref: "#/components/schemas/Diagnostic"
-          description: List of validation errors
-      required:
-        - sourceID
-        - input
-        - overlay
-        - overlayPath
-        - output
-    SuggestResponse:
-      type: object
-      properties:
-        overlay:
-          type: string
-          description: The studio modifications overlay contents - this should be an overlay YAML document
-      required:
-        - overlay
     Workflow:
       type: object
       properties:
@@ -395,28 +408,6 @@ components:
         - authSecret
     Publishing:
       type: object
-    RunResponseStreamEvent:
-      type: object
-      required:
-        - event
-        - data
-      properties:
-        event:
-          type: string
-          description: Type of the stream
-        data:
-          $ref: "#/components/schemas/RunResponse"
-    SourceResponseStreamEvent:
-      type: object
-      required:
-        - event
-        - data
-      properties:
-        event:
-          type: string
-          description: Type of the stream
-        data:
-          $ref: "#/components/schemas/SourceResponse"
   securitySchemes:
     secret:
       type: apiKey
