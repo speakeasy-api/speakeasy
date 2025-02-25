@@ -24,6 +24,7 @@ type HTTPClient interface {
 }
 
 type HookContext struct {
+	BaseURL        string
 	Context        context.Context
 	OperationID    string
 	OAuth2Scopes   []string
@@ -77,8 +78,6 @@ func New() *Hooks {
 		afterSuccessHook:  []afterSuccessHook{},
 		afterErrorHook:    []afterErrorHook{},
 	}
-
-	initHooks(h)
 
 	return h
 }

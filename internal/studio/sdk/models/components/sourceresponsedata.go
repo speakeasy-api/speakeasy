@@ -2,7 +2,7 @@
 
 package components
 
-type SourceResponse struct {
+type SourceResponseData struct {
 	// Source ID in the workflow file
 	SourceID string `json:"sourceID"`
 	// The merged input specs for the source
@@ -17,42 +17,42 @@ type SourceResponse struct {
 	Diagnosis []Diagnostic `json:"diagnosis,omitempty"`
 }
 
-func (o *SourceResponse) GetSourceID() string {
+func (o *SourceResponseData) GetSourceID() string {
 	if o == nil {
 		return ""
 	}
 	return o.SourceID
 }
 
-func (o *SourceResponse) GetInput() string {
+func (o *SourceResponseData) GetInput() string {
 	if o == nil {
 		return ""
 	}
 	return o.Input
 }
 
-func (o *SourceResponse) GetOverlay() string {
+func (o *SourceResponseData) GetOverlay() string {
 	if o == nil {
 		return ""
 	}
 	return o.Overlay
 }
 
-func (o *SourceResponse) GetOverlayPath() string {
+func (o *SourceResponseData) GetOverlayPath() string {
 	if o == nil {
 		return ""
 	}
 	return o.OverlayPath
 }
 
-func (o *SourceResponse) GetOutput() string {
+func (o *SourceResponseData) GetOutput() string {
 	if o == nil {
 		return ""
 	}
 	return o.Output
 }
 
-func (o *SourceResponse) GetDiagnosis() []Diagnostic {
+func (o *SourceResponseData) GetDiagnosis() []Diagnostic {
 	if o == nil {
 		return nil
 	}

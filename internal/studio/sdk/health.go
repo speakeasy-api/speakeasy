@@ -30,13 +30,6 @@ func newHealth(sdkConfig sdkConfiguration) *Health {
 // Health Check
 // Check the CLI health and return relevant information.
 func (s *Health) Check(ctx context.Context, opts ...operations.Option) (*operations.CheckHealthResponse, error) {
-	hookCtx := hooks.HookContext{
-		Context:        ctx,
-		OperationID:    "checkHealth",
-		OAuth2Scopes:   []string{},
-		SecuritySource: s.sdkConfiguration.Security,
-	}
-
 	o := operations.Options{}
 	supportedOptions := []string{
 		operations.SupportedOptionRetries,
@@ -58,6 +51,13 @@ func (s *Health) Check(ctx context.Context, opts ...operations.Option) (*operati
 	opURL, err := url.JoinPath(baseURL, "/health")
 	if err != nil {
 		return nil, fmt.Errorf("error generating URL: %w", err)
+	}
+
+	hookCtx := hooks.HookContext{
+		BaseURL:        baseURL,
+		Context:        ctx,
+		OperationID:    "checkHealth",
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	timeout := o.Timeout

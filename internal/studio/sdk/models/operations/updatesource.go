@@ -30,7 +30,7 @@ func (o *UpdateSourceRequestBody) GetInput() *string {
 type UpdateSourceResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
-	SourceResponse *components.SourceResponse
+	SourceResult *components.SourceResponseData
 }
 
 func (o *UpdateSourceResponse) GetHTTPMeta() components.HTTPMetadata {
@@ -40,9 +40,9 @@ func (o *UpdateSourceResponse) GetHTTPMeta() components.HTTPMetadata {
 	return o.HTTPMeta
 }
 
-func (o *UpdateSourceResponse) GetSourceResponse() *components.SourceResponse {
+func (o *UpdateSourceResponse) GetSourceResponse() *components.SourceResponseData {
 	if o == nil {
 		return nil
 	}
-	return o.SourceResponse
+	return o.SourceResult
 }

@@ -1,4 +1,4 @@
-# GenerateOverlayResponseBody
+# OverlayCompareResponse
 
 Successful response
 

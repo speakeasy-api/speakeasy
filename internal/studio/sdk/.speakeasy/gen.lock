@@ -1,19 +1,19 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 103116643dcafea63f7f31d5a5b1cb10
+  docChecksum: 18c0fc08c6e4ade5682240dc39b54e4e
   docVersion: 1.0.0
-  speakeasyVersion: 1.474.0
-  generationVersion: 2.495.0
-  releaseVersion: 0.8.7
-  configChecksum: 28cea047f23b070cd444b22d652f8ec2
+  speakeasyVersion: 1.504.0
+  generationVersion: 2.529.0
+  releaseVersion: 0.10.4
+  configChecksum: fe75e102ea201c95774cfc521819d252
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.6.9
+    core: 3.7.2
     defaultEnabledRetries: 0.2.0
     envVarSecurityUsage: 0.3.2
-    globalSecurity: 2.82.10
+    globalSecurity: 2.82.11
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
     globalServerURLs: 2.82.2
@@ -25,7 +25,6 @@ features:
     sdkHooks: 0.1.0
     serverEvents: 0.1.2
     serverEventsSentinels: 0.1.0
-    unions: 2.85.10
 generatedFiles:
   - /models/components/auth.go
   - /models/components/codesamples.go
@@ -35,13 +34,16 @@ generatedFiles:
   - /models/components/healthresponse.go
   - /models/components/httpmetadata.go
   - /models/components/overlay.go
+  - /models/components/overlaycomparerequestbody.go
+  - /models/components/overlaycompareresponse.go
   - /models/components/publishing.go
+  - /models/components/runrequestbody.go
   - /models/components/runresponse.go
-  - /models/components/runresponsestreamevent.go
+  - /models/components/runresponsedata.go
   - /models/components/security.go
   - /models/components/source.go
   - /models/components/sourceregistry.go
-  - /models/components/sourceresponse.go
+  - /models/components/sourceresponsedata.go
   - /models/components/suggestresponse.go
   - /models/components/target.go
   - /models/components/targetrunsummary.go
@@ -63,13 +65,16 @@ generatedFiles:
   - docs/models/components/healthresponse.md
   - docs/models/components/httpmetadata.md
   - docs/models/components/overlay.md
+  - docs/models/components/overlaycomparerequestbody.md
+  - docs/models/components/overlaycompareresponse.md
   - docs/models/components/publishing.md
+  - docs/models/components/runrequestbody.md
   - docs/models/components/runresponse.md
-  - docs/models/components/runresponsestreamevent.md
+  - docs/models/components/runresponsedata.md
   - docs/models/components/security.md
   - docs/models/components/source.md
   - docs/models/components/sourceregistry.md
-  - docs/models/components/sourceresponse.md
+  - docs/models/components/sourceresponsedata.md
   - docs/models/components/suggestresponse.md
   - docs/models/components/target.md
   - docs/models/components/targetrunsummary.md
@@ -77,14 +82,10 @@ generatedFiles:
   - docs/models/components/workflow.md
   - docs/models/operations/checkhealthresponse.md
   - docs/models/operations/exitresponse.md
-  - docs/models/operations/generateoverlayrequestbody.md
   - docs/models/operations/generateoverlayresponse.md
-  - docs/models/operations/generateoverlayresponsebody.md
   - docs/models/operations/getrunresponse.md
   - docs/models/operations/option.md
-  - docs/models/operations/runrequestbody.md
   - docs/models/operations/runresponse.md
-  - docs/models/operations/runresponsebody.md
   - docs/models/operations/suggestmethodnamesresponse.md
   - docs/sdks/health/README.md
   - docs/sdks/run/README.md
@@ -136,4 +137,69 @@ examples:
         "200":
           application/json: {"overlay": "<value>"}
 examplesVersion: 1.0.0
-generatedTests: {}
+generatedTests:
+  getFullyFlattenedRequest: "2025-02-25T16:43:14-05:00"
+  postTest2: "2025-02-25T16:43:14-05:00"
+  postAdditionalPropertiesWithNullableFields: "2025-02-25T16:43:14-05:00"
+  responseBodyJsonGet: "2025-02-25T16:43:14-05:00"
+  unionOfArraysPost: "2025-02-25T16:43:14-05:00"
+  overriddenFieldNamesPost: "2025-02-25T16:43:14-05:00"
+  responseBodies2xxJSONObjectAllOptionalProperties: "2025-02-25T16:43:14-05:00"
+  responseBodyAdditionalPropertiesAnyPost: "2025-02-25T16:43:14-05:00"
+  responseBodyAdditionalPropertiesComplexNumbersPost: "2025-02-25T16:43:14-05:00"
+  responseBodyAdditionalPropertiesDatePost: "2025-02-25T16:43:14-05:00"
+  responseBodyAdditionalPropertiesObjectPost: "2025-02-25T16:43:14-05:00"
+  responseBodyAdditionalPropertiesPost: "2025-02-25T16:43:14-05:00"
+  responseBodyDecimalStr: "2025-02-25T16:43:14-05:00"
+  responseBodyMultilineStringPost: "2025-02-25T16:43:14-05:00"
+  responseBodyOptionalGet: "2025-02-25T16:43:14-05:00"
+  responseBodyReadOnly: "2025-02-25T16:43:14-05:00"
+  responseBodyStringGet: "2025-02-25T16:43:14-05:00"
+  responseBodyXmlGet: "2025-02-25T16:43:14-05:00"
+  globalsOptionalHiddenPathParameterOperationRequired: "2025-02-25T16:43:14-05:00"
+  globalsOptionalHiddenPathParameterPathRequired: "2025-02-25T16:43:14-05:00"
+  globalsOptionalPathParameterOperationRequired: "2025-02-25T16:43:14-05:00"
+  globalsOptionalPathParameterPathRequired: "2025-02-25T16:43:14-05:00"
+  deepObjectQueryParamsDeepObject: "2025-02-25T16:43:14-05:00"
+  deepObjectQueryParamsMap: "2025-02-25T16:43:14-05:00"
+  deepObjectQueryParamsObject: "2025-02-25T16:43:14-05:00"
+  formQueryParamsArray: "2025-02-25T16:43:14-05:00"
+  formQueryParamsCamelObject: "2025-02-25T16:43:14-05:00"
+  formQueryParamsMap: "2025-02-25T16:43:14-05:00"
+  formQueryParamsObject: "2025-02-25T16:43:14-05:00"
+  formQueryParamsPrimitive: "2025-02-25T16:43:14-05:00"
+  formQueryParamsRefParamObject: "2025-02-25T16:43:14-05:00"
+  headerParamsArray: "2025-02-25T16:43:14-05:00"
+  headerParamsMap: "2025-02-25T16:43:14-05:00"
+  headerParamsObject: "2025-02-25T16:43:14-05:00"
+  headerParamsPrimitive: "2025-02-25T16:43:14-05:00"
+  jsonQueryParamsObjectSmaller: "2025-02-25T16:43:14-05:00"
+  mixedParametersCamelCase: "2025-02-25T16:43:14-05:00"
+  mixedParametersPrimitives: "2025-02-25T16:43:14-05:00"
+  mixedQueryParams: "2025-02-25T16:43:14-05:00"
+  pathParameterJson: "2025-02-25T16:43:14-05:00"
+  pipeDelimitedQueryParamsArray: "2025-02-25T16:43:14-05:00"
+  simplePathParameterArrays: "2025-02-25T16:43:14-05:00"
+  simplePathParameterMaps: "2025-02-25T16:43:14-05:00"
+  simplePathParameterObjects: "2025-02-25T16:43:14-05:00"
+  simplePathParameterPrimitives: "2025-02-25T16:43:14-05:00"
+  requestBodyDeprecatedRequestBodyRefPost: "2025-02-25T16:43:14-05:00"
+  requestBodyPostMultipleContentTypesComponentFiltered: "2025-02-25T16:43:14-05:00"
+  requestBodyPostMultipleContentTypesComponentFilteredDefaultTest: "2025-02-25T16:43:14-05:00"
+  requestBodyPostNotNullableNotRequiredStringBody: "2025-02-25T16:43:14-05:00"
+  nestedFirstGet: "2025-02-25T16:43:14-05:00"
+  statusCode2XX: "2025-02-25T16:43:14-05:00"
+  statusCode4XX: "2025-02-25T16:43:14-05:00"
+  statusCode5XX: "2025-02-25T16:43:14-05:00"
+  statusCodeDefault: "2025-02-25T16:43:14-05:00"
+  testHooks: "2025-02-25T16:43:14-05:00"
+  constQueryParams: "2025-02-25T16:43:14-05:00"
+  requestBodyGetInferredOptionalRequestWrapper: "2025-02-25T16:43:14-05:00"
+  duplicateHeaderParameterAtOperationLevelDoesNotError: "2025-02-25T16:43:14-05:00"
+  duplicateHeaderParameterAtPathLevelDoesNotError: "2025-02-25T16:43:14-05:00"
+  duplicatePathParameterAtOperationLevelDoesNotError: "2025-02-25T16:43:14-05:00"
+  duplicatePathParameterAtPathLevelDoesNotError: "2025-02-25T16:43:14-05:00"
+  duplicateQueryParameterAtOperationLevelDoesNotError: "2025-02-25T16:43:14-05:00"
+  duplicateQueryParameterAtPathLevelDoesNotError: "2025-02-25T16:43:14-05:00"
+  defaultQueryParams: "2025-02-25T16:43:14-05:00"
+  operationIdColon:get: "2025-02-25T16:43:14-05:00"

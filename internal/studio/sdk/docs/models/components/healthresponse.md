@@ -1,5 +1,7 @@
 # HealthResponse
 
+Successful response
+
 
 ## Fields
 

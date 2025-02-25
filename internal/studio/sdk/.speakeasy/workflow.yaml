@@ -1,4 +1,5 @@
 workflowVersion: 1.0.0
+speakeasyVersion: latest
 sources:
     SpeakeasyStudio-OAS:
         inputs:
@@ -6,8 +7,14 @@ sources:
         overlays:
             - location: .speakeasy/speakeasy-modifications-overlay.yaml
         registry:
-            location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
+            location: registry.speakeasyapi.dev/qynn-test/qynn-test/speakeasy-studio-oas
 targets:
     speakeasy-studio:
         target: go
         source: SpeakeasyStudio-OAS
+        codeSamples:
+            registry:
+                location: registry.speakeasyapi.dev/qynn-test/qynn-test/speakeasy-studio-oas-go-code-samples
+            labelOverride:
+                fixedValue: Go (SDK)
+            blocking: false

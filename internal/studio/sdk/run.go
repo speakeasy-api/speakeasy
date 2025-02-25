@@ -30,13 +30,6 @@ func newRun(sdkConfig sdkConfiguration) *Run {
 // GetLastResult - Run
 // Get the output of the last run.
 func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*operations.GetRunResponse, error) {
-	hookCtx := hooks.HookContext{
-		Context:        ctx,
-		OperationID:    "getRun",
-		OAuth2Scopes:   []string{},
-		SecuritySource: s.sdkConfiguration.Security,
-	}
-
 	o := operations.Options{}
 	supportedOptions := []string{
 		operations.SupportedOptionRetries,
@@ -58,6 +51,13 @@ func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*op
 	opURL, err := url.JoinPath(baseURL, "/run")
 	if err != nil {
 		return nil, fmt.Errorf("error generating URL: %w", err)
+	}
+
+	hookCtx := hooks.HookContext{
+		BaseURL:        baseURL,
+		Context:        ctx,
+		OperationID:    "getRun",
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	timeout := o.Timeout
@@ -186,14 +186,14 @@ func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*op
 	case httpRes.StatusCode == 200:
 		switch {
 		case utils.MatchContentType(httpRes.Header.Get("Content-Type"), `text/event-stream`):
-			out := stream.NewEventStream(httpRes.Body, func(se []byte) (components.RunResponseStreamEvent, error) {
-				var e components.RunResponseStreamEvent
+			out := stream.NewEventStream(httpRes.Body, func(se []byte) (components.RunResponse, error) {
+				var e components.RunResponse
 				if err := utils.UnmarshalJsonFromResponseBody(bytes.NewBuffer(se), &e, ""); err != nil {
-					return components.RunResponseStreamEvent{}, err
+					return components.RunResponse{}, err
 				}
 				return e, nil
 			}, "")
-			res.RunResponseStreamEvent = out
+			res.RunResponse = out
 		default:
 			rawBody, err := utils.ConsumeRawBody(httpRes)
 			if err != nil {
@@ -227,14 +227,7 @@ func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*op
 
 // ReRun - Run
 // Regenerate the currently selected targets.
-func (s *Run) ReRun(ctx context.Context, request operations.RunRequestBody, opts ...operations.Option) (*operations.RunResponse, error) {
-	hookCtx := hooks.HookContext{
-		Context:        ctx,
-		OperationID:    "run",
-		OAuth2Scopes:   []string{},
-		SecuritySource: s.sdkConfiguration.Security,
-	}
-
+func (s *Run) ReRun(ctx context.Context, request components.RunRequestBody, opts ...operations.Option) (*operations.RunResponse, error) {
 	o := operations.Options{}
 	supportedOptions := []string{
 		operations.SupportedOptionRetries,
@@ -258,6 +251,12 @@ func (s *Run) ReRun(ctx context.Context, request operations.RunRequestBody, opts
 		return nil, fmt.Errorf("error generating URL: %w", err)
 	}
 
+	hookCtx := hooks.HookContext{
+		BaseURL:        baseURL,
+		Context:        ctx,
+		OperationID:    "run",
+		SecuritySource: s.sdkConfiguration.Security,
+	}
 	bodyReader, reqContentType, err := utils.SerializeRequestBody(ctx, request, false, false, "Request", "json", `request:"mediaType=application/json"`)
 	if err != nil {
 		return nil, err
@@ -392,14 +391,14 @@ func (s *Run) ReRun(ctx context.Context, request operations.RunRequestBody, opts
 	case httpRes.StatusCode == 200:
 		switch {
 		case utils.MatchContentType(httpRes.Header.Get("Content-Type"), `text/event-stream`):
-			out := stream.NewEventStream(httpRes.Body, func(se []byte) (operations.RunResponseBody, error) {
-				var e operations.RunResponseBody
+			out := stream.NewEventStream(httpRes.Body, func(se []byte) (components.RunResponse, error) {
+				var e components.RunResponse
 				if err := utils.UnmarshalJsonFromResponseBody(bytes.NewBuffer(se), &e, ""); err != nil {
-					return operations.RunResponseBody{}, err
+					return components.RunResponse{}, err
 				}
 				return e, nil
 			}, "")
-			res.OneOf = out
+			res.RunResponse = out
 		default:
 			rawBody, err := utils.ConsumeRawBody(httpRes)
 			if err != nil {

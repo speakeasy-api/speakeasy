@@ -1,4 +1,4 @@
-# GenerateOverlayRequestBody
+# OverlayCompareRequestBody
 
 
 ## Fields
