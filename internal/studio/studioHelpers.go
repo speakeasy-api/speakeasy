@@ -123,7 +123,7 @@ func convertLastRunResult(ctx context.Context, workflowRunner run.Workflow, sour
 
 	sourceResult := workflowRunner.SourceResults[sourceID]
 	if sourceResult != nil {
-		sourceResponseData, err := convertSourceResultIntoSourceResponseData(sourceID, *sourceResult, overlayPath)
+		sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, sourceID, overlayPath)
 		if err != nil {
 			return &ret, fmt.Errorf("error converting source result to source response: %w", err)
 		}
@@ -133,7 +133,7 @@ func convertLastRunResult(ctx context.Context, workflowRunner run.Workflow, sour
 	return &ret, nil
 }
 
-func convertSourceResultIntoSourceResponseData(sourceID string, sourceResult run.SourceResult, overlayPath string) (*components.SourceResponseData, error) {
+func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, sourceID, overlayPath string) (*components.SourceResponseData, error) {
 	var err error
 	overlayContents := ""
 	if overlayPath != "" {
@@ -314,9 +314,6 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 }
 
 func upsertOverlay(overlay overlay.Overlay, workflowRunner run.Workflow, sourceID, overlayPath string) (string, error) {
-	workflowConfig := workflowRunner.GetWorkflowFile()
-	source := workflowConfig.Sources[sourceID]
-
 	if overlayPath == "" {
 		var err error
 		overlayPath, err = modifications.GetOverlayPath(workflowRunner.ProjectDir)
@@ -324,6 +321,9 @@ func upsertOverlay(overlay overlay.Overlay, workflowRunner run.Workflow, sourceI
 			return overlayPath, err
 		}
 	}
+
+	workflowConfig := workflowRunner.GetWorkflowFile()
+	source := workflowConfig.Sources[sourceID]
 
 	overlayPath, err := modifications.UpsertOverlay(overlayPath, &source, overlay)
 	if err != nil {

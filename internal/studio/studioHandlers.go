@@ -135,7 +135,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 
 	h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult, step string) {
 		if sourceResult.Source == h.SourceID {
-			sourceResponseData, err := convertSourceResultIntoSourceResponseData(h.SourceID, *sourceResult, h.OverlayPath)
+			sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, h.SourceID, h.OverlayPath)
 			if err != nil {
 				// TODO: How to handle this error and exit the parent function?
 				fmt.Println("error converting source result to source response:", err)
