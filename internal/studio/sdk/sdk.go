@@ -167,9 +167,9 @@ func New(opts ...SDKOption) *SDK {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.10.4",
-			GenVersion:        "2.529.0",
-			UserAgent:         "speakeasy-sdk/go 0.10.4 2.529.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			SDKVersion:        "0.10.6",
+			GenVersion:        "2.531.0",
+			UserAgent:         "speakeasy-sdk/go 0.10.6 2.531.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -203,7 +203,7 @@ func New(opts ...SDKOption) *SDK {
 	return sdk
 }
 
-// GenerateOverlay - Generate an overlay from two yaml files
+// GenerateOverlay - Generate Overlay
 // Generate an overlay from two yaml files
 func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCompareRequestBody, opts ...operations.Option) (*operations.GenerateOverlayResponse, error) {
 	o := operations.Options{}

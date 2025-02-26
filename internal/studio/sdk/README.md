@@ -100,12 +100,12 @@ func main() {
 
 ### [Run](docs/sdks/run/README.md)
 
-* [GetLastResult](docs/sdks/run/README.md#getlastresult) - Run
-* [ReRun](docs/sdks/run/README.md#rerun) - Run
+* [GetLastResult](docs/sdks/run/README.md#getlastresult) - Get Last RunResult
+* [ReRun](docs/sdks/run/README.md#rerun) - Rerun generation
 
 ### [SDK](docs/sdks/sdk/README.md)
 
-* [GenerateOverlay](docs/sdks/sdk/README.md#generateoverlay) - Generate an overlay from two yaml files
+* [GenerateOverlay](docs/sdks/sdk/README.md#generateoverlay) - Generate Overlay
 * [Exit](docs/sdks/sdk/README.md#exit) - Exit
 
 ### [Suggest](docs/sdks/suggest/README.md)

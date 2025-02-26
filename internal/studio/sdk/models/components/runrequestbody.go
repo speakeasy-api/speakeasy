@@ -4,30 +4,32 @@ package components
 
 type RunRequestBody struct {
 	// The studio modifications overlay contents - this should be an overlay YAML document
-	Overlay *string `json:"overlay,omitempty"`
+	Overlay string `json:"overlay"`
 	// The input spec for the source
-	Input *string `json:"input,omitempty"`
+	Input string `json:"input"`
 	// Map of target specific inputs keyed on target name
-	Targets map[string]TargetSpecificInputs `json:"targets,omitempty"`
+	// Only present if a target input is modified
+	//
+	Targets map[string]TargetSpecificInputs `json:"targets"`
 }
 
-func (o *RunRequestBody) GetOverlay() *string {
+func (o *RunRequestBody) GetOverlay() string {
 	if o == nil {
-		return nil
+		return ""
 	}
 	return o.Overlay
 }
 
-func (o *RunRequestBody) GetInput() *string {
+func (o *RunRequestBody) GetInput() string {
 	if o == nil {
-		return nil
+		return ""
 	}
 	return o.Input
 }
 
 func (o *RunRequestBody) GetTargets() map[string]TargetSpecificInputs {
 	if o == nil {
-		return nil
+		return map[string]TargetSpecificInputs{}
 	}
 	return o.Targets
 }
