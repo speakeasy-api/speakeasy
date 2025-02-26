@@ -1,7 +1,9 @@
 package prompts
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -180,8 +182,10 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	defer cancel()
 	recentGenerations, err := remote.GetRecentWorkspaceGenerations(timeout)
 
-	// Retrieve recent namespaces and check if there are any available.
-	hasRecentGenerations := err == nil && len(recentGenerations) > 0
+	hasBlueprint := quickstart.Defaults.Blueprint != nil && *quickstart.Defaults.Blueprint != ""
+
+	// Retrieve recent namespaces and check if there are any available. If --blueprint is provided, we will not check for recent generations.
+	hasRecentGenerations := !hasBlueprint && err == nil && len(recentGenerations) > 0
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
@@ -213,7 +217,29 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	if quickstart.Defaults.SchemaPath != nil {
+	if hasBlueprint {
+		blueprintFile, err := fetchAndSaveBlueprint(ctx, *quickstart.Defaults.Blueprint)
+		if err == nil {
+			fileLocation = blueprintFile
+
+			fmt.Println(
+				styles.RenderInfoMessage(
+					fmt.Sprintf("Using blueprint '%s'", *quickstart.Defaults.Blueprint),
+				) + "\n",
+			)
+		} else {
+			// fallthrough
+			fmt.Println(
+				styles.RenderInfoMessage(
+					fmt.Sprintf("Blueprint '%s' does not exist. Continuing with quickstart...", *quickstart.Defaults.Blueprint),
+				) + "\n",
+			)
+		}
+	}
+
+	if hasBlueprint && fileLocation != "" {
+		// noop
+	} else if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	} else if useRemoteSource && selectedRegistryUri != "" {
 		// The workflow file will be updated with a registry based input like:
@@ -656,4 +682,76 @@ func configureRegistry(source *workflow.Source, orgSlug, workspaceSlug, sourceNa
 	}
 	source.Registry = registryEntry
 	return nil
+}
+
+type FormatType string
+
+const (
+	FormatJSON FormatType = "json"
+	FormatYAML FormatType = "yaml"
+)
+
+type blueprintRequest struct {
+	ID string `json:"id"`
+}
+
+type blueprintResponse struct {
+	ID        string     `json:"id"`
+	Spec      string     `json:"spec"`
+	CreatedAt time.Time  `json:"created_at"`
+	Format    FormatType `json:"format"`
+}
+
+var (
+	ErrMsgFailedToFetchBlueprint  = errors.New("failed to fetch blueprint")
+	ErrMsgFailedToSaveBlueprint   = errors.New("failed to save blueprint")
+	ErrMsgFailedToDecodeBlueprint = errors.New("failed to decode blueprint")
+)
+
+func fetchAndSaveBlueprint(ctx context.Context, blueprintID string) (string, error) {
+	baseURL := "https://api.speakeasy.com"
+	url := fmt.Sprintf("%s/v1/schema_store", baseURL)
+
+	var reqBody blueprintRequest
+	reqBody.ID = blueprintID
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", ErrMsgFailedToDecodeBlueprint
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return "", ErrMsgFailedToFetchBlueprint
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", ErrMsgFailedToFetchBlueprint
+	}
+
+	var respBody blueprintResponse
+	err = json.NewDecoder(resp.Body).Decode(&respBody)
+	if err != nil {
+		return "", err
+	}
+
+	tempDir := os.TempDir()
+	tempFile, err := os.Create(filepath.Join(tempDir, "blueprint.yaml"))
+	if err != nil {
+		return "", ErrMsgFailedToSaveBlueprint
+	}
+	defer tempFile.Close()
+
+	_, err = tempFile.WriteString(respBody.Spec)
+	if err != nil {
+		return "", ErrMsgFailedToSaveBlueprint
+	}
+
+	return tempFile.Name(), nil
 }

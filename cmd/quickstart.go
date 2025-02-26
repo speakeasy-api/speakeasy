@@ -43,6 +43,7 @@ type QuickstartFlags struct {
 	Schema      string `json:"schema"`
 	OutDir      string `json:"out-dir"`
 	TargetType  string `json:"target"`
+	Blueprint   string `json:"blueprint"`
 }
 
 //go:embed sample_openapi.yaml
@@ -74,6 +75,11 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:        "target",
 			Shorthand:   "t",
 			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")),
+		},
+		flag.StringFlag{
+			Name:        "blueprint",
+			Shorthand:   "b",
+			Description: "blueprint to use for the quickstart command",
 		},
 	},
 }
@@ -114,6 +120,10 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	if flags.TargetType != "" {
 		quickstartObj.Defaults.TargetType = &flags.TargetType
+	}
+
+	if flags.Blueprint != "" {
+		quickstartObj.Defaults.Blueprint = &flags.Blueprint
 	}
 
 	nextState := prompts.SourceBase
