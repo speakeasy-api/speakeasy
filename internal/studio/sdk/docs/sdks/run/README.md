@@ -34,11 +34,11 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    if res.RunResponseStreamEvent != nil {
-        defer res.RunResponseStreamEvent.Close()
+    if res.RunResponse != nil {
+        defer res.RunResponse.Close()
 
-        for res.RunResponseStreamEvent.Next() {
-            event := res.RunResponseStreamEvent.Value()
+        for res.RunResponse.Next() {
+            event := res.RunResponse.Value()
             log.Print(event)
             // Handle the event
 	      }
@@ -75,7 +75,7 @@ package main
 import(
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -86,15 +86,15 @@ func main() {
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
-    res, err := s.Run.ReRun(ctx, operations.RunRequestBody{})
+    res, err := s.Run.ReRun(ctx, components.RunRequestBody{})
     if err != nil {
         log.Fatal(err)
     }
-    if res.OneOf != nil {
-        defer res.OneOf.Close()
+    if res.RunResponse != nil {
+        defer res.RunResponse.Close()
 
-        for res.OneOf.Next() {
-            event := res.OneOf.Value()
+        for res.RunResponse.Next() {
+            event := res.RunResponse.Value()
             log.Print(event)
             // Handle the event
 	      }
@@ -107,7 +107,7 @@ func main() {
 | Parameter                                                              | Type                                                                   | Required                                                               | Description                                                            |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `ctx`                                                                  | [context.Context](https://pkg.go.dev/context#Context)                  | :heavy_check_mark:                                                     | The context to use for the request.                                    |
-| `request`                                                              | [operations.RunRequestBody](../../models/operations/runrequestbody.md) | :heavy_check_mark:                                                     | The request object to use for the request.                             |
+| `request`                                                              | [components.RunRequestBody](../../models/components/runrequestbody.md) | :heavy_check_mark:                                                     | The request object to use for the request.                             |
 | `opts`                                                                 | [][operations.Option](../../models/operations/option.md)               | :heavy_minus_sign:                                                     | The options for this request.                                          |
 
 ### Response

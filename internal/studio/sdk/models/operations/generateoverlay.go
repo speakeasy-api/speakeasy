@@ -6,44 +6,10 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 )
 
-type GenerateOverlayRequestBody struct {
-	// The first yaml file
-	Before string `json:"before"`
-	// The second yaml file
-	After string `json:"after"`
-}
-
-func (o *GenerateOverlayRequestBody) GetBefore() string {
-	if o == nil {
-		return ""
-	}
-	return o.Before
-}
-
-func (o *GenerateOverlayRequestBody) GetAfter() string {
-	if o == nil {
-		return ""
-	}
-	return o.After
-}
-
-// GenerateOverlayResponseBody - Successful response
-type GenerateOverlayResponseBody struct {
-	// The studio modifications overlay contents - this should be an overlay YAML document
-	Overlay string `json:"overlay"`
-}
-
-func (o *GenerateOverlayResponseBody) GetOverlay() string {
-	if o == nil {
-		return ""
-	}
-	return o.Overlay
-}
-
 type GenerateOverlayResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
-	Object *GenerateOverlayResponseBody
+	OverlayCompareResponse *components.OverlayCompareResponse
 }
 
 func (o *GenerateOverlayResponse) GetHTTPMeta() components.HTTPMetadata {
@@ -53,9 +19,9 @@ func (o *GenerateOverlayResponse) GetHTTPMeta() components.HTTPMetadata {
 	return o.HTTPMeta
 }
 
-func (o *GenerateOverlayResponse) GetObject() *GenerateOverlayResponseBody {
+func (o *GenerateOverlayResponse) GetOverlayCompareResponse() *components.OverlayCompareResponse {
 	if o == nil {
 		return nil
 	}
-	return o.Object
+	return o.OverlayCompareResponse
 }

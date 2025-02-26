@@ -10,7 +10,7 @@ import (
 type GetRunResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 	// Successful response
-	RunResponseStreamEvent *stream.EventStream[components.RunResponseStreamEvent]
+	RunResponse *stream.EventStream[components.RunResponse]
 }
 
 func (o *GetRunResponse) GetHTTPMeta() components.HTTPMetadata {
@@ -20,9 +20,9 @@ func (o *GetRunResponse) GetHTTPMeta() components.HTTPMetadata {
 	return o.HTTPMeta
 }
 
-func (o *GetRunResponse) GetRunResponseStreamEvent() *stream.EventStream[components.RunResponseStreamEvent] {
+func (o *GetRunResponse) GetRunResponse() *stream.EventStream[components.RunResponse] {
 	if o == nil {
 		return nil
 	}
-	return o.RunResponseStreamEvent
+	return o.RunResponse
 }

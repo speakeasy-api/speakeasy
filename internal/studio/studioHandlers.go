@@ -27,7 +27,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
 	"github.com/speakeasy-api/speakeasy/internal/suggest"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
@@ -144,7 +143,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 
 	h.WorkflowRunner.OnSourceResult = func(sourceResult *run.SourceResult, step string) {
 		if sourceResult.Source == h.SourceID {
-			sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, h.OverlayPath)
+			sourceResponse, err := convertSourceResultIntoSourceResponseData(h.SourceID, *sourceResult, h.OverlayPath)
 			if err != nil {
 				// TODO: How to handle this error and exit the parent function?
 				fmt.Println("error converting source result to source response:", err)
@@ -313,7 +312,7 @@ func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 }
 
 func (h *StudioHandlers) compareOverlay(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var requestBody operations.GenerateOverlayRequestBody
+	var requestBody components.OverlayCompareRequestBody
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
@@ -342,7 +341,7 @@ func (h *StudioHandlers) compareOverlay(ctx context.Context, w http.ResponseWrit
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error marshalling response: %w", err))
 	}
 
-	var response operations.GenerateOverlayResponseBody
+	var response components.OverlayCompareResponse
 	response.Overlay = string(resBytes)
 
 	err = json.NewEncoder(w).Encode(response)
@@ -407,8 +406,8 @@ func (h *StudioHandlers) exit(ctx context.Context, w http.ResponseWriter, r *htt
 // Helper functions
 // ---------------------------------
 
-func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) (*components.RunResponse, error) {
-	ret := components.RunResponse{
+func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) (*components.RunResponseData, error) {
+	ret := components.RunResponseData{
 		TargetResults:    make(map[string]components.TargetRunSummary),
 		WorkingDirectory: h.WorkflowRunner.ProjectDir,
 		Step:             step,
@@ -469,11 +468,11 @@ func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) 
 
 	sourceResult := h.WorkflowRunner.SourceResults[h.SourceID]
 	if sourceResult != nil {
-		sourceResponse, err := convertSourceResultIntoSourceResponse(h.SourceID, *sourceResult, h.OverlayPath)
+		sourceResponseData, err := convertSourceResultIntoSourceResponseData(h.SourceID, *sourceResult, h.OverlayPath)
 		if err != nil {
 			return &ret, fmt.Errorf("error converting source result to source response: %w", err)
 		}
-		ret.SourceResult = *sourceResponse
+		ret.SourceResult = *sourceResponseData
 	}
 
 	return &ret, nil
@@ -519,7 +518,7 @@ func (h *StudioHandlers) runSource() (*run.SourceResult, error) {
 	return sourceResult, nil
 }
 
-func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.SourceResult, overlayPath string) (*components.SourceResponse, error) {
+func convertSourceResultIntoSourceResponseData(sourceID string, sourceResult run.SourceResult, overlayPath string) (*components.SourceResponseData, error) {
 	var err error
 	overlayContents := ""
 	if overlayPath != "" {
@@ -582,7 +581,7 @@ func convertSourceResultIntoSourceResponse(sourceID string, sourceResult run.Sou
 		return nil, fmt.Errorf("error formatting input spec: %w", err)
 	}
 
-	return &components.SourceResponse{
+	return &components.SourceResponseData{
 		SourceID:    sourceID,
 		Input:       string(formattedInputSpec),
 		Overlay:     overlayContents,

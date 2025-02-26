@@ -1,5 +1,7 @@
 # SuggestResponse
 
+Successful response
+
 
 ## Fields
 

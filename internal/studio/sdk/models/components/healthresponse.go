@@ -14,6 +14,7 @@ func (o *Data) GetStatus() *string {
 	return o.Status
 }
 
+// HealthResponse - Successful response
 type HealthResponse struct {
 	Data *Data `json:"data,omitempty"`
 }

@@ -2,13 +2,13 @@
 
 package components
 
-// SuggestResponse - Successful response
-type SuggestResponse struct {
+// OverlayCompareResponse - Successful response
+type OverlayCompareResponse struct {
 	// The studio modifications overlay contents - this should be an overlay YAML document
 	Overlay string `json:"overlay"`
 }
 
-func (o *SuggestResponse) GetOverlay() string {
+func (o *OverlayCompareResponse) GetOverlay() string {
 	if o == nil {
 		return ""
 	}

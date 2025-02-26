@@ -2,85 +2,28 @@
 
 package components
 
-// RunResponse - Map of target run summaries
+// RunResponse - Successful response
 type RunResponse struct {
-	// Step of the run
-	Step string `json:"step"`
-	// Whether the run was partial
-	IsPartial bool `json:"isPartial"`
-	// Link to the linting report
-	LintingReportLink *string        `json:"lintingReportLink,omitempty"`
-	SourceResult      SourceResponse `json:"sourceResult"`
-	// Map of target results
-	TargetResults map[string]TargetRunSummary `json:"targetResults"`
-	Workflow      Workflow                    `json:"workflow"`
-	// Working directory
-	WorkingDirectory string `json:"workingDirectory"`
-	// Time taken to run the workflow in milliseconds
-	Took int64 `json:"took"`
-	// Error message if the run failed
-	Error *string `json:"error,omitempty"`
+	// Type of the stream
+	Event string `json:"event"`
+	// Map of target run summaries
+	Data RunResponseData `json:"data"`
 }
 
-func (o *RunResponse) GetStep() string {
+func (o *RunResponse) GetEvent() string {
 	if o == nil {
 		return ""
 	}
-	return o.Step
+	return o.Event
 }
 
-func (o *RunResponse) GetIsPartial() bool {
+func (o *RunResponse) GetData() RunResponseData {
 	if o == nil {
-		return false
+		return RunResponseData{}
 	}
-	return o.IsPartial
+	return o.Data
 }
 
-func (o *RunResponse) GetLintingReportLink() *string {
-	if o == nil {
-		return nil
-	}
-	return o.LintingReportLink
-}
-
-func (o *RunResponse) GetSourceResult() SourceResponse {
-	if o == nil {
-		return SourceResponse{}
-	}
-	return o.SourceResult
-}
-
-func (o *RunResponse) GetTargetResults() map[string]TargetRunSummary {
-	if o == nil {
-		return map[string]TargetRunSummary{}
-	}
-	return o.TargetResults
-}
-
-func (o *RunResponse) GetWorkflow() Workflow {
-	if o == nil {
-		return Workflow{}
-	}
-	return o.Workflow
-}
-
-func (o *RunResponse) GetWorkingDirectory() string {
-	if o == nil {
-		return ""
-	}
-	return o.WorkingDirectory
-}
-
-func (o *RunResponse) GetTook() int64 {
-	if o == nil {
-		return 0
-	}
-	return o.Took
-}
-
-func (o *RunResponse) GetError() *string {
-	if o == nil {
-		return nil
-	}
-	return o.Error
+func (o RunResponse) GetEventEncoding(event string) (string, error) {
+	return "application/json", nil
 }

@@ -62,7 +62,7 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -73,14 +73,14 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
 		Before: "<value>",
 		After:  "<value>",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.Object != nil {
+	if res.OverlayCompareResponse != nil {
 		// handle response
 	}
 }
@@ -127,7 +127,7 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
 	"models/operations"
@@ -140,7 +140,7 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
 		Before: "<value>",
 		After:  "<value>",
 	}, operations.WithRetries(
@@ -157,7 +157,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.Object != nil {
+	if res.OverlayCompareResponse != nil {
 		// handle response
 	}
 }
@@ -171,7 +171,7 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
 )
@@ -194,14 +194,14 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
 		Before: "<value>",
 		After:  "<value>",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.Object != nil {
+	if res.OverlayCompareResponse != nil {
 		// handle response
 	}
 }
@@ -231,7 +231,7 @@ import (
 	"context"
 	"errors"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/sdkerrors"
 	"log"
 )
@@ -243,7 +243,7 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
 		Before: "<value>",
 		After:  "<value>",
 	})
@@ -266,18 +266,55 @@ func main() {
 ### Server Variables
 
 The default server `http://localhost:{port}` contains variables and is set to `http://localhost:8080` by default. To override default values, the following options are available when initializing the SDK client instance:
- * `WithPort(port string)`
 
-### Override Server URL Per-Client
+| Variable | Option                  | Default  | Description                                  |
+| -------- | ----------------------- | -------- | -------------------------------------------- |
+| `port`   | `WithPort(port string)` | `"8080"` | The port number the CLI server is running on |
 
-The default server can also be overridden globally using the `WithServerURL(serverURL string)` option when initializing the SDK client instance. For example:
+#### Example
+
 ```go
 package main
 
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
+	"log"
+)
+
+func main() {
+	ctx := context.Background()
+
+	s := sdk.New(
+		sdk.WithPort("10501"),
+		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
+	)
+
+	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
+		Before: "<value>",
+		After:  "<value>",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if res.OverlayCompareResponse != nil {
+		// handle response
+	}
+}
+
+```
+
+### Override Server URL Per-Client
+
+The default server can be overridden globally using the `WithServerURL(serverURL string)` option when initializing the SDK client instance. For example:
+```go
+package main
+
+import (
+	"context"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -289,14 +326,14 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
 		Before: "<value>",
 		After:  "<value>",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.Object != nil {
+	if res.OverlayCompareResponse != nil {
 		// handle response
 	}
 }
@@ -351,7 +388,7 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/operations"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -362,14 +399,14 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, operations.GenerateOverlayRequestBody{
+	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
 		Before: "<value>",
 		After:  "<value>",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.Object != nil {
+	if res.OverlayCompareResponse != nil {
 		// handle response
 	}
 }

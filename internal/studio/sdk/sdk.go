@@ -167,9 +167,9 @@ func New(opts ...SDKOption) *SDK {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.8.7",
-			GenVersion:        "2.495.0",
-			UserAgent:         "speakeasy-sdk/go 0.8.7 2.495.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			SDKVersion:        "0.10.4",
+			GenVersion:        "2.529.0",
+			UserAgent:         "speakeasy-sdk/go 0.10.4 2.529.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -205,14 +205,7 @@ func New(opts ...SDKOption) *SDK {
 
 // GenerateOverlay - Generate an overlay from two yaml files
 // Generate an overlay from two yaml files
-func (s *SDK) GenerateOverlay(ctx context.Context, request operations.GenerateOverlayRequestBody, opts ...operations.Option) (*operations.GenerateOverlayResponse, error) {
-	hookCtx := hooks.HookContext{
-		Context:        ctx,
-		OperationID:    "generateOverlay",
-		OAuth2Scopes:   []string{},
-		SecuritySource: s.sdkConfiguration.Security,
-	}
-
+func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCompareRequestBody, opts ...operations.Option) (*operations.GenerateOverlayResponse, error) {
 	o := operations.Options{}
 	supportedOptions := []string{
 		operations.SupportedOptionRetries,
@@ -236,6 +229,12 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request operations.GenerateOv
 		return nil, fmt.Errorf("error generating URL: %w", err)
 	}
 
+	hookCtx := hooks.HookContext{
+		BaseURL:        baseURL,
+		Context:        ctx,
+		OperationID:    "generateOverlay",
+		SecuritySource: s.sdkConfiguration.Security,
+	}
 	bodyReader, reqContentType, err := utils.SerializeRequestBody(ctx, request, false, false, "Request", "json", `request:"mediaType=application/json"`)
 	if err != nil {
 		return nil, err
@@ -375,12 +374,12 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request operations.GenerateOv
 				return nil, err
 			}
 
-			var out operations.GenerateOverlayResponseBody
+			var out components.OverlayCompareResponse
 			if err := utils.UnmarshalJsonFromResponseBody(bytes.NewBuffer(rawBody), &out, ""); err != nil {
 				return nil, err
 			}
 
-			res.Object = &out
+			res.OverlayCompareResponse = &out
 		default:
 			rawBody, err := utils.ConsumeRawBody(httpRes)
 			if err != nil {
@@ -415,13 +414,6 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request operations.GenerateOv
 // Exit
 // Exit the CLI
 func (s *SDK) Exit(ctx context.Context, opts ...operations.Option) (*operations.ExitResponse, error) {
-	hookCtx := hooks.HookContext{
-		Context:        ctx,
-		OperationID:    "exit",
-		OAuth2Scopes:   []string{},
-		SecuritySource: s.sdkConfiguration.Security,
-	}
-
 	o := operations.Options{}
 	supportedOptions := []string{
 		operations.SupportedOptionRetries,
@@ -443,6 +435,13 @@ func (s *SDK) Exit(ctx context.Context, opts ...operations.Option) (*operations.
 	opURL, err := url.JoinPath(baseURL, "/exit")
 	if err != nil {
 		return nil, fmt.Errorf("error generating URL: %w", err)
+	}
+
+	hookCtx := hooks.HookContext{
+		BaseURL:        baseURL,
+		Context:        ctx,
+		OperationID:    "exit",
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	timeout := o.Timeout

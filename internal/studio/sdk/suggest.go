@@ -29,13 +29,6 @@ func newSuggest(sdkConfig sdkConfiguration) *Suggest {
 // MethodNames - Suggest Method Names
 // Suggest method names for the current source.
 func (s *Suggest) MethodNames(ctx context.Context, opts ...operations.Option) (*operations.SuggestMethodNamesResponse, error) {
-	hookCtx := hooks.HookContext{
-		Context:        ctx,
-		OperationID:    "suggestMethodNames",
-		OAuth2Scopes:   []string{},
-		SecuritySource: s.sdkConfiguration.Security,
-	}
-
 	o := operations.Options{}
 	supportedOptions := []string{
 		operations.SupportedOptionRetries,
@@ -57,6 +50,13 @@ func (s *Suggest) MethodNames(ctx context.Context, opts ...operations.Option) (*
 	opURL, err := url.JoinPath(baseURL, "/suggest/method-names")
 	if err != nil {
 		return nil, fmt.Errorf("error generating URL: %w", err)
+	}
+
+	hookCtx := hooks.HookContext{
+		BaseURL:        baseURL,
+		Context:        ctx,
+		OperationID:    "suggestMethodNames",
+		SecuritySource: s.sdkConfiguration.Security,
 	}
 
 	timeout := o.Timeout
