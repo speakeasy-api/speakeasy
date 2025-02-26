@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,10 +12,12 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/samber/lo"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
+	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
@@ -40,6 +43,94 @@ func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string
 	}
 
 	return sourceResult, nil
+}
+
+func sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath, step string) error {
+	ret, err := convertLastRunResult(ctx, workflowRunner, sourceID, overlayPath, step)
+	if err != nil {
+		return fmt.Errorf("error getting last completed run result: %w", err)
+	}
+
+	responseJSON, err := json.Marshal(ret)
+	if err != nil {
+		return fmt.Errorf("error marshaling run response: %w", err)
+	}
+	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+	flusher.Flush()
+
+	return nil
+}
+
+func convertLastRunResult(ctx context.Context, workflowRunner run.Workflow, sourceID, overlayPath, step string) (*components.RunResponseData, error) {
+	ret := components.RunResponseData{
+		TargetResults:    make(map[string]components.TargetRunSummary),
+		WorkingDirectory: workflowRunner.ProjectDir,
+		Step:             step,
+		IsPartial:        step != "Complete",
+		Took:             workflowRunner.Duration.Milliseconds(),
+	}
+
+	workflowConfig := workflowRunner.GetWorkflowFile()
+
+	wf, err := convertWorkflowToComponentsWorkflow(*workflowConfig, ret.WorkingDirectory)
+	if err != nil {
+		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+	}
+	ret.Workflow = wf
+
+	if workflowRunner.Error != nil {
+		errStr := workflowRunner.Error.Error()
+		ret.Error = &errStr
+	}
+
+	for k, v := range workflowRunner.TargetResults {
+		if v == nil {
+			continue
+		}
+
+		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
+		if err != nil {
+			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
+		}
+		absGenYamlPath, err := filepath.Abs(v.GenYamlPath)
+		if err != nil {
+			return &ret, fmt.Errorf("error getting absolute path to gen.yaml: %w", err)
+		}
+		readMePath := filepath.Join(v.OutputPath, "README.md")
+		readMeContents, err := utils.ReadFileToString(readMePath)
+		if err != nil {
+			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
+		}
+
+		targetConfig := workflowConfig.Targets[k]
+		outputDirectory := ""
+
+		if targetConfig.Output != nil {
+			outputDirectory = *targetConfig.Output
+		} else {
+			outputDirectory = ret.WorkingDirectory
+		}
+		ret.TargetResults[k] = components.TargetRunSummary{
+			TargetID:        k,
+			SourceID:        sourceID,
+			Readme:          readMeContents,
+			GenYaml:         genYamlContents,
+			GenYamlPath:     &absGenYamlPath,
+			Language:        targetConfig.Target,
+			OutputDirectory: outputDirectory,
+		}
+	}
+
+	sourceResult := workflowRunner.SourceResults[sourceID]
+	if sourceResult != nil {
+		sourceResponseData, err := convertSourceResultIntoSourceResponseData(sourceID, *sourceResult, overlayPath)
+		if err != nil {
+			return &ret, fmt.Errorf("error converting source result to source response: %w", err)
+		}
+		ret.SourceResult = *sourceResponseData
+	}
+
+	return &ret, nil
 }
 
 func convertSourceResultIntoSourceResponseData(sourceID string, sourceResult run.SourceResult, overlayPath string) (*components.SourceResponseData, error) {
@@ -220,4 +311,26 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 	}
 
 	return asString, nil
+}
+
+func upsertOverlay(overlay overlay.Overlay, workflowRunner run.Workflow, sourceID, overlayPath string) (string, error) {
+	workflowConfig := workflowRunner.GetWorkflowFile()
+	source := workflowConfig.Sources[sourceID]
+
+	if overlayPath == "" {
+		var err error
+		overlayPath, err = modifications.GetOverlayPath(workflowRunner.ProjectDir)
+		if err != nil {
+			return overlayPath, err
+		}
+	}
+
+	overlayPath, err := modifications.UpsertOverlay(overlayPath, &source, overlay)
+	if err != nil {
+		return overlayPath, err
+	}
+
+	workflowConfig.Sources[sourceID] = source
+
+	return overlayPath, workflow.Save(workflowRunner.ProjectDir, workflowConfig)
 }

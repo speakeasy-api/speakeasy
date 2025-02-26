@@ -13,7 +13,6 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -75,7 +74,7 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 		return errors.New("streaming unsupported")
 	}
 
-	err := h.sendLastRunResultToStream(ctx, w, flusher, "Generating SDK")
+	err := sendLastRunResultToStream(ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath, "Generating SDK")
 	if err != nil {
 		return fmt.Errorf("error sending last run result to stream: %w", err)
 	}
@@ -86,7 +85,7 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 	}
 	defer h.mutexCondition.L.Unlock()
 
-	return h.sendLastRunResultToStream(ctx, w, flusher, "Complete")
+	return sendLastRunResultToStream(ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath, "Complete")
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -146,7 +145,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 			if step == "" {
 				step = "Generating SDK"
 			}
-			response, err := h.convertLastRunResult(ctx, step)
+			response, err := convertLastRunResult(ctx, h.WorkflowRunner, h.SourceID, h.OverlayPath, step)
 			if err != nil {
 				fmt.Println("error getting last completed run result:", err)
 				return
@@ -172,7 +171,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		fmt.Println("error running workflow:", err)
 	}
 
-	return h.sendLastRunResultToStream(ctx, w, flusher, "Complete")
+	return sendLastRunResultToStream(ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath, "Complete")
 }
 
 func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -262,7 +261,7 @@ func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 		}
 
 		// Write the overlay to a file
-		err = h.upsertOverlay(overlay)
+		h.OverlayPath, err = upsertOverlay(overlay, h.WorkflowRunner, h.SourceID, h.OverlayPath)
 		if err != nil {
 			return errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
 		}
@@ -393,116 +392,4 @@ func (h *StudioHandlers) exit(ctx context.Context, w http.ResponseWriter, r *htt
 		return fmt.Errorf("error shutting down server: %w", err)
 	}
 	return nil
-}
-
-func (h *StudioHandlers) convertLastRunResult(ctx context.Context, step string) (*components.RunResponseData, error) {
-	ret := components.RunResponseData{
-		TargetResults:    make(map[string]components.TargetRunSummary),
-		WorkingDirectory: h.WorkflowRunner.ProjectDir,
-		Step:             step,
-		IsPartial:        step != "Complete",
-		Took:             h.WorkflowRunner.Duration.Milliseconds(),
-	}
-
-	wf, err := convertWorkflowToComponentsWorkflow(*h.WorkflowRunner.GetWorkflowFile(), ret.WorkingDirectory)
-	if err != nil {
-		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
-	}
-	ret.Workflow = wf
-
-	if h.WorkflowRunner.Error != nil {
-		errStr := h.WorkflowRunner.Error.Error()
-		ret.Error = &errStr
-	}
-
-	for k, v := range h.WorkflowRunner.TargetResults {
-		if v == nil {
-			continue
-		}
-
-		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
-		if err != nil {
-			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
-		}
-		absGenYamlPath, err := filepath.Abs(v.GenYamlPath)
-		if err != nil {
-			return &ret, fmt.Errorf("error getting absolute path to gen.yaml: %w", err)
-		}
-		readMePath := filepath.Join(v.OutputPath, "README.md")
-		readMeContents, err := utils.ReadFileToString(readMePath)
-		if err != nil {
-			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
-		}
-
-		workflowConfig := h.WorkflowRunner.GetWorkflowFile()
-		targetConfig := workflowConfig.Targets[k]
-
-		outputDirectory := ""
-
-		if targetConfig.Output != nil {
-			outputDirectory = *targetConfig.Output
-		} else {
-			outputDirectory = ret.WorkingDirectory
-		}
-		ret.TargetResults[k] = components.TargetRunSummary{
-			TargetID:        k,
-			SourceID:        h.SourceID,
-			Readme:          readMeContents,
-			GenYaml:         genYamlContents,
-			GenYamlPath:     &absGenYamlPath,
-			Language:        targetConfig.Target,
-			OutputDirectory: outputDirectory,
-		}
-	}
-
-	sourceResult := h.WorkflowRunner.SourceResults[h.SourceID]
-	if sourceResult != nil {
-		sourceResponseData, err := convertSourceResultIntoSourceResponseData(h.SourceID, *sourceResult, h.OverlayPath)
-		if err != nil {
-			return &ret, fmt.Errorf("error converting source result to source response: %w", err)
-		}
-		ret.SourceResult = *sourceResponseData
-	}
-
-	return &ret, nil
-}
-
-func (h *StudioHandlers) sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, step string) error {
-	ret, err := h.convertLastRunResult(ctx, step)
-	if err != nil {
-		return fmt.Errorf("error getting last completed run result: %w", err)
-	}
-
-	responseJSON, err := json.Marshal(ret)
-	if err != nil {
-		return fmt.Errorf("error marshaling run response: %w", err)
-	}
-	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
-	flusher.Flush()
-
-	return nil
-}
-
-func (h *StudioHandlers) upsertOverlay(overlay overlay.Overlay) error {
-	workflowConfig := h.WorkflowRunner.GetWorkflowFile()
-	source := workflowConfig.Sources[h.SourceID]
-
-	if h.OverlayPath == "" {
-		var err error
-		h.OverlayPath, err = modifications.GetOverlayPath(h.WorkflowRunner.ProjectDir)
-		if err != nil {
-			return err
-		}
-	}
-
-	overlayPath, err := modifications.UpsertOverlay(h.OverlayPath, &source, overlay)
-	if err != nil {
-		return err
-	}
-
-	h.OverlayPath = overlayPath
-
-	workflowConfig.Sources[h.SourceID] = source
-
-	return workflow.Save(h.WorkflowRunner.ProjectDir, workflowConfig)
 }
