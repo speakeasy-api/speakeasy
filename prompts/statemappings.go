@@ -23,6 +23,7 @@ type Quickstart struct {
 type Defaults struct {
 	SchemaPath *string
 	TargetType *string
+	Blueprint  *string
 }
 
 // Define constants using iota
