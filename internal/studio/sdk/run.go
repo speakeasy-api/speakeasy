@@ -27,7 +27,7 @@ func newRun(sdkConfig sdkConfiguration) *Run {
 	}
 }
 
-// GetLastResult - Run
+// GetLastResult - Get Last RunResult
 // Get the output of the last run.
 func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*operations.GetRunResponse, error) {
 	o := operations.Options{}
@@ -225,7 +225,7 @@ func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*op
 
 }
 
-// ReRun - Run
+// ReRun - Rerun generation
 // Regenerate the currently selected targets.
 func (s *Run) ReRun(ctx context.Context, request components.RunRequestBody, opts ...operations.Option) (*operations.RunResponse, error) {
 	o := operations.Options{}

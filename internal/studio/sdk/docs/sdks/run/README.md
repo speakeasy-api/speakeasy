@@ -5,8 +5,8 @@
 
 ### Available Operations
 
-* [GetLastResult](#getlastresult) - Run
-* [ReRun](#rerun) - Run
+* [GetLastResult](#getlastresult) - Get Last RunResult
+* [ReRun](#rerun) - Rerun generation
 
 ## GetLastResult
 
@@ -86,7 +86,15 @@ func main() {
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
 
-    res, err := s.Run.ReRun(ctx, components.RunRequestBody{})
+    res, err := s.Run.ReRun(ctx, components.RunRequestBody{
+        Overlay: "<value>",
+        Input: "<value>",
+        Targets: map[string]components.TargetSpecificInputs{
+            "key": components.TargetSpecificInputs{
+                Config: "<value>",
+            },
+        },
+    })
     if err != nil {
         log.Fatal(err)
     }

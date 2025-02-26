@@ -19,14 +19,14 @@ paths:
           $ref: "#/components/responses/HealthResponse"
   /run:
     get:
-      summary: Run
+      summary: Get Last RunResult
       description: Get the output of the last run.
       operationId: getRun
       responses:
         "200":
           $ref: "#/components/responses/RunResponse"
     post:
-      summary: Run
+      summary: Rerun generation
       description: Regenerate the currently selected targets.
       operationId: run
       requestBody:
@@ -40,7 +40,7 @@ paths:
           $ref: "#/components/responses/RunResponse"
   /overlays/compare:
     post:
-      summary: Generate an overlay from two yaml files
+      summary: Generate Overlay
       description: Generate an overlay from two yaml files
       operationId: generateOverlay
       requestBody:
@@ -137,7 +137,13 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/TargetSpecificInputs"
-          description: Map of target specific inputs keyed on target name
+          description: |
+            Map of target specific inputs keyed on target name
+            Only present if a target input is modified
+      required:
+        - overlay
+        - input
+        - targets
     RunResponseData:
       type: object
       description: Map of target run summaries

@@ -216,12 +216,7 @@ func (h *StudioHandlers) updateSourceAndTarget(r *http.Request) error {
 		Config string `json:"config"`
 	}
 
-	// Destructure the request body which is a json object with a single key "overlay" which is a string
-	var reqBody struct {
-		Overlay string                                     `json:"overlay"`
-		Input   string                                     `json:"input"`
-		Targets map[string]components.TargetSpecificInputs `json:"targets"` // this is only present if a target input is modified
-	}
+	var reqBody components.RunRequestBody
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding request body: %w", err))

@@ -4,7 +4,7 @@
 
 ### Available Operations
 
-* [GenerateOverlay](#generateoverlay) - Generate an overlay from two yaml files
+* [GenerateOverlay](#generateoverlay) - Generate Overlay
 * [Exit](#exit) - Exit
 
 ## GenerateOverlay
