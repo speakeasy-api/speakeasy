@@ -83,5 +83,7 @@ func targetEnablesTesting(ctx context.Context, target workflow.Target) bool {
 		return false
 	}
 
-	return testcmd.CheckTestingAccountType(*accountType) && *target.Testing.Enabled
+	err := testcmd.CheckTestingEnabled(ctx)
+
+	return err == nil && *target.Testing.Enabled
 }

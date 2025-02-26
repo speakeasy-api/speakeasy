@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/links"
@@ -64,7 +63,7 @@ func NewRunner(ctx context.Context, opts ...RunnerOpt) *Runner {
 
 // Run loads the workflow, loads the generator, and runs target testing.
 func (r *Runner) Run(ctx context.Context) error {
-	if err := r.checkAccountType(ctx); err != nil {
+	if err := CheckTestingEnabled(ctx); err != nil {
 		return err
 	}
 
@@ -134,21 +133,6 @@ func (r *Runner) RunWithVisualization(ctx context.Context) error {
 	}
 
 	return errors.Join(err, runErr)
-}
-
-// Checks the account type to ensure testing is enabled.
-func (r *Runner) checkAccountType(ctx context.Context) error {
-	accountType := auth.GetAccountTypeFromContext(ctx)
-
-	if accountType == nil {
-		return fmt.Errorf("Account type not found. Ensure you are logged in via the `speakeasy auth login` command or SPEAKEASY_API_KEY environment variable.")
-	}
-
-	if !CheckTestingAccountType(*accountType) {
-		return fmt.Errorf("Testing is not supported on the %s account tier. Contact %s for more information.", *accountType, styles.RenderSupportEmail())
-	}
-
-	return nil
 }
 
 // Discovers the workflow configuration to set the runner project directory and
