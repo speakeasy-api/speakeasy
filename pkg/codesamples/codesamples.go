@@ -154,7 +154,7 @@ func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath
 		specifiedOperation,
 		"",
 		filepath.Join(configPath, "speakeasyusagegen"),
-		true,
+		specifiedOperation == "",
 		usageOutput,
 	); err != nil {
 		return nil, err

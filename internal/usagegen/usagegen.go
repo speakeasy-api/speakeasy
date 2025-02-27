@@ -187,7 +187,7 @@ func parseOperationInfoAndCodeSample(lang, usageOutputSection string) (*UsageSni
 	}
 
 	// Define a regular expression to capture the API name, method, and endpoint
-	apiDetailsRegex := regexp.MustCompile(`([/\w{}_]+)\s+\((\w+)\s+(.*)\)`)
+	apiDetailsRegex := regexp.MustCompile(`([\w{}_/-]+)\s+\((\w+)\s+(.*)\)`)
 
 	// Find and extract the API details
 	matches := apiDetailsRegex.FindStringSubmatch(parts[0])
