@@ -86,12 +86,12 @@ func activateWebhooks(ctx context.Context) error {
 		return fmt.Errorf("failed to get sdk from context: %w", err)
 	}
 
-	if _, err = sdk.Workspaces.SetFeatureFlags(ctx, shared.WorkspaceFeatureFlagRequest{
-		FeatureFlags: []shared.WorkspaceFeatureFlag{
-			shared.WorkspaceFeatureFlagWebhooks,
+	if _, err = sdk.Organizations.CreateBillingAddOns(ctx, shared.OrganizationBillingAddOnRequest{
+		AddOns: []shared.BillingAddOn{
+			shared.BillingAddOnWebhooks,
 		},
 	}); err != nil {
-		return fmt.Errorf("failed to set feature flags: %w", err)
+		return fmt.Errorf("failed to set billing add on: %w", err)
 	}
 
 	logger.Println("Successfully upgraded - webhooks are now enabled")

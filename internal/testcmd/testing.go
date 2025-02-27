@@ -14,6 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 )
 
 func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, workflowTarget workflow.Target, targetName, outDir string) (string, error) {
@@ -38,6 +39,25 @@ func ExecuteTargetTesting(ctx context.Context, generator *generate.Generator, wo
 	})
 
 	return testReportURL, err
+}
+
+func CheckTestingEnabled(ctx context.Context) error {
+	accountType := auth.GetAccountTypeFromContext(ctx)
+	orgSlug := auth.GetOrgSlugFromContext(ctx)
+	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+	if accountType == nil {
+		return fmt.Errorf("Account type not found. Ensure you are logged in via the `speakeasy auth login` command or SPEAKEASY_API_KEY environment variable.")
+	}
+
+	if !slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, *accountType) {
+		return fmt.Errorf("testing is not supported on the %s account tier. Contact %s for more information", *accountType, styles.RenderSalesEmail())
+	}
+
+	if ok, _ := auth.HasBillingAddOn(ctx, shared.BillingAddOnSDKTesting); !ok {
+		return fmt.Errorf("The SDK testing add-on must be enabled to use testing. Please visit %s", fmt.Sprintf("https://app.speakeasy.com/org/%s/%s/settings/billing", orgSlug, workspaceSlug))
+	}
+
+	return nil
 }
 
 func CheckTestingAccountType(accountType shared.AccountType) bool {
