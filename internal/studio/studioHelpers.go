@@ -153,12 +153,14 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 	if sourceResult.LintResult != nil {
 		for _, e := range sourceResult.LintResult.AllErrors {
 			vErr := vErrs.GetValidationErr(e)
-			diagnosis = append(diagnosis, components.Diagnostic{
-				Message:  vErr.Message,
-				Severity: string(vErr.Severity),
-				Line:     pointer.ToInt64(int64(vErr.LineNumber)),
-				Type:     vErr.Rule,
-			})
+			if vErr != nil {
+				diagnosis = append(diagnosis, components.Diagnostic{
+					Message:  vErr.Message,
+					Severity: string(vErr.Severity),
+					Line:     pointer.ToInt64(int64(vErr.LineNumber)),
+					Type:     vErr.Rule,
+				})
+			}
 		}
 	}
 
