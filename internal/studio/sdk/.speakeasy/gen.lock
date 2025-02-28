@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 37fe273fb626155d4e01ed2b20f47276
+  docChecksum: faddc55949cb91fa0c0c3a99379a9589
   docVersion: 1.0.0
-  speakeasyVersion: 1.505.0
-  generationVersion: 2.531.0
-  releaseVersion: 0.10.6
-  configChecksum: 1f2b4334e77a4bd5690579c5ed0f18c1
+  speakeasyVersion: 0.0.1
+  generationVersion: 2.540.1
+  releaseVersion: 0.12.2
+  configChecksum: 096a857b0631f325fbcd4dfd7b890194
 features:
   go:
     additionalDependencies: 0.1.0
@@ -40,6 +40,7 @@ generatedFiles:
   - /models/components/runrequestbody.go
   - /models/components/runresponse.go
   - /models/components/runresponsedata.go
+  - /models/components/runstreamoptions.go
   - /models/components/security.go
   - /models/components/source.go
   - /models/components/sourceregistry.go
@@ -49,6 +50,7 @@ generatedFiles:
   - /models/components/targetrunsummary.go
   - /models/components/targetspecificinputs.go
   - /models/components/workflow.go
+  - /models/operations/cancelrun.go
   - /models/operations/checkhealth.go
   - /models/operations/exit.go
   - /models/operations/generateoverlay.go
@@ -71,6 +73,7 @@ generatedFiles:
   - docs/models/components/runrequestbody.md
   - docs/models/components/runresponse.md
   - docs/models/components/runresponsedata.md
+  - docs/models/components/runstreamoptions.md
   - docs/models/components/security.md
   - docs/models/components/source.md
   - docs/models/components/sourceregistry.md
@@ -80,6 +83,7 @@ generatedFiles:
   - docs/models/components/targetrunsummary.md
   - docs/models/components/targetspecificinputs.md
   - docs/models/components/workflow.md
+  - docs/models/operations/cancelrunresponse.md
   - docs/models/operations/checkhealthresponse.md
   - docs/models/operations/exitresponse.md
   - docs/models/operations/generateoverlayresponse.md
@@ -136,6 +140,7 @@ examples:
       responses:
         "200":
           application/json: {"overlay": "<value>"}
+  cancelRun: {}
 examplesVersion: 1.0.0
 generatedTests:
   getFullyFlattenedRequest: "2025-02-25T16:43:14-05:00"
