@@ -245,7 +245,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
-		if summary != nil {
+		if summary != nil && summary.Info.Title != "" {
 			sourceName = summary.Info.Title
 		} else {
 			sourceName = quickstart.SDKName + "-OAS"
