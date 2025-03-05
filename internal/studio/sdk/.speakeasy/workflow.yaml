@@ -3,18 +3,16 @@ speakeasyVersion: latest
 sources:
     SpeakeasyStudio-OAS:
         inputs:
-            - location: ../oas_studio.yaml
+            - location: /home/qynn/SpeakEasy/speakeasy/internal/studio/oas_studio.yaml
         overlays:
             - location: .speakeasy/speakeasy-modifications-overlay.yaml
-        registry:
-            location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
+        # registry:
+        #     location: registry.speakeasyapi.dev/qynn/qynn-dev/speakeasy-studio-oas
 targets:
-    speakeasy-studio:
+    speakeasy-studio-go:
         target: go
         source: SpeakeasyStudio-OAS
-        codeSamples:
-            registry:
-                location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas-go-code-samples
-            labelOverride:
-                fixedValue: Go (SDK)
-            blocking: false
+    speakeasy-studio-ts:
+        target: typescript
+        source: SpeakeasyStudio-OAS
+        output: /home/qynn/SpeakEasy/speakeasy-registry/web/packages/generated-studio-ts-sdk
