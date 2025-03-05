@@ -38,6 +38,13 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/RunResponse"
+    put:
+      summary: Cancel generation
+      description: Interrupts the current generation
+      operationId: cancelRun
+      responses:
+        "200":
+          description: OK
   /overlays/compare:
     post:
       summary: Generate Overlay

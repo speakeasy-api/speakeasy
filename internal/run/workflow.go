@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy/registry"
@@ -61,6 +62,10 @@ type Workflow struct {
 	Duration        time.Duration
 	criticalWarns   []string
 	Error           error
+
+	// Studio
+	CancellableGeneration *sdkgen.CancellableGeneration
+	StreamableGeneration  *sdkgen.StreamableGeneration
 }
 
 type Opt func(w *Workflow)
@@ -259,6 +264,25 @@ func WithInstallationURLs(installationURLs map[string]string) Opt {
 func WithRegistryTags(registryTags []string) Opt {
 	return func(w *Workflow) {
 		w.RegistryTags = registryTags
+	}
+}
+
+func WithCancellableGeneration() Opt {
+	return func(w *Workflow) {
+		w.CancellableGeneration = &sdkgen.CancellableGeneration{
+			CancellationMutex:     sync.Mutex{},
+			CancellationMutexCond: sync.NewCond(&sync.Mutex{}),
+		}
+	}
+}
+
+func WithStreamableGeneration(onProgressUpdate func(sdkgen.ProgressUpdate), updateSteps bool) Opt {
+
+	return func(w *Workflow) {
+		w.StreamableGeneration = &sdkgen.StreamableGeneration{
+			OnProgressUpdate: onProgressUpdate,
+			UpdateSteps:      updateSteps,
+		}
 	}
 }
 
