@@ -267,7 +267,9 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(referencePath)
 	}
 
-	// fooMove the tempfile to the output directory
+	// If we are using a blueprint template, the original location will be a
+	// tempfile. We want therefore to move the tempfile to the output directory,
+	// and update the workflow file to point to the new location.
 	if quickstartObj.IsUsingBlueprint {
 		oldInput := quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location
 
