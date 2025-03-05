@@ -224,14 +224,14 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 			fmt.Println(
 				styles.RenderInfoMessage(
-					fmt.Sprintf("Using blueprint '%s'", *quickstart.Defaults.Blueprint),
+					fmt.Sprintf("Using sandbox session '%s'", *quickstart.Defaults.Blueprint),
 				) + "\n",
 			)
 		} else {
 			// fallthrough
 			fmt.Println(
 				styles.RenderInfoMessage(
-					fmt.Sprintf("Blueprint '%s' does not exist. Continuing with quickstart...", *quickstart.Defaults.Blueprint),
+					fmt.Sprintf("Could not find sandbox session '%s'. Continuing with quickstart...", *quickstart.Defaults.Blueprint),
 				) + "\n",
 			)
 		}
@@ -718,7 +718,7 @@ func fetchAndSaveBlueprint(ctx context.Context, blueprintID string) (string, err
 	if err != nil {
 		return "", ErrMsgFailedToDecodeBlueprint
 	}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(body))
 	if err != nil {
 		return "", ErrMsgFailedToFetchBlueprint
 	}

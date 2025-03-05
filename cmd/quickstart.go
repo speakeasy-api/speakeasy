@@ -43,7 +43,7 @@ type QuickstartFlags struct {
 	Schema      string `json:"schema"`
 	OutDir      string `json:"out-dir"`
 	TargetType  string `json:"target"`
-	Blueprint   string `json:"blueprint"`
+	From        string `json:"from"`
 }
 
 //go:embed sample_openapi.yaml
@@ -77,9 +77,9 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")),
 		},
 		flag.StringFlag{
-			Name:        "blueprint",
-			Shorthand:   "b",
-			Description: "blueprint to use for the quickstart command",
+			Name:        "from",
+			Shorthand:   "f",
+			Description: "template to use for the quickstart command.\nCreate a new sandbox at https://app.speakeasy.com/sandbox",
 		},
 	},
 }
@@ -103,8 +103,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		return ErrWorkflowExists
 	}
 
-	log.From(ctx).PrintfStyled(styles.DimmedItalic, "\nYour first SDK is a few short questions away...\n")
-
 	quickstartObj := prompts.Quickstart{
 		WorkflowFile: &workflow.Workflow{
 			Version: workflow.WorkflowVersion,
@@ -122,8 +120,9 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.Defaults.TargetType = &flags.TargetType
 	}
 
-	if flags.Blueprint != "" {
-		quickstartObj.Defaults.Blueprint = &flags.Blueprint
+	if flags.From != "" {
+		quickstartObj.Defaults.Blueprint = &flags.From
+		quickstartObj.IsUsingBlueprint = true
 	}
 
 	nextState := prompts.SourceBase
@@ -266,6 +265,18 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			return err
 		}
 		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(referencePath)
+	}
+
+	// fooMove the tempfile to the output directory
+	if quickstartObj.IsUsingBlueprint {
+		oldInput := quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location
+
+		newPath := filepath.Join(outDir, "openapi.yaml")
+		if err := os.Rename(oldInput.Resolve(), newPath); err != nil {
+			return errors.Wrapf(err, "failed to rename blueprint to openapi.yaml")
+		}
+
+		quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location = workflow.LocationString(newPath)
 	}
 
 	// Make sure the workflow file stays up to date
