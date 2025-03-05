@@ -742,7 +742,7 @@ func fetchAndSaveBlueprint(ctx context.Context, blueprintID string) (string, err
 	}
 
 	tempDir := os.TempDir()
-	tempFile, err := os.Create(filepath.Join(tempDir, "blueprint.yaml"))
+	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", respBody.ID, respBody.Format)))
 	if err != nil {
 		return "", ErrMsgFailedToSaveBlueprint
 	}
