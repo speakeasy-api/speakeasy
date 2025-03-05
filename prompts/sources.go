@@ -703,9 +703,9 @@ type blueprintResponse struct {
 }
 
 var (
-	ErrMsgFailedToFetchBlueprint  = errors.New("failed to fetch blueprint")
-	ErrMsgFailedToSaveBlueprint   = errors.New("failed to save blueprint")
-	ErrMsgFailedToDecodeBlueprint = errors.New("failed to decode blueprint")
+	ErrMsgFailedToFetchBlueprint  = errors.New("failed to fetch sandbox session")
+	ErrMsgFailedToSaveBlueprint   = errors.New("failed to save sandbox session")
+	ErrMsgFailedToDecodeBlueprint = errors.New("failed to decode sandbox session")
 )
 
 func fetchAndSaveBlueprint(ctx context.Context, blueprintID string) (string, error) {
