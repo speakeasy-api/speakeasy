@@ -1,9 +1,7 @@
 package prompts
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -14,17 +12,20 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	timeAgo "github.com/dustin/go-humanize"
 	humanize "github.com/dustin/go-humanize/english"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/remote"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/auth"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/registry"
 )
@@ -684,24 +685,6 @@ func configureRegistry(source *workflow.Source, orgSlug, workspaceSlug, sourceNa
 	return nil
 }
 
-type FormatType string
-
-const (
-	FormatJSON FormatType = "json"
-	FormatYAML FormatType = "yaml"
-)
-
-type blueprintRequest struct {
-	ID string `json:"id"`
-}
-
-type blueprintResponse struct {
-	ID        string     `json:"id"`
-	Spec      string     `json:"spec"`
-	CreatedAt time.Time  `json:"created_at"`
-	Format    FormatType `json:"format"`
-}
-
 var (
 	ErrMsgFailedToFetchBlueprint  = errors.New("failed to fetch sandbox session")
 	ErrMsgFailedToSaveBlueprint   = errors.New("failed to save sandbox session")
@@ -709,46 +692,26 @@ var (
 )
 
 func fetchAndSaveBlueprint(ctx context.Context, blueprintID string) (string, error) {
-	baseURL := "https://api.speakeasy.com"
-	url := fmt.Sprintf("%s/v1/schema_store", baseURL)
-
-	var reqBody blueprintRequest
-	reqBody.ID = blueprintID
-	body, err := json.Marshal(reqBody)
-	if err != nil {
-		return "", ErrMsgFailedToDecodeBlueprint
-	}
-	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(body))
-	if err != nil {
-		return "", ErrMsgFailedToFetchBlueprint
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	speakeasyClient, err := sdk.InitSDK()
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", ErrMsgFailedToFetchBlueprint
-	}
-
-	var respBody blueprintResponse
-	err = json.NewDecoder(resp.Body).Decode(&respBody)
+	schemaStoreItem, err := speakeasyClient.SchemaStore.GetSchemaStoreItem(ctx, &operations.GetSchemaStoreItemRequestBody{
+		ID: &blueprintID,
+	})
 	if err != nil {
-		return "", err
+		return "", ErrMsgFailedToFetchBlueprint
 	}
 
 	tempDir := os.TempDir()
-	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", respBody.ID, respBody.Format)))
+	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", schemaStoreItem.SchemaStoreItem.ID, schemaStoreItem.SchemaStoreItem.Format)))
 	if err != nil {
 		return "", ErrMsgFailedToSaveBlueprint
 	}
 	defer tempFile.Close()
 
-	_, err = tempFile.WriteString(respBody.Spec)
+	_, err = tempFile.WriteString(schemaStoreItem.SchemaStoreItem.Spec)
 	if err != nil {
 		return "", ErrMsgFailedToSaveBlueprint
 	}
