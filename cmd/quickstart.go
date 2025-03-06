@@ -273,8 +273,15 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	if quickstartObj.IsUsingBlueprint {
 		oldInput := quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location
 
-		newPath := filepath.Join(outDir, "openapi.yaml")
-		if err := os.Rename(oldInput.Resolve(), newPath); err != nil {
+		oldInputPath := oldInput.Resolve()
+		// parse the last part of the path to get the filename + extension
+		filename := filepath.Base(oldInputPath)
+
+		ext := filepath.Ext(filename)
+
+		newPath := filepath.Join(outDir, fmt.Sprintf("openapi%s", ext))
+
+		if err := os.Rename(oldInputPath, newPath); err != nil {
 			return errors.Wrapf(err, "failed to rename blueprint to openapi.yaml")
 		}
 
