@@ -209,7 +209,7 @@
 
 ### Features
 
-- SDK code that looks you wrote it. Optimised for performance, debuggability and modern idiomatics.
+- SDK code that looks like you wrote it. Optimised for performance, debuggability and modern idiomatics.
 - Complete Terraform Providers built on a Type-safe Go SDK.
 - Contract Test generation with a pre built mock-server ([Powered by Arazzo](https://www.speakeasy.com/openapi/arazzo))
 - Generate clean code-samples for syncing with API docs.
@@ -239,7 +239,7 @@ speakeasy [flags]
 * [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy billing](docs/billing/README.md)	 - Manage billing related operations
 * [speakeasy bump](docs/bump.md)	 - Bumps the version of a Speakeasy Generation Target
-* [speakeasy clean](docs/clean.md)	 - Speakeasy clean can be used to clean up cache, stale temp folders, and old CLI binaries.
+* [speakeasy clean](docs/clean.md)	 - Clean up cache, stale temp folders, and old CLI binaries.
 * [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
 * [speakeasy lint](docs/lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
 * [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
