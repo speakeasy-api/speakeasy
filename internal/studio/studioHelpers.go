@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+
 	"github.com/AlekSi/pointer"
 	"github.com/samber/lo"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
@@ -19,7 +22,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -325,12 +327,96 @@ func upsertOverlay(overlay overlay.Overlay, workflowRunner run.Workflow, sourceI
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	source := workflowConfig.Sources[sourceID]
 
-	overlayPath, err := modifications.UpsertOverlay(overlayPath, &source, overlay)
+	newOverlayPath, err := modifications.UpsertOverlay(overlayPath, &source, overlay)
 	if err != nil {
 		return overlayPath, err
 	}
 
 	workflowConfig.Sources[sourceID] = source
 
-	return overlayPath, workflow.Save(workflowRunner.ProjectDir, workflowConfig)
+	return newOverlayPath, workflow.Save(workflowRunner.ProjectDir, workflowConfig)
+}
+
+func updateSourceAndTarget(workflowRunner run.Workflow, sourceID, overlayPath string, runRequestBody components.RunRequestBody) (string, error) {
+	var err error
+
+	type target struct {
+		ID     string `json:"id"`
+		Config string `json:"config"`
+	}
+
+	if runRequestBody.Input != nil && *runRequestBody.Input != "" {
+		// Assert that the workflow source input is a single local file
+		workflowConfig := workflowRunner.GetWorkflowFile()
+		source := workflowConfig.Sources[sourceID]
+		if len(source.Inputs) != 1 {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input for source with multiple inputs"))
+		}
+		if strings.HasPrefix(*runRequestBody.Input, "http://") || strings.HasPrefix(*runRequestBody.Input, "https://") {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input to a remote file"))
+		}
+
+		inputLocation := source.Inputs[0].Location.Resolve()
+
+		// if it's absolute that's fine, otherwise it's relative to the project directory
+		if !filepath.IsAbs(inputLocation) {
+			inputLocation = filepath.Join(workflowRunner.ProjectDir, inputLocation)
+		}
+
+		err = utils.WriteStringToFile(inputLocation, *runRequestBody.Input)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
+		}
+	}
+
+	if runRequestBody.Overlay != nil && *runRequestBody.Overlay != "" {
+		// Verify this is a valid overlay
+		var overlay overlay.Overlay
+		dec := yaml.NewDecoder(strings.NewReader(*runRequestBody.Overlay))
+		err = dec.Decode(&overlay)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding overlay: %w", err))
+		}
+
+		// Write the overlay to a file
+		overlayPath, err = upsertOverlay(overlay, workflowRunner, sourceID, overlayPath)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
+		}
+	}
+
+	for targetID, input := range runRequestBody.Targets {
+		sdkPath := ""
+
+		wfTarget, ok := workflowRunner.GetWorkflowFile().Targets[targetID]
+		if !ok {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", targetID))
+		}
+		sdkPath = workflowRunner.ProjectDir
+		if wfTarget.Output != nil {
+			sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
+		}
+
+		cfg, err := sdkGenConfig.Load(sdkPath)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
+		}
+
+		currentFileContent, err := os.ReadFile(cfg.ConfigPath)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
+		}
+
+		err = utils.WriteStringToFile(cfg.ConfigPath, input.Config)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
+		}
+
+		if _, err := sdkGenConfig.Load(sdkPath); err != nil {
+			err = utils.WriteStringToFile(cfg.ConfigPath, string(currentFileContent))
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("invalid config file changes rolling back: %w", err))
+		}
+	}
+
+	return overlayPath, nil
 }

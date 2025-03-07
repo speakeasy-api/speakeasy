@@ -62,7 +62,6 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -73,14 +72,11 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	})
+	res, err := s.CancelRun(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.OverlayCompareResponse != nil {
+	if res != nil {
 		// handle response
 	}
 }
@@ -105,6 +101,7 @@ func main() {
 
 ### [SDK](docs/sdks/sdk/README.md)
 
+* [CancelRun](docs/sdks/sdk/README.md#cancelrun) - Cancel generation
 * [GenerateOverlay](docs/sdks/sdk/README.md#generateoverlay) - Generate Overlay
 * [Exit](docs/sdks/sdk/README.md#exit) - Exit
 
@@ -127,7 +124,6 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
 	"models/operations"
@@ -140,10 +136,7 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	}, operations.WithRetries(
+	res, err := s.CancelRun(ctx, operations.WithRetries(
 		retry.Config{
 			Strategy: "backoff",
 			Backoff: &retry.BackoffStrategy{
@@ -157,7 +150,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.OverlayCompareResponse != nil {
+	if res != nil {
 		// handle response
 	}
 }
@@ -171,7 +164,6 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/retry"
 	"log"
 )
@@ -194,14 +186,11 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	})
+	res, err := s.CancelRun(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.OverlayCompareResponse != nil {
+	if res != nil {
 		// handle response
 	}
 }
@@ -216,7 +205,7 @@ Handling errors in this SDK should largely match your expectations. All operatio
 
 By Default, an API error will return `sdkerrors.SDKError`. When custom error responses are specified for an operation, the SDK may also return their associated error. You can refer to respective *Errors* tables in SDK docs for more details on possible error types for each operation.
 
-For example, the `GenerateOverlay` function may return the following errors:
+For example, the `CancelRun` function may return the following errors:
 
 | Error Type         | Status Code | Content Type |
 | ------------------ | ----------- | ------------ |
@@ -231,7 +220,6 @@ import (
 	"context"
 	"errors"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/sdkerrors"
 	"log"
 )
@@ -243,10 +231,7 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	})
+	res, err := s.CancelRun(ctx)
 	if err != nil {
 
 		var e *sdkerrors.SDKError
@@ -279,7 +264,6 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -287,18 +271,15 @@ func main() {
 	ctx := context.Background()
 
 	s := sdk.New(
-		sdk.WithPort("10501"),
+		sdk.WithPort("23656"),
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	})
+	res, err := s.CancelRun(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.OverlayCompareResponse != nil {
+	if res != nil {
 		// handle response
 	}
 }
@@ -314,7 +295,6 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -326,14 +306,11 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	})
+	res, err := s.CancelRun(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.OverlayCompareResponse != nil {
+	if res != nil {
 		// handle response
 	}
 }
@@ -388,7 +365,6 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -399,14 +375,11 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	})
+	res, err := s.CancelRun(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.OverlayCompareResponse != nil {
+	if res != nil {
 		// handle response
 	}
 }

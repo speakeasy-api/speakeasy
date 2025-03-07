@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk"
-	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"log"
 )
 
@@ -16,14 +15,11 @@ func main() {
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 
-	res, err := s.GenerateOverlay(ctx, components.OverlayCompareRequestBody{
-		Before: "<value>",
-		After:  "<value>",
-	})
+	res, err := s.CancelRun(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if res.OverlayCompareResponse != nil {
+	if res != nil {
 		// handle response
 	}
 }

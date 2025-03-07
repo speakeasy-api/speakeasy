@@ -56,6 +56,7 @@ func (s *Suggest) MethodNames(ctx context.Context, opts ...operations.Option) (*
 		BaseURL:        baseURL,
 		Context:        ctx,
 		OperationID:    "suggestMethodNames",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
