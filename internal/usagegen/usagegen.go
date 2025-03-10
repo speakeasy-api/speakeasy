@@ -227,8 +227,6 @@ func writeExampleCode(lang, path, code string) error {
 		outFile = path + "/main.py"
 	case "ruby":
 		outFile = path + "/app.rb"
-	case "swift":
-		outFile = path + "/main.swift"
 	case "typescript":
 		outFile = path + "/index.ts"
 	default:
