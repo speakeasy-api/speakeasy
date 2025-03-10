@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -10,8 +13,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/pkg/overlay"
-	"os"
-	"strings"
 )
 
 var overlayFlag = flag.StringFlag{
@@ -30,7 +31,7 @@ var overlayCmd = &model.CommandGroup{
 	Usage:    "overlay",
 	Short:    "Work with OpenAPI Overlays",
 	Long:     utils.RenderMarkdown(overlayLong),
-	Commands: []model.Command{overlayCompareCmd, overlayValidateCmd, overlayApplyCmd},
+	Commands: []model.Command{overlayCompareCmd, overlayValidateCmd, overlayApplyCmd, overlayApplyMultipleCmd},
 }
 
 type overlayValidateFlags struct {
@@ -106,6 +107,40 @@ var overlayApplyCmd = &model.ExecutableCommand[overlayApplyFlags]{
 	},
 }
 
+type overlayApplyMultipleFlags struct {
+	Overlays []string `json:"overlays"`
+	Schema   string   `json:"schema"`
+	Strict   bool     `json:"strict"`
+	Out      string   `json:"out"`
+}
+
+var overlayApplyMultipleCmd = &model.ExecutableCommand[overlayApplyMultipleFlags]{
+	Usage: "apply-multiple",
+	Short: "Apply multiple overlays in sequence to a specification and output the result.",
+	Run:   runApplyMultiple,
+	Flags: []flag.Flag{
+		flag.StringSliceFlag{
+			Name:        "overlays",
+			Description: "the overlay files to apply in sequence",
+			Required:    true,
+		},
+		flag.StringFlag{
+			Name:                       "schema",
+			Shorthand:                  "s",
+			Description:                "the schema to extend",
+			AutocompleteFileExtensions: charm_internal.OpenAPIFileExtensions,
+		},
+		flag.BooleanFlag{
+			Name:        "strict",
+			Description: "fail if any overlay has action target expressions which match no nodes, and produce warnings if any overlay actions do nothing",
+		},
+		flag.StringFlag{
+			Name:        "out",
+			Description: "write directly to a file instead of stdout",
+		},
+	},
+}
+
 func runValidateOverlay(ctx context.Context, flags overlayValidateFlags) error {
 	if err := overlay.Validate(flags.Overlay); err != nil {
 		return err
@@ -165,7 +200,7 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 	}
 
 	shouldWarn := len(flags.Out) > 0 && flags.Strict
-	summary, err := overlay.Apply(flags.Schema, flags.Overlay, yamlOut, out, flags.Strict, shouldWarn)
+	summary, err := applyOverlay(ctx, flags.Schema, flags.Overlay, out, yamlOut, flags.Strict, shouldWarn)
 	if err != nil {
 		return err
 	}
@@ -181,6 +216,47 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 			fmt.Sprintf("Output written to: `%s`", flags.Out),
 		)
 		log.From(ctx).Println(msg)
+	}
+
+	return nil
+}
+
+func runApplyMultiple(ctx context.Context, flags overlayApplyMultipleFlags) error {
+	out := os.Stdout
+	yamlOut := true
+
+	if flags.Out != "" {
+		file, err := os.Create(flags.Out)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		out = file
+
+		yamlOut = utils.HasYAMLExt(flags.Out)
+	}
+
+	currentSchema := flags.Schema
+	for _, overlayFile := range flags.Overlays {
+		shouldWarn := len(flags.Out) > 0 && flags.Strict
+		summary, err := applyOverlay(ctx, currentSchema, overlayFile, out, yamlOut, flags.Strict, shouldWarn)
+		if err != nil {
+			return err
+		}
+		currentSchema = overlayFile // Update the schema to the result of the last application
+
+		// Only print summary information if we aren't writing the result to stdout
+		if flags.Out != "" {
+			printSummary(ctx, summary)
+
+			msg := styles.RenderSuccessMessage(
+				"Overlay Applied Successfully",
+				fmt.Sprintf("Overlay ^%s^ applied to ^%s^", overlayFile, currentSchema),
+				fmt.Sprintf("Actions applied: `%d`", len(summary.TargetToChangeType)),
+				fmt.Sprintf("Output written to: `%s`", flags.Out),
+			)
+			log.From(ctx).Println(msg)
+		}
 	}
 
 	return nil
@@ -300,4 +376,13 @@ func formatTargetPath(target string) string {
 	}
 
 	return strings.Join(finalParts, styles.Dimmed.Render(" > "))
+}
+
+func applyOverlay(ctx context.Context, schema, overlayFile string, out *os.File, yamlOut, strict, shouldWarn bool) (*overlay.Summary, error) {
+	summary, err := overlay.Apply(schema, overlayFile, yamlOut, out, strict, shouldWarn)
+	if err != nil {
+		return nil, err
+	}
+
+	return summary, nil
 }
