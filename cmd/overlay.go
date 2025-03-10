@@ -200,7 +200,7 @@ func runApply(ctx context.Context, flags overlayApplyFlags) error {
 	}
 
 	shouldWarn := len(flags.Out) > 0 && flags.Strict
-	summary, err := applyOverlay(ctx, flags.Schema, flags.Overlay, out, yamlOut, flags.Strict, shouldWarn)
+	summary, err := overlay.Apply(flags.Schema, []string{flags.Overlay}, yamlOut, out, flags.Strict, shouldWarn)
 	if err != nil {
 		return err
 	}
@@ -378,8 +378,8 @@ func formatTargetPath(target string) string {
 	return strings.Join(finalParts, styles.Dimmed.Render(" > "))
 }
 
-func applyOverlay(ctx context.Context, schema, overlayFile string, out *os.File, yamlOut, strict, shouldWarn bool) (*overlay.Summary, error) {
-	summary, err := overlay.Apply(schema, overlayFile, yamlOut, out, strict, shouldWarn)
+func applyOverlay(ctx context.Context, schema string, overlayFiles []string, out *os.File, yamlOut, strict, shouldWarn bool) (*overlay.Summary, error) {
+	summary, err := overlay.Apply(schema, overlayFiles, yamlOut, out, strict, shouldWarn)
 	if err != nil {
 		return nil, err
 	}
