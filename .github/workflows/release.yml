@@ -41,7 +41,7 @@ jobs:
       - name: Configure git for private modules
         run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
       - name: Setup Choco
-        uses: crazy-max/ghaction-chocolatey@2ae99523e93879734d432250f87e2c45c379cd60 # v3.2.0
+        uses: crazy-max/ghaction-chocolatey@6828f16489ec8d2968b55066766cb41f0d278f2a # v3.3.0
         with:
           args: --version
       - name: goreleaser
