@@ -9,3 +9,4 @@ temp/
 integration/temp
 .DS_Store
 .vscode/launch.json
+__debug_bin*
