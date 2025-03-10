@@ -236,27 +236,23 @@ func runApplyMultiple(ctx context.Context, flags overlayApplyMultipleFlags) erro
 		yamlOut = utils.HasYAMLExt(flags.Out)
 	}
 
-	currentSchema := flags.Schema
-	for _, overlayFile := range flags.Overlays {
-		shouldWarn := len(flags.Out) > 0 && flags.Strict
-		summary, err := applyOverlay(ctx, currentSchema, overlayFile, out, yamlOut, flags.Strict, shouldWarn)
-		if err != nil {
-			return err
-		}
-		currentSchema = overlayFile // Update the schema to the result of the last application
+	shouldWarn := len(flags.Out) > 0 && flags.Strict
+	summary, err := applyOverlay(ctx, flags.Schema, flags.Overlays, out, yamlOut, flags.Strict, shouldWarn)
+	if err != nil {
+		return err
+	}
 
-		// Only print summary information if we aren't writing the result to stdout
-		if flags.Out != "" {
-			printSummary(ctx, summary)
+	// Only print summary information if we aren't writing the result to stdout
+	if flags.Out != "" {
+		printSummary(ctx, summary)
 
-			msg := styles.RenderSuccessMessage(
-				"Overlay Applied Successfully",
-				fmt.Sprintf("Overlay ^%s^ applied to ^%s^", overlayFile, currentSchema),
-				fmt.Sprintf("Actions applied: `%d`", len(summary.TargetToChangeType)),
-				fmt.Sprintf("Output written to: `%s`", flags.Out),
-			)
-			log.From(ctx).Println(msg)
-		}
+		msg := styles.RenderSuccessMessage(
+			"Overlays Applied Successfully",
+			fmt.Sprintf("Overlays applied to ^%s^", flags.Schema),
+			fmt.Sprintf("Actions applied: `%d`", len(summary.TargetToChangeType)),
+			fmt.Sprintf("Output written to: `%s`", flags.Out),
+		)
+		log.From(ctx).Println(msg)
 	}
 
 	return nil
