@@ -17,12 +17,14 @@ type Quickstart struct {
 	LanguageConfigs          map[string]*config.Configuration
 	Defaults                 Defaults
 	IsUsingSampleOpenAPISpec bool
+	IsUsingBlueprint         bool
 	SDKName                  string
 }
 
 type Defaults struct {
 	SchemaPath *string
 	TargetType *string
+	Blueprint  *string
 }
 
 // Define constants using iota

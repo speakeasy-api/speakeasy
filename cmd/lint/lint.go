@@ -36,6 +36,7 @@ type LintOpenapiFlags struct {
 	MaxValidationErrors   int    `json:"max-validation-errors"`
 	MaxValidationWarnings int    `json:"max-validation-warnings"`
 	Ruleset               string `json:"ruleset"`
+	NonInteractive        bool   `json:"non-interactive"`
 }
 
 const lintOpenAPILong = `# Lint 
@@ -81,6 +82,10 @@ var LintOpenapiCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 			Shorthand:    "r",
 			Description:  "ruleset to use for linting",
 			DefaultValue: "speakeasy-recommended",
+		},
+		flag.BooleanFlag{
+			Name:        "non-interactive",
+			Description: "force non-interactive mode even when running in a terminal",
 		},
 	},
 }
@@ -144,6 +149,11 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 }
 
 func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
+	// If non-interactive flag is set, use the non-interactive version
+	if flags.NonInteractive {
+		return lintOpenapi(ctx, flags)
+	}
+	
 	limits := validation.OutputLimits{
 		MaxWarns:  flags.MaxValidationWarnings,
 		MaxErrors: flags.MaxValidationErrors,

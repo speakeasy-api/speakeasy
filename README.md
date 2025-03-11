@@ -176,13 +176,6 @@
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
       <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
     </picture>
-    <a href="https://www.speakeasy.com/docs/languages/swift/methodology-swift" target="_blank">
-     <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/122f024b-f3ce-4c24-b62e-71497a042689">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/122f024b-f3ce-4c24-b62e-71497a042689">
-      <img width="100px" src="https://github.com/user-attachments/assets/122f024b-f3ce-4c24-b62e-71497a042689#gh-light-mode-only" alt="Swift">
-     </picture>
-    </a>
     <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
@@ -209,7 +202,7 @@
 
 ### Features
 
-- SDK code that looks you wrote it. Optimised for performance, debuggability and modern idiomatics.
+- SDK code that looks like you wrote it. Optimised for performance, debuggability and modern idiomatics.
 - Complete Terraform Providers built on a Type-safe Go SDK.
 - Contract Test generation with a pre built mock-server ([Powered by Arazzo](https://www.speakeasy.com/openapi/arazzo))
 - Generate clean code-samples for syncing with API docs.
@@ -239,7 +232,7 @@ speakeasy [flags]
 * [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy billing](docs/billing/README.md)	 - Manage billing related operations
 * [speakeasy bump](docs/bump.md)	 - Bumps the version of a Speakeasy Generation Target
-* [speakeasy clean](docs/clean.md)	 - Speakeasy clean can be used to clean up cache, stale temp folders, and old CLI binaries.
+* [speakeasy clean](docs/clean.md)	 - Clean up cache, stale temp folders, and old CLI binaries.
 * [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
 * [speakeasy lint](docs/lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
 * [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document

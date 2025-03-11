@@ -12,17 +12,20 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	timeAgo "github.com/dustin/go-humanize"
 	humanize "github.com/dustin/go-humanize/english"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/remote"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/auth"
+
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/registry"
 )
@@ -180,8 +183,10 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	defer cancel()
 	recentGenerations, err := remote.GetRecentWorkspaceGenerations(timeout)
 
-	// Retrieve recent namespaces and check if there are any available.
-	hasRecentGenerations := err == nil && len(recentGenerations) > 0
+	hasBlueprint := quickstart.Defaults.Blueprint != nil && *quickstart.Defaults.Blueprint != ""
+
+	// Retrieve recent namespaces and check if there are any available. If --blueprint is provided, we will not check for recent generations.
+	hasRecentGenerations := !hasBlueprint && err == nil && len(recentGenerations) > 0
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
@@ -213,7 +218,29 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	if quickstart.Defaults.SchemaPath != nil {
+	if hasBlueprint {
+		blueprintFile, err := fetchAndSaveBlueprint(ctx, *quickstart.Defaults.Blueprint)
+		if err == nil {
+			fileLocation = blueprintFile
+
+			fmt.Println(
+				styles.RenderInfoMessage(
+					fmt.Sprintf("Using sandbox session '%s'", *quickstart.Defaults.Blueprint),
+				) + "\n",
+			)
+		} else {
+			// fallthrough
+			fmt.Println(
+				styles.RenderInfoMessage(
+					fmt.Sprintf("Could not find sandbox session '%s'. Continuing with quickstart...", *quickstart.Defaults.Blueprint),
+				) + "\n",
+			)
+		}
+	}
+
+	if hasBlueprint && fileLocation != "" {
+		// noop
+	} else if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	} else if useRemoteSource && selectedRegistryUri != "" {
 		// The workflow file will be updated with a registry based input like:
@@ -245,7 +272,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
-		if summary != nil {
+		if summary != nil && summary.Info.Title != "" {
 			sourceName = summary.Info.Title
 		} else {
 			sourceName = quickstart.SDKName + "-OAS"
@@ -656,4 +683,38 @@ func configureRegistry(source *workflow.Source, orgSlug, workspaceSlug, sourceNa
 	}
 	source.Registry = registryEntry
 	return nil
+}
+
+var (
+	ErrMsgFailedToFetchBlueprint  = errors.New("failed to fetch sandbox session")
+	ErrMsgFailedToSaveBlueprint   = errors.New("failed to save sandbox session")
+	ErrMsgFailedToDecodeBlueprint = errors.New("failed to decode sandbox session")
+)
+
+func fetchAndSaveBlueprint(ctx context.Context, blueprintID string) (string, error) {
+	speakeasyClient, err := sdk.InitSDK()
+	if err != nil {
+		return "", err
+	}
+
+	schemaStoreItem, err := speakeasyClient.SchemaStore.GetSchemaStoreItem(ctx, &operations.GetSchemaStoreItemRequestBody{
+		ID: &blueprintID,
+	})
+	if err != nil {
+		return "", ErrMsgFailedToFetchBlueprint
+	}
+
+	tempDir := os.TempDir()
+	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", schemaStoreItem.SchemaStoreItem.ID, schemaStoreItem.SchemaStoreItem.Format)))
+	if err != nil {
+		return "", ErrMsgFailedToSaveBlueprint
+	}
+	defer tempFile.Close()
+
+	_, err = tempFile.WriteString(schemaStoreItem.SchemaStoreItem.Spec)
+	if err != nil {
+		return "", ErrMsgFailedToSaveBlueprint
+	}
+
+	return tempFile.Name(), nil
 }

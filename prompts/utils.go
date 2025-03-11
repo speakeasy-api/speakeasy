@@ -2,9 +2,10 @@ package prompts
 
 import (
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"os"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -140,8 +141,6 @@ func getTargetDisplay(target string) string {
 		return "Postman"
 	case "ruby":
 		return "Ruby"
-	case "swift":
-		return "Swift"
 	}
 
 	return target
