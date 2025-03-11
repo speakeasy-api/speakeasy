@@ -190,8 +190,6 @@ github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/forPelevin/gomoji v1.2.0 h1:9k4WVSSkE1ARO/BWywxgEUBvR/jMnao6EZzrql5nxJ8=
-github.com/forPelevin/gomoji v1.2.0/go.mod h1:8+Z3KNGkdslmeGZBC3tCrwMrcPy5GRzAD+gL9NAwMXg=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
@@ -579,8 +577,8 @@ github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939 h1:LGtzWU
 github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939/go.mod h1:9ap4lXBHgxGyFwxtOfa+B1C3IQ0rvnqteqjJvJ11oiQ=
 github.com/speakeasy-api/openapi v0.1.7 h1:INU1+Pu9/ub6JtABRj8cWCpU3CCE/Z8q1FTygczYkes=
 github.com/speakeasy-api/openapi v0.1.7/go.mod h1:t1HA3wPC8jpGRr0UHW+SIvIB8dT5RXXi39XLrIG/URU=
-github.com/speakeasy-api/openapi-generation/v2 v2.546.3 h1:elhZz1O4ry3OnEqSyKnH/JncNSLPhEfYb5NlsumKZBE=
-github.com/speakeasy-api/openapi-generation/v2 v2.546.3/go.mod h1:QGMPsXlEJBcFMlLLKSieDgSyGTNPiEZw7vXvwT4O/gc=
+github.com/speakeasy-api/openapi-generation/v2 v2.547.2 h1:D7EGLAj+HL6or8BEZ9MKabZdqBYgWU09J0/2JJhHlrs=
+github.com/speakeasy-api/openapi-generation/v2 v2.547.2/go.mod h1:53lOL100XFuTJXFgeC+0Esm56WqPjRoI9kUjZttUsrs=
 github.com/speakeasy-api/openapi-overlay v0.10.1 h1:XFx/GvJvtAGf4dcQ6bxzsLNf76x/QWE2X0SSZrWojBQ=
 github.com/speakeasy-api/openapi-overlay v0.10.1/go.mod h1:n0iOU7AqKpNFfEt6tq7qYITC4f0yzVVdFw0S7hukemg=
 github.com/speakeasy-api/sdk-gen-config v1.30.10 h1:ehF1VtF6iwFEaOatz4eeapcYhZMhczlU29PYYlXFVT0=

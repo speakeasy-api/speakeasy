@@ -34,7 +34,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/openapi v0.1.7
-	github.com/speakeasy-api/openapi-generation/v2 v2.546.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.547.2
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.30.10
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.25.1
@@ -106,7 +106,6 @@ require (
 	github.com/evanw/esbuild v0.24.0 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/forPelevin/gomoji v1.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gammban/numtow v0.0.2 // indirect
