@@ -2,9 +2,40 @@
 
 package components
 
+// OverlayDocument - Document information
+type OverlayDocument struct {
+	// Document location
+	Location string `json:"location"`
+	Auth     *Auth  `json:"auth,omitempty"`
+	// Document contents
+	Contents *string `json:"contents,omitempty"`
+}
+
+func (o *OverlayDocument) GetLocation() string {
+	if o == nil {
+		return ""
+	}
+	return o.Location
+}
+
+func (o *OverlayDocument) GetAuth() *Auth {
+	if o == nil {
+		return nil
+	}
+	return o.Auth
+}
+
+func (o *OverlayDocument) GetContents() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Contents
+}
+
 type Overlay struct {
 	FallbackCodeSamples *FallbackCodeSamples `json:"fallbackCodeSamples,omitempty"`
-	Document            *Document            `json:"document,omitempty"`
+	// Document information
+	Document *OverlayDocument `json:"document,omitempty"`
 }
 
 func (o *Overlay) GetFallbackCodeSamples() *FallbackCodeSamples {
@@ -14,7 +45,7 @@ func (o *Overlay) GetFallbackCodeSamples() *FallbackCodeSamples {
 	return o.FallbackCodeSamples
 }
 
-func (o *Overlay) GetDocument() *Document {
+func (o *Overlay) GetDocument() *OverlayDocument {
 	if o == nil {
 		return nil
 	}

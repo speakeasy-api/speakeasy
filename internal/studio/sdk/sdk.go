@@ -167,9 +167,9 @@ func New(opts ...SDKOption) *SDK {
 		sdkConfiguration: sdkConfiguration{
 			Language:          "go",
 			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.10.6",
-			GenVersion:        "2.531.0",
-			UserAgent:         "speakeasy-sdk/go 0.10.6 2.531.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			SDKVersion:        "0.10.7",
+			GenVersion:        "2.541.0",
+			UserAgent:         "speakeasy-sdk/go 0.10.7 2.541.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
 			ServerDefaults: []map[string]string{
 				{
 					"port": "8080",
@@ -233,6 +233,7 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCom
 		BaseURL:        baseURL,
 		Context:        ctx,
 		OperationID:    "generateOverlay",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 	bodyReader, reqContentType, err := utils.SerializeRequestBody(ctx, request, false, false, "Request", "json", `request:"mediaType=application/json"`)
@@ -441,6 +442,7 @@ func (s *SDK) Exit(ctx context.Context, opts ...operations.Option) (*operations.
 		BaseURL:        baseURL,
 		Context:        ctx,
 		OperationID:    "exit",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 

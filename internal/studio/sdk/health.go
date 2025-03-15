@@ -57,6 +57,7 @@ func (s *Health) Check(ctx context.Context, opts ...operations.Option) (*operati
 		BaseURL:        baseURL,
 		Context:        ctx,
 		OperationID:    "checkHealth",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
