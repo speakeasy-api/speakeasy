@@ -153,12 +153,14 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 	if sourceResult.LintResult != nil {
 		for _, e := range sourceResult.LintResult.AllErrors {
 			vErr := vErrs.GetValidationErr(e)
-			diagnosis = append(diagnosis, components.Diagnostic{
-				Message:  vErr.Message,
-				Severity: string(vErr.Severity),
-				Line:     pointer.ToInt64(int64(vErr.LineNumber)),
-				Type:     vErr.Rule,
-			})
+			if vErr != nil {
+				diagnosis = append(diagnosis, components.Diagnostic{
+					Message:  vErr.Message,
+					Severity: string(vErr.Severity),
+					Line:     pointer.ToInt64(int64(vErr.LineNumber)),
+					Type:     vErr.Rule,
+				})
+			}
 		}
 	}
 
@@ -252,6 +254,29 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow, workingDir string)
 		})
 
 		source.Inputs = updatedInputs
+
+		source.Overlays = lo.Map(source.Overlays, func(overlay components.Overlay, _ int) components.Overlay {
+			// If the overlay is a local file, read the contents
+			if overlay.Document.Location != "" &&
+				!strings.HasPrefix(overlay.Document.Location, "https://") &&
+				!strings.HasPrefix(overlay.Document.Location, "http://") &&
+				!strings.HasPrefix(overlay.Document.Location, "registry.speakeasyapi.dev") {
+				contents, err := utils.ReadFileToString(overlay.Document.Location)
+				if err != nil {
+					return overlay
+				}
+
+				return components.Overlay{
+					Document: &components.OverlayDocument{
+						Location: overlay.Document.Location,
+						Contents: &contents,
+					},
+				}
+			}
+
+			return overlay
+		})
+
 		c.Sources[key] = source
 	}
 

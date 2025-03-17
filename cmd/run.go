@@ -32,6 +32,7 @@ type RunFlags struct {
 	SkipCompile        bool              `json:"skip-compile"`
 	SkipTesting        bool              `json:"skip-testing"`
 	SkipVersioning     bool              `json:"skip-versioning"`
+	SkipUploadSpec     bool              `json:"skip-upload-spec"`
 	FrozenWorkflowLock bool              `json:"frozen-workflow-lockfile"`
 	Force              bool              `json:"force"`
 	Output             string            `json:"output"`
@@ -117,6 +118,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Name:         "skip-versioning",
 			Description:  "skip automatic SDK version increments",
 			DefaultValue: false,
+		},
+		flag.BooleanFlag{
+			Name:        "skip-upload-spec",
+			Description: "skip uploading the spec to the registry",
 		},
 		flag.BooleanFlag{
 			Name:         "frozen-workflow-lockfile",
@@ -321,6 +326,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithSkipTesting(flags.SkipTesting),
 		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithSkipSnapshot(flags.SkipUploadSpec),
 		run.WithVerbose(flags.Verbose),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),

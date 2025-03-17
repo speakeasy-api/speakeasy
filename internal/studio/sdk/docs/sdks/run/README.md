@@ -25,7 +25,7 @@ import(
 
 func main() {
     ctx := context.Background()
-    
+
     s := sdk.New(
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )
@@ -81,7 +81,7 @@ import(
 
 func main() {
     ctx := context.Background()
-    
+
     s := sdk.New(
         sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
     )

@@ -1,12 +1,12 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: 37fe273fb626155d4e01ed2b20f47276
+  docChecksum: afbb3f993c6b315d265d95ec4a6c8e95
   docVersion: 1.0.0
-  speakeasyVersion: 1.505.0
-  generationVersion: 2.531.0
-  releaseVersion: 0.10.6
-  configChecksum: 1f2b4334e77a4bd5690579c5ed0f18c1
+  speakeasyVersion: 1.510.0
+  generationVersion: 2.541.0
+  releaseVersion: 0.10.7
+  configChecksum: 4bb9bf671365ec272609f72a390efeda
 features:
   go:
     additionalDependencies: 0.1.0
@@ -67,6 +67,7 @@ generatedFiles:
   - docs/models/components/overlay.md
   - docs/models/components/overlaycomparerequestbody.md
   - docs/models/components/overlaycompareresponse.md
+  - docs/models/components/overlaydocument.md
   - docs/models/components/publishing.md
   - docs/models/components/runrequestbody.md
   - docs/models/components/runresponse.md

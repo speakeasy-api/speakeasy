@@ -34,7 +34,7 @@ paths:
         content:
           application/json:
             schema:
-                $ref: "#/components/schemas/RunRequestBody"
+              $ref: "#/components/schemas/RunRequestBody"
       responses:
         "200":
           $ref: "#/components/responses/RunResponse"
@@ -355,7 +355,13 @@ components:
           $ref: "#/components/schemas/FallbackCodeSamples"
           description: Fallback code samples
         document:
-          $ref: "#/components/schemas/Document"
+          allOf:
+            - $ref: "#/components/schemas/Document"
+            - type: object
+              properties:
+                contents:
+                  type: string
+                  description: Document contents
           description: Document information
     SourceRegistry:
       type: object

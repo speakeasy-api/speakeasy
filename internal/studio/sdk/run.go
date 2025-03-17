@@ -57,6 +57,7 @@ func (s *Run) GetLastResult(ctx context.Context, opts ...operations.Option) (*op
 		BaseURL:        baseURL,
 		Context:        ctx,
 		OperationID:    "getRun",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 
@@ -255,6 +256,7 @@ func (s *Run) ReRun(ctx context.Context, request components.RunRequestBody, opts
 		BaseURL:        baseURL,
 		Context:        ctx,
 		OperationID:    "run",
+		OAuth2Scopes:   []string{},
 		SecuritySource: s.sdkConfiguration.Security,
 	}
 	bodyReader, reqContentType, err := utils.SerializeRequestBody(ctx, request, false, false, "Request", "json", `request:"mediaType=application/json"`)
