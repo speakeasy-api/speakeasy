@@ -8,12 +8,6 @@ replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
 
-// point at local openapi generation
-replace github.com/speakeasy-api/openapi-generation/v2 => ../speakeasy-openapi-generation
-
-// point at local core
-replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
-
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -40,9 +34,9 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/openapi v0.1.7
-	github.com/speakeasy-api/openapi-generation/v2 v2.548.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.551.3
 	github.com/speakeasy-api/openapi-overlay v0.10.1
-	github.com/speakeasy-api/sdk-gen-config v1.30.10
+	github.com/speakeasy-api/sdk-gen-config v1.30.11
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.25.1
 	github.com/speakeasy-api/speakeasy-core v0.19.6
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
@@ -169,7 +163,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
