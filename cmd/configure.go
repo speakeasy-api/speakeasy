@@ -896,7 +896,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 	}
 	if isPRMode {
-		agenda = append(agenda, fmt.Sprintf("• Navigate to %s, ensure `Workflow permissions: can create pull requests` is enabled.", actionSettingsPath))
+		agenda = append(agenda, fmt.Sprintf("• Navigate to %s ensure `Workflow permissions: can create pull requests` is enabled.", actionSettingsPath))
 	}
 	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to view your generations.", actionPath))
 
