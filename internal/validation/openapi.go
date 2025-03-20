@@ -331,7 +331,7 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 
 	if len(vErrs) > 0 {
 		status = "OpenAPI document invalid ✖"
-	} else if len(vErrs) > 0 {
+	} else if len(vWarns) > 0 {
 		status = "OpenAPI document valid with warnings ⚠"
 	}
 

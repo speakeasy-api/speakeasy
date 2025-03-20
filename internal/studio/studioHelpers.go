@@ -160,7 +160,11 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 					Line:     pointer.ToInt64(int64(vErr.LineNumber)),
 					Type:     vErr.Rule,
 				})
+				continue
 			}
+		}
+		for _, w := range sourceResult.LintResult.Warnings {
+			diagnosis = append(diagnosis, convertWarningToDiagnostic(w))
 		}
 	}
 
@@ -206,6 +210,45 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 		Output:      outputDocumentString,
 		Diagnosis:   diagnosis,
 	}, nil
+}
+
+func convertWarningToDiagnostic(w error) components.Diagnostic {
+	if vErr, ok := w.(*vErrs.ValidationError); ok {
+		return components.Diagnostic{
+			Message:  vErr.Message,
+			Severity: string(vErr.Severity),
+			Line:     pointer.ToInt64(int64(vErr.LineNumber)),
+			Type:     vErr.Rule,
+			Path:     []string{vErr.Path},
+		}
+	}
+
+	if uErr, ok := w.(*vErrs.UnsupportedError); ok {
+		return components.Diagnostic{
+			Message:  uErr.Message,
+			Line:     pointer.ToInt64(int64(uErr.LineNumber)),
+			Severity: "warn",
+			Type:     "Unsupported",
+		}
+	}
+
+	// TODO: Try to extract the warning type, message, and line number at a minimum
+	// parts := strings.Split(w.Error(), ":")
+	// if len(parts) == 2 {
+	// 	warnType := strings.TrimSpace(parts[0])
+	// 	message := strings.TrimSpace(parts[1])
+	// 	return components.Diagnostic{
+	// 		Message:  message,
+	// 		Severity: "warn",
+	// 		Type:     warnType,
+	// 	}
+	// }
+
+	return components.Diagnostic{
+		Message:  w.Error(),
+		Severity: "warn",
+		Type:     "Warnings",
+	}
 }
 
 func convertWorkflowToComponentsWorkflow(w workflow.Workflow, workingDir string) (components.Workflow, error) {
