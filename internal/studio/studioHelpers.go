@@ -223,6 +223,21 @@ func convertWarningToDiagnostic(w error) components.Diagnostic {
 		}
 	}
 
+	if skippedErr, ok := w.(*vErrs.SkippedError); ok {
+		skippedStr := fmt.Sprintf("Skipping path %q", skippedErr.SkippedEntity.Path)
+		if skippedErr.SkippedEntity.Operation != "" {
+			skippedStr = fmt.Sprintf("Skipping operation %q", skippedErr.SkippedEntity.Operation)
+		}
+		return components.Diagnostic{
+			Message:     skippedErr.Message,
+			Line:        pointer.ToInt64(int64(skippedErr.LineNumber)),
+			Severity:    "warn",
+			Type:        fmt.Sprintf("Skipped %ss", skippedErr.SkippedEntity.GetSpecificEntity()),
+			Path:        []string{skippedErr.SkippedEntity.Path},
+			HelpMessage: pointer.ToString(skippedStr),
+		}
+	}
+
 	if uErr, ok := w.(*vErrs.UnsupportedError); ok {
 		return components.Diagnostic{
 			Message:  uErr.Message,
