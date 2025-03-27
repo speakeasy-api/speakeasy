@@ -53,6 +53,7 @@ var SupportedTestingTargets = []string{
 	"typescript",
 	"python",
 	"go",
+	"java",
 }
 
 //go:embed terraform_release.yaml
