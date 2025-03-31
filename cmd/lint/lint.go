@@ -153,7 +153,7 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 	if flags.NonInteractive {
 		return lintOpenapi(ctx, flags)
 	}
-	
+
 	limits := validation.OutputLimits{
 		MaxWarns:  flags.MaxValidationWarnings,
 		MaxErrors: flags.MaxValidationErrors,
