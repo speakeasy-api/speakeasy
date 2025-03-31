@@ -15,7 +15,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -435,21 +434,14 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 		return false
 	}
 
-	offerDeclineOption := !fromQuickstart && config.SeenStudio()
-
 	numDiagnostics := wf.CountDiagnostics()
 	if numDiagnostics == 0 {
 		return false
 	}
 
-	if offerDeclineOption {
-		message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
-		return interactivity.SimpleConfirm(message, true)
-	}
-
-	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. The Speakeasy Studio can help you fix them.\n", numDiagnostics)
+	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. Speakeasy Studio can help you fix them.\n", numDiagnostics)
 	log.From(ctx).PrintStyled(styles.HeavilyEmphasized, message)
-	return interactivity.SimpleButton("↵ Launch Studio", "Press enter to continue")
+	return interactivity.SimpleConfirm("Would you like to launch Speakeasy Studio?", true)
 }
 
 func printSampleSpecMessage(absSchemaPath string) {
