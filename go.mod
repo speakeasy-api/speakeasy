@@ -10,6 +10,7 @@ replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-
 
 require (
 	github.com/AlekSi/pointer v1.2.0
+	github.com/KimMachineGun/automemlimit v0.7.1
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.1
@@ -46,6 +47,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.10.0
+	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.28.0
@@ -194,6 +196,7 @@ require (
 	github.com/otiai10/copy v1.14.0 // indirect
 	github.com/pb33f/doctor v0.0.12 // indirect
 	github.com/pb33f/libopenapi-validator v0.1.0 // indirect
+	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
