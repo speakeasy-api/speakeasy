@@ -3,6 +3,8 @@ package errorCodes
 import (
 	"context"
 	"fmt"
+	"slices"
+
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
@@ -11,7 +13,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"gopkg.in/yaml.v3"
-	"slices"
 )
 
 func BuildErrorCodesOverlay(ctx context.Context, schemaPath string) (*overlay.Overlay, error) {
@@ -230,11 +231,12 @@ func keepOnlyMostUsed(codeUsedComponents map[string]map[string]int) map[string]s
 
 // Returns something like:
 // InternalServerError:
-//      type: object
-//      properties:
-//        message:
-//          type: string
-//      additionalProperties: true
+//
+//	type: object
+//	properties:
+//	  message:
+//	    type: string
+//	additionalProperties: true
 func getSchemaNodes(group errorGroup) []*yaml.Node {
 	builder := yamlutil.NewBuilder(false)
 
@@ -258,11 +260,12 @@ func getSchemaNodes(group errorGroup) []*yaml.Node {
 
 // Returns something like:
 // InternalServerError:
-//     description: Internal Server Error
-//     content:
-//         application/json:
-//             schema:
-//                 $ref: '#/components/schemas/InternalServerError'
+//
+//	description: Internal Server Error
+//	content:
+//	    application/json:
+//	        schema:
+//	            $ref: '#/components/schemas/InternalServerError'
 func getComponentNodes(group errorGroup) []*yaml.Node {
 	builder := yamlutil.NewBuilder(false)
 

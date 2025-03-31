@@ -1,19 +1,19 @@
 package overlay
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
 	schemaFile               = "testdata/base.yaml"
-	schemaJSON    = "testdata/base.json"
-	overlayFileV1 = "testdata/overlay.yaml"
-	overlayFileV2 = "testdata/overlay-v2.yaml"
+	schemaJSON               = "testdata/base.json"
+	overlayFileV1            = "testdata/overlay.yaml"
+	overlayFileV2            = "testdata/overlay-v2.yaml"
 	overlayStrictFailure     = "testdata/strict-failure.yaml"
 	expectedFile             = "testdata/expected.yaml"
 	expectedFileJSON         = "testdata/expected.json"

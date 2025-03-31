@@ -1,17 +1,18 @@
+version: "2"
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-
+formatters:
+  enable:
+    - gofmt
 linters:
-  disable-all: true
+  default: none
   enable:
     # - copyloopvar
     # - durationcheck
     # - errcheck
     # - forcetypeassert
     # - gocheckcompilerdirectives
-    # - gofmt
-    # - gosimple
     - govet
     # - ineffassign
     # - intrange
@@ -21,17 +22,15 @@ linters:
     - misspell
     # - nilerr
     # - nolintlint
-    # - paralleltest
     # - perfsprint
     # - prealloc
     # - predeclared
     # - spancheck
     # - staticcheck
-    # - tenv
-    # - thelper
     # - testifylint
     # - unconvert
     # - unparam
     # - unused
     # - usestdlibvars
+    # - usetesting
     # - wastedassign
