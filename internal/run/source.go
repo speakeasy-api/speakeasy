@@ -55,7 +55,7 @@ func (e *LintingError) Error() string {
 	return fmt.Sprintf("linting failed: %s - %s", e.Document, errString)
 }
 
-func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string) (string, *SourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, targetLanguage string) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{

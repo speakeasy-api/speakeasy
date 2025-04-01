@@ -61,7 +61,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, targetLanguage)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, targetLanguage)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
