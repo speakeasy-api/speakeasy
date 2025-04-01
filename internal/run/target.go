@@ -48,6 +48,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
+	targetLanguage := t.Target
 	targetLock := workflow.TargetLock{Source: t.Source}
 
 	log.From(ctx).Infof("Running target %s (%s)...\n", target, t.Target)
@@ -60,7 +61,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, t.Target)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, targetLanguage)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -84,7 +85,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			}
 		}
 	} else {
-		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir, t.Target)
+		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir, targetLanguage)
 		if err != nil {
 			return sourceRes, nil, err
 		}
