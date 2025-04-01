@@ -2,11 +2,9 @@ module github.com/speakeasy-api/speakeasy
 
 go 1.24.0
 
-replace github.com/pb33f/doctor v0.0.8 => github.com/speakeasy-api/doctor v0.0.0-20240920145439-74ab55243125
+replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixvacuum
 
-replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.0.0-20241006201546-c9e5f704a939
-
-replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.0.0-20240926095216-18e2075ffe0f
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.8-fixhiddencomps
 
 require (
 	github.com/AlekSi/pointer v1.2.0
@@ -197,7 +195,7 @@ require (
 	github.com/pb33f/doctor v0.0.20 // indirect
 	github.com/pb33f/libopenapi-validator v0.3.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
-	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/petermattis/goid v0.0.0-20250319124200-ccd6737f222a // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
