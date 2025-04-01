@@ -4,7 +4,7 @@ go 1.24.0
 
 replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixvacuum
 
-replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.8-fixhiddencomps
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.8-fixhiddencomps-fixed
 
 require (
 	github.com/AlekSi/pointer v1.2.0
