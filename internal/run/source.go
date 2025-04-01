@@ -145,7 +145,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !w.SkipLinting {
 		w.OnSourceResult(sourceRes, "Linting")
-		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
+		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir, targetID)
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
@@ -193,7 +193,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	return currentDocument, sourceRes, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, source, schemaPath, defaultRuleset, projectDir string) (*validation.ValidationResult, error) {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, source, schemaPath, defaultRuleset, projectDir string, target string) (*validation.ValidationResult, error) {
 	step := parentStep.NewSubstep("Validating Document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -206,7 +206,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 		MaxWarns:  1000,
 	}
 
-	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart, w.SkipGenerateLintReport)
+	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart, w.SkipGenerateLintReport, target)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 

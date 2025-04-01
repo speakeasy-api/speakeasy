@@ -60,7 +60,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, t.Target)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -84,7 +84,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			}
 		}
 	} else {
-		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir)
+		res, err := w.validateDocument(ctx, rootStep, t.Source, sourcePath, "speakeasy-generation", w.ProjectDir, t.Target)
 		if err != nil {
 			return sourceRes, nil, err
 		}
