@@ -170,7 +170,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
 	if targetType == "terraform" {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
-		outDir = "terraform-provider"
 	}
 
 	if !currentDirectoryEmpty() {
@@ -181,8 +180,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 			Validate(func(s string) error {
 				if targetType == "terraform" {
-					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
-						return errors.New("a terraform provider directory must start with 'terraform-provider'")
+					if !strings.HasPrefix(s, "terraform-provider-") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider-") {
+						return errors.New("a terraform provider directory must start with 'terraform-provider-'")
 					}
 				}
 				return nil
@@ -495,7 +494,7 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 			return "."
 		}
 
-		subDirectory = fmt.Sprintf("terraform-provider-%s", subDirectory)
+		subDirectory = fmt.Sprintf("terraform-provider-%s", strcase.ToKebab(sdkClassName))
 	}
 
 	return filepath.Join(workingDir, subDirectory)
