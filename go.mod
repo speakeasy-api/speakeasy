@@ -33,7 +33,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/openapi v0.1.7
-	github.com/speakeasy-api/openapi-generation/v2 v2.564.5
+	github.com/speakeasy-api/openapi-generation/v2 v2.564.12
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.30.11
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.25.1
@@ -49,6 +49,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/term v0.30.0
+	golang.org/x/text v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -269,7 +270,6 @@ require (
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241104194629-dd2ea8efbc28 // indirect
