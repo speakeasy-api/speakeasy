@@ -3,18 +3,16 @@ package run
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
+	"strings"
 )
 
 func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, vErrs []error) (string, *SourceResult, error) {
-	targetLanguage := w.workflow.Targets[targetID].Target
 	var invalidOperations []string
 	for _, err := range vErrs {
 		vErr := errors.GetValidationErr(err)
@@ -43,7 +41,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	}
 	w.workflow.Sources[sourceID] = source
 
-	sourcePath, sourceRes, err := w.RunSource(ctx, substep, sourceID, targetID, targetLanguage)
+	sourcePath, sourceRes, err := w.RunSource(ctx, substep, sourceID, targetID)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to re-run source: %w", err)
 	}

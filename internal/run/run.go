@@ -155,7 +155,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		if _, ok := w.workflow.Sources[sourceID]; !ok {
 			return fmt.Errorf("source '%s' not found", sourceID)
 		}
-		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "", "")
+		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "")
 		if err != nil {
 			return err
 		}

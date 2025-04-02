@@ -58,7 +58,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 		return nil, fmt.Errorf("failed to get document contents: %w", err)
 	}
 
-	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, false, skipGenerateReport, "")
+	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, false, skipGenerateReport)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func ValidateWithInteractivity(ctx context.Context, schemaPath, header, token st
 	return res, nil
 }
 
-func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string, isQuickstart bool, skipGenerateReport bool, target string) (*ValidationResult, error) {
+func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token string, limits *OutputLimits, defaultRuleset, workingDir string, isQuickstart bool, skipGenerateReport bool) (*ValidationResult, error) {
 	logger := log.From(ctx)
 	logger.Info("Linting OpenAPI document...\n")
 
@@ -112,7 +112,7 @@ func ValidateOpenAPI(ctx context.Context, source, schemaPath, header, token stri
 
 	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
 
-	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, isQuickstart, skipGenerateReport, target)
+	res, err := Validate(ctx, logger, schema, schemaPath, limits, isRemote, defaultRuleset, workingDir, isQuickstart, skipGenerateReport)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 }
 
 // Validate returns (validation errors, validation warnings, validation info, error)
-func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string, parseValidOperations bool, skipGenerateReport bool, target string) (*ValidationResult, error) {
+func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string, parseValidOperations bool, skipGenerateReport bool) (*ValidationResult, error) {
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
 	opts := []generate.GeneratorOptions{
@@ -286,7 +286,7 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		return nil, err
 	}
 
-	res, err := g.Validate(ctx, schema, schemaPath, isRemote, workingDir, target)
+	res, err := g.Validate(ctx, schema, schemaPath, isRemote, workingDir)
 	if err != nil {
 		return nil, err
 	}

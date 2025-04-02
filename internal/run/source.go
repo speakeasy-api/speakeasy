@@ -55,7 +55,7 @@ func (e *LintingError) Error() string {
 	return fmt.Sprintf("linting failed: %s - %s", e.Document, errString)
 }
 
-func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, targetLanguage string) (string, *SourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{
@@ -145,7 +145,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if !w.SkipLinting {
 		w.OnSourceResult(sourceRes, "Linting")
-		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir, targetLanguage)
+		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir)
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
 		}
@@ -193,7 +193,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	return currentDocument, sourceRes, nil
 }
 
-func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, source, schemaPath, defaultRuleset, projectDir string, target string) (*validation.ValidationResult, error) {
+func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, source, schemaPath, defaultRuleset, projectDir string) (*validation.ValidationResult, error) {
 	step := parentStep.NewSubstep("Validating Document")
 
 	if slices.Contains(w.validatedDocuments, schemaPath) {
@@ -206,7 +206,7 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 		MaxWarns:  1000,
 	}
 
-	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart, w.SkipGenerateLintReport, target)
+	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart, w.SkipGenerateLintReport)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 

@@ -37,7 +37,7 @@ func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string
 	}
 	workflowRunner = *workflowRunnerPtr
 
-	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
+	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "")
 	if err != nil {
 		return nil, fmt.Errorf("error running source: %w", err)
 	}
