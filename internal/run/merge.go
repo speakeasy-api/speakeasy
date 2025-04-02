@@ -3,13 +3,14 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
-	"os"
-	"path/filepath"
 )
 
 type Merge struct {
