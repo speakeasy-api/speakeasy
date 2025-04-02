@@ -15,7 +15,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -171,7 +170,6 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
 	if targetType == "terraform" {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
-		outDir = "terraform-provider"
 	}
 
 	if !currentDirectoryEmpty() {
@@ -182,8 +180,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			SetSuggestionCallback(charm.SuggestionCallback(charm.SuggestionCallbackConfig{IsDirectories: true})).
 			Validate(func(s string) error {
 				if targetType == "terraform" {
-					if !strings.HasPrefix(s, "terraform-provider") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider") {
-						return errors.New("a terraform provider directory must start with 'terraform-provider'")
+					if !strings.HasPrefix(s, "terraform-provider-") && !strings.HasPrefix(filepath.Base(filepath.Join(workingDir, s)), "terraform-provider-") {
+						return errors.New("a terraform provider directory must start with 'terraform-provider-'")
 					}
 				}
 				return nil
@@ -435,21 +433,14 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 		return false
 	}
 
-	offerDeclineOption := !fromQuickstart && config.SeenStudio()
-
 	numDiagnostics := wf.CountDiagnostics()
 	if numDiagnostics == 0 {
 		return false
 	}
 
-	if offerDeclineOption {
-		message := fmt.Sprintf("We've detected %d potential improvements for your SDK. Would you like to launch the studio?", numDiagnostics)
-		return interactivity.SimpleConfirm(message, true)
-	}
-
-	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. The Speakeasy Studio can help you fix them.\n", numDiagnostics)
+	message := fmt.Sprintf("\nWe've detected %d potential improvements for your SDK. Speakeasy Studio can help you fix them.\n", numDiagnostics)
 	log.From(ctx).PrintStyled(styles.HeavilyEmphasized, message)
-	return interactivity.SimpleButton("↵ Launch Studio", "Press enter to continue")
+	return interactivity.SimpleConfirm("Would you like to launch Speakeasy Studio?", true)
 }
 
 func printSampleSpecMessage(absSchemaPath string) {
@@ -503,7 +494,7 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 			return "."
 		}
 
-		subDirectory = fmt.Sprintf("terraform-provider-%s", subDirectory)
+		subDirectory = fmt.Sprintf("terraform-provider-%s", strcase.ToKebab(sdkClassName))
 	}
 
 	return filepath.Join(workingDir, subDirectory)

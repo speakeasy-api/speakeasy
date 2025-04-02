@@ -53,6 +53,7 @@ var SupportedTestingTargets = []string{
 	"typescript",
 	"python",
 	"go",
+	"java",
 }
 
 //go:embed terraform_release.yaml
@@ -413,7 +414,7 @@ func WriteTestingFiles(ctx context.Context, wf *workflow.Workflow, currentWorkin
 
 	// Attempt to update the appropriate generation workflow if they choose a PAT based approach
 	if isPatBased {
-		for name, _ := range wf.Targets {
+		for name := range wf.Targets {
 			generationWorkflow := &config.GenerateWorkflow{}
 			generationWorkflowFilePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_generation.yaml")
 			if len(wf.Targets) > 1 {
