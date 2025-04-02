@@ -141,7 +141,7 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 		return err
 	}
 
-	if _, err := validation.ValidateOpenAPI(ctx, "", flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false, false); err != nil {
+	if _, err := validation.ValidateOpenAPI(ctx, "", flags.SchemaPath, flags.Header, flags.Token, &limits, flags.Ruleset, wd, false, false, ""); err != nil {
 		return err
 	}
 
