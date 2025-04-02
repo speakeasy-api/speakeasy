@@ -287,7 +287,15 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		return nil, err
 	}
 
-	res, err := g.Validate(ctx, schema, schemaPath, isRemote, workingDir, target)
+	validateOpts := generate.ValidateOpts{
+		Schema:     schema,
+		SchemaPath: schemaPath,
+		IsRemote:   isRemote,
+		WorkingDir: workingDir,
+		Target:     target,
+	}
+	res, err := g.ValidateWithOpts(ctx, validateOpts)
+
 	if err != nil {
 		return nil, err
 	}
