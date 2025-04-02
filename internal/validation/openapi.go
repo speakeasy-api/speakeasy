@@ -260,6 +260,7 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		generate.WithDontWrite(),
 		generate.WithLogger(l),
 		generate.WithRunLocation("cli"),
+		generate.WithWarningLoggerDisabled(),
 	}
 
 	if parseValidOperations {
