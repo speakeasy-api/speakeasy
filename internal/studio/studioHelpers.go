@@ -20,6 +20,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
 )
 
@@ -224,16 +226,12 @@ func convertWarningToDiagnostic(w error) components.Diagnostic {
 	}
 
 	if skippedErr, ok := w.(*vErrs.SkippedError); ok {
-		skippedStr := fmt.Sprintf("Skipping path %q", skippedErr.SkippedEntity.Path)
-		if skippedErr.SkippedEntity.Operation != "" {
-			skippedStr = fmt.Sprintf("Skipping operation %q", skippedErr.SkippedEntity.Operation)
-		}
+		skippedStr := fmt.Sprintf("Skipping %s %q", skippedErr.SkippedEntity.Type, skippedErr.SkippedEntity.Name)
 		return components.Diagnostic{
 			Message:     skippedErr.Message,
 			Line:        pointer.ToInt64(int64(skippedErr.LineNumber)),
 			Severity:    "warn",
-			Type:        fmt.Sprintf("Skipped %ss", skippedErr.SkippedEntity.GetSpecificEntity()),
-			Path:        []string{skippedErr.SkippedEntity.Path},
+			Type:        fmt.Sprintf("Skipped %ss", cases.Title(language.English).String(skippedErr.SkippedEntity.Type)),
 			HelpMessage: pointer.ToString(skippedStr),
 		}
 	}
