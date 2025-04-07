@@ -42,7 +42,9 @@ type QuickstartFlags struct {
 	Schema      string `json:"schema"`
 	OutDir      string `json:"out-dir"`
 	TargetType  string `json:"target"`
-	From        string `json:"from"`
+
+	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
+	From string `json:"from"`
 }
 
 //go:embed sample_openapi.yaml
@@ -120,8 +122,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	}
 
 	if flags.From != "" {
-		quickstartObj.Defaults.Blueprint = &flags.From
-		quickstartObj.IsUsingBlueprint = true
+		quickstartObj.Defaults.Template = &flags.From
+		quickstartObj.IsUsingTemplate = true
 	}
 
 	nextState := prompts.SourceBase
@@ -268,7 +270,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	// If we are using a blueprint template, the original location will be a
 	// tempfile. We want therefore to move the tempfile to the output directory,
 	// and update the workflow file to point to the new location.
-	if quickstartObj.IsUsingBlueprint {
+	if quickstartObj.IsUsingTemplate {
 		oldInput := quickstartObj.WorkflowFile.Sources[sourceName].Inputs[0].Location
 
 		oldInputPath := oldInput.Resolve()

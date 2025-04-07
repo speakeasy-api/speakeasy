@@ -5,6 +5,7 @@ import (
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 )
 
 type (
@@ -17,14 +18,21 @@ type Quickstart struct {
 	LanguageConfigs          map[string]*config.Configuration
 	Defaults                 Defaults
 	IsUsingSampleOpenAPISpec bool
-	IsUsingBlueprint         bool
+	IsUsingTemplate          bool
 	SDKName                  string
 }
 
 type Defaults struct {
 	SchemaPath *string
 	TargetType *string
-	Blueprint  *string
+
+	// The template to use for quickstart. A template is a pre-configured OAS spec retrieved
+	// from the registry schema store.
+	// The corresponding CLI flag is --from, e.g:
+	// speakeasy quickstart --from wandering-octopus-129129
+	Template *string
+
+	TemplateData *shared.SchemaStoreItem
 }
 
 // Define constants using iota
