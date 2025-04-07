@@ -36,7 +36,7 @@ require (
 	github.com/speakeasy-api/openapi-generation/v2 v2.566.5
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.30.11
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.25.1
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.1
 	github.com/speakeasy-api/speakeasy-core v0.19.7
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-api/versioning-reports v0.6.0

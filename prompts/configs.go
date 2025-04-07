@@ -141,7 +141,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 		return nil, err
 	}
 
-	languageGroups, fields, err := languageSpecificForms(target.Target, output, defaultConfigs, isQuickstart, sdkClassName)
+	languageGroups, fields, err := languageSpecificForms(target.Target, output, defaultConfigs, quickstart, sdkClassName)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func languageSpecificForms(
 	language string,
 	existingConfig *config.Configuration,
 	configFields []config.SDKGenConfigField,
-	isQuickstart bool,
+	quickstart *Quickstart,
 	sdkClassName string,
 ) ([]*huh.Group, []LangField, error) {
 	langConfig := config.LanguageConfig{}
@@ -234,7 +234,8 @@ func languageSpecificForms(
 			continue
 		}
 
-		valid, defaultValue, validateRegex, validateMessage, descriptionFn := getValuesForField(field, langConfig, language, sdkClassName, isQuickstart)
+		valid, defaultValue, validateRegex, validateMessage, descriptionFn := getValuesForField(field, langConfig, language, sdkClassName, quickstart)
+		isQuickstart := quickstart != nil
 
 		if valid {
 			if lang, ok := quickstartScopedKeys[language]; (ok && slices.Contains(lang, field.Name)) || (!isQuickstart && slices.Contains(additionalRelevantConfigs, field.Name)) {
@@ -255,7 +256,7 @@ func getValuesForField(
 	langConfig config.LanguageConfig,
 	language string,
 	sdkClassName string,
-	isQuickstart bool,
+	quickstart *Quickstart,
 ) (
 	valid bool,
 	defaultValue string,
@@ -263,6 +264,7 @@ func getValuesForField(
 	validationMessage string,
 	descriptionFn func(v string) string,
 ) {
+	isQuickstart := quickstart != nil
 	if field.Name == "maxMethodParams" {
 	}
 	if field.DefaultValue != nil {
@@ -308,19 +310,26 @@ func getValuesForField(
 	if field.Description != nil {
 		description = *field.Description
 	}
-	if field.Name == "packageName" && isQuickstart && sdkClassName != "" {
+	if field.Name == "packageName" && isQuickstart {
+		// By default we base the package name on the SDK class name
+		packageName := sdkClassName
+
+		if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
+			packageName = quickstart.Defaults.TemplateData.PackageName
+		}
+
 		switch language {
 		case "go":
-			defaultValue = "github.com/my-company/" + strcase.ToKebab(sdkClassName)
+			defaultValue = "github.com/my-company/" + strcase.ToKebab(packageName)
 			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("go get %s")
 		case "typescript":
-			defaultValue = strcase.ToKebab(sdkClassName)
+			defaultValue = strcase.ToKebab(packageName)
 			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("npm install %s")
 		case "python":
-			defaultValue = strcase.ToKebab(sdkClassName)
+			defaultValue = strcase.ToKebab(packageName)
 			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("pip install %s")
 		case "terraform":
-			defaultValue = strcase.ToKebab(sdkClassName)
+			defaultValue = strcase.ToKebab(packageName)
 		}
 	}
 

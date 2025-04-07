@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	timeAgo "github.com/dustin/go-humanize"
@@ -135,25 +136,21 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 }
 
 func getSDKName(sdkName *string, placeholder string) error {
-	if sdkName == nil || *sdkName == "" {
-		descriptionFn := func() string {
-			v := placeholder
-			if sdkName != nil && *sdkName != "" {
-				v = *sdkName
-			}
-			return "Your users will access your SDK using " + styles.Emphasized.Render(fmt.Sprintf("%s.DoThing()\n", v))
+	descriptionFn := func() string {
+		v := placeholder
+		if sdkName != nil && *sdkName != "" {
+			v = *sdkName
 		}
-
-		return charm_internal.Execute(
-			charm_internal.NewInput(sdkName).
-				Title("Give your SDK a name").
-				DescriptionFunc(descriptionFn, sdkName).
-				Placeholder(placeholder).
-				Suggestions([]string{placeholder}),
-		)
+		return "Your users will access your SDK using " + styles.Emphasized.Render(fmt.Sprintf("%s.DoThing()\n", v))
 	}
 
-	return nil
+	return charm_internal.Execute(
+		charm_internal.NewInput(sdkName).
+			Title("Give your SDK a name").
+			DescriptionFunc(descriptionFn, sdkName).
+			Placeholder(placeholder).
+			Suggestions([]string{placeholder}),
+	)
 }
 
 func getOverlayPrompts(promptForOverlay *bool, overlayLocation, authHeader *string) []*huh.Group {
@@ -183,10 +180,10 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	defer cancel()
 	recentGenerations, err := remote.GetRecentWorkspaceGenerations(timeout)
 
-	hasBlueprint := quickstart.Defaults.Blueprint != nil && *quickstart.Defaults.Blueprint != ""
+	hasTemplate := quickstart.Defaults.Template != nil && *quickstart.Defaults.Template != ""
 
-	// Retrieve recent namespaces and check if there are any available. If --blueprint is provided, we will not check for recent generations.
-	hasRecentGenerations := !hasBlueprint && err == nil && len(recentGenerations) > 0
+	// Retrieve recent namespaces and check if there are any available. If --from is provided, we will not check for recent generations.
+	hasRecentGenerations := !hasTemplate && err == nil && len(recentGenerations) > 0
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
@@ -218,28 +215,35 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	if hasBlueprint {
-		blueprintFile, err := fetchAndSaveBlueprint(ctx, *quickstart.Defaults.Blueprint)
+	var templateFile *shared.SchemaStoreItem
+
+	if hasTemplate {
+		templateFile, err = fetchTemplate(ctx, *quickstart.Defaults.Template)
 		if err == nil {
-			fileLocation = blueprintFile
+			fileLocation, err = saveTemplateToDisk(ctx, templateFile)
+			if err != nil {
+				return nil, err
+			}
+
+			quickstart.SDKName = templateFile.SDKClassname
 
 			fmt.Println(
 				styles.RenderInfoMessage(
-					fmt.Sprintf("Using sandbox session '%s'", *quickstart.Defaults.Blueprint),
+					fmt.Sprintf("Using template '%s'", *quickstart.Defaults.Template),
 				) + "\n",
 			)
 		} else {
 			// fallthrough
 			fmt.Println(
 				styles.RenderInfoMessage(
-					fmt.Sprintf("Could not find sandbox session '%s'. Continuing with quickstart...", *quickstart.Defaults.Blueprint),
+					fmt.Sprintf("Could not find template '%s'. Continuing with quickstart...", *quickstart.Defaults.Template),
 				) + "\n",
 			)
 		}
 	}
 
-	if hasBlueprint && fileLocation != "" {
-		// noop
+	if hasTemplate && fileLocation != "" {
+		quickstart.Defaults.TemplateData = templateFile
 	} else if quickstart.Defaults.SchemaPath != nil {
 		fileLocation = *quickstart.Defaults.SchemaPath
 	} else if useRemoteSource && selectedRegistryUri != "" {
@@ -686,35 +690,41 @@ func configureRegistry(source *workflow.Source, orgSlug, workspaceSlug, sourceNa
 }
 
 var (
-	ErrMsgFailedToFetchBlueprint  = errors.New("failed to fetch sandbox session")
-	ErrMsgFailedToSaveBlueprint   = errors.New("failed to save sandbox session")
-	ErrMsgFailedToDecodeBlueprint = errors.New("failed to decode sandbox session")
+	ErrMsgFailedToFetchTemplate  = errors.New("failed to fetch template")
+	ErrMsgFailedToSaveTemplate   = errors.New("failed to save template")
+	ErrMsgFailedToDecodeTemplate = errors.New("failed to decode template")
 )
 
-func fetchAndSaveBlueprint(ctx context.Context, blueprintID string) (string, error) {
+func fetchTemplate(ctx context.Context, templateID string) (*shared.SchemaStoreItem, error) {
 	speakeasyClient, err := sdk.InitSDK()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	schemaStoreItem, err := speakeasyClient.SchemaStore.GetSchemaStoreItem(ctx, &operations.GetSchemaStoreItemRequestBody{
-		ID: &blueprintID,
+		ID: &templateID,
 	})
 	if err != nil {
-		return "", ErrMsgFailedToFetchBlueprint
+		return nil, ErrMsgFailedToFetchTemplate
 	}
 
+	return schemaStoreItem.SchemaStoreItem, nil
+}
+
+func saveTemplateToDisk(ctx context.Context, schemaStoreItem *shared.SchemaStoreItem) (string, error) {
 	tempDir := os.TempDir()
-	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", schemaStoreItem.SchemaStoreItem.ID, schemaStoreItem.SchemaStoreItem.Format)))
-	if err != nil {
-		return "", ErrMsgFailedToSaveBlueprint
-	}
-	defer tempFile.Close()
+	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", schemaStoreItem.ID, schemaStoreItem.Format)))
 
-	_, err = tempFile.WriteString(schemaStoreItem.SchemaStoreItem.Spec)
 	if err != nil {
-		return "", ErrMsgFailedToSaveBlueprint
+		return "", ErrMsgFailedToSaveTemplate
 	}
+
+	_, err = tempFile.WriteString(schemaStoreItem.Spec)
+	if err != nil {
+		return "", ErrMsgFailedToSaveTemplate
+	}
+
+	defer tempFile.Close()
 
 	return tempFile.Name(), nil
 }
