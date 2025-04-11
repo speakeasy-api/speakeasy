@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-version"
 	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi/bundler"
 	"github.com/pb33f/libopenapi/datamodel"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
@@ -23,6 +24,46 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
+
+func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, basePath string, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
+
+	data, err := os.ReadFile(inFile)
+	if err != nil {
+		panic(fmt.Errorf("error reading file %s: %w", inFile, err))
+	}
+
+	config := datamodel.DocumentConfiguration{
+		AllowFileReferences:   true,
+		AllowRemoteReferences: true,
+		BasePath:              basePath,
+	}
+
+	doc, err := libopenapi.NewDocumentWithConfiguration(data, &config)
+	if err != nil {
+		fmt.Printf("Error creating document: %v\n", err)
+		os.Exit(1)
+	}
+
+	v3Model, errors := doc.BuildV3Model()
+	if errors != nil {
+		fmt.Printf("Error building model: %v\n", err)
+		os.Exit(1)
+	}
+
+	bytes, e := bundler.BundleDocument(&v3Model.Model)
+	if e != nil {
+		panic(fmt.Errorf("bundling failed: %w", e))
+	}
+
+	err = os.WriteFile(outFile, bytes, 0644)
+	if err != nil {
+		panic(fmt.Errorf("failed to write bundled file: %w", err))
+	}
+
+	fmt.Printf("Bundled OpenAPI spec saved to %s\n", outFile)
+
+	return nil
+}
 
 func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
 	inSchemas := make([][]byte, len(inFiles))

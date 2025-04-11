@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+
 	"github.com/speakeasy-api/speakeasy/internal/migrate"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
