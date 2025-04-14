@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"path/filepath"
+
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
@@ -22,7 +24,6 @@ func mergeInit() {
 	_ = mergeCmd.MarkFlagRequired("schemas")
 	mergeCmd.Flags().StringP("out", "o", "", "path to the output file")
 	_ = mergeCmd.MarkFlagRequired("out")
-	mergeCmd.Flags().String("base-path", "", "optional base path to resolve relative $ref file references")
 	mergeCmd.Flags().Bool("resolve", false, "resolve local references in the first schema file")
 
 	rootCmd.AddCommand(mergeCmd)
@@ -39,18 +40,14 @@ func mergeExec(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	basePath, err := cmd.Flags().GetString("base-path")
-	if err != nil {
-		return err
-	}
-
 	resolve, err := cmd.Flags().GetBool("resolve")
 	if err != nil {
 		return err
 	}
 
 	if resolve {
-		if err := merge.MergeByResolvingLocalReferences(cmd.Context(), inSchemas[0], outFile, basePath, "speakeasy-recommended", "", false); err != nil {
+		dir := filepath.Dir(inSchemas[0])
+		if err := merge.MergeByResolvingLocalReferences(cmd.Context(), inSchemas[0], outFile, dir, "speakeasy-recommended", "", false); err != nil {
 			return err
 		}
 	} else {
