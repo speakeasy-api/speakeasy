@@ -26,7 +26,6 @@ import (
 )
 
 func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, basePath string, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
-
 	data, err := os.ReadFile(inFile)
 	if err != nil {
 		panic(fmt.Errorf("error reading file %s: %w", inFile, err))
@@ -46,7 +45,9 @@ func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, baseP
 
 	v3Model, errors := doc.BuildV3Model()
 	if errors != nil {
-		fmt.Printf("Error building model: %v\n", err)
+		for _, err = range errors {
+			fmt.Printf("Error building model: %v\n", err)
+		}
 		os.Exit(1)
 	}
 
@@ -59,8 +60,6 @@ func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, baseP
 	if err != nil {
 		panic(fmt.Errorf("failed to write bundled file: %w", err))
 	}
-
-	fmt.Printf("Bundled OpenAPI spec saved to %s\n", outFile)
 
 	return nil
 }
