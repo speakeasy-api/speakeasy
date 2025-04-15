@@ -25,6 +25,13 @@ const (
 	ReadMe
 )
 
+type CodeSampleExampleSource struct {
+	// Map from header/param name to value
+	Params map[string]string
+	// JSON string of the request body
+	RequestBodyJSON string
+}
+
 func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, isSilent bool, opts workflow.CodeSamples) (string, error) {
 	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
 	isJSON := filepath.Ext(schema) == ".json"
@@ -52,6 +59,8 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 			filepath.Join(configPath, "speakeasyusagegen"),
 			true,
 			usageOutput,
+			nil,
+			nil,
 		); err != nil {
 			return "", err
 		}
@@ -129,7 +138,8 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	return overlayString, nil
 }
 
-func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath, lang string, isSilent bool, operationID *string) ([]usagegen.UsageSnippet, error) {
+// GenerateUsageSnippet us used in the Temporal job in SpeakeasyRegistry
+func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath, lang string, isSilent bool, operationID *string, example *CodeSampleExampleSource) ([]usagegen.UsageSnippet, error) {
 	if isSilent {
 		logger := log.From(ctx)
 		var logs bytes.Buffer
@@ -140,6 +150,15 @@ func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath
 	specifiedOperation := ""
 	if operationID != nil {
 		specifiedOperation = *operationID
+	}
+
+	exampleParams := map[string]string{}
+	if example != nil {
+		exampleParams = example.Params
+	}
+	var exampleRequestBody *string
+	if example != nil {
+		exampleRequestBody = &example.RequestBodyJSON
 	}
 
 	usageOutput := &bytes.Buffer{}
@@ -156,6 +175,8 @@ func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath
 		filepath.Join(configPath, "speakeasyusagegen"),
 		specifiedOperation == "",
 		usageOutput,
+		exampleParams,
+		exampleRequestBody,
 	); err != nil {
 		return nil, err
 	}

@@ -90,5 +90,7 @@ func genUsageSnippets(ctx context.Context, flags GenerateUsageSnippetFlags) erro
 		flags.ConfigPath,
 		flags.All,
 		nil,
+		nil,
+		nil,
 	)
 }
