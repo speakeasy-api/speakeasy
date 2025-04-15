@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"path/filepath"
+
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
@@ -22,6 +24,7 @@ func mergeInit() {
 	_ = mergeCmd.MarkFlagRequired("schemas")
 	mergeCmd.Flags().StringP("out", "o", "", "path to the output file")
 	_ = mergeCmd.MarkFlagRequired("out")
+	mergeCmd.Flags().Bool("resolve", false, "resolve local references in the first schema file")
 
 	rootCmd.AddCommand(mergeCmd)
 }
@@ -37,8 +40,20 @@ func mergeExec(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(cmd.Context(), inSchemas, outFile, "speakeasy-recommended", "", false); err != nil {
+	resolve, err := cmd.Flags().GetBool("resolve")
+	if err != nil {
 		return err
+	}
+
+	if resolve {
+		dir := filepath.Dir(inSchemas[0])
+		if err := merge.MergeByResolvingLocalReferences(cmd.Context(), inSchemas[0], outFile, dir, "speakeasy-recommended", "", false); err != nil {
+			return err
+		}
+	} else {
+		if err := merge.MergeOpenAPIDocuments(cmd.Context(), inSchemas, outFile, "speakeasy-recommended", "", false); err != nil {
+			return err
+		}
 	}
 
 	log.From(cmd.Context()).Successf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
