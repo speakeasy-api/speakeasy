@@ -150,6 +150,7 @@ func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath
 	specifiedOperation := ""
 	if operationID != nil {
 		specifiedOperation = *operationID
+		println("specifiedOperation", specifiedOperation)
 	}
 
 	exampleParams := map[string]string{}

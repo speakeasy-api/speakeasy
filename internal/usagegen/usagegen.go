@@ -73,6 +73,7 @@ func Generate(
 	}
 
 	if exampleRequestBody != nil {
+		println("exampleRequestBody", exampleRequestBody)
 		opts = append(opts, generate.WithUsageSnippetExampleParams(exampleParams))
 		opts = append(opts, generate.WithUsageSnippetExampleRequestBody(*exampleRequestBody))
 	}
