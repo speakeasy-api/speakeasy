@@ -22,7 +22,15 @@ import (
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string, all bool, outputBuffer *bytes.Buffer) error {
+func Generate(
+	ctx context.Context,
+	customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string,
+	all bool,
+	outputBuffer *bytes.Buffer,
+	// These should be provided together
+	exampleParams map[string]string,
+	exampleRequestBody *string,
+) error {
 	matchedLanguage := false
 	for _, language := range workflow.SupportedLanguagesUsageSnippets {
 		if language == lang {
@@ -62,6 +70,11 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		opts = append(opts, generate.WithUsageSnippetArgsByOperationID(operation))
 	} else {
 		opts = append(opts, generate.WithUsageSnippetArgsByNamespace(namespace))
+	}
+
+	if exampleRequestBody != nil {
+		opts = append(opts, generate.WithUsageSnippetExampleParams(exampleParams))
+		opts = append(opts, generate.WithUsageSnippetExampleRequestBody(*exampleRequestBody))
 	}
 
 	g, err := generate.New(opts...)
