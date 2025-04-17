@@ -27,7 +27,7 @@ func Generate(
 	customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string,
 	all bool,
 	outputBuffer *bytes.Buffer,
-// These should be provided together
+	// These should be provided together
 	exampleParams map[string]string,
 	exampleRequestBody *string,
 ) error {
