@@ -78,7 +78,7 @@
 
 <p>Polished and type-safe SDKs, Terraform providers and Contract Tests for your API. 10 Languages and counting.</p>
 <a href="https://app.speakeasy.com/"><img src="https://custom-icon-badges.demolab.com/badge/-Start%20Generating%20-212015?style=for-the-badge&logoColor=FBE331&logo=speakeasy&labelColor=545454" alt="Start Generating"/></a>
-<a href="https://youtu.be/-cSZGUvT5-8?si=VwJBPcOGq0g2R4cI"><img src="https://img.shields.io/static/v1?label=Docs&message=Watch Demo&color=000&style=for-the-badge" alt="Watch Demo" /></a>
+<a href="https://youtu.be/-cSZGUvT5-8?si=VwJBPcOGq0g2R4cI"><img src="https://img.shields.io/static/v1?label=Docs&message=Watch%20Demo&color=000&style=for-the-badge" alt="Watch Demo" /></a>
 
 <div align="left">
   <h1>
