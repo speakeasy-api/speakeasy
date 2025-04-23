@@ -7,6 +7,7 @@ before:
     - go mod tidy
     # you may remove this if you don't need go generate
     - go generate ./...
+    - ./scripts/completions.sh
 builds:
   - env:
       - CGO_ENABLED=0
@@ -19,6 +20,8 @@ builds:
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     format: zip
+    files:
+      - completions/*
 checksum:
   name_template: "checksums.txt"
 snapshot:
@@ -39,6 +42,11 @@ brews:
     license: Apache-2.0
     test: |
       system "#{bin}/speakeasy --version"
+    extra_install: |
+      bash_completion.install "completions/speakeasy.bash" => "speakeasy"
+      zsh_completion.install "completions/speakeasy.zsh" => "_speakeasy"
+      fish_completion.install "completions/speakeasy.fish"
+
   - name: speakeasy@{{ .Major }}.{{ .Minor }}.{{ .Patch }}
     repository:
       owner: speakeasy-api
@@ -48,6 +56,10 @@ brews:
     license: Apache-2.0
     test: |
       system "#{bin}/speakeasy --version"
+    extra_install: |
+      bash_completion.install "completions/speakeasy.bash" => "speakeasy"
+      zsh_completion.install "completions/speakeasy.zsh" => "_speakeasy"
+      fish_completion.install "completions/speakeasy.fish"
 
 chocolateys:
   - name: speakeasy
