@@ -7,7 +7,7 @@ before:
     - go mod tidy
     # you may remove this if you don't need go generate
     - go generate ./...
-    - ./scripts/completions.sh
+    - go run scripts/completions.go
 builds:
   - env:
       - CGO_ENABLED=0
