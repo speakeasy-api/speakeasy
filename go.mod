@@ -34,8 +34,8 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi v0.1.7
-	github.com/speakeasy-api/openapi-generation/v2 v2.588.0
+	github.com/speakeasy-api/openapi v0.2.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.593.3
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.30.13
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.1
@@ -240,8 +240,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
-	github.com/wasilibs/go-re2 v1.7.0 // indirect
-	github.com/wasilibs/wazero-helpers v0.0.0-20240620070341-3dff1577cd52 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240815153524-6ea36470d1bd // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
@@ -275,6 +273,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/client-go v0.31.1 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
