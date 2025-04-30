@@ -49,7 +49,7 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("GitHub app access checked failed. Is the Speakeasy GitHub app installed in the repo?")
+		return fmt.Errorf("GitHub app access check failed. Is the Speakeasy GitHub app installed in the repo? Install at: https://github.com/apps/speakeasy-github")
 	}
 
 	triggerRequest := shared.GithubTriggerActionRequest{
