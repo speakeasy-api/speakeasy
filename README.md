@@ -228,7 +228,6 @@ speakeasy [flags]
 
 #### Sub Commands
 
-* [speakeasy ask](docs/ask.md)	 - Starts a conversation with Speakeasy trained AI
 * [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
 * [speakeasy billing](docs/billing/README.md)	 - Manage billing related operations
 * [speakeasy bump](docs/bump.md)	 - Bumps the version of a Speakeasy Generation Target
