@@ -20,6 +20,7 @@ type Quickstart struct {
 	IsUsingSampleOpenAPISpec bool
 	IsUsingTemplate          bool
 	SDKName                  string
+	IsReactQuery             bool
 }
 
 type Defaults struct {
