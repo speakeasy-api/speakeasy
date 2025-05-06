@@ -63,7 +63,6 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Short: "Quickstart a TypeScript SDK with React Query enabled",
 			Run: func(ctx context.Context, flags QuickstartFlags) error {
 				flags.TargetType = "typescript"
-				flags.SkipCompile = true
 				flags.IsReactQuery = true
 				return quickstartExec(ctx, flags)
 			},
