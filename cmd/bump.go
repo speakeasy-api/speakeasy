@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"slices"
 
 	"github.com/hashicorp/go-version"
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -49,6 +51,7 @@ var bumpCommand = &cobra.Command{
 func bumpInit() {
 	bumpCommand.Flags().StringP("target", "t", "", "The target to bump the version of, if more than one target is found in the gen.yaml")
 	bumpCommand.Flags().StringP("version", "v", "", "The version to bump to, if you want to specify a specific version.")
+	bumpCommand.Flags().Bool("run", false, "Run the run command after bumping the version")
 
 	bumpCommand.RunE = bumpExec
 	rootCmd.AddCommand(bumpCommand)
@@ -61,6 +64,11 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 	}
 
 	specificVersion, err := cmd.Flags().GetString("version")
+	if err != nil {
+		return err
+	}
+
+	shouldRun, err := cmd.Flags().GetBool("run")
 	if err != nil {
 		return err
 	}
@@ -118,6 +126,7 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 	}
 
 	langCfg := cfg.Config.Languages[target]
+	originalVersion := langCfg.Version
 
 	if specificVersion != "" {
 		langCfg.Version = specificVersion
@@ -147,6 +156,39 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Bumped target %s's%s version to %s\n", target, bumpTyp, langCfg.Version)
+
+	if shouldRun {
+		ctx := cmd.Context()
+		
+		fmt.Println("Executing run command...")
+		
+		workflow, err := run.NewWorkflow(
+			ctx,
+			run.WithTarget(target),
+		)
+		
+		if err != nil {
+			return fmt.Errorf("failed to create workflow: %w", err)
+		}
+		
+		err = workflow.Run(ctx)
+		
+		if err != nil {
+			fmt.Printf("Run command failed: %s\n", err)
+			fmt.Println("Rolling back version bump...")
+			
+			langCfg := cfg.Config.Languages[target]
+			langCfg.Version = originalVersion
+			cfg.Config.Languages[target] = langCfg
+			
+			if saveErr := config.SaveConfig(wd, cfg.Config); saveErr != nil {
+				return fmt.Errorf("failed to roll back version bump: %w", saveErr)
+			}
+			
+			fmt.Printf("Rolled back %s's version to %s\n", target, originalVersion)
+			return fmt.Errorf("neither bump nor run was run: %w", err)
+		}
+	}
 
 	return nil
 }
