@@ -158,30 +158,29 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 
 	if shouldRun {
 		fmt.Println("Executing run command...")
-		
+
 		workflow, err := run.NewWorkflow(
 			nil,
 			run.WithTarget(target),
 		)
-		
+
 		if err != nil {
 			return fmt.Errorf("failed to create workflow: %w", err)
 		}
-		
+
 		err = workflow.Run(nil)
-		
 		if err != nil {
 			fmt.Printf("Run command failed: %s\n", err)
 			fmt.Println("Rolling back version bump...")
-			
+
 			langCfg := cfg.Config.Languages[target]
 			langCfg.Version = originalVersion
 			cfg.Config.Languages[target] = langCfg
-			
+
 			if saveErr := config.SaveConfig(wd, cfg.Config); saveErr != nil {
 				return fmt.Errorf("failed to roll back version bump: %w", saveErr)
 			}
-			
+
 			fmt.Printf("Rolled back %s's version to %s\n", target, originalVersion)
 			return fmt.Errorf("neither bump nor run was run: %w", err)
 		}
