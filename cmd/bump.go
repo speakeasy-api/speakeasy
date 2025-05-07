@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"slices"
@@ -158,12 +157,10 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Bumped target %s's%s version to %s\n", target, bumpTyp, langCfg.Version)
 
 	if shouldRun {
-		ctx := cmd.Context()
-		
 		fmt.Println("Executing run command...")
 		
 		workflow, err := run.NewWorkflow(
-			ctx,
+			nil,
 			run.WithTarget(target),
 		)
 		
@@ -171,7 +168,7 @@ func bumpExec(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to create workflow: %w", err)
 		}
 		
-		err = workflow.Run(ctx)
+		err = workflow.Run(nil)
 		
 		if err != nil {
 			fmt.Printf("Run command failed: %s\n", err)
