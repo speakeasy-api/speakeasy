@@ -133,6 +133,9 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if err != nil {
 			return err
 		}
+		if state == nil {
+			return nil
+		}
 		nextState = *state
 	}
 

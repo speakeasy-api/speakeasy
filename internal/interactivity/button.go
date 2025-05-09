@@ -5,7 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"os"
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 )
 
 var (
@@ -119,7 +119,7 @@ func (b *Button) OnUserExit() {}
 func (b *Button) Run() bool {
 	newM, err := charm_internal.RunModel(b)
 	if err != nil {
-		os.Exit(1)
+		concurrency.SafeExit(1)
 	}
 
 	resultingModel := newM.(*Button)

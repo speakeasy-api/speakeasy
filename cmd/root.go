@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"slices"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/speakeasy-api/speakeasy/cmd/lint"
 
@@ -14,6 +17,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy-core/events"
 
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 
@@ -114,7 +118,64 @@ func CmdForTest(version, artifactArch string) *cobra.Command {
 func Execute(version, artifactArch string) {
 	setupRootCmd(version, artifactArch)
 
-	if err := rootCmd.Execute(); err != nil {
+	run := func() error {
+		if err := concurrency.AcquireLock(); err != nil {
+			return err
+		}
+
+		// Set up signal handling for graceful shutdown
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
+		// Create a done channel to signal when to stop the update goroutine
+		done := make(chan struct{})
+
+		// Ensure lock is released on any exit path
+		defer func() {
+			close(done)
+			signal.Stop(signalChan)
+			if err := concurrency.ReleaseLock(); err != nil {
+				l.Error("", zap.Error(err))
+			}
+		}()
+
+		// Start goroutine to periodically update the lock timestamp
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					if err := concurrency.UpdateLock(); err != nil {
+						l.Error("", zap.Error(err))
+					}
+				case <-done:
+					return // Exit the goroutine when done channel is closed
+				}
+			}
+		}()
+
+		// Start goroutine to handle termination signals
+		go func() {
+			select {
+			case <-signalChan:
+				// Signal received, close done channel and exit
+				close(done)
+				if err := concurrency.ReleaseLock(); err != nil {
+					l.Error("", zap.Error(err))
+				}
+				os.Exit(1)
+			case <-done:
+				// Normal exit, just return
+				return
+			}
+		}()
+
+		return rootCmd.Execute()
+	}
+
+	if err := run(); err != nil {
 		l.Error("", zap.Error(err))
 		os.Exit(1)
 	}
@@ -176,8 +237,6 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string, cm
 	l := log.From(ctx)
 	l.PrintfStyled(mainStyle.Padding(1, 2), "%s\n%s", versionString, updateString)
 	l.Println("\n")
-
-	return
 }
 
 func setLogLevel(cmd *cobra.Command) error {

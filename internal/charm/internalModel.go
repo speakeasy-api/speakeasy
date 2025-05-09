@@ -2,7 +2,6 @@ package charm
 
 import (
 	"fmt"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -59,7 +58,7 @@ func RunModel(m InternalModel, opts ...tea.ProgramOption) (InternalModel, error)
 	} else {
 		if m, ok := mResult.(modelWrapper); ok {
 			if m.signalExit {
-				os.Exit(0)
+				return nil, nil
 			}
 
 			return m.model, nil

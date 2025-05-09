@@ -22,17 +22,26 @@ const (
 	workspaceKeysKey = "workspace_api_keys"
 )
 
-func Load() error {
+func GetSpeakeasyHomeDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	cfgDir = filepath.Join(home, ".speakeasy")
 
+	return cfgDir, nil
+}
+
+func Load() error {
+	speakeasyHomeDir, err := GetSpeakeasyHomeDir()
+	if err != nil {
+		return err
+	}
+
 	vCfg.SetConfigName("config")
 	vCfg.SetConfigType("yaml")
-	vCfg.AddConfigPath(cfgDir)
+	vCfg.AddConfigPath(speakeasyHomeDir)
 
 	if err := vCfg.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 	utils2 "github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/hashicorp/go-multierror"
@@ -40,7 +41,7 @@ func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, baseP
 	doc, err := libopenapi.NewDocumentWithConfiguration(data, &config)
 	if err != nil {
 		fmt.Printf("Error creating document: %v\n", err)
-		os.Exit(1)
+		concurrency.SafeExit(1)
 	}
 
 	v3Model, errors := doc.BuildV3Model()
@@ -48,7 +49,7 @@ func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, baseP
 		for _, err = range errors {
 			fmt.Printf("Error building model: %v\n", err)
 		}
-		os.Exit(1)
+		concurrency.SafeExit(1)
 	}
 
 	bytes, e := bundler.BundleDocument(&v3Model.Model)
@@ -56,7 +57,7 @@ func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, baseP
 		panic(fmt.Errorf("bundling failed: %w", e))
 	}
 
-	err = os.WriteFile(outFile, bytes, 0644)
+	err = os.WriteFile(outFile, bytes, 0o644)
 	if err != nil {
 		panic(fmt.Errorf("failed to write bundled file: %w", err))
 	}

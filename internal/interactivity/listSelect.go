@@ -1,10 +1,10 @@
 package interactivity
 
 import (
-	"os"
 	"slices"
 
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -140,7 +140,11 @@ func SelectFrom[T interface{}](label string, options []list.Item) T {
 
 	mResult, err := charm_internal.RunModel(&m)
 	if err != nil {
-		os.Exit(1)
+		concurrency.SafeExit(1)
+	}
+
+	if mResult == nil {
+		return *new(T)
 	}
 
 	final, _ := mResult.(*ListSelect[T])

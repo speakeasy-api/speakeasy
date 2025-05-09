@@ -2,13 +2,13 @@ package interactivity
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 )
 
 type SimpleInput struct {
@@ -119,7 +119,7 @@ func (m *SimpleInput) OnUserExit() {}
 func (m *SimpleInput) Run() string {
 	newM, err := charm_internal.RunModel(m)
 	if err != nil {
-		os.Exit(1)
+		concurrency.SafeExit(1)
 	}
 
 	resultingModel := newM.(*SimpleInput)

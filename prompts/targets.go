@@ -3,11 +3,12 @@ package prompts
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
@@ -111,7 +112,7 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 			"Chat with us for access: `https://go.speakeasy.com/chat`")
 
 		log.From(ctx).Println(msg)
-		os.Exit(0)
+		return nil, nil
 	}
 
 	quickstart.WorkflowFile.Targets[targetName] = *target

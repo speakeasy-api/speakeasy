@@ -2,7 +2,6 @@ package interactivity
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/cursor"
@@ -11,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 )
 
 var (
@@ -255,7 +255,7 @@ func (m *MultiInput) OnUserExit() {}
 func (m *MultiInput) Run() map[string]string {
 	newM, err := charm_internal.RunModel(m)
 	if err != nil {
-		os.Exit(1)
+		concurrency.SafeExit(1)
 	}
 
 	resultingModel := newM.(*MultiInput)
