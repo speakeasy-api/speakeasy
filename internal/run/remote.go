@@ -24,6 +24,10 @@ var githubActionRunningStatuses = []string{
 	"pending",
 }
 
+func isRunning(status string) bool {
+	return slices.Contains(githubActionRunningStatuses, status)
+}
+
 func RunGitHub(ctx context.Context, target, version string, force bool) error {
 	sdk, err := auth.GetSDKFromContext(ctx)
 	if err != nil {
@@ -52,6 +56,16 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 		return fmt.Errorf("GitHub app access check failed. Is the Speakeasy GitHub app installed in the repo? Install at: https://github.com/apps/speakeasy-github")
 	}
 
+	initialAction, _ := sdk.Github.GetAction(ctx, operations.GetGitHubActionRequest{
+		Org:        org,
+		Repo:       repo,
+		TargetName: &target,
+	})
+	initialActionRunURL := ""
+	if initialAction != nil && initialAction.GithubGetActionResponse != nil && initialAction.GithubGetActionResponse.RunURL != nil {
+		initialActionRunURL = *initialAction.GithubGetActionResponse.RunURL
+	}
+
 	triggerRequest := shared.GithubTriggerActionRequest{
 		GenLockID:  genLockID,
 		Org:        org,
@@ -70,15 +84,16 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to trigger GitHub action: %w", err)
 	}
+	log.From(ctx).Println("Triggered GitHub action for repo:\n" + "https://github.com/" + org + "/" + repo + "/actions \n")
 
 	var runURL string
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
+	stopSpinner := interactivity.StartSpinner("Waiting for GitHub Action to start...")
+	defer stopSpinner()
+
 	timeoutCh := time.After(5 * time.Minute)
-
-	stopSpinner := interactivity.StartSpinner("Kicking off Github Action run...")
-
 	for runURL == "" {
 		select {
 		case <-ticker.C:
@@ -93,19 +108,19 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 				return fmt.Errorf("failed to get GitHub action(s): %w", err)
 			}
 
-			if actionRes != nil && actionRes.GithubGetActionResponse != nil && actionRes.GithubGetActionResponse.RunURL != nil && slices.Contains(githubActionRunningStatuses, *actionRes.GithubGetActionResponse.RunStatus) {
+			hasResponse := actionRes != nil && actionRes.GithubGetActionResponse != nil && actionRes.GithubGetActionResponse.RunURL != nil && *actionRes.GithubGetActionResponse.RunURL != "" && actionRes.GithubGetActionResponse.RunStatus != nil
+			if hasResponse && isRunning(*actionRes.GithubGetActionResponse.RunStatus) && *actionRes.GithubGetActionResponse.RunURL != initialActionRunURL {
 				runURL = *actionRes.GithubGetActionResponse.RunURL
-				break
+				stopSpinner()
+				log.From(ctx).Println(styles.RenderSuccessMessage("Successfully Kicked Off Generation Run", runURL))
+				return nil
 			}
 
 		case <-timeoutCh:
 			stopSpinner()
-			return nil
+			return fmt.Errorf("Tried to trigger GitHub action but it never started running")
 		}
 	}
-
-	stopSpinner()
-	log.From(ctx).Println(styles.RenderSuccessMessage("Successfully Kicked Off Generation Run", runURL))
 
 	return nil
 }
@@ -137,7 +152,7 @@ func getRepo(ctx context.Context, genLockID string) (string, string, error) {
 
 	targets, err := sdk.Events.GetTargets(ctx, operations.GetWorkspaceTargetsRequest{})
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get workspace targets: %w", err)
+		return "", "", fmt.Errorf("failed to query the Speakeasy API for SDKs: %w", err)
 	}
 
 	var org, repo string
