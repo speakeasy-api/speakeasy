@@ -75,6 +75,7 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
+	numRetries := 0
 	timeoutCh := time.After(5 * time.Minute)
 
 	stopSpinner := interactivity.StartSpinner("Kicking off Github Action run...")
@@ -93,12 +94,22 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 				return fmt.Errorf("failed to get GitHub action(s): %w", err)
 			}
 
-			if actionRes != nil && actionRes.GithubGetActionResponse != nil && actionRes.GithubGetActionResponse.RunURL != nil && slices.Contains(githubActionRunningStatuses, *actionRes.GithubGetActionResponse.RunStatus) {
+			if actionRes != nil && actionRes.GithubGetActionResponse != nil && actionRes.GithubGetActionResponse.RunURL != nil && *actionRes.GithubGetActionResponse.RunURL != "" && slices.Contains(githubActionRunningStatuses, *actionRes.GithubGetActionResponse.RunStatus) {
 				runURL = *actionRes.GithubGetActionResponse.RunURL
 				break
 			}
 
 		case <-timeoutCh:
+			if numRetries < 2 {
+				numRetries++
+				// Trigger the action again
+				_, err = sdk.Github.TriggerAction(ctx, triggerRequest)
+				if err != nil {
+					return fmt.Errorf("failed to trigger GitHub action: %w", err)
+				}
+				timeoutCh = time.After(5 * time.Minute)
+				continue
+			}
 			stopSpinner()
 			return nil
 		}
