@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/versioning-reports/versioning"
@@ -248,8 +249,10 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 }
 
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
-var mutex sync.Mutex
-var rootCmd = cmd.CmdForTest(version, artifactArch)
+var (
+	mutex   sync.Mutex
+	rootCmd = cmd.CmdForTest(version, artifactArch)
+)
 
 func executeI(t *testing.T, wd string, args ...string) Runnable {
 	mutex.Lock()

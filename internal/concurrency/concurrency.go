@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 )
 
 // ErrLockExists indicates another process already holds the lock
@@ -20,6 +21,10 @@ const MaxLockAge = time.Minute
 // AcquireLock attempts to atomically create a lock file
 // Returns nil if successful, ErrLockExists if another process holds the lock
 func AcquireLock() error {
+	if env.IsConcurrencyLockDisabled() {
+		return nil
+	}
+
 	speakeasyHomeDir, err := config.GetSpeakeasyHomeDir()
 	if err != nil {
 		return err
@@ -61,6 +66,10 @@ func AcquireLock() error {
 
 // UpdateLock updates the timestamp in the lock file
 func UpdateLock() error {
+	if env.IsConcurrencyLockDisabled() {
+		return nil
+	}
+
 	speakeasyHomeDir, err := config.GetSpeakeasyHomeDir()
 	if err != nil {
 		return err
@@ -116,6 +125,10 @@ func isLockStale(lockFile string) (bool, error) {
 
 // ReleaseLock removes the lock file
 func ReleaseLock() error {
+	if env.IsConcurrencyLockDisabled() {
+		return nil
+	}
+
 	speakeasyHomeDir, err := config.GetSpeakeasyHomeDir()
 	if err != nil {
 		return err

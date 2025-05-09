@@ -11,6 +11,8 @@ import (
 
 // Entrypoint for CLI integration tests
 func TestMain(m *testing.M) {
+	os.Setenv("SPEAKEASY_CONCURRENCY_LOCK_DISABLED", "true")
+
 	// Create a temporary directory
 	if _, err := os.Stat(tempDir); err == nil {
 		if err := os.RemoveAll(tempDir); err != nil {

@@ -34,3 +34,7 @@ func IsLocalDev() bool {
 func SpeakeasyRunLocation() string {
 	return os.Getenv("SPEAKEASY_RUN_LOCATION")
 }
+
+func IsConcurrencyLockDisabled() bool {
+	return os.Getenv("SPEAKEASY_CONCURRENCY_LOCK_DISABLED") == "true"
+}
