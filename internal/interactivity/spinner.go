@@ -36,11 +36,9 @@ func (m *model) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-type exitMsg struct{}
-
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
-	case exitMsg:
+	case tea.QuitMsg:
 		m.quit = true
 		return m, tea.Quit
 	}
