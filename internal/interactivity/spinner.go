@@ -67,6 +67,7 @@ func StartSpinner(message string) func() {
 
 	return func() {
 		p.Quit()
+		// Very important, otherwise the TUI will be borked and future logs will be messed up
 		p.ReleaseTerminal()
 	}
 }
