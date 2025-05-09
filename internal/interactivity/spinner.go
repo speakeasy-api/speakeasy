@@ -5,6 +5,7 @@ package interactivity
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -67,6 +68,7 @@ func StartSpinner(message string) func() {
 	}()
 
 	return func() {
-		p.Send(exitMsg{})
+		p.Quit()
+		p.ReleaseTerminal()
 	}
 }
