@@ -35,15 +35,15 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/openapi v0.2.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.598.21
+	github.com/speakeasy-api/openapi-generation/v2 v2.598.22
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.30.16
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.1
 	github.com/speakeasy-api/speakeasy-core v0.19.7
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-api/versioning-reports v0.6.0
-	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/cobra v1.9.1
+	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.10.0
@@ -222,7 +222,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.11.1 // indirect
-	github.com/speakeasy-api/jsonpath v0.6.1 // indirect
+	github.com/speakeasy-api/jsonpath v0.6.2 // indirect
 	github.com/speakeasy-api/speakeasy-go-sdk v1.8.1 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
