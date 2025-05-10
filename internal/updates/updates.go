@@ -118,6 +118,7 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 		return "", err
 	}
 	defer mutex.Unlock()
+	log.From(ctx).Infof("Installing version %s", desiredVersion)
 
 	v, err := version.NewVersion(desiredVersion)
 	if err != nil {

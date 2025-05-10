@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/singleton"
 )
 
@@ -52,11 +53,13 @@ var NewIPMutex = singleton.New(func() *InterProcessMutex {
 func (m *InterProcessMutex) TryLock(ctx context.Context, onRetry func(attempt int)) error {
 	attempt := 0
 	for {
-		ok, err := m.mu.TryLockContext(ctx, m.LockRetryDelay)
+		log.From(ctx).Infof("Attempting to acquire lock (pid %d)", os.Getpid())
+		ok, err := m.mu.TryLock()
 		if err != nil {
 			return fmt.Errorf("failed to acquire lock (pid %d): %w", os.Getpid(), err)
 		}
 		if ok {
+			log.From(ctx).Infof("Acquired lock (pid %d)", os.Getpid())
 			return nil
 		}
 		attempt++
@@ -67,8 +70,8 @@ func (m *InterProcessMutex) TryLock(ctx context.Context, onRetry func(attempt in
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(m.LockRetryDelay):
-			continue
+		// case <-time.After(m.LockRetryDelay):
+		case <-time.After(10 * time.Second):
 		}
 	}
 }

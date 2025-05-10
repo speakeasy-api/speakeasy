@@ -329,6 +329,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 // If promote is true, the version will be promoted to the default version (ie when running `speakeasy`)
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, shouldPromote bool) error {
+	log.From(cmd.Context()).Info("--------------------------------")
+	log.From(cmd.Context()).Infof("Installing version %s, shouldPromote: %t", desiredVersion, shouldPromote)
 	vLocation, err := updates.InstallVersion(cmd.Context(), desiredVersion, artifactArch, 30)
 	if err != nil {
 		return ErrInstallFailed.Wrap(err)
@@ -363,7 +365,6 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 
 	return nil
 }
-
 func promoteVersion(ctx context.Context, vLocation string) error {
 	mutex := concurrency.NewIPMutex()
 	err := mutex.TryLock(ctx, func(attempt int) {
@@ -373,10 +374,19 @@ func promoteVersion(ctx context.Context, vLocation string) error {
 		return err
 	}
 	defer mutex.Unlock()
+	log.From(ctx).Infof("Promoting version %s", vLocation)
 
 	currentExecPath, err := os.Executable()
 	if err != nil {
 		return err
+	}
+
+	// Check if vLocation still exists before trying to rename it
+	if _, err := os.Stat(vLocation); os.IsNotExist(err) {
+		log.From(ctx).Infof("CLI was likely already updated, skipping promotion")
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to locate latest CLI binary: %w", err)
 	}
 
 	if err := os.Rename(vLocation, currentExecPath); err != nil {
