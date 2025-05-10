@@ -37,7 +37,7 @@ func DefaultOpts() Opts {
 func new(o Opts) *InterProcessMutex {
 	mu := flock.New(filepath.Join(os.TempDir(), o.Name))
 
-	return &InterProcessMutex{mu: mu}
+	return &InterProcessMutex{Opts: o, mu: mu}
 }
 
 // NewIPMutexWithOpts creates a new inter-process mutex with a custom config.
@@ -53,7 +53,6 @@ var NewIPMutex = singleton.New(func() *InterProcessMutex {
 func (m *InterProcessMutex) TryLock(ctx context.Context, onRetry func(attempt int)) error {
 	attempt := 0
 	for {
-		log.From(ctx).Infof("Attempting to acquire lock (pid %d)", os.Getpid())
 		ok, err := m.mu.TryLock()
 		if err != nil {
 			return fmt.Errorf("failed to acquire lock (pid %d): %w", os.Getpid(), err)
@@ -70,8 +69,7 @@ func (m *InterProcessMutex) TryLock(ctx context.Context, onRetry func(attempt in
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		// case <-time.After(m.LockRetryDelay):
-		case <-time.After(10 * time.Second):
+		case <-time.After(m.LockRetryDelay):
 		}
 	}
 }

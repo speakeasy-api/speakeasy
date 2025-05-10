@@ -329,8 +329,6 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 // If promote is true, the version will be promoted to the default version (ie when running `speakeasy`)
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, shouldPromote bool) error {
-	log.From(cmd.Context()).Info("--------------------------------")
-	log.From(cmd.Context()).Infof("Installing version %s, shouldPromote: %t", desiredVersion, shouldPromote)
 	vLocation, err := updates.InstallVersion(cmd.Context(), desiredVersion, artifactArch, 30)
 	if err != nil {
 		return ErrInstallFailed.Wrap(err)
@@ -374,7 +372,6 @@ func promoteVersion(ctx context.Context, vLocation string) error {
 		return err
 	}
 	defer mutex.Unlock()
-	log.From(ctx).Infof("Promoting version %s", vLocation)
 
 	currentExecPath, err := os.Executable()
 	if err != nil {
