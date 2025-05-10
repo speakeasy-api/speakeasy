@@ -111,7 +111,9 @@ func Update(ctx context.Context, currentVersion, artifactArch string, timeout in
 // returns the path to the installed binary
 func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, timeout int) (string, error) {
 	mutex := concurrency.NewIPMutex()
-	err := mutex.TryLock(ctx)
+	err := mutex.TryLock(ctx, func(attempt int) {
+		log.From(ctx).PrintfStyled(styles.DimmedItalic, "Failed to acquire lock (attempt %d). Retrying...", attempt)
+	})
 	if err != nil {
 		return "", err
 	}

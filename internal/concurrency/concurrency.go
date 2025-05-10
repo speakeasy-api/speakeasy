@@ -15,6 +15,10 @@ import (
 
 // InterProcessMutex provides file-based mutual exclusion between processes.
 // The lock is automatically released if the holding process dies.
+//
+// See:
+//   - Linux: https://linux.die.net/man/2/flock
+//   - Windows: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex
 type InterProcessMutex struct {
 	Opts
 	mu *flock.Flock
@@ -45,16 +49,28 @@ var NewIPMutex = singleton.New(func() *InterProcessMutex {
 	return new(DefaultOpts())
 })
 
-func (m *InterProcessMutex) TryLock(ctx context.Context) error {
-	ok, err := m.mu.TryLockContext(ctx, m.LockRetryDelay)
-	if err != nil {
-		return fmt.Errorf("failed to acquire lock (pid %d): %w", os.Getpid(), err)
-	}
-	if !ok {
-		return fmt.Errorf("failed to acquire lock (pid %d)", os.Getpid())
-	}
+func (m *InterProcessMutex) TryLock(ctx context.Context, onRetry func(attempt int)) error {
+	attempt := 0
+	for {
+		ok, err := m.mu.TryLockContext(ctx, m.LockRetryDelay)
+		if err != nil {
+			return fmt.Errorf("failed to acquire lock (pid %d): %w", os.Getpid(), err)
+		}
+		if ok {
+			return nil
+		}
+		attempt++
+		if onRetry != nil {
+			onRetry(attempt)
+		}
 
-	return nil
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(m.LockRetryDelay):
+			continue
+		}
+	}
 }
 
 func (m *InterProcessMutex) Unlock() error {
