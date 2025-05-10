@@ -5,6 +5,7 @@ package interactivity
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -35,11 +36,9 @@ func (m *model) Init() tea.Cmd {
 	return m.spinner.Tick
 }
 
-type exitMsg struct{}
-
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
-	case exitMsg:
+	case tea.QuitMsg:
 		m.quit = true
 		return m, tea.Quit
 	}
@@ -67,6 +66,8 @@ func StartSpinner(message string) func() {
 	}()
 
 	return func() {
-		p.Send(exitMsg{})
+		p.Quit()
+		// Very important, otherwise the TUI will be borked and future logs will be messed up
+		p.ReleaseTerminal()
 	}
 }
