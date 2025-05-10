@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
+	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
@@ -30,6 +31,23 @@ import (
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/registry"
 )
+
+type QuickstartDefaults struct {
+	SchemaPath   *string
+	TargetType   *string
+	Template     *string
+	TemplateData *shared.SchemaStoreItem
+}
+
+type Quickstart struct {
+	WorkflowFile             *workflow.Workflow
+	LanguageConfigs          map[string]*config.Configuration
+	Defaults                 QuickstartDefaults
+	SDKName                  string
+	IsUsingTemplate          bool
+	IsReactQuery             bool
+	IsUsingSampleOpenAPISpec bool
+}
 
 func getOASLocation(location, authHeader *string, allowSample bool) error {
 	locationPrompt := oasLocationPrompt(location, allowSample)

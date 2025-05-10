@@ -38,10 +38,11 @@ import (
 )
 
 type QuickstartFlags struct {
-	SkipCompile bool   `json:"skip-compile"`
-	Schema      string `json:"schema"`
-	OutDir      string `json:"out-dir"`
-	TargetType  string `json:"target"`
+	SkipCompile  bool   `json:"skip-compile"`
+	Schema       string `json:"schema"`
+	OutDir       string `json:"out-dir"`
+	TargetType   string `json:"target"`
+	IsReactQuery bool   `json:"is-react-query"`
 
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
@@ -56,6 +57,18 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 	Long:         `Guided setup to help you create a new SDK in minutes.`,
 	Run:          quickstartExec,
 	RequiresAuth: true,
+	NonInteractiveSubcommands: []model.Command{
+		&model.ExecutableCommand[QuickstartFlags]{
+			Usage: "react-query",
+			Short: "Quickstart a TypeScript SDK with React Query enabled",
+			Run: func(ctx context.Context, flags QuickstartFlags) error {
+				flags.TargetType = "typescript"
+				flags.SkipCompile = true
+				flags.IsReactQuery = true
+				return quickstartExec(ctx, flags)
+			},
+		},
+	},
 	Flags: []flag.Flag{
 		flag.BooleanFlag{
 			Name:        "skip-compile",
@@ -111,6 +124,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			Targets: make(map[string]workflow.Target),
 		},
 		LanguageConfigs: make(map[string]*sdkGenConfig.Configuration),
+		IsReactQuery:    flags.IsReactQuery,
 	}
 
 	if flags.Schema != "" {
