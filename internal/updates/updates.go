@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/events"
 	"io"
 	"net/http"
 	"os"
@@ -15,8 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy-core/events"
+
 	"github.com/speakeasy-api/speakeasy/internal/cache"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
@@ -108,6 +110,10 @@ func Update(ctx context.Context, currentVersion, artifactArch string, timeout in
 // InstallVersion installs a specific version of the CLI
 // returns the path to the installed binary
 func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, timeout int) (string, error) {
+	mutex := concurrency.NewIPMutex()
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	v, err := version.NewVersion(desiredVersion)
 	if err != nil {
 		return "", err

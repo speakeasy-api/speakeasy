@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/internal/concurrency"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 
 	"github.com/speakeasy-api/speakeasy-core/errors"
@@ -355,16 +356,28 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 
 	// If the workflow succeeded, make the used version the default
 	if shouldPromote && !env.IsGithubAction() && !env.IsLocalDev() {
-		currentExecPath, err := os.Executable()
-		if err != nil {
-			log.From(cmd.Context()).Warnf("failed to promote version: %s", err.Error())
-			return nil
+		if err := promoteVersion(cmd.Context(), vLocation); err != nil {
+			return fmt.Errorf("failed to promote version: %w", err)
 		}
+	}
 
-		if err := os.Rename(vLocation, currentExecPath); err != nil {
-			log.From(cmd.Context()).Warnf("failed to promote version: %s", err.Error())
-			return nil
-		}
+	return nil
+}
+
+func promoteVersion(ctx context.Context, vLocation string) error {
+	mutex := concurrency.NewIPMutex()
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	currentExecPath, err := os.Executable()
+	if err != nil {
+		log.From(ctx).Warnf("failed to promote version: %s", err.Error())
+		return nil
+	}
+
+	if err := os.Rename(vLocation, currentExecPath); err != nil {
+		log.From(ctx).Warnf("failed to promote version: %s", err.Error())
+		return nil
 	}
 
 	return nil
