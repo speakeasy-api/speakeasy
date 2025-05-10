@@ -1,43 +1,45 @@
 package concurrency
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gofrs/flock"
 	"github.com/speakeasy-api/speakeasy/internal/singleton"
 )
 
-// Package concurrency provides utilities for inter-process synchronization and coordination.
-// It contains helpers for managing concurrent access to shared resources and communication
-// between different processes in a safe and efficient manner.
+// Package concurrency provides utilities for inter-process synchronization .
 
 type InterProcessMutex struct {
+	Opts
 	mu *flock.Flock
 }
 
-type Config struct {
-	Path string
+type Opts struct {
+	Name    string
+	Timeout time.Duration
 }
 
-func DefaultConfig() Config {
-	return Config{Path: filepath.Join(os.TempDir(), "speakeasy-lock")}
+func DefaultOpts() Opts {
+	return Opts{Name: "speakeasy-lock", Timeout: 10 * time.Second}
 }
 
-func new(cfg Config) *InterProcessMutex {
-	mu := flock.New(cfg.Path)
+func new(o Opts) *InterProcessMutex {
+	mu := flock.New(filepath.Join(os.TempDir(), o.Name))
 
 	return &InterProcessMutex{mu: mu}
 }
 
-// NewIPMutexWithConfig creates a new inter-process mutex with a custom config.
-var NewIPMutexWithConfig = singleton.NewWithConfig(func(c Config) *InterProcessMutex {
-	return new(c)
+// NewIPMutexWithOpts creates a new inter-process mutex with a custom config.
+var NewIPMutexWithOpts = singleton.NewWithOpts(func(o Opts) *InterProcessMutex {
+	return new(o)
 })
 
 // NewIPMutex creates a new inter-process mutex with the default config.
 var NewIPMutex = singleton.New(func() *InterProcessMutex {
-	return new(DefaultConfig())
+	return new(DefaultOpts())
 })
 
 func (m *InterProcessMutex) Lock() error {
@@ -49,5 +51,5 @@ func (m *InterProcessMutex) Unlock() error {
 }
 
 func (m *InterProcessMutex) TryLock() (bool, error) {
-	return m.mu.TryLock()
+	return m.mu.TryLockContext(context.Background(), m.Timeout)
 }

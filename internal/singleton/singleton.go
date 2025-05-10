@@ -20,9 +20,9 @@ func New[R any](constructor func() R) func() R {
 	}
 }
 
-// NewWithConfig creates a singleton factory function that accepts a config parameter.
+// NewWithOpts creates a singleton factory function that accepts a config parameter.
 // Returns a function that will always return the same instance.
-func NewWithConfig[T any, R any](constructor func(T) R) func(T) R {
+func NewWithOpts[T any, R any](constructor func(T) R) func(T) R {
 	var s singleton[T, R]
 	return func(cfg T) R {
 		s.once.Do(func() {
