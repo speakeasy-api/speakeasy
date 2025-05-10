@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/singleton"
 )
 
@@ -31,7 +30,7 @@ type Opts struct {
 }
 
 func DefaultOpts() Opts {
-	return Opts{Name: "speakeasy.lock", LockRetryDelay: 10 * time.Second}
+	return Opts{Name: "speakeasy.lock", LockRetryDelay: 3 * time.Second}
 }
 
 func new(o Opts) *InterProcessMutex {
@@ -58,7 +57,6 @@ func (m *InterProcessMutex) TryLock(ctx context.Context, onRetry func(attempt in
 			return fmt.Errorf("failed to acquire lock (pid %d): %w", os.Getpid(), err)
 		}
 		if ok {
-			log.From(ctx).Infof("Acquired lock (pid %d)", os.Getpid())
 			return nil
 		}
 		attempt++
