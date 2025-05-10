@@ -18,12 +18,12 @@ type InterProcessMutex struct {
 }
 
 type Opts struct {
-	Name    string
-	Timeout time.Duration
+	Name           string
+	LockRetryDelay time.Duration
 }
 
 func DefaultOpts() Opts {
-	return Opts{Name: "speakeasy-lock", Timeout: 10 * time.Second}
+	return Opts{Name: "speakeasy-lock", LockRetryDelay: 10 * time.Second}
 }
 
 func new(o Opts) *InterProcessMutex {
@@ -50,6 +50,6 @@ func (m *InterProcessMutex) Unlock() error {
 	return m.mu.Unlock()
 }
 
-func (m *InterProcessMutex) TryLock() (bool, error) {
-	return m.mu.TryLockContext(context.Background(), m.Timeout)
+func (m *InterProcessMutex) TryLock(ctx context.Context) (bool, error) {
+	return m.mu.TryLockContext(ctx, m.LockRetryDelay)
 }
