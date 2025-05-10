@@ -371,8 +371,7 @@ func promoteVersion(ctx context.Context, vLocation string) error {
 
 	currentExecPath, err := os.Executable()
 	if err != nil {
-		log.From(ctx).Warnf("failed to promote version: %s", err.Error())
-		return nil
+		return err
 	}
 
 	if err := os.Rename(vLocation, currentExecPath); err != nil {
