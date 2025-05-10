@@ -366,7 +366,10 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 
 func promoteVersion(ctx context.Context, vLocation string) error {
 	mutex := concurrency.NewIPMutex()
-	mutex.Lock()
+	err := mutex.TryLock(ctx)
+	if err != nil {
+		return err
+	}
 	defer mutex.Unlock()
 
 	currentExecPath, err := os.Executable()

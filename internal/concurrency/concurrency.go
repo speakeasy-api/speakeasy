@@ -2,6 +2,7 @@ package concurrency
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -10,8 +11,10 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/singleton"
 )
 
-// Package concurrency provides utilities for inter-process synchronization .
+// Package concurrency provides utilities for inter-process synchronization.
 
+// InterProcessMutex provides file-based mutual exclusion between processes.
+// The lock is automatically released if the holding process dies.
 type InterProcessMutex struct {
 	Opts
 	mu *flock.Flock
@@ -23,7 +26,7 @@ type Opts struct {
 }
 
 func DefaultOpts() Opts {
-	return Opts{Name: "speakeasy-lock", LockRetryDelay: 10 * time.Second}
+	return Opts{Name: "speakeasy.lock", LockRetryDelay: 10 * time.Second}
 }
 
 func new(o Opts) *InterProcessMutex {
@@ -42,14 +45,18 @@ var NewIPMutex = singleton.New(func() *InterProcessMutex {
 	return new(DefaultOpts())
 })
 
-func (m *InterProcessMutex) Lock() error {
-	return m.mu.Lock()
+func (m *InterProcessMutex) TryLock(ctx context.Context) error {
+	ok, err := m.mu.TryLockContext(ctx, m.LockRetryDelay)
+	if err != nil {
+		return fmt.Errorf("failed to acquire lock (pid %d): %w", os.Getpid(), err)
+	}
+	if !ok {
+		return fmt.Errorf("failed to acquire lock (pid %d)", os.Getpid())
+	}
+
+	return nil
 }
 
 func (m *InterProcessMutex) Unlock() error {
 	return m.mu.Unlock()
-}
-
-func (m *InterProcessMutex) TryLock(ctx context.Context) (bool, error) {
-	return m.mu.TryLockContext(ctx, m.LockRetryDelay)
 }
