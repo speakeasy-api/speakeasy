@@ -13,7 +13,7 @@ import (
 
 // Package locks provides utilities for inter-process synchronization.
 
-// CLIUpdateMutex provides file-based mutual exclusion between processes.
+// InterProcessMutex provides file-based mutual exclusion between processes.
 // It uses file locking to ensure that only one process can perform CLI updates at a time.
 // The lock is automatically released if the holding process dies.
 //
@@ -23,7 +23,7 @@ import (
 //
 // The mutex can be used to coordinate CLI update operations between multiple
 // concurrent processes to prevent race conditions during installation or updates.
-type CLIUpdateMutex struct {
+type InterProcessMutex struct {
 	Opts
 	mu *flock.Flock
 }
@@ -32,24 +32,15 @@ type Opts struct {
 	Name string
 }
 
-func DefaultOpts() Opts {
-	return Opts{Name: "speakeasy.lock"}
-}
-
-func new(o Opts) *CLIUpdateMutex {
+func new(o Opts) *InterProcessMutex {
 	mu := flock.New(filepath.Join(os.TempDir(), o.Name))
 
-	return &CLIUpdateMutex{Opts: o, mu: mu}
+	return &InterProcessMutex{Opts: o, mu: mu}
 }
 
-// CLIUpdateLockWithOpts creates a new inter-process mutex with a custom config.
-var CLIUpdateLockWithOpts = singleton.NewWithOpts(func(o Opts) *CLIUpdateMutex {
-	return new(o)
-})
-
 // CLIUpdateLock creates a new inter-process mutex with default options.
-var CLIUpdateLock = singleton.New(func() *CLIUpdateMutex {
-	return new(DefaultOpts())
+var CLIUpdateLock = singleton.New(func() *InterProcessMutex {
+	return new(Opts{Name: "speakeasy-cli-update-mutex.lock"})
 })
 
 type TryLockResult struct {
@@ -58,7 +49,7 @@ type TryLockResult struct {
 	Success bool
 }
 
-func (m *CLIUpdateMutex) TryLock(ctx context.Context, retryDelay time.Duration) <-chan TryLockResult {
+func (m *InterProcessMutex) TryLock(ctx context.Context, retryDelay time.Duration) <-chan TryLockResult {
 	ch := make(chan TryLockResult)
 	go func() {
 		for attempt := 0; ; attempt++ {
@@ -84,6 +75,6 @@ func (m *CLIUpdateMutex) TryLock(ctx context.Context, retryDelay time.Duration) 
 	return ch
 }
 
-func (m *CLIUpdateMutex) Unlock() error {
+func (m *InterProcessMutex) Unlock() error {
 	return m.mu.Unlock()
 }
