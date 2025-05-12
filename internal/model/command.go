@@ -8,7 +8,9 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/speakeasy-api/speakeasy/internal/locks"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 
 	"github.com/speakeasy-api/speakeasy-core/errors"
@@ -355,16 +357,42 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 
 	// If the workflow succeeded, make the used version the default
 	if shouldPromote && !env.IsGithubAction() && !env.IsLocalDev() {
-		currentExecPath, err := os.Executable()
-		if err != nil {
-			log.From(cmd.Context()).Warnf("failed to promote version: %s", err.Error())
-			return nil
+		if err := promoteVersion(cmd.Context(), vLocation); err != nil {
+			return fmt.Errorf("failed to promote version: %w", err)
 		}
+	}
 
-		if err := os.Rename(vLocation, currentExecPath); err != nil {
-			log.From(cmd.Context()).Warnf("failed to promote version: %s", err.Error())
-			return nil
+	return nil
+}
+func promoteVersion(ctx context.Context, vLocation string) error {
+	mutex := locks.CLIUpdateLock()
+	for result := range mutex.TryLock(ctx, 1*time.Second) {
+		if result.Error != nil {
+			return result.Error
 		}
+		if result.Success {
+			break
+		}
+		log.From(ctx).WithStyle(styles.DimmedItalic).Debug(fmt.Sprintf("promoteVersion: Failed to acquire lock (attempt %d). Retrying...", result.Attempt))
+	}
+	defer mutex.Unlock()
+
+	currentExecPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	// Check if vLocation still exists before trying to rename it
+	if _, err := os.Stat(vLocation); os.IsNotExist(err) {
+		log.From(ctx).Infof("CLI was likely already updated, skipping promotion")
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to locate latest CLI binary: %w", err)
+	}
+
+	if err := os.Rename(vLocation, currentExecPath); err != nil {
+		log.From(ctx).Warnf("failed to promote version: %s", err.Error())
+		return nil
 	}
 
 	return nil

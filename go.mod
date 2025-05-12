@@ -22,6 +22,7 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/gofrs/flock v0.12.1
 	github.com/google/go-github/v58 v58.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
@@ -263,7 +264,7 @@ require (
 	golang.org/x/image v0.10.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241104194629-dd2ea8efbc28 // indirect
