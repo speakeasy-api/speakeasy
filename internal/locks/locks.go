@@ -11,14 +11,18 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/singleton"
 )
 
-// Package concurrency provides utilities for inter-process synchronization.
+// Package locks provides utilities for inter-process synchronization.
 
 // CLIUpdateMutex provides file-based mutual exclusion between processes.
+// It uses file locking to ensure that only one process can perform CLI updates at a time.
 // The lock is automatically released if the holding process dies.
 //
-// See:
-//   - Linux: https://linux.die.net/man/2/flock
-//   - Windows: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex
+// This implementation is cross-platform compatible:
+//   - Linux/macOS: Uses flock syscall (https://linux.die.net/man/2/flock)
+//   - Windows: Uses LockFileEx API (https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex)
+//
+// The mutex can be used to coordinate CLI update operations between multiple
+// concurrent processes to prevent race conditions during installation or updates.
 type CLIUpdateMutex struct {
 	Opts
 	mu *flock.Flock
