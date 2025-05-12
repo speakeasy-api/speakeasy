@@ -121,7 +121,6 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 		log.From(ctx).WithStyle(styles.DimmedItalic).Debug(fmt.Sprintf("InstallVersion: Failed to acquire lock (attempt %d). Retrying...", result.Attempt))
 	}
 	defer mutex.Unlock()
-	log.From(ctx).Infof("Installing version %s", desiredVersion)
 
 	v, err := version.NewVersion(desiredVersion)
 	if err != nil {
