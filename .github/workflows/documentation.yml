@@ -37,7 +37,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
         run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
       - name: Set up Go 1.x
-        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: "speakeasy/go.mod"
       - name: Generate speakeasy-registry doc-site docs
@@ -53,7 +53,7 @@ jobs:
           title: "docs: update speakeasy cli docs"
       - if: failure()
         name: Notify Slack on Failure
-        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 # v2.1.0
         with:
           webhook: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }} # URL for docs channel
           webhook-type: incoming-webhook
