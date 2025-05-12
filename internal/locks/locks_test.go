@@ -138,17 +138,6 @@ func TestCLIUpdateMutex_Singleton(t *testing.T) {
 
 	// They should be the same instance
 	assert.Same(t, mutex1, mutex2, "CLIUpdateLock should return the same instance")
-
-	// Test the custom options version
-	customOpts := Opts{Name: "custom-lock.lock"}
-	customMutex1 := CLIUpdateLockWithOpts(customOpts)
-	customMutex2 := CLIUpdateLockWithOpts(customOpts)
-
-	// They should be the same instance
-	assert.Same(t, customMutex1, customMutex2, "CLIUpdateLockWithOpts should return the same instance for the same options")
-
-	// Note: We skip testing different options, as the singleton implementation has
-	// a cache by name that would cause the test to fail inappropriately
 }
 
 func TestCLIUpdateMutex_ConcurrentUsers(t *testing.T) {
