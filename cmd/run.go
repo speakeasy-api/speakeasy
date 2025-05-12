@@ -190,7 +190,7 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// Skip target selection when using --github=all since we'll find all targets
-	if flags.Target == "" && flags.Source == "" && flags.GitHub != "all" {
+	if flags.Target == "" && flags.Source == "" && flags.GitHub != "" {
 		if len(wf.Targets) == 1 {
 			flags.Target = targets[0]
 		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
