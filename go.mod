@@ -22,6 +22,7 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/gofrs/flock v0.12.1
 	github.com/google/go-github/v58 v58.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
@@ -131,7 +132,6 @@ require (
 	github.com/go-playground/validator/v10 v10.14.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47 // indirect
