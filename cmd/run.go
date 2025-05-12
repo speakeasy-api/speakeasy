@@ -41,7 +41,7 @@ type RunFlags struct {
 	RegistryTags       []string          `json:"registry-tags"`
 	SetVersion         string            `json:"set-version"`
 	Watch              bool              `json:"watch"`
-	GitHub             bool              `json:"github"`
+	GitHub             string            `json:"github"`
 	Minimal            bool              `json:"minimal"`
 }
 
@@ -166,9 +166,9 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Description: "launch the web studio for improving the quality of the generated SDK",
 			Required:    false,
 		},
-		flag.BooleanFlag{
+		flag.StringFlag{
 			Name:        "github",
-			Description: "kick off a generation run in GitHub",
+			Description: "kick off a generation run in GitHub. Use 'all' to run all repos in workspace, provide specific GitHub URLs as a comma-separated list, or use without a value for current target",
 		},
 		flag.BooleanFlag{
 			Name:        "minimal",
@@ -189,7 +189,8 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		return err
 	}
 
-	if flags.Target == "" && flags.Source == "" {
+	// Skip target selection when using --github=all since we'll find all targets
+	if flags.Target == "" && flags.Source == "" && flags.GitHub != "all" {
 		if len(wf.Targets) == 1 {
 			flags.Target = targets[0]
 		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
@@ -212,8 +213,10 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// Needed later
-	if err := cmd.Flags().Set("target", flags.Target); err != nil {
-		return err
+	if flags.Target != "" {
+		if err := cmd.Flags().Set("target", flags.Target); err != nil {
+			return err
+		}
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
@@ -312,8 +315,9 @@ var minimalOpts = []run.Opt{
 }
 
 func runNonInteractive(ctx context.Context, flags RunFlags) error {
-	if flags.GitHub {
-		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
+	// Note: This will run for both --github (empty value) and --github=value
+	if flags.GitHub != "false" { // Using "false" as an unlikely edge case
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force, flags.GitHub)
 	}
 
 	opts := []run.Opt{
@@ -369,8 +373,9 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 }
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
-	if flags.GitHub {
-		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
+	// Note: This will run for both --github (empty value) and --github=value
+	if flags.GitHub != "false" { // Using "false" as an unlikely edge case
+		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force, flags.GitHub)
 	}
 
 	opts := []run.Opt{
