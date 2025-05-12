@@ -8,8 +8,9 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+	"time"
 
-	"github.com/speakeasy-api/speakeasy/internal/concurrency"
+	"github.com/speakeasy-api/speakeasy/internal/locks"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 
 	"github.com/speakeasy-api/speakeasy-core/errors"
@@ -364,12 +365,15 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 	return nil
 }
 func promoteVersion(ctx context.Context, vLocation string) error {
-	mutex := concurrency.NewIPMutex()
-	err := mutex.TryLock(ctx, func(attempt int) {
-		log.From(ctx).PrintfStyled(styles.DimmedItalic, "Failed to acquire lock (attempt %d). Retrying...", attempt)
-	})
-	if err != nil {
-		return err
+	mutex := locks.CLIUpdateLock()
+	for result := range mutex.TryLock(ctx, 1*time.Second) {
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.Success {
+			break
+		}
+		log.From(ctx).WithStyle(styles.DimmedItalic).Debug(fmt.Sprintf("promoteVersion: Failed to acquire lock (attempt %d). Retrying...", result.Attempt))
 	}
 	defer mutex.Unlock()
 
