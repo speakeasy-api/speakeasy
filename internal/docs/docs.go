@@ -137,7 +137,7 @@ func getPath(cmd *cobra.Command) string {
 	fullPath := strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name())
 
 	if cmd.HasAvailableSubCommands() {
-		return strings.ReplaceAll(fullPath, " ", "/") + "/README.md"
+		return strings.ReplaceAll(fullPath, " ", "/") + "/index.md"
 	}
 
 	return strings.ReplaceAll(fullPath, " ", "/") + ".md"
