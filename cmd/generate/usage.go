@@ -3,24 +3,25 @@ package generate
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-	"strings"
 )
 
 type GenerateUsageSnippetFlags struct {
-	Lang       string `json:"lang"`
-	SchemaPath string `json:"schema"`
-	Header     string `json:"header"`
-	Token      string `json:"token"`
-	Operation  string `json:"operation-id"`
-	Namespace  string `json:"namespace"`
-	Out        string `json:"out"`
-	ConfigPath string `json:"config-path"`
-	All        bool   `json:"all"`
+	Lang         string `json:"lang"`
+	SchemaPath   string `json:"schema"`
+	Header       string `json:"header"`
+	Token        string `json:"token"`
+	OperationIds string `json:"operation-ids"`
+	Namespace    string `json:"namespace"`
+	Out          string `json:"out"`
+	ConfigPath   string `json:"config-path"`
+	All          bool   `json:"all"`
 }
 
 var genUsageSnippetCmd = &model.ExecutableCommand[GenerateUsageSnippetFlags]{
@@ -47,9 +48,9 @@ You can also select to write to a file or write to a formatted output directory.
 		headerFlag,
 		tokenFlag,
 		flag.StringFlag{
-			Name:        "operation-id",
+			Name:        "operation-ids",
 			Shorthand:   "i",
-			Description: "The AffectedOperationIDs to generate usage snippet for",
+			Description: "A comma-separated list of operation IDs to generate usage snippets for",
 		},
 		flag.StringFlag{
 			Name:        "namespace",
@@ -77,6 +78,8 @@ You can also select to write to a file or write to a formatted output directory.
 }
 
 func genUsageSnippets(ctx context.Context, flags GenerateUsageSnippetFlags) error {
+	operationIDs := strings.Split(flags.OperationIds, ",")
+
 	return usagegen.Generate(
 		ctx,
 		config.GetCustomerID(),
@@ -85,7 +88,7 @@ func genUsageSnippets(ctx context.Context, flags GenerateUsageSnippetFlags) erro
 		flags.Header,
 		flags.Token,
 		flags.Out,
-		flags.Operation,
+		operationIDs,
 		flags.Namespace,
 		flags.ConfigPath,
 		flags.All,
