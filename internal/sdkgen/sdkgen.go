@@ -56,7 +56,7 @@ type GenerateOptions struct {
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
-	if !generate.CheckLanguageSupported(opts.Language) {
+	if !generate.CheckLanguageSupported(ctx, opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
 

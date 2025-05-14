@@ -24,7 +24,9 @@ import (
 
 func Generate(
 	ctx context.Context,
-	customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string,
+	customerID, lang, schemaPath, header, token, out string,
+	operationIDs []string,
+	namespace, configPath string,
 	all bool,
 	outputBuffer *bytes.Buffer,
 	// These should be provided together
@@ -64,10 +66,10 @@ func Generate(
 
 	if all {
 		opts = append(opts, generate.WithUsageSnippetArgsGenerateAll())
-	} else if operation == "" && namespace == "" {
+	} else if len(operationIDs) == 0 && namespace == "" {
 		opts = append(opts, generate.WithUsageSnippetArgsByRootExample())
-	} else if operation != "" {
-		opts = append(opts, generate.WithUsageSnippetArgsByOperationID(operation))
+	} else if len(operationIDs) > 0 {
+		opts = append(opts, generate.WithUsageSnippetArgsByOperationIDs(operationIDs))
 	} else {
 		opts = append(opts, generate.WithUsageSnippetArgsByNamespace(namespace))
 	}
