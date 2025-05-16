@@ -1,9 +1,10 @@
 package errorCodes
 
 import (
+	"slices"
+
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"slices"
 )
 
 type errorGroup struct {
@@ -18,45 +19,31 @@ func initErrorGroups() errorGroupSlice {
 	return errorGroupSlice{
 		{
 			name:         "BadRequest",
-			codes:        []string{"400", "413", "414", "415", "422", "431", "510"},
-			description:  "A collection of codes that generally means the end user got something wrong in making the request",
+			codes:        []string{"400", "422"},
+			description:  "Invalid request",
 			schemaName:   "BadRequest",
 			responseName: "BadRequest",
 		},
 		{
 			name:         "Unauthorized",
-			codes:        []string{"401", "403", "407", "511"},
-			description:  "A collection of codes that generally means the client was not authenticated correctly for the request they want to make",
+			codes:        []string{"401", "403"},
+			description:  "Permission denied or not authenticated",
 			schemaName:   "Unauthorized",
 			responseName: "Unauthorized",
 		},
 		{
 			name:         "NotFound",
-			codes:        []string{"404", "501", "505"},
-			description:  "Status codes relating to the resource/entity they are requesting not being found or endpoints/routes not existing",
+			codes:        []string{"404"},
+			description:  "Not found",
 			schemaName:   "NotFound",
 			responseName: "NotFound",
 		},
 		{
 			name:         "RateLimited",
 			codes:        []string{"429"},
-			description:  "Status codes relating to the client being rate limited by the server",
+			description:  "Rate limit exceeded",
 			schemaName:   "RateLimited",
 			responseName: "RateLimited",
-		},
-		{
-			name:         "InternalServerError",
-			codes:        []string{"500", "502", "503", "506", "507", "508"},
-			description:  "A collection of status codes that generally mean the server failed in an unexpected way",
-			schemaName:   "InternalServerError",
-			responseName: "InternalServerError",
-		},
-		{
-			name:         "Timeout",
-			codes:        []string{"408", "504"},
-			description:  "Timeouts occurred with the request",
-			schemaName:   "Timeout",
-			responseName: "Timeout",
 		},
 	}
 }
