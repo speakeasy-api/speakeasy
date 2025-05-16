@@ -17,6 +17,7 @@ import (
 
 	"github.com/pkg/errors"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/filesystem"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"go.uber.org/zap"
@@ -274,7 +275,7 @@ type fileSystem struct {
 	buf *bytes.Buffer
 }
 
-var _ generate.FileSystem = &fileSystem{}
+var _ filesystem.FileSystem = &fileSystem{}
 
 func (fs *fileSystem) ReadFile(fileName string) ([]byte, error) {
 	return os.ReadFile(fileName)
@@ -286,12 +287,15 @@ func (fs *fileSystem) WriteFile(outFileName string, data []byte, mode os.FileMod
 		_, err := fs.buf.Write(data)
 		return err
 	}
-
 	return nil
 }
 
 func (fs *fileSystem) MkdirAll(path string, mode os.FileMode) error {
 	return nil
+}
+
+func (fs *fileSystem) Remove(name string) error {
+	return os.Remove(name)
 }
 
 func (fs *fileSystem) Open(name string) (fs.File, error) {
@@ -300,4 +304,8 @@ func (fs *fileSystem) Open(name string) (fs.File, error) {
 
 func (fs *fileSystem) Stat(name string) (fs.FileInfo, error) {
 	return os.Stat(name)
+}
+
+func (fs *fileSystem) OpenFile(name string, flag int, perm fs.FileMode) (filesystem.File, error) {
+	return os.OpenFile(name, flag, perm)
 }
