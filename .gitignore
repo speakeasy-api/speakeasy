@@ -11,3 +11,5 @@ integration/temp
 .vscode/launch.json
 __debug_bin*
 /completions/
+
+**/.claude/settings.local.json
