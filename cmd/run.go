@@ -169,11 +169,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		},
 		flag.BooleanFlag{
 			Name:        "github",
-			Description: "kick off a generation run in GitHub",
+			Description: "kick off a generation run in GitHub for the repository pertaining to your current directory",
 		},
 		flag.StringFlag{
 			Name:        "github-repos",
-			Description: "GitHub repositories to run SDK generation for. Use 'all' for all repos or a comma-separated list of GitHub repo URLs",
+			Description: "GLOBAL: run SDK generation across your entire Speakeasy workspace/account, independent of your current directory. Use 'all' for all connected repos or a comma-separated list of GitHub repo URLs",
 		},
 		flag.BooleanFlag{
 			Name:        "minimal",
