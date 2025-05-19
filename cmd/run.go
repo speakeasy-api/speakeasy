@@ -42,6 +42,7 @@ type RunFlags struct {
 	SetVersion         string            `json:"set-version"`
 	Watch              bool              `json:"watch"`
 	GitHub             bool              `json:"github"`
+	GitHubRepos        string            `json:"github-repos"`
 	Minimal            bool              `json:"minimal"`
 }
 
@@ -168,7 +169,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		},
 		flag.BooleanFlag{
 			Name:        "github",
-			Description: "kick off a generation run in GitHub",
+			Description: "kick off a generation run in GitHub for the repository pertaining to your current directory",
+		},
+		flag.StringFlag{
+			Name:        "github-repos",
+			Description: "GLOBAL: run SDK generation across your entire Speakeasy workspace/account, independent of your current directory. Use 'all' for all connected repos or a comma-separated list of GitHub repo URLs",
 		},
 		flag.BooleanFlag{
 			Name:        "minimal",
@@ -187,6 +192,13 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	sources, targets, err := run.ParseSourcesAndTargets()
 	if err != nil {
 		return err
+	}
+
+	if flags.GitHubRepos != "" {
+		flags.GitHub = true
+		if err := cmd.Flags().Set("github", "true"); err != nil {
+			return err
+		}
 	}
 
 	if flags.Target == "" && flags.Source == "" {
@@ -313,6 +325,9 @@ var minimalOpts = []run.Opt{
 
 func runNonInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
+		if flags.GitHubRepos != "" {
+			return run.RunGitHubRepos(ctx, flags.Target, flags.SetVersion, flags.Force, flags.GitHubRepos)
+		}
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
@@ -370,6 +385,9 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 
 func runInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
+		if flags.GitHubRepos != "" {
+			return run.RunGitHubRepos(ctx, flags.Target, flags.SetVersion, flags.Force, flags.GitHubRepos)
+		}
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
