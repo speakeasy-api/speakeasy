@@ -244,3 +244,4 @@ speakeasy [flags]
 * [speakeasy tag](docs/tag/README.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
 * [speakeasy test](docs/test.md)	 - For each workflow target, starts the mock API server and runs testing.
 * [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version
+# Add --github-repos flag to run command
