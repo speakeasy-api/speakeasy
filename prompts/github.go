@@ -623,6 +623,9 @@ func defaultGenerationFile() *config.GenerateWorkflow {
 					Cron: "0 0 * * *",
 				},
 			},
+			PullRequest: config.PullRequestOn{
+				Types: []string{"labeled", "unlabeled"},
+			},
 		},
 		Jobs: config.Jobs{
 			Generate: config.Job{
