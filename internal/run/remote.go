@@ -227,7 +227,7 @@ func runGitHubReposAll(ctx context.Context, target, version string, force bool) 
 	}
 
 	if len(uniqueRepos) == 0 {
-		return fmt.Errorf("no GitHub repositories found for this workspace")
+		return fmt.Errorf("no GitHub repositories found for this workspace you must install the Speakeasy GitHub app to use this feature")
 	}
 
 	logger := log.From(ctx)
