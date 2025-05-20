@@ -4,7 +4,7 @@ on:
     push:
         branches:
             - main
-     workflow_dispatch:  # 👈 allows manual trigger from PR (remove before merge)
+    workflow_dispatch:  # 👈 allows manual trigger from PR (remove before merge)
 
 permissions:
     contents: write
