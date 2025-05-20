@@ -4,6 +4,7 @@ on:
     push:
         branches:
             - main
+     workflow_dispatch:  # 👈 allows manual trigger from PR (remove before merge)
 
 permissions:
     contents: write
@@ -14,16 +15,17 @@ jobs:
         runs-on:
             group: windows-latest-large
         if: startsWith(github.event.head_commit.message, 'ci:') != true
+
         steps:
             - name: Setup environment
               run: |-
                   chcp 65001 #set code page to utf-8
                   echo ("GOPRIVATE=github.com/speakeasy-api") >> $env:GITHUB_ENV
+
             - name: Checkout repository
               uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
               with:
                   fetch-depth: 0
-            - name: Conventional Commits
               uses: TriPSs/conventional-changelog-action@67139193614f5b9e8db87da1bd4240922b34d765 # v6.0.0
               with:
                   github-token: ${{ secrets.github_token }}
@@ -31,20 +33,22 @@ jobs:
                   output-file: "false"
                   skip-on-empty: "false"
                   preset: conventionalcommits
-            - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
-              with:
-                  go-version-file: "go.mod"
-                  # Reference: https://github.com/actions/setup-go/issues/495
-                  cache: false
-            # More assembly might be required: Docker logins, GPG, etc. It all depends
-            # on your needs.
+
             - name: Configure git for private modules
               run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
+
             - name: Setup Choco
               uses: crazy-max/ghaction-chocolatey@6828f16489ec8d2968b55066766cb41f0d278f2a # v3.3.0
               with:
                   args: --version
-            - name: goreleaser
+
+            - name: Setup Go
+            - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+              with:
+                  go-version-file: "go.mod"
+                  cache: false
+
+            - name: Run GoReleaser
               uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
               with:
                   distribution: goreleaser
@@ -53,3 +57,16 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+            - name: Trigger Docs Workflow
+              if: success()
+              uses: peter-evans/repository-dispatch@v3
+              with:
+                  token: ${{ secrets.SERVICE_BOT_TOKEN }}
+                  repository: speakeasy-api/marketing-site
+                  event-type: release-docs-update
+                  client-payload: |
+                      {
+                        "ref": "${{ github.sha }}",
+                        "release_notes": "${{ steps.changelog.outputs.clean_changelog }}"
+                      }

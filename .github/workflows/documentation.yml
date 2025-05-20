@@ -5,6 +5,8 @@ on:
         branches:
             - main
     workflow_dispatch:
+    repository_dispatch:
+        types: [release-docs-update]
 
 permissions:
     contents: write
@@ -48,6 +50,11 @@ jobs:
               working-directory: speakeasy
               run: |
                   go run cmd/docs/main.go -out-dir ../marketing-site/src/content/docs/speakeasy-reference/cli
+
+            - name: Write release notes
+              if: github.event_name == 'repository_dispatch'
+              run: |
+                  echo "${{ github.event.client_payload.release_notes }}" > marketing-site/src/content/docs/speakeasy-reference/release-notes.md
 
             - name: Create PR against marketing-site
               uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
