@@ -4,7 +4,7 @@ on:
     push:
         branches:
             - main
-    workflow_dispatch:  # 👈 allows manual trigger from PR (remove before merge)
+    workflow_dispatch: # 👈 allows manual trigger from PR
 
 permissions:
     contents: write
@@ -26,6 +26,9 @@ jobs:
               uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
               with:
                   fetch-depth: 0
+
+            - name: Generate release notes
+              id: changelog
               uses: TriPSs/conventional-changelog-action@67139193614f5b9e8db87da1bd4240922b34d765 # v6.0.0
               with:
                   github-token: ${{ secrets.github_token }}
