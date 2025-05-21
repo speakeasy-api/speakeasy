@@ -46,21 +46,19 @@ jobs:
                   path: marketing-site
 
             - name: Write formatted changelog file with frontmatter
-            shell: pwsh
-            run: |
-                $today = "${{ steps.date.outputs.today }}"
-                $filePath = "marketing-site/src/content/changelog/$today.md"
-                @"
-            ---
-            title: "Changelog for $today"
-            date: "$today"
-            ---
+              shell: pwsh
+              run: |
+                  $today = "${{ steps.date.outputs.today }}"
+                  $filePath = "marketing-site/src/content/changelog/$today.md"
+                  $frontmatter = @"
+                  ---
+                  title: "Changelog for $today"
+                  date: "$today"
+                  ---
 
-            $(Get-Content RELEASE_NOTES.md -Raw)
-            "@ | Set-Content $filePath -Encoding UTF8
-
-            $(Get-Content RELEASE_NOTES.md -Raw)
-            "@ | Set-Content $filePath -Encoding UTF8
+                  "@
+                      $releaseNotes = Get-Content RELEASE_NOTES.md -Raw
+                      $frontmatter + $releaseNotes | Set-Content $filePath -Encoding UTF8
 
             - name: Commit changelog to marketing-site
               working-directory: marketing-site
