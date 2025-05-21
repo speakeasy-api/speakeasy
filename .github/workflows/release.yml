@@ -42,29 +42,44 @@ jobs:
               uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
               with:
                   repository: speakeasy-api/marketing-site
-                  token: ${{ secrets.BOT_REPO_TOKEN }}
+                  token: ${{ secrets.SERVICE_BOT_TOKEN }}
                   path: marketing-site
-
-            - name: Write formatted changelog file with frontmatter
+            - name: Write individual changelog files for each version
               shell: pwsh
               run: |
-                  $today = "${{ steps.date.outputs.today }}"
-                  $filePath = "marketing-site/src/content/changelog/$today.md"
+                  $notes = Get-Content RELEASE_NOTES.md -Raw
+
+                  # Match release entries with version and date
+                  $pattern = '(?ms)^## \[(?<version>\d+\.\d+\.\d+)\]\([^)]+\) \((?<date>\d{4}-\d{2}-\d{2})\)\s+(?<body>.*?)(?=^## \[|\z)'
+
+                  $matches = [regex]::Matches($notes, $pattern)
+
+                  foreach ($match in $matches) {
+                  $version = $match.Groups['version'].Value
+                  $date = $match.Groups['date'].Value
+                  $body = $match.Groups['body'].Value.Trim()
+
+                  # Format filename as v1-554-2.mdx
+                  $slug = "v" + ($version -replace '\.', '-')
+                  $outputPath = "marketing-site/src/content/changelog/$slug.mdx"
+
                   $frontmatter = @"
                   ---
-                  title: "Changelog for $today"
-                  date: "$today"
+                  title: "v$version ($date)"
+                  date: "$date"
                   ---
 
                   "@
-                      $releaseNotes = Get-Content RELEASE_NOTES.md -Raw
-                      $frontmatter + $releaseNotes | Set-Content $filePath -Encoding UTF8
+
+                      "$frontmatter$body" | Set-Content $outputPath -Encoding UTF8
+                      Write-Host "Created changelog file: $outputPath"
+                      }
 
             - name: Create PR on marketing-site
               uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
               with:
                   path: marketing-site
-                  token: ${{ secrets.BOT_REPO_TOKEN }}
+                  token: ${{ secrets.SERVICE_BOT_TOKEN }}
                   commit-message: "docs: add changelog for ${{ steps.date.outputs.today }}"
                   title: "docs: add changelog for ${{ steps.date.outputs.today }}"
                   branch: changelog/update-${{ steps.date.outputs.today }}
