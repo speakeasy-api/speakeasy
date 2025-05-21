@@ -60,16 +60,6 @@ jobs:
                       $releaseNotes = Get-Content RELEASE_NOTES.md -Raw
                       $frontmatter + $releaseNotes | Set-Content $filePath -Encoding UTF8
 
-            - name: Commit changelog to marketing-site
-              working-directory: marketing-site
-              run: |
-                  git config user.name "speakeasybot"
-                  git config user.email "speakeasybot@speakeasy.com"
-                  git checkout -b changelog/update-${{ steps.date.outputs.today }}
-                  git add src/content/changelog/${{ steps.date.outputs.today }}.md
-                  git commit -m "docs: add changelog for ${{ steps.date.outputs.today }}"
-                  git push origin HEAD
-
             - name: Create PR on marketing-site
               uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
               with:
