@@ -49,7 +49,6 @@ jobs:
               run: |
                   $notes = Get-Content RELEASE_NOTES.md -Raw
 
-                  # Match release entries with version and date
                   $pattern = '(?ms)^## \[(?<version>\d+\.\d+\.\d+)\]\([^)]+\) \((?<date>\d{4}-\d{2}-\d{2})\)\s+(?<body>.*?)(?=^## \[|\z)'
 
                   $matches = [regex]::Matches($notes, $pattern)
@@ -59,21 +58,32 @@ jobs:
                   $date = $match.Groups['date'].Value
                   $body = $match.Groups['body'].Value.Trim()
 
-                  # Format filename as v1-554-2.mdx
+                  # Skip if body is empty or just whitespace
+                  if ([string]::IsNullOrWhiteSpace($body)) {
+                      Write-Host "Skipping v$version — no content."
+                      continue
+                  }
+
                   $slug = "v" + ($version -replace '\.', '-')
                   $outputPath = "marketing-site/src/content/changelog/$slug.mdx"
 
+                  # Skip if the file already exists
+                  if (Test-Path $outputPath) {
+                      Write-Host "Skipping v$version — file already exists at $outputPath"
+                      continue
+                  }
+
                   $frontmatter = @"
-                  ---
-                  title: "v$version ($date)"
-                  date: "$date"
-                  ---
+                      ---
+                      title: "v$version ($date)"
+                      date: "$date"
+                      ---
 
-                  "@
+                      "@
 
-                      "$frontmatter$body" | Set-Content $outputPath -Encoding UTF8
-                      Write-Host "Created changelog file: $outputPath"
-                      }
+                          "$frontmatter$body" | Set-Content $outputPath -Encoding UTF8
+                          Write-Host "Created changelog file: $outputPath"
+                          }
 
             - name: Create PR on marketing-site
               uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
