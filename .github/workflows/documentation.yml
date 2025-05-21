@@ -49,34 +49,13 @@ jobs:
               run: |
                   go run cmd/docs/main.go -out-dir ../marketing-site/src/content/docs/speakeasy-reference/cli
 
-            - name: Generate Release Notes
-              working-directory: speakeasy
-              run: |
-                  git config --global user.name "speakeasybot"
-                  git config --global user.email "speakeasybot@speakeasy.com"
-                  npx --yes conventional-changelog-cli -p conventionalcommits -o ../marketing-site/RELEASE_NOTES.md -r 1
-
-            - name: Check if there are any changes
-              working-directory: marketing-site
-              id: git-check
-              run: |
-                  git config --global user.name "speakeasybot"
-                  git config --global user.email "speakeasybot@speakeasy.com"
-                  git add .
-                  if git diff --cached --quiet; then
-                    echo "changed=false" >> "$GITHUB_OUTPUT"
-                  else
-                    echo "changed=true" >> "$GITHUB_OUTPUT"
-                  fi
-
             - name: Create PR against marketing-site
-              if: steps.git-check.outputs.changed == 'true'
               uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
               with:
                   path: marketing-site
                   token: ${{ secrets.SERVICE_BOT_TOKEN }}
-                  commit-message: "docs: update speakeasy CLI docs and/or changelog"
-                  title: "docs: update speakeasy CLI docs and/or changelog"
+                  commit-message: "docs: update speakeasy CLI docs"
+                  title: "docs: update speakeasy CLI docs"
                   branch: cli-docs/update
 
             - if: failure()
