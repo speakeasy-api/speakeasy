@@ -5,8 +5,6 @@ on:
         branches:
             - main
     workflow_dispatch:
-    repository_dispatch:
-        types: [release-docs-update]
 
 permissions:
     contents: write
@@ -41,7 +39,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.SERVICE_BOT_TOKEN }}
               run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
 
-            - name: Set up Go
+            - name: Set up Go 1.x
               uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
               with:
                   go-version-file: "speakeasy/go.mod"
@@ -51,22 +49,40 @@ jobs:
               run: |
                   go run cmd/docs/main.go -out-dir ../marketing-site/src/content/docs/speakeasy-reference/cli
 
-            - name: Write release notes
-              if: github.event_name == 'repository_dispatch'
+            - name: Generate Release Notes
+              uses: TriPSs/conventional-changelog-action@67139193614f5b9e8db87da1bd4240922b34d765 # v6.0.0
+              with:
+                  github-token: ${{ secrets.SERVICE_BOT_TOKEN }}
+                  output-file: ./marketing-site/RELEASE_NOTES.md
+                  skip-commit: "true"
+                  skip-on-empty: "true" # skip step entirely if no new conventional commits
+                  preset: conventionalcommits
+
+            - name: Check if there are any changes
+              working-directory: marketing-site
+              id: git-check
               run: |
-                  echo "${{ github.event.client_payload.release_notes }}" > marketing-site/src/content/docs/speakeasy-reference/release-notes.md
+                  git config --global user.name "speakeasybot"
+                  git config --global user.email "speakeasybot@speakeasy.com"
+                  git add .
+                  if git diff --cached --quiet; then
+                    echo "changed=false" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "changed=true" >> "$GITHUB_OUTPUT"
+                  fi
 
             - name: Create PR against marketing-site
+              if: steps.git-check.outputs.changed == 'true'
               uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
               with:
                   path: marketing-site
                   token: ${{ secrets.SERVICE_BOT_TOKEN }}
-                  commit-message: "docs: update speakeasy CLI docs"
-                  title: "docs: update speakeasy CLI docs"
+                  commit-message: "docs: update speakeasy CLI docs and/or changelog"
+                  title: "docs: update speakeasy CLI docs and/or changelog"
                   branch: cli-docs/update
 
-            - name: Notify Slack on Failure
-              if: failure()
+            - if: failure()
+              name: Notify Slack on Failure
               uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 # v2.1.0
               with:
                   webhook: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }}
