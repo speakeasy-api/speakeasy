@@ -50,11 +50,11 @@ jobs:
                   go run cmd/docs/main.go -out-dir ../marketing-site/src/content/docs/speakeasy-reference/cli
 
             - name: Generate Release Notes
-              uses: ./.github/actions/generate-changelog
-              with:
-                  github-token: ${{ secrets.SERVICE_BOT_TOKEN }}
-                  output-file: ../marketing-site/RELEASE_NOTES.md
-              working-directory: ./speakeasy
+              working-directory: speakeasy
+              run: |
+                  git config --global user.name "speakeasybot"
+                  git config --global user.email "speakeasybot@speakeasy.com"
+                  npx --yes conventional-changelog-cli -p conventionalcommits -o ../marketing-site/RELEASE_NOTES.md -r 1
 
             - name: Check if there are any changes
               working-directory: marketing-site
