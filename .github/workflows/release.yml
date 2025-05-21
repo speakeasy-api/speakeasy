@@ -75,5 +75,5 @@ jobs:
                   client-payload: >
                       {
                         "ref": "${{ github.sha }}",
-                        "release_notes": "${{ steps.changelog.outputs.clean_changelog }}"
+                        "release_notes": ${{ toJson(steps.changelog.outputs.clean_changelog) }}
                       }
