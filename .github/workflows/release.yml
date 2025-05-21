@@ -40,12 +40,14 @@ jobs:
             - name: Configure git for private modules
               run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
 
-            - name: Setup Choco
+            - name: Setup Choco (disabled for testing)
+              if: false # 👈 disables this step safely
               uses: crazy-max/ghaction-chocolatey@6828f16489ec8d2968b55066766cb41f0d278f2a # v3.3.0
               with:
                   args: --version
 
-            - name: Setup Go
+            - name: Setup Go (disabled for testing)
+              if: false # 👈 disables this step safely
               uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
               with:
                   go-version-file: "go.mod"
@@ -70,7 +72,7 @@ jobs:
                   token: ${{ secrets.SERVICE_BOT_TOKEN }}
                   repository: speakeasy-api/marketing-site
                   event-type: release-docs-update
-                  client-payload: |
+                  client-payload: >
                       {
                         "ref": "${{ github.sha }}",
                         "release_notes": "${{ steps.changelog.outputs.clean_changelog }}"
