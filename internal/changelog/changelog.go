@@ -64,6 +64,8 @@ func Generate(inputFile, outputDir string) error {
 		version := submatches[1]
 		date := submatches[2]
 		body := strings.TrimSpace(chunk[len(submatches[0]):])
+		body = strings.TrimSuffix(body, "---")
+		body = strings.TrimSpace(body)
 
 		if body == "" {
 			fmt.Printf("Skipping v%s — no content.\n", version)
@@ -82,8 +84,15 @@ func Generate(inputFile, outputDir string) error {
 
 		content := strings.Builder{}
 		content.WriteString("---\n")
-		content.WriteString(fmt.Sprintf("title: \"v%s (%s)\"\n", version, date))
+		content.WriteString(fmt.Sprintf("title: \"v%s\"\n", version))
 		content.WriteString(fmt.Sprintf("date: \"%s\"\n", date))
+		content.WriteString("# IMPORTANT: Add tags and authors like so:\n")
+		content.WriteString("# tags:\n")
+		content.WriteString("#   - \"Python\"\n")
+		content.WriteString("#   - \"Ruby\"\n")
+		content.WriteString("# authors:\n")
+		content.WriteString("#   - name: Sagar Batchu\n")
+		content.WriteString("#   - image_url: \"/assets/author-headshots/sagar.jpeg\"\n")
 		content.WriteString("---\n\n")
 		content.WriteString(processedBody + "\n")
 
@@ -100,13 +109,28 @@ func Generate(inputFile, outputDir string) error {
 func addEmojisToSections(body string) string {
 	lines := strings.Split(body, "\n")
 	var result []string
-
+	sectionCount := 0
+	
+	// Count sections
+	for _, line := range lines {
+		if strings.HasPrefix(line, "### ") {
+			sectionCount++
+		}
+	}
+	
+	foundFirstSection := false
 	for _, line := range lines {
 		if strings.HasPrefix(line, "### ") {
 			sectionName := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(line, "### ")))
 			if emoji, exists := sectionEmojis[sectionName]; exists {
 				line = "### " + emoji + " " + strings.TrimSpace(strings.TrimPrefix(line, "### "))
 			}
+			
+			// If this is the second section and we have multiple sections, add HR before it
+			if foundFirstSection && sectionCount > 1 {
+				result = append(result, "", "<hr />", "")
+			}
+			foundFirstSection = true
 		}
 		result = append(result, line)
 	}
