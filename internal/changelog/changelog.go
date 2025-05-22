@@ -12,6 +12,7 @@ var headerPattern = regexp.MustCompile(`(?m)^## \[(\d+\.\d+\.\d+)\]\([^)]+\) \((
 var sectionPattern = regexp.MustCompile(`(?m)^### ([^#\n]+)\s*\n(.*?)(?:\n###|$)`)
 var languagePattern = regexp.MustCompile(`\b(PHP|Ruby|Java|Python|TypeScript|JavaScript|Go|C#|Swift|Kotlin)\b`)
 var urlPattern = regexp.MustCompile(`https://github\.com/speakeasy-api/cli/pull/`)
+var commitPattern = regexp.MustCompile(`\s+\(\[[a-f0-9]+\]\(https://github\.com/[^)]+\)\)`)
 
 var sectionEmojis = map[string]string{
 	"features":                 "✨",
@@ -66,6 +67,7 @@ func Generate(inputFile, outputDir string) error {
 		body := strings.TrimSpace(chunk[len(submatches[0]):])
 		body = strings.TrimSuffix(body, "---")
 		body = strings.TrimSpace(body)
+		body = commitPattern.ReplaceAllString(body, "")
 
 		if body == "" {
 			fmt.Printf("Skipping v%s — no content.\n", version)
