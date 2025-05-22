@@ -110,14 +110,14 @@ func addEmojisToSections(body string) string {
 	lines := strings.Split(body, "\n")
 	var result []string
 	sectionCount := 0
-	
+
 	// Count sections
 	for _, line := range lines {
 		if strings.HasPrefix(line, "### ") {
 			sectionCount++
 		}
 	}
-	
+
 	foundFirstSection := false
 	for _, line := range lines {
 		if strings.HasPrefix(line, "### ") {
@@ -125,7 +125,7 @@ func addEmojisToSections(body string) string {
 			if emoji, exists := sectionEmojis[sectionName]; exists {
 				line = "### " + emoji + " " + strings.TrimSpace(strings.TrimPrefix(line, "### "))
 			}
-			
+
 			// If this is the second section and we have multiple sections, add HR before it
 			if foundFirstSection && sectionCount > 1 {
 				result = append(result, "", "<hr />", "")
