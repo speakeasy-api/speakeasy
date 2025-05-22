@@ -140,10 +140,30 @@ components:
           description: |
             Map of target specific inputs keyed on target name
             Only present if a target input is modified
+        compile:
+          description: whether to compile the generated SDK
+          type: boolean
+        disconnect:
+          description: whether to disconnect the studio when completed
+          type: boolean
+        stream:
+          description: if provided, the generator will stream progress updates back to the studio
+          $ref: "#/components/schemas/RunStreamOptions"
       required:
-        - overlay
-        - input
-        - targets
+        - compile
+        - disconnect
+    RunStreamOptions:
+      type: object
+      properties:
+        genSteps:
+          description: whether to send a progress update at each generation step
+          type: boolean
+        fileStatus:
+          description: whether to send a progress update for each created, modified or deleted file
+          type: boolean
+      required:
+        - genSteps
+        - fileStatus
     RunResponseData:
       type: object
       description: Map of target run summaries
@@ -151,6 +171,21 @@ components:
         step:
           type: string
           description: Step of the run
+          enum:
+            # CLI steps
+            - "Fetching spec"
+            - "Overlaying"
+            - "Transforming"
+            - "Linting"
+            - "Uploading spec"
+            # Generator steps
+            - "Started"
+            - "Generating SDK"
+            - "Updating README"
+            - "Compiling SDK"
+            - "Completed"
+            - "Cancelling"
+            - "Exiting"
         isPartial:
           type: boolean
           description: Whether the run was partial
@@ -228,34 +263,43 @@ components:
     TargetRunSummary:
       type: object
       properties:
-        readme:
+        targetID:
           type: string
-          description: Contents of the README file for this target
-        gen_yaml:
+          description: Target ID in the workflow file
+        sourceID:
           type: string
-          description: Contents of the gen.yaml file for this target
-        gen_yaml_path:
-          type: string
-          description: The path to the gen.yaml file for this target
+          description: Source ID in the workflow file
         output_directory:
           type: string
           description: Output directory for this target
         language:
           type: string
           description: Language for this target
-        sourceID:
-          type: string
-          description: Source ID in the workflow file
-        targetID:
-          type: string
-          description: Target ID in the workflow file
+        readme:
+          $ref: "#/components/schemas/FileData"
+        gen_yaml:
+          $ref: "#/components/schemas/FileData"
       required:
         - targetID
         - sourceID
-        - readme
-        - gen_yaml
         - output_directory
         - language
+    FileData:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The file's reference name
+        path:
+          type: string
+          description: The file's absolute path
+        content:
+          type: string
+          description: The file's content
+      required:
+        - name
+        - path
+        - content
     TargetSpecificInputs:
       type: object
       properties:
