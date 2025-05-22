@@ -27,6 +27,26 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
 
+type SourceResultCallback func(sourceRes *SourceResult, sourceStep SourceStepID) error
+
+type SourceStepID string
+
+const (
+	// CLI steps
+	SourceStepFetch     SourceStepID = "Fetching spec"
+	SourceStepOverlay   SourceStepID = "Overlaying"
+	SourceStepTransform SourceStepID = "Transforming"
+	SourceStepLint      SourceStepID = "Linting"
+	SourceStepUpload    SourceStepID = "Uploading spec"
+	// Generator steps
+	SourceStepStart    SourceStepID = "Started"
+	SourceStepGenerate SourceStepID = "Generating SDK"
+	SourceStepReadme   SourceStepID = "Updating README"
+	SourceStepCompile  SourceStepID = "Compiling SDK"
+	SourceStepComplete SourceStepID = "Completed"
+	SourceStepExit     SourceStepID = "Exiting"
+)
+
 type SourceResult struct {
 	Source string
 	// The merged OAS spec that was input to the source contents as a string
@@ -55,7 +75,7 @@ func (e *LintingError) Error() string {
 	return fmt.Sprintf("linting failed: %s - %s", e.Document, errString)
 }
 
-func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, targetLanguage string) (string, *SourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{
@@ -64,9 +84,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 	defer func() {
 		w.SourceResults[sourceID] = sourceRes
-		w.OnSourceResult(sourceRes, "")
+		w.OnSourceResult(sourceRes, SourceStepComplete)
 	}()
-	w.OnSourceResult(sourceRes, "Fetching spec")
+	w.OnSourceResult(sourceRes, SourceStepFetch)
 
 	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
@@ -122,7 +142,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
-		w.OnSourceResult(sourceRes, "Overlaying")
+		w.OnSourceResult(sourceRes, SourceStepOverlay)
 		currentDocument, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -130,7 +150,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
-		w.OnSourceResult(sourceRes, "Transforming")
+		w.OnSourceResult(sourceRes, SourceStepTransform)
 		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -138,13 +158,13 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
-		return "", nil, fmt.Errorf("failed to write to output location: %w", err)
+		return "", nil, fmt.Errorf("failed to write to output location: %w %s?", err, outputLocation)
 	}
 	currentDocument = outputLocation
 	sourceRes.OutputPath = currentDocument
 
 	if !w.SkipLinting {
-		w.OnSourceResult(sourceRes, "Linting")
+		w.OnSourceResult(sourceRes, SourceStepLint)
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir, targetLanguage)
 		if err != nil {
 			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
@@ -159,7 +179,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 	step.Succeed()
 
-	w.OnSourceResult(sourceRes, "Uploading spec")
+	w.OnSourceResult(sourceRes, SourceStepUpload)
 
 	if !w.SkipSnapshot {
 		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)

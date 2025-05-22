@@ -147,35 +147,54 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}
 	}
 
-	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
+	if w.CancellableGeneration != nil {
+		cancelCtx, cancelFunc := context.WithCancel(ctx)
+		w.CancellableGeneration.CancellationMutexCond.L.Lock()
+		w.CancellableGeneration.CancellableContext = cancelCtx
+		w.CancellableGeneration.CancelGeneration = cancelFunc
+		w.CancellableGeneration.CancellationMutexCond.L.Unlock()
 
-	logListener := make(chan log.Msg)
-	logger := log.From(ctx).WithListener(logListener)
-	ctx = log.With(ctx, logger)
-	go genStep.ListenForSubsteps(logListener)
+		defer func() {
+			w.CancellableGeneration.CancellationMutexCond.L.Lock()
+			w.CancellableGeneration.CancelGeneration = nil
+			w.CancellableGeneration.CancellableContext = nil
+			w.CancellableGeneration.CancellationMutexCond.L.Unlock()
+		}()
+	}
+
+	if w.StreamableGeneration != nil && w.Debug {
+		logListener := make(chan log.Msg)
+		w.StreamableGeneration.LogListener = logListener
+		logger := log.From(ctx).WithListener(logListener)
+		ctx = log.With(ctx, logger)
+		genStep := rootStep.NewSubstep(fmt.Sprintf("STUDIO Generating %s SDK", utils.CapitalizeFirst(t.Target)))
+		go genStep.ListenForSubsteps(logListener)
+	}
 
 	generationAccess, err := sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{
-			CustomerID:      config.GetCustomerID(),
-			WorkspaceID:     config.GetWorkspaceID(),
-			Language:        t.Target,
-			SchemaPath:      sourcePath,
-			Header:          "",
-			Token:           "",
-			OutDir:          outDir,
-			CLIVersion:      events.GetSpeakeasyVersionFromContext(ctx),
-			InstallationURL: w.InstallationURLs[target],
-			Debug:           w.Debug,
-			AutoYes:         true,
-			Published:       published,
-			OutputTests:     false,
-			Repo:            w.Repo,
-			RepoSubDir:      w.RepoSubDirs[target],
-			Verbose:         w.Verbose,
-			Compile:         w.ShouldCompile,
-			TargetName:      target,
-			SkipVersioning:  w.SkipVersioning,
+			CustomerID:            config.GetCustomerID(),
+			WorkspaceID:           config.GetWorkspaceID(),
+			Language:              t.Target,
+			SchemaPath:            sourcePath,
+			Header:                "",
+			Token:                 "",
+			OutDir:                outDir,
+			CLIVersion:            events.GetSpeakeasyVersionFromContext(ctx),
+			InstallationURL:       w.InstallationURLs[target],
+			Debug:                 w.Debug,
+			AutoYes:               true,
+			Published:             published,
+			OutputTests:           false,
+			Repo:                  w.Repo,
+			RepoSubDir:            w.RepoSubDirs[target],
+			Verbose:               w.Verbose,
+			Compile:               w.ShouldCompile,
+			TargetName:            target,
+			SkipVersioning:        w.SkipVersioning,
+			CancellableGeneration: w.CancellableGeneration,
+			StreamableGeneration:  w.StreamableGeneration,
 		},
 	)
 
@@ -387,4 +406,19 @@ func (w *Workflow) printTargetSuccessMessage(ctx context.Context) {
 
 	msg := fmt.Sprintf("%s\n%s\n", styles.Success.Render(heading), strings.Join(additionalLines, "\n"))
 	log.From(ctx).Println(msg)
+}
+
+func (w *Workflow) CancelGeneration() error {
+
+	if w.CancellableGeneration != nil {
+		w.CancellableGeneration.CancellationMutexCond.L.Lock()
+		defer w.CancellableGeneration.CancellationMutexCond.L.Unlock()
+
+		if w.CancellableGeneration.CancelGeneration != nil {
+			w.CancellableGeneration.CancelGeneration()
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Generation is not cancellable")
 }
