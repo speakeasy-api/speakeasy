@@ -67,8 +67,11 @@ jobs:
                   title: "docs: add changelog for ${{ steps.date.outputs.today }}"
                   branch: changelog/update-${{ steps.date.outputs.today }}
 
-            - name: Clean up temp files
-              run: rm RELEASE_NOTES.md
+            - name: Clean up changelog temp files
+              shell: pwsh
+              run: |
+                  Remove-Item -Force RELEASE_NOTES.md
+                  Remove-Item -Recurse -Force marketing-site
 
             # More assembly might be required: Docker logins, GPG, etc. It all depends
             # on your needs.
