@@ -3,6 +3,11 @@ package run
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/defaultcodesamples"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -10,10 +15,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/overlay"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type Overlay struct {
@@ -92,7 +93,7 @@ func overlayDocument(ctx context.Context, schema string, overlayFiles []string, 
 		}
 
 		// YamlOut param needs to be based on the eventual output file
-		if _, err := overlay.Apply(currentBase, overlayFile, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && !strings.Contains(err.Error(), "overlay must define at least one action") {
+		if _, err := overlay.Apply(currentBase, []string{overlayFile}, utils.HasYAMLExt(outFile), tempOutFile, false, false); err != nil && !strings.Contains(err.Error(), "overlay must define at least one action") {
 			return err
 		}
 
