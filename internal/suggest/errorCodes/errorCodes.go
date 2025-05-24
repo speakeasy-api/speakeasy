@@ -249,6 +249,7 @@ func getSchemaNodes(group errorGroup) []*yaml.Node {
 
 	var nodes []*yaml.Node
 	nodes = append(nodes, builder.NewNodeItem("type", "object")...)
+	nodes = append(nodes, builder.NewNodeItem("x-speakeasy-suggested-error", "true")...)
 	nodes = append(nodes, builder.NewKeyNode("properties"), propertiesNode)
 	nodes = append(nodes, builder.NewNodeItem("additionalProperties", "true")...)
 
