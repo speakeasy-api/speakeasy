@@ -87,13 +87,8 @@ func main() {
     )
 
     res, err := s.Run.ReRun(ctx, components.RunRequestBody{
-        Overlay: "<value>",
-        Input: "<value>",
-        Targets: map[string]components.TargetSpecificInputs{
-            "key": components.TargetSpecificInputs{
-                Config: "<value>",
-            },
-        },
+        Compile: true,
+        Disconnect: true,
     })
     if err != nil {
         log.Fatal(err)
