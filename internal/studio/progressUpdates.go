@@ -2,6 +2,7 @@ package studio
 
 import (
 	"fmt"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
@@ -13,7 +14,7 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 	workflowConfig := h.WorkflowRunner.GetWorkflowFile()
 	workflow, _ := convertWorkflowToComponentsWorkflow(*workflowConfig, h.WorkflowRunner.ProjectDir)
 
-	onProgressUpdate := func(progressUpdate sdkgen.ProgressUpdate) {
+	onProgressUpdate := func(progressUpdate generate.ProgressUpdate) {
 		targetID := progressUpdate.TargetID
 		targetConfig, found := workflowConfig.Targets[targetID]
 		if !found {
@@ -31,9 +32,9 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 		case progressUpdate.Step != nil:
 
 			switch progressUpdate.Step.ID {
-			case "genSDK":
+			case generate.ProgressStepGenSDK:
 				step = run.SourceStepGenerate
-			case "compileSDK":
+			case generate.ProgressStepCompileSDK:
 				step = run.SourceStepCompile
 			default:
 				return
@@ -86,7 +87,7 @@ func (h *StudioHandlers) disableGenerationProgressUpdates() {
 	h.WorkflowRunner.StreamableGeneration = nil
 }
 
-func (h *StudioHandlers) logGenerationProgress(progressUpdate sdkgen.ProgressUpdate) {
+func (h *StudioHandlers) logGenerationProgress(progressUpdate generate.ProgressUpdate) {
 	logChan := h.WorkflowRunner.StreamableGeneration.LogListener
 	if logChan == nil {
 		return
