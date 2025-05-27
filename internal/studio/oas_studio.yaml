@@ -60,14 +60,6 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/SuggestResponse"
-  /exit:
-    post:
-      summary: Exit
-      description: Exit the CLI
-      operationId: exit
-      responses:
-        "200":
-          description: Successful response
 components:
   responses:
     SuggestResponse:

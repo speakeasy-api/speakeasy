@@ -79,7 +79,6 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	})
 	mux.HandleFunc("/overlays/compare", handler(handlers.compareOverlay))
 	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
-	// mux.HandleFunc("/exit", handler(handlers.exit))
 
 	port, err := searchForAvailablePort()
 	if err != nil {
