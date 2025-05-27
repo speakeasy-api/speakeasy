@@ -18,6 +18,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -99,6 +100,8 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 	if wsRes.Workspace == nil {
 		return result, fmt.Errorf("unexpected missing workspace response")
 	}
+
+	log.From(ctx).Printf("Workspace: %s", wsRes.Workspace.Name)
 
 	orgReq := operations.GetOrganizationRequest{
 		OrganizationID: wsRes.Workspace.OrganizationID,
@@ -217,19 +220,25 @@ func newStatusWorkspaceModel(ctx context.Context, client *speakeasyclientsdkgo.S
 		slug:           workspace.Slug,
 	}
 
+	stopSpinner := interactivity.StartSpinner("Collecting targets data...")
+
 	wsTargetsreq := operations.GetWorkspaceTargetsRequest{}
 
 	wsTargetsRes, err := client.Events.GetTargets(ctx, wsTargetsreq)
 
 	if err != nil {
+		stopSpinner()
 		return result, fmt.Errorf("error getting Speakeasy workspace targets: %w", err)
 	}
 
 	if wsTargetsRes.StatusCode != 200 {
+		stopSpinner()
 		return result, fmt.Errorf("unexpected status code getting Speakeasy workspace targets: %d", wsTargetsRes.StatusCode)
 	}
 
 	targets, err := newStatusWorkspaceTargetsModel(ctx, client, org, result, wsTargetsRes.TargetSDKList)
+
+	stopSpinner()
 
 	if err != nil {
 		return result, err
