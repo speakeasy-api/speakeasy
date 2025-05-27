@@ -220,7 +220,7 @@ func newStatusWorkspaceModel(ctx context.Context, client *speakeasyclientsdkgo.S
 		slug:           workspace.Slug,
 	}
 
-	stopSpinner := interactivity.StartSpinner("Collecting targets data...")
+	stopSpinner := interactivity.StartSpinner("Querying for active SDKs and other targets...")
 
 	wsTargetsreq := operations.GetWorkspaceTargetsRequest{}
 
