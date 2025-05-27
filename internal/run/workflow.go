@@ -8,6 +8,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/registry"
 
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -292,7 +293,7 @@ func WithCancellableGeneration(cancellable bool) Opt {
 	}
 }
 
-func WithStreamableGeneration(onProgressUpdate func(sdkgen.ProgressUpdate), updateSteps bool) Opt {
+func WithStreamableGeneration(onProgressUpdate func(generate.ProgressUpdate), updateSteps bool) Opt {
 
 	return func(w *Workflow) {
 		w.StreamableGeneration = &sdkgen.StreamableGeneration{

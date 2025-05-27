@@ -34,9 +34,6 @@ type GenerationAccess struct {
 	Level         *shared.Level
 }
 
-type ProgressUpdate = generate.ProgressUpdate
-type ProgressStep = generate.ProgressStep
-
 type CancellableGeneration struct {
 	CancellationMutex     sync.Mutex
 	CancellationMutexCond *sync.Cond
@@ -45,9 +42,9 @@ type CancellableGeneration struct {
 }
 
 type StreamableGeneration struct {
-	OnProgressUpdate func(ProgressUpdate) // the callback function called on each progress update
-	UpdateSteps      bool                 // whether to receive an update before each generation step starts
-	LogListener      chan log.Msg         // the channel to listen for log messages (Debug only)
+	OnProgressUpdate func(generate.ProgressUpdate) // the callback function called on each progress update
+	UpdateSteps      bool                          // whether to receive an update before each generation step starts
+	LogListener      chan log.Msg                  // the channel to listen for log messages (Debug only)
 }
 
 type GenerateOptions struct {
@@ -195,9 +192,9 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			errs, aborted := g.GenerateWithCancel(opts.CancellableGeneration.CancellableContext, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
 			if aborted {
 				if opts.StreamableGeneration != nil && opts.StreamableGeneration.OnProgressUpdate != nil {
-					opts.StreamableGeneration.OnProgressUpdate(ProgressUpdate{
-						Step: &ProgressStep{
-							ID:      "cancel",
+					opts.StreamableGeneration.OnProgressUpdate(generate.ProgressUpdate{
+						Step: &generate.ProgressStep{
+							ID:      generate.ProgressStepCancelled,
 							Message: fmt.Sprintf("Generation was aborted w/ %v errors", len(errs)),
 						},
 					})
