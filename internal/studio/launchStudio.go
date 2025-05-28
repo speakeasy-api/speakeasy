@@ -64,21 +64,18 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler(handlers.root))
 	mux.HandleFunc("/health", handler(handlers.health))
-
+	mux.HandleFunc("/overlays/compare", handler(handlers.compareOverlay))
+	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			handler(handlers.reRun)(w, r)
 		case http.MethodGet:
 			handler(handlers.getLastRunResult)(w, r)
-		case http.MethodPut:
-			handler(handlers.cancelRun)(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/overlays/compare", handler(handlers.compareOverlay))
-	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
 
 	port, err := searchForAvailablePort()
 	if err != nil {

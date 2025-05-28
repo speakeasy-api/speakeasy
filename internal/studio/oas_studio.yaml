@@ -132,9 +132,6 @@ components:
           description: |
             Map of target specific inputs keyed on target name
             Only present if a target input is modified
-        compile:
-          description: whether to compile the generated SDK
-          type: boolean
         disconnect:
           description: whether to disconnect the studio when completed
           type: boolean
@@ -142,7 +139,6 @@ components:
           description: if provided, the generator will stream progress updates back to the studio
           $ref: "#/components/schemas/RunStreamOptions"
       required:
-        - compile
         - disconnect
     RunStreamOptions:
       type: object

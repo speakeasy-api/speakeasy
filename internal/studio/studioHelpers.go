@@ -30,7 +30,6 @@ import (
 type TargetResults = map[string]components.TargetRunSummary
 
 type studioRunnerOptions struct {
-	Compile        bool
 	Cancellable    bool
 	OnSourceResult run.SourceResultCallback
 	Debug          bool
@@ -49,7 +48,7 @@ func cloneWorkflowRunner(ctx context.Context, workflowRunner run.Workflow, optio
 		run.WithSkipGenerateLintReport(),
 		run.WithSkipSnapshot(true),
 		run.WithSkipChangeReport(true),
-		run.WithShouldCompile(options.Compile),
+		run.WithShouldCompile(true),
 		run.WithCancellableGeneration(options.Cancellable),
 		run.WithSourceUpdates(options.OnSourceResult),
 		run.WithDebug(options.Debug),
@@ -62,7 +61,7 @@ func cloneWorkflowRunner(ctx context.Context, workflowRunner run.Workflow, optio
 	return *clonedWorkflow, nil
 }
 
-func getOnSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string) run.SourceResultCallback {
+func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string) run.SourceResultCallback {
 	return func(sourceResult *run.SourceResult, sourceStep run.SourceStepID) error {
 		if sourceResult.Source == sourceID {
 			sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, sourceID, overlayPath)
@@ -91,7 +90,6 @@ func getOnSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.
 
 func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
 	options := studioRunnerOptions{
-		Compile:        false,
 		Cancellable:    false,
 		Debug:          false,
 		OnSourceResult: nil,
@@ -143,7 +141,7 @@ func readFileData(name string, path string) (components.FileData, error) {
 	}
 
 	return components.FileData{
-		Name:    "gen.yaml",
+		Name:    name,
 		Path:    absPath,
 		Content: content,
 	}, nil

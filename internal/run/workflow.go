@@ -284,8 +284,7 @@ func WithCancellableGeneration(cancellable bool) Opt {
 	return func(w *Workflow) {
 		if cancellable {
 			w.CancellableGeneration = &sdkgen.CancellableGeneration{
-				CancellationMutex:     sync.Mutex{},
-				CancellationMutexCond: sync.NewCond(&sync.Mutex{}),
+				CancellationMutex: sync.Mutex{},
 			}
 		} else {
 			w.CancellableGeneration = nil
@@ -293,12 +292,13 @@ func WithCancellableGeneration(cancellable bool) Opt {
 	}
 }
 
-func WithStreamableGeneration(onProgressUpdate func(generate.ProgressUpdate), updateSteps bool) Opt {
+func WithStreamableGeneration(onProgressUpdate func(generate.ProgressUpdate), genSteps, fileStatus bool) Opt {
 
 	return func(w *Workflow) {
 		w.StreamableGeneration = &sdkgen.StreamableGeneration{
 			OnProgressUpdate: onProgressUpdate,
-			UpdateSteps:      updateSteps,
+			GenSteps:         genSteps,
+			FileStatus:       fileStatus,
 		}
 	}
 }
