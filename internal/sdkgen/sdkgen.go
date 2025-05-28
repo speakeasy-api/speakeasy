@@ -35,15 +35,15 @@ type GenerationAccess struct {
 }
 
 type CancellableGeneration struct {
-	CancellationMutex     sync.Mutex
-	CancellationMutexCond *sync.Cond
-	CancellableContext    context.Context
-	CancelGeneration      context.CancelFunc // the function to call to cancel generation
+	CancellationMutex  sync.Mutex
+	CancellableContext context.Context
+	CancelGeneration   context.CancelFunc // the function to call to cancel generation
 }
 
 type StreamableGeneration struct {
 	OnProgressUpdate func(generate.ProgressUpdate) // the callback function called on each progress update
-	UpdateSteps      bool                          // whether to receive an update before each generation step starts
+	GenSteps         bool                          // whether to receive an update before each generation step starts
+	FileStatus       bool                          // whether to receive updates on each file status change
 	LogListener      chan log.Msg                  // the channel to listen for log messages (Debug only)
 }
 
@@ -170,7 +170,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			generate.WithProgressUpdates(
 				opts.TargetName,
 				opts.StreamableGeneration.OnProgressUpdate,
-				opts.StreamableGeneration.UpdateSteps,
+				opts.StreamableGeneration.GenSteps,
+				opts.StreamableGeneration.FileStatus,
 			),
 		)
 	}
@@ -191,18 +192,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
 			errs, aborted := g.GenerateWithCancel(opts.CancellableGeneration.CancellableContext, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
 			if aborted {
-				if opts.StreamableGeneration != nil && opts.StreamableGeneration.OnProgressUpdate != nil {
-					opts.StreamableGeneration.OnProgressUpdate(generate.ProgressUpdate{
-						Step: &generate.ProgressStep{
-							ID:      generate.ProgressStepCancelled,
-							Message: fmt.Sprintf("Generation was aborted w/ %v errors", len(errs)),
-						},
-					})
-				}
-
 				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
 			}
-
 			genErrs = errs
 		} else {
 			genErrs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
