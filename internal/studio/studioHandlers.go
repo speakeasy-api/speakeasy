@@ -14,6 +14,7 @@ import (
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
@@ -30,9 +31,7 @@ type StudioHandlers struct {
 	StudioURL      string
 	Server         *http.Server
 
-	mutex           sync.Mutex
-	mutexCondition  *sync.Cond
-	running         bool
+	runMutex        sync.Mutex
 	healthCheckSeen bool
 }
 
@@ -57,8 +56,7 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 		}
 	}
 
-	ret.mutex = sync.Mutex{}
-	ret.mutexCondition = sync.NewCond(&ret.mutex)
+	ret.runMutex = sync.Mutex{}
 
 	return ret, nil
 }
@@ -77,11 +75,8 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 		return fmt.Errorf("error sending last run result to stream: %w", err)
 	}
 
-	h.mutexCondition.L.Lock()
-	for h.running {
-		h.mutexCondition.Wait()
-	}
-	defer h.mutexCondition.L.Unlock()
+	h.runMutex.Lock()
+	defer h.runMutex.Unlock()
 
 	return sendLastRunResultToStream(ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath, run.SourceStepComplete)
 }
@@ -110,13 +105,8 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 
 	// Wait for previous run to finish, if any
 	h.WorkflowRunner.CancelGeneration()
-	h.mutexCondition.L.Lock()
-	h.running = true
-	defer func() {
-		h.running = false
-		h.mutexCondition.Broadcast()
-		h.mutexCondition.L.Unlock()
-	}()
+	h.runMutex.Lock()
+	defer h.runMutex.Unlock()
 
 	updatedOverlayPath, err := updateSourceAndTarget(h.WorkflowRunner, h.SourceID, h.OverlayPath, runRequestBody)
 	if err != nil {
@@ -125,10 +115,9 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	h.OverlayPath = updatedOverlayPath
 
 	options := studioRunnerOptions{
-		Compile:        false,
-		Cancellable:    true,
-		OnSourceResult: getOnSourceResult(h.Ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath),
-		Debug:          true,
+		Cancellable:    !runRequestBody.Disconnect,
+		Debug:          env.IsLocalDev(),
+		OnSourceResult: onSourceResult(h.Ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath),
 	}
 
 	defer func() {
@@ -141,7 +130,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	}
 
 	if runRequestBody.Stream != nil {
-		h.enableGenerationProgressUpdates(w, flusher, runRequestBody.Stream.Steps)
+		h.enableGenerationProgressUpdates(w, flusher, runRequestBody.Stream.GenSteps, runRequestBody.Stream.FileStatus)
 		defer h.disableGenerationProgressUpdates()
 	}
 
@@ -276,8 +265,4 @@ func (h *StudioHandlers) suggestMethodNames(ctx context.Context, w http.Response
 	}
 
 	return nil
-}
-
-func (h *StudioHandlers) cancelRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	return h.WorkflowRunner.CancelGeneration()
 }

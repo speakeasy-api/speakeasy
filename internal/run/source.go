@@ -44,6 +44,7 @@ const (
 	SourceStepReadme   SourceStepID = "Updating README"
 	SourceStepCompile  SourceStepID = "Compiling SDK"
 	SourceStepComplete SourceStepID = "Completed"
+	SourceStepCancel   SourceStepID = "Cancelling"
 	SourceStepExit     SourceStepID = "Exiting"
 )
 

@@ -149,16 +149,17 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	if w.CancellableGeneration != nil {
 		cancelCtx, cancelFunc := context.WithCancel(ctx)
-		w.CancellableGeneration.CancellationMutexCond.L.Lock()
+		w.CancellableGeneration.CancellationMutex.Lock()
 		w.CancellableGeneration.CancellableContext = cancelCtx
 		w.CancellableGeneration.CancelGeneration = cancelFunc
-		w.CancellableGeneration.CancellationMutexCond.L.Unlock()
+		w.CancellableGeneration.CancellationMutex.Unlock()
 
 		defer func() {
-			w.CancellableGeneration.CancellationMutexCond.L.Lock()
+			w.CancellableGeneration.CancellationMutex.Lock()
 			w.CancellableGeneration.CancelGeneration = nil
 			w.CancellableGeneration.CancellableContext = nil
-			w.CancellableGeneration.CancellationMutexCond.L.Unlock()
+			w.CancellableGeneration.CancellationMutex.Unlock()
+			cancelFunc() // Ensure context is cleaned up
 		}()
 	}
 
@@ -409,11 +410,9 @@ func (w *Workflow) printTargetSuccessMessage(ctx context.Context) {
 }
 
 func (w *Workflow) CancelGeneration() error {
-
 	if w.CancellableGeneration != nil {
-		w.CancellableGeneration.CancellationMutexCond.L.Lock()
-		defer w.CancellableGeneration.CancellationMutexCond.L.Unlock()
-
+		w.CancellableGeneration.CancellationMutex.Lock()
+		defer w.CancellableGeneration.CancellationMutex.Unlock()
 		if w.CancellableGeneration.CancelGeneration != nil {
 			w.CancellableGeneration.CancelGeneration()
 			return nil

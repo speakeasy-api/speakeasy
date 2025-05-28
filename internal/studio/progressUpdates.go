@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, flusher http.Flusher, updateSteps bool) {
+func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, flusher http.Flusher, genSteps, fileStatus bool) {
 	workflowConfig := h.WorkflowRunner.GetWorkflowFile()
 	workflow, _ := convertWorkflowToComponentsWorkflow(*workflowConfig, h.WorkflowRunner.ProjectDir)
 
@@ -36,6 +36,8 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 				step = run.SourceStepGenerate
 			case generate.ProgressStepCompileSDK:
 				step = run.SourceStepCompile
+			case generate.ProgressStepCancelled:
+				step = run.SourceStepCancel
 			default:
 				return
 			}
@@ -79,7 +81,8 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 
 	h.WorkflowRunner.StreamableGeneration = &sdkgen.StreamableGeneration{
 		OnProgressUpdate: onProgressUpdate,
-		UpdateSteps:      updateSteps,
+		GenSteps:         genSteps,
+		FileStatus:       fileStatus,
 	}
 }
 
