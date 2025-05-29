@@ -32,8 +32,7 @@ type StudioHandlers struct {
 	StudioURL      string
 	Server         *http.Server
 
-	runningCond     *sync.Cond
-	running         bool
+	runMutex        sync.Mutex
 	healthCheckSeen bool
 }
 
@@ -58,9 +57,6 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 		}
 	}
 
-	var runCondMutex sync.Mutex
-	ret.runningCond = sync.NewCond(&runCondMutex)
-
 	return ret, nil
 }
 
@@ -78,11 +74,9 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 		return fmt.Errorf("error sending last run result to stream: %w", err)
 	}
 
-	h.runningCond.L.Lock()
-	for h.running {
-		h.runningCond.Wait()
-	}
-	h.runningCond.L.Unlock()
+	// make sure no generation is currently running
+	h.runMutex.Lock()
+	defer h.runMutex.Unlock()
 
 	return sendLastRunResultToStream(ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath, "Complete")
 }
@@ -96,20 +90,9 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return errors.New("streaming unsupported")
 	}
 
-	// Wait for the run to finish
-	h.runningCond.L.Lock()
-	for h.running {
-		h.runningCond.Wait()
-	}
-	h.running = true
-	h.runningCond.L.Unlock()
-
-	defer func() {
-		h.runningCond.L.Lock()
-		h.running = false
-		h.runningCond.Broadcast()
-		h.runningCond.L.Unlock()
-	}()
+	// Wait for last run to finish
+	h.runMutex.Lock()
+	defer h.runMutex.Unlock()
 
 	// If the client disconnected already, save ourselves the trouble
 	if ctx.Err() != nil {
