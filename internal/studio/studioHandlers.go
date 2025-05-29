@@ -32,8 +32,7 @@ type StudioHandlers struct {
 	StudioURL      string
 	Server         *http.Server
 
-	mutex           sync.Mutex
-	mutexCondition  *sync.Cond
+	runningCond     *sync.Cond
 	running         bool
 	healthCheckSeen bool
 }
@@ -59,8 +58,8 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 		}
 	}
 
-	ret.mutex = sync.Mutex{}
-	ret.mutexCondition = sync.NewCond(&ret.mutex)
+	var runCondMutex sync.Mutex
+	ret.runningCond = sync.NewCond(&runCondMutex)
 
 	return ret, nil
 }
@@ -79,11 +78,11 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 		return fmt.Errorf("error sending last run result to stream: %w", err)
 	}
 
-	h.mutexCondition.L.Lock()
+	h.runningCond.L.Lock()
 	for h.running {
-		h.mutexCondition.Wait()
+		h.runningCond.Wait()
 	}
-	defer h.mutexCondition.L.Unlock()
+	h.runningCond.L.Unlock()
 
 	return sendLastRunResultToStream(ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath, "Complete")
 }
@@ -98,16 +97,18 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	}
 
 	// Wait for the run to finish
-	h.mutexCondition.L.Lock()
+	h.runningCond.L.Lock()
 	for h.running {
-		h.mutexCondition.Wait()
+		h.runningCond.Wait()
 	}
-
 	h.running = true
+	h.runningCond.L.Unlock()
+
 	defer func() {
+		h.runningCond.L.Lock()
 		h.running = false
-		h.mutexCondition.Broadcast()
-		h.mutexCondition.L.Unlock()
+		h.runningCond.Broadcast()
+		h.runningCond.L.Unlock()
 	}()
 
 	// If the client disconnected already, save ourselves the trouble
