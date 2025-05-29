@@ -1,203 +1,203 @@
 openapi: "3.0.0"
 info:
-    version: 1.0.0
-    title: Swagger Petstore
-    license:
-        name: MIT
+  version: 1.0.0
+  title: Swagger Petstore
+  license:
+    name: MIT
 servers:
-    - url: http://petstore.swagger.io/v1
+  - url: http://petstore.swagger.io/v1
 paths:
-    /pets:
-        get:
-            summary: List all pets
-            operationId: listPets
-            tags:
-                - pets
-            parameters:
-                - name: limit
-                  in: query
-                  description: How many items to return at one time (max 100)
-                  required: false
-                  schema:
-                    type: integer
-                    maximum: 100
-                    format: int32
-            responses:
-                '200':
-                    description: A paged array of pets
-                    headers:
-                        x-next:
-                            description: A link to the next page of responses
-                            schema:
-                                type: string
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Pets"
-                default:
-                    description: unexpected error
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '422':
-                    $ref: '#/components/responses/BadRequest'
-                '401':
-                    $ref: '#/components/responses/Unauthorized'
-                '403':
-                    $ref: '#/components/responses/Unauthorized'
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '429':
-                    $ref: '#/components/responses/RateLimited'
-        post:
-            summary: Create a pet
-            operationId: createPets
-            tags:
-                - pets
-            responses:
-                '201':
-                    description: Null response
-                default:
-                    description: unexpected error
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '422':
-                    $ref: '#/components/responses/BadRequest'
-                '401':
-                    $ref: '#/components/responses/Unauthorized'
-                '403':
-                    $ref: '#/components/responses/Unauthorized'
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '429':
-                    $ref: '#/components/responses/RateLimited'
-    /pets/{petId}:
-        get:
-            summary: Info for a specific pet
-            operationId: showPetById
-            tags:
-                - pets
-            parameters:
-                - name: petId
-                  in: path
-                  required: true
-                  description: The id of the pet to retrieve
-                  schema:
-                    type: string
-            responses:
-                '200':
-                    description: Expected response to a valid request
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Pet"
-                default:
-                    description: unexpected error
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '422':
-                    $ref: '#/components/responses/BadRequest'
-                '401':
-                    $ref: '#/components/responses/Unauthorized'
-                '403':
-                    $ref: '#/components/responses/Unauthorized'
-                '404':
-                    $ref: '#/components/responses/NotFound'
-                '429':
-                    $ref: '#/components/responses/RateLimited'
-components:
-    schemas:
-        Pet:
-            type: object
-            required:
-                - id
-                - name
-                - names
-            properties:
-                id:
-                    type: integer
-                    format: int64
-                name:
-                    type: string
-                tag:
-                    type: string
-        Pets:
-            type: array
-            maxItems: 100
-            items:
+  /pets:
+    get:
+      summary: List all pets
+      operationId: listPets
+      tags:
+        - pets
+      parameters:
+        - name: limit
+          in: query
+          description: How many items to return at one time (max 100)
+          required: false
+          schema:
+            type: integer
+            maximum: 100
+            format: int32
+      responses:
+        '200':
+          description: A paged array of pets
+          headers:
+            x-next:
+              description: A link to the next page of responses
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pets"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      summary: Create a pet
+      operationId: createPets
+      tags:
+        - pets
+      responses:
+        '201':
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /pets/{petId}:
+    get:
+      summary: Info for a specific pet
+      operationId: showPetById
+      tags:
+        - pets
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: The id of the pet to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
                 $ref: "#/components/schemas/Pet"
-        Error:
-            type: object
-            required:
-                - code
-                - message
-            properties:
-                code:
-                    type: integer
-                    format: int32
-                message:
-                    type: string
-        BadRequest:
-            type: object
-            x-speakeasy-suggested-error: true
-            properties:
-                message:
-                    type: string
-            additionalProperties: true
-        Unauthorized:
-            type: object
-            x-speakeasy-suggested-error: true
-            properties:
-                message:
-                    type: string
-            additionalProperties: true
-        NotFound:
-            type: object
-            x-speakeasy-suggested-error: true
-            properties:
-                message:
-                    type: string
-            additionalProperties: true
-        RateLimited:
-            type: object
-            x-speakeasy-suggested-error: true
-            properties:
-                message:
-                    type: string
-            additionalProperties: true
-    responses:
-        BadRequest:
-            description: Invalid request
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/components/schemas/BadRequest'
-        Unauthorized:
-            description: Permission denied or not authenticated
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/components/schemas/Unauthorized'
-        NotFound:
-            description: Not found
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/components/schemas/NotFound'
-        RateLimited:
-            description: Rate limit exceeded
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/components/schemas/RateLimited'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+        - names
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        tag:
+          type: string
+    Pets:
+      type: array
+      maxItems: 100
+      items:
+        $ref: "#/components/schemas/Pet"
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    BadRequest:
+      type: object
+      x-speakeasy-suggested-error: true
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+    Unauthorized:
+      type: object
+      x-speakeasy-suggested-error: true
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+    NotFound:
+      type: object
+      x-speakeasy-suggested-error: true
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+    RateLimited:
+      type: object
+      x-speakeasy-suggested-error: true
+      properties:
+        message:
+          type: string
+      additionalProperties: true
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BadRequest'
+    Unauthorized:
+      description: Permission denied or not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Unauthorized'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotFound'
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RateLimited'
