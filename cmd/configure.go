@@ -237,7 +237,7 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		existingSourceName = newName
 	}
 
-	if err := workflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
+	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
@@ -397,7 +397,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.Wrapf(err, "failed to save config file for target %s", targetName)
 	}
 
-	if err := workflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
+	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
@@ -980,7 +980,7 @@ func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) (
 		var targetLanguage string
 		for lang := range cfg.Config.Languages {
 			// A problem with some old gen.yaml files pulling in non language entries
-			if slices.Contains(generate.GetSupportedLanguages(), lang) {
+			if slices.Contains(generate.GetSupportedTargetNames(), lang) {
 				targetLanguage = lang
 				if lang == "docs" {
 					break

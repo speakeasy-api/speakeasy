@@ -3,8 +3,6 @@ package prompts
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"github.com/speakeasy-api/speakeasy/internal/log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,17 +12,60 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
-const TargetNameDefault = "my-first-target"
+const (
+	TargetNameDefault = "my-first-target"
+
+	targetGroupMCP       = "mcp"
+	targetGroupSDK       = "sdk"
+	targetGroupTerraform = "terraform"
+)
 
 func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outDir *string, newTarget bool) []*huh.Group {
+	groups := []*huh.Group{}
 	targetFields := []huh.Field{}
+
 	if newTarget {
+		targetGroup := new(string)
+
 		targetFields = append(targetFields, huh.NewSelect[string]().
-			Title("Which language would you like to generate?").
-			Options(GetTargetOptions()...).
+			Title("What would you like to generate?").
+			Options([]huh.Option[string]{
+				huh.NewOption("Software Development Kit (SDK)", targetGroupSDK),
+				huh.NewOption("Terraform Provider", targetGroupTerraform),
+				huh.NewOption("Model Context Protocol (MCP) Server", targetGroupMCP),
+			}...).
+			Value(targetGroup))
+
+		targetFields = append(targetFields, huh.NewSelect[string]().
+			TitleFunc(func() string {
+				switch *targetGroup {
+				case targetGroupMCP:
+					return "Which MCP Server would you like to generate?"
+				case targetGroupSDK:
+					return "Which SDK language would you like to generate?"
+				case targetGroupTerraform:
+					return "Which Terraform Provider language would you like to generate?"
+				default:
+					return ""
+				}
+			}, targetGroup).
+			OptionsFunc(func() []huh.Option[string] {
+				switch *targetGroup {
+				case targetGroupMCP:
+					return getMCPTargetOptions()
+				case targetGroupSDK:
+					return getSDKTargetOptions()
+				case targetGroupTerraform:
+					return getTerraformTargetOptions()
+				default:
+					return nil
+				}
+			}, targetGroup).
 			Value(targetType))
 	}
 
@@ -55,9 +96,8 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	}
 
 	targetFields = append(targetFields, rendersSelectSource(currentWorkflow, sourceName)...)
-	groups := []*huh.Group{
-		huh.NewGroup(targetFields...),
-	}
+	groups = append(groups, huh.NewGroup(targetFields...))
+
 	if len(currentWorkflow.Targets) > 0 {
 		groups = append(groups,
 			huh.NewGroup(charm.NewInlineInput(outDir).
@@ -100,7 +140,7 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		return nil, errors.Wrap(err, "failed to create new target")
 	}
 
-	if err := target.Validate(generate.GetSupportedLanguages(), quickstart.WorkflowFile.Sources); err != nil {
+	if err := target.Validate(generate.GetSupportedTargetNames(), quickstart.WorkflowFile.Sources); err != nil {
 		return nil, errors.Wrap(err, "failed to validate target")
 	}
 
@@ -139,7 +179,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 		target.Output = &outDir
 	}
 
-	if err := target.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
+	if err := target.Validate(generate.GetSupportedTargetNames(), currentWorkflow.Sources); err != nil {
 		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
@@ -171,7 +211,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 		newTarget.Output = &outDir
 	}
 
-	if err := newTarget.Validate(generate.GetSupportedLanguages(), currentWorkflow.Sources); err != nil {
+	if err := newTarget.Validate(generate.GetSupportedTargetNames(), currentWorkflow.Sources); err != nil {
 		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
