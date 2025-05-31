@@ -3,13 +3,14 @@ package overlay
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
-	"io"
 )
 
 type ChangeType int
@@ -61,18 +62,29 @@ func Compare(schemas []string, w io.Writer) (*Summary, error) {
 	return Summarize(o), nil
 }
 
-func Apply(schema string, overlayFile string, yamlOut bool, w io.Writer, strict bool, warn bool) (*Summary, error) {
-	o, err := loader.LoadOverlay(overlayFile)
+func Apply(schema string, overlayFiles []string, yamlOut bool, w io.Writer, strict bool, warn bool) (*Summary, error) {
+	var summary *Summary
+	var err error
+
+	// Load the initial schema
+	ys, specFile, err := loader.LoadEitherSpecification(schema, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	ys, specFile, err := loader.LoadEitherSpecification(schema, o)
-	if err != nil {
-		return nil, err
+	for _, overlayFile := range overlayFiles {
+		o, err := loader.LoadOverlay(overlayFile)
+		if err != nil {
+			return nil, err
+		}
+
+		summary, err = Summarize(o), ApplyWithSourceLocation(ys, o, specFile, yamlOut, w, strict)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return Summarize(o), ApplyWithSourceLocation(ys, o, specFile, yamlOut, w, strict)
+	return summary, nil
 }
 
 func Summarize(o *overlay.Overlay) *Summary {
