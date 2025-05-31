@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+
 	"github.com/AlekSi/pointer"
 	"github.com/samber/lo"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
@@ -19,27 +22,87 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
 )
 
-func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
-	workflowRunnerPtr, err := workflowRunner.Clone(
+type TargetResults = map[string]components.TargetRunSummary
+
+type studioRunnerOptions struct {
+	Compile        bool
+	Cancellable    bool
+	OnSourceResult run.SourceResultCallback
+	Debug          bool
+}
+
+func NoSourceResultCallback(sourceRes *run.SourceResult, sourceStep run.SourceStepID) error {
+	return nil
+}
+
+func cloneWorkflowRunner(ctx context.Context, workflowRunner run.Workflow, options studioRunnerOptions, sourceID string) (run.Workflow, error) {
+
+	clonedWorkflow, err := workflowRunner.Clone(
 		ctx,
 		run.WithSkipCleanup(),
-		run.WithSkipLinting(),
+		run.WithLinting(),
 		run.WithSkipGenerateLintReport(),
 		run.WithSkipSnapshot(true),
 		run.WithSkipChangeReport(true),
+		run.WithShouldCompile(options.Compile),
+		run.WithCancellableGeneration(options.Cancellable),
+		run.WithSourceUpdates(options.OnSourceResult),
+		run.WithDebug(options.Debug),
 	)
-	if err != nil {
-		return nil, fmt.Errorf("error cloning workflow runner: %w", err)
-	}
-	workflowRunner = *workflowRunnerPtr
 
-	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
+	if err != nil {
+		return workflowRunner, fmt.Errorf("error cloning workflow runner: %w", err)
+	}
+
+	return *clonedWorkflow, nil
+}
+
+func getOnSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string) run.SourceResultCallback {
+	return func(sourceResult *run.SourceResult, sourceStep run.SourceStepID) error {
+		if sourceResult.Source == sourceID {
+			sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, sourceID, overlayPath)
+			if err != nil {
+				return fmt.Errorf("error converting source result to source response: %s", err)
+			}
+
+			response, err := convertLastRunResult(ctx, workflowRunner, sourceID, overlayPath, sourceStep)
+			if err != nil {
+				return fmt.Errorf("error getting last completed run result: %s", err)
+			}
+			response.SourceResult = sourceResponseData
+
+			responseJSON, err := json.Marshal(response)
+			if err != nil {
+				return fmt.Errorf("error marshaling run response: %s", err)
+			}
+
+			fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+			flusher.Flush()
+		}
+
+		return nil
+	}
+}
+
+func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
+	options := studioRunnerOptions{
+		Compile:        false,
+		Cancellable:    false,
+		Debug:          false,
+		OnSourceResult: nil,
+	}
+	runner, err := cloneWorkflowRunner(ctx, workflowRunner, options, sourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, sourceResult, err := runner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
+
 	if err != nil {
 		return nil, fmt.Errorf("error running source: %w", err)
 	}
@@ -47,107 +110,124 @@ func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string
 	return sourceResult, nil
 }
 
-func sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath, step string) error {
-	ret, err := convertLastRunResult(ctx, workflowRunner, sourceID, overlayPath, step)
+func sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string, step run.SourceStepID) error {
+	runResponseData, err := convertLastRunResult(ctx, workflowRunner, sourceID, overlayPath, step)
 	if err != nil {
 		return fmt.Errorf("error getting last completed run result: %w", err)
 	}
 
-	responseJSON, err := json.Marshal(ret)
+	return sendRunResponseDataToStream(w, flusher, runResponseData)
+}
+
+func sendRunResponseDataToStream(w http.ResponseWriter, flusher http.Flusher, runResponseData components.RunResponseData) error {
+	responseJSON, err := json.Marshal(runResponseData)
 	if err != nil {
 		return fmt.Errorf("error marshaling run response: %w", err)
 	}
+
 	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
 	flusher.Flush()
 
 	return nil
 }
 
-func convertLastRunResult(ctx context.Context, workflowRunner run.Workflow, sourceID, overlayPath, step string) (*components.RunResponseData, error) {
-	ret := components.RunResponseData{
-		TargetResults:    make(map[string]components.TargetRunSummary),
-		WorkingDirectory: workflowRunner.ProjectDir,
-		Step:             step,
-		IsPartial:        step != "Complete",
-		Took:             workflowRunner.Duration.Milliseconds(),
-	}
-
-	workflowConfig := workflowRunner.GetWorkflowFile()
-
-	wf, err := convertWorkflowToComponentsWorkflow(*workflowConfig, ret.WorkingDirectory)
+func readFileData(name string, path string) (components.FileData, error) {
+	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return &ret, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+		return components.FileData{}, fmt.Errorf("error getting absolute path to %s: %w", name, err)
 	}
-	ret.Workflow = wf
 
+	content, err := utils.ReadFileToString(path)
+	if err != nil {
+		return components.FileData{}, fmt.Errorf("error reading %s: %w", name, err)
+	}
+
+	return components.FileData{
+		Name:    "gen.yaml",
+		Path:    absPath,
+		Content: content,
+	}, nil
+}
+
+func convertLastRunResult(ctx context.Context, workflowRunner run.Workflow, sourceID, overlayPath string, step run.SourceStepID) (components.RunResponseData, error) {
+	workflowConfig := workflowRunner.GetWorkflowFile()
+	workflow, err := convertWorkflowToComponentsWorkflow(*workflowConfig, workflowRunner.ProjectDir)
+	if err != nil {
+		return components.RunResponseData{}, fmt.Errorf("error converting workflow to components.Workflow: %w", err)
+	}
+
+	errStr := ""
 	if workflowRunner.Error != nil {
-		errStr := workflowRunner.Error.Error()
-		ret.Error = &errStr
+		errStr = workflowRunner.Error.Error()
 	}
 
+	targetResults := make(map[string]components.TargetRunSummary)
 	for k, v := range workflowRunner.TargetResults {
 		if v == nil {
 			continue
 		}
 
-		genYamlContents, err := utils.ReadFileToString(v.GenYamlPath)
-		if err != nil {
-			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
-		}
-		absGenYamlPath, err := filepath.Abs(v.GenYamlPath)
-		if err != nil {
-			return &ret, fmt.Errorf("error getting absolute path to gen.yaml: %w", err)
-		}
-		readMePath := filepath.Join(v.OutputPath, "README.md")
-		readMeContents, err := utils.ReadFileToString(readMePath)
-		if err != nil {
-			return &ret, fmt.Errorf("error reading gen.yaml: %w", err)
-		}
-
 		targetConfig := workflowConfig.Targets[k]
-		outputDirectory := ""
-
+		outputDirectory := workflowRunner.ProjectDir
 		if targetConfig.Output != nil {
 			outputDirectory = *targetConfig.Output
-		} else {
-			outputDirectory = ret.WorkingDirectory
 		}
-		ret.TargetResults[k] = components.TargetRunSummary{
+
+		genYaml, err := readFileData("gen.yaml", v.GenYamlPath)
+		if err != nil {
+			return components.RunResponseData{}, err
+		}
+
+		readMePath := filepath.Join(v.OutputPath, "README.md")
+		readme, err := readFileData("README.md", readMePath)
+		if err != nil {
+			return components.RunResponseData{}, err
+		}
+
+		targetResults[k] = components.TargetRunSummary{
 			TargetID:        k,
 			SourceID:        sourceID,
-			Readme:          readMeContents,
-			GenYaml:         genYamlContents,
-			GenYamlPath:     &absGenYamlPath,
 			Language:        targetConfig.Target,
 			OutputDirectory: outputDirectory,
+			GenYaml:         &genYaml,
+			Readme:          &readme,
 		}
 	}
 
-	sourceResult := workflowRunner.SourceResults[sourceID]
-	if sourceResult != nil {
-		sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, sourceID, overlayPath)
+	var sourceResponseData components.SourceResponseData
+	workflowResult := workflowRunner.SourceResults[sourceID]
+	if workflowResult != nil {
+		sourceResponseData, err = convertSourceResultIntoSourceResponseData(*workflowResult, sourceID, overlayPath)
 		if err != nil {
-			return &ret, fmt.Errorf("error converting source result to source response: %w", err)
+			return components.RunResponseData{}, fmt.Errorf("error converting source result to source response: %w", err)
 		}
-		ret.SourceResult = *sourceResponseData
 	}
 
-	return &ret, nil
+	return components.RunResponseData{
+		TargetResults:    targetResults,
+		WorkingDirectory: workflowRunner.ProjectDir,
+		Workflow:         workflow,
+		Step:             components.Step(step),
+		SourceResult:     sourceResponseData,
+		IsPartial:        step != run.SourceStepComplete,
+		Took:             workflowRunner.Duration.Milliseconds(),
+		Error:            &errStr,
+	}, nil
 }
 
-func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, sourceID, overlayPath string) (*components.SourceResponseData, error) {
+func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, sourceID, overlayPath string) (components.SourceResponseData, error) {
 	var err error
 	overlayContents := ""
 	if overlayPath != "" {
 		overlayContents, err = utils.ReadFileToString(overlayPath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading modifications overlay: %w", err)
+			return components.SourceResponseData{}, fmt.Errorf("error reading modifications overlay: %w", err)
 		}
 	}
 
 	outputDocumentString, err := utils.ReadFileToString(sourceResult.OutputPath)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, fmt.Errorf("error reading output document: %w", err)
+		return components.SourceResponseData{}, fmt.Errorf("error reading output document: %w", err)
 	}
 
 	diagnosis := make([]components.Diagnostic, 0)
@@ -182,7 +262,6 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 	}
 
 	finalOverlayPath := ""
-
 	if overlayPath != "" {
 		finalOverlayPath, _ = filepath.Abs(overlayPath)
 	}
@@ -197,14 +276,14 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 	inputNode := &yaml.Node{}
 	err = yaml.Unmarshal(inputSpecBytes, inputNode)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling input spec: %w", err)
+		return components.SourceResponseData{}, fmt.Errorf("error unmarshalling input spec: %w", err)
 	}
 	formattedInputSpec, err := schemas.RenderDocument(inputNode, inputPath, !isJSON, !isJSON)
 	if err != nil {
-		return nil, fmt.Errorf("error formatting input spec: %w", err)
+		return components.SourceResponseData{}, fmt.Errorf("error formatting input spec: %w", err)
 	}
 
-	return &components.SourceResponseData{
+	return components.SourceResponseData{
 		SourceID:    sourceID,
 		Input:       string(formattedInputSpec),
 		Overlay:     overlayContents,
@@ -406,12 +485,96 @@ func upsertOverlay(overlay overlay.Overlay, workflowRunner run.Workflow, sourceI
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	source := workflowConfig.Sources[sourceID]
 
-	overlayPath, err := modifications.UpsertOverlay(overlayPath, &source, overlay)
+	newOverlayPath, err := modifications.UpsertOverlay(overlayPath, &source, overlay)
 	if err != nil {
 		return overlayPath, err
 	}
 
 	workflowConfig.Sources[sourceID] = source
 
-	return overlayPath, workflow.Save(workflowRunner.ProjectDir, workflowConfig)
+	return newOverlayPath, workflow.Save(workflowRunner.ProjectDir, workflowConfig)
+}
+
+func updateSourceAndTarget(workflowRunner run.Workflow, sourceID, overlayPath string, runRequestBody components.RunRequestBody) (string, error) {
+	var err error
+
+	type target struct {
+		ID     string `json:"id"`
+		Config string `json:"config"`
+	}
+
+	if runRequestBody.Input != nil && *runRequestBody.Input != "" {
+		// Assert that the workflow source input is a single local file
+		workflowConfig := workflowRunner.GetWorkflowFile()
+		source := workflowConfig.Sources[sourceID]
+		if len(source.Inputs) != 1 {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input for source with multiple inputs"))
+		}
+		if strings.HasPrefix(*runRequestBody.Input, "http://") || strings.HasPrefix(*runRequestBody.Input, "https://") {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("cannot update source input to a remote file"))
+		}
+
+		inputLocation := source.Inputs[0].Location.Resolve()
+
+		// if it's absolute that's fine, otherwise it's relative to the project directory
+		if !filepath.IsAbs(inputLocation) {
+			inputLocation = filepath.Join(workflowRunner.ProjectDir, inputLocation)
+		}
+
+		err = utils.WriteStringToFile(inputLocation, *runRequestBody.Input)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
+		}
+	}
+
+	if runRequestBody.Overlay != nil && *runRequestBody.Overlay != "" {
+		// Verify this is a valid overlay
+		var overlay overlay.Overlay
+		dec := yaml.NewDecoder(strings.NewReader(*runRequestBody.Overlay))
+		err = dec.Decode(&overlay)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error decoding overlay: %w", err))
+		}
+
+		// Write the overlay to a file
+		overlayPath, err = upsertOverlay(overlay, workflowRunner, sourceID, overlayPath)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error getting or creating overlay path: %w", err))
+		}
+	}
+
+	for targetID, input := range runRequestBody.Targets {
+		sdkPath := ""
+
+		wfTarget, ok := workflowRunner.GetWorkflowFile().Targets[targetID]
+		if !ok {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", targetID))
+		}
+		sdkPath = workflowRunner.ProjectDir
+		if wfTarget.Output != nil {
+			sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
+		}
+
+		cfg, err := sdkGenConfig.Load(sdkPath)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
+		}
+
+		currentFileContent, err := os.ReadFile(cfg.ConfigPath)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error loading config file: %w", err))
+		}
+
+		err = utils.WriteStringToFile(cfg.ConfigPath, input.Config)
+		if err != nil {
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("error writing input to file: %w", err))
+		}
+
+		if _, err := sdkGenConfig.Load(sdkPath); err != nil {
+			err = utils.WriteStringToFile(cfg.ConfigPath, string(currentFileContent))
+			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("invalid config file changes rolling back: %w", err))
+		}
+	}
+
+	return overlayPath, nil
 }

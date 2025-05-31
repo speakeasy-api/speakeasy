@@ -1,9 +1,9 @@
-speakeasyVersion: 1.468.2
+speakeasyVersion: 1.548.4
 sources:
     SpeakeasyStudio-OAS:
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
-        sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
+        sourceRevisionDigest: sha256:9f9519379e4740b1ec94c4a8cbdbc08f7aa9ad119c42a46b95265711d2dca60a
+        sourceBlobDigest: sha256:3122dd5f45e7e455a6e8cf59df4f08d63e6c2e2fc4ec6b69707dc7ada5a51f56
         tags:
             - latest
             - 1.0.0
@@ -19,6 +19,11 @@ targets:
         sourceNamespace: speakeasy-studio-oas
         sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
         sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
+    speakeasy-studio-go:
+        source: SpeakeasyStudio-OAS
+        sourceNamespace: speakeasy-studio-oas
+        sourceRevisionDigest: sha256:9f9519379e4740b1ec94c4a8cbdbc08f7aa9ad119c42a46b95265711d2dca60a
+        sourceBlobDigest: sha256:3122dd5f45e7e455a6e8cf59df4f08d63e6c2e2fc4ec6b69707dc7ada5a51f56
     spekaeasy-studio:
         source: SpekaeasyStudio-OAS
         sourceNamespace: spekaeasy-studio-oas
@@ -26,15 +31,20 @@ targets:
         sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
 workflow:
     workflowVersion: 1.0.0
+    speakeasyVersion: latest
     sources:
         SpeakeasyStudio-OAS:
             inputs:
-                - location: ../oas_studio.yaml
+                - location: /home/qynn/SpeakEasy/speakeasy/internal/studio/oas_studio.yaml
             overlays:
                 - location: .speakeasy/speakeasy-modifications-overlay.yaml
             registry:
-                location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
+                location: registry.speakeasyapi.dev/speakeasy-team/test-workspace/speakeasy-studio-oas
     targets:
-        speakeasy-studio:
+        speakeasy-studio-go:
             target: go
             source: SpeakeasyStudio-OAS
+        speakeasy-studio-ts:
+            target: typescript
+            source: SpeakeasyStudio-OAS
+            output: /home/qynn/SpeakEasy/speakeasy-registry/web/packages/generated-studio-ts-sdk

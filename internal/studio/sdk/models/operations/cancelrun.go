@@ -6,11 +6,11 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
 )
 
-type ExitResponse struct {
+type CancelRunResponse struct {
 	HTTPMeta components.HTTPMetadata `json:"-"`
 }
 
-func (o *ExitResponse) GetHTTPMeta() components.HTTPMetadata {
+func (o *CancelRunResponse) GetHTTPMeta() components.HTTPMetadata {
 	if o == nil {
 		return components.HTTPMetadata{}
 	}
