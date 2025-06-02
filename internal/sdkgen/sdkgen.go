@@ -56,7 +56,7 @@ type GenerateOptions struct {
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
-	if !generate.CheckLanguageSupported(opts.Language) {
+	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
 
@@ -214,7 +214,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 		return err
 	}
 
-	if _, err := g.LoadConfig(ctx, outDir, generate.GetSupportedLanguages()...); err != nil {
+	if _, err := g.LoadConfig(ctx, outDir, generate.GetSupportedTargetNames()...); err != nil {
 		return err
 	}
 

@@ -75,7 +75,7 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 		flag.StringFlag{
 			Name:        "target",
 			Shorthand:   "t",
-			Description: fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(prompts.GetSupportedTargets(), ", ")),
+			Description: fmt.Sprintf("generation target (available options: [%s])", strings.Join(prompts.GetSupportedTargetNames(), ", ")),
 		},
 		flag.StringFlag{
 			Name:        "from",
@@ -136,7 +136,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		nextState = *state
 	}
 
-	if err := quickstartObj.WorkflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
+	if err := quickstartObj.WorkflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 

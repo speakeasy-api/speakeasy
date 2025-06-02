@@ -33,7 +33,7 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 		return nil, nil, err
 	}
 
-	if err := wf.Validate(generate.GetSupportedLanguages()); err != nil {
+	if err := wf.Validate(generate.GetSupportedTargetNames()); err != nil {
 		return nil, nil, err
 	}
 

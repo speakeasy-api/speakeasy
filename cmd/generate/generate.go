@@ -20,16 +20,12 @@ import (
 )
 
 func SDKSupportedLanguageTargets() []string {
-	languages := make([]string, 0)
-	for _, lang := range generate.GetSupportedLanguages() {
-		if lang == "docs" {
-			continue
-		}
+	targetNames := generate.GetSupportedSDKTargetNames()
 
-		languages = append(languages, lang)
-	}
+	// Legacy "SDK" language, kept for backwards compatibility.
+	targetNames = append(targetNames, "terraform")
 
-	return languages
+	return targetNames
 }
 
 var (
@@ -157,7 +153,7 @@ func getLatestVersionInfo(ctx context.Context, flags GenerateSDKVersionFlags) er
 
 	lang := flags.Language
 	if lang != "" {
-		if !slices.Contains(generate.GetSupportedLanguages(), lang) {
+		if !slices.Contains(generate.GetSupportedTargetNames(), lang) {
 			return fmt.Errorf("unsupported language %s", lang)
 		}
 
@@ -199,7 +195,7 @@ func getChangelogs(ctx context.Context, flags GenerateSDKChangelogFlags) error {
 
 	lang := flags.Language
 	if lang != "" {
-		if !slices.Contains(generate.GetSupportedLanguages(), lang) {
+		if !slices.Contains(generate.GetSupportedTargetNames(), lang) {
 			return fmt.Errorf("unsupported language %s", lang)
 		}
 
