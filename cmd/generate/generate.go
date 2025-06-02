@@ -19,13 +19,8 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 )
 
-func SDKSupportedLanguageTargets() []string {
-	targetNames := generate.GetSupportedSDKTargetNames()
-
-	// Legacy "SDK" language, kept for backwards compatibility.
-	targetNames = append(targetNames, "terraform")
-
-	return targetNames
+func GeneratorSupportedTargetNames() []string {
+	return generate.GetSupportedTargetNames()
 }
 
 var (

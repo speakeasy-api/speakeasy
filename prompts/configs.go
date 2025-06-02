@@ -29,6 +29,9 @@ var quickstartScopedKeys = map[string][]string{
 	"go": {
 		"packageName",
 	},
+	"mcp-typescript": {
+		"packageName",
+	},
 	"typescript": {
 		"packageName",
 	},

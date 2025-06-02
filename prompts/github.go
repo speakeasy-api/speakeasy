@@ -39,21 +39,22 @@ const (
 )
 
 var SupportedPublishingTargets = []string{
-	"typescript",
-	"python",
 	"csharp",
-	"ruby",
-	"php",
-	"java",
 	"go",
+	"java",
+	"mcp-typescript",
+	"php",
+	"python",
+	"ruby",
 	"terraform",
+	"typescript",
 }
 
 var SupportedTestingTargets = []string{
-	"typescript",
-	"python",
 	"go",
 	"java",
+	"python",
+	"typescript",
 }
 
 //go:embed terraform_release.yaml
@@ -121,7 +122,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 
 	if hasPublishingDefined {
 		switch target.Target {
-		case "typescript":
+		case "mcp-typescript", "typescript":
 			if target.Publishing.NPM != nil {
 				return target, nil
 			}
@@ -153,7 +154,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 	}
 
 	switch target.Target {
-	case "typescript":
+	case "mcp-typescript", "typescript":
 		target.Publishing = &workflow.Publishing{
 			NPM: &workflow.NPM{
 				Token: formatWorkflowSecret(npmTokenDefault),
