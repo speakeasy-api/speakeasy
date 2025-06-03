@@ -106,7 +106,6 @@ func main() {
 ### [SDK](docs/sdks/sdk/README.md)
 
 * [GenerateOverlay](docs/sdks/sdk/README.md#generateoverlay) - Generate Overlay
-* [Exit](docs/sdks/sdk/README.md#exit) - Exit
 
 ### [Suggest](docs/sdks/suggest/README.md)
 
@@ -287,7 +286,7 @@ func main() {
 	ctx := context.Background()
 
 	s := sdk.New(
-		sdk.WithPort("10501"),
+		sdk.WithPort("21809"),
 		sdk.WithSecurity("<YOUR_API_KEY_HERE>"),
 	)
 

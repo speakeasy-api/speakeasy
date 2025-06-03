@@ -2,10 +2,72 @@
 
 package components
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// Step of the run
+type Step string
+
+const (
+	StepFetchingSpec   Step = "Fetching spec"
+	StepOverlaying     Step = "Overlaying"
+	StepTransforming   Step = "Transforming"
+	StepLinting        Step = "Linting"
+	StepUploadingSpec  Step = "Uploading spec"
+	StepStarted        Step = "Started"
+	StepGeneratingSDK  Step = "Generating SDK"
+	StepUpdatingReadme Step = "Updating README"
+	StepCompilingSDK   Step = "Compiling SDK"
+	StepCompleted      Step = "Completed"
+	StepCancelling     Step = "Cancelling"
+	StepExiting        Step = "Exiting"
+)
+
+func (e Step) ToPointer() *Step {
+	return &e
+}
+func (e *Step) UnmarshalJSON(data []byte) error {
+	var v string
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	switch v {
+	case "Fetching spec":
+		fallthrough
+	case "Overlaying":
+		fallthrough
+	case "Transforming":
+		fallthrough
+	case "Linting":
+		fallthrough
+	case "Uploading spec":
+		fallthrough
+	case "Started":
+		fallthrough
+	case "Generating SDK":
+		fallthrough
+	case "Updating README":
+		fallthrough
+	case "Compiling SDK":
+		fallthrough
+	case "Completed":
+		fallthrough
+	case "Cancelling":
+		fallthrough
+	case "Exiting":
+		*e = Step(v)
+		return nil
+	default:
+		return fmt.Errorf("invalid value for Step: %v", v)
+	}
+}
+
 // RunResponseData - Map of target run summaries
 type RunResponseData struct {
 	// Step of the run
-	Step string `json:"step"`
+	Step Step `json:"step"`
 	// Whether the run was partial
 	IsPartial bool `json:"isPartial"`
 	// Link to the linting report
@@ -22,9 +84,9 @@ type RunResponseData struct {
 	Error *string `json:"error,omitempty"`
 }
 
-func (o *RunResponseData) GetStep() string {
+func (o *RunResponseData) GetStep() Step {
 	if o == nil {
-		return ""
+		return Step("")
 	}
 	return o.Step
 }
