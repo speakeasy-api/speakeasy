@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/charmbracelet/glamour"
@@ -280,4 +281,46 @@ func WriteTempFile(content string, optionalFilename string) (string, error) {
 	}
 
 	return tmpFile.Name(), nil
+}
+
+// Single-Slot-Queue (aka "latest arrived cheats")
+// - only one function can run at a the same time
+// - there can only be one function queued at a time
+// - when a new function is queued it replaces the previous one in the queue
+// - if a bump function is provided, it is run immediately upon enqueuing
+func SingleSlotQueue(bump func()) func(fn func()) {
+	mu := sync.Mutex{}
+
+	var queued func()
+	var running bool
+
+	return func(fn func()) {
+		mu.Lock()
+		if running {
+			queued = fn
+			mu.Unlock()
+			if bump != nil {
+				bump()
+			}
+			return
+		}
+
+		running = true
+		mu.Unlock()
+
+		for {
+			fn()
+
+			mu.Lock()
+			if queued == nil {
+				running = false
+				mu.Unlock()
+				return
+			}
+
+			fn = queued
+			queued = nil
+			mu.Unlock()
+		}
+	}
 }
