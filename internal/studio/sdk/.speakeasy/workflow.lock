@@ -1,4 +1,4 @@
-speakeasyVersion: 1.468.2
+speakeasyVersion: 1.548.4
 sources:
     SpeakeasyStudio-OAS:
         sourceNamespace: speakeasy-studio-oas
@@ -19,6 +19,11 @@ targets:
         sourceNamespace: speakeasy-studio-oas
         sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
         sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
+    speakeasy-studio-go:
+        source: SpeakeasyStudio-OAS
+        sourceNamespace: speakeasy-studio-oas
+        sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
+        sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
     spekaeasy-studio:
         source: SpekaeasyStudio-OAS
         sourceNamespace: spekaeasy-studio-oas
@@ -26,6 +31,7 @@ targets:
         sourceBlobDigest: sha256:78026283d1ab636c2946eaaa88c61a11a764e3fb98b16078864ca8d1a96cfcf6
 workflow:
     workflowVersion: 1.0.0
+    speakeasyVersion: latest
     sources:
         SpeakeasyStudio-OAS:
             inputs:
@@ -35,6 +41,9 @@ workflow:
             registry:
                 location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
     targets:
-        speakeasy-studio:
+        speakeasy-studio-go:
             target: go
+            source: SpeakeasyStudio-OAS
+        speakeasy-studio-ts:
+            target: typescript
             source: SpeakeasyStudio-OAS

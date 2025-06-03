@@ -1,22 +1,22 @@
 lockVersion: 2.0.0
 id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
-  docChecksum: afbb3f993c6b315d265d95ec4a6c8e95
+  docChecksum: 1b6d68cb9eb6743757b7caccb2c488cb
   docVersion: 1.0.0
-  speakeasyVersion: 1.510.0
-  generationVersion: 2.541.0
-  releaseVersion: 0.10.7
-  configChecksum: 4bb9bf671365ec272609f72a390efeda
+  speakeasyVersion: 1.548.4
+  generationVersion: 2.605.6
+  releaseVersion: 0.10.8
+  configChecksum: fc7a945fe06aafe8c946276924f61490
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.7.2
+    core: 3.7.5
     defaultEnabledRetries: 0.2.0
     envVarSecurityUsage: 0.3.2
     globalSecurity: 2.82.11
     globalSecurityCallbacks: 0.1.0
     globalSecurityFlattening: 0.1.0
-    globalServerURLs: 2.82.2
+    globalServerURLs: 2.82.3
     groups: 2.81.2
     intellisenseMarkdownSupport: 0.1.0
     nameOverrides: 2.81.2
@@ -31,6 +31,7 @@ generatedFiles:
   - /models/components/diagnostic.go
   - /models/components/document.go
   - /models/components/fallbackcodesamples.go
+  - /models/components/filedata.go
   - /models/components/healthresponse.go
   - /models/components/httpmetadata.go
   - /models/components/overlay.go
@@ -40,6 +41,7 @@ generatedFiles:
   - /models/components/runrequestbody.go
   - /models/components/runresponse.go
   - /models/components/runresponsedata.go
+  - /models/components/runstreamoptions.go
   - /models/components/security.go
   - /models/components/source.go
   - /models/components/sourceregistry.go
@@ -50,7 +52,6 @@ generatedFiles:
   - /models/components/targetspecificinputs.go
   - /models/components/workflow.go
   - /models/operations/checkhealth.go
-  - /models/operations/exit.go
   - /models/operations/generateoverlay.go
   - /models/operations/getrun.go
   - /models/operations/run.go
@@ -62,6 +63,7 @@ generatedFiles:
   - docs/models/components/diagnostic.md
   - docs/models/components/document.md
   - docs/models/components/fallbackcodesamples.md
+  - docs/models/components/filedata.md
   - docs/models/components/healthresponse.md
   - docs/models/components/httpmetadata.md
   - docs/models/components/overlay.md
@@ -72,17 +74,18 @@ generatedFiles:
   - docs/models/components/runrequestbody.md
   - docs/models/components/runresponse.md
   - docs/models/components/runresponsedata.md
+  - docs/models/components/runstreamoptions.md
   - docs/models/components/security.md
   - docs/models/components/source.md
   - docs/models/components/sourceregistry.md
   - docs/models/components/sourceresponsedata.md
+  - docs/models/components/step.md
   - docs/models/components/suggestresponse.md
   - docs/models/components/target.md
   - docs/models/components/targetrunsummary.md
   - docs/models/components/targetspecificinputs.md
   - docs/models/components/workflow.md
   - docs/models/operations/checkhealthresponse.md
-  - docs/models/operations/exitresponse.md
   - docs/models/operations/generateoverlayresponse.md
   - docs/models/operations/getrunresponse.md
   - docs/models/operations/option.md
@@ -125,19 +128,18 @@ examples:
       responses:
         "200":
           application/json: {"overlay": "<value>"}
-  exit: {}
   checkHealth: {}
   getRun: {}
   run:
     speakeasy-default-run:
       requestBody:
-        application/json: {}
+        application/json: {"disconnect": true}
   suggestMethodNames:
     speakeasy-default-suggest-method-names:
       responses:
         "200":
           application/json: {"overlay": "<value>"}
-examplesVersion: 1.0.0
+examplesVersion: 1.0.2
 generatedTests:
   getFullyFlattenedRequest: "2025-02-25T16:43:14-05:00"
   postTest2: "2025-02-25T16:43:14-05:00"
