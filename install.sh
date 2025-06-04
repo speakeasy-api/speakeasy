@@ -15,6 +15,15 @@ BINARY_NAME=${BINARY_NAME:-"speakeasy"}
 REPO_NAME="speakeasy-api/speakeasy"
 ISSUE_URL="https://github.com/speakeasy-api/speakeasy/issues/new"
 
+# github_api_curl - make authenticated GitHub API calls
+github_api_curl() {
+  if [ -n "$GITHUB_TOKEN" ]; then
+    curl -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
+  else
+    curl "$@"
+  fi
+}
+
 # get_latest_release "speakeasy-api/speakeasy"
 get_latest_release() {
   local retry=0
@@ -23,7 +32,7 @@ get_latest_release() {
   local delay=1
 
   while [ $retry -lt $max_retries ]; do
-    release_info=$(curl --retry 5 --silent "https://api.github.com/repos/$1/releases/latest")
+    release_info=$(github_api_curl --retry 5 --silent "https://api.github.com/repos/$1/releases/latest")
     tag_name=$(echo "$release_info" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if echo "$tag_name" | grep -q '^v'; then
