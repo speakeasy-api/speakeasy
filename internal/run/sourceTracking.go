@@ -102,7 +102,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	return
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) (err error) {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult) (err error) {
 	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
 
 	if !registry.IsRegistryEnabled(ctx) {
@@ -171,12 +171,21 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
-	memfs := fsextras.NewMemFS()
+	resolved := fsextras.NewMemFS()
+	registryStep.NewSubstep("Snapshotting Resolved Layer")
 
-	registryStep.NewSubstep("Snapshotting OpenAPI Revision")
+	rootDocumentPath, err := pl.Localize(ctx, resolved, bundler.LocalizeOptions{
+		DocumentPath: sourceResult.OutputPath,
+		OutputRoot:   bundler.BundleRoot.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("error localizing openapi document: %w", err)
+	}
 
-	rootDocumentPath, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
-		DocumentPath: documentPath,
+	// snapshot the source input
+	pl.Localize(ctx, resolved, bundler.LocalizeOptions{
+		DocumentPath: sourceResult.OutputPath,
+		OutputRoot:   bundler.WorkflowSourceRoot.String(),
 	})
 	if err != nil {
 		return fmt.Errorf("error localizing openapi document: %w", err)
@@ -187,9 +196,9 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
 	}
 
-	rootDocument, err := memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))
+	rootDocument, err := resolved.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))
 	if errors.Is(err, fs.ErrNotExist) {
-		rootDocument, err = memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.json"))
+		rootDocument, err = resolved.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.json"))
 	}
 	if err != nil {
 		return fmt.Errorf("error opening root document: %w", err)
@@ -212,7 +221,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	// Always add the openapi document version as a tag
 	tags = append(tags, annotations.Version)
 
-	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(resolved, resolved), &bundler.OCIBuildOptions{
 		Tags:        tags,
 		Annotations: annotations,
 		MediaType:   ocicommon.MediaTypeOpenAPIBundleV0,
@@ -231,7 +240,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	reg = strings.TrimPrefix(reg, "https://")
 
 	substepStore := registryStep.NewSubstep("Storing OpenAPI Revision")
-	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+	pushResult, err := pl.PushOCIImage(ctx, resolved, &bundler.OCIPushOptions{
 		Tags:     tags,
 		Registry: reg,
 		Access: ocicommon.NewRepositoryAccess(apiKey, namespaceName, ocicommon.RepositoryAccessOptions{

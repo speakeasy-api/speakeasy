@@ -21,8 +21,6 @@ type Overlay struct {
 	source     workflow.Source
 }
 
-var _ SourceStep = Overlay{}
-
 func NewOverlay(parentStep *workflowTracking.WorkflowStep, source workflow.Source) Overlay {
 	return Overlay{
 		parentStep: parentStep,
@@ -30,27 +28,32 @@ func NewOverlay(parentStep *workflowTracking.WorkflowStep, source workflow.Sourc
 	}
 }
 
-func (o Overlay) Do(ctx context.Context, inputPath string) (string, error) {
+type OverlayResult struct {
+	Location            string
+	InputSchemaLocation []string
+}
+
+func (o Overlay) Do(ctx context.Context, inputPath string) (result OverlayResult, err error) {
 	overlayStep := o.parentStep.NewSubstep("Applying Overlays")
 
 	overlayLocation := o.source.GetTempOverlayLocation()
+	result.Location = overlayLocation
 
 	log.From(ctx).Infof("Applying %d overlays into %s...", len(o.source.Overlays), overlayLocation)
 
-	var err error
 	var overlaySchemas []string
 	for _, overlay := range o.source.Overlays {
 		overlayFilePath := ""
 		if overlay.Document != nil {
 			overlayFilePath, err = schemas.ResolveDocument(ctx, *overlay.Document, nil, overlayStep)
 			if err != nil {
-				return "", err
+				return
 			}
 		} else if overlay.FallbackCodeSamples != nil {
 			// Make temp file for the overlay output
 			overlayFilePath = filepath.Join(workflow.GetTempDir(), fmt.Sprintf("fallback_code_samples_overlay_%s.yaml", randStringBytes(10)))
-			if err := os.MkdirAll(filepath.Dir(overlayFilePath), 0o755); err != nil {
-				return "", err
+			if err = os.MkdirAll(filepath.Dir(overlayFilePath), 0o755); err != nil {
+				return
 			}
 
 			err = defaultcodesamples.DefaultCodeSamples(ctx, defaultcodesamples.DefaultCodeSamplesFlags{
@@ -60,21 +63,22 @@ func (o Overlay) Do(ctx context.Context, inputPath string) (string, error) {
 			})
 			if err != nil {
 				log.From(ctx).Errorf("failed to generate default code samples: %s", err.Error())
-				return "", err
+				return
 			}
 		}
 
 		overlaySchemas = append(overlaySchemas, overlayFilePath)
+		result.InputSchemaLocation = append(result.InputSchemaLocation, overlayFilePath)
 	}
 
 	overlayStep.NewSubstep(fmt.Sprintf("Apply %d overlay(s)", len(o.source.Overlays)))
 
-	if err := overlayDocument(ctx, inputPath, overlaySchemas, overlayLocation); err != nil {
-		return "", err
+	if err = overlayDocument(ctx, inputPath, overlaySchemas, overlayLocation); err != nil {
+		return
 	}
 
 	overlayStep.Succeed()
-	return overlayLocation, nil
+	return
 }
 
 func overlayDocument(ctx context.Context, schema string, overlayFiles []string, outFile string) error {

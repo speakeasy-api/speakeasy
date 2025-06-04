@@ -13,8 +13,6 @@ import (
 )
 
 func TestStability(t *testing.T) {
-	t.Skip("Skipping stability test until we can figure out how to make it work on CI")
-	t.Parallel()
 	temp := setupTestDir(t)
 
 	// Create a basic workflow file
@@ -43,7 +41,7 @@ func TestStability(t *testing.T) {
 	// Run the initial generation
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
-	cmdErr := execute(t, temp, initialArgs...).Run()
+	cmdErr := executeI(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files

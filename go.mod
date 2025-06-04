@@ -274,3 +274,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
+
+replace (
+	github.com/speakeasy-api/speakeasy-core => ../speakeasy-core
+)

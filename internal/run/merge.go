@@ -20,7 +20,10 @@ type Merge struct {
 	ruleset    string
 }
 
-var _ SourceStep = Merge{}
+type MergeResult struct {
+	Location            string
+	InputSchemaLocation []string
+}
 
 func NewMerge(w *Workflow, parentStep *workflowTracking.WorkflowStep, source workflow.Source, ruleset string) Merge {
 	return Merge{
@@ -31,29 +34,29 @@ func NewMerge(w *Workflow, parentStep *workflowTracking.WorkflowStep, source wor
 	}
 }
 
-func (m Merge) Do(ctx context.Context, _ string) (string, error) {
+func (m Merge) Do(ctx context.Context, _ string) (result MergeResult, err error) {
 	mergeStep := m.parentStep.NewSubstep("Merge Documents")
 
-	mergeLocation := m.source.GetTempMergeLocation()
+	result.Location = m.source.GetTempMergeLocation()
 
-	log.From(ctx).Infof("Merging %d schemas into %s...", len(m.source.Inputs), mergeLocation)
+	log.From(ctx).Infof("Merging %d schemas into %s...", len(m.source.Inputs), result.Location)
 
-	inSchemas := []string{}
 	for _, input := range m.source.Inputs {
-		resolvedPath, err := schemas.ResolveDocument(ctx, input, nil, mergeStep)
+		var resolvedPath string
+		resolvedPath, err = schemas.ResolveDocument(ctx, input, nil, mergeStep)
 		if err != nil {
-			return "", err
+			return
 		}
-		inSchemas = append(inSchemas, resolvedPath)
+		result.InputSchemaLocation = append(result.InputSchemaLocation, resolvedPath)
 	}
 
 	mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(m.source.Inputs)))
 
-	if err := mergeDocuments(ctx, inSchemas, mergeLocation, m.ruleset, m.workflow.ProjectDir, m.workflow.SkipGenerateLintReport); err != nil {
-		return "", err
+	if err = mergeDocuments(ctx, result.InputSchemaLocation, result.Location, m.ruleset, m.workflow.ProjectDir, m.workflow.SkipGenerateLintReport); err != nil {
+		return
 	}
 
-	return mergeLocation, nil
+	return result, nil
 }
 
 func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
