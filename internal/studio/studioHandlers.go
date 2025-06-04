@@ -23,6 +23,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type flag struct {
+	mu sync.Mutex
+	v  bool
+}
+
 type StudioHandlers struct {
 	WorkflowRunner run.Workflow
 	SourceID       string
@@ -31,7 +36,9 @@ type StudioHandlers struct {
 	StudioURL      string
 	Server         *http.Server
 
-	runMutex        sync.Mutex
+	runMutex  sync.Mutex
+	runQueued flag
+
 	healthCheckSeen bool
 }
 
@@ -57,6 +64,10 @@ func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*Stud
 	}
 
 	ret.runMutex = sync.Mutex{}
+	ret.runQueued = flag{
+		mu: sync.Mutex{},
+		v:  false,
+	}
 
 	return ret, nil
 }
@@ -82,6 +93,32 @@ func (h *StudioHandlers) getLastRunResult(ctx context.Context, w http.ResponseWr
 }
 
 func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	// check if client is already disconnected
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	// check if another run is already waiting
+	h.runQueued.mu.Lock()
+	if h.runQueued.v {
+		h.runQueued.mu.Unlock()
+		log.From(ctx).Warn("too many requests: another run is already queued")
+		return nil
+	}
+	h.runQueued.v = true
+	h.runQueued.mu.Unlock()
+
+	// cancel previous run (if any) and wait for it to finish
+	h.WorkflowRunner.CancelGeneration()
+	h.runMutex.Lock()
+	// previous run released the lock, meaning it has finished
+	defer h.runMutex.Unlock()
+
+	// no longer waiting
+	h.runQueued.mu.Lock()
+	h.runQueued.v = false
+	h.runQueued.mu.Unlock()
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -90,23 +127,12 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 		return errors.New("streaming unsupported")
 	}
 
-	// If the client disconnected already, save ourselves the trouble
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
 	body, _ := io.ReadAll(r.Body)
 	r.Body = io.NopCloser(bytes.NewBuffer(body))
-
 	var runRequestBody components.RunRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&runRequestBody); err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("could not decode RunRequestBody: %w", err))
 	}
-
-	// Wait for previous run to finish, if any
-	h.WorkflowRunner.CancelGeneration()
-	h.runMutex.Lock()
-	defer h.runMutex.Unlock()
 
 	updatedOverlayPath, err := updateSourceAndTarget(h.WorkflowRunner, h.SourceID, h.OverlayPath, runRequestBody)
 	if err != nil {
