@@ -51,3 +51,10 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+            - name: Trigger changelog reconcile
+              run: |
+                  curl -X POST \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    -H "Authorization: token ${{ secrets.BOT_REPO_TOKEN }}" \
+                    https://api.github.com/repos/speakeasy-api/marketing-site/actions/workflows/changelog-reconcile.yml/dispatches \
+                    -d '{"ref":"main"}'
