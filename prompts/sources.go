@@ -289,7 +289,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	}
 	source.Inputs = append(source.Inputs, *document)
 
-	if source.Output == nil {
+	if source.Output == nil || *source.Output == "" {
 		// Set default output path for source
 		defaultOutput := ".speakeasy/out.openapi.yaml"
 		source.Output = &defaultOutput
