@@ -102,8 +102,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	h.runQueued.mu.Lock()
 	if h.runQueued.v {
 		h.runQueued.mu.Unlock()
-		log.From(ctx).Warn("too many requests: another run is already queued")
-		return nil
+		return errors.New("Too many Re-run requests: please allow the current run to finish.")
 	}
 	h.runQueued.v = true
 	h.runQueued.mu.Unlock()
@@ -229,7 +228,6 @@ func (h *StudioHandlers) compareOverlay(ctx context.Context, w http.ResponseWrit
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error unmarshalling after overlay: %w", err))
 	}
-
 	res, err := overlay.Compare("Studio Overlay Diff", &before, after)
 	if err != nil {
 		return errors.ErrBadRequest.Wrap(fmt.Errorf("error comparing overlays: %w", err))

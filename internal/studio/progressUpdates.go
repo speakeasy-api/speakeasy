@@ -73,7 +73,7 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 			Workflow:         workflow,
 			Step:             components.Step(step),
 			IsPartial:        true,
-			Took:             h.WorkflowRunner.Duration.Milliseconds(), // ?
+			Took:             h.WorkflowRunner.Duration.Milliseconds(),
 		}
 		sendRunResponseDataToStream(w, flusher, runResponseData)
 
