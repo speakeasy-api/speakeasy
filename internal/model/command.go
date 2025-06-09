@@ -124,6 +124,11 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				return err
 			}
 			cmd.SetContext(authCtx)
+
+			if err := auth.ConfirmWorkspace(authCtx); err != nil {
+				cmd.SilenceUsage = true
+				return err
+			}
 		} else {
 			authCtx, err := auth.UseExistingAPIKeyIfAvailable(cmd.Context())
 			if err != nil {
@@ -131,6 +136,11 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				return err
 			}
 			cmd.SetContext(authCtx)
+
+			if err := auth.ConfirmWorkspace(authCtx); err != nil {
+				cmd.SilenceUsage = true
+				return err
+			}
 		}
 
 		// If the command uses a workflow file, run using the version specified in the workflow file
