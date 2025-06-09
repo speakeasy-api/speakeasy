@@ -43,7 +43,7 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 			}
 
 		case progressUpdate.File != nil && progressUpdate.File.IsMainReadme && progressUpdate.File.Content != nil:
-			step = run.SourceStepReadme
+			step = run.SourceStepGenerate
 
 			readme := components.FileData{
 				Name:    "README.md",
