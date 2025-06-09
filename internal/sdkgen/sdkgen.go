@@ -188,19 +188,17 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
 
-		var genErrs []error
+		genCtx := ctx
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
-			errs, aborted := g.GenerateWithCancel(opts.CancellableGeneration.CancellableContext, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
-			if aborted {
-				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
+			genCtx = opts.CancellableGeneration.CancellableContext
+			if genCtx.Err() != nil {
+				return fmt.Errorf("generation was aborted for %s ✖", opts.Language)
 			}
-			genErrs = errs
-		} else {
-			genErrs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
 		}
 
-		if len(genErrs) > 0 {
-			for _, err := range genErrs {
+		errs := g.Generate(genCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+		if len(errs) > 0 {
+			for _, err := range errs {
 				logger.Error("", zap.Error(err))
 			}
 
