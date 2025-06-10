@@ -83,6 +83,8 @@ func testQuickstartTarget(t *testing.T, target string) {
 	tmpDir, err := os.MkdirTemp("", "speakeasy-quickstart-test-"+target+"-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
+	
+	t.Logf("Using temporary directory: %s", tmpDir)
 
 	// Change to the temporary directory
 	originalDir, err := os.Getwd()
