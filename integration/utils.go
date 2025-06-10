@@ -1,10 +1,13 @@
 package integration_tests
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -88,5 +91,63 @@ func checkForExpectedFiles(t *testing.T, outdir string, files []string) {
 		if fileInfo.Size() == 0 {
 			t.Errorf("Expected file %s in directory %s is empty.", fileName, outdir)
 		}
+	}
+}
+
+type Runnable interface {
+	Run() error
+}
+
+type subprocessRunner struct {
+	cmd *exec.Cmd
+	out *bytes.Buffer
+}
+
+func (r *subprocessRunner) Run() error {
+	err := r.cmd.Run()
+	if err != nil {
+		fmt.Println(r.out.String())
+		return err
+	}
+	return nil
+}
+
+func execute(t *testing.T, wd string, args ...string) Runnable {
+	t.Helper()
+	_, filename, _, _ := runtime.Caller(0)
+	baseFolder := filepath.Join(filepath.Dir(filename), "..")
+	
+	// Build the CLI binary first
+	binaryPath := filepath.Join(os.TempDir(), "speakeasy-test-"+randStringBytes(8))
+	buildCmd := exec.Command("go", "build", "-o", binaryPath, ".")
+	buildCmd.Dir = baseFolder
+	buildCmd.Env = os.Environ()
+	
+	buildOut := bytes.Buffer{}
+	buildCmd.Stdout = &buildOut
+	buildCmd.Stderr = &buildOut
+	
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("Failed to build CLI binary: %v\nOutput: %s", err, buildOut.String())
+	}
+	
+	// Clean up binary after test
+	t.Cleanup(func() {
+		os.Remove(binaryPath)
+	})
+	
+	// Execute the built binary from the test directory
+	execCmd := exec.Command(binaryPath, args...)
+	execCmd.Env = os.Environ()
+	execCmd.Dir = wd
+
+	// store stdout and stderr in a buffer and output it all in one go if there's a failure
+	out := bytes.Buffer{}
+	execCmd.Stdout = &out
+	execCmd.Stderr = &out
+
+	return &subprocessRunner{
+		cmd: execCmd,
+		out: &out,
 	}
 }

@@ -1,15 +1,12 @@
 package integration_tests
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -209,43 +206,6 @@ func TestInputOnlyWorkflow(t *testing.T) {
 	require.NoError(t, cmdErr)
 }
 
-type Runnable interface {
-	Run() error
-}
-
-type subprocessRunner struct {
-	cmd *exec.Cmd
-	out *bytes.Buffer
-}
-
-func (r *subprocessRunner) Run() error {
-	err := r.cmd.Run()
-	if err != nil {
-		fmt.Println(r.out.String())
-		return err
-	}
-	return nil
-}
-
-func execute(t *testing.T, wd string, args ...string) Runnable {
-	t.Helper()
-	_, filename, _, _ := runtime.Caller(0)
-	baseFolder := filepath.Join(filepath.Dir(filename), "..")
-	mainGo := filepath.Join(baseFolder, "main.go")
-	execCmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
-	execCmd.Env = os.Environ()
-	execCmd.Dir = wd
-
-	// store stdout and stderr in a buffer and output it all in one go if there's a failure
-	out := bytes.Buffer{}
-	execCmd.Stdout = &out
-	execCmd.Stderr = &out
-
-	return &subprocessRunner{
-		cmd: execCmd,
-		out: &out,
-	}
-}
 
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
 var mutex sync.Mutex
