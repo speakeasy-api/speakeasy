@@ -20,6 +20,7 @@ type Quickstart struct {
 	IsUsingSampleOpenAPISpec bool
 	IsUsingTemplate          bool
 	SDKName                  string
+	NonInteractive           bool
 }
 
 type Defaults struct {

@@ -91,21 +91,26 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	initialFields := []huh.Field{}
 
 	if quickstart == nil || quickstart.SDKName == "" {
-		initialFields = append(initialFields,
-			huh.NewInput().
-				Title("Name your SDK").
-				Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
-				Placeholder("MyCompanySDK").
-				Suggestions(suggestions).
-				Prompt("").
-				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return errors.New("SDK name must not be empty")
-					}
-					return nil
-				}).
-				Value(&sdkClassName),
-		)
+		if quickstart != nil && quickstart.NonInteractive {
+			// Use default SDK name in non-interactive mode
+			sdkClassName = "MyCompanySDK"
+		} else {
+			initialFields = append(initialFields,
+				huh.NewInput().
+					Title("Name your SDK").
+					Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
+					Placeholder("MyCompanySDK").
+					Suggestions(suggestions).
+					Prompt("").
+					Validate(func(s string) error {
+						if strings.TrimSpace(s) == "" {
+							return errors.New("SDK name must not be empty")
+						}
+						return nil
+					}).
+					Value(&sdkClassName),
+			)
+		}
 	} else {
 		sdkClassName = strcase.ToCamel(quickstart.SDKName)
 	}
@@ -127,7 +132,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	formSubtitle := "This will configure a config file that defines parameters for how your SDK is generated. \n" +
 		"Default config values have been provided. You only need to edit values that you want to modify."
 
-	if len(initialFields) > 0 {
+	if len(initialFields) > 0 && (quickstart == nil || !quickstart.NonInteractive) {
 		form := huh.NewForm(huh.NewGroup(initialFields...))
 		if _, err := charm.NewForm(form, charm.WithTitle(formTitle), charm.WithDescription(formSubtitle)).ExecuteForm(); err != nil {
 			return nil, err
@@ -149,7 +154,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 		return nil, err
 	}
 
-	if len(languageGroups) > 0 {
+	if len(languageGroups) > 0 && (quickstart == nil || !quickstart.NonInteractive) {
 		form := huh.NewForm(languageGroups...)
 		if _, err := charm.NewForm(form, charm.WithTitle(formTitle), charm.WithDescription(formSubtitle)).
 			ExecuteForm(); err != nil {

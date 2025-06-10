@@ -187,9 +187,12 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
-	useRemoteSource := hasRecentGenerations
+	useRemoteSource := false // Default to false for non-interactive mode
+	if !quickstart.NonInteractive {
+		useRemoteSource = hasRecentGenerations
+	}
 
-	if hasRecentGenerations {
+	if hasRecentGenerations && !quickstart.NonInteractive {
 		prompt := charm_internal.NewBranchPrompt(
 			"Do you want to base your SDK on an existing SDK?",
 			"Selecting 'Yes' will allow you to pick from the most recently used SDKs in your workspace",
@@ -202,16 +205,25 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	selectedRegistryUri := ""
 	if useRemoteSource {
-		selectedRecentGeneration, err := selectRecentGeneration(ctx, recentGenerations)
-
-		if err != nil {
-			useRemoteSource = false
-		}
-
-		if selectedRecentGeneration != nil {
-			selectedRegistryUri = selectedRecentGeneration.RegistryUri
+		if quickstart.NonInteractive {
+			// Use the first recent generation as default in non-interactive mode
+			if len(recentGenerations) > 0 {
+				selectedRegistryUri = recentGenerations[0].RegistryUri
+			} else {
+				useRemoteSource = false
+			}
 		} else {
-			useRemoteSource = false
+			selectedRecentGeneration, err := selectRecentGeneration(ctx, recentGenerations)
+
+			if err != nil {
+				useRemoteSource = false
+			}
+
+			if selectedRecentGeneration != nil {
+				selectedRegistryUri = selectedRecentGeneration.RegistryUri
+			} else {
+				useRemoteSource = false
+			}
 		}
 	}
 
@@ -252,8 +264,13 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		// - location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/petstore-oas@latest
 		fileLocation = selectedRegistryUri
 	} else {
-		if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
-			return nil, err
+		if quickstart.NonInteractive {
+			// Use sample spec as default in non-interactive mode
+			fileLocation = ""
+		} else {
+			if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -273,8 +290,18 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		sourceName = selectedRemoteNamespace
 	} else {
 		// No need to prompt for SDK name if we are using a sample spec
-		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
-			return nil, err
+		if quickstart.NonInteractive {
+			// Use default SDK name in non-interactive mode
+			if quickstart.SDKName == "" {
+				quickstart.SDKName = strcase.ToCamel(orgSlug)
+				if quickstart.SDKName == "" {
+					quickstart.SDKName = "DefaultSDK"
+				}
+			}
+		} else {
+			if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
+				return nil, err
+			}
 		}
 		if summary != nil && summary.Info.Title != "" {
 			sourceName = summary.Info.Title

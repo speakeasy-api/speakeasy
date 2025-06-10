@@ -135,9 +135,27 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		targetType = *quickstart.Defaults.TargetType
 	}
 
-	targetName, target, err := PromptForNewTarget(quickstart.WorkflowFile, targetName, targetType, "")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create new target")
+	var target *workflow.Target
+	var err error
+	
+	if quickstart.NonInteractive {
+		// Create target directly with defaults in non-interactive mode
+		sourceName := getSourcesFromWorkflow(quickstart.WorkflowFile)[0]
+		
+		// Use default target type if not specified
+		if targetType == "" {
+			targetType = "go" // Default to Go SDK
+		}
+		
+		target = &workflow.Target{
+			Target: targetType,
+			Source: sourceName,
+		}
+	} else {
+		targetName, target, err = PromptForNewTarget(quickstart.WorkflowFile, targetName, targetType, "")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create new target")
+		}
 	}
 
 	if err := target.Validate(generate.GetSupportedTargetNames(), quickstart.WorkflowFile.Sources); err != nil {

@@ -131,8 +131,13 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.IsUsingTemplate = true
 	}
 
+	// Set non-interactive mode in the quickstart object
 	if flags.NonInteractive {
-		return quickstartNonInteractive(ctx, flags)
+		quickstartObj.NonInteractive = true
+		// Use sample spec by default in non-interactive mode
+		if flags.Schema == "" {
+			quickstartObj.IsUsingSampleOpenAPISpec = true
+		}
 	}
 
 	nextState := prompts.SourceBase
@@ -347,7 +352,15 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		changeDirMsg = fmt.Sprintf("`cd %s` before moving forward with your SDK", relPath)
 	}
 
-	if err = wf.RunWithVisualization(ctx); err != nil {
+	// Use non-interactive run mode if NonInteractive flag is set
+	var runErr error
+	if quickstartObj.NonInteractive {
+		runErr = wf.Run(ctx)
+	} else {
+		runErr = wf.RunWithVisualization(ctx)
+	}
+	
+	if err = runErr; err != nil {
 		if strings.Contains(err.Error(), "document invalid") {
 			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
 				return errors.Wrapf(err, "failed to run generation workflow")
@@ -523,119 +536,4 @@ func currentDirectoryEmpty() bool {
 	return err == io.EOF
 }
 
-// quickstartNonInteractive runs quickstart in non-interactive mode using defaults
-func quickstartNonInteractive(ctx context.Context, flags QuickstartFlags) error {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	// Create workflow with defaults
-	workflowFile := &workflow.Workflow{
-		Version: workflow.WorkflowVersion,
-		Sources: make(map[string]workflow.Source),
-		Targets: make(map[string]workflow.Target),
-	}
-
-	// Set default target type
-	targetType := flags.TargetType
-	if targetType == "" {
-		targetType = "go"
-	}
-
-	// Set default source
-	sourceName := "my-source"
-	schemaPath := "openapi.yaml"
-	
-	if flags.Schema != "" {
-		schemaPath = flags.Schema
-	} else {
-		// Use sample spec by default in non-interactive mode
-		absSchemaPath := filepath.Join(workingDir, "openapi.yaml")
-		if err := os.WriteFile(absSchemaPath, []byte(sampleSpec), 0o644); err != nil {
-			return errors.Wrapf(err, "failed to write sample OpenAPI spec")
-		}
-		printSampleSpecMessage(absSchemaPath)
-	}
-
-	workflowFile.Sources[sourceName] = workflow.Source{
-		Inputs: []workflow.Document{
-			{
-				Location: workflow.LocationString(schemaPath),
-			},
-		},
-	}
-
-	// Set default target
-	targetName := "my-target"
-	workflowFile.Targets[targetName] = workflow.Target{
-		Target: targetType,
-		Source: sourceName,
-	}
-
-	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
-		return errors.Wrapf(err, "failed to validate workflow file")
-	}
-
-	outDir := workingDir
-	if flags.OutDir != "" {
-		outDir = flags.OutDir
-	}
-
-	speakeasyFolderPath := filepath.Join(outDir, ".speakeasy")
-	if _, err := os.Stat(speakeasyFolderPath); os.IsNotExist(err) {
-		err = os.MkdirAll(speakeasyFolderPath, 0o755)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Save workflow file
-	if err := workflow.Save(outDir, workflowFile); err != nil {
-		return errors.Wrapf(err, "failed to save workflow file")
-	}
-
-	// Create and save basic config
-	config, err := sdkGenConfig.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{targetType: true})
-	if err != nil {
-		return errors.Wrapf(err, "failed to generate default config")
-	}
-
-	// Set basic SDK name
-	sdkClassName := "TestSDK"
-	config.Generation.SDKClassName = sdkClassName
-
-	if err := sdkGenConfig.SaveConfig(outDir, config); err != nil {
-		return errors.Wrapf(err, "failed to save config file")
-	}
-
-	// Change to output directory and run generation
-	if err := os.Chdir(outDir); err != nil {
-		return errors.Wrapf(err, "failed to change to output directory")
-	}
-
-	wf, err := run.NewWorkflow(
-		ctx,
-		run.WithTarget(targetName),
-		run.WithShouldCompile(!flags.SkipCompile),
-		run.WithSkipCleanup(),
-	)
-
-	defer func() {
-		if err == nil || env.IsGithubAction() {
-			wf.Cleanup()
-		}
-	}()
-
-	if err != nil {
-		return err
-	}
-
-	// Run without visualization in non-interactive mode
-	if err = wf.Run(ctx); err != nil {
-		return errors.Wrapf(err, "failed to run generation workflow")
-	}
-
-	return nil
-}
 
