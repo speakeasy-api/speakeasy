@@ -34,6 +34,9 @@ type Defaults struct {
 	Template *string
 
 	TemplateData *shared.SchemaStoreItem
+
+	// Package name for non-interactive mode
+	PackageName *string
 }
 
 // Define constants using iota

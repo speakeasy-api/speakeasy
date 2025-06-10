@@ -45,6 +45,10 @@ type QuickstartFlags struct {
 
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
+
+	// Hidden flags for testing non-interactive mode
+	SDKName     string `json:"sdk-name"`
+	PackageName string `json:"package-name"`
 }
 
 //go:embed sample_openapi.yaml
@@ -81,6 +85,16 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:        "from",
 			Shorthand:   "f",
 			Description: "template to use for the quickstart command.\nCreate a new sandbox at https://app.speakeasy.com/sandbox",
+		},
+		flag.StringFlag{
+			Name:        "sdk-name",
+			Description: "SDK class name for non-interactive mode",
+			Hidden:      true,
+		},
+		flag.StringFlag{
+			Name:        "package-name",
+			Description: "package name for non-interactive mode",
+			Hidden:      true,
 		},
 	},
 }
@@ -133,6 +147,15 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		if flags.Schema == "" {
 			quickstartObj.IsUsingSampleOpenAPISpec = true
 		}
+	}
+
+	// Set SDK name and package name from flags if provided
+	if flags.SDKName != "" {
+		quickstartObj.SDKName = flags.SDKName
+	}
+
+	if flags.PackageName != "" {
+		quickstartObj.Defaults.PackageName = &flags.PackageName
 	}
 
 	nextState := prompts.SourceBase

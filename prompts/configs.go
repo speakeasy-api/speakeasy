@@ -326,7 +326,9 @@ func getValuesForField(
 		// By default we base the package name on the SDK class name
 		packageName := sdkClassName
 
-		if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
+		if quickstart.Defaults.PackageName != nil {
+			packageName = *quickstart.Defaults.PackageName
+		} else if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
 			packageName = quickstart.Defaults.TemplateData.PackageName
 		}
 
