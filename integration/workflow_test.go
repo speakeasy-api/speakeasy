@@ -238,6 +238,10 @@ func (c *cmdRunner) Run() error {
 	return c.rootCmd.Execute()
 }
 
+func (c *cmdRunner) Output() []byte {
+	return []byte{}
+}
+
 func TestSpecWorkflows(t *testing.T) {
 	tests := []struct {
 		name            string

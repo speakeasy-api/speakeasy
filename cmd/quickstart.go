@@ -38,11 +38,10 @@ import (
 )
 
 type QuickstartFlags struct {
-	SkipCompile     bool   `json:"skip-compile"`
-	Schema          string `json:"schema"`
-	OutDir          string `json:"out-dir"`
-	TargetType      string `json:"target"`
-	NonInteractive  bool   `json:"non-interactive"`
+	SkipCompile bool   `json:"skip-compile"`
+	Schema      string `json:"schema"`
+	OutDir      string `json:"out-dir"`
+	TargetType  string `json:"target"`
 
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
@@ -82,10 +81,6 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:        "from",
 			Shorthand:   "f",
 			Description: "template to use for the quickstart command.\nCreate a new sandbox at https://app.speakeasy.com/sandbox",
-		},
-		flag.BooleanFlag{
-			Name:        "non-interactive",
-			Description: "run in non-interactive mode using defaults",
 		},
 	},
 }
@@ -131,8 +126,8 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.IsUsingTemplate = true
 	}
 
-	// Set non-interactive mode in the quickstart object
-	if flags.NonInteractive {
+	// Automatically detect non-interactive mode
+	if !utils.IsInteractive() {
 		quickstartObj.NonInteractive = true
 		// Use sample spec by default in non-interactive mode
 		if flags.Schema == "" {
@@ -400,7 +395,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	if shouldLaunchStudio(ctx, wf, true) {
 		err = studio.LaunchStudio(ctx, wf)
-	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
+	} else if len(wf.SDKOverviewURLs) == 1 && utils.IsInteractive() { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
 		utils.OpenInBrowser(overviewURL)
 	}

@@ -92,8 +92,12 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	if quickstart == nil || quickstart.SDKName == "" {
 		if quickstart != nil && quickstart.NonInteractive {
-			// Use default SDK name in non-interactive mode
-			sdkClassName = "MyCompanySDK"
+			// Use first suggestion in non-interactive mode
+			if len(suggestions) > 0 {
+				sdkClassName = suggestions[0]
+			} else {
+				sdkClassName = "MyCompanySDK"
+			}
 		} else {
 			initialFields = append(initialFields,
 				huh.NewInput().

@@ -96,6 +96,7 @@ func checkForExpectedFiles(t *testing.T, outdir string, files []string) {
 
 type Runnable interface {
 	Run() error
+	Output() []byte
 }
 
 type subprocessRunner struct {
@@ -110,6 +111,10 @@ func (r *subprocessRunner) Run() error {
 		return err
 	}
 	return nil
+}
+
+func (r *subprocessRunner) Output() []byte {
+	return r.out.Bytes()
 }
 
 func execute(t *testing.T, wd string, args ...string) Runnable {
