@@ -206,7 +206,6 @@ func TestInputOnlyWorkflow(t *testing.T) {
 	require.NoError(t, cmdErr)
 }
 
-
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
 var mutex sync.Mutex
 var rootCmd = cmd.CmdForTest(version, artifactArch)

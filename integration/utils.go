@@ -121,26 +121,26 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
-	
+
 	// Build the CLI binary first
 	binaryPath := filepath.Join(os.TempDir(), "speakeasy-test-"+randStringBytes(8))
 	buildCmd := exec.Command("go", "build", "-o", binaryPath, ".")
 	buildCmd.Dir = baseFolder
 	buildCmd.Env = os.Environ()
-	
+
 	buildOut := bytes.Buffer{}
 	buildCmd.Stdout = &buildOut
 	buildCmd.Stderr = &buildOut
-	
+
 	if err := buildCmd.Run(); err != nil {
 		t.Fatalf("Failed to build CLI binary: %v\nOutput: %s", err, buildOut.String())
 	}
-	
+
 	// Clean up binary after test
 	t.Cleanup(func() {
 		os.Remove(binaryPath)
 	})
-	
+
 	// Execute the built binary from the test directory
 	execCmd := exec.Command(binaryPath, args...)
 	execCmd.Env = os.Environ()

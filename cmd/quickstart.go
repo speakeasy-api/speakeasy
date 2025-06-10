@@ -354,7 +354,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	} else {
 		runErr = wf.RunWithVisualization(ctx)
 	}
-	
+
 	if err = runErr; err != nil {
 		if strings.Contains(err.Error(), "document invalid") {
 			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
@@ -530,5 +530,3 @@ func currentDirectoryEmpty() bool {
 	_, err = dir.Readdirnames(1)
 	return err == io.EOF
 }
-
-

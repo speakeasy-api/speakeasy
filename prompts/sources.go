@@ -290,19 +290,18 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		sourceName = selectedRemoteNamespace
 	} else {
 		// No need to prompt for SDK name if we are using a sample spec
-		if quickstart.NonInteractive {
+		if quickstart.NonInteractive && quickstart.SDKName == "" {
 			// Use default SDK name in non-interactive mode
+			quickstart.SDKName = strcase.ToCamel(orgSlug)
 			if quickstart.SDKName == "" {
-				quickstart.SDKName = strcase.ToCamel(orgSlug)
-				if quickstart.SDKName == "" {
-					quickstart.SDKName = "DefaultSDK"
-				}
+				quickstart.SDKName = "DefaultSDK"
 			}
-		} else {
+		} else if !quickstart.NonInteractive {
 			if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
 				return nil, err
 			}
 		}
+
 		if summary != nil && summary.Info.Title != "" {
 			sourceName = summary.Info.Title
 		} else {

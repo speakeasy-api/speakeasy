@@ -83,7 +83,7 @@ func testQuickstartTarget(t *testing.T, target string) {
 	tmpDir, err := os.MkdirTemp("", "speakeasy-quickstart-test-"+target+"-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
-	
+
 	t.Logf("Using temporary directory: %s", tmpDir)
 
 	// Change to the temporary directory
@@ -103,7 +103,7 @@ func testQuickstartTarget(t *testing.T, target string) {
 	runner := execute(t, tmpDir, "quickstart", "--target", target)
 	cmdErr := runner.Run()
 	output := runner.Output()
-	
+
 	// Only fail if it's not due to account limits or other expected failures
 	if cmdErr != nil {
 		outputStr := string(output)
@@ -119,7 +119,7 @@ func testQuickstartTarget(t *testing.T, target string) {
 	// Verify basic files were created (only if quickstart got far enough)
 	workflowFile := filepath.Join(tmpDir, ".speakeasy", "workflow.yaml")
 	openapiFile := filepath.Join(tmpDir, "openapi.yaml")
-	
+
 	if cmdErr == nil {
 		// If quickstart succeeded, these files should definitely exist
 		assert.FileExists(t, workflowFile, "workflow.yaml should be created when quickstart succeeds")
@@ -148,57 +148,57 @@ func verifyTargetSpecificFiles(t *testing.T, targetDir, target string) {
 		// Check for common Go files
 		assert.FileExists(t, filepath.Join(targetDir, "go.mod"), "go.mod should be created for Go target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "mcp-typescript":
 		// Check for TypeScript/Node.js files
 		assert.FileExists(t, filepath.Join(targetDir, "package.json"), "package.json should be created for TypeScript target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "python":
 		// Check for Python files
 		assert.FileExists(t, filepath.Join(targetDir, "setup.py"), "setup.py should be created for Python target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "java":
 		// Check for Java files
 		assert.FileExists(t, filepath.Join(targetDir, "pom.xml"), "pom.xml should be created for Java target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "csharp":
 		// Check for C# files
 		files, err := filepath.Glob(filepath.Join(targetDir, "*.csproj"))
 		require.NoError(t, err)
 		assert.NotEmpty(t, files, "*.csproj file should be created for C# target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "php":
 		// Check for PHP files
 		assert.FileExists(t, filepath.Join(targetDir, "composer.json"), "composer.json should be created for PHP target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "ruby":
 		// Check for Ruby files
 		files, err := filepath.Glob(filepath.Join(targetDir, "*.gemspec"))
 		require.NoError(t, err)
 		assert.NotEmpty(t, files, "*.gemspec file should be created for Ruby target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "terraform":
 		// Check for Terraform files
 		assert.FileExists(t, filepath.Join(targetDir, "main.tf"), "main.tf should be created for Terraform target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "unity":
 		// Check for Unity files
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	case "postman":
 		// Check for Postman files
 		files, err := filepath.Glob(filepath.Join(targetDir, "*.json"))
 		require.NoError(t, err)
 		assert.NotEmpty(t, files, "*.json file should be created for Postman target")
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")
-		
+
 	default:
 		// For any other targets, just check that README exists
 		assert.FileExists(t, filepath.Join(targetDir, "README.md"), "README.md should be created")

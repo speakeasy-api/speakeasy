@@ -137,16 +137,16 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	var target *workflow.Target
 	var err error
-	
+
 	if quickstart.NonInteractive {
 		// Create target directly with defaults in non-interactive mode
 		sourceName := getSourcesFromWorkflow(quickstart.WorkflowFile)[0]
-		
+
 		// Use default target type if not specified
 		if targetType == "" {
 			targetType = "go" // Default to Go SDK
 		}
-		
+
 		target = &workflow.Target{
 			Target: targetType,
 			Source: sourceName,
