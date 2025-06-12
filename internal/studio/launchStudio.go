@@ -64,8 +64,6 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler(handlers.root))
 	mux.HandleFunc("/health", handler(handlers.health))
-	mux.HandleFunc("/overlays/compare", handler(handlers.compareOverlay))
-	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -76,6 +74,8 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+	mux.HandleFunc("/overlays/compare", handler(handlers.compareOverlay))
+	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
 
 	port, err := searchForAvailablePort()
 	if err != nil {
@@ -157,7 +157,7 @@ func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) 
 
 		logger.Info(fmt.Sprintf("%s started", base))
 		if err := h(ctx, w, r); err != nil {
-			log.From(ctx).Error(fmt.Sprintf("%s failed: %v", base, err))
+			logger.Error(fmt.Sprintf("%s failed: %v", base, err))
 			respondJSONError(ctx, w, err)
 			return
 		}

@@ -147,6 +147,14 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}
 	}
 
+	logListener := make(chan log.Msg)
+	logger := log.From(ctx).WithListener(logListener)
+	ctx = log.With(ctx, logger)
+
+	if w.StreamableGeneration != nil && w.Debug {
+		w.StreamableGeneration.LogListener = logListener
+	}
+
 	if w.CancellableGeneration != nil {
 		cancelCtx, cancelFunc := context.WithCancel(ctx)
 		w.CancellableGeneration.CancellationMutex.Lock()
@@ -163,14 +171,8 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}()
 	}
 
-	if w.StreamableGeneration != nil && w.Debug {
-		logListener := make(chan log.Msg)
-		w.StreamableGeneration.LogListener = logListener
-		logger := log.From(ctx).WithListener(logListener)
-		ctx = log.With(ctx, logger)
-		genStep := rootStep.NewSubstep(fmt.Sprintf("STUDIO Generating %s SDK", utils.CapitalizeFirst(t.Target)))
-		go genStep.ListenForSubsteps(logListener)
-	}
+	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
+	go genStep.ListenForSubsteps(logListener)
 
 	generationAccess, err := sdkgen.Generate(
 		ctx,

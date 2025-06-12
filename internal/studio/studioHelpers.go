@@ -29,36 +29,26 @@ import (
 
 type TargetResults = map[string]components.TargetRunSummary
 
-type studioRunnerOptions struct {
-	Cancellable    bool
-	OnSourceResult run.SourceResultCallback
-	Debug          bool
-}
-
-func NoSourceResultCallback(sourceRes *run.SourceResult, sourceStep run.SourceStepID) error {
-	return nil
-}
-
-func cloneWorkflowRunner(ctx context.Context, workflowRunner run.Workflow, options studioRunnerOptions, sourceID string) (run.Workflow, error) {
-
-	clonedWorkflow, err := workflowRunner.Clone(
+func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
+	workflowRunnerPtr, err := workflowRunner.Clone(
 		ctx,
 		run.WithSkipCleanup(),
-		run.WithLinting(),
+		run.WithSkipLinting(),
 		run.WithSkipGenerateLintReport(),
 		run.WithSkipSnapshot(true),
 		run.WithSkipChangeReport(true),
-		run.WithShouldCompile(true),
-		run.WithCancellableGeneration(options.Cancellable),
-		run.WithSourceUpdates(options.OnSourceResult),
-		run.WithDebug(options.Debug),
 	)
-
 	if err != nil {
-		return workflowRunner, fmt.Errorf("error cloning workflow runner: %w", err)
+		return nil, fmt.Errorf("error cloning workflow runner: %w", err)
+	}
+	workflowRunner = *workflowRunnerPtr
+
+	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
+	if err != nil {
+		return nil, fmt.Errorf("error running source: %w", err)
 	}
 
-	return *clonedWorkflow, nil
+	return sourceResult, nil
 }
 
 func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string) run.SourceResultCallback {
@@ -86,26 +76,6 @@ func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flu
 
 		return nil
 	}
-}
-
-func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
-	options := studioRunnerOptions{
-		Cancellable:    false,
-		Debug:          false,
-		OnSourceResult: nil,
-	}
-	runner, err := cloneWorkflowRunner(ctx, workflowRunner, options, sourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	_, sourceResult, err := runner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
-
-	if err != nil {
-		return nil, fmt.Errorf("error running source: %w", err)
-	}
-
-	return sourceResult, nil
 }
 
 func sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string, step run.SourceStepID) error {

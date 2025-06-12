@@ -35,8 +35,8 @@ type GenerationAccess struct {
 }
 
 type CancellableGeneration struct {
-	CancellationMutex  sync.Mutex
-	CancellableContext context.Context
+	CancellationMutex  sync.Mutex         // protects both CancellableContext and CancelGeneration (exposed by w.CancelGeneration())
+	CancellableContext context.Context    // the context that can be cancelled to stop generation
 	CancelGeneration   context.CancelFunc // the function to call to cancel generation
 }
 
@@ -68,7 +68,6 @@ type GenerateOptions struct {
 	TargetName      string
 	SkipVersioning  bool
 
-	SkipCompilation       bool
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
 }
@@ -188,15 +187,19 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
 
-		genCtx := ctx
+		var errs []error
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
-			genCtx = opts.CancellableGeneration.CancellableContext
-			if genCtx.Err() != nil {
-				return fmt.Errorf("generation was aborted for %s ✖", opts.Language)
+			cancelCtx := opts.CancellableGeneration.CancellableContext
+
+			var cancelled bool
+			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+			if cancelled {
+				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
 			}
+		} else {
+			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
 		}
 
-		errs := g.Generate(genCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
 		if len(errs) > 0 {
 			for _, err := range errs {
 				logger.Error("", zap.Error(err))
@@ -207,7 +210,6 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		return nil
 	})
-
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
