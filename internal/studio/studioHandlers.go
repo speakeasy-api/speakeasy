@@ -139,20 +139,49 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	}
 	h.OverlayPath = updatedOverlayPath
 
-	options := studioRunnerOptions{
-		Cancellable:    !runRequestBody.Disconnect,
-		Debug:          env.IsLocalDev(),
-		OnSourceResult: onSourceResult(h.Ctx, w, flusher, h.WorkflowRunner, h.SourceID, h.OverlayPath),
-	}
-
 	defer func() {
-		h.WorkflowRunner.OnSourceResult = NoSourceResultCallback
+		h.WorkflowRunner.OnSourceResult = func(r *run.SourceResult, s run.SourceStepID) error { return nil }
 	}()
 
-	h.WorkflowRunner, err = cloneWorkflowRunner(h.Ctx, h.WorkflowRunner, options, h.SourceID)
+	clonedWorkflow, err := h.WorkflowRunner.Clone(
+		h.Ctx,
+		run.WithSkipCleanup(),
+		run.WithLinting(),
+		run.WithSkipGenerateLintReport(),
+		run.WithSkipSnapshot(true),
+		run.WithSkipChangeReport(true),
+		run.WithShouldCompile(true),
+		run.WithCancellableGeneration(!runRequestBody.Disconnect),
+		run.WithDebug(env.IsLocalDev()),
+		run.WithSourceUpdates(func(sourceResult *run.SourceResult, sourceStep run.SourceStepID) error {
+			if sourceResult.Source == h.SourceID {
+				sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, h.SourceID, h.OverlayPath)
+				if err != nil {
+					return fmt.Errorf("error converting source result to source response: %s", err)
+				}
+
+				response, err := convertLastRunResult(ctx, h.WorkflowRunner, h.SourceID, h.OverlayPath, sourceStep)
+				if err != nil {
+					return fmt.Errorf("error getting last completed run result: %s", err)
+				}
+				response.SourceResult = sourceResponseData
+
+				responseJSON, err := json.Marshal(response)
+				if err != nil {
+					return fmt.Errorf("error marshaling run response: %s", err)
+				}
+
+				fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+				flusher.Flush()
+			}
+
+			return nil
+		}),
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
+	h.WorkflowRunner = *clonedWorkflow
 
 	if runRequestBody.Stream != nil {
 		h.enableGenerationProgressUpdates(w, flusher, runRequestBody.Stream.GenSteps, runRequestBody.Stream.FileStatus)

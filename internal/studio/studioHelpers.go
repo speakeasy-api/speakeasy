@@ -35,72 +35,21 @@ type studioRunnerOptions struct {
 	Debug          bool
 }
 
-func NoSourceResultCallback(sourceRes *run.SourceResult, sourceStep run.SourceStepID) error {
-	return nil
-}
-
-func cloneWorkflowRunner(ctx context.Context, workflowRunner run.Workflow, options studioRunnerOptions, sourceID string) (run.Workflow, error) {
-
-	clonedWorkflow, err := workflowRunner.Clone(
+func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
+	workflowRunnerPtr, err := workflowRunner.Clone(
 		ctx,
 		run.WithSkipCleanup(),
-		run.WithLinting(),
+		run.WithSkipLinting(),
 		run.WithSkipGenerateLintReport(),
 		run.WithSkipSnapshot(true),
 		run.WithSkipChangeReport(true),
-		run.WithShouldCompile(true),
-		run.WithCancellableGeneration(options.Cancellable),
-		run.WithSourceUpdates(options.OnSourceResult),
-		run.WithDebug(options.Debug),
 	)
-
 	if err != nil {
-		return workflowRunner, fmt.Errorf("error cloning workflow runner: %w", err)
+		return nil, fmt.Errorf("error cloning workflow runner: %w", err)
 	}
+	workflowRunner = *workflowRunnerPtr
 
-	return *clonedWorkflow, nil
-}
-
-func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string) run.SourceResultCallback {
-	return func(sourceResult *run.SourceResult, sourceStep run.SourceStepID) error {
-		if sourceResult.Source == sourceID {
-			sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, sourceID, overlayPath)
-			if err != nil {
-				return fmt.Errorf("error converting source result to source response: %s", err)
-			}
-
-			response, err := convertLastRunResult(ctx, workflowRunner, sourceID, overlayPath, sourceStep)
-			if err != nil {
-				return fmt.Errorf("error getting last completed run result: %s", err)
-			}
-			response.SourceResult = sourceResponseData
-
-			responseJSON, err := json.Marshal(response)
-			if err != nil {
-				return fmt.Errorf("error marshaling run response: %s", err)
-			}
-
-			fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
-			flusher.Flush()
-		}
-
-		return nil
-	}
-}
-
-func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
-	options := studioRunnerOptions{
-		Cancellable:    false,
-		Debug:          false,
-		OnSourceResult: nil,
-	}
-	runner, err := cloneWorkflowRunner(ctx, workflowRunner, options, sourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	_, sourceResult, err := runner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
-
+	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
 	if err != nil {
 		return nil, fmt.Errorf("error running source: %w", err)
 	}
