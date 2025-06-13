@@ -36,4 +36,5 @@ var _ = []Flag{
 	&IntFlag{},
 	&MapFlag{},
 	&StringSliceFlag{},
+	&StringFlagWithOptionalValue{},
 }
