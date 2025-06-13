@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/openapi/arazzo"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/sdk-gen-config/workspace"
@@ -62,6 +65,80 @@ func CheckTestingEnabled(ctx context.Context) error {
 
 func CheckTestingAccountType(accountType shared.AccountType) bool {
 	return slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, accountType)
+}
+
+// RebuildTests will prepare the arazzo and gen.lock files for a target ready to rebuild tests.
+func RebuildTests(ctx context.Context, target, rebuildFlag string, cfg *config.Config) error {
+	workspaceResult, _ := workspace.FindWorkspace(filepath.Dir(cfg.ConfigPath), workspace.FindWorkspaceOptions{
+		FindFile:  "tests.arazzo.yaml",
+		Recursive: true,
+	})
+
+	if rebuildFlag == "*" {
+		cfg.LockFile.GeneratedTests = nil
+		if err := config.SaveLockFile(filepath.Dir(cfg.ConfigPath), cfg.LockFile); err != nil {
+			return errors.Wrapf(err, "failed to update lock file for target %s", target)
+		}
+		if workspaceResult != nil {
+			err := os.Remove(workspaceResult.Path)
+			if err != nil {
+				return errors.Wrapf(err, "failed to remove tests.arazzo.yaml file for target %s", target)
+			}
+		}
+
+		return nil
+	}
+
+	var operations []string
+	ops := strings.Split(rebuildFlag, ",")
+	for _, op := range ops {
+		op = strings.TrimSpace(op)
+		if op == "" {
+			continue
+		}
+		operations = append(operations, op)
+
+		cfg.LockFile.GeneratedTests.Delete(op)
+	}
+
+	if err := config.SaveLockFile(filepath.Dir(cfg.ConfigPath), cfg.LockFile); err != nil {
+		return errors.Wrapf(err, "failed to update lock file for target %s", target)
+	}
+
+	f, err := os.OpenFile(workspaceResult.Path, os.O_RDWR, 0o600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open tests.arazzo.yaml file for target %s", target)
+	}
+	defer f.Close()
+
+	a, _, err := arazzo.Unmarshal(ctx, f, arazzo.WithSkipValidation())
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal tests.arazzo.yaml file for target %s", target)
+	}
+
+	retainedWorkflows := arazzo.Workflows{}
+	for _, workflow := range a.Workflows {
+		// If the workflow id isn't present in our list then we retain it
+		if !slices.Contains(operations, workflow.WorkflowID) {
+			retainedWorkflows = append(retainedWorkflows, workflow)
+		}
+	}
+
+	a.Workflows = retainedWorkflows
+
+	// Seek to beginning and truncate before writing
+	if _, err := f.Seek(0, 0); err != nil {
+		return errors.Wrapf(err, "failed to seek to beginning of tests.arazzo.yaml file for target %s", target)
+	}
+	if err := f.Truncate(0); err != nil {
+		return errors.Wrapf(err, "failed to truncate tests.arazzo.yaml file for target %s", target)
+	}
+
+	if err := a.Marshal(ctx, f); err != nil {
+		return errors.Wrapf(err, "failed to marshal tests.arazzo.yaml file for target %s", target)
+	}
+
+	return nil
 }
 
 func populateRawTestReport(outDir string, event *shared.CliEvent) bool {
