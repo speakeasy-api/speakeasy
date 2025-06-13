@@ -3,41 +3,30 @@
 package components
 
 type TargetRunSummary struct {
-	// Contents of the README file for this target
-	Readme string `json:"readme"`
-	// Contents of the gen.yaml file for this target
-	GenYaml string `json:"gen_yaml"`
-	// The path to the gen.yaml file for this target
-	GenYamlPath *string `json:"gen_yaml_path,omitempty"`
+	// Target ID in the workflow file
+	TargetID string `json:"targetID"`
+	// Source ID in the workflow file
+	SourceID string `json:"sourceID"`
 	// Output directory for this target
 	OutputDirectory string `json:"output_directory"`
 	// Language for this target
-	Language string `json:"language"`
-	// Source ID in the workflow file
-	SourceID string `json:"sourceID"`
-	// Target ID in the workflow file
-	TargetID string `json:"targetID"`
+	Language string    `json:"language"`
+	Readme   *FileData `json:"readme,omitempty"`
+	GenYaml  *FileData `json:"gen_yaml,omitempty"`
 }
 
-func (o *TargetRunSummary) GetReadme() string {
+func (o *TargetRunSummary) GetTargetID() string {
 	if o == nil {
 		return ""
 	}
-	return o.Readme
+	return o.TargetID
 }
 
-func (o *TargetRunSummary) GetGenYaml() string {
+func (o *TargetRunSummary) GetSourceID() string {
 	if o == nil {
 		return ""
 	}
-	return o.GenYaml
-}
-
-func (o *TargetRunSummary) GetGenYamlPath() *string {
-	if o == nil {
-		return nil
-	}
-	return o.GenYamlPath
+	return o.SourceID
 }
 
 func (o *TargetRunSummary) GetOutputDirectory() string {
@@ -54,16 +43,16 @@ func (o *TargetRunSummary) GetLanguage() string {
 	return o.Language
 }
 
-func (o *TargetRunSummary) GetSourceID() string {
+func (o *TargetRunSummary) GetReadme() *FileData {
 	if o == nil {
-		return ""
+		return nil
 	}
-	return o.SourceID
+	return o.Readme
 }
 
-func (o *TargetRunSummary) GetTargetID() string {
+func (o *TargetRunSummary) GetGenYaml() *FileData {
 	if o == nil {
-		return ""
+		return nil
 	}
-	return o.TargetID
+	return o.GenYaml
 }
