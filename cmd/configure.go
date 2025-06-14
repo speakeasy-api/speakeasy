@@ -169,7 +169,7 @@ var configureTestingCmd = &model.ExecutableCommand[ConfigureTestsFlags]{
 		},
 		flag.StringFlagWithOptionalValue{
 			Name:         "rebuild",
-			Description:  "clears out all existing tests and regenerates them from scratch or if operations are specified will rebuild the tests for those operations",
+			Description:  "clears out all existing tests and regenerates them from scratch or if operations are specified will rebuild the tests for those operations (multiple operations can be specified as a single comma separated value)",
 			DefaultValue: "*",
 		},
 	},
