@@ -166,6 +166,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	if isQuickstart {
 		setDevContainerDefaults(output, wf, target)
 		setEnvVarPrefixDefaults(output, target, sdkClassName)
+		setReactQueryDefaults(output, target, quickstart.IsReactQuery)
 	}
 
 	return output, nil
@@ -188,6 +189,14 @@ func setDevContainerDefaults(output *config.Configuration, wf *workflow.Workflow
 	}
 }
 
+func setReactQueryDefaults(output *config.Configuration, target *workflow.Target, isReactQuery bool) {
+	if target.Target == "typescript" && isReactQuery {
+		if cfg, ok := output.Languages[target.Target]; ok && cfg.Cfg != nil {
+			cfg.Cfg["enableReactQuery"] = true
+		}
+	}
+}
+
 func setEnvVarPrefixDefaults(output *config.Configuration, target *workflow.Target, sdkClassName string) {
 	if target.Target == "go" || target.Target == "typescript" || target.Target == "python" {
 		if cfg, ok := output.Languages[target.Target]; ok && cfg.Cfg != nil {
@@ -203,10 +212,17 @@ func configBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 			return nil, err
 		}
 
+		// Set defaults for new SDKs
+		if quickstart != nil {
+			setDevContainerDefaults(output, quickstart.WorkflowFile, &target)
+			setEnvVarPrefixDefaults(output, &target, output.Generation.SDKClassName)
+			setReactQueryDefaults(output, &target, quickstart.IsReactQuery)
+		}
+
 		quickstart.LanguageConfigs[key] = output
 	}
 
-	var nextState QuickstartState = Complete
+	nextState := Complete
 	return &nextState, nil
 }
 
