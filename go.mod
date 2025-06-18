@@ -14,6 +14,7 @@ require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.1
+	github.com/charmbracelet/fang v0.1.0
 	github.com/charmbracelet/glamour v0.7.0
 	github.com/charmbracelet/huh v0.5.1
 	github.com/charmbracelet/lipgloss v0.13.0
@@ -50,9 +51,9 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sync v0.12.0
+	golang.org/x/sync v0.13.0
 	golang.org/x/term v0.30.0
-	golang.org/x/text v0.23.0
+	golang.org/x/text v0.24.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -81,9 +82,13 @@ require (
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/charmbracelet/x/ansi v0.2.3 // indirect
+	github.com/charmbracelet/colorprofile v0.3.0 // indirect
+	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.1 // indirect
+	github.com/charmbracelet/x/ansi v0.8.0 // indirect
+	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
+	github.com/charmbracelet/x/exp/charmtone v0.0.0-20250603201427-c31516f43444 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240617190524-788ec55faed1 // indirect
-	github.com/charmbracelet/x/term v0.2.0 // indirect
+	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/chromedp/cdproto v0.0.0-20230802225258-3cf4e6d46a89 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
@@ -189,7 +194,11 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
+	github.com/muesli/mango v0.1.0 // indirect
+	github.com/muesli/mango-cobra v1.2.0 // indirect
+	github.com/muesli/mango-pflag v0.1.0 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
+	github.com/muesli/roff v0.1.0 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
