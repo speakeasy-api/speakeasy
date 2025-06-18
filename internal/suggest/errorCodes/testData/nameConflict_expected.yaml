@@ -35,50 +35,16 @@ paths:
                 "$ref": "#/components/schemas/Pet"
         '400':
           $ref: '#/components/responses/InvalidInput'
-        '413':
-          $ref: '#/components/responses/InvalidInput'
-        '414':
-          $ref: '#/components/responses/InvalidInput'
-        '415':
-          $ref: '#/components/responses/InvalidInput'
         '422':
-          $ref: '#/components/responses/InvalidInput'
-        '431':
-          $ref: '#/components/responses/InvalidInput'
-        '510':
           $ref: '#/components/responses/InvalidInput'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Unauthorized'
-        '407':
-          $ref: '#/components/responses/Unauthorized'
-        '511':
-          $ref: '#/components/responses/Unauthorized'
         '404':
-          $ref: '#/components/responses/NotFound'
-        '501':
-          $ref: '#/components/responses/NotFound'
-        '505':
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
-        '500':
-          $ref: '#/components/responses/InternalServerError1'
-        '502':
-          $ref: '#/components/responses/InternalServerError1'
-        '503':
-          $ref: '#/components/responses/InternalServerError1'
-        '506':
-          $ref: '#/components/responses/InternalServerError1'
-        '507':
-          $ref: '#/components/responses/InternalServerError1'
-        '508':
-          $ref: '#/components/responses/InternalServerError1'
-        '408':
-          $ref: '#/components/responses/Timeout'
-        '504':
-          $ref: '#/components/responses/Timeout'
     post:
       tags:
         - pet
@@ -103,50 +69,16 @@ paths:
           description: Invalid input
         '400':
           $ref: '#/components/responses/InvalidInput'
-        '413':
-          $ref: '#/components/responses/InvalidInput'
-        '414':
-          $ref: '#/components/responses/InvalidInput'
-        '415':
-          $ref: '#/components/responses/InvalidInput'
         '422':
-          $ref: '#/components/responses/InvalidInput'
-        '431':
-          $ref: '#/components/responses/InvalidInput'
-        '510':
           $ref: '#/components/responses/InvalidInput'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Unauthorized'
-        '407':
-          $ref: '#/components/responses/Unauthorized'
-        '511':
-          $ref: '#/components/responses/Unauthorized'
         '404':
-          $ref: '#/components/responses/NotFound'
-        '501':
-          $ref: '#/components/responses/NotFound'
-        '505':
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
-        '500':
-          $ref: '#/components/responses/InternalServerError1'
-        '502':
-          $ref: '#/components/responses/InternalServerError1'
-        '503':
-          $ref: '#/components/responses/InternalServerError1'
-        '506':
-          $ref: '#/components/responses/InternalServerError1'
-        '507':
-          $ref: '#/components/responses/InternalServerError1'
-        '508':
-          $ref: '#/components/responses/InternalServerError1'
-        '408':
-          $ref: '#/components/responses/Timeout'
-        '504':
-          $ref: '#/components/responses/Timeout'
   "/pet/findByStatus":
     get:
       tags:
@@ -182,46 +114,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-        '413':
-          $ref: '#/components/responses/InvalidInput'
-        '414':
-          $ref: '#/components/responses/InvalidInput'
-        '415':
-          $ref: '#/components/responses/InvalidInput'
         '422':
-          $ref: '#/components/responses/InvalidInput'
-        '431':
-          $ref: '#/components/responses/InvalidInput'
-        '510':
           $ref: '#/components/responses/InvalidInput'
         '403':
           $ref: '#/components/responses/Unauthorized'
-        '407':
-          $ref: '#/components/responses/Unauthorized'
-        '511':
-          $ref: '#/components/responses/Unauthorized'
-        '501':
-          $ref: '#/components/responses/NotFound'
-        '505':
-          $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
-        '500':
-          $ref: '#/components/responses/InternalServerError1'
-        '502':
-          $ref: '#/components/responses/InternalServerError1'
-        '503':
-          $ref: '#/components/responses/InternalServerError1'
-        '506':
-          $ref: '#/components/responses/InternalServerError1'
-        '507':
-          $ref: '#/components/responses/InternalServerError1'
-        '508':
-          $ref: '#/components/responses/InternalServerError1'
-        '408':
-          $ref: '#/components/responses/Timeout'
-        '504':
-          $ref: '#/components/responses/Timeout'
 components:
   securitySchemes:
     api_key:
@@ -296,18 +194,7 @@ components:
       type: string
     RateLimited:
       type: object
-      properties:
-        message:
-          type: string
-      additionalProperties: true
-    InternalServerError1:
-      type: object
-      properties:
-        message:
-          type: string
-      additionalProperties: true
-    Timeout:
-      type: object
+      x-speakeasy-suggested-error: true
       properties:
         message:
           type: string
@@ -338,20 +225,8 @@ components:
           schema:
             $ref: '#/components/schemas/InternalServerError'
     RateLimited:
-      description: Status codes relating to the client being rate limited by the server
+      description: Rate limit exceeded
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/RateLimited'
-    InternalServerError1:
-      description: A collection of status codes that generally mean the server failed in an unexpected way
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/InternalServerError1'
-    Timeout:
-      description: Timeouts occurred with the request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Timeout'

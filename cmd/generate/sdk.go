@@ -32,7 +32,7 @@ type GenerateFlags struct {
 
 var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	Usage:        "sdk",
-	Short:        fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s)", strings.Join(SDKSupportedLanguageTargets(), ", ")),
+	Short:        fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s)", strings.Join(GeneratorSupportedTargetNames(), ", ")),
 	Long:         generateLongDesc,
 	Run:          genSDKs,
 	RequiresAuth: true,
@@ -41,8 +41,8 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 			Name:          "lang",
 			Shorthand:     "l",
 			Required:      true,
-			AllowedValues: SDKSupportedLanguageTargets(),
-			Description:   fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(SDKSupportedLanguageTargets(), ", ")),
+			AllowedValues: GeneratorSupportedTargetNames(),
+			Description:   fmt.Sprintf("language to generate sdk for (available options: [%s])", strings.Join(GeneratorSupportedTargetNames(), ", ")),
 		},
 		schemaFlag,
 		outFlag,
@@ -200,4 +200,4 @@ generate:
 `+"```"+`
 
 For additional documentation visit: https://speakeasy.com/docs/using-speakeasy/create-client-sdks/intro
-`, strings.Join(SDKSupportedLanguageTargets(), "\n	- "))
+`, strings.Join(GeneratorSupportedTargetNames(), "\n	- "))

@@ -3,12 +3,13 @@ package generate
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
-	"strings"
 )
 
 type GenerateUsageSnippetFlags struct {
@@ -49,7 +50,7 @@ You can also select to write to a file or write to a formatted output directory.
 		flag.StringFlag{
 			Name:        "operation-id",
 			Shorthand:   "i",
-			Description: "The AffectedOperationIDs to generate usage snippet for",
+			Description: "A comma-separated list of operationIds to generate usage snippets for.",
 		},
 		flag.StringFlag{
 			Name:        "namespace",
@@ -89,6 +90,8 @@ func genUsageSnippets(ctx context.Context, flags GenerateUsageSnippetFlags) erro
 		flags.Namespace,
 		flags.ConfigPath,
 		flags.All,
+		nil,
+		nil,
 		nil,
 	)
 }

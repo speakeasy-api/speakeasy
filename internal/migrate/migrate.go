@@ -349,7 +349,7 @@ func getPublishing(genWorkflow config.GenerateWorkflow, lang string) *workflow.P
 	if shouldPublish {
 		// These secret values are hardcoded because they are the names of the secrets in the action
 		switch lang {
-		case "typescript":
+		case "mcp-typescript", "typescript":
 			return &workflow.Publishing{
 				NPM: &workflow.NPM{
 					Token: "$NPM_TOKEN",

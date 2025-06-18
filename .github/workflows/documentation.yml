@@ -1,66 +1,73 @@
 name: Documentation
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
 
 permissions:
-  contents: write
+    contents: write
 
 env:
-  GOPRIVATE: "github.com/speakeasy-api"
+    GOPRIVATE: "github.com/speakeasy-api"
 
 jobs:
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
+    docs:
+        name: Documentation
+        runs-on: ubuntu-latest
 
-    env:
-      CLI_RUNTIME: "docs"
-
-    steps:
-      - name: Checkout speakeasy repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          path: speakeasy
-          token: ${{ secrets.DOCUMENTATION_PAT }}
-      - name: Checkout speakeasy-registry repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: speakeasy-api/speakeasy-registry
-          path: speakeasy-registry
-          token: ${{ secrets.DOCUMENTATION_PAT }}
-      - name: Configure git for private modules
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
-        run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
-      - name: Set up Go 1.x
-        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
-        with:
-          go-version-file: "speakeasy/go.mod"
-      - name: Generate speakeasy-registry doc-site docs
-        working-directory: speakeasy
-        run: |
-          go run cmd/docs/main.go -out-dir ../speakeasy-registry/web/packages/marketing-site/src/pages/docs/speakeasy-reference/cli
-      - name: Create PR against speakeasy-registry
-        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
-        with:
-          path: speakeasy-registry
-          token: ${{ secrets.DOCUMENTATION_PAT }}
-          commit-message: "docs: update speakeasy cli docs"
-          title: "docs: update speakeasy cli docs"
-      - if: failure()
-        name: Notify Slack on Failure
-        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
-        with:
-          webhook: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }} # URL for docs channel
-          webhook-type: incoming-webhook
-          payload: |
-            text: "*CLI to Website Documentation Failure*:"
-            blocks:
-              - type: "section"
-                text:
-                  type: "mrkdwn"
-                  text: "*GitHub Actions Logs*: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
+            CLI_RUNTIME: "docs"
+
+        steps:
+            - name: Checkout speakeasy repository
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+              with:
+                  path: speakeasy
+                  token: ${{ secrets.SERVICE_BOT_TOKEN }}
+
+            - name: Checkout marketing-site repository
+              uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+              with:
+                  repository: speakeasy-api/marketing-site
+                  path: marketing-site
+                  token: ${{ secrets.SERVICE_BOT_TOKEN }}
+
+            - name: Configure git for private modules
+              env:
+                  GITHUB_TOKEN: ${{ secrets.SERVICE_BOT_TOKEN }}
+              run: git config --global url."https://speakeasybot:${GITHUB_TOKEN}@github.com".insteadOf "https://github.com"
+
+            - name: Set up Go 1.x
+              uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+              with:
+                  go-version-file: "speakeasy/go.mod"
+
+            - name: Generate CLI docs into marketing-site
+              working-directory: speakeasy
+              run: |
+                  go run cmd/docs/main.go -out-dir ../marketing-site/src/content/docs/speakeasy-reference/cli
+
+            - name: Create PR against marketing-site
+              uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+              with:
+                  path: marketing-site
+                  token: ${{ secrets.SERVICE_BOT_TOKEN }}
+                  commit-message: "docs: update speakeasy CLI docs"
+                  title: "docs: update speakeasy CLI docs"
+                  branch: cli-docs/update
+
+            - if: failure()
+              name: Notify Slack on Failure
+              uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52 # v2.1.0
+              with:
+                  webhook: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }}
+                  webhook-type: incoming-webhook
+                  payload: |
+                      text: "*CLI to Website Documentation Failure*:"
+                      blocks:
+                        - type: "section"
+                          text:
+                            type: "mrkdwn"
+                            text: "*GitHub Actions Logs*: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"

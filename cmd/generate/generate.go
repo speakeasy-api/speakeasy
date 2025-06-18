@@ -19,17 +19,8 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 )
 
-func SDKSupportedLanguageTargets() []string {
-	languages := make([]string, 0)
-	for _, lang := range generate.GetSupportedLanguages() {
-		if lang == "docs" {
-			continue
-		}
-
-		languages = append(languages, lang)
-	}
-
-	return languages
+func GeneratorSupportedTargetNames() []string {
+	return generate.GetSupportedTargetNames()
 }
 
 var (
@@ -157,7 +148,7 @@ func getLatestVersionInfo(ctx context.Context, flags GenerateSDKVersionFlags) er
 
 	lang := flags.Language
 	if lang != "" {
-		if !slices.Contains(generate.GetSupportedLanguages(), lang) {
+		if !slices.Contains(generate.GetSupportedTargetNames(), lang) {
 			return fmt.Errorf("unsupported language %s", lang)
 		}
 
@@ -199,7 +190,7 @@ func getChangelogs(ctx context.Context, flags GenerateSDKChangelogFlags) error {
 
 	lang := flags.Language
 	if lang != "" {
-		if !slices.Contains(generate.GetSupportedLanguages(), lang) {
+		if !slices.Contains(generate.GetSupportedTargetNames(), lang) {
 			return fmt.Errorf("unsupported language %s", lang)
 		}
 

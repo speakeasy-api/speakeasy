@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	spkErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/testcmd"
@@ -119,8 +118,8 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 }
 
 type ConfigureTestsFlags struct {
-	Rebuild           bool   `json:"rebuild"`
-	WorkflowDirectory string `json:"workflow-directory"`
+	Rebuild           *string `json:"rebuild"`
+	WorkflowDirectory string  `json:"workflow-directory"`
 }
 
 type ConfigureGithubFlags struct {
@@ -168,9 +167,10 @@ var configureTestingCmd = &model.ExecutableCommand[ConfigureTestsFlags]{
 			Shorthand:   "d",
 			Description: "directory of speakeasy workflow file",
 		},
-		flag.BooleanFlag{
-			Name:        "rebuild",
-			Description: "clears out all existing tests and regenerates them from scratch",
+		flag.StringFlagWithOptionalValue{
+			Name:         "rebuild",
+			Description:  "clears out all existing tests and regenerates them from scratch or if operations are specified will rebuild the tests for those operations (multiple operations can be specified as a single comma separated value)",
+			DefaultValue: "*",
 		},
 	},
 	RequiresAuth: true,
@@ -237,7 +237,7 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		existingSourceName = newName
 	}
 
-	if err := workflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
+	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
@@ -397,7 +397,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.Wrapf(err, "failed to save config file for target %s", targetName)
 	}
 
-	if err := workflowFile.Validate(generate.GetSupportedLanguages()); err != nil {
+	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
@@ -622,20 +622,8 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 		}
 
 		// We clear out the existing generated tests gen.lock entry and arazzo file, so we can rebuild from scratch.
-		if flags.Rebuild && cfg.LockFile != nil {
-			cfg.LockFile.GeneratedTests = nil
-			if err := config.SaveLockFile(filepath.Dir(cfg.ConfigPath), cfg.LockFile); err != nil {
-				return errors.Wrapf(err, "failed to update lock file for target %s", name)
-			}
-			if res, _ := workspace.FindWorkspace(filepath.Dir(cfg.ConfigPath), workspace.FindWorkspaceOptions{
-				FindFile:  "tests.arazzo.yaml",
-				Recursive: true,
-			}); res != nil {
-				err := os.Remove(res.Path)
-				if err != nil {
-					return errors.Wrapf(err, "failed to remove tests.arazzo.yaml file for target %s", name)
-				}
-			}
+		if flags.Rebuild != nil && cfg.LockFile != nil {
+			testcmd.RebuildTests(ctx, name, *flags.Rebuild, cfg)
 		}
 	}
 
@@ -980,7 +968,7 @@ func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) (
 		var targetLanguage string
 		for lang := range cfg.Config.Languages {
 			// A problem with some old gen.yaml files pulling in non language entries
-			if slices.Contains(generate.GetSupportedLanguages(), lang) {
+			if slices.Contains(generate.GetSupportedTargetNames(), lang) {
 				targetLanguage = lang
 				if lang == "docs" {
 					break

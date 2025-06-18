@@ -17,12 +17,21 @@ import (
 
 	"github.com/pkg/errors"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/filesystem"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"go.uber.org/zap"
 )
 
-func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string, all bool, outputBuffer *bytes.Buffer) error {
+func Generate(
+	ctx context.Context,
+	customerID, lang, schemaPath, header, token, out, operation, namespace, configPath string,
+	all bool,
+	outputBuffer *bytes.Buffer,
+	// These should be provided together
+	exampleParams map[string]string,
+	exampleRequestBody *string,
+) error {
 	matchedLanguage := false
 	for _, language := range workflow.SupportedLanguagesUsageSnippets {
 		if language == lang {
@@ -62,6 +71,11 @@ func Generate(ctx context.Context, customerID, lang, schemaPath, header, token, 
 		opts = append(opts, generate.WithUsageSnippetArgsByOperationID(operation))
 	} else {
 		opts = append(opts, generate.WithUsageSnippetArgsByNamespace(namespace))
+	}
+
+	if exampleRequestBody != nil {
+		opts = append(opts, generate.WithUsageSnippetExampleParams(exampleParams))
+		opts = append(opts, generate.WithUsageSnippetExampleRequestBody(*exampleRequestBody))
 	}
 
 	g, err := generate.New(opts...)
@@ -261,7 +275,7 @@ type fileSystem struct {
 	buf *bytes.Buffer
 }
 
-var _ generate.FileSystem = &fileSystem{}
+var _ filesystem.FileSystem = &fileSystem{}
 
 func (fs *fileSystem) ReadFile(fileName string) ([]byte, error) {
 	return os.ReadFile(fileName)
@@ -273,12 +287,15 @@ func (fs *fileSystem) WriteFile(outFileName string, data []byte, mode os.FileMod
 		_, err := fs.buf.Write(data)
 		return err
 	}
-
 	return nil
 }
 
 func (fs *fileSystem) MkdirAll(path string, mode os.FileMode) error {
 	return nil
+}
+
+func (fs *fileSystem) Remove(name string) error {
+	return os.Remove(name)
 }
 
 func (fs *fileSystem) Open(name string) (fs.File, error) {
@@ -287,4 +304,8 @@ func (fs *fileSystem) Open(name string) (fs.File, error) {
 
 func (fs *fileSystem) Stat(name string) (fs.FileInfo, error) {
 	return os.Stat(name)
+}
+
+func (fs *fileSystem) OpenFile(name string, flag int, perm fs.FileMode) (filesystem.File, error) {
+	return os.OpenFile(name, flag, perm)
 }

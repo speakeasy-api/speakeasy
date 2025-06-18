@@ -5,7 +5,7 @@ info:
     This is a sample Pet Store Server based on the OpenAPI 3.1 specification.
   version: 1.0.0
 security:
-  - api_key: [ ]
+  - api_key: []
 servers:
   - url: https://petstore.swagger.io/v2
 tags:
@@ -57,7 +57,6 @@ paths:
                 "$ref": "#/components/schemas/Pet"
         '405':
           description: Invalid input
-
   "/pet/findByStatus":
     get:
       tags:
@@ -93,7 +92,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
 components:
   securitySchemes:
     api_key:
@@ -183,4 +181,3 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorInvalidInput'
-

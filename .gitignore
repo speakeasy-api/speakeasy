@@ -10,3 +10,6 @@ integration/temp
 .DS_Store
 .vscode/launch.json
 __debug_bin*
+/completions/
+
+**/.claude/settings.local.json

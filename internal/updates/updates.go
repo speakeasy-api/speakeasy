@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/events"
 	"io"
 	"net/http"
 	"os"
@@ -15,9 +14,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy-core/events"
+
 	"github.com/speakeasy-api/speakeasy/internal/cache"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/locks"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
 	"github.com/google/go-github/v58/github"
@@ -108,6 +110,18 @@ func Update(ctx context.Context, currentVersion, artifactArch string, timeout in
 // InstallVersion installs a specific version of the CLI
 // returns the path to the installed binary
 func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, timeout int) (string, error) {
+	mutex := locks.CLIUpdateLock()
+	for result := range mutex.TryLock(ctx, 1*time.Second) {
+		if result.Error != nil {
+			return "", result.Error
+		}
+		if result.Success {
+			break
+		}
+		log.From(ctx).WithStyle(styles.DimmedItalic).Debug(fmt.Sprintf("InstallVersion: Failed to acquire lock (attempt %d). Retrying...", result.Attempt))
+	}
+	defer mutex.Unlock()
+
 	v, err := version.NewVersion(desiredVersion)
 	if err != nil {
 		return "", err

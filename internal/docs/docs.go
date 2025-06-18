@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -14,7 +15,15 @@ import (
 
 var docSiteRoot = "/docs/speakeasy-reference/cli"
 
+// regex to strip any ANSI color codes (for safety, optional)
+var ansiEscape = regexp.MustCompile(`\x1b\\[[0-9;]*m`)
+
+func stripAnsi(s string) string {
+	return ansiEscape.ReplaceAllString(s, "")
+}
+
 func GenerateDocs(cmd *cobra.Command, outDir string) error {
+	cmd.DisableAutoGenTag = true
 	return genDocs(cmd, outDir)
 }
 
@@ -51,14 +60,21 @@ func genDoc(cmd *cobra.Command) (string, error) {
 	cmd.InitDefaultHelpFlag()
 
 	builder := &strings.Builder{}
+
+	// ✅ Add frontmatter if this is an index.md page
+	if strings.HasSuffix(getPath(cmd), "index.md") {
+		builder.WriteString("---\nasIndexPage: true\n---\n\n")
+	}
+
 	name := cmd.Name()
 
 	builder.WriteString(fmt.Sprintf("# %s  \n", name))
 	builder.WriteString(fmt.Sprintf("`%s`  \n\n\n", cmd.CommandPath()))
-	builder.WriteString(fmt.Sprintf("%s  \n\n", cmd.Short))
+	builder.WriteString(fmt.Sprintf("%s  \n\n", stripAnsi(cmd.Short)))
+
 	if len(cmd.Long) > 0 {
 		builder.WriteString("## Details\n\n")
-		builder.WriteString(cmd.Long + "\n\n")
+		builder.WriteString(stripAnsi(cmd.Long) + "\n\n")
 	}
 
 	if cmd.Runnable() {
@@ -74,16 +90,15 @@ func genDoc(cmd *cobra.Command) (string, error) {
 	if err := printOptions(builder, cmd); err != nil {
 		return "", err
 	}
+
 	if cmd.HasParent() {
 		builder.WriteString("### Parent Command\n\n")
 		parent := cmd.Parent()
 		link := getDocSiteLink(parent)
-
 		builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", parent.CommandPath(), link, parent.Short))
 	}
 
 	children := cmd.Commands()
-
 	if len(children) > 0 {
 		builder.WriteString("### Sub Commands\n\n")
 		slices.SortStableFunc(children, func(i, j *cobra.Command) int {
@@ -96,7 +111,6 @@ func genDoc(cmd *cobra.Command) (string, error) {
 			}
 
 			link := getDocSiteLink(child)
-
 			builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", child.CommandPath(), link, child.Short))
 		}
 	}
@@ -120,6 +134,7 @@ func printOptions(builder *strings.Builder, cmd *cobra.Command) error {
 		parentFlags.PrintDefaults()
 		builder.WriteString("```\n\n")
 	}
+
 	return nil
 }
 
@@ -137,7 +152,7 @@ func getPath(cmd *cobra.Command) string {
 	fullPath := strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name())
 
 	if cmd.HasAvailableSubCommands() {
-		return strings.ReplaceAll(fullPath, " ", "/") + "/README.md"
+		return strings.ReplaceAll(fullPath, " ", "/") + "/index.md"
 	}
 
 	return strings.ReplaceAll(fullPath, " ", "/") + ".md"
