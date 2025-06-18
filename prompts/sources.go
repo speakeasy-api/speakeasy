@@ -289,6 +289,12 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	}
 	source.Inputs = append(source.Inputs, *document)
 
+	if authHeader == "" && (source.Output == nil || *source.Output == "") {
+		// Set default output path for source
+		defaultOutput := ".speakeasy/out.openapi.yaml"
+		source.Output = &defaultOutput
+	}
+
 	if registry.IsRegistryEnabled(ctx) && orgSlug != "" && auth.GetWorkspaceSlugFromContext(ctx) != "" {
 		if err := configureRegistry(source, orgSlug, auth.GetWorkspaceSlugFromContext(ctx), sourceName); err != nil {
 			return nil, err
@@ -501,6 +507,10 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	if outputLocation != "" {
 		source.Output = &outputLocation
+	} else if authHeader == "" {
+		// Set default output path for source
+		defaultOutput := ".speakeasy/out.openapi.yaml"
+		source.Output = &defaultOutput
 	}
 
 	if err := source.Validate(); err != nil {
