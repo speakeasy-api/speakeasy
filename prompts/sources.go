@@ -507,7 +507,7 @@ func PromptForNewSource(currentWorkflow *workflow.Workflow) (string, *workflow.S
 
 	if outputLocation != "" {
 		source.Output = &outputLocation
-	} else {
+	} else if authHeader == "" {
 		// Set default output path for source
 		defaultOutput := ".speakeasy/out.openapi.yaml"
 		source.Output = &defaultOutput
