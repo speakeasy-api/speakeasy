@@ -42,6 +42,7 @@ type QuickstartFlags struct {
 	Schema      string `json:"schema"`
 	OutDir      string `json:"out-dir"`
 	TargetType  string `json:"target"`
+	Output      string `json:"output"`
 
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
@@ -81,6 +82,12 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:        "from",
 			Shorthand:   "f",
 			Description: "template to use for the quickstart command.\nCreate a new sandbox at https://app.speakeasy.com/sandbox",
+		},
+		flag.EnumFlag{
+			Name:          "output",
+			Description:   "how to display output (available options: [summary, console, mermaid])",
+			DefaultValue:  "summary",
+			AllowedValues: []string{"summary", "console", "mermaid"},
 		},
 	},
 }
@@ -338,9 +345,30 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		changeDirMsg = fmt.Sprintf("`cd %s` before moving forward with your SDK", relPath)
 	}
 
-	if err = wf.RunWithVisualization(ctx); err != nil {
+	// Execute the workflow based on output mode
+	switch flags.Output {
+	case "summary":
+		err = wf.RunWithVisualization(ctx)
+	case "mermaid":
+		err = wf.Run(ctx)
+		if err == nil {
+			wf.RootStep.Finalize(true)
+			if mermaid, mermaidErr := wf.RootStep.ToMermaidDiagram(); mermaidErr == nil {
+				log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
+			}
+		}
+	case "console":
+		err = wf.Run(ctx)
+		if err == nil {
+			wf.RootStep.Finalize(true)
+		}
+	default:
+		err = wf.RunWithVisualization(ctx)
+	}
+
+	if err != nil {
 		if strings.Contains(err.Error(), "document invalid") {
-			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile); newErr != nil {
+			if retry, newErr := retryWithSampleSpec(ctx, quickstartObj.WorkflowFile, initialTarget, outDir, flags.SkipCompile, flags.Output); newErr != nil {
 				return errors.Wrapf(err, "failed to run generation workflow")
 			} else if retry {
 				if changeDirMsg != "" {
@@ -386,7 +414,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	return err
 }
 
-func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, initialTarget, outDir string, skipCompile bool) (bool, error) {
+func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, initialTarget, outDir string, skipCompile bool, output string) (bool, error) {
 	retrySampleSpec := true
 	_, err := charm.NewForm(huh.NewForm(
 		huh.NewGroup(
@@ -425,7 +453,26 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		run.WithShouldCompile(!skipCompile),
 	)
 
-	err = wf.RunWithVisualization(ctx)
+	// Execute the workflow based on output mode
+	switch output {
+	case "summary":
+		err = wf.RunWithVisualization(ctx)
+	case "mermaid":
+		err = wf.Run(ctx)
+		if err == nil {
+			wf.RootStep.Finalize(true)
+			if mermaid, mermaidErr := wf.RootStep.ToMermaidDiagram(); mermaidErr == nil {
+				log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
+			}
+		}
+	case "console":
+		err = wf.Run(ctx)
+		if err == nil {
+			wf.RootStep.Finalize(true)
+		}
+	default:
+		err = wf.RunWithVisualization(ctx)
+	}
 
 	return true, err
 }
