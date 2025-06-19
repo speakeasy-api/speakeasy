@@ -284,8 +284,8 @@ func writeToOutputLocation(ctx context.Context, documentPath string, outputLocat
 
 		return os.WriteFile(outputLocation, jsonBytes, 0o644)
 	} else {
-		// Otherwise, just rename the file
-		return os.Rename(documentPath, outputLocation)
+		// Otherwise, copy the file to preserve the original
+		return utils.CopyFile(documentPath, outputLocation)
 	}
 }
 
