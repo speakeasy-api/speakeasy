@@ -276,9 +276,9 @@ func getTempApplyPath(path string) string {
 // Reformats yaml to json if necessary and writes to the output location
 func writeToOutputLocation(ctx context.Context, documentPath string, outputLocation string) error {
 	// If paths are the same, no need to do anything
-	// if documentPath == outputLocation {
-	// 	return nil
-	// }
+	if documentPath == outputLocation {
+		return nil
+	}
 
 	// If we have yaml and need json, convert it
 	if utils.HasYAMLExt(documentPath) && !utils.HasYAMLExt(outputLocation) {
@@ -290,8 +290,8 @@ func writeToOutputLocation(ctx context.Context, documentPath string, outputLocat
 		return os.WriteFile(outputLocation, jsonBytes, 0o644)
 	} else {
 		// Otherwise, copy the file to preserve the original
-		// return utils.CopyFile(documentPath, outputLocation)
-		return os.Rename(documentPath, outputLocation)
+		// return os.Rename(documentPath, outputLocation)
+		return utils.CopyFile(documentPath, outputLocation)
 	}
 }
 
