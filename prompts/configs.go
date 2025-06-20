@@ -228,7 +228,7 @@ func languageSpecificForms(
 					defaultValue: defaultValue,
 				})
 
-				if shouldSkipFieldPrompt(quickstart, field.Name) {
+				if quickstart != nil && quickstart.UseLanguageDefaults {
 					continue
 				}
 				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
@@ -390,26 +390,6 @@ func createBaseServerURLPrompt(baseServerURL *string) huh.Field {
 		Inline(true).
 		Prompt(" ").
 		Value(baseServerURL)
-}
-
-func shouldSkipFieldPrompt(quickstart *Quickstart, fieldName string) bool {
-	if quickstart == nil {
-		return false
-	}
-
-	switch fieldName {
-	case "packageName":
-		return quickstart.PackageName != ""
-	case "groupID":
-		return quickstart.GroupID != ""
-	case "artifactID":
-		return quickstart.ArtifactID != ""
-	case "namespace":
-		return quickstart.Namespace != ""
-	case "author":
-		return quickstart.Author != ""
-	}
-	return false
 }
 
 func saveLanguageConfigValues(
