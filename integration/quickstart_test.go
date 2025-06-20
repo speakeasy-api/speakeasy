@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -15,6 +16,11 @@ import (
 )
 
 func TestQuickstart(t *testing.T) {
+	now := time.Now()
+	t.Logf("Building binary")
+	// Build the binary once to warm up the cache
+	buildTempBinary(t)
+	t.Logf("Binary built in %s", time.Since(now))
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
@@ -22,33 +28,6 @@ func TestQuickstart(t *testing.T) {
 			testQuickstartForTarget(t, target)
 		})
 	}
-}
-
-func buildTempBinary(t *testing.T) string {
-	tempDir := getTempDir()
-	binaryName := "speakeasy"
-	if runtime.GOOS == "windows" {
-		binaryName = "speakeasy.exe"
-	}
-
-	tempBinary := filepath.Join(tempDir, binaryName)
-
-	// Build the binary
-	cmd := exec.Command("go", "build", "-o", tempBinary, ".")
-	cmd.Dir = getProjectRoot(t)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("failed to build binary: %s", string(output))
-	}
-
-	// Verify the binary exists and is executable
-	_, err = os.Stat(tempBinary)
-	if err != nil {
-		t.Fatalf("binary was not created at %s", tempBinary)
-	}
-
-	return tempBinary
 }
 
 func testQuickstartForTarget(t *testing.T, target string) {
@@ -83,6 +62,8 @@ func testQuickstartForTarget(t *testing.T, target string) {
 	require.NoError(t, err)
 
 	// Run quickstart
+	now := time.Now()
+	t.Logf("Running quickstart for target %s", target)
 	quickstartCmd := exec.Command(tempBinary,
 		"quickstart",
 		"--skip-interactive",
@@ -95,6 +76,7 @@ func testQuickstartForTarget(t *testing.T, target string) {
 		t.Logf("Quickstart output for %s: %s", target, string(quickstartOutput))
 		t.Fatalf("Quickstart failed for target %s: %v", target, err)
 	}
+	t.Logf("Quickstart took %s", time.Since(now))
 
 	// Check if SDK was generated directly in test directory or in a subdirectory
 	generatedDir := testDir
@@ -110,6 +92,8 @@ func testQuickstartForTarget(t *testing.T, target string) {
 	verifyBasicStructure(t, generatedDir, target)
 
 	// Run speakeasy run
+	now = time.Now()
+	t.Logf("Running speakeasy run for target %s", target)
 	runCmd := exec.Command(tempBinary, "run", "--output", "console")
 	runOutput, err := runCmd.CombinedOutput()
 
@@ -120,7 +104,7 @@ func testQuickstartForTarget(t *testing.T, target string) {
 	} else {
 		t.Logf("Speakeasy run succeeded for target %s", target)
 	}
-
+	t.Logf("Speakeasy run took %s", time.Since(now))
 	// Verify basic structure was created
 	verifyBasicStructure(t, generatedDir, target)
 }
@@ -279,4 +263,31 @@ func getProjectRoot(t *testing.T) string {
 
 	t.Fatal("Could not find project root (go.mod not found)")
 	return ""
+}
+
+func buildTempBinary(t *testing.T) string {
+	tempDir := getTempDir()
+	binaryName := "speakeasy"
+	if runtime.GOOS == "windows" {
+		binaryName = "speakeasy.exe"
+	}
+
+	tempBinary := filepath.Join(tempDir, binaryName)
+
+	// Build the binary
+	cmd := exec.Command("go", "build", "-o", tempBinary, ".")
+	cmd.Dir = getProjectRoot(t)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to build binary: %s", string(output))
+	}
+
+	// Verify the binary exists and is executable
+	_, err = os.Stat(tempBinary)
+	if err != nil {
+		t.Fatalf("binary was not created at %s", tempBinary)
+	}
+
+	return tempBinary
 }
