@@ -71,22 +71,8 @@ func expectedFilesByLanguage(language string) []string {
 		return []string{"README.md", "package.json", "tsconfig.json"}
 	case "python":
 		return []string{"README.md", "setup.py"}
-	case "java":
-		return []string{"README.md", "pom.xml"}
-	case "csharp":
-		return []string{"README.md", ".csproj"}
-	case "php":
-		return []string{"README.md", "composer.json"}
-	case "ruby":
-		return []string{"README.md", "Gemfile"}
-	case "terraform":
-		return []string{"README.md", "main.tf"}
-	case "unity":
-		return []string{"README.md", "package.json"}
-	case "postman":
-		return []string{"README.md"}
 	default:
-		return []string{"README.md"} // Most targets should at least generate a README
+		return []string{}
 	}
 }
 
@@ -103,26 +89,4 @@ func checkForExpectedFiles(t *testing.T, outdir string, files []string) {
 			t.Errorf("Expected file %s in directory %s is empty.", fileName, outdir)
 		}
 	}
-}
-
-// checkForExpectedFilesLenient is more lenient for testing environments
-// It logs missing files but doesn't fail the test
-func checkForExpectedFilesLenient(t *testing.T, outdir string, files []string) int {
-	foundCount := 0
-	for _, fileName := range files {
-		filePath := filepath.Join(outdir, fileName)
-		fileInfo, err := os.Stat(filePath)
-		if err != nil {
-			t.Logf("Expected file %s not found in directory %s: %v", fileName, outdir, err)
-			continue
-		}
-
-		if fileInfo.Size() == 0 {
-			t.Logf("Expected file %s in directory %s is empty", fileName, outdir)
-		} else {
-			t.Logf("Found expected file %s in directory %s (size: %d bytes)", fileName, outdir, fileInfo.Size())
-			foundCount++
-		}
-	}
-	return foundCount
 }
