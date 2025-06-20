@@ -18,6 +18,7 @@ func TestQuickstart(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
+			t.Parallel()
 			testQuickstartForTarget(t, target)
 		})
 	}
