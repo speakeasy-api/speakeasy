@@ -311,24 +311,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		DetectDotGit: true,
 	})
 	if errors.Is(err, gitc.ErrRepositoryNotExists) {
-		// Check if git initialization is specified via hidden flag
-		if quickstartObj.InitGit != "" {
-			if quickstartObj.InitGit == prompts.DefaultOptionFlag {
-				initialiseRepo = true
-			} else {
-				initialiseRepo = strings.ToLower(quickstartObj.InitGit) == "true" || strings.ToLower(quickstartObj.InitGit) == "yes"
-			}
-		} else {
-			initialiseRepo = true
-			prompt := charm.NewBranchPrompt(
-				"Do you want to initialize a new git repository?",
-				"Selecting 'Yes' will initialize a new git repository in the output directory",
-				&initialiseRepo,
-			)
-			if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
-				initialiseRepo = false
-			}
-		}
+		initialiseRepo = getShouldInitGit(&quickstartObj)
 	}
 
 	var resolvedSchema string
@@ -652,6 +635,38 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	}
 
 	return filepath.Join(workingDir, subDirectory)
+}
+
+// Helper functions to reduce nesting and handle DEFAULT flag short-circuiting
+
+func getShouldInitGit(quickstart *prompts.Quickstart) bool {
+	if quickstart.InitGit != "" {
+		if quickstart.InitGit == prompts.DefaultOptionFlag {
+			return true
+		}
+		return strings.ToLower(quickstart.InitGit) == "true" || strings.ToLower(quickstart.InitGit) == "yes"
+	}
+	
+	initialiseRepo := true
+	prompt := charm.NewBranchPrompt(
+		"Do you want to initialize a new git repository?",
+		"Selecting 'Yes' will initialize a new git repository in the output directory",
+		&initialiseRepo,
+	)
+	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
+		return false
+	}
+	return initialiseRepo
+}
+
+func getShouldLaunchStudio(ctx context.Context, wf *run.Workflow, quickstart *prompts.Quickstart) bool {
+	if quickstart.LaunchStudio != "" {
+		if quickstart.LaunchStudio == prompts.DefaultOptionFlag {
+			return shouldLaunchStudio(ctx, wf, true)
+		}
+		return strings.ToLower(quickstart.LaunchStudio) == "true" || strings.ToLower(quickstart.LaunchStudio) == "yes"
+	}
+	return shouldLaunchStudio(ctx, wf, true)
 }
 
 func currentDirectoryEmpty() bool {

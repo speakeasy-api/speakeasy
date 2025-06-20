@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/speakeasy-api/speakeasy/prompts"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -357,22 +358,9 @@ func getTempDir() string {
 	return "/tmp"
 }
 
-// isAlphaTarget checks if a target is in Alpha stage
+// isAlphaTarget checks if a target is in Alpha stage using the existing codebase implementation
 func isAlphaTarget(target string) bool {
-	// Known Alpha targets based on common patterns
-	// This should be updated based on actual target maturity
-	alphaTargets := []string{
-		"unity",   // Unity is often Alpha
-		"postman", // Postman might be Alpha
-		// Add other known Alpha targets here
-	}
-
-	for _, alphaTarget := range alphaTargets {
-		if target == alphaTarget {
-			return true
-		}
-	}
-	return false
+	return generate.GetTargetNameMaturity(target) == "Alpha"
 }
 
 // getProjectRoot returns the project root directory

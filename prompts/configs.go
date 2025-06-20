@@ -90,53 +90,17 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	initialFields := []huh.Field{}
 
-	// Check if SDK name is provided via hidden flag
-	if quickstart != nil && quickstart.SDKName != "" {
-		if quickstart.SDKName == DefaultOptionFlag {
-			sdkClassName = "MyCompanySDK"
-		} else {
-			sdkClassName = quickstart.SDKName
-		}
-	} else if quickstart == nil || quickstart.SDKName == "" {
-		initialFields = append(initialFields,
-			huh.NewInput().
-				Title("Name your SDK").
-				Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
-				Placeholder("MyCompanySDK").
-				Suggestions(suggestions).
-				Prompt("").
-				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return errors.New("SDK name must not be empty")
-					}
-					return nil
-				}).
-				Value(&sdkClassName),
-		)
-	} else {
-		sdkClassName = strcase.ToCamel(quickstart.SDKName)
+	// Get SDK name with optional prompt
+	sdkClassName, needsSDKNamePrompt := getSDKClassName(quickstart, suggestions)
+	if needsSDKNamePrompt {
+		initialFields = append(initialFields, createSDKNamePrompt(&sdkClassName, suggestions))
 	}
 
+	// Get base server URL with optional prompt
 	var baseServerURL string
-	// Check if base server URL is provided via hidden flag
-	if quickstart != nil && quickstart.BaseServerURL != "" {
-		if quickstart.BaseServerURL == DefaultOptionFlag {
-			baseServerURL = ""
-		} else {
-			baseServerURL = quickstart.BaseServerURL
-		}
-	} else {
-		if !isQuickstart && output.Generation.BaseServerURL != "" {
-			baseServerURL = output.Generation.BaseServerURL
-		}
-		if !isQuickstart && target.Target != "postman" {
-			initialFields = append(initialFields, huh.NewInput().
-				Title("Provide a base server URL for your SDK to use:").
-				Placeholder("You must do this if a server URL is not defined in your OpenAPI spec").
-				Inline(true).
-				Prompt(" ").
-				Value(&baseServerURL))
-		}
+	needsBaseServerURLPrompt := getBaseServerURL(quickstart, output, target, isQuickstart, &baseServerURL)
+	if needsBaseServerURLPrompt {
+		initialFields = append(initialFields, createBaseServerURLPrompt(&baseServerURL))
 	}
 
 	formTitle := fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName)
@@ -263,24 +227,8 @@ func languageSpecificForms(
 					defaultValue: defaultValue,
 				})
 				
-				// Skip prompt if hidden flag is provided for this field
-				shouldSkipPrompt := false
-				if quickstart != nil {
-					switch field.Name {
-					case "packageName":
-						shouldSkipPrompt = quickstart.PackageName != ""
-					case "groupID":
-						shouldSkipPrompt = quickstart.GroupID != ""
-					case "artifactID":
-						shouldSkipPrompt = quickstart.ArtifactID != ""
-					case "namespace":
-						shouldSkipPrompt = quickstart.Namespace != ""
-					case "author":
-						shouldSkipPrompt = quickstart.Author != ""
-					}
-				}
-				
-				if !shouldSkipPrompt {
+				// Add prompt only if not provided via hidden flag
+				if !shouldSkipFieldPrompt(quickstart, field.Name) {
 					groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
 				}
 			}
@@ -482,6 +430,82 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 	}
 
 	return huh.NewGroup(input)
+}
+
+// Helper functions to reduce nesting and handle DEFAULT flag short-circuiting
+
+func getSDKClassName(quickstart *Quickstart, suggestions []string) (string, bool) {
+	if quickstart != nil && quickstart.SDKName != "" {
+		if quickstart.SDKName == DefaultOptionFlag {
+			return "MyCompanySDK", false
+		}
+		return quickstart.SDKName, false
+	}
+	if quickstart == nil || quickstart.SDKName == "" {
+		return "", true // needs prompt
+	}
+	return strcase.ToCamel(quickstart.SDKName), false
+}
+
+func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
+	return huh.NewInput().
+		Title("Name your SDK").
+		Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
+		Placeholder("MyCompanySDK").
+		Suggestions(suggestions).
+		Prompt("").
+		Validate(func(s string) error {
+			if strings.TrimSpace(s) == "" {
+				return errors.New("SDK name must not be empty")
+			}
+			return nil
+		}).
+		Value(sdkClassName)
+}
+
+func getBaseServerURL(quickstart *Quickstart, output *config.Configuration, target *workflow.Target, isQuickstart bool, baseServerURL *string) bool {
+	if quickstart != nil && quickstart.BaseServerURL != "" {
+		if quickstart.BaseServerURL == DefaultOptionFlag {
+			*baseServerURL = ""
+		} else {
+			*baseServerURL = quickstart.BaseServerURL
+		}
+		return false
+	}
+	
+	if !isQuickstart && output.Generation.BaseServerURL != "" {
+		*baseServerURL = output.Generation.BaseServerURL
+	}
+	return !isQuickstart && target.Target != "postman" // needs prompt
+}
+
+func createBaseServerURLPrompt(baseServerURL *string) huh.Field {
+	return huh.NewInput().
+		Title("Provide a base server URL for your SDK to use:").
+		Placeholder("You must do this if a server URL is not defined in your OpenAPI spec").
+		Inline(true).
+		Prompt(" ").
+		Value(baseServerURL)
+}
+
+func shouldSkipFieldPrompt(quickstart *Quickstart, fieldName string) bool {
+	if quickstart == nil {
+		return false
+	}
+	
+	switch fieldName {
+	case "packageName":
+		return quickstart.PackageName != ""
+	case "groupID":
+		return quickstart.GroupID != ""
+	case "artifactID":
+		return quickstart.ArtifactID != ""
+	case "namespace":
+		return quickstart.Namespace != ""
+	case "author":
+		return quickstart.Author != ""
+	}
+	return false
 }
 
 func saveLanguageConfigValues(
