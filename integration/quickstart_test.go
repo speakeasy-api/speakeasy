@@ -18,14 +18,14 @@ import (
 func TestQuickstartVerifyAllTargetsAreTested(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
 
-	// Read the current file quickstart_comprehensive_test.go and
+	// Read the current file quickstart_test.go and
 	// check that it contains a test for that target "testQuickstartForTarget(t, {target}
-	currentFile, err := os.ReadFile("quickstart_comprehensive_test.go")
+	currentFile, err := os.ReadFile("quickstart_test.go")
 	require.NoError(t, err)
 	for _, target := range targets {
 		if !strings.Contains(string(currentFile), fmt.Sprintf("testQuickstartForTarget(t, %q", target)) {
 			titled := strings.ToUpper(target[0:1]) + target[1:]
-			t.Fatalf("TestQuickstartFor%s not found in quickstart_comprehensive_test.go you must add it", titled)
+			t.Fatalf("TestQuickstartFor%s not found in quickstart_test.go you must add it", titled)
 		}
 	}
 }
