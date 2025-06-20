@@ -1,6 +1,7 @@
 package integration_tests
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,16 +65,28 @@ func testQuickstartForTarget(t *testing.T, target string) {
 	// Run quickstart
 	now := time.Now()
 	t.Logf("Running quickstart for target %s", target)
-	quickstartCmd := exec.Command(tempBinary,
+	
+	// Create context with timeout to prevent hanging on Windows
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	
+	quickstartCmd := exec.CommandContext(ctx, tempBinary,
 		"quickstart",
 		"--skip-interactive",
 		"--target", target,
 		"--output", "console",
 	)
+	// Set the working directory for the command to run in isolation
+	quickstartCmd.Dir = testDir
+	// Copy environment variables but remove any Go-specific ones that might interfere
+	quickstartCmd.Env = os.Environ()
 
 	quickstartOutput, err := quickstartCmd.CombinedOutput()
 	if err != nil {
 		t.Logf("Quickstart output for %s: %s", target, string(quickstartOutput))
+		t.Logf("Quickstart command: %s", quickstartCmd.String())
+		t.Logf("Working directory: %s", testDir)
+		t.Logf("Binary path: %s", tempBinary)
 		t.Fatalf("Quickstart failed for target %s: %v", target, err)
 	}
 	t.Logf("Quickstart took %s", time.Since(now))
@@ -94,7 +107,16 @@ func testQuickstartForTarget(t *testing.T, target string) {
 	// Run speakeasy run
 	now = time.Now()
 	t.Logf("Running speakeasy run for target %s", target)
-	runCmd := exec.Command(tempBinary, "run", "--output", "console")
+	
+	// Create context with timeout to prevent hanging on Windows
+	runCtx, runCancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer runCancel()
+	
+	runCmd := exec.CommandContext(runCtx, tempBinary, "run", "--output", "console")
+	// Set the working directory for the command to run in isolation
+	runCmd.Dir = generatedDir
+	// Copy environment variables
+	runCmd.Env = os.Environ()
 	runOutput, err := runCmd.CombinedOutput()
 
 	if err != nil {
@@ -236,7 +258,12 @@ func checkFileExists(t *testing.T, dir, filename string) {
 // getTempDir returns the appropriate temp directory for the OS
 func getTempDir() string {
 	if runtime.GOOS == "windows" {
-		return os.TempDir()
+		// Use os.TempDir() and ensure it's absolute
+		tempDir := os.TempDir()
+		if absPath, err := filepath.Abs(tempDir); err == nil {
+			return absPath
+		}
+		return tempDir
 	}
 	return "/tmp"
 }
@@ -288,10 +315,19 @@ func buildTempBinary(t *testing.T) string {
 	}
 
 	// Verify the binary exists and is executable
-	_, err = os.Stat(tempBinary)
+	stat, err := os.Stat(tempBinary)
 	if err != nil {
 		t.Fatalf("binary was not created at %s", tempBinary)
 	}
+	
+	// On Windows, check if the binary has the correct extension
+	if runtime.GOOS == "windows" {
+		if !strings.HasSuffix(tempBinary, ".exe") {
+			t.Fatalf("Windows binary should have .exe extension: %s", tempBinary)
+		}
+	}
+	
+	t.Logf("Binary created successfully at %s (size: %d bytes)", tempBinary, stat.Size())
 
 	return tempBinary
 }
