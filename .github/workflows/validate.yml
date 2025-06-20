@@ -91,6 +91,6 @@ jobs:
       - name: Build
         run: go build ./...
 
-      - run: go test -json -v -p 1 ./... | gotestfmt
+      - run: go test -json -v -p 1 -timeout=20m ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}

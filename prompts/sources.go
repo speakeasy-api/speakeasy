@@ -135,19 +135,24 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 	}
 }
 
-func getSDKName(sdkName *string, placeholder string) error {
+func getSDKName(quickstart *Quickstart, placeholder string) error {
+	if quickstart.SkipInteractive {
+		quickstart.SDKName = placeholder
+		return nil
+	}
+
 	descriptionFn := func() string {
 		v := placeholder
-		if sdkName != nil && *sdkName != "" {
-			v = *sdkName
+		if quickstart.SDKName != "" {
+			v = quickstart.SDKName
 		}
 		return "Your users will access your SDK using " + styles.Emphasized.Render(fmt.Sprintf("%s.DoThing()\n", v))
 	}
 
 	return charm_internal.Execute(
-		charm_internal.NewInput(sdkName).
+		charm_internal.NewInput(&quickstart.SDKName).
 			Title("Give your SDK a name").
-			DescriptionFunc(descriptionFn, sdkName).
+			DescriptionFunc(descriptionFn, &quickstart.SDKName).
 			Placeholder(placeholder).
 			Suggestions([]string{placeholder}),
 	)
@@ -189,7 +194,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	// has interacted with the form.
 	useRemoteSource := hasRecentGenerations
 
-	if hasRecentGenerations {
+	if hasRecentGenerations && !quickstart.SkipInteractive {
 		prompt := charm_internal.NewBranchPrompt(
 			"Do you want to base your SDK on an existing SDK?",
 			"Selecting 'Yes' will allow you to pick from the most recently used SDKs in your workspace",
@@ -251,6 +256,8 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		// inputs:
 		// - location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/petstore-oas@latest
 		fileLocation = selectedRegistryUri
+	} else if quickstart.SkipInteractive {
+		fileLocation = ""
 	} else {
 		if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
 			return nil, err
@@ -272,14 +279,14 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	} else if selectedRemoteNamespace != "" {
 		sourceName = selectedRemoteNamespace
 	} else {
-		// No need to prompt for SDK name if we are using a sample spec
-		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
+		if err := getSDKName(quickstart, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
+
 		if summary != nil && summary.Info.Title != "" {
-			sourceName = summary.Info.Title
+			sourceName = strings.ReplaceAll(summary.Info.Title, "/", "-")
 		} else {
-			sourceName = quickstart.SDKName + "-OAS"
+			sourceName = strings.ReplaceAll(quickstart.SDKName, "/", "-") + "-OAS"
 		}
 	}
 
