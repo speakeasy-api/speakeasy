@@ -90,7 +90,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	initialFields := []huh.Field{}
 
-	// Check if SDK name is provided via hidden flag
+	// Check if SDK name is provided via flag
 	if quickstart != nil && quickstart.SDKName != "" {
 		if quickstart.SDKName == DefaultOptionFlag {
 			sdkClassName = suggestions[0] // Use first suggestion as default
@@ -104,7 +104,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	}
 
 	var baseServerURL string
-	// Check if base server URL is provided via hidden flag
+	// Check if base server URL is provided via flag
 	if quickstart != nil && quickstart.BaseServerURL != "" {
 		if quickstart.BaseServerURL == DefaultOptionFlag {
 			baseServerURL = ""
@@ -244,7 +244,7 @@ func languageSpecificForms(
 					defaultValue: defaultValue,
 				})
 				
-				// Add prompt only if not provided via hidden flag
+				// Add prompt only if not provided via flag
 				if !shouldSkipFieldPrompt(quickstart, field.Name) {
 					groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
 				}
@@ -449,7 +449,7 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 	return huh.NewGroup(input)
 }
 
-// Helper functions to reduce nesting and handle DEFAULT flag short-circuiting
+// Helper functions to reduce nesting and handle flag short-circuiting
 
 func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
 	return huh.NewInput().

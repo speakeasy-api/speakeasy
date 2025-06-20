@@ -278,7 +278,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	} else if selectedRemoteNamespace != "" {
 		sourceName = selectedRemoteNamespace
 	} else {
-		// Check if SDK name is provided via hidden flag
+		// Check if SDK name is provided via flag
 		if quickstart.SDKName != "" && quickstart.SDKName != DefaultOptionFlag {
 			// SDKName was already set from the flag in quickstart.go
 		} else {
@@ -292,7 +292,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 			}
 		}
 		
-		// Set source name based on hidden flag or defaults
+		// Set source name based on flag or defaults
 		if quickstart.SourceName != "" {
 			if quickstart.SourceName == DefaultOptionFlag {
 				if summary != nil && summary.Info.Title != "" {

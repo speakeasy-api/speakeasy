@@ -556,7 +556,7 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 }
 
 func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool, quickstart *prompts.Quickstart) bool {
-	// Check if studio launch is controlled via hidden flag
+	// Check if studio launch is controlled via flag
 	if quickstart != nil && quickstart.LaunchStudio != "" {
 		if quickstart.LaunchStudio == prompts.DefaultOptionFlag {
 			// Fall through to normal logic
@@ -636,7 +636,7 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	return filepath.Join(workingDir, subDirectory)
 }
 
-// Helper functions to reduce nesting and handle DEFAULT flag short-circuiting
+// Helper functions to reduce nesting and handle flag short-circuiting
 
 func getShouldInitGit(quickstart *prompts.Quickstart) bool {
 	if quickstart.InitGit != "" {
