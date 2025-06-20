@@ -90,17 +90,34 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	initialFields := []huh.Field{}
 
-	// Get SDK name with optional prompt
-	sdkClassName, needsSDKNamePrompt := getSDKClassName(quickstart, suggestions)
-	if needsSDKNamePrompt {
+	// Check if SDK name is provided via hidden flag
+	if quickstart != nil && quickstart.SDKName != "" {
+		if quickstart.SDKName == DefaultOptionFlag {
+			sdkClassName = "MyCompanySDK"
+		} else {
+			sdkClassName = quickstart.SDKName
+		}
+	} else if quickstart == nil || quickstart.SDKName == "" {
 		initialFields = append(initialFields, createSDKNamePrompt(&sdkClassName, suggestions))
+	} else {
+		sdkClassName = strcase.ToCamel(quickstart.SDKName)
 	}
 
-	// Get base server URL with optional prompt
 	var baseServerURL string
-	needsBaseServerURLPrompt := getBaseServerURL(quickstart, output, target, isQuickstart, &baseServerURL)
-	if needsBaseServerURLPrompt {
-		initialFields = append(initialFields, createBaseServerURLPrompt(&baseServerURL))
+	// Check if base server URL is provided via hidden flag
+	if quickstart != nil && quickstart.BaseServerURL != "" {
+		if quickstart.BaseServerURL == DefaultOptionFlag {
+			baseServerURL = ""
+		} else {
+			baseServerURL = quickstart.BaseServerURL
+		}
+	} else {
+		if !isQuickstart && output.Generation.BaseServerURL != "" {
+			baseServerURL = output.Generation.BaseServerURL
+		}
+		if !isQuickstart && target.Target != "postman" {
+			initialFields = append(initialFields, createBaseServerURLPrompt(&baseServerURL))
+		}
 	}
 
 	formTitle := fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName)
@@ -434,19 +451,6 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 
 // Helper functions to reduce nesting and handle DEFAULT flag short-circuiting
 
-func getSDKClassName(quickstart *Quickstart, suggestions []string) (string, bool) {
-	if quickstart != nil && quickstart.SDKName != "" {
-		if quickstart.SDKName == DefaultOptionFlag {
-			return "MyCompanySDK", false
-		}
-		return quickstart.SDKName, false
-	}
-	if quickstart == nil || quickstart.SDKName == "" {
-		return "", true // needs prompt
-	}
-	return strcase.ToCamel(quickstart.SDKName), false
-}
-
 func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
 	return huh.NewInput().
 		Title("Name your SDK").
@@ -461,22 +465,6 @@ func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
 			return nil
 		}).
 		Value(sdkClassName)
-}
-
-func getBaseServerURL(quickstart *Quickstart, output *config.Configuration, target *workflow.Target, isQuickstart bool, baseServerURL *string) bool {
-	if quickstart != nil && quickstart.BaseServerURL != "" {
-		if quickstart.BaseServerURL == DefaultOptionFlag {
-			*baseServerURL = ""
-		} else {
-			*baseServerURL = quickstart.BaseServerURL
-		}
-		return false
-	}
-	
-	if !isQuickstart && output.Generation.BaseServerURL != "" {
-		*baseServerURL = output.Generation.BaseServerURL
-	}
-	return !isQuickstart && target.Target != "postman" // needs prompt
 }
 
 func createBaseServerURLPrompt(baseServerURL *string) huh.Field {

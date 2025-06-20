@@ -480,17 +480,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	// Doing it before shouldLaunchStudio because that blocks asking the user for input
 	events.FlushActiveEvent(ctx, err)
 
-	// Check if studio launch is controlled via hidden flag
-	shouldLaunch := true
-	if quickstartObj.LaunchStudio != "" {
-		if quickstartObj.LaunchStudio == prompts.DefaultOptionFlag {
-			shouldLaunch = shouldLaunchStudio(ctx, wf, true)
-		} else {
-			shouldLaunch = strings.ToLower(quickstartObj.LaunchStudio) == "true" || strings.ToLower(quickstartObj.LaunchStudio) == "yes"
-		}
-	} else {
-		shouldLaunch = shouldLaunchStudio(ctx, wf, true)
-	}
+	shouldLaunch := shouldLaunchStudio(ctx, wf, true, &quickstartObj)
 
 	if shouldLaunch {
 		err = studio.LaunchStudio(ctx, wf)
@@ -565,7 +555,16 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
-func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool, quickstart *prompts.Quickstart) bool {
+	// Check if studio launch is controlled via hidden flag
+	if quickstart != nil && quickstart.LaunchStudio != "" {
+		if quickstart.LaunchStudio == prompts.DefaultOptionFlag {
+			// Fall through to normal logic
+		} else {
+			return strings.ToLower(quickstart.LaunchStudio) == "true" || strings.ToLower(quickstart.LaunchStudio) == "yes"
+		}
+	}
+	
 	if !studio.CanLaunch(ctx, wf) {
 		return false
 	}
@@ -657,16 +656,6 @@ func getShouldInitGit(quickstart *prompts.Quickstart) bool {
 		return false
 	}
 	return initialiseRepo
-}
-
-func getShouldLaunchStudio(ctx context.Context, wf *run.Workflow, quickstart *prompts.Quickstart) bool {
-	if quickstart.LaunchStudio != "" {
-		if quickstart.LaunchStudio == prompts.DefaultOptionFlag {
-			return shouldLaunchStudio(ctx, wf, true)
-		}
-		return strings.ToLower(quickstart.LaunchStudio) == "true" || strings.ToLower(quickstart.LaunchStudio) == "yes"
-	}
-	return shouldLaunchStudio(ctx, wf, true)
 }
 
 func currentDirectoryEmpty() bool {
