@@ -194,7 +194,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	// has interacted with the form.
 	useRemoteSource := hasRecentGenerations
 
-	if hasRecentGenerations {
+	if hasRecentGenerations && !quickstart.SkipInteractive {
 		prompt := charm_internal.NewBranchPrompt(
 			"Do you want to base your SDK on an existing SDK?",
 			"Selecting 'Yes' will allow you to pick from the most recently used SDKs in your workspace",
@@ -250,14 +250,14 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	if hasTemplate && fileLocation != "" {
 		quickstart.Defaults.TemplateData = templateFile
 	} else if quickstart.Defaults.SchemaPath != nil {
-		if *quickstart.Defaults.SchemaPath != DefaultOptionFlag {
-			fileLocation = *quickstart.Defaults.SchemaPath
-		}
+		fileLocation = *quickstart.Defaults.SchemaPath
 	} else if useRemoteSource && selectedRegistryUri != "" {
 		// The workflow file will be updated with a registry based input like:
 		// inputs:
 		// - location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/petstore-oas@latest
 		fileLocation = selectedRegistryUri
+	} else if quickstart.SkipInteractive {
+		fileLocation = ""
 	} else {
 		if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
 			return nil, err

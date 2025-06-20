@@ -47,12 +47,8 @@ type QuickstartFlags struct {
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
 
-	// Hidden flags for bypassing interactive prompts
-	CopyExisting bool   `json:"copy-existing"`
-	UseDefaults  bool   `json:"use-defaults"`
-	SDKName      string `json:"sdk-name"`
-	InitGit      string `json:"init-git"`
-	LaunchStudio string `json:"launch-studio"`
+	// Hidden flag for bypassing interactive prompts
+	SkipInteractive bool `json:"skip-interactive"`
 }
 
 //go:embed sample_openapi.yaml
@@ -98,28 +94,8 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 		},
 		// Hidden flags for bypassing interactive prompts
 		flag.BooleanFlag{
-			Name:        "copy-existing",
-			Description: "whether to copy existing config (use DEFAULT to skip prompt)",
-			Hidden:      true,
-		},
-		flag.BooleanFlag{
-			Name:        "use-defaults",
-			Description: "whether to use defaults for gen.yaml language config",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "sdk-name",
-			Description: "SDK name (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "init-git",
-			Description: "initialize git repository (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "launch-studio",
-			Description: "whether to launch studio (use DEFAULT for default value)",
+			Name:        "skip-interactive",
+			Description: "whether to use defaults - this will skip all prompts",
 			Hidden:      true,
 		},
 	},
@@ -151,14 +127,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			Targets: make(map[string]workflow.Target),
 		},
 		LanguageConfigs: make(map[string]*sdkGenConfig.Configuration),
-		CopyExisting:    flags.CopyExisting,
-		InitGit:         flags.InitGit,
-		LaunchStudio:    flags.LaunchStudio,
-	}
-
-	// Set SDK name directly if provided via flag
-	if flags.SDKName != "" {
-		quickstartObj.SDKName = flags.SDKName
+		SkipInteractive: flags.SkipInteractive,
 	}
 
 	if flags.Schema != "" {
@@ -222,7 +191,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
 	}
 
-	if !currentDirectoryEmpty() {
+	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive {
 		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput(&promptedDir).
 			Title("What directory should the "+targetType+" files be written to?").
 			Description(description+"\n").
@@ -513,13 +482,8 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 }
 
 func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool, quickstart *prompts.Quickstart) bool {
-	// Check if studio launch is controlled via flag
-	if quickstart != nil && quickstart.LaunchStudio != "" {
-		if quickstart.LaunchStudio == prompts.DefaultOptionFlag {
-			// Fall through to normal logic
-		} else {
-			return strings.ToLower(quickstart.LaunchStudio) == "true" || strings.ToLower(quickstart.LaunchStudio) == "yes"
-		}
+	if quickstart != nil && quickstart.SkipInteractive {
+		return false
 	}
 
 	if !studio.CanLaunch(ctx, wf) {
@@ -596,23 +560,20 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 // Helper functions to reduce nesting and handle flag short-circuiting
 
 func getShouldInitGit(quickstart *prompts.Quickstart) bool {
-	if quickstart.InitGit != "" {
-		if quickstart.InitGit == prompts.DefaultOptionFlag {
-			return true
-		}
-		return strings.ToLower(quickstart.InitGit) == "true" || strings.ToLower(quickstart.InitGit) == "yes"
+	initRepo := true
+	if quickstart.SkipInteractive {
+		return initRepo
 	}
 
-	initialiseRepo := true
 	prompt := charm.NewBranchPrompt(
 		"Do you want to initialize a new git repository?",
 		"Selecting 'Yes' will initialize a new git repository in the output directory",
-		&initialiseRepo,
+		&initRepo,
 	)
 	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
 		return false
 	}
-	return initialiseRepo
+	return initRepo
 }
 
 func currentDirectoryEmpty() bool {

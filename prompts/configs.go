@@ -228,7 +228,7 @@ func languageSpecificForms(
 					defaultValue: defaultValue,
 				})
 
-				if quickstart != nil && quickstart.UseDefaults {
+				if quickstart != nil && quickstart.SkipInteractive {
 					continue
 				}
 				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
