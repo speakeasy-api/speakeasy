@@ -15,122 +15,76 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestQuickstartComprehensive tests quickstart for each supported target
-// using the pattern: build temp binary -> mkdir temp dir -> run quickstart -> run speakeasy run
-func TestQuickstartComprehensive(t *testing.T) {
+func TestQuickstartVerifyAllTargetsAreTested(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
 
-	// Build the temporary binary once for all tests
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
+	// Read the current file quickstart_comprehensive_test.go and
+	// check that it contains a test for that target "testQuickstartForTarget(t, {target}
+	currentFile, err := os.ReadFile("quickstart_comprehensive_test.go")
+	require.NoError(t, err)
 	for _, target := range targets {
-		t.Run(fmt.Sprintf("target_%s", target), func(t *testing.T) {
-			testQuickstartComprehensiveForTarget(t, target, tempBinary)
-		})
+		if !strings.Contains(string(currentFile), fmt.Sprintf("testQuickstartForTarget(t, %q", target)) {
+			titled := strings.ToUpper(target[0:1]) + target[1:]
+			t.Fatalf("TestQuickstartFor%s not found in quickstart_comprehensive_test.go you must add it", titled)
+		}
 	}
 }
 
-// TestQuickstartTypescript specifically tests TypeScript target
 func TestQuickstartTypescript(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "typescript", tempBinary)
+	testQuickstartForTarget(t, "typescript")
 }
 
-// TestQuickstartPython specifically tests Python target
 func TestQuickstartPython(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "python", tempBinary)
+	testQuickstartForTarget(t, "python")
 }
 
-// TestQuickstartGo specifically tests Go target
 func TestQuickstartGo(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "go", tempBinary)
+	testQuickstartForTarget(t, "go")
 }
 
-// TestQuickstartJava specifically tests Java target
 func TestQuickstartJava(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "java", tempBinary)
+	testQuickstartForTarget(t, "java")
 }
 
-// TestQuickstartCsharp specifically tests C# target
 func TestQuickstartCsharp(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "csharp", tempBinary)
+	testQuickstartForTarget(t, "csharp")
 }
 
-// TestQuickstartPhp specifically tests PHP target
 func TestQuickstartPhp(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "php", tempBinary)
+	testQuickstartForTarget(t, "php")
 }
 
-// TestQuickstartRuby specifically tests Ruby target
 func TestQuickstartRuby(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "ruby", tempBinary)
+	testQuickstartForTarget(t, "ruby")
 }
 
-// TestQuickstartMcpTypescript specifically tests MCP TypeScript target
 func TestQuickstartMcpTypescript(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "mcp-typescript", tempBinary)
+	testQuickstartForTarget(t, "mcp-typescript")
 }
 
-// TestQuickstartTerraform specifically tests Terraform target
 func TestQuickstartTerraform(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "terraform", tempBinary)
+	testQuickstartForTarget(t, "terraform")
 }
 
-// TestQuickstartUnity specifically tests Unity target
 func TestQuickstartUnity(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "unity", tempBinary)
+	testQuickstartForTarget(t, "unity")
 }
 
-// TestQuickstartPostman specifically tests Postman target
 func TestQuickstartPostman(t *testing.T) {
 	t.Parallel()
-	tempBinary := buildTempBinary(t)
-	defer os.Remove(tempBinary)
-
-	testQuickstartComprehensiveForTarget(t, "postman", tempBinary)
+	testQuickstartForTarget(t, "postman")
 }
 
-// buildTempBinary builds the speakeasy binary to a temporary location
 func buildTempBinary(t *testing.T) string {
 	tempDir := getTempDir()
 	binaryName := "speakeasy"
@@ -154,13 +108,14 @@ func buildTempBinary(t *testing.T) string {
 	return tempBinary
 }
 
-// testQuickstartComprehensiveForTarget runs the comprehensive test for a specific target
-func testQuickstartComprehensiveForTarget(t *testing.T, target, tempBinary string) {
+func testQuickstartForTarget(t *testing.T, target string) {
 	// Skip Alpha languages as they have different behavior
 	if isAlphaTarget(target) {
 		t.Skipf("Skipping %s as it's an Alpha language", target)
 		return
 	}
+
+	tempBinary := buildTempBinary(t)
 
 	// Create test directory
 	testDir := createTestDir(t, target)
