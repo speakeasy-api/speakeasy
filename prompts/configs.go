@@ -90,11 +90,10 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	initialFields := []huh.Field{}
 
-	// Check if SDK name is provided via flag
-	if quickstart != nil && quickstart.SDKName != "" {
-		sdkClassName = quickstart.SDKName
-	} else if quickstart == nil || quickstart.SDKName == "" {
+	if quickstart == nil || quickstart.SDKName == "" {
 		initialFields = append(initialFields, createSDKNamePrompt(&sdkClassName, suggestions))
+	} else {
+		sdkClassName = strcase.ToCamel(quickstart.SDKName)
 	}
 
 	var baseServerURL string
@@ -237,7 +236,7 @@ func languageSpecificForms(
 					key:          field.Name,
 					defaultValue: defaultValue,
 				})
-				
+
 				// Add prompt only if not provided via flag
 				if !shouldSkipFieldPrompt(quickstart, field.Name) {
 					groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
@@ -317,7 +316,7 @@ func getValuesForField(
 				if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
 					packageName = quickstart.Defaults.TemplateData.PackageName
 				}
-				
+
 				switch language {
 				case "go":
 					defaultValue = "github.com/my-company/" + strcase.ToKebab(packageName)
@@ -350,7 +349,7 @@ func getValuesForField(
 				defaultValue = strcase.ToKebab(packageName)
 			}
 		}
-		
+
 		switch language {
 		case "go":
 			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("go get %s")
@@ -446,7 +445,7 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 // Helper functions to reduce nesting and handle flag short-circuiting
 
 func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
-	return huh.NewInput().
+	huh.NewInput().
 		Title("Name your SDK").
 		Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
 		Placeholder("MyCompanySDK").
@@ -474,7 +473,7 @@ func shouldSkipFieldPrompt(quickstart *Quickstart, fieldName string) bool {
 	if quickstart == nil {
 		return false
 	}
-	
+
 	switch fieldName {
 	case "packageName":
 		return quickstart.PackageName != ""
