@@ -97,20 +97,11 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	}
 
 	var baseServerURL string
-	// Check if base server URL is provided via flag
-	if quickstart != nil && quickstart.BaseServerURL != "" {
-		if quickstart.BaseServerURL == DefaultOptionFlag {
-			baseServerURL = ""
-		} else {
-			baseServerURL = quickstart.BaseServerURL
-		}
-	} else {
-		if !isQuickstart && output.Generation.BaseServerURL != "" {
-			baseServerURL = output.Generation.BaseServerURL
-		}
-		if !isQuickstart && target.Target != "postman" {
-			initialFields = append(initialFields, createBaseServerURLPrompt(&baseServerURL))
-		}
+	if !isQuickstart && output.Generation.BaseServerURL != "" {
+		baseServerURL = output.Generation.BaseServerURL
+	}
+	if !isQuickstart && target.Target != "postman" {
+		initialFields = append(initialFields, createBaseServerURLPrompt(&baseServerURL))
 	}
 
 	formTitle := fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName)
