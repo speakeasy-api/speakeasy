@@ -135,24 +135,24 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 	}
 }
 
-func getSDKName(sdkName *string, placeholder string) error {
-	if *sdkName == DefaultOptionFlag {
-		*sdkName = placeholder
+func getSDKName(quickstart *Quickstart, placeholder string) error {
+	if quickstart.SkipInteractive {
+		quickstart.SDKName = placeholder
 		return nil
 	}
 
 	descriptionFn := func() string {
 		v := placeholder
-		if sdkName != nil && *sdkName != "" {
-			v = *sdkName
+		if quickstart.SDKName != "" {
+			v = quickstart.SDKName
 		}
 		return "Your users will access your SDK using " + styles.Emphasized.Render(fmt.Sprintf("%s.DoThing()\n", v))
 	}
 
 	return charm_internal.Execute(
-		charm_internal.NewInput(sdkName).
+		charm_internal.NewInput(&quickstart.SDKName).
 			Title("Give your SDK a name").
-			DescriptionFunc(descriptionFn, sdkName).
+			DescriptionFunc(descriptionFn, &quickstart.SDKName).
 			Placeholder(placeholder).
 			Suggestions([]string{placeholder}),
 	)
@@ -279,7 +279,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	} else if selectedRemoteNamespace != "" {
 		sourceName = selectedRemoteNamespace
 	} else {
-		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
+		if err := getSDKName(quickstart, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
 

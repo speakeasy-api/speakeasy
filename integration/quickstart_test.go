@@ -13,7 +13,10 @@ import (
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/singleflight"
 )
+
+var buildGroup singleflight.Group
 
 func TestQuickstartVerifyAllTargetsAreTested(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
@@ -94,18 +97,28 @@ func buildTempBinary(t *testing.T) string {
 
 	tempBinary := filepath.Join(tempDir, binaryName)
 
-	// Build the binary
-	cmd := exec.Command("go", "build", "-o", tempBinary, ".")
-	cmd.Dir = getProjectRoot(t)
+	// Use singleflight to ensure only one binary build happens at a time
+	result, err, _ := buildGroup.Do("build", func() (interface{}, error) {
+		// Build the binary
+		cmd := exec.Command("go", "build", "-o", tempBinary, ".")
+		cmd.Dir = getProjectRoot(t)
 
-	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "Failed to build binary: %s", string(output))
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("failed to build binary: %s", string(output))
+		}
 
-	// Verify the binary exists and is executable
-	_, err = os.Stat(tempBinary)
-	require.NoError(t, err, "Binary was not created at %s", tempBinary)
+		// Verify the binary exists and is executable
+		_, err = os.Stat(tempBinary)
+		if err != nil {
+			return nil, fmt.Errorf("binary was not created at %s", tempBinary)
+		}
 
-	return tempBinary
+		return tempBinary, nil
+	})
+
+	require.NoError(t, err)
+	return result.(string)
 }
 
 func testQuickstartForTarget(t *testing.T, target string) {
