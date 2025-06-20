@@ -93,7 +93,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	// Check if SDK name is provided via hidden flag
 	if quickstart != nil && quickstart.SDKName != "" {
 		if quickstart.SDKName == DefaultOptionFlag {
-			sdkClassName = "MyCompanySDK"
+			sdkClassName = suggestions[0] // Use first suggestion as default
 		} else {
 			sdkClassName = quickstart.SDKName
 		}
