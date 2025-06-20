@@ -20,9 +20,7 @@ type Quickstart struct {
 	IsUsingSampleOpenAPISpec bool
 	IsUsingTemplate          bool
 	SDKName                  string
-	InitGit                  string
-	LaunchStudio             string
-	UseLanguageDefaults      bool
+	UseDefaults              bool
 }
 
 type Defaults struct {
