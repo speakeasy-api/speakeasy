@@ -237,7 +237,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		DetectDotGit: true,
 	})
 	if errors.Is(err, gitc.ErrRepositoryNotExists) {
-		initialiseRepo = getShouldInitGit(&quickstartObj)
+		initialiseRepo = shouldInitGit(&quickstartObj)
 	}
 
 	var resolvedSchema string
@@ -557,7 +557,7 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	return filepath.Join(workingDir, subDirectory)
 }
 
-func getShouldInitGit(quickstart *prompts.Quickstart) bool {
+func shouldInitGit(quickstart *prompts.Quickstart) bool {
 	initRepo := true
 	if quickstart.SkipInteractive {
 		return initRepo
