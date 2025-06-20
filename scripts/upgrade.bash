@@ -50,8 +50,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
   echo "$ git add go.mod go.sum"
   git add go.mod go.sum
-  echo "$ git commit -m\"$SUMMARY\""
-  git commit -m"$SUMMARY"
+  echo "$ git commit --allow-empty-message -m \"$SUMMARY\""
+  git commit --allow-empty-message -m "$SUMMARY"
   echo "===== When you are ready, execute the following command to upgrade ====="
   echo "$ git push origin main"
 )

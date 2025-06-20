@@ -189,7 +189,7 @@ func setDevContainerDefaults(output *config.Configuration, wf *workflow.Workflow
 }
 
 func setEnvVarPrefixDefaults(output *config.Configuration, target *workflow.Target, sdkClassName string) {
-	if target.Target == "go" || target.Target == "typescript" || target.Target == "python" {
+	if target.Target == "go" || target.Target == "typescript" || target.Target == "python" || target.Target == "mcp-typescript" {
 		if cfg, ok := output.Languages[target.Target]; ok && cfg.Cfg != nil {
 			cfg.Cfg["envVarPrefix"] = strings.ToUpper(sdkClassName)
 		}
