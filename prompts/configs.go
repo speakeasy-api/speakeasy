@@ -228,10 +228,10 @@ func languageSpecificForms(
 					defaultValue: defaultValue,
 				})
 
-				// Add prompt only if not provided via flag
-				if !shouldSkipFieldPrompt(quickstart, field.Name) {
-					groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
+				if shouldSkipFieldPrompt(quickstart, field.Name) {
+					continue
 				}
+				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
 			}
 		}
 	}
