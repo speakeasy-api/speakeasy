@@ -557,8 +557,6 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	return filepath.Join(workingDir, subDirectory)
 }
 
-// Helper functions to reduce nesting and handle flag short-circuiting
-
 func getShouldInitGit(quickstart *prompts.Quickstart) bool {
 	initRepo := true
 	if quickstart.SkipInteractive {

@@ -365,8 +365,6 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 	return huh.NewGroup(input)
 }
 
-// Helper functions to reduce nesting and handle flag short-circuiting
-
 func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
 	return huh.NewInput().
 		Title("Name your SDK").
