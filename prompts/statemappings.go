@@ -23,6 +23,7 @@ type Quickstart struct {
 	InitGit                  string
 	LaunchStudio             string
 	UseDefaults              bool
+	CopyExisting             bool
 }
 
 type Defaults struct {

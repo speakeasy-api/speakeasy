@@ -48,17 +48,11 @@ type QuickstartFlags struct {
 	From string `json:"from"`
 
 	// Hidden flags for bypassing interactive prompts
-	CopyExisting       bool   `json:"copy-existing"`
-	SDKName            string `json:"sdk-name"`
-	PackageName        string `json:"package-name"`
-	InitGit            string `json:"init-git"`
-	BaseServerURL      string `json:"base-server-url"`
-	GroupID            string `json:"group-id"`
-	ArtifactID         string `json:"artifact-id"`
-	Namespace          string `json:"namespace"`
-	Author             string `json:"author"`
-	SourceName         string `json:"source-name"`
-	LaunchStudio       string `json:"launch-studio"`
+	CopyExisting bool   `json:"copy-existing"`
+	UseDefaults  bool   `json:"use-defaults"`
+	SDKName      string `json:"sdk-name"`
+	InitGit      string `json:"init-git"`
+	LaunchStudio string `json:"launch-studio"`
 }
 
 //go:embed sample_openapi.yaml
@@ -108,49 +102,19 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Description: "whether to copy existing config (use DEFAULT to skip prompt)",
 			Hidden:      true,
 		},
+		flag.BooleanFlag{
+			Name:        "use-defaults",
+			Description: "whether to use defaults for gen.yaml language config",
+			Hidden:      true,
+		},
 		flag.StringFlag{
 			Name:        "sdk-name",
 			Description: "SDK name (use DEFAULT for default value)",
 			Hidden:      true,
 		},
 		flag.StringFlag{
-			Name:        "package-name",
-			Description: "package name (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
 			Name:        "init-git",
 			Description: "initialize git repository (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "base-server-url",
-			Description: "base server URL (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "group-id",
-			Description: "Java group ID (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "artifact-id",
-			Description: "Java artifact ID (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "namespace",
-			Description: "PHP namespace (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "author",
-			Description: "Ruby author (use DEFAULT for default value)",
-			Hidden:      true,
-		},
-		flag.StringFlag{
-			Name:        "source-name",
-			Description: "source name (use DEFAULT for default value)",
 			Hidden:      true,
 		},
 		flag.StringFlag{
@@ -188,14 +152,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		},
 		LanguageConfigs: make(map[string]*sdkGenConfig.Configuration),
 		CopyExisting:    flags.CopyExisting,
-		PackageName:     flags.PackageName,
 		InitGit:         flags.InitGit,
-		BaseServerURL:   flags.BaseServerURL,
-		GroupID:         flags.GroupID,
-		ArtifactID:      flags.ArtifactID,
-		Namespace:       flags.Namespace,
-		Author:          flags.Author,
-		SourceName:      flags.SourceName,
 		LaunchStudio:    flags.LaunchStudio,
 	}
 
@@ -564,7 +521,7 @@ func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bo
 			return strings.ToLower(quickstart.LaunchStudio) == "true" || strings.ToLower(quickstart.LaunchStudio) == "yes"
 		}
 	}
-	
+
 	if !studio.CanLaunch(ctx, wf) {
 		return false
 	}
@@ -645,7 +602,7 @@ func getShouldInitGit(quickstart *prompts.Quickstart) bool {
 		}
 		return strings.ToLower(quickstart.InitGit) == "true" || strings.ToLower(quickstart.InitGit) == "yes"
 	}
-	
+
 	initialiseRepo := true
 	prompt := charm.NewBranchPrompt(
 		"Do you want to initialize a new git repository?",
@@ -669,4 +626,3 @@ func currentDirectoryEmpty() bool {
 	_, err = dir.Readdirnames(1)
 	return err == io.EOF
 }
-
