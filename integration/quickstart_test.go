@@ -1,7 +1,6 @@
 package integration_tests
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,79 +12,15 @@ import (
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/singleflight"
 )
 
-var buildGroup singleflight.Group
-
-func TestQuickstartVerifyAllTargetsAreTested(t *testing.T) {
+func TestQuickstart(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
-
-	// Read the current file quickstart_test.go and
-	// check that it contains a test for that target "testQuickstartForTarget(t, {target}
-	currentFile, err := os.ReadFile("quickstart_test.go")
-	require.NoError(t, err)
 	for _, target := range targets {
-		if !strings.Contains(string(currentFile), fmt.Sprintf("testQuickstartForTarget(t, %q", target)) {
-			titled := strings.ToUpper(target[0:1]) + target[1:]
-			t.Fatalf("TestQuickstartFor%s not found in quickstart_test.go you must add it", titled)
-		}
+		t.Run(target, func(t *testing.T) {
+			testQuickstartForTarget(t, target)
+		})
 	}
-}
-
-func TestQuickstartTypescript(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "typescript")
-}
-
-func TestQuickstartPython(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "python")
-}
-
-func TestQuickstartGo(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "go")
-}
-
-func TestQuickstartJava(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "java")
-}
-
-func TestQuickstartCsharp(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "csharp")
-}
-
-func TestQuickstartPhp(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "php")
-}
-
-func TestQuickstartRuby(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "ruby")
-}
-
-func TestQuickstartMcpTypescript(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "mcp-typescript")
-}
-
-func TestQuickstartTerraform(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "terraform")
-}
-
-func TestQuickstartUnity(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "unity")
-}
-
-func TestQuickstartPostman(t *testing.T) {
-	t.Parallel()
-	testQuickstartForTarget(t, "postman")
 }
 
 func buildTempBinary(t *testing.T) string {
@@ -97,28 +32,22 @@ func buildTempBinary(t *testing.T) string {
 
 	tempBinary := filepath.Join(tempDir, binaryName)
 
-	// Use singleflight to ensure only one binary build happens at a time
-	result, err, _ := buildGroup.Do("build", func() (interface{}, error) {
-		// Build the binary
-		cmd := exec.Command("go", "build", "-o", tempBinary, ".")
-		cmd.Dir = getProjectRoot(t)
+	// Build the binary
+	cmd := exec.Command("go", "build", "-o", tempBinary, ".")
+	cmd.Dir = getProjectRoot(t)
 
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return nil, fmt.Errorf("failed to build binary: %s", string(output))
-		}
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to build binary: %s", string(output))
+	}
 
-		// Verify the binary exists and is executable
-		_, err = os.Stat(tempBinary)
-		if err != nil {
-			return nil, fmt.Errorf("binary was not created at %s", tempBinary)
-		}
+	// Verify the binary exists and is executable
+	_, err = os.Stat(tempBinary)
+	if err != nil {
+		t.Fatalf("binary was not created at %s", tempBinary)
+	}
 
-		return tempBinary, nil
-	})
-
-	require.NoError(t, err)
-	return result.(string)
+	return tempBinary
 }
 
 func testQuickstartForTarget(t *testing.T, target string) {
