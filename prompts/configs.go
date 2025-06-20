@@ -368,7 +368,7 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 // Helper functions to reduce nesting and handle flag short-circuiting
 
 func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
-	huh.NewInput().
+	return huh.NewInput().
 		Title("Name your SDK").
 		Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
 		Placeholder("MyCompanySDK").
