@@ -283,23 +283,10 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 			return nil, err
 		}
 
-		// Set source name based on flag or defaults
-		if quickstart.SourceName != "" {
-			if quickstart.SourceName == DefaultOptionFlag {
-				if summary != nil && summary.Info.Title != "" {
-					sourceName = summary.Info.Title
-				} else {
-					sourceName = quickstart.SDKName + "-OAS"
-				}
-			} else {
-				sourceName = quickstart.SourceName
-			}
+		if summary != nil && summary.Info.Title != "" {
+			sourceName = summary.Info.Title
 		} else {
-			if summary != nil && summary.Info.Title != "" {
-				sourceName = summary.Info.Title
-			} else {
-				sourceName = quickstart.SDKName + "-OAS"
-			}
+			sourceName = quickstart.SDKName + "-OAS"
 		}
 	}
 
