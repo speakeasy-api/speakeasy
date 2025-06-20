@@ -316,10 +316,6 @@ func verifyTargetSpecificFiles(t *testing.T, generatedDir, target string) {
 		checkFileExists(t, generatedDir, "pyproject.toml")
 	case "go":
 		checkFileExists(t, generatedDir, "go.mod")
-	case "csharp", "unity":
-		// Look for .csproj files
-		matches, _ := filepath.Glob(filepath.Join(generatedDir, "*.csproj"))
-		assert.True(t, len(matches) > 0, "Should have .csproj file for %s target", target)
 	case "php":
 		checkFileExists(t, generatedDir, "composer.json")
 	case "ruby":

@@ -410,7 +410,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 
 	if shouldLaunch {
 		err = studio.LaunchStudio(ctx, wf)
-	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
+	} else if len(wf.SDKOverviewURLs) == 1 && !quickstartObj.SkipInteractive { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
 		utils.OpenInBrowser(overviewURL)
 	}
