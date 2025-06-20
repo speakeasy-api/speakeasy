@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -181,12 +181,7 @@ func testQuickstartComprehensiveForTarget(t *testing.T, target, tempBinary strin
 	// Run quickstart
 	quickstartCmd := exec.Command(tempBinary,
 		"quickstart",
-		"--copy-existing=false",
-		"--schema="+prompts.DefaultOptionFlag,
-		"--sdk-name="+prompts.DefaultOptionFlag,
-		"--package-name="+prompts.DefaultOptionFlag,
-		"--init-git="+prompts.DefaultOptionFlag,
-		"--launch-studio=false",
+		"--skip-interactive",
 		"--target", target,
 		"--output", "console",
 	)
