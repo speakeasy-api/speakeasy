@@ -45,8 +45,6 @@ const (
 )
 
 const (
-	DefaultOptionFlag = "DEFAULT"
-)
 
 // TODO: Add Github Configuration Next
 var StateMapping map[QuickstartState]formFunction = map[QuickstartState]formFunction{
