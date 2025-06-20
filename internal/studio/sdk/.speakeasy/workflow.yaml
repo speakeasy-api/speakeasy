@@ -9,6 +9,10 @@ sources:
         registry:
             location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas
 targets:
-    speakeasy-studio:
+    speakeasy-studio-go:
         target: go
         source: SpeakeasyStudio-OAS
+    speakeasy-studio-ts:
+        target: typescript
+        source: SpeakeasyStudio-OAS
+        output: /path/to/speakeasy-registry/web/packages/generated-studio-ts-sdk

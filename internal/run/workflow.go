@@ -3,10 +3,12 @@ package run
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy/registry"
 
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -57,10 +59,14 @@ type Workflow struct {
 	computedChanges map[string]bool
 	SourceResults   map[string]*SourceResult
 	TargetResults   map[string]*TargetResult
-	OnSourceResult  func(*SourceResult, string)
+	OnSourceResult  SourceResultCallback
 	Duration        time.Duration
 	criticalWarns   []string
 	Error           error
+
+	// Studio
+	CancellableGeneration *sdkgen.CancellableGeneration
+	StreamableGeneration  *sdkgen.StreamableGeneration
 }
 
 type Opt func(w *Workflow)
@@ -100,7 +106,7 @@ func NewWorkflow(
 		ForceGeneration:  false,
 		SourceResults:    make(map[string]*SourceResult),
 		TargetResults:    make(map[string]*TargetResult),
-		OnSourceResult:   func(*SourceResult, string) {},
+		OnSourceResult:   func(*SourceResult, SourceStepID) error { return nil },
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
@@ -259,6 +265,42 @@ func WithInstallationURLs(installationURLs map[string]string) Opt {
 func WithRegistryTags(registryTags []string) Opt {
 	return func(w *Workflow) {
 		w.RegistryTags = registryTags
+	}
+}
+
+func WithSourceUpdates(onSourceResult SourceResultCallback) Opt {
+	if onSourceResult != nil {
+		return func(w *Workflow) {
+			w.OnSourceResult = onSourceResult
+		}
+	}
+
+	return func(w *Workflow) {
+		w.OnSourceResult = func(sourceRes *SourceResult, sourceStep SourceStepID) error { return nil }
+	}
+}
+
+func WithCancellableGeneration(cancellable bool) Opt {
+	return func(w *Workflow) {
+		if cancellable {
+			w.CancellableGeneration = &sdkgen.CancellableGeneration{
+				CancellationMutex: sync.Mutex{},
+				// CancelCtx and CancelFunc fields depend on the runTarget context
+				// and will be set right before generation starts.
+			}
+		} else {
+			w.CancellableGeneration = nil
+		}
+	}
+}
+
+func WithStreamableGeneration(onProgressUpdate func(generate.ProgressUpdate), genSteps, fileStatus bool) Opt {
+	return func(w *Workflow) {
+		w.StreamableGeneration = &sdkgen.StreamableGeneration{
+			OnProgressUpdate: onProgressUpdate,
+			GenSteps:         genSteps,
+			FileStatus:       fileStatus,
+		}
 	}
 }
 

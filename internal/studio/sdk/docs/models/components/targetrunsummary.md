@@ -3,12 +3,11 @@
 
 ## Fields
 
-| Field                                         | Type                                          | Required                                      | Description                                   |
-| --------------------------------------------- | --------------------------------------------- | --------------------------------------------- | --------------------------------------------- |
-| `Readme`                                      | *string*                                      | :heavy_check_mark:                            | Contents of the README file for this target   |
-| `GenYaml`                                     | *string*                                      | :heavy_check_mark:                            | Contents of the gen.yaml file for this target |
-| `GenYamlPath`                                 | **string*                                     | :heavy_minus_sign:                            | The path to the gen.yaml file for this target |
-| `OutputDirectory`                             | *string*                                      | :heavy_check_mark:                            | Output directory for this target              |
-| `Language`                                    | *string*                                      | :heavy_check_mark:                            | Language for this target                      |
-| `SourceID`                                    | *string*                                      | :heavy_check_mark:                            | Source ID in the workflow file                |
-| `TargetID`                                    | *string*                                      | :heavy_check_mark:                            | Target ID in the workflow file                |
+| Field                                                       | Type                                                        | Required                                                    | Description                                                 |
+| ----------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `TargetID`                                                  | *string*                                                    | :heavy_check_mark:                                          | Target ID in the workflow file                              |
+| `SourceID`                                                  | *string*                                                    | :heavy_check_mark:                                          | Source ID in the workflow file                              |
+| `OutputDirectory`                                           | *string*                                                    | :heavy_check_mark:                                          | Output directory for this target                            |
+| `Language`                                                  | *string*                                                    | :heavy_check_mark:                                          | Language for this target                                    |
+| `Readme`                                                    | [*components.FileData](../../models/components/filedata.md) | :heavy_minus_sign:                                          | N/A                                                         |
+| `GenYaml`                                                   | [*components.FileData](../../models/components/filedata.md) | :heavy_minus_sign:                                          | N/A                                                         |

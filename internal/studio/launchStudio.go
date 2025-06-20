@@ -64,7 +64,6 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler(handlers.root))
 	mux.HandleFunc("/health", handler(handlers.health))
-
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -77,7 +76,6 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	})
 	mux.HandleFunc("/overlays/compare", handler(handlers.compareOverlay))
 	mux.HandleFunc("/suggest/method-names", handler(handlers.suggestMethodNames))
-	mux.HandleFunc("/exit", handler(handlers.exit))
 
 	port, err := searchForAvailablePort()
 	if err != nil {
@@ -102,7 +100,7 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 		fmt.Println(listeningMessage+"Opening URL in your browser: ", handlers.StudioURL)
 	}
 
-	// After ten seconds, if the health check hasn't been seen then kill the server
+	// After 1 minute, if the health check hasn't been seen then kill the server
 	go func() {
 		time.Sleep(1 * time.Minute)
 		if !handlers.healthCheckSeen {
@@ -148,20 +146,23 @@ func authMiddleware(secret string, next http.Handler) http.Handler {
 
 func handler(h func(context.Context, http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		logger := log.From(ctx)
+
 		start := time.Now()
 		id := generateRequestID()
 		method := fmt.Sprintf("%-6s", r.Method)  // Fixed width 6 characters
 		path := fmt.Sprintf("%-21s", r.URL.Path) // Fixed width 21 characters
 		base := fmt.Sprintf("%s %s %s", id, method, path)
-		log.From(r.Context()).Info(fmt.Sprintf("%s started", base))
-		ctx := r.Context()
+
+		logger.Info(fmt.Sprintf("%s started", base))
 		if err := h(ctx, w, r); err != nil {
-			log.From(ctx).Error(fmt.Sprintf("%s failed: %v", base, err))
+			logger.Error(fmt.Sprintf("%s failed: %v", base, err))
 			respondJSONError(ctx, w, err)
 			return
 		}
 		duration := time.Since(start)
-		log.From(ctx).Info(fmt.Sprintf("%s completed in %s", base, duration))
+		logger.Info(fmt.Sprintf("%s completed in %s", base, duration))
 	}
 }
 

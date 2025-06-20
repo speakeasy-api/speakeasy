@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
@@ -33,6 +34,19 @@ type GenerationAccess struct {
 	Level         *shared.Level
 }
 
+type CancellableGeneration struct {
+	CancellationMutex  sync.Mutex         // protects both CancellableContext and CancelGeneration (exposed by w.CancelGeneration())
+	CancellableContext context.Context    // the context that can be cancelled to stop generation
+	CancelGeneration   context.CancelFunc // the function to call to cancel generation
+}
+
+type StreamableGeneration struct {
+	OnProgressUpdate func(generate.ProgressUpdate) // the callback function called on each progress update
+	GenSteps         bool                          // whether to receive an update before each generation step starts
+	FileStatus       bool                          // whether to receive updates on each file status change
+	LogListener      chan log.Msg                  // the channel to listen for log messages (Debug only)
+}
+
 type GenerateOptions struct {
 	CustomerID      string
 	WorkspaceID     string
@@ -53,6 +67,9 @@ type GenerateOptions struct {
 	Compile         bool
 	TargetName      string
 	SkipVersioning  bool
+
+	CancellableGeneration *CancellableGeneration
+	StreamableGeneration  *StreamableGeneration
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
@@ -146,6 +163,18 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generatorOpts = append(generatorOpts, generate.WithSkipVersioning(opts.SkipVersioning))
 	}
 
+	if opts.StreamableGeneration != nil {
+		generatorOpts = append(
+			generatorOpts,
+			generate.WithProgressUpdates(
+				opts.TargetName,
+				opts.StreamableGeneration.OnProgressUpdate,
+				opts.StreamableGeneration.GenSteps,
+				opts.StreamableGeneration.FileStatus,
+			),
+		)
+	}
+
 	g, err := generate.New(generatorOpts...)
 	if err != nil {
 		return &GenerationAccess{
@@ -157,13 +186,28 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
-		if errs := g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile); len(errs) > 0 {
+
+		var errs []error
+		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
+			cancelCtx := opts.CancellableGeneration.CancellableContext
+
+			var cancelled bool
+			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+			if cancelled {
+				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
+			}
+		} else {
+			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+		}
+
+		if len(errs) > 0 {
 			for _, err := range errs {
 				logger.Error("", zap.Error(err))
 			}
 
 			return fmt.Errorf("failed to generate SDKs for %s ✖", opts.Language)
 		}
+
 		return nil
 	})
 	if err != nil {
