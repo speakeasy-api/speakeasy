@@ -136,6 +136,11 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 }
 
 func getSDKName(sdkName *string, placeholder string) error {
+	if *sdkName == DefaultOptionFlag {
+		*sdkName = placeholder
+		return nil
+	}
+
 	descriptionFn := func() string {
 		v := placeholder
 		if sdkName != nil && *sdkName != "" {
@@ -274,18 +279,8 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	} else if selectedRemoteNamespace != "" {
 		sourceName = selectedRemoteNamespace
 	} else {
-		// Check if SDK name is provided via flag
-		if quickstart.SDKName != "" && quickstart.SDKName != DefaultOptionFlag {
-			// SDKName was already set from the flag in quickstart.go
-		} else {
-			if quickstart.SDKName == DefaultOptionFlag {
-				quickstart.SDKName = strcase.ToCamel(orgSlug)
-			} else {
-				// No need to prompt for SDK name if we are using a sample spec
-				if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
-					return nil, err
-				}
-			}
+		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
+			return nil, err
 		}
 
 		// Set source name based on flag or defaults
