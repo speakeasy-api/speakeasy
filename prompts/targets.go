@@ -136,7 +136,7 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	}
 
 	var target *workflow.Target
-	
+
 	// Check if we have a default target type from hidden flags or use prompts
 	if quickstart.Defaults.TargetType != nil && *quickstart.Defaults.TargetType != "" {
 		// Use the target type that was already set (e.g., from --target flag)
