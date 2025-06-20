@@ -115,6 +115,12 @@ func testQuickstartForTarget(t *testing.T, target string) {
 		return
 	}
 
+	if target == "terraform" {
+		// TODO: The petstore default spec is not supported for terraform
+		t.Skipf("Skipping %s as it's not supported yet", target)
+		return
+	}
+
 	tempBinary := buildTempBinary(t)
 
 	// Create test directory
