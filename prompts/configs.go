@@ -92,15 +92,9 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 
 	// Check if SDK name is provided via flag
 	if quickstart != nil && quickstart.SDKName != "" {
-		if quickstart.SDKName == DefaultOptionFlag {
-			sdkClassName = suggestions[0] // Use first suggestion as default
-		} else {
-			sdkClassName = quickstart.SDKName
-		}
+		sdkClassName = quickstart.SDKName
 	} else if quickstart == nil || quickstart.SDKName == "" {
 		initialFields = append(initialFields, createSDKNamePrompt(&sdkClassName, suggestions))
-	} else {
-		sdkClassName = strcase.ToCamel(quickstart.SDKName)
 	}
 
 	var baseServerURL string
