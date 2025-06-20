@@ -245,7 +245,13 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	if hasTemplate && fileLocation != "" {
 		quickstart.Defaults.TemplateData = templateFile
 	} else if quickstart.Defaults.SchemaPath != nil {
-		fileLocation = *quickstart.Defaults.SchemaPath
+		// Check if schema path is "DEFAULT" which means use sample spec
+		if *quickstart.Defaults.SchemaPath == DefaultOptionFlag {
+			// Leave fileLocation empty to trigger sample spec usage below
+			fileLocation = ""
+		} else {
+			fileLocation = *quickstart.Defaults.SchemaPath
+		}
 	} else if useRemoteSource && selectedRegistryUri != "" {
 		// The workflow file will be updated with a registry based input like:
 		// inputs:
@@ -272,14 +278,37 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	} else if selectedRemoteNamespace != "" {
 		sourceName = selectedRemoteNamespace
 	} else {
-		// No need to prompt for SDK name if we are using a sample spec
-		if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
-			return nil, err
-		}
-		if summary != nil && summary.Info.Title != "" {
-			sourceName = summary.Info.Title
+		// Check if SDK name is provided via hidden flag
+		if quickstart.SDKName != "" && quickstart.SDKName != DefaultOptionFlag {
+			// SDKName was already set from the flag in quickstart.go
 		} else {
-			sourceName = quickstart.SDKName + "-OAS"
+			if quickstart.SDKName == DefaultOptionFlag {
+				quickstart.SDKName = strcase.ToCamel(orgSlug)
+			} else {
+				// No need to prompt for SDK name if we are using a sample spec
+				if err := getSDKName(&quickstart.SDKName, strcase.ToCamel(orgSlug)); err != nil {
+					return nil, err
+				}
+			}
+		}
+		
+		// Set source name based on hidden flag or defaults
+		if quickstart.SourceName != "" {
+			if quickstart.SourceName == DefaultOptionFlag {
+				if summary != nil && summary.Info.Title != "" {
+					sourceName = summary.Info.Title
+				} else {
+					sourceName = quickstart.SDKName + "-OAS"
+				}
+			} else {
+				sourceName = quickstart.SourceName
+			}
+		} else {
+			if summary != nil && summary.Info.Title != "" {
+				sourceName = summary.Info.Title
+			} else {
+				sourceName = quickstart.SDKName + "-OAS"
+			}
 		}
 	}
 

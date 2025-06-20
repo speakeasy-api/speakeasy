@@ -20,6 +20,18 @@ type Quickstart struct {
 	IsUsingSampleOpenAPISpec bool
 	IsUsingTemplate          bool
 	SDKName                  string
+	
+	// Hidden flags for bypassing prompts
+	CopyExisting  bool
+	PackageName   string
+	InitGit       string
+	BaseServerURL string
+	GroupID       string
+	ArtifactID    string
+	Namespace     string
+	Author        string
+	SourceName    string
+	LaunchStudio  string
 }
 
 type Defaults struct {
@@ -41,6 +53,10 @@ const (
 	SourceBase
 	TargetBase
 	ConfigBase
+)
+
+const (
+	DefaultOptionFlag = "DEFAULT"
 )
 
 // TODO: Add Github Configuration Next
