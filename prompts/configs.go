@@ -299,93 +299,25 @@ func getValuesForField(
 		description = *field.Description
 	}
 	if field.Name == "packageName" && isQuickstart {
-		// Check if package name is provided via hidden flag
-		if quickstart.PackageName != "" {
-			if quickstart.PackageName == DefaultOptionFlag {
-				// Use default logic
-				packageName := sdkClassName
-				if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
-					packageName = quickstart.Defaults.TemplateData.PackageName
-				}
+		// By default we base the package name on the SDK class name
+		packageName := sdkClassName
 
-				switch language {
-				case "go":
-					defaultValue = "github.com/my-company/" + strcase.ToKebab(packageName)
-				case "typescript", "python":
-					defaultValue = strcase.ToKebab(packageName)
-				case "terraform":
-					defaultValue = strcase.ToKebab(packageName)
-				default:
-					defaultValue = strcase.ToKebab(packageName)
-				}
-			} else {
-				defaultValue = quickstart.PackageName
-			}
-		} else {
-			// By default we base the package name on the SDK class name
-			packageName := sdkClassName
-
-			if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
-				packageName = quickstart.Defaults.TemplateData.PackageName
-			}
-
-			switch language {
-			case "go":
-				defaultValue = "github.com/my-company/" + strcase.ToKebab(packageName)
-			case "typescript":
-				defaultValue = strcase.ToKebab(packageName)
-			case "python":
-				defaultValue = strcase.ToKebab(packageName)
-			case "terraform":
-				defaultValue = strcase.ToKebab(packageName)
-			}
+		if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
+			packageName = quickstart.Defaults.TemplateData.PackageName
 		}
 
 		switch language {
 		case "go":
+			defaultValue = "github.com/my-company/" + strcase.ToKebab(packageName)
 			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("go get %s")
 		case "typescript":
+			defaultValue = strcase.ToKebab(packageName)
 			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("npm install %s")
 		case "python":
+			defaultValue = strcase.ToKebab(packageName)
 			description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("pip install %s")
-		}
-	}
-
-	// Handle other language-specific hidden flags
-	if isQuickstart {
-		switch field.Name {
-		case "groupID":
-			if language == "java" && quickstart.GroupID != "" {
-				if quickstart.GroupID == DefaultOptionFlag {
-					defaultValue = "com.example"
-				} else {
-					defaultValue = quickstart.GroupID
-				}
-			}
-		case "artifactID":
-			if language == "java" && quickstart.ArtifactID != "" {
-				if quickstart.ArtifactID == DefaultOptionFlag {
-					defaultValue = strcase.ToKebab(sdkClassName)
-				} else {
-					defaultValue = quickstart.ArtifactID
-				}
-			}
-		case "namespace":
-			if language == "php" && quickstart.Namespace != "" {
-				if quickstart.Namespace == DefaultOptionFlag {
-					defaultValue = strcase.ToCamel(sdkClassName)
-				} else {
-					defaultValue = quickstart.Namespace
-				}
-			}
-		case "author":
-			if language == "ruby" && quickstart.Author != "" {
-				if quickstart.Author == DefaultOptionFlag {
-					defaultValue = "SDK Team"
-				} else {
-					defaultValue = quickstart.Author
-				}
-			}
+		case "terraform":
+			defaultValue = strcase.ToKebab(packageName)
 		}
 	}
 
