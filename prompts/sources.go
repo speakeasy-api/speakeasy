@@ -284,9 +284,9 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 
 		if summary != nil && summary.Info.Title != "" {
-			sourceName = summary.Info.Title
+			sourceName = strings.ReplaceAll(summary.Info.Title, "/", "-")
 		} else {
-			sourceName = quickstart.SDKName + "-OAS"
+			sourceName = strings.ReplaceAll(quickstart.SDKName, "/", "-") + "-OAS"
 		}
 	}
 
