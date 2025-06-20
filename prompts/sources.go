@@ -245,11 +245,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	if hasTemplate && fileLocation != "" {
 		quickstart.Defaults.TemplateData = templateFile
 	} else if quickstart.Defaults.SchemaPath != nil {
-		// Check if schema path is "DEFAULT" which means use sample spec
-		if *quickstart.Defaults.SchemaPath == DefaultOptionFlag {
-			// Leave fileLocation empty to trigger sample spec usage below
-			fileLocation = ""
-		} else {
+		if *quickstart.Defaults.SchemaPath != DefaultOptionFlag {
 			fileLocation = *quickstart.Defaults.SchemaPath
 		}
 	} else if useRemoteSource && selectedRegistryUri != "" {
@@ -291,7 +287,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 				}
 			}
 		}
-		
+
 		// Set source name based on flag or defaults
 		if quickstart.SourceName != "" {
 			if quickstart.SourceName == DefaultOptionFlag {
