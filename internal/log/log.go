@@ -143,6 +143,25 @@ func (l Logger) WithListener(listener chan Msg) Logger {
 	return l2
 }
 
+// For compatibility with workflowTracking.LogMsg
+type LogMsgSender interface {
+	SendLogMsg(content string, msgType MsgType)
+}
+
+func (l Logger) WithLogMsgSender(sender LogMsgSender) Logger {
+	// Create a channel that forwards messages to the sender
+	listener := make(chan Msg, 100)
+	
+	// Start a goroutine to forward messages
+	go func() {
+		for msg := range listener {
+			sender.SendLogMsg(msg.Msg, msg.Type)
+		}
+	}()
+	
+	return l.WithListener(listener)
+}
+
 func (l Logger) Copy() Logger {
 	return Logger{
 		level:           l.level,
@@ -170,8 +189,16 @@ func (l Logger) Debug(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	msg = l.format(LevelDebug, msg, err) + fieldsToJSON(fields)
-	l.Println(msg)
+	formatted := l.format(LevelDebug, msg, err) + fieldsToJSON(fields)
+	l.Println(formatted)
+	
+	// Send to listener if available
+	if l.listener != nil {
+		select {
+		case l.listener <- Msg{Type: "debug", Msg: msg}:
+		default:
+		}
+	}
 }
 
 func (l Logger) Info(msg string, fields ...zapcore.Field) {
@@ -183,8 +210,16 @@ func (l Logger) Info(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	msg = l.format(LevelInfo, msg, err) + fieldsToJSON(fields)
-	l.Println(msg)
+	formatted := l.format(LevelInfo, msg, err) + fieldsToJSON(fields)
+	l.Println(formatted)
+	
+	// Send to listener if available
+	if l.listener != nil {
+		select {
+		case l.listener <- Msg{Type: MsgInfo, Msg: msg}:
+		default:
+		}
+	}
 }
 
 func (l Logger) Infof(format string, a ...any) {
@@ -200,12 +235,20 @@ func (l Logger) Warn(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	msg = l.format(LevelWarn, msg, err) + fieldsToJSON(fields)
+	formatted := l.format(LevelWarn, msg, err) + fieldsToJSON(fields)
 
-	l.Println(msg)
+	l.Println(formatted)
 
 	if l.warnCapture != nil {
-		*l.warnCapture = append(*l.warnCapture, msg)
+		*l.warnCapture = append(*l.warnCapture, formatted)
+	}
+	
+	// Send to listener if available
+	if l.listener != nil {
+		select {
+		case l.listener <- Msg{Type: MsgWarn, Msg: msg}:
+		default:
+		}
 	}
 }
 
@@ -218,8 +261,16 @@ func (l Logger) Error(msg string, fields ...zapcore.Field) {
 
 	msg, err, fields := getMessage(msg, fields)
 
-	msg = l.format(LevelErr, msg, err) + fieldsToJSON(fields)
-	l.Println(msg)
+	formatted := l.format(LevelErr, msg, err) + fieldsToJSON(fields)
+	l.Println(formatted)
+	
+	// Send to listener if available
+	if l.listener != nil {
+		select {
+		case l.listener <- Msg{Type: MsgError, Msg: msg}:
+		default:
+		}
+	}
 }
 
 func (l Logger) Errorf(format string, a ...any) {

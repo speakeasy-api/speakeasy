@@ -66,8 +66,13 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		logger.Println(msg)
 	}
 
-	logCapture := logger.WithWriter(&logs).WithWarnCapture(&warnings) // Swallow but retain the logs to be displayed later, upon failure
+	// Create channels for updates and logs
 	updatesChannel := make(chan workflowTracking.UpdateMsg)
+	logChannel := make(chan workflowTracking.LogMsg, 100) // Buffered to prevent blocking
+
+	// Create a log adapter that forwards log messages to the UI channel
+	logAdapter := workflowTracking.NewLogChannelAdapter(logChannel)
+	logCapture := logger.WithWriter(&logs).WithWarnCapture(&warnings).WithLogMsgSender(logAdapter)
 	w.RootStep = workflowTracking.NewWorkflowStep("Workflow", logCapture, updatesChannel)
 
 	var runErr error
@@ -85,7 +90,7 @@ func (w *Workflow) RunWithVisualization(ctx context.Context) error {
 		return nil
 	}
 
-	err := w.RootStep.RunWithVisualization(runFnCli, updatesChannel)
+	err := w.RootStep.RunWithVisualizationAndLogs(runFnCli, updatesChannel, logChannel)
 	if err != nil {
 		logger.Errorf("Workflow failed with error: %s", err)
 	}
