@@ -48,34 +48,35 @@ type StreamableGeneration struct {
 }
 
 type GenerateOptions struct {
-	CustomerID      string
-	WorkspaceID     string
-	Language        string
-	SchemaPath      string
-	Header          string
-	Token           string
-	OutDir          string
-	CLIVersion      string
-	InstallationURL string
-	Debug           bool
-	AutoYes         bool
-	Published       bool
-	OutputTests     bool
-	Repo            string
-	RepoSubDir      string
-	Verbose         bool
-	Compile         bool
-	TargetName      string
-	SkipVersioning  bool
-
+	CustomerID            string
+	WorkspaceID           string
+	Language              string
+	SchemaPath            string
+	Header                string
+	Token                 string
+	OutDir                string
+	CLIVersion            string
+	InstallationURL       string
+	Debug                 bool
+	AutoYes               bool
+	Published             bool
+	OutputTests           bool
+	Repo                  string
+	RepoSubDir            string
+	Verbose               bool
+	Compile               bool
+	TargetName            string
+	SkipVersioning        bool
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
+	OldSchema             []byte
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
 	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
+	log.From(ctx).Info(fmt.Sprintf("ops.oldSchema length is : %d", len(string(opts.OldSchema))))
 
 	ctx = events.SetTargetInContext(ctx, opts.OutDir)
 
@@ -197,10 +198,11 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
 			}
 		} else {
-			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile, opts.OldSchema)
 		}
 
 		if len(errs) > 0 {
+
 			for _, err := range errs {
 				logger.Error("", zap.Error(err))
 			}

@@ -83,7 +83,7 @@ func Generate(
 		return err
 	}
 
-	if errs := g.Generate(ctx, schema, schemaPath, lang, configPath, isRemote, false); len(errs) > 0 {
+	if errs := g.Generate(ctx, schema, schemaPath, lang, configPath, isRemote, false, nil); len(errs) > 0 {
 		isValidationError := false
 		for _, err := range errs {
 			if strings.Contains(err.Error(), "validation error:") {
