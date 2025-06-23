@@ -175,7 +175,7 @@ func getLatestVersionInfo(ctx context.Context, flags GenerateSDKVersionFlags) er
 		changeLog = changelog.GetChangeLog(changelog.WithSpecificVersion(version))
 	}
 
-	logger.Print(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	logger.Print(string(markdown.Render("# CHANGELOG...\n\n"+changeLog, 100, 0)))
 
 	return nil
 }
@@ -246,6 +246,6 @@ func getChangelogs(ctx context.Context, flags GenerateSDKChangelogFlags) error {
 		return nil
 	}
 
-	logger.Print(string(markdown.Render("# CHANGELOG\n\n"+changeLog, 100, 0)))
+	logger.Print(string(markdown.Render("# CHANGELOG&&&\n\n"+changeLog, 100, 0)))
 	return nil
 }

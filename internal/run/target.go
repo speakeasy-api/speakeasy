@@ -16,6 +16,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/git"
@@ -27,6 +28,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/codesamples"
 	"github.com/speakeasy-api/speakeasy/registry"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 	"go.uber.org/zap"
 )
 
@@ -154,6 +156,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	ctx = log.With(ctx, logger)
 	go genStep.ListenForSubsteps(logListener)
 
+	oldSchema, err := w.fetchOldSchema(ctx, target)
+	if err != nil {
+		return sourceRes, nil, err
+	}
+
 	generationAccess, err := sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{
@@ -176,12 +183,21 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			Compile:         w.ShouldCompile,
 			TargetName:      target,
 			SkipVersioning:  w.SkipVersioning,
+			OldSchema:       oldSchema,
 		},
 	)
 
 	if err != nil {
 		return sourceRes, nil, err
 	}
+
+	// If we failed to compute changes, always generate the SDK
+	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+		MustGenerate: true,
+		Key:          "openapi_change_summary",
+		Priority:     5,
+	})
+
 	w.generationAccess = generationAccess
 
 	if t.CodeSamples != nil {
@@ -230,6 +246,54 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	w.lockfile.Targets[target] = targetLock
 
 	return sourceRes, &targetResult, nil
+}
+
+func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, error) {
+	log.From(ctx).Info("fethcing old schema")
+	if w.lockfileOld != nil {
+		log.From(ctx).Info("fethcing old schema 1")
+		if targetLockOld, ok := w.lockfileOld.Targets[target]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
+			log.From(ctx).Info("fethcing old schema 2")
+			orgSlug := auth.GetOrgSlugFromContext(ctx)
+			workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+			log.From(ctx).Info("fethcing old schema 3")
+			oldRegistryLocation := ""
+			// TODO: Remove static sha value. This is being used to fix the
+			// old version of the spec so that changelog can be generated against it.
+			if targetLockOld.SourceRevisionDigest != "" && targetLockOld.SourceNamespace != "" {
+				log.From(ctx).Info("fethcing old schema 5")
+				oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+					targetLockOld.SourceNamespace, "sha256:14275fd32010d9a3ca42ca15f060f3351de22e5ba0ff7ebead0a820714d73d22")
+			} else {
+				log.From(ctx).Info("fethcing old schema 4")
+				return nil, errors.New("no previous revision found")
+			}
+
+			d := workflow.Document{Location: workflow.LocationString(oldRegistryLocation)}
+			log.From(ctx).Info("fethcing old schema 6")
+			oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
+			log.From(ctx).Info("fethcing old schema 7")
+			if err != nil {
+				log.From(ctx).Info("fethcing old schema 8")
+				return nil, errors.New("Failed to resolve old schema")
+			}
+			log.From(ctx).Info("fethcing old schema 9")
+			log.From(ctx).Info("oldDocPath: " + oldDocPath.LocalFilePath)
+			oldDocBytes, err := changes.GetSchema(oldDocPath.LocalFilePath)
+			log.From(ctx).Info("fethcing old schema 10")
+			if err != nil {
+				log.From(ctx).Info("fethcing old schema 11")
+				return nil, errors.New("Failed to get schema. " + err.Error())
+			}
+			log.From(ctx).Info("fethcing old schema 12")
+			// log oldDocBytes in string format
+			log.From(ctx).Info("oldDocBytes: " + string(oldDocBytes))
+			log.From(ctx).Info(fmt.Sprintf("oldDocBytes length: %d", len(oldDocBytes)))
+			return oldDocBytes, nil
+		}
+	}
+	log.From(ctx).Info("no previous revision found")
+	return nil, errors.New("no previous revision found")
 }
 
 // Returns codeSamples namespace name and digest

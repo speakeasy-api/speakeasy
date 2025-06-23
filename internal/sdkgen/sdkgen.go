@@ -53,12 +53,14 @@ type GenerateOptions struct {
 	Compile         bool
 	TargetName      string
 	SkipVersioning  bool
+	OldSchema       []byte
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
 	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
+	log.From(ctx).Info(fmt.Sprintf("ops.oldSchema length is : %d", len(string(opts.OldSchema))))
 
 	ctx = events.SetTargetInContext(ctx, opts.OutDir)
 
@@ -157,7 +159,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
-		if errs := g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile); len(errs) > 0 {
+		if errs := g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile, opts.OldSchema); len(errs) > 0 {
 			for _, err := range errs {
 				logger.Error("", zap.Error(err))
 			}
