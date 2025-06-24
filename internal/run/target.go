@@ -262,8 +262,11 @@ func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, e
 			// old version of the spec so that changelog can be generated against it.
 			if targetLockOld.SourceRevisionDigest != "" && targetLockOld.SourceNamespace != "" {
 				log.From(ctx).Info("fethcing old schema 5")
+				// TODO: This is temorary working for changelog-test-repo. This sha is a constant sha value fixed in history
+				// oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+				// 	targetLockOld.SourceNamespace, "sha256:14275fd32010d9a3ca42ca15f060f3351de22e5ba0ff7ebead0a820714d73d22")
 				oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
-					targetLockOld.SourceNamespace, "sha256:14275fd32010d9a3ca42ca15f060f3351de22e5ba0ff7ebead0a820714d73d22")
+					targetLockOld.SourceNamespace, targetLockOld.SourceRevisionDigest)
 			} else {
 				log.From(ctx).Info("fethcing old schema 4")
 				return nil, errors.New("no previous revision found")
