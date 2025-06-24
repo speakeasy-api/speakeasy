@@ -134,7 +134,7 @@ func RebuildTests(ctx context.Context, target, rebuildFlag string, cfg *config.C
 		return errors.Wrapf(err, "failed to truncate tests.arazzo.yaml file for target %s", target)
 	}
 
-	if err := a.Marshal(ctx, f); err != nil {
+	if err := arazzo.Marshal(ctx, a, f); err != nil {
 		return errors.Wrapf(err, "failed to marshal tests.arazzo.yaml file for target %s", target)
 	}
 

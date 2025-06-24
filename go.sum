@@ -579,10 +579,10 @@ github.com/speakeasy-api/jsonpath v0.6.2 h1:Mys71yd6u8kuowNCR0gCVPlVAHCmKtoGXYoA
 github.com/speakeasy-api/jsonpath v0.6.2/go.mod h1:ymb2iSkyOycmzKwbEAYPJV/yi2rSmvBCLZJcyD+VVWw=
 github.com/speakeasy-api/libopenapi v0.21.8-fixhiddencomps-fixed h1:wnCsprnR6nlouDXUU8J+cMv01hSOdKqHentbIfQuc88=
 github.com/speakeasy-api/libopenapi v0.21.8-fixhiddencomps-fixed/go.mod h1:Gc8oQkjr2InxwumK0zOBtKN9gIlv9L2VmSVIUk2YxcU=
-github.com/speakeasy-api/openapi v0.2.1 h1:0mtVOnLTcBdNXHGDMhk9ri41nek1f/K8/iepT9V7Z8s=
-github.com/speakeasy-api/openapi v0.2.1/go.mod h1:ilmVT3LXMsqLZcHOp3JN/DjZZS0PK9v6H7Jt8iPeC48=
-github.com/speakeasy-api/openapi-generation/v2 v2.632.2 h1:A3Atik98hCWfW5IhJqT1HIPlnMkSxV/fblLUOy6OM4Y=
-github.com/speakeasy-api/openapi-generation/v2 v2.632.2/go.mod h1:rzd0RW/K82YiG43g8vewVcFXfwOWp1wUoZib2oCJ4l0=
+github.com/speakeasy-api/openapi v0.2.3 h1:jxeYXcAn1r5PyUZzXeG7T65hpJMcdTg84nDF0YUCdAw=
+github.com/speakeasy-api/openapi v0.2.3/go.mod h1:vqBYh4eIgL9mVqrtdbuttji0ggR3/4xqU1ief4rjzY4=
+github.com/speakeasy-api/openapi-generation/v2 v2.634.1 h1:QjB4Z4hwCZVNCEnwMqJ+3B/kzsvcSw5h53M5BmIodAM=
+github.com/speakeasy-api/openapi-generation/v2 v2.634.1/go.mod h1:efqCdbJlObAZ9E/7YWxk1v8arWE8V96WeWSYGNtQMmY=
 github.com/speakeasy-api/openapi-overlay v0.10.1 h1:XFx/GvJvtAGf4dcQ6bxzsLNf76x/QWE2X0SSZrWojBQ=
 github.com/speakeasy-api/openapi-overlay v0.10.1/go.mod h1:n0iOU7AqKpNFfEt6tq7qYITC4f0yzVVdFw0S7hukemg=
 github.com/speakeasy-api/sdk-gen-config v1.30.21 h1:gfyApIjMItLjAL1/y0Z5UjJX7EcesliJeypRMkzeuo8=
@@ -756,8 +756,8 @@ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
-golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
-golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
+golang.org/x/sync v0.15.0 h1:KWH3jNZsfyT6xfAfKiz6MRNmd46ByHDYaZ7KSkCtdW8=
+golang.org/x/sync v0.15.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20181128092732-4ed8d59d0b35/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=

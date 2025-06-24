@@ -1,8 +1,6 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.24.1
-
-toolchain go1.24.2
+go 1.24.3
 
 replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixvacuum
 
@@ -35,8 +33,8 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi v0.2.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.632.2
+	github.com/speakeasy-api/openapi v0.2.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.634.1
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.30.21
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.1
@@ -50,7 +48,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sync v0.12.0
+	golang.org/x/sync v0.15.0
 	golang.org/x/term v0.30.0
 	golang.org/x/text v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
