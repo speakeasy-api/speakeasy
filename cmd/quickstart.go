@@ -55,11 +55,12 @@ type QuickstartFlags struct {
 var sampleSpec string
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
-	Usage:        "quickstart",
-	Short:        "Guided setup to help you create a new SDK in minutes.",
-	Long:         `Guided setup to help you create a new SDK in minutes.`,
-	Run:          quickstartExec,
-	RequiresAuth: true,
+	Usage:           "quickstart",
+	Short:           "Guided setup to help you create a new SDK in minutes.",
+	Long:            `Guided setup to help you create a new SDK in minutes.`,
+	Run:             quickstartNonInteractive,
+	RunInteractive:  quickstartInteractive,
+	RequiresAuth:    true,
 	Flags: []flag.Flag{
 		flag.BooleanFlag{
 			Name:        "skip-compile",
@@ -106,7 +107,17 @@ const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when 
 	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
 	"To regenerate the current workflow: `speakeasy run --watch`.")
 
-func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
+func quickstartNonInteractive(ctx context.Context, flags QuickstartFlags) error {
+	flags.SkipInteractive = true
+	return quickstartCore(ctx, flags)
+}
+
+func quickstartInteractive(ctx context.Context, flags QuickstartFlags) error {
+	flags.SkipInteractive = false
+	return quickstartCore(ctx, flags)
+}
+
+func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
