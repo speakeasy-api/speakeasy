@@ -55,12 +55,12 @@ type QuickstartFlags struct {
 var sampleSpec string
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
-	Usage:           "quickstart",
-	Short:           "Guided setup to help you create a new SDK in minutes.",
-	Long:            `Guided setup to help you create a new SDK in minutes.`,
-	Run:             quickstartNonInteractive,
-	RunInteractive:  quickstartInteractive,
-	RequiresAuth:    true,
+	Usage:          "quickstart",
+	Short:          "Guided setup to help you create a new SDK in minutes.",
+	Long:           `Guided setup to help you create a new SDK in minutes.`,
+	Run:            quickstartNonInteractive,
+	RunInteractive: quickstartInteractive,
+	RequiresAuth:   true,
 	Flags: []flag.Flag{
 		flag.BooleanFlag{
 			Name:        "skip-compile",
