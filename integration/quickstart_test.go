@@ -24,7 +24,6 @@ func TestQuickstart(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
-			t.Parallel()
 			testQuickstartForTarget(t, target, tempBinary)
 		})
 	}
@@ -92,7 +91,7 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 	// Run speakeasy run
 	now = time.Now()
 	t.Logf("Running speakeasy run for target %s", target)
-	runCmd := exec.Command(tempBinary, "run", "--output", "console")
+	runCmd := exec.Command(tempBinary, "run", "--output", "console", "--pinned")
 	runOutput, err := runCmd.CombinedOutput()
 
 	if err != nil {
