@@ -19,18 +19,18 @@ func TestQuickstart(t *testing.T) {
 	now := time.Now()
 	t.Logf("Building binary")
 	// Build the binary once to warm up the cache
-	buildTempBinary(t)
+	tempBinary := buildTempBinary(t)
 	t.Logf("Binary built in %s", time.Since(now))
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
 			t.Parallel()
-			testQuickstartForTarget(t, target)
+			testQuickstartForTarget(t, target, tempBinary)
 		})
 	}
 }
 
-func testQuickstartForTarget(t *testing.T, target string) {
+func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 	// Skip Alpha languages as they have different behavior
 	if isAlphaTarget(target) {
 		t.Skipf("Skipping %s as it's an Alpha language", target)
@@ -42,8 +42,6 @@ func testQuickstartForTarget(t *testing.T, target string) {
 		t.Skipf("Skipping %s as it's not supported yet", target)
 		return
 	}
-
-	tempBinary := buildTempBinary(t)
 
 	// Create test directory
 	testDir := createTestDir(t, target)
