@@ -46,17 +46,21 @@ type QuickstartFlags struct {
 
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
+
+	// Hidden flag for bypassing interactive prompts
+	SkipInteractive bool `json:"skip-interactive"`
 }
 
 //go:embed sample_openapi.yaml
 var sampleSpec string
 
 var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
-	Usage:        "quickstart",
-	Short:        "Guided setup to help you create a new SDK in minutes.",
-	Long:         `Guided setup to help you create a new SDK in minutes.`,
-	Run:          quickstartExec,
-	RequiresAuth: true,
+	Usage:          "quickstart",
+	Short:          "Guided setup to help you create a new SDK in minutes.",
+	Long:           `Guided setup to help you create a new SDK in minutes.`,
+	Run:            quickstartNonInteractive,
+	RunInteractive: quickstartInteractive,
+	RequiresAuth:   true,
 	Flags: []flag.Flag{
 		flag.BooleanFlag{
 			Name:        "skip-compile",
@@ -89,6 +93,12 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			DefaultValue:  "summary",
 			AllowedValues: []string{"summary", "console", "mermaid"},
 		},
+		// Hidden flags for bypassing interactive prompts
+		flag.BooleanFlag{
+			Name:        "skip-interactive",
+			Description: "whether to use defaults - this will skip all prompts",
+			Hidden:      true,
+		},
 	},
 }
 
@@ -97,7 +107,17 @@ const ErrWorkflowExists = speakeasyErrors.Error("You cannot run quickstart when 
 	"To add an additional SDK to this workflow: `speakeasy configure`. \n" +
 	"To regenerate the current workflow: `speakeasy run --watch`.")
 
-func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
+func quickstartNonInteractive(ctx context.Context, flags QuickstartFlags) error {
+	flags.SkipInteractive = true
+	return quickstartCore(ctx, flags)
+}
+
+func quickstartInteractive(ctx context.Context, flags QuickstartFlags) error {
+	flags.SkipInteractive = false
+	return quickstartCore(ctx, flags)
+}
+
+func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -118,6 +138,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 			Targets: make(map[string]workflow.Target),
 		},
 		LanguageConfigs: make(map[string]*sdkGenConfig.Configuration),
+		SkipInteractive: flags.SkipInteractive,
 	}
 
 	if flags.Schema != "" {
@@ -181,7 +202,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
 	}
 
-	if !currentDirectoryEmpty() {
+	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive {
 		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput(&promptedDir).
 			Title("What directory should the "+targetType+" files be written to?").
 			Description(description+"\n").
@@ -227,15 +248,7 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 		DetectDotGit: true,
 	})
 	if errors.Is(err, gitc.ErrRepositoryNotExists) {
-		initialiseRepo = true
-		prompt := charm.NewBranchPrompt(
-			"Do you want to initialize a new git repository?",
-			"Selecting 'Yes' will initialize a new git repository in the output directory",
-			&initialiseRepo,
-		)
-		if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
-			initialiseRepo = false
-		}
+		initialiseRepo = shouldInitGit(&quickstartObj)
 	}
 
 	var resolvedSchema string
@@ -404,9 +417,11 @@ func quickstartExec(ctx context.Context, flags QuickstartFlags) error {
 	// Doing it before shouldLaunchStudio because that blocks asking the user for input
 	events.FlushActiveEvent(ctx, err)
 
-	if shouldLaunchStudio(ctx, wf, true) {
+	shouldLaunch := shouldLaunchStudio(ctx, wf, true, &quickstartObj)
+
+	if shouldLaunch {
 		err = studio.LaunchStudio(ctx, wf)
-	} else if len(wf.SDKOverviewURLs) == 1 { // There should only be one target after quickstart
+	} else if len(wf.SDKOverviewURLs) == 1 && !quickstartObj.SkipInteractive { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
 		utils.OpenInBrowser(overviewURL)
 	}
@@ -477,7 +492,11 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
-func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool) bool {
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool, quickstart *prompts.Quickstart) bool {
+	if quickstart != nil && quickstart.SkipInteractive {
+		return false
+	}
+
 	if !studio.CanLaunch(ctx, wf) {
 		return false
 	}
@@ -547,6 +566,23 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 	}
 
 	return filepath.Join(workingDir, subDirectory)
+}
+
+func shouldInitGit(quickstart *prompts.Quickstart) bool {
+	initRepo := true
+	if quickstart.SkipInteractive {
+		return initRepo
+	}
+
+	prompt := charm.NewBranchPrompt(
+		"Do you want to initialize a new git repository?",
+		"Selecting 'Yes' will initialize a new git repository in the output directory",
+		&initRepo,
+	)
+	if _, err := charm.NewForm(huh.NewForm(prompt)).ExecuteForm(); err != nil {
+		return false
+	}
+	return initRepo
 }
 
 func currentDirectoryEmpty() bool {
