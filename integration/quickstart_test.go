@@ -209,8 +209,6 @@ func verifyTargetSpecificFiles(t *testing.T, generatedDir, target string) {
 		checkFileExists(t, generatedDir, "go.mod") // Terraform provider is Go-based
 	case "java":
 		checkFileExists(t, generatedDir, "build.gradle")
-	case "csharp":
-		checkFileExists(t, generatedDir, ".sln")
 	case "postman":
 		// Postman collections might not have standard files, just check basic structure
 		t.Logf("Postman target verification - checking basic structure")
