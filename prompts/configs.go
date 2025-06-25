@@ -91,21 +91,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 	initialFields := []huh.Field{}
 
 	if quickstart == nil || quickstart.SDKName == "" {
-		initialFields = append(initialFields,
-			huh.NewInput().
-				Title("Name your SDK").
-				Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
-				Placeholder("MyCompanySDK").
-				Suggestions(suggestions).
-				Prompt("").
-				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return errors.New("SDK name must not be empty")
-					}
-					return nil
-				}).
-				Value(&sdkClassName),
-		)
+		initialFields = append(initialFields, createSDKNamePrompt(&sdkClassName, suggestions))
 	} else {
 		sdkClassName = strcase.ToCamel(quickstart.SDKName)
 	}
@@ -115,12 +101,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 		baseServerURL = output.Generation.BaseServerURL
 	}
 	if !isQuickstart && target.Target != "postman" {
-		initialFields = append(initialFields, huh.NewInput().
-			Title("Provide a base server URL for your SDK to use:").
-			Placeholder("You must do this if a server URL is not defined in your OpenAPI spec").
-			Inline(true).
-			Prompt(" ").
-			Value(&baseServerURL))
+		initialFields = append(initialFields, createBaseServerURLPrompt(&baseServerURL))
 	}
 
 	formTitle := fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName)
@@ -246,6 +227,10 @@ func languageSpecificForms(
 					key:          field.Name,
 					defaultValue: defaultValue,
 				})
+
+				if quickstart != nil && quickstart.SkipInteractive {
+					continue
+				}
 				groups = append(groups, addPromptForField(field.Name, defaultValue, validateRegex, validateMessage, descriptionFn))
 			}
 		}
@@ -378,6 +363,31 @@ func addPromptForField(key, defaultValue, validateRegex, validateMessage string,
 	}
 
 	return huh.NewGroup(input)
+}
+
+func createSDKNamePrompt(sdkClassName *string, suggestions []string) huh.Field {
+	return huh.NewInput().
+		Title("Name your SDK").
+		Description("This should be PascalCase. Your users will access SDK methods with myCompanySDK.doThing()\n").
+		Placeholder("MyCompanySDK").
+		Suggestions(suggestions).
+		Prompt("").
+		Validate(func(s string) error {
+			if strings.TrimSpace(s) == "" {
+				return errors.New("SDK name must not be empty")
+			}
+			return nil
+		}).
+		Value(sdkClassName)
+}
+
+func createBaseServerURLPrompt(baseServerURL *string) huh.Field {
+	return huh.NewInput().
+		Title("Provide a base server URL for your SDK to use:").
+		Placeholder("You must do this if a server URL is not defined in your OpenAPI spec").
+		Inline(true).
+		Prompt(" ").
+		Value(baseServerURL)
 }
 
 func saveLanguageConfigValues(

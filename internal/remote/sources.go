@@ -50,6 +50,11 @@ func GetRecentWorkspaceGenerations(ctx context.Context) ([]RecentGeneration, err
 		return nil, err
 	}
 
+	if workspaceId == "self" {
+		// This takes too long for self workspace
+		return []RecentGeneration{}, nil
+	}
+
 	speakeasyClient, err := sdk.InitSDK()
 	if err != nil {
 		return nil, err

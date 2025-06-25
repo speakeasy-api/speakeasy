@@ -135,9 +135,23 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		targetType = *quickstart.Defaults.TargetType
 	}
 
-	targetName, target, err := PromptForNewTarget(quickstart.WorkflowFile, targetName, targetType, "")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create new target")
+	var target *workflow.Target
+
+	// Check if we have a default target type from hidden flags or use prompts
+	if quickstart.Defaults.TargetType != nil && *quickstart.Defaults.TargetType != "" {
+		// Use the target type that was already set (e.g., from --target flag)
+		sourceName := getSourcesFromWorkflow(quickstart.WorkflowFile)[0]
+		target = &workflow.Target{
+			Target: targetType,
+			Source: sourceName,
+		}
+	} else {
+		updatedTargetName, targetPtr, err := PromptForNewTarget(quickstart.WorkflowFile, targetName, targetType, "")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create new target")
+		}
+		targetName = updatedTargetName
+		target = targetPtr
 	}
 
 	if err := target.Validate(generate.GetSupportedTargetNames(), quickstart.WorkflowFile.Sources); err != nil {
