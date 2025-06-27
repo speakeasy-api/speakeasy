@@ -616,6 +616,7 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to load config file for target %s", name)
 		}
+		cfg.Config.Generation.Tests.GenerateTests = true
 		cfg.Config.Generation.Tests.GenerateNewTests = true
 		if err := config.SaveConfig(filepath.Dir(cfg.ConfigPath), cfg.Config); err != nil {
 			return errors.Wrapf(err, "failed to save config file for target %s", name)
