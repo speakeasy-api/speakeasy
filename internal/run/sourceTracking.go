@@ -235,7 +235,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	// snapshot the source
 	err = pl.EmbedSource(ctx, resolved, embedConfig)
 	if err != nil {
-		log.From(ctx).Warnf("warning: couldn't embed source in openapi document: %s", err.Error())
+		log.From(ctx).Warnf("warning: couldn't embedding source in openapi document: %s", err.Error())
 	}
 
 	rootDocument, err := resolved.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))

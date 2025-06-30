@@ -21,6 +21,7 @@ require (
 	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/gofrs/flock v0.12.1
+	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v58 v58.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.7.0
@@ -38,7 +39,7 @@ require (
 	github.com/speakeasy-api/openapi-overlay v0.10.1
 	github.com/speakeasy-api/sdk-gen-config v1.31.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.1
-	github.com/speakeasy-api/speakeasy-core v0.19.8
+	github.com/speakeasy-api/speakeasy-core v0.20.0
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-api/versioning-reports v0.6.0
 	github.com/spf13/cobra v1.9.1
@@ -133,7 +134,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -274,5 +274,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
-
-replace github.com/speakeasy-api/speakeasy-core => ../speakeasy-core

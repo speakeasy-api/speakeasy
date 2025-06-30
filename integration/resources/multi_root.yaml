@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: Multi-File Test API
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      operationId: getTest
+      summary: Test endpoint
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "multi_components.yaml#/components/schemas/TestResponse"
+components:
+  schemas:
+    LocalSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string

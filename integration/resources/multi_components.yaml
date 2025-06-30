@@ -1,0 +1,18 @@
+components:
+  schemas:
+    TestResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["success", "error"]
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              timestamp:
+                type: string
+                format: date-time

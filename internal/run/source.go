@@ -159,11 +159,12 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
-		return "", nil, fmt.Errorf("failed to write to output location: %w %s?", err, outputLocation)
+	if !w.FrozenWorkflowLock {
+		if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
+			return "", nil, fmt.Errorf("failed to write to output location: %w %s", err, outputLocation)
+		}
 	}
-	currentDocument = outputLocation
-	sourceRes.OutputPath = currentDocument
+	sourceRes.OutputPath = outputLocation
 
 	if !w.SkipLinting {
 		w.OnSourceResult(sourceRes, SourceStepLint)
@@ -300,6 +301,10 @@ func writeToOutputLocation(ctx context.Context, documentPath string, outputLocat
 	// If paths are the same, no need to do anything
 	if documentPath == outputLocation {
 		return nil
+	}
+	// Make sure the outputLocation directory exists
+	if err := os.MkdirAll(filepath.Dir(outputLocation), os.ModePerm); err != nil {
+		return err
 	}
 
 	// If we have yaml and need json, convert it
