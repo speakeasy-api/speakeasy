@@ -1,0 +1,39 @@
+overlay: 1.0.0
+info:
+  title: Test API Overlay
+  version: 1.0.0
+actions:
+  - target: '$.info'
+    update:
+      x-speakeasy-name-override: TestAPI
+      x-speakeasy-retries:
+        strategy: backoff
+        backoff:
+          initialInterval: 500
+          maxInterval: 60000
+          maxElapsedTime: 3600000
+          exponent: 1.5
+        statusCodes:
+          - 408
+          - 429
+          - 5XX
+        retryConnectionErrors: true
+  - target: '$.paths["/users"].get'
+    update:
+      x-speakeasy-pagination:
+        type: offsetLimit
+        inputs:
+          - name: page
+            in: query
+            type: integer
+          - name: limit
+            in: query
+            type: integer
+        outputs:
+          results: $.users
+  - target: '$.components.schemas.User.properties'
+    update:
+      metadata:
+        type: object
+        description: Additional user metadata
+        additionalProperties: true
