@@ -151,9 +151,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generatorOpts = append(generatorOpts, generate.WithVerboseOutput(true))
 	}
 
-	if opts.Debug {
-		generatorOpts = append(generatorOpts, generate.WithDebuggingEnabled())
-	}
+	// Always enable debug file writing to help with troubleshooting format errors
+	generatorOpts = append(generatorOpts, generate.WithDebuggingEnabled())
 
 	// Enable outputting of internal tests for internal speakeasy use cases
 	if opts.OutputTests {
