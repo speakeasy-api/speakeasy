@@ -45,7 +45,7 @@ func TestMultiFileStability(t *testing.T) {
 	// Run the initial generation
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
-	cmdErr := executeI(t, temp, initialArgs...).Run()
+	cmdErr := execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files
@@ -63,7 +63,7 @@ func TestMultiFileStability(t *testing.T) {
 
 	// Test frozen workflow lock behavior
 	frozenArgs := []string{"run", "-t", "all", "--pinned", "--frozen-workflow-lockfile", "--skip-compile"}
-	cmdErr = executeI(t, temp, frozenArgs...).Run()
+	cmdErr = execute(t, temp, frozenArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums after frozen run
