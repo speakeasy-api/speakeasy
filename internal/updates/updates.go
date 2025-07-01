@@ -130,6 +130,7 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 	currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
 	curVer, err := version.NewVersion(currentVersion)
 	// If the current version is the same as the desired version, just return the current executable location
+	return os.Executable()
 	if err == nil && curVer.Equal(v) {
 		return os.Executable()
 	}

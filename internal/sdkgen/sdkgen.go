@@ -187,7 +187,6 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
-
 		var errs []error
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
 			cancelCtx := opts.CancellableGeneration.CancellableContext
