@@ -68,7 +68,9 @@ func TestStability(t *testing.T) {
 
 	// exclude gen.lock -- we could (we do) reformat the document inside the frozen one
 	delete(frozenChecksums, ".speakeasy/gen.lock")
+	delete(frozenChecksums, ".speakeasy\\gen.lock") // windows
 	delete(initialChecksums, ".speakeasy/gen.lock")
+	delete(initialChecksums, ".speakeasy\\gen.lock") // windows
 	// Compare checksums
 	require.Equal(t, initialChecksums, frozenChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 }
