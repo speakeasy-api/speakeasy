@@ -263,10 +263,10 @@ func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, e
 			if targetLockOld.SourceRevisionDigest != "" && targetLockOld.SourceNamespace != "" {
 				log.From(ctx).Info("fethcing old schema 5")
 				// TODO: This is temorary working for changelog-test-repo. This sha is a constant sha value fixed in history
-				oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
-					targetLockOld.SourceNamespace, "sha256:14275fd32010d9a3ca42ca15f060f3351de22e5ba0ff7ebead0a820714d73d22")
 				// oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
-				// 	targetLockOld.SourceNamespace, targetLockOld.SourceRevisionDigest)
+				// 	targetLockOld.SourceNamespace, "sha256:14275fd32010d9a3ca42ca15f060f3351de22e5ba0ff7ebead0a820714d73d22")
+				oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+					targetLockOld.SourceNamespace, targetLockOld.SourceRevisionDigest)
 			} else {
 				log.From(ctx).Info("fethcing old schema 4")
 				return nil, errors.New("no previous revision found")
@@ -278,7 +278,7 @@ func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, e
 			log.From(ctx).Info("fethcing old schema 7")
 			if err != nil {
 				log.From(ctx).Info("fethcing old schema 8")
-				return nil, errors.New("Failed to resolve old schema")
+				return nil, fmt.Errorf("failed to resolve old schema. Err: %w", err)
 			}
 			log.From(ctx).Info("fethcing old schema 9")
 			log.From(ctx).Info("oldDocPath: " + oldDocPath.LocalFilePath)
@@ -286,7 +286,7 @@ func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, e
 			log.From(ctx).Info("fethcing old schema 10")
 			if err != nil {
 				log.From(ctx).Info("fethcing old schema 11")
-				return nil, errors.New("Failed to get schema. " + err.Error())
+				return nil, fmt.Errorf("failed to get schema. Err: %w", err)
 			}
 			log.From(ctx).Info("fethcing old schema 12")
 			// log oldDocBytes in string format
