@@ -274,51 +274,41 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, error) {
 	log.From(ctx).Info("fethcing old schema")
 	if w.lockfileOld != nil {
-		log.From(ctx).Info("fethcing old schema 1")
 		if targetLockOld, ok := w.lockfileOld.Targets[target]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
-			log.From(ctx).Info("fethcing old schema 2")
+			log.From(ctx).Info("Starting to fetch old schema")
 			orgSlug := auth.GetOrgSlugFromContext(ctx)
 			workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
-			log.From(ctx).Info("fethcing old schema 3")
 			oldRegistryLocation := ""
-			// TODO: Remove static sha value. This is being used to fix the
-			// old version of the spec so that changelog can be generated against it.
 			if targetLockOld.SourceRevisionDigest != "" && targetLockOld.SourceNamespace != "" {
-				log.From(ctx).Info("fethcing old schema 5")
+				log.From(ctx).Info("Found source revision and source namespace")
 				// TODO: This is temorary working for changelog-test-repo. This sha is a constant sha value fixed in history
 				// oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
 				// 	targetLockOld.SourceNamespace, "sha256:14275fd32010d9a3ca42ca15f060f3351de22e5ba0ff7ebead0a820714d73d22")
 				oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
 					targetLockOld.SourceNamespace, targetLockOld.SourceRevisionDigest)
 			} else {
-				log.From(ctx).Info("fethcing old schema 4")
-				return nil, errors.New("no previous revision found")
+				return nil, errors.New("source revision or source namespace was empty. Cant fetch old schema. SourceRevisionDigest: " + targetLockOld.SourceRevisionDigest + " SourceNamespace: " + targetLockOld.SourceNamespace)
 			}
 
 			d := workflow.Document{Location: workflow.LocationString(oldRegistryLocation)}
-			log.From(ctx).Info("fethcing old schema 6")
 			oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
-			log.From(ctx).Info("fethcing old schema 7")
+			log.From(ctx).Info("fethcing old schema bundle")
 			if err != nil {
-				log.From(ctx).Info("fethcing old schema 8")
+				log.From(ctx).Info("Error while fetching old schema bundle")
 				return nil, fmt.Errorf("failed to resolve old schema. Err: %w", err)
 			}
-			log.From(ctx).Info("fethcing old schema 9")
-			log.From(ctx).Info("oldDocPath: " + oldDocPath.LocalFilePath)
 			oldDocBytes, err := changes.GetSchema(oldDocPath.LocalFilePath)
-			log.From(ctx).Info("fethcing old schema 10")
+			log.From(ctx).Info("unbundling old schema")
 			if err != nil {
-				log.From(ctx).Info("fethcing old schema 11")
-				return nil, fmt.Errorf("failed to get schema. Err: %w", err)
+				log.From(ctx).Info("Error while unbundling old schema")
+				return nil, fmt.Errorf("Error while unbundling old schema. Err: %w", err)
 			}
-			log.From(ctx).Info("fethcing old schema 12")
-			// log oldDocBytes in string format
-			log.From(ctx).Info("oldDocBytes: " + string(oldDocBytes))
-			log.From(ctx).Info(fmt.Sprintf("oldDocBytes length: %d", len(oldDocBytes)))
+			log.From(ctx).Info(fmt.Sprintf("oldDocBytes: %d", len(oldDocBytes)))
 			return oldDocBytes, nil
 		}
+	} else {
+		log.From(ctx).Info("no previous old schema found")
 	}
-	log.From(ctx).Info("no previous revision found")
 	return nil, errors.New("no previous revision found")
 }
 
