@@ -65,7 +65,7 @@ jobs:
             *Job:* ${{ github.job }}
             *Branch:* ${{ github.ref }}
             *Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook_url: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }}
           
   golangci-lint:
     name: Go Linting
@@ -103,4 +103,4 @@ jobs:
             *Job:* ${{ github.job }}
             *Branch:* ${{ github.ref }}
             *Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook_url: ${{ secrets.SLACK_DOCS_WEBHOOK_URL }}
