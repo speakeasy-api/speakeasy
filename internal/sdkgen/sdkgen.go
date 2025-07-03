@@ -2,6 +2,7 @@ package sdkgen
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -215,8 +216,17 @@ func Generate(ctx context.Context, opts GenerateOptions, oldSchema []byte) (*Gen
 	})
 
 	oldConfig, newConfig := sdkchangelog.CreateConfigs(oldSchema, schema, opts.Language, opts.OutDir, opts.Verbose, logger)
+	logger.Infof("oldSchema %v", string(oldSchema))
+	logger.Infof("newSchema %v", string(schema))
 	sdkDiff := sdkchangelog.Changes(oldConfig, newConfig)
+	sdkDiffJSON, err := json.MarshalIndent(sdkDiff, "", "  ")
+	if err != nil {
+		logger.Errorf("failed to marshal sdkDiff: %v", err)
+	} else {
+		logger.Infof("sdkDiff: %s", string(sdkDiffJSON))
+	}
 	changelogContent := sdkchangelog.ToMarkdown(sdkDiff)
+	logger.Infof("version report being added %v", changelogContent)
 
 	versionReport := versioning2.VersionReport{
 		Key:          fmt.Sprintf("SDK_CHANGELOG_%s", opts.Language),
@@ -226,11 +236,13 @@ func Generate(ctx context.Context, opts GenerateOptions, oldSchema []byte) (*Gen
 		NewVersion:   "",
 	}
 	versionReport.PRReport += changelogContent
+	logger.Infof("version report being added %v", versionReport)
 	logging.From(ctx).Info("version report being added ", zap.Any("versionReport", versionReport))
 	// How this works
 	// This version report is written to a file and read in sdk-generation-action for generating changelog.
 	err = versioning2.AddVersionReport(ctx, versionReport)
 	if err != nil {
+		logger.Error("failed to add version report. Skipped sdk changelog addition", zap.Error(err))
 		logging.LogWarning(ctx, "failed to add version report. Skipped sdk changelog addition", err)
 	}
 
