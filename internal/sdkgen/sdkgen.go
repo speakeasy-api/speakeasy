@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	versioning2 "github.com/speakeasy-api/versioning-reports/versioning"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
@@ -22,7 +23,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
+	sdkchangelog "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
@@ -72,7 +75,7 @@ type GenerateOptions struct {
 	StreamableGeneration  *StreamableGeneration
 }
 
-func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
+func Generate(ctx context.Context, opts GenerateOptions, oldSchema []byte) (*GenerationAccess, error) {
 	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
@@ -210,6 +213,27 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		return nil
 	})
+
+	oldConfig, newConfig := sdkchangelog.CreateConfigs(oldSchema, schema, opts.Language, opts.OutDir, opts.Verbose, logger)
+	sdkDiff := sdkchangelog.Changes(oldConfig, newConfig)
+	changelogContent := sdkchangelog.ToMarkdown(sdkDiff)
+
+	versionReport := versioning2.VersionReport{
+		Key:          fmt.Sprintf("SDK_CHANGELOG_%s", opts.Language),
+		Priority:     1,
+		MustGenerate: true,
+		BumpType:     versioning2.BumpNone,
+		NewVersion:   "",
+	}
+	versionReport.PRReport += changelogContent
+	logging.From(ctx).Info("version report being added ", zap.Any("versionReport", versionReport))
+	// How this works
+	// This version report is written to a file and read in sdk-generation-action for generating changelog.
+	err = versioning2.AddVersionReport(ctx, versionReport)
+	if err != nil {
+		logging.LogWarning(ctx, "failed to add version report. Skipped sdk changelog addition", err)
+	}
+
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,

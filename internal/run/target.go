@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -174,6 +175,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
+	oldSchema, err := w.fetchOldSchema(ctx, target)
+	if err != nil {
+		logger.Errorf("An error occurred when downloading old schema: %v", err)
+		oldSchema = nil
+	}
+
 	generationAccess, err := sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{
@@ -199,6 +206,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			CancellableGeneration: w.CancellableGeneration,
 			StreamableGeneration:  w.StreamableGeneration,
 		},
+		oldSchema,
 	)
 
 	if err != nil {
@@ -422,4 +430,56 @@ func (w *Workflow) CancelGeneration() error {
 	}
 
 	return fmt.Errorf("Generation is not cancellable")
+}
+
+func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, error) {
+	log.From(ctx).Info("Fetching old schema for target: ", zap.String("target", target))
+	if w.lockfileOld != nil {
+		if targetLockOld, ok := w.lockfileOld.Targets[target]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
+			log.From(ctx).Info("Starting to fetch old schema")
+			orgSlug := auth.GetOrgSlugFromContext(ctx)
+			workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+			oldRegistryLocation := ""
+			if targetLockOld.SourceRevisionDigest != "" && targetLockOld.SourceNamespace != "" {
+				log.From(ctx).Info("Found source revision and source namespace")
+				oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
+					targetLockOld.SourceNamespace, targetLockOld.SourceRevisionDigest)
+			} else {
+				return nil, errors.New("source revision or source namespace was empty. Cant fetch old schema. SourceRevisionDigest: " + targetLockOld.SourceRevisionDigest + " SourceNamespace: " + targetLockOld.SourceNamespace)
+			}
+
+			d := workflow.Document{Location: workflow.LocationString(oldRegistryLocation)}
+			oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
+			log.From(ctx).Info("fethcing old schema bundle")
+			if err != nil {
+				log.From(ctx).Info("Error while fetching old schema bundle")
+				return nil, fmt.Errorf("failed to resolve old schema. Err: %w", err)
+			}
+			oldDocBytes, err := GetSchema(ctx, oldDocPath.LocalFilePath)
+			log.From(ctx).Info("unbundling old schema")
+			if err != nil {
+				log.From(ctx).Info("Error while unbundling old schema")
+				return nil, fmt.Errorf("Error while unbundling old schema. Err: %w", err)
+			}
+			log.From(ctx).Info(fmt.Sprintf("oldDocBytes: %d", len(oldDocBytes)))
+			return oldDocBytes, nil
+		}
+	} else {
+		log.From(ctx).Info("no previous old schema found")
+	}
+	return nil, errors.New("no previous revision found")
+}
+
+func GetSchema(ctx context.Context, filePath string) ([]byte, error) {
+	if filePath == "" {
+		log.From(ctx).Info("file path is empty")
+		return nil, fmt.Errorf("file path is empty")
+	}
+	specBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		log.From(ctx).Info("no previous old schema found")
+		return nil, fmt.Errorf("cannot read the spec: %s", err.Error())
+	}
+
+	return specBytes, nil
 }
