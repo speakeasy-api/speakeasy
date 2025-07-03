@@ -102,7 +102,6 @@ func (r *Runner) RunWithVisualization(ctx context.Context) error {
 	}
 
 	err := r.workflowTracker.RunWithVisualization(runFnCli, updatesChannel)
-
 	if err != nil {
 		logger.Errorf("Workflow testing failed: %s", err)
 	}
@@ -165,6 +164,10 @@ func (r *Runner) prepareGenerator(ctx context.Context) (*generate.Generator, err
 		generate.WithRunLocation(runLocation),
 	}
 
+	if r.disableMockserver {
+		generatorOpts = append(generatorOpts, generate.WithDisableMockServer())
+	}
+
 	// The generator verbose output option, regardless of given value, also
 	// resets the logger in the generator, so only set when enabled. Otherwise,
 	// output can interleave/format incorrectly.
@@ -173,7 +176,6 @@ func (r *Runner) prepareGenerator(ctx context.Context) (*generate.Generator, err
 	}
 
 	generator, err := generate.New(generatorOpts...)
-
 	if err != nil {
 		return nil, fmt.Errorf("Unable to prepare testing instance: %w", err)
 	}
@@ -230,7 +232,6 @@ func (r *Runner) runSingleWorkflowTargetTesting(ctx context.Context, workflowTar
 	testingCtx := log.With(ctx, testingLogger)
 
 	generator, err := r.prepareGenerator(testingCtx)
-
 	if err != nil {
 		return err
 	}

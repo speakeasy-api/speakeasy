@@ -25,6 +25,10 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
 
+type SourceStep interface {
+	Do(ctx context.Context, inputPath string) (string, error)
+}
+
 const speakeasySelf = "speakeasy-self"
 
 func ParseSourcesAndTargets() ([]string, []string, error) {

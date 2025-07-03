@@ -1,8 +1,6 @@
 package integration_tests
 
 import (
-	"crypto/md5"
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
@@ -13,8 +11,6 @@ import (
 )
 
 func TestStability(t *testing.T) {
-	t.Skip("Skipping stability test until we can figure out how to make it work on CI")
-	t.Parallel()
 	temp := setupTestDir(t)
 
 	// Create a basic workflow file
@@ -47,15 +43,15 @@ func TestStability(t *testing.T) {
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files
-	initialChecksums, err = calculateChecksums(temp)
+	initialChecksums, err = filesToString(temp)
 	require.NoError(t, err)
 
 	// Re-run the generation. We should have stable digests.
 	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
-	rerunChecksums, err := calculateChecksums(temp)
+	rerunChecksums, err := filesToString(temp)
 	require.NoError(t, err)
-	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical when using --frozen-workflow-lock")
+	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical")
 	// Modify the workflow file to simulate a change
 	// Shouldn't do anything; we'll validate that later.
 	workflowFile.Sources["test-source"].Inputs[0].Location = "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.1/petstore.yaml"
@@ -67,9 +63,14 @@ func TestStability(t *testing.T) {
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums after frozen run
-	frozenChecksums, err := calculateChecksums(temp)
+	frozenChecksums, err := filesToString(temp)
 	require.NoError(t, err)
 
+	// exclude gen.lock -- we could (we do) reformat the document inside the frozen one
+	delete(frozenChecksums, ".speakeasy/gen.lock")
+	delete(frozenChecksums, ".speakeasy\\gen.lock") // windows
+	delete(initialChecksums, ".speakeasy/gen.lock")
+	delete(initialChecksums, ".speakeasy\\gen.lock") // windows
 	// Compare checksums
 	require.Equal(t, initialChecksums, frozenChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 }
@@ -168,7 +169,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 	require.NoError(t, cmdErr)
 }
 
-func calculateChecksums(dir string) (map[string]string, error) {
+func filesToString(dir string) (map[string]string, error) {
 	checksums := make(map[string]string)
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -180,7 +181,7 @@ func calculateChecksums(dir string) (map[string]string, error) {
 				return err
 			}
 			relPath, _ := filepath.Rel(dir, path)
-			checksums[relPath] = fmt.Sprintf("%x", md5.Sum(data))
+			checksums[relPath] = string(data)
 		}
 		return nil
 	})

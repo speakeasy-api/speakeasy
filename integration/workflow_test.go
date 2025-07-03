@@ -248,6 +248,8 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 }
 
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
+// We should not use it on multiple tests at once as they will share memory: this can create issues.
+// so we leave it around as a little helper method: swap out execute for executeI and debug breakpoints work
 var mutex sync.Mutex
 var rootCmd = cmd.CmdForTest(version, artifactArch)
 

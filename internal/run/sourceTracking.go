@@ -22,14 +22,55 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/reports"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/registry"
-	"go.uber.org/zap"
 )
+
+// embedSourceConfig implements bundler.EmbedSourceConfig interface
+type embedSourceConfig struct {
+	originalSource  *workflow.Source
+	localizedSource *workflow.Source
+}
+
+func (e *embedSourceConfig) WorkflowSource() *workflow.Source {
+	return e.originalSource
+}
+
+func (e *embedSourceConfig) LocalizedWorkflowSource() *workflow.Source {
+	return e.localizedSource
+}
+
+// createLocalizedSource creates a localized version of the source based on the source result
+func createLocalizedSource(originalSource workflow.Source, sourceResult *SourceResult) *workflow.Source {
+	localizedSource := originalSource // Copy the original source structure
+
+	// Replace inputs with the merged input files from the source result
+	if len(sourceResult.MergeResult.InputSchemaLocation) > 0 {
+		localizedSource.Inputs = make([]workflow.Document, len(sourceResult.MergeResult.InputSchemaLocation))
+		for i, inputPath := range sourceResult.MergeResult.InputSchemaLocation {
+			localizedSource.Inputs[i] = workflow.Document{
+				Location: workflow.LocationString(inputPath),
+			}
+		}
+	}
+
+	// Copy overlay results from the source result if they exist
+	if len(sourceResult.OverlayResult.InputSchemaLocation) > 0 {
+		localizedSource.Overlays = make([]workflow.Overlay, len(sourceResult.OverlayResult.InputSchemaLocation))
+		for i, overlayPath := range sourceResult.OverlayResult.InputSchemaLocation {
+			localizedSource.Overlays[i] = workflow.Overlay{
+				Document: &workflow.Document{
+					Location: workflow.LocationString(overlayPath),
+				},
+			}
+		}
+	}
+
+	return &localizedSource
+}
 
 func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
 	changesStep := rootStep.NewSubstep("Computing Document Changes")
@@ -102,7 +143,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	return
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, documentPath string) (err error) {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult) (err error) {
 	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
 
 	if !registry.IsRegistryEnabled(ctx) {
@@ -171,25 +212,35 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	pl := bundler.NewPipeline(&bundler.PipelineOptions{})
-	memfs := fsextras.NewMemFS()
+	resolved := fsextras.NewMemFS()
+	registryStep.NewSubstep("Snapshotting Resolved Layer")
 
-	registryStep.NewSubstep("Snapshotting OpenAPI Revision")
-
-	rootDocumentPath, err := pl.Localize(ctx, memfs, bundler.LocalizeOptions{
-		DocumentPath: documentPath,
+	rootDocumentPath, err := pl.Localize(ctx, resolved, bundler.LocalizeOptions{
+		DocumentPath: sourceResult.OutputPath,
+		OutputRoot:   bundler.BundleRoot.String(),
 	})
 	if err != nil {
 		return fmt.Errorf("error localizing openapi document: %w", err)
 	}
 
-	gitRepo, err := git.NewLocalRepository(w.ProjectDir)
-	if err != nil {
-		log.From(ctx).Debug("error sniffing git repository", zap.Error(err))
+	// Create localized source based on the source result
+	localizedSource := createLocalizedSource(source, sourceResult)
+
+	// Create embed source config with original and localized sources
+	embedConfig := &embedSourceConfig{
+		originalSource:  &source,
+		localizedSource: localizedSource,
 	}
 
-	rootDocument, err := memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))
+	// snapshot the source
+	err = pl.EmbedSource(ctx, resolved, embedConfig)
+	if err != nil {
+		log.From(ctx).Warnf("warning: couldn't embedding source in openapi document: %s", err.Error())
+	}
+
+	rootDocument, err := resolved.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.yaml"))
 	if errors.Is(err, fs.ErrNotExist) {
-		rootDocument, err = memfs.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.json"))
+		rootDocument, err = resolved.Open(filepath.Join(bundler.BundleRoot.String(), "openapi.json"))
 	}
 	if err != nil {
 		return fmt.Errorf("error opening root document: %w", err)
@@ -200,19 +251,11 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		return fmt.Errorf("error extracting annotations from openapi document: %w", err)
 	}
 
-	revision := ""
-	if gitRepo != nil {
-		revision, err = gitRepo.HeadHash()
-		if err != nil {
-			log.From(ctx).Debug("error sniffing head commit hash", zap.Error(err))
-		}
-	}
-	annotations.Revision = revision
 	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
 	// Always add the openapi document version as a tag
 	tags = append(tags, annotations.Version)
 
-	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(memfs, memfs), &bundler.OCIBuildOptions{
+	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(resolved, resolved), &bundler.OCIBuildOptions{
 		Tags:        tags,
 		Annotations: annotations,
 		MediaType:   ocicommon.MediaTypeOpenAPIBundleV0,
@@ -231,7 +274,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	reg = strings.TrimPrefix(reg, "https://")
 
 	substepStore := registryStep.NewSubstep("Storing OpenAPI Revision")
-	pushResult, err := pl.PushOCIImage(ctx, memfs, &bundler.OCIPushOptions{
+	pushResult, err := pl.PushOCIImage(ctx, resolved, &bundler.OCIPushOptions{
 		Tags:     tags,
 		Registry: reg,
 		Access: ocicommon.NewRepositoryAccess(apiKey, namespaceName, ocicommon.RepositoryAccessOptions{

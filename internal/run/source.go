@@ -50,10 +50,13 @@ const (
 type SourceResult struct {
 	Source string
 	// The merged OAS spec that was input to the source contents as a string
-	InputSpec    string
-	LintResult   *validation.ValidationResult
-	ChangeReport *reports.ReportResult
-	Diagnosis    suggestions.Diagnosis
+	InputSpec     string
+	LintResult    *validation.ValidationResult
+	ChangeReport  *reports.ReportResult
+	Diagnosis     suggestions.Diagnosis
+	OverlayResult OverlayResult
+	MergeResult   MergeResult
+	CLIVersion    string
 	// The path to the output OAS spec
 	OutputPath string
 }
@@ -61,10 +64,6 @@ type SourceResult struct {
 type LintingError struct {
 	Err      error
 	Document string
-}
-
-type SourceStep interface {
-	Do(ctx context.Context, inputPath string) (string, error)
 }
 
 func (e *LintingError) Error() string {
@@ -129,11 +128,13 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 				outputLocation = reformattedLocation
 			}
 		}
+		sourceRes.MergeResult.InputSchemaLocation = []string{currentDocument}
 	} else {
-		currentDocument, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument)
+		sourceRes.MergeResult, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
+		currentDocument = sourceRes.MergeResult.Location
 	}
 
 	sourceRes.InputSpec, err = utils.ReadFileToString(currentDocument)
@@ -143,10 +144,11 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
 		w.OnSourceResult(sourceRes, SourceStepOverlay)
-		currentDocument, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
+		sourceRes.OverlayResult, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
+		currentDocument = sourceRes.OverlayResult.Location
 	}
 
 	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
@@ -157,11 +159,12 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
-		return "", nil, fmt.Errorf("failed to write to output location: %w %s?", err, outputLocation)
+	if !w.FrozenWorkflowLock {
+		if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
+			return "", nil, fmt.Errorf("failed to write to output location: %w %s", err, outputLocation)
+		}
 	}
-	currentDocument = outputLocation
-	sourceRes.OutputPath = currentDocument
+	sourceRes.OutputPath = outputLocation
 
 	if !w.SkipLinting {
 		w.OnSourceResult(sourceRes, SourceStepLint)
@@ -182,7 +185,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	w.OnSourceResult(sourceRes, SourceStepUpload)
 
 	if !w.SkipSnapshot {
-		err = w.snapshotSource(ctx, rootStep, sourceID, source, currentDocument)
+		err = w.snapshotSource(ctx, rootStep, sourceID, source, sourceRes)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			logger.Warnf("failed to snapshot source: %s", err.Error())
 		}
@@ -298,6 +301,10 @@ func writeToOutputLocation(ctx context.Context, documentPath string, outputLocat
 	// If paths are the same, no need to do anything
 	if documentPath == outputLocation {
 		return nil
+	}
+	// Make sure the outputLocation directory exists
+	if err := os.MkdirAll(filepath.Dir(outputLocation), os.ModePerm); err != nil {
+		return err
 	}
 
 	// If we have yaml and need json, convert it
