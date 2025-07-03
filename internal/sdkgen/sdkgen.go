@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
-	versioning2 "github.com/speakeasy-api/versioning-reports/versioning"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
@@ -214,35 +214,40 @@ func Generate(ctx context.Context, opts GenerateOptions, oldSchema []byte) (*Gen
 
 		return nil
 	})
+	generationOptions := sdkchangelog.GenerateOptions{
+		Logger:  logger,
+		Verbose: opts.Verbose,
+		Lang:    opts.Language,
+		OutDir:  opts.OutDir,
+	}
 
-	oldConfig, newConfig := sdkchangelog.CreateConfigs(oldSchema, schema, opts.Language, opts.OutDir, opts.Verbose, logger)
-	logger.Infof("oldSchema %v", string(oldSchema))
-	logger.Infof("newSchema %v", string(schema))
+	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecBytes(oldSchema, schema, generationOptions)
+	log.From(ctx).Debug("oldSchema ", zap.String("oldSchema", string(oldSchema)))
+	log.From(ctx).Debug("newSchema ", zap.String("newSchema", string(schema)))
 	sdkDiff := sdkchangelog.Changes(oldConfig, newConfig)
 	sdkDiffJSON, err := json.MarshalIndent(sdkDiff, "", "  ")
 	if err != nil {
-		logger.Errorf("failed to marshal sdkDiff: %v", err)
+		log.From(ctx).Debug("failed to marshal sdkDiff ", zap.Error(err))
 	} else {
-		logger.Infof("sdkDiff: %s", string(sdkDiffJSON))
+		log.From(ctx).Debug("sdkDiff: ", zap.String("sdkDiff", string(sdkDiffJSON)))
 	}
 	changelogContent := sdkchangelog.ToMarkdown(sdkDiff)
-	logger.Infof("version report being added %v", changelogContent)
+	log.From(ctx).Debug("SDK changelogContent: ", zap.String("changelogContent", changelogContent))
 
-	versionReport := versioning2.VersionReport{
+	versionReport := versioning.VersionReport{
 		Key:          fmt.Sprintf("SDK_CHANGELOG_%s", opts.Language),
 		Priority:     1,
 		MustGenerate: true,
-		BumpType:     versioning2.BumpNone,
+		BumpType:     versioning.BumpNone,
 		NewVersion:   "",
 	}
 	versionReport.PRReport += changelogContent
-	logger.Infof("version report being added %v", versionReport)
-	logging.From(ctx).Info("version report being added ", zap.Any("versionReport", versionReport))
-	// How this works
+	log.From(ctx).Debug("version report being added ", zap.Any("versionReport", versionReport))
+	// How this works is as follows:
 	// This version report is written to a file and read in sdk-generation-action for generating changelog.
-	err = versioning2.AddVersionReport(ctx, versionReport)
+	err = versioning.AddVersionReport(ctx, versionReport)
 	if err != nil {
-		logger.Error("failed to add version report. Skipped sdk changelog addition", zap.Error(err))
+		log.From(ctx).Debug("failed to add version report. Skipped sdk changelog addition", zap.Error(err))
 		logging.LogWarning(ctx, "failed to add version report. Skipped sdk changelog addition", err)
 	}
 
