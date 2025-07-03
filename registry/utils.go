@@ -3,9 +3,10 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/config"
 	"os"
 	"path/filepath"
+
+	"github.com/speakeasy-api/speakeasy/internal/config"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
@@ -14,7 +15,7 @@ import (
 )
 
 func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, outPath string) (*download.DownloadedRegistryOpenAPIBundle, error) {
-	log.From(ctx).Infof("Downloading bundle %s... to %s\n", d.Location, outPath)
+	log.From(ctx).Infof("Downloading bundle %s ... to %s\n", d.Location, outPath)
 
 	if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
 		return nil, err

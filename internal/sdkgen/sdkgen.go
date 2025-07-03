@@ -48,34 +48,35 @@ type StreamableGeneration struct {
 }
 
 type GenerateOptions struct {
-	CustomerID      string
-	WorkspaceID     string
-	Language        string
-	SchemaPath      string
-	Header          string
-	Token           string
-	OutDir          string
-	CLIVersion      string
-	InstallationURL string
-	Debug           bool
-	AutoYes         bool
-	Published       bool
-	OutputTests     bool
-	Repo            string
-	RepoSubDir      string
-	Verbose         bool
-	Compile         bool
-	TargetName      string
-	SkipVersioning  bool
-
+	CustomerID            string
+	WorkspaceID           string
+	Language              string
+	SchemaPath            string
+	Header                string
+	Token                 string
+	OutDir                string
+	CLIVersion            string
+	InstallationURL       string
+	Debug                 bool
+	AutoYes               bool
+	Published             bool
+	OutputTests           bool
+	Repo                  string
+	RepoSubDir            string
+	Verbose               bool
+	Compile               bool
+	TargetName            string
+	SkipVersioning        bool
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
+	OldSchema             []byte
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
 	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
+	log.From(ctx).Info(fmt.Sprintf("ops.oldSchema length is : %d", len(string(opts.OldSchema))))
 
 	ctx = events.SetTargetInContext(ctx, opts.OutDir)
 
@@ -184,23 +185,26 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}, err
 	}
 
+	logger.Successf("about to enter ")
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
-
 		var errs []error
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
+			logger.Successf("\nFirst if condition ")
 			cancelCtx := opts.CancellableGeneration.CancellableContext
 
 			var cancelled bool
-			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile, opts.OldSchema)
 			if cancelled {
 				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
 			}
 		} else {
-			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+			logger.Successf("\nSecond if condition ")
+			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile, opts.OldSchema)
 		}
 
 		if len(errs) > 0 {
+
 			for _, err := range errs {
 				logger.Error("", zap.Error(err))
 			}
@@ -210,6 +214,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		return nil
 	})
+	logger.Successf("out of tunnel")
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
