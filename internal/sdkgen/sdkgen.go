@@ -185,18 +185,21 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}, err
 	}
 
+	logger.Successf("about to enter ")
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
 		var errs []error
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
+			logger.Successf("\nFirst if condition ")
 			cancelCtx := opts.CancellableGeneration.CancellableContext
 
 			var cancelled bool
-			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
+			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile, opts.OldSchema)
 			if cancelled {
 				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
 			}
 		} else {
+			logger.Successf("\nSecond if condition ")
 			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile, opts.OldSchema)
 		}
 
@@ -211,6 +214,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		return nil
 	})
+	logger.Successf("out of tunnel")
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
