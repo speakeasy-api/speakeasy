@@ -433,15 +433,15 @@ func (w *Workflow) CancelGeneration() error {
 }
 
 func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, error) {
-	log.From(ctx).Info("Fetching old schema for target: ", zap.String("target", target))
+	log.From(ctx).Debug("Fetching old schema for target: ", zap.String("target", target))
 	if w.lockfileOld != nil {
 		if targetLockOld, ok := w.lockfileOld.Targets[target]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
-			log.From(ctx).Info("Starting to fetch old schema")
+			log.From(ctx).Debug("Starting to fetch old schema")
 			orgSlug := auth.GetOrgSlugFromContext(ctx)
 			workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 			oldRegistryLocation := ""
 			if targetLockOld.SourceRevisionDigest != "" && targetLockOld.SourceNamespace != "" {
-				log.From(ctx).Info("Found source revision and source namespace")
+				log.From(ctx).Debug("Found source revision and source namespace")
 				oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
 					targetLockOld.SourceNamespace, targetLockOld.SourceRevisionDigest)
 			} else {
@@ -450,22 +450,22 @@ func (w *Workflow) fetchOldSchema(ctx context.Context, target string) ([]byte, e
 
 			d := workflow.Document{Location: workflow.LocationString(oldRegistryLocation)}
 			oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
-			log.From(ctx).Info("fethcing old schema bundle")
+			log.From(ctx).Debug("fethcing old schema bundle")
 			if err != nil {
-				log.From(ctx).Info("Error while fetching old schema bundle")
+				log.From(ctx).Debug("Error while fetching old schema bundle")
 				return nil, fmt.Errorf("failed to resolve old schema. Err: %w", err)
 			}
 			oldDocBytes, err := GetSchema(ctx, oldDocPath.LocalFilePath)
-			log.From(ctx).Info("unbundling old schema")
+			log.From(ctx).Debug("unbundling old schema")
 			if err != nil {
-				log.From(ctx).Info("Error while unbundling old schema")
+				log.From(ctx).Debug("Error while unbundling old schema")
 				return nil, fmt.Errorf("Error while unbundling old schema. Err: %w", err)
 			}
-			log.From(ctx).Info(fmt.Sprintf("oldDocBytes: %d", len(oldDocBytes)))
+			log.From(ctx).Debug(fmt.Sprintf("oldDocBytes: %d", len(oldDocBytes)))
 			return oldDocBytes, nil
 		}
 	} else {
-		log.From(ctx).Info("no previous old schema found")
+		log.From(ctx).Debug("no previous old schema found")
 	}
 	return nil, errors.New("no previous revision found")
 }
