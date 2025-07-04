@@ -25,6 +25,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
 
+const ErrNoRollback = errors.Error("failed with error that shouldn't be rolled back")
+
 type SourceStep interface {
 	Do(ctx context.Context, inputPath string) (string, error)
 }

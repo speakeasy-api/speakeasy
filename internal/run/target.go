@@ -200,7 +200,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			StreamableGeneration:  w.StreamableGeneration,
 		},
 	)
-
 	if err != nil {
 		return sourceRes, nil, err
 	}
@@ -209,7 +208,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	if t.CodeSamples != nil {
 		codeSamplesStep := rootStep.NewSubstep("Generating Code Samples")
 		namespaceName, digest, err := w.runCodeSamples(ctx, codeSamplesStep, *t.CodeSamples, t.Target, sourcePath, t.Output)
-
 		if err != nil {
 			// Block by default. Only warn if explicitly set to non-blocking
 			if t.CodeSamples.Blocking == nil || *t.CodeSamples.Blocking {
@@ -230,7 +228,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		if w.SkipTesting {
 			testingStep.Skip("explicitly disabled")
 		} else if err := w.runTesting(ctx, target, t, testingStep, outDir); err != nil {
-			return sourceRes, nil, err
+			return sourceRes, nil, ErrNoRollback.Wrap(err)
 		}
 	}
 
@@ -317,7 +315,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 	memfs := fsextras.NewMemFS()
 
 	overlayPath := "overlay.yaml"
-	err = memfs.WriteBytes(overlayPath, []byte(overlayString), 0644)
+	err = memfs.WriteBytes(overlayPath, []byte(overlayString), 0o644)
 	if err != nil {
 		return "", "", fmt.Errorf("error writing overlay to memfs: %w", err)
 	}
@@ -354,7 +352,6 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		Annotations: annotations,
 		MediaType:   ocicommon.MediaTypeOpenAPIOverlayV0,
 	})
-
 	if err != nil {
 		return "", "", fmt.Errorf("error bundling code samples artifact: %w", err)
 	}

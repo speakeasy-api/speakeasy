@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"encoding/json"
+	errs "errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -316,6 +317,11 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 	runErr := runWithVersion(cmd, artifactArch, desiredVersion, shouldPromote)
 	if runErr != nil {
+		// If the error has been marked as non-rollbackable, return the cause
+		if errors.Is(runErr, run.ErrNoRollback) {
+			return errs.Unwrap(runErr)
+		}
+
 		// If the command failed to run with the latest version, try to run with the version from the lock file
 		if wf.SpeakeasyVersion == "latest" {
 			msg := fmt.Sprintf("Failed to run with Speakeasy version %s: %s\n", desiredVersion, runErr.Error())
@@ -374,6 +380,7 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 
 	return nil
 }
+
 func promoteVersion(ctx context.Context, vLocation string) error {
 	mutex := locks.CLIUpdateLock()
 	for result := range mutex.TryLock(ctx, 1*time.Second) {
