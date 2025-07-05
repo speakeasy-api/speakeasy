@@ -107,6 +107,7 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 			TargetName:      "",
 			SkipVersioning:  false,
 		},
+		nil,
 	)
 
 	return err

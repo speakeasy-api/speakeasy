@@ -2,6 +2,7 @@ package sdkgen
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
@@ -22,7 +24,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
+	sdkchangelog "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
@@ -72,7 +76,7 @@ type GenerateOptions struct {
 	StreamableGeneration  *StreamableGeneration
 }
 
-func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
+func Generate(ctx context.Context, opts GenerateOptions, oldSchema []byte) (*GenerationAccess, error) {
 	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
@@ -210,6 +214,43 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		return nil
 	})
+	generationOptions := sdkchangelog.GenerateOptions{
+		Logger:  logger,
+		Verbose: opts.Verbose,
+		Lang:    opts.Language,
+		OutDir:  opts.OutDir,
+	}
+
+	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecBytes(oldSchema, schema, generationOptions)
+	log.From(ctx).Debug("oldSchema ", zap.String("oldSchema", string(oldSchema)))
+	log.From(ctx).Debug("newSchema ", zap.String("newSchema", string(schema)))
+	sdkDiff := sdkchangelog.Changes(oldConfig, newConfig)
+	sdkDiffJSON, err := json.MarshalIndent(sdkDiff, "", "  ")
+	if err != nil {
+		log.From(ctx).Debug("failed to marshal sdkDiff ", zap.Error(err))
+	} else {
+		log.From(ctx).Debug("sdkDiff: ", zap.String("sdkDiff", string(sdkDiffJSON)))
+	}
+	changelogContent := sdkchangelog.ToMarkdown(sdkDiff)
+	log.From(ctx).Debug("SDK changelogContent: ", zap.String("changelogContent", changelogContent))
+
+	versionReport := versioning.VersionReport{
+		Key:          fmt.Sprintf("SDK_CHANGELOG_%s", opts.Language),
+		Priority:     1,
+		MustGenerate: true,
+		BumpType:     versioning.BumpNone,
+		NewVersion:   "",
+	}
+	versionReport.PRReport += changelogContent
+	log.From(ctx).Debug("version report being added ", zap.Any("versionReport", versionReport))
+	// How this works is as follows:
+	// This version report is written to a file and read in sdk-generation-action for generating changelog.
+	err = versioning.AddVersionReport(ctx, versionReport)
+	if err != nil {
+		log.From(ctx).Debug("failed to add version report. Skipped sdk changelog addition", zap.Error(err))
+		logging.LogWarning(ctx, "failed to add version report. Skipped sdk changelog addition", err)
+	}
+
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
