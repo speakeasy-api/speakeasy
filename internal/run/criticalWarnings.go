@@ -5,6 +5,7 @@ import "regexp"
 var criticalWarnings = []*regexp.Regexp{
 	regexp.MustCompile(`skipping.*unsupported`),
 	regexp.MustCompile(`registry tracking failed`),
+	regexp.MustCompile(`Compilation was skipped`),
 }
 
 func getCriticalWarnings(warnLogs []string) []string {
