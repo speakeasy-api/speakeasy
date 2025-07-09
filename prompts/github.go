@@ -244,7 +244,7 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 				}
 			}
 		}
-		
+
 		target.Publishing = &workflow.Publishing{
 			Terraform: &workflow.Terraform{
 				GPGPrivateKey: formatWorkflowSecret(terraformGPGPrivateKeyDefault),

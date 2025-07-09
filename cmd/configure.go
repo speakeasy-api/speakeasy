@@ -479,7 +479,7 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 					"",
 					"Reference: https://developer.hashicorp.com/terraform/registry/providers/publishing#preparing-your-provider"))
 				logger.Println("")
-				
+
 				// Continue with the configuration despite the warning
 				workflowFile.Targets[name] = *modifiedTarget
 				continue

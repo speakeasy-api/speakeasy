@@ -104,4 +104,4 @@ func TestIsTerraformNamingWarning(t *testing.T) {
 			}
 		})
 	}
-} 
+}
