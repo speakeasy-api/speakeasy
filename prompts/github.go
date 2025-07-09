@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -37,6 +38,35 @@ const (
 	terraformGPGPrivateKeyDefault    = "TERRAFORM_GPG_PRIVATE_KEY"
 	terraformGPGPassPhraseDefault    = "TERRAFORM_GPG_PASSPHRASE"
 )
+
+// TerraformNamingWarning is a custom error type for Terraform repository naming warnings
+type TerraformNamingWarning struct {
+	RepoName string
+}
+
+func (w *TerraformNamingWarning) Error() string {
+	return fmt.Sprintf("Terraform repository naming warning: repository '%s' does not follow the required naming convention", w.RepoName)
+}
+
+// IsTerraformNamingWarning checks if an error is a TerraformNamingWarning
+func IsTerraformNamingWarning(err error) bool {
+	_, ok := err.(*TerraformNamingWarning)
+	return ok
+}
+
+// checkTerraformRepositoryNaming checks if the repository name follows the Terraform naming convention
+// The public HashiCorp Terraform Registry requires terraform-provider-{NAME} where name is lowercase
+func checkTerraformRepositoryNaming(repoName string) error {
+	// Check if the repository name follows the terraform-provider-{NAME} pattern
+	// where NAME should be lowercase
+	terraformProviderPattern := regexp.MustCompile(`^terraform-provider-([a-z0-9-]+)$`)
+
+	if !terraformProviderPattern.MatchString(repoName) {
+		return &TerraformNamingWarning{RepoName: repoName}
+	}
+
+	return nil
+}
 
 var SupportedPublishingTargets = []string{
 	"csharp",
@@ -200,6 +230,21 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 			},
 		}
 	case "terraform":
+		// Check repository naming convention for Terraform
+		if repo := FindGithubRepository("."); repo != nil {
+			if remoteURL := ParseGithubRemoteURL(repo); remoteURL != "" {
+				// Extract repository name from URL
+				urlParts := strings.Split(remoteURL, "/")
+				if len(urlParts) > 0 {
+					repoName := urlParts[len(urlParts)-1]
+					if err := checkTerraformRepositoryNaming(repoName); err != nil {
+						// Return the target with the warning attached
+						return target, err
+					}
+				}
+			}
+		}
+		
 		target.Publishing = &workflow.Publishing{
 			Terraform: &workflow.Terraform{
 				GPGPrivateKey: formatWorkflowSecret(terraformGPGPrivateKeyDefault),

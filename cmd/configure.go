@@ -469,6 +469,21 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 		target := workflowFile.Targets[name]
 		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
 		if err != nil {
+			// Check if this is a Terraform naming warning
+			if prompts.IsTerraformNamingWarning(err) {
+				// Display the warning and continue with the configuration
+				logger.Println(styles.RenderWarningMessage("HashiCorp Terraform Registry repository naming requirement",
+					"The public HashiCorp Terraform Registry requires Terraform Provider",
+					"repositories to have a naming convention of terraform-provider-NAME,",
+					"where name is lowercase characters.",
+					"",
+					"Reference: https://developer.hashicorp.com/terraform/registry/providers/publishing#preparing-your-provider"))
+				logger.Println("")
+				
+				// Continue with the configuration despite the warning
+				workflowFile.Targets[name] = *modifiedTarget
+				continue
+			}
 			return err
 		}
 		workflowFile.Targets[name] = *modifiedTarget
