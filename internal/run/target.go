@@ -443,24 +443,6 @@ func writeSdkChangelogToDisk(ctx context.Context, diff sdkchangelog.SDKDiff, lan
 		log.From(ctx).Warnf("error computing changes: %s", err.Error())
 	}
 
-	packageName := "sdk" // default value
-	version := ""        // default value
-
-	if diff.NewSubsystem != nil && diff.NewSubsystem.Config != nil {
-		if langCfg, ok := diff.NewSubsystem.Config.Languages[lang]; ok {
-			if pkgName, ok := langCfg.Cfg["packageName"]; ok {
-				packageName = pkgName.(string)
-				version = langCfg.Version
-			}
-		}
-	}
-
-	// Add commit heading
-	err = storePullRequestMetadata(ctx, fmt.Sprintf("%s_commit_heading", lang), packageName+" "+version)
-	if err != nil {
-		return err
-	}
-
 	// Add commit message
 	err = storePullRequestMetadata(ctx, fmt.Sprintf("%s_commit_message", lang), changelogContent)
 	if err != nil {
