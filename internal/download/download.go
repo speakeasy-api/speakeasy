@@ -40,7 +40,9 @@ var allowedDocumentExtensions = []string{".yaml", ".yml", ".json"}
 var ErrUnknownDocumentType = fmt.Errorf("unrecognized document extension")
 
 type DownloadedRegistryOpenAPIBundle struct {
-	LocalFilePath     string
+	LocalFilePath string
+	// Directory where the downloaded file is stored
+	LocalDirectory    string
 	NamespaceName     string
 	ManifestReference string
 	ManifestDigest    string
@@ -241,6 +243,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 	outPath = filepath.Join(outPath, shortDigest)
 
 	var outputFileName string
+	var outputDirectory string
 	if fileName, _ := bundleCache.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
 		cleanName := filepath.Clean(fileName)
 		outputFileName = filepath.Join(outPath, cleanName)
@@ -248,6 +251,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 		if err != nil {
 			return nil, fmt.Errorf("failed to create output directory: %w", err)
 		}
+		outputDirectory = filepath.Dir(outputFileName)
 	} else {
 		return nil, fmt.Errorf("no root openapi file found in bundle")
 	}
@@ -258,6 +262,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 
 	return &DownloadedRegistryOpenAPIBundle{
 		LocalFilePath:     outputFileName,
+		LocalDirectory:    outputDirectory,
 		NamespaceName:     document.NamespaceName,
 		ManifestReference: document.Reference,
 		ManifestDigest:    bundleCache.ManifestDigest,

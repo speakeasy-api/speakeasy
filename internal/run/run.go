@@ -136,12 +136,20 @@ func (w *Workflow) Run(ctx context.Context) error {
 	return err
 }
 
+type downloadedSpecInfo struct {
+	tempDir string
+	oldSpec string
+	newSpec string
+}
+
 func (w *Workflow) RunInner(ctx context.Context) error {
 	if w.Source != "" && w.Target != "" {
 		return fmt.Errorf("cannot specify both a target and a source")
 	}
 
 	sourceIDs := []string{w.Source}
+	sourceMap := map[string]downloadedSpecInfo{}
+
 	if w.Source == "all" {
 		sourceIDs = lo.Keys(w.workflow.Sources)
 	}
@@ -161,7 +169,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		if _, ok := w.workflow.Sources[sourceID]; !ok {
 			return fmt.Errorf("source '%s' not found", sourceID)
 		}
-		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "", "")
+		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "", "", sourceMap)
 		if err != nil {
 			return err
 		}
@@ -174,7 +182,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		if _, ok := w.workflow.Targets[targetID]; !ok {
 			return fmt.Errorf("target '%s' not found", targetID)
 		}
-		_, _, err := w.runTarget(ctx, targetID)
+		_, _, err := w.runTarget(ctx, targetID, sourceMap)
 		if err != nil {
 			return err
 		}

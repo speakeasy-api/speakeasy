@@ -2,7 +2,6 @@ package run
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -49,7 +48,7 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult, *TargetResult, error) {
+func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[string]downloadedSpecInfo) (*SourceResult, *TargetResult, error) {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
@@ -66,7 +65,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, targetLanguage)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, targetLanguage, sourceMap)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -179,12 +178,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
-	oldSchema, err := w.fetchOldSchema(ctx, target)
-	if err != nil {
-		logger.Errorf("An error occurred when downloading old schema: %v", err)
-		oldSchema = nil
-	}
-
 	generateOptionsHeader := ""
 	generateOptionsToken := ""
 	generationAccess, err := sdkgen.Generate(
@@ -216,11 +209,15 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	if err != nil {
 		return sourceRes, nil, err
 	}
-	_, schema, err := openapi.GetSchemaContents(ctx, sourcePath, generateOptionsHeader, generateOptionsToken)
 
-	err = fetchChanges(ctx, oldSchema, schema, t.Target)
+	// Fetch the old & new spec and other details from the sourceMap.
+	// SourceMap is populated when RunSource method is called
+	requiredInfo := sourceMap[t.Source]
+	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpec, requiredInfo.newSpec, requiredInfo.tempDir, target, w.Debug, log.From(ctx))
+	diff := sdkchangelog.Changes(oldConfig, newConfig)
+	err = updateChangelog(ctx, diff, target, log.From(ctx))
 	if err != nil {
-		log.From(ctx).Warnf("Encountered issue when fetching generating july 2025 changelog content: %s", err.Error())
+		log.From(ctx).Warnf("error updating changelog: %s", err.Error())
 	}
 
 	w.generationAccess = generationAccess
@@ -493,59 +490,12 @@ func GetSchema(ctx context.Context, filePath string) ([]byte, error) {
 	return specBytes, nil
 }
 
-func fetchChanges(ctx context.Context, oldSchema []byte, newSchema []byte, lang string) error {
-	lang = strings.ToLower(lang)
-	logger := log.From(ctx)
-	// create temp directory
-	outputDir := "/tmp/speakeasy/sdk-changelog-july-2025"
-	err := os.MkdirAll(outputDir, 0o700)
-	if err != nil {
-		return fmt.Errorf("error creating temp directory: %w", err)
-	}
-
-	oldPath := filepath.Join(outputDir, "old.openapi.yaml")
-	if err := os.WriteFile(oldPath, oldSchema, 0644); err != nil {
-		return fmt.Errorf("error writing old spec: %w", err)
-	}
-	newPath := filepath.Join(outputDir, "new.openapi.yaml")
-	if err := os.WriteFile(newPath, newSchema, 0644); err != nil {
-		return fmt.Errorf("error writing new spec: %w", err)
-	}
-
-	// Create GenerateOptions for both specs
-	oldOptions := sdkchangelog.GenerateOptions{
-		Lang:       lang,
-		SchemaPath: oldPath,
-		OutDir:     outputDir,
-		Logger:     logger,
-		Verbose:    false,
-	}
-
-	newOptions := sdkchangelog.GenerateOptions{
-		Lang:       lang,
-		SchemaPath: newPath,
-		OutDir:     outputDir,
-		Logger:     logger,
-		Verbose:    false,
-	}
-
-	// Get the differences using the Changes function
-	fmt.Fprintf(os.Stderr, "Generating diff...\n")
-	diff := sdkchangelog.Changes(oldOptions, newOptions)
-	sdkDiffJSON, err := json.MarshalIndent(diff, "", "  ")
-	if err != nil {
-		log.From(ctx).Infof("failed to marshal sdkDiff %s", err)
-	} else {
-		log.From(ctx).Infof("sdkDiff: %s", string(sdkDiffJSON))
-	}
-
+func updateChangelog(ctx context.Context, diff sdkchangelog.SDKDiff, lang string, logger logging.Logger) error {
 	changelogContent := sdkchangelog.ToMarkdown(diff)
-	log.From(ctx).Infof("SDK changelogContent: %s", changelogContent)
 
-	// Add PR report
-	err = addVersionReport(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", lang), changelogContent)
+	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", "go"), changelogContent)
 	if err != nil {
-		return err
+		log.From(ctx).Warnf("error computing changes: %s", err.Error())
 	}
 
 	packageName := "sdk" // default value
@@ -560,33 +510,23 @@ func fetchChanges(ctx context.Context, oldSchema []byte, newSchema []byte, lang 
 		}
 	}
 
-	// Print the diff as JSON
-	fmt.Printf("Changes between %s and %s:\n", oldPath, newPath)
-
-	jsonOutput, err := diff.ToJSON()
-	if err != nil {
-		return fmt.Errorf("error converting diff to JSON: %w", err)
-	}
-
-	fmt.Println(string(jsonOutput))
-	fmt.Fprintf(os.Stderr, "\nFiles saved to: %s\n", outputDir)
-
 	// Add commit heading
-	err = addVersionReport(ctx, fmt.Sprintf("%s_commit_heading", lang), packageName+" "+version)
+	err = storePullRequestMetadata(ctx, fmt.Sprintf("%s_commit_heading", lang), packageName+" "+version)
 	if err != nil {
 		return err
 	}
 
 	// Add commit message
-	err = addVersionReport(ctx, fmt.Sprintf("%s_commit_message", lang), changelogContent)
+	err = storePullRequestMetadata(ctx, fmt.Sprintf("%s_commit_message", lang), changelogContent)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func addVersionReport(ctx context.Context, key string, report string) error {
+// A bit of a hack for being able to set and get arbitrary keys in a temp file for populating PR description
+// Using already existing machinery for version reports
+func storePullRequestMetadata(ctx context.Context, key string, report string) error {
 	versionReport := versioning.VersionReport{
 		Key:          key,
 		Priority:     1,

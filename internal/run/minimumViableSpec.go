@@ -43,7 +43,7 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 	}
 	w.workflow.Sources[sourceID] = source
 
-	sourcePath, sourceRes, err := w.RunSource(ctx, substep, sourceID, targetID, targetLanguage)
+	sourcePath, sourceRes, err := w.RunSource(ctx, substep, sourceID, targetID, targetLanguage, nil)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to re-run source: %w", err)
 	}

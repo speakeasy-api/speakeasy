@@ -74,7 +74,7 @@ func (e *LintingError) Error() string {
 	return fmt.Sprintf("linting failed: %s - %s", e.Document, errString)
 }
 
-func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string) (string, *SourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string, sourceMap map[string]downloadedSpecInfo) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{
@@ -194,7 +194,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil && !w.SkipChangeReport {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
-			sourceRes.ChangeReport, err = w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
+			report, downloadedSpecInfo, err := w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
+			sourceRes.ChangeReport = report
+			sourceMap[sourceID] = downloadedSpecInfo
 			if err != nil {
 				// Don't fail the whole workflow if this fails
 				logger.Warnf("failed to compute OpenAPI changes: %s", err.Error())
