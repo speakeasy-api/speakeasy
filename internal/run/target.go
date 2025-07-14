@@ -178,8 +178,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
-	generateOptionsHeader := ""
-	generateOptionsToken := ""
 	generationAccess, err := sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{
@@ -187,8 +185,8 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 			WorkspaceID:           config.GetWorkspaceID(),
 			Language:              t.Target,
 			SchemaPath:            sourcePath,
-			Header:                generateOptionsHeader,
-			Token:                 generateOptionsToken,
+			Header:                "",
+			Token:                 "",
 			OutDir:                outDir,
 			CLIVersion:            events.GetSpeakeasyVersionFromContext(ctx),
 			InstallationURL:       w.InstallationURLs[target],
