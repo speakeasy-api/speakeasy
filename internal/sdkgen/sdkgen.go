@@ -2,7 +2,6 @@ package sdkgen
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -13,7 +12,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"github.com/speakeasy-api/versioning-reports/versioning"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	gen_config "github.com/speakeasy-api/sdk-gen-config"
@@ -24,9 +22,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
-	sdkchangelog "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
@@ -76,7 +72,7 @@ type GenerateOptions struct {
 	StreamableGeneration  *StreamableGeneration
 }
 
-func Generate(ctx context.Context, opts GenerateOptions, oldSchema []byte) (*GenerationAccess, error) {
+func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
 
 	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
@@ -216,15 +212,6 @@ func Generate(ctx context.Context, opts GenerateOptions, oldSchema []byte) (*Gen
 		return nil
 	})
 
-	err = fetchChanges(ctx, oldSchema, schema, opts.Language)
-	if err != nil {
-		return &GenerationAccess{
-			AccessAllowed: generationAccess,
-			Message:       message,
-			Level:         level,
-		}, err
-	}
-
 	sdkDocsLink := "https://www.speakeasy.com/docs/customize-sdks"
 
 	logger.Successf("\nSDK for %s generated successfully ✓", opts.Language)
@@ -279,116 +266,5 @@ func GetGenLockID(outDir string) *string {
 		}
 	}
 
-	return nil
-}
-
-func fetchChanges(ctx context.Context, oldSchema []byte, newSchema []byte, lang string) error {
-	lang = strings.ToLower(lang)
-	logger := log.From(ctx)
-	// create temp directory
-	outputDir := "/tmp/speakeasy/sdk-changelog-july-2025"
-	err := os.MkdirAll(outputDir, 0o700)
-	if err != nil {
-		return fmt.Errorf("error creating temp directory: %w", err)
-	}
-
-	oldPath := filepath.Join(outputDir, "old.openapi.yaml")
-	if err := os.WriteFile(oldPath, oldSchema, 0644); err != nil {
-		return fmt.Errorf("error writing old spec: %w", err)
-	}
-	newPath := filepath.Join(outputDir, "new.openapi.yaml")
-	if err := os.WriteFile(newPath, newSchema, 0644); err != nil {
-		return fmt.Errorf("error writing new spec: %w", err)
-	}
-
-	// Create GenerateOptions for both specs
-	oldOptions := sdkchangelog.GenerateOptions{
-		Lang:       lang,
-		SchemaPath: oldPath,
-		OutDir:     outputDir,
-		Logger:     logger,
-		Verbose:    false,
-	}
-
-	newOptions := sdkchangelog.GenerateOptions{
-		Lang:       lang,
-		SchemaPath: newPath,
-		OutDir:     outputDir,
-		Logger:     logger,
-		Verbose:    false,
-	}
-
-	// Get the differences using the Changes function
-	fmt.Fprintf(os.Stderr, "Generating diff...\n")
-	diff := sdkchangelog.Changes(oldOptions, newOptions)
-	sdkDiffJSON, err := json.MarshalIndent(diff, "", "  ")
-	if err != nil {
-		log.From(ctx).Infof("failed to marshal sdkDiff %s", err)
-	} else {
-		log.From(ctx).Infof("sdkDiff: %s", string(sdkDiffJSON))
-	}
-
-	changelogContent := sdkchangelog.ToMarkdown(diff)
-	log.From(ctx).Infof("SDK changelogContent: %s", changelogContent)
-
-	// Add PR report
-	err = addVersionReport(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", lang), changelogContent)
-	if err != nil {
-		return err
-	}
-
-	packageName := "sdk" // default value
-	version := ""        // default value
-
-	if diff.NewSubsystem != nil && diff.NewSubsystem.Config != nil {
-		if langCfg, ok := diff.NewSubsystem.Config.Languages[lang]; ok {
-			if pkgName, ok := langCfg.Cfg["packageName"]; ok {
-				packageName = pkgName.(string)
-				version = langCfg.Version
-			}
-		}
-	}
-
-	// Print the diff as JSON
-	fmt.Printf("Changes between %s and %s:\n", oldPath, newPath)
-
-	jsonOutput, err := diff.ToJSON()
-	if err != nil {
-		return fmt.Errorf("error converting diff to JSON: %w", err)
-	}
-
-	fmt.Println(string(jsonOutput))
-	fmt.Fprintf(os.Stderr, "\nFiles saved to: %s\n", outputDir)
-
-	// Add commit heading
-	err = addVersionReport(ctx, fmt.Sprintf("%s_commit_heading", lang), packageName+" "+version)
-	if err != nil {
-		return err
-	}
-
-	// Add commit message
-	err = addVersionReport(ctx, fmt.Sprintf("%s_commit_message", lang), changelogContent)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func addVersionReport(ctx context.Context, key string, report string) error {
-	versionReport := versioning.VersionReport{
-		Key:          key,
-		Priority:     1,
-		MustGenerate: true,
-		BumpType:     versioning.BumpNone,
-		NewVersion:   "",
-	}
-	versionReport.PRReport += report
-	err := versioning.AddVersionReport(ctx, versionReport)
-	if err != nil {
-		log.From(ctx).Infof("failed to add version report. key: %s, report: %s, error: %s", key, report, err)
-		logging.LogWarning(ctx, "failed to add version report. Skipped sdk changelog addition", err)
-		return err
-	}
 	return nil
 }
