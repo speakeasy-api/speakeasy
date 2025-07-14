@@ -136,12 +136,6 @@ func (w *Workflow) Run(ctx context.Context) error {
 	return err
 }
 
-type downloadedSpecInfo struct {
-	tempDir string
-	oldSpec string
-	newSpec string
-}
-
 func (w *Workflow) RunInner(ctx context.Context) error {
 	if w.Source != "" && w.Target != "" {
 		return fmt.Errorf("cannot specify both a target and a source")

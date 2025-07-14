@@ -29,6 +29,12 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 )
 
+type downloadedSpecInfo struct {
+	tempDir string
+	oldSpec string
+	newSpec string
+}
+
 // embedSourceConfig implements bundler.EmbedSourceConfig interface
 type embedSourceConfig struct {
 	originalSource  *workflow.Source
