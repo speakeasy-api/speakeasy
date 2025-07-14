@@ -73,7 +73,6 @@ type GenerateOptions struct {
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
-
 	if !generate.CheckTargetNameSupported(opts.Language) {
 		return nil, fmt.Errorf("language not supported: %s", opts.Language)
 	}
@@ -211,6 +210,13 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		return nil
 	})
+	if err != nil {
+		return &GenerationAccess{
+			AccessAllowed: generationAccess,
+			Message:       message,
+			Level:         level,
+		}, err
+	}
 
 	sdkDocsLink := "https://www.speakeasy.com/docs/customize-sdks"
 
