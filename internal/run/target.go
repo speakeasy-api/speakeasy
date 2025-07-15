@@ -177,6 +177,17 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
+	// Fetch the old & new spec and other details from the sourceMap.
+	// SourceMap is populated when RunSource method is called
+	requiredInfo := sourceMap[t.Source]
+	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpec, requiredInfo.newSpec, requiredInfo.tempDir, target, w.Debug, log.From(ctx))
+	diff := sdkchangelog.Changes(oldConfig, newConfig)
+	changelogContent := sdkchangelog.ToMarkdown(diff)
+	err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
+	if err != nil {
+		log.From(ctx).Warnf("error updating changelog: %s", err.Error())
+	}
+
 	generationAccess, err := sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{
@@ -201,20 +212,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 			SkipVersioning:        w.SkipVersioning,
 			CancellableGeneration: w.CancellableGeneration,
 			StreamableGeneration:  w.StreamableGeneration,
+			ReleaseNotes:          changelogContent,
 		},
 	)
 	if err != nil {
 		return sourceRes, nil, err
-	}
-
-	// Fetch the old & new spec and other details from the sourceMap.
-	// SourceMap is populated when RunSource method is called
-	requiredInfo := sourceMap[t.Source]
-	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpec, requiredInfo.newSpec, requiredInfo.tempDir, target, w.Debug, log.From(ctx))
-	diff := sdkchangelog.Changes(oldConfig, newConfig)
-	err = writeSdkChangelogToDisk(ctx, diff, target, log.From(ctx))
-	if err != nil {
-		log.From(ctx).Warnf("error updating changelog: %s", err.Error())
 	}
 
 	w.generationAccess = generationAccess
@@ -435,10 +437,8 @@ func (w *Workflow) CancelGeneration() error {
 	return fmt.Errorf("Generation is not cancellable")
 }
 
-func writeSdkChangelogToDisk(ctx context.Context, diff sdkchangelog.SDKDiff, lang string, logger logging.Logger) error {
-	changelogContent := sdkchangelog.ToMarkdown(diff)
-
-	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", "go"), changelogContent)
+func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, lang string, logger logging.Logger) error {
+	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", lang), changelogContent)
 	if err != nil {
 		log.From(ctx).Warnf("error computing changes: %s", err.Error())
 	}
