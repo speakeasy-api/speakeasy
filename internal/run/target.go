@@ -180,7 +180,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 	// Fetch the old & new spec and other details from the sourceMap.
 	// SourceMap is populated when RunSource method is called
 	requiredInfo := sourceMap[t.Source]
-	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpec, requiredInfo.newSpec, requiredInfo.tempDir, target, w.Debug, log.From(ctx))
+	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpec, requiredInfo.newSpec, requiredInfo.tempDir, t.Target, w.Debug, log.From(ctx))
 	diff := sdkchangelog.Changes(oldConfig, newConfig)
 	changelogContent := sdkchangelog.ToMarkdown(diff)
 	err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
