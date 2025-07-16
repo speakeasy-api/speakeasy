@@ -30,9 +30,9 @@ import (
 )
 
 type downloadedSpecInfo struct {
-	tempDir string
-	oldSpec string
-	newSpec string
+	tempDir     string
+	oldSpecPath string
+	newSpecPath string
 }
 
 // embedSourceConfig implements bundler.EmbedSourceConfig interface
@@ -120,9 +120,9 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	}
 
 	sourceDirectoryInfo = downloadedSpecInfo{
-		tempDir: oldDocPath.LocalDirectory,
-		oldSpec: oldDocPath.LocalFilePath,
-		newSpec: newDocPath,
+		tempDir:     oldDocPath.LocalDirectory,
+		oldSpecPath: oldDocPath.LocalFilePath,
+		newSpecPath: newDocPath,
 	}
 
 	changesStep.NewSubstep("Computing changes")
