@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -179,13 +180,16 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 
 	// Fetch the old & new spec and other details from the sourceMap.
 	// SourceMap is populated when RunSource method is called
-	requiredInfo := sourceMap[t.Source]
-	oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpec, requiredInfo.newSpec, requiredInfo.tempDir, t.Target, w.Debug, log.From(ctx))
-	diff := sdkchangelog.Changes(oldConfig, newConfig)
-	changelogContent := sdkchangelog.ToMarkdown(diff)
-	err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
-	if err != nil {
-		log.From(ctx).Warnf("error updating changelog: %s", err.Error())
+	changelogContent := ""
+	if os.Getenv("SDK_CHANGELOG_JULY_2025") == "true" {
+		requiredInfo := sourceMap[t.Source]
+		oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpec, requiredInfo.newSpec, requiredInfo.tempDir, t.Target, w.Debug, log.From(ctx))
+		diff := sdkchangelog.Changes(oldConfig, newConfig)
+		changelogContent = sdkchangelog.ToMarkdown(diff)
+		err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
+		if err != nil {
+			log.From(ctx).Warnf("error updating changelog: %s", err.Error())
+		}
 	}
 
 	generationAccess, err := sdkgen.Generate(
