@@ -129,10 +129,11 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		log.From(ctx).Infof("wrote changes summary to \"%s\"", filepath)
 	}
 	prMD := ""
+	// Adding summary details in a collapsible section
 	if len(summary.Text) > 0 {
-		prMD = "## OpenAPI Change Summary\n" + summary.Text + "\n"
+		prMD = "<details>\n<summary>## OpenAPI Change Summary</summary>\n" + summary.Text + "\n" + "</details>"
 	} else {
-		prMD = "## OpenAPI Change Summary\nNo specification changes\n"
+		prMD = "<details open>\n<summary>## OpenAPI Change Summary</summary>\nNo specification changes\n" + "</details>"
 	}
 
 	// New form -- the above form is deprecated.
