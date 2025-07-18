@@ -441,14 +441,14 @@ func (w *Workflow) CancelGeneration() error {
 	return fmt.Errorf("Generation is not cancellable")
 }
 
-func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, lang string, logger logging.Logger) error {
-	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", lang), changelogContent)
+func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, target string, logger logging.Logger) error {
+	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", target), changelogContent)
 	if err != nil {
 		log.From(ctx).Warnf("error computing changes: %s", err.Error())
 	}
 
 	// Add commit message
-	err = storePullRequestMetadata(ctx, fmt.Sprintf("%s_commit_message", lang), changelogContent)
+	err = storePullRequestMetadata(ctx, fmt.Sprintf("COMMIT_MESSAGE_%s", target), changelogContent)
 	if err != nil {
 		return err
 	}
@@ -459,9 +459,10 @@ func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, lang 
 // Using already existing machinery for version reports
 func storePullRequestMetadata(ctx context.Context, key string, report string) error {
 	versionReport := versioning.VersionReport{
-		Key:          key,
+		Key: key,
+		// Lowest priority
 		Priority:     1,
-		MustGenerate: true,
+		MustGenerate: false,
 		BumpType:     versioning.BumpNone,
 		NewVersion:   "",
 	}
