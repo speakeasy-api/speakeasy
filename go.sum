@@ -607,8 +607,6 @@ github.com/speakeasy-api/speakeasy-proxy v0.0.2 h1:u4rQ8lXvuYRCSxiLQGb5JxkZRwNID
 github.com/speakeasy-api/speakeasy-proxy v0.0.2/go.mod h1:cvMxdIEPYAvXS5mpYMU6CuJRPQnhq4gRXKE7xeCP/V0=
 github.com/speakeasy-api/speakeasy-schemas v1.3.0 h1:7Arm2d0/K9owEBQPmNon1KPERmf58g0Eg/NmPgXaEY0=
 github.com/speakeasy-api/speakeasy-schemas v1.3.0/go.mod h1:g6NfrOjYLCJZp81ZLY2ksF7afC9BW9bL4Bg1V1oAFlw=
-github.com/speakeasy-api/versioning-reports v0.6.0 h1:oLokEQ7xnDXqWAQk60Sk+ifwYaRbq3BrLX2KyT8gWxE=
-github.com/speakeasy-api/versioning-reports v0.6.0/go.mod h1:LW5FABrvi5SBbeiD3HJYw0JZYe6Rw2Xna59pFJ2BmLI=
 github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd h1:csraKifkLpqDClUIbFTetjtraueL1KUhKBm6okL+ug4=
 github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd/go.mod h1:cyGycBxnlCATLUv5jtPwaHnkiYomNWzXQougLmaCTzU=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=

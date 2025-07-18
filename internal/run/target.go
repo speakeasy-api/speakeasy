@@ -188,7 +188,8 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 		changelogContent = sdkchangelog.ToMarkdown(diff)
 		err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
 		if err != nil {
-			log.From(ctx).Warnf("error updating changelog: %s", err.Error())
+			// Swallow error so that we dont block generation
+			log.From(ctx).Warnf("Error updating new changelog: %s", err.Error())
 		}
 	}
 
@@ -441,15 +442,21 @@ func (w *Workflow) CancelGeneration() error {
 	return fmt.Errorf("Generation is not cancellable")
 }
 
+// target refers to workflow target name
+// The version reports written here are read in sdk-generation-action to generate commit message
+// and PR description
 func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, target string, logger logging.Logger) error {
-	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", target), changelogContent)
+	// Add Release message
+	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", target), changelogContent, "pr_report")
 	if err != nil {
 		log.From(ctx).Warnf("error computing changes: %s", err.Error())
+		return err
 	}
 
-	// Add commit message
-	err = storePullRequestMetadata(ctx, fmt.Sprintf("COMMIT_MESSAGE_%s", target), changelogContent)
+	// Add Commit message
+	err = storePullRequestMetadata(ctx, fmt.Sprintf("COMMIT_MESSAGE_%s", target), changelogContent, "commit_report")
 	if err != nil {
+		log.From(ctx).Warnf("error computing changes: %s", err.Error())
 		return err
 	}
 	return nil
@@ -457,7 +464,10 @@ func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, targe
 
 // A bit of a hack for being able to set and get arbitrary keys in a temp file for populating PR description
 // Using already existing machinery for version reports
-func storePullRequestMetadata(ctx context.Context, key string, report string) error {
+func storePullRequestMetadata(ctx context.Context, key string, report string, reportType string) error {
+	if reportType != "pr_report" && reportType != "commit_report" {
+		return fmt.Errorf("Unknown report type passed -> %s", reportType)
+	}
 	versionReport := versioning.VersionReport{
 		Key: key,
 		// Lowest priority
@@ -466,11 +476,14 @@ func storePullRequestMetadata(ctx context.Context, key string, report string) er
 		BumpType:     versioning.BumpNone,
 		NewVersion:   "",
 	}
-	versionReport.PRReport += report
+	if reportType == "pr_report" {
+		versionReport.PRReport += report
+	} else if reportType == "commit_report" {
+		versionReport.CommitReport += report
+	}
 	err := versioning.AddVersionReport(ctx, versionReport)
 	if err != nil {
-		log.From(ctx).Infof("failed to add version report. key: %s, report: %s, error: %s", key, report, err)
-		logging.LogWarning(ctx, "failed to add version report. Skipped sdk changelog addition", err)
+		log.From(ctx).Warnf("failed to add version report. key: %s, report: %s, error: %s", key, report, err)
 		return err
 	}
 	return nil

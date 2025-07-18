@@ -6,6 +6,8 @@ replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixva
 
 replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.8-fixhiddencomps-fixed
 
+replace github.com/speakeasy-api/versioning-reports => ../versioning-reports
+
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/KimMachineGun/automemlimit v0.7.1
