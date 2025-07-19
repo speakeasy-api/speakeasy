@@ -49,15 +49,17 @@ func removeDocs(outDir string, exclusionList []string) (bool, error) {
 
 	for _, item := range items {
 		if item.IsDir() {
-			empty, err := removeDocs(filepath.Join(outDir, item.Name()), exclusionList)
+			childEmpty, err := removeDocs(filepath.Join(outDir, item.Name()), exclusionList)
 			if err != nil {
 				return false, err
 			}
 
-			if empty {
+			if childEmpty {
 				if err := os.Remove(filepath.Join(outDir, item.Name())); err != nil {
 					return false, err
 				}
+			} else {
+				empty = false
 			}
 		} else {
 			if slices.Contains(exclusionList, filepath.Join(outDir, item.Name())) {
