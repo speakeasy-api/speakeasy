@@ -8,6 +8,9 @@ replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21
 
 replace github.com/speakeasy-api/versioning-reports => ../versioning-reports
 
+replace github.com/speakeasy-api/sdk-gen-config => ../sdk-gen-config
+replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
+
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/KimMachineGun/automemlimit v0.7.1
