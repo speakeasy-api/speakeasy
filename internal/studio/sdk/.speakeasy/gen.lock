@@ -3,14 +3,14 @@ id: 03e1a158-06c8-40f6-ad18-cf64d98829cf
 management:
   docChecksum: 1b6d68cb9eb6743757b7caccb2c488cb
   docVersion: 1.0.0
-  speakeasyVersion: 1.548.4
-  generationVersion: 2.605.6
-  releaseVersion: 0.10.8
-  configChecksum: fc7a945fe06aafe8c946276924f61490
+  speakeasyVersion: 1.587.0
+  generationVersion: 2.662.0
+  releaseVersion: 0.11.0
+  configChecksum: 94b871b5ab5d5e1e06a16e04f21aad7b
 features:
   go:
     additionalDependencies: 0.1.0
-    core: 3.7.5
+    core: 3.8.1
     defaultEnabledRetries: 0.2.0
     envVarSecurityUsage: 0.3.2
     globalSecurity: 2.82.11
@@ -21,8 +21,8 @@ features:
     intellisenseMarkdownSupport: 0.1.0
     nameOverrides: 2.81.2
     responseFormat: 0.1.2
-    retries: 2.83.2
-    sdkHooks: 0.1.0
+    retries: 2.83.3
+    sdkHooks: 0.2.0
     serverEvents: 0.1.2
     serverEventsSentinels: 0.1.0
 generatedFiles:
@@ -96,6 +96,7 @@ generatedFiles:
   - docs/sdks/sdk/README.md
   - docs/sdks/suggest/README.md
   - health.go
+  - internal/config/sdkconfiguration.go
   - internal/hooks/hooks.go
   - internal/utils/contenttype.go
   - internal/utils/env.go

@@ -1,9 +1,9 @@
-speakeasyVersion: 1.548.4
+speakeasyVersion: 1.587.0
 sources:
     SpeakeasyStudio-OAS:
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
-        sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
+        sourceRevisionDigest: sha256:64f5d10234d4e75017e88c61d023d955970ed21862ac4d1a381282934e9159af
+        sourceBlobDigest: sha256:c83895a2ba8491225d5108dc47346e9528e6e05676781b02419c87160cb0661a
         tags:
             - latest
             - 1.0.0
@@ -22,8 +22,10 @@ targets:
     speakeasy-studio-go:
         source: SpeakeasyStudio-OAS
         sourceNamespace: speakeasy-studio-oas
-        sourceRevisionDigest: sha256:9018148e02c465b1ce58f688d7cb6790d982c9d684495be78d696ea1bc1c6f7f
-        sourceBlobDigest: sha256:e9f18d4d27ef0f70700960cc516419ffe4e11c7add6c727d188ea3404a0ee162
+        sourceRevisionDigest: sha256:64f5d10234d4e75017e88c61d023d955970ed21862ac4d1a381282934e9159af
+        sourceBlobDigest: sha256:c83895a2ba8491225d5108dc47346e9528e6e05676781b02419c87160cb0661a
+        codeSamplesNamespace: speakeasy-studio-oas-go-code-samples
+        codeSamplesRevisionDigest: sha256:aa300e578296b6574e52e9647647d33119a040c2bfa2282eb816f563b5ead34b
     spekaeasy-studio:
         source: SpekaeasyStudio-OAS
         sourceNamespace: spekaeasy-studio-oas
@@ -44,6 +46,19 @@ workflow:
         speakeasy-studio-go:
             target: go
             source: SpeakeasyStudio-OAS
+            codeSamples:
+                registry:
+                    location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas-go-code-samples
+                labelOverride:
+                    fixedValue: Go (SDK)
+                blocking: false
         speakeasy-studio-ts:
             target: typescript
             source: SpeakeasyStudio-OAS
+            output: /path/to/speakeasy-registry/web/packages/generated-studio-ts-sdk
+            codeSamples:
+                registry:
+                    location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/speakeasy-studio-oas-typescript-code-samples
+                labelOverride:
+                    fixedValue: Typescript (SDK)
+                blocking: false
