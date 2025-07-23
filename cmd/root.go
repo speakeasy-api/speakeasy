@@ -42,6 +42,7 @@ Generate from OpenAPI Specs:
 - Client and Server SDKs in GO, Python, TypeScript, Java, PHP, C#, Ruby
 - Postman collections
 - Terraform providers
+- MCP Servers
 
 [Quickstart guide](https://www.speakeasy.com/docs/create-client-sdks)
 
