@@ -133,9 +133,9 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 			ExecuteForm(); err != nil {
 			return nil, err
 		}
-
-		saveLanguageConfigValues(target.Target, output, targetFormFields)
 	}
+
+	saveLanguageConfigValues(target.Target, output, targetFormFields)
 
 	output.Generation.SDKClassName = sdkClassName
 	output.Generation.BaseServerURL = baseServerURL
@@ -203,13 +203,8 @@ func TargetSpecificForms(
 	}
 
 	var groups []*huh.Group
-	targetFormFields := make(TargetFormFields)
-
-	if quickstart != nil && quickstart.SkipInteractive {
-		return groups, targetFormFields, nil
-	}
-
 	isQuickstart := quickstart != nil
+	targetFormFields := make(TargetFormFields)
 	targetQuickstartFieldNames, ok := quickstartScopedKeys[targetName]
 
 	if !ok {
@@ -234,6 +229,10 @@ func TargetSpecificForms(
 		if err != nil {
 			return groups, targetFormFields, err
 		}
+	}
+
+	if isQuickstart && quickstart.SkipInteractive {
+		return groups, targetFormFields, nil
 	}
 
 	// configFields ordering is non-deterministic, so its important to collect
