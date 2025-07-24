@@ -7,14 +7,14 @@ sources:
         overlays:
             - location: .speakeasy/speakeasy-modifications-overlay.yaml
         registry:
-            location: registry.speakeasyapi.dev/speakeasy/speakesay-registry/speakeasy-studio-oas
+            location: registry.speakeasyapi.dev/speakeasy/speakeasy-registry/speakeasy-studio-oas
 targets:
     speakeasy-studio-go:
         target: go
         source: SpeakeasyStudio-OAS
         codeSamples:
             registry:
-                location: registry.speakeasyapi.dev/speakeasy/speakesay-registry/speakeasy-studio-oas-go-code-samples
+                location: registry.speakeasyapi.dev/speakeasy/speakeasy-registry/speakeasy-studio-oas-go-code-samples
             labelOverride:
                 fixedValue: Go (SDK)
             blocking: false
