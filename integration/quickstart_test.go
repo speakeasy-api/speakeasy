@@ -16,8 +16,6 @@ import (
 )
 
 func TestQuickstart(t *testing.T) {
-	t.Parallel()
-
 	now := time.Now()
 	t.Logf("Building binary")
 	// Build the binary once to warm up the cache
@@ -26,12 +24,9 @@ func TestQuickstart(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
-			t.Parallel()
-
 			if shouldSkipTarget(t, target) {
 				return
 			}
-
 			testQuickstartForTarget(t, target, tempBinary)
 		})
 	}
