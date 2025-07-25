@@ -319,12 +319,15 @@ func getSDKGenConfigField(fields []config.SDKGenConfigField, fieldName string) *
 
 // getFormTitle returns the appropriate title for the configuration form based on the target type.
 func getFormTitle(targetType, targetName string) string {
+	base := "Let's configure your %s target (%s)"
 	switch targetType {
 	case "mcp-typescript":
-		return "Let's configure your MCP Server target"
-	default:
-		return fmt.Sprintf("Let's configure your %s target (%s)", targetType, targetName)
+		targetType = "MCP Server"
+	case "terraform":
+		targetType = "Terraform Provider"
 	}
+
+	return fmt.Sprintf(base, targetType, targetName)
 }
 
 // getFormSubtitle returns the appropriate subtitle for the configuration form based on the target type.
@@ -332,8 +335,13 @@ func getFormSubtitle(targetType string) string {
 	base := "This will configure a config file that defines parameters for how your %s is generated. \n" +
 		"Default config values have been provided. You only need to edit values that you want to modify."
 	suffix := "SDK"
-	if targetType == "mcp-typescript" {
+
+	switch targetType {
+	case "mcp-typescript":
 		suffix = "MCP Server"
+	case "terraform":
+		suffix = "Terraform Provider"
 	}
+
 	return fmt.Sprintf(base, suffix)
 }
