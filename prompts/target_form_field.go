@@ -132,6 +132,9 @@ func NewTargetFormField(
 				}
 
 			}
+		case "cloudflareEnabled":
+			description = "This will enable Cloudflare Workers deployment for your MCP Server"
+			targetFormField.Title = "Do you plan on deploying to Cloudflare?"
 		}
 	}
 
@@ -205,15 +208,11 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 
 		if f.Title != "" {
 			confirm = confirm.Title(f.Title)
-		} else {
-			confirm = confirm.Title("Would you like to deploy to Cloudflare?")
 		}
+		
 
 		if f.DescriptionFunc != nil {
-			fn := func() string {
-				return f.DescriptionFunc(*value)
-			}
-			confirm = confirm.DescriptionFunc(fn, value)
+			confirm = confirm.Description(f.DescriptionFunc(*value))
 		}
 
 		return confirm.Value(value)
@@ -237,8 +236,6 @@ func (f *TargetFormField) SetDescriptionFunc(description string) {
 				if *v == "" {
 					return fmt.Sprintf(description, "UNSET")
 				}
-			case *bool:
-				return fmt.Sprintf(description, *v)
 			}
 
 			return fmt.Sprintf(description, v)
