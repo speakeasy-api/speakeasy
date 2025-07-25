@@ -130,7 +130,6 @@ func NewTargetFormField(
 						return toPointer(sdkPackageName)
 					}
 				}
-
 			}
 		case "cloudflareEnabled":
 			description = "This will enable Cloudflare Workers deployment for your MCP Server"
@@ -209,7 +208,6 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		if f.Title != "" {
 			confirm = confirm.Title(f.Title)
 		}
-		
 
 		if f.DescriptionFunc != nil {
 			confirm = confirm.Description(f.DescriptionFunc(*value))
@@ -285,7 +283,6 @@ func (f *TargetFormField) SetValidationRegex(regex *string) error {
 
 	validationRegexStr := strings.Replace(*regex, `\u002f`, `/`, -1)
 	validationRegex, err := regexp.Compile(validationRegexStr)
-
 	if err != nil {
 		return fmt.Errorf("error compiling validation regex %s: %w", validationRegexStr, err)
 	}
