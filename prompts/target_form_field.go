@@ -97,8 +97,11 @@ func NewTargetFormField(
 				targetFormField.SetValue(strcase.ToKebab(packageName))
 			case "terraform":
 				targetFormField.SetValue(strcase.ToKebab(packageName))
-			case "mcp-typescript", "typescript":
+			case "typescript":
 				description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("npm install %s")
+				targetFormField.SetValue(strcase.ToKebab(packageName))
+			case "mcp-typescript":
+				description = "We recommend a descriptive name for your MCP Server. \nThis will be appear as the server name to MCP Clients like " + styles.Emphasized.Render("Cursor, Claude Code.")
 				targetFormField.SetValue(strcase.ToKebab(packageName))
 			}
 		case "sdkPackageName":
@@ -197,6 +200,23 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 
 		return input
+	case *bool:
+		confirm := huh.NewConfirm().Key(f.Name)
+
+		if f.Title != "" {
+			confirm = confirm.Title(f.Title)
+		} else {
+			confirm = confirm.Title("Would you like to deploy to Cloudflare?")
+		}
+
+		if f.DescriptionFunc != nil {
+			fn := func() string {
+				return f.DescriptionFunc(*value)
+			}
+			confirm = confirm.DescriptionFunc(fn, value)
+		}
+
+		return confirm.Value(value)
 	default:
 		return nil
 	}
@@ -217,6 +237,8 @@ func (f *TargetFormField) SetDescriptionFunc(description string) {
 				if *v == "" {
 					return fmt.Sprintf(description, "UNSET")
 				}
+			case *bool:
+				return fmt.Sprintf(description, *v)
 			}
 
 			return fmt.Sprintf(description, v)
@@ -239,6 +261,10 @@ func (f *TargetFormField) SetValue(value any) {
 	case string:
 		f.Value = toPointer(v)
 	case *string:
+		f.Value = v
+	case bool:
+		f.Value = toPointer(v)
+	case *bool:
 		f.Value = v
 	}
 }

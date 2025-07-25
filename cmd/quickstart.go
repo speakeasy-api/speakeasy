@@ -215,6 +215,8 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
 	if targetType == "terraform" {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
+	} else if targetType == "mcp-typescript" {
+		description = "We recommend a git repo for each MCP Server. To use the current directory, leave empty."
 	}
 
 	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive {
