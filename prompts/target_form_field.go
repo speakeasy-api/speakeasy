@@ -97,8 +97,11 @@ func NewTargetFormField(
 				targetFormField.SetValue(strcase.ToKebab(packageName))
 			case "terraform":
 				targetFormField.SetValue(strcase.ToKebab(packageName))
-			case "mcp-typescript", "typescript":
+			case "typescript":
 				description = description + "\nTo install your SDK, users will execute " + styles.Emphasized.Render("npm install %s")
+				targetFormField.SetValue(strcase.ToKebab(packageName))
+			case "mcp-typescript":
+				description = "We recommend a descriptive name for your MCP Server. \nThis will be appear as the server name to MCP Clients like " + styles.Emphasized.Render("Cursor, Claude Code.")
 				targetFormField.SetValue(strcase.ToKebab(packageName))
 			}
 		case "sdkPackageName":
@@ -127,8 +130,10 @@ func NewTargetFormField(
 						return toPointer(sdkPackageName)
 					}
 				}
-
 			}
+		case "cloudflareEnabled":
+			description = "This will enable Cloudflare Workers deployment for your MCP Server"
+			targetFormField.Title = "Do you plan on deploying to Cloudflare?"
 		}
 	}
 
@@ -197,6 +202,18 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 
 		return input
+	case *bool:
+		confirm := huh.NewConfirm().Key(f.Name)
+
+		if f.Title != "" {
+			confirm = confirm.Title(f.Title)
+		}
+
+		if f.DescriptionFunc != nil {
+			confirm = confirm.Description(f.DescriptionFunc(*value))
+		}
+
+		return confirm.Value(value)
 	default:
 		return nil
 	}
@@ -240,6 +257,10 @@ func (f *TargetFormField) SetValue(value any) {
 		f.Value = toPointer(v)
 	case *string:
 		f.Value = v
+	case bool:
+		f.Value = toPointer(v)
+	case *bool:
+		f.Value = v
 	}
 }
 
@@ -262,7 +283,6 @@ func (f *TargetFormField) SetValidationRegex(regex *string) error {
 
 	validationRegexStr := strings.Replace(*regex, `\u002f`, `/`, -1)
 	validationRegex, err := regexp.Compile(validationRegexStr)
-
 	if err != nil {
 		return fmt.Errorf("error compiling validation regex %s: %w", validationRegexStr, err)
 	}

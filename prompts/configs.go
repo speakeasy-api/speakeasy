@@ -27,6 +27,7 @@ var quickstartScopedKeys = map[string][]string{
 		"sdkPackageName",
 	},
 	"mcp-typescript": {
+		"cloudflareEnabled",
 		"packageName",
 	},
 	"typescript": {
@@ -101,9 +102,8 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 		initialFields = append(initialFields, createBaseServerURLPrompt(&baseServerURL))
 	}
 
-	formTitle := fmt.Sprintf("Let's configure your %s target (%s)", target.Target, targetName)
-	formSubtitle := "This will configure a config file that defines parameters for how your SDK is generated. \n" +
-		"Default config values have been provided. You only need to edit values that you want to modify."
+	formTitle := getFormTitle(target.Target, targetName)
+	formSubtitle := getFormSubtitle(target.Target)
 
 	if len(initialFields) > 0 {
 		form := huh.NewForm(huh.NewGroup(initialFields...))
@@ -225,7 +225,6 @@ func TargetSpecificForms(
 		}
 
 		_, err := targetFormFields.Add(field, langConfig, targetName, sdkClassName, quickstart)
-
 		if err != nil {
 			return groups, targetFormFields, err
 		}
@@ -240,13 +239,23 @@ func TargetSpecificForms(
 	// intentionally reference previously answered fields.
 	for _, name := range targetQuickstartFieldNames {
 		if field, ok := targetFormFields[name]; ok {
-			groups = append(groups, huh.NewGroup(field.HuhField(targetFormFields)))
+			f := field.HuhField(targetFormFields)
+			if f != nil {
+				groups = append(groups, huh.NewGroup(f))
+				continue
+			}
+			return groups, targetFormFields, fmt.Errorf("field %s is not valid", name)
 		}
 	}
 
 	for _, name := range additionalRelevantConfigs {
 		if field, ok := targetFormFields[name]; ok {
-			groups = append(groups, huh.NewGroup(field.HuhField(targetFormFields)))
+			f := field.HuhField(targetFormFields)
+			if f != nil {
+				groups = append(groups, huh.NewGroup(f))
+				continue
+			}
+			return groups, targetFormFields, fmt.Errorf("field %s is not valid", name)
 		}
 	}
 
@@ -306,4 +315,27 @@ func getSDKGenConfigField(fields []config.SDKGenConfigField, fieldName string) *
 	}
 
 	return nil
+}
+
+var targetTypeMapping = map[string]string{
+	"mcp-typescript": "MCP Server",
+	"terraform":      "Terraform Provider",
+}
+
+func getTargetDisplayName(targetType string) string {
+	if displayName, exists := targetTypeMapping[targetType]; exists {
+		return displayName
+	}
+	return targetType
+}
+
+func getFormTitle(targetType, targetName string) string {
+	base := "Let's configure your %s target (%s)"
+	return fmt.Sprintf(base, getTargetDisplayName(targetType), targetName)
+}
+
+func getFormSubtitle(targetType string) string {
+	base := "This will configure a config file that defines parameters for how your %s is generated. \n" +
+		"Default config values have been provided. You only need to edit values that you want to modify."
+	return fmt.Sprintf(base, getTargetDisplayName(targetType))
 }

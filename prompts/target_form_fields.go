@@ -16,7 +16,6 @@ func (f TargetFormFields) Add(
 	quickstart *Quickstart,
 ) (*TargetFormField, error) {
 	targetFormField, err := NewTargetFormField(f, configField, targetConfig, targetName, sdkClassName, quickstart)
-
 	if err != nil {
 		return nil, err
 	}
