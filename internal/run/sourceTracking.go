@@ -30,7 +30,6 @@ import (
 )
 
 type downloadedSpecInfo struct {
-	tempDir     string
 	oldSpecPath string
 	newSpecPath string
 }
@@ -120,7 +119,6 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	}
 
 	sourceDirectoryInfo = downloadedSpecInfo{
-		tempDir:     oldDocPath.LocalDirectory,
 		oldSpecPath: oldDocPath.LocalFilePath,
 		newSpecPath: newDocPath,
 	}
