@@ -177,13 +177,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
-
 	// Fetch the old & new spec and other details from the sourceMap.
 	// SourceMap is populated when RunSource method is called
 	changelogContent := ""
 	if os.Getenv("SDK_CHANGELOG_JULY_2025") == "true" {
 		requiredInfo := sourceMap[t.Source]
-		oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpecPath, requiredInfo.newSpecPath, requiredInfo.tempDir, t.Target, w.Debug, log.From(ctx))
+		oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpecPath, requiredInfo.newSpecPath, outDir, t.Target, w.Debug, log.From(ctx))
 		diff := sdkchangelog.Changes(oldConfig, newConfig)
 		changelogContent = sdkchangelog.ToMarkdown(diff)
 		err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
