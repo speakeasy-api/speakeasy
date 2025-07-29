@@ -182,7 +182,14 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 	changelogContent := ""
 	if os.Getenv("SDK_CHANGELOG_JULY_2025") == "true" {
 		requiredInfo := sourceMap[t.Source]
-		oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(requiredInfo.oldSpecPath, requiredInfo.newSpecPath, outDir, t.Target, w.Debug, log.From(ctx))
+		oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(sdkchangelog.SpecComparison{
+			OldSpecPath: requiredInfo.oldSpecPath,
+			NewSpecPath: requiredInfo.newSpecPath,
+			OutputDir:   outDir,
+			Lang:        t.Target,
+			Verbose:     w.Verbose,
+			Logger:      log.From(ctx),
+		})
 		diff := sdkchangelog.Changes(oldConfig, newConfig)
 		changelogContent = sdkchangelog.ToMarkdown(diff)
 		err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
