@@ -187,7 +187,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 		diff := sdkchangelog.Changes(oldConfig, newConfig)
 		changelogContent = sdkchangelog.ToMarkdown(diff)
 		err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
-		targetLock.ReleaseNotes = changelogContent
 		if err != nil {
 			// Swallow error so that we dont block generation
 			log.From(ctx).Warnf("Error updating new changelog: %s", err.Error())
