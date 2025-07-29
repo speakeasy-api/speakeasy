@@ -142,7 +142,6 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	}
 
 	sourceIDs := []string{w.Source}
-	sourceMap := map[string]downloadedSpecInfo{}
 
 	if w.Source == "all" {
 		sourceIDs = lo.Keys(w.workflow.Sources)
@@ -163,7 +162,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		if _, ok := w.workflow.Sources[sourceID]; !ok {
 			return fmt.Errorf("source '%s' not found", sourceID)
 		}
-		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "", "", sourceMap)
+		_, _, err := w.RunSource(ctx, w.RootStep, sourceID, "", "")
 		if err != nil {
 			return err
 		}
@@ -176,7 +175,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		if _, ok := w.workflow.Targets[targetID]; !ok {
 			return fmt.Errorf("target '%s' not found", targetID)
 		}
-		_, _, err := w.runTarget(ctx, targetID, sourceMap)
+		_, _, err := w.runTarget(ctx, targetID)
 		if err != nil {
 			return err
 		}

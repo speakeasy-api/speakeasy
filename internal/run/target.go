@@ -48,7 +48,7 @@ func getTarget(target string) (*workflow.Target, error) {
 	return &t, nil
 }
 
-func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[string]downloadedSpecInfo) (*SourceResult, *TargetResult, error) {
+func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult, *TargetResult, error) {
 	rootStep := w.RootStep.NewSubstep(fmt.Sprintf("Target: %s", target))
 
 	t := w.workflow.Targets[target]
@@ -65,7 +65,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 	var sourceRes *SourceResult
 
 	if source != nil {
-		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, targetLanguage, sourceMap)
+		sourcePath, sourceRes, err = w.RunSource(ctx, rootStep, t.Source, target, targetLanguage)
 		if err != nil {
 			if w.FromQuickstart && sourceRes != nil && sourceRes.LintResult != nil && len(sourceRes.LintResult.ValidOperations) > 0 {
 				cliEvent := events.GetTelemetryEventFromContext(ctx)
@@ -177,14 +177,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string, sourceMap map[s
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
-	// Fetch the old & new spec and other details from the sourceMap.
-	// SourceMap is populated when RunSource method is called
+	// Old & new spec and other details are updated in RunSource method
 	changelogContent := ""
 	if os.Getenv("SDK_CHANGELOG_JULY_2025") == "true" {
-		requiredInfo := sourceMap[t.Source]
+		requiredInfo := w.SourceResults[t.Source]
 		oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(sdkchangelog.SpecComparison{
-			OldSpecPath: requiredInfo.oldSpecPath,
-			NewSpecPath: requiredInfo.newSpecPath,
+			OldSpecPath: requiredInfo.AdditionalInfo.oldSpecPath,
+			NewSpecPath: requiredInfo.AdditionalInfo.newSpecPath,
 			OutputDir:   outDir,
 			Lang:        t.Target,
 			Verbose:     w.Verbose,

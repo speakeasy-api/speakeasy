@@ -58,7 +58,8 @@ type SourceResult struct {
 	MergeResult   MergeResult
 	CLIVersion    string
 	// The path to the output OAS spec
-	OutputPath string
+	OutputPath     string
+	AdditionalInfo downloadedSpecInfo
 }
 
 type LintingError struct {
@@ -74,7 +75,7 @@ func (e *LintingError) Error() string {
 	return fmt.Sprintf("linting failed: %s - %s", e.Document, errString)
 }
 
-func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string, sourceMap map[string]downloadedSpecInfo) (string, *SourceResult, error) {
+func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
 	sourceRes := &SourceResult{
@@ -200,7 +201,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 				logger.Warnf("failed to compute OpenAPI changes: %s", err.Error())
 			}
 			sourceRes.ChangeReport = report
-			sourceMap[sourceID] = specInfo
+			sourceRes.AdditionalInfo = specInfo
 		}
 	}
 
