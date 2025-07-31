@@ -142,7 +142,6 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	}
 
 	sourceIDs := []string{w.Source}
-
 	if w.Source == "all" {
 		sourceIDs = lo.Keys(w.workflow.Sources)
 	}

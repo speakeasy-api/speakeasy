@@ -228,7 +228,6 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	if err != nil {
 		return sourceRes, nil, err
 	}
-
 	w.generationAccess = generationAccess
 
 	if t.CodeSamples != nil {
