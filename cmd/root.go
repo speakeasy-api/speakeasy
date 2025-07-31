@@ -95,6 +95,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, cleanCmd)
 
 	addCommand(rootCmd, AskCmd)
+	addCommand(rootCmd, reproCmd)
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {
