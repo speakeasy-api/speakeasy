@@ -128,7 +128,7 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 
 // createTestDir creates a temporary test directory for the target
 func createTestDir(t *testing.T, target string) string {
-	tempDir := getTempDir()
+	tempDir := testutils.GetTempDir()
 	baseTestDir := filepath.Join(tempDir, "speakeasy-quickstart-tests")
 	testDir := filepath.Join(baseTestDir, target)
 
@@ -254,5 +254,3 @@ func checkFileExists(t *testing.T, dir, filename string) {
 func isAlphaTarget(target string) bool {
 	return generate.GetTargetNameMaturity(target) == "Alpha"
 }
-
-

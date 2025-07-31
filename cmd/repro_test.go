@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func getReproDir() string {
 	return filepath.Join(testutils.GetTempDir(), "speakeasy-test-repro")
 }
@@ -29,7 +28,6 @@ func getReproSubDir() string {
 func getSpeakeasyBinary() string {
 	return filepath.Join(testutils.GetTempDir(), "speakeasy-test")
 }
-
 
 func TestReproEndToEnd(t *testing.T) {
 	// Create test directories
