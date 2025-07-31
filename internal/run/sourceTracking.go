@@ -120,7 +120,6 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 
 	sourceDirectoryInfo = downloadedSpecInfo{
 		oldSpecPath: oldDocPath.LocalFilePath,
-		newSpecPath: newDocPath,
 	}
 
 	changesStep.NewSubstep("Computing changes")

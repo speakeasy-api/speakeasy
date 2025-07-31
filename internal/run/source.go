@@ -202,6 +202,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 			sourceRes.ChangeReport = report
 			sourceRes.AdditionalInfo = specInfo
+			sourceRes.AdditionalInfo.newSpecPath = currentDocument
 		}
 	}
 
