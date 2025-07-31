@@ -222,7 +222,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
 	if cliEvent != nil && cliEvent.ExecutionID != "" {
-		logger.Infof("Speakeasy Reproduction ID: %s", cliEvent.ExecutionID)
+		logger.Infof("speakeasy repro --execution-id %s", cliEvent.ExecutionID)
 	}
 
 	logger.Successf("\nSDK for %s generated successfully ✓", opts.Language)
