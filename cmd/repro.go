@@ -29,22 +29,33 @@ type ReproFlags struct {
 	UseRawWorkflow bool   `json:"use-raw-workflow"`
 }
 
-const reproLong = `# Reproduce a failed generation locally
+const (
+	inputSpecFilename = "snapshotted.openapi.yaml"
+	reproLong         = `# Reproduce a failed generation locally
 
 Download and reproduce a failed SDK generation locally for debugging purposes.
 
 This command will:
 1. Fetch the CLI events for the provided execution ID
-2. Download the OpenAPI spec from the registry
+2. Download the merged/overlayed OpenAPI spec that was actually used for generation (default)
 3. Create a local reproduction environment with all necessary files
 4. Automatically run 'speakeasy run' to reproduce the generation
+
+By default, this command downloads the final merged spec that was used for generation.
+Use --use-raw-workflow if you need to debug overlay or workflow source issues.
 
 Example usage:
 ` + "```bash" + `
 speakeasy repro --execution-id c303282d-f2e6-46ca-a04a-35d3d873712d
 speakeasy repro --execution-id c303282d-f2e6-46ca-a04a-35d3d873712d --directory /tmp/debug
-speakeasy repro --execution-id c303282d-f2e6-46ca-a04a-35d3d873712d --use-raw-workflow
+speakeasy repro --execution-id c303282d-f2e6-46ca-a04a-35d3d873712d --use-raw-workflow  # Debug workflow/overlay issues
 ` + "```"
+)
+
+type slugs struct {
+	org       string
+	workspace string
+}
 
 var reproCmd = &model.ExecutableCommand[ReproFlags]{
 	Usage:        "repro",
@@ -66,24 +77,73 @@ var reproCmd = &model.ExecutableCommand[ReproFlags]{
 		},
 		flag.BooleanFlag{
 			Name:        "use-raw-workflow",
-			Description: "Use the original workflow without downloading specs or modifying inputs",
+			Description: "Use the original workflow to debug overlay/source issues (default: use merged spec)",
 		},
 	},
 }
 
 func runRepro(ctx context.Context, flags ReproFlags) error {
 	executionID := flags.ExecutionID
+	logger := log.From(ctx)
 
-	// Fetch CLI events
+	eventsForExecution, err := fetchCLIEvents(ctx, executionID)
+	if err != nil {
+		return err
+	}
+
+	interactionTypes := collectInteractionTypes(eventsForExecution)
+	logger.Infof("Found %d events (%s)", len(eventsForExecution), strings.Join(interactionTypes, ", "))
+
+	genEvent := findGenEvent(eventsForExecution)
+	if genEvent == nil {
+		return fmt.Errorf("no generation event found for execution ID: %s (found interaction types: %s)", executionID, strings.Join(interactionTypes, ", "))
+	}
+	logger.Infof("Found generation event for target: %s", getValue(genEvent.GenerateTarget))
+
+	workflowRaw := extractWorkflow(eventsForExecution)
+	workspaceID := extractWorkspaceID(eventsForExecution)
+
+	s := fetchWorkspaceInfo(ctx, workspaceID, logger)
+
+	// Determine output directory
+	outputDir := flags.Directory
+	if outputDir == "" {
+		outputDir = filepath.Join("/tmp", fmt.Sprintf("%s.%s", s.org, s.workspace))
+	}
+
+	printGenerationDetails(logger, genEvent, s)
+
+	if err := setupDirectoryStructure(outputDir, eventsForExecution, logger); err != nil {
+		return err
+	}
+
+	speakeasyDir := filepath.Join(outputDir, ".speakeasy")
+
+	_, skipSpecDownload, err := downloadSpec(ctx, genEvent, s, speakeasyDir, logger)
+	if err != nil {
+		return err
+	}
+
+	if err := writeGenConfig(genEvent, speakeasyDir, executionID); err != nil {
+		return err
+	}
+
+	if err := writeWorkflowFiles(workflowRaw, speakeasyDir, skipSpecDownload, flags.UseRawWorkflow, executionID, logger); err != nil {
+		return err
+	}
+
+	return finishAndRegenerate(outputDir, logger)
+}
+
+func fetchCLIEvents(ctx context.Context, executionID string) ([]shared.CliEvent, error) {
 	s, err := core.GetSDKFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get SDK client: %w", err)
+		return nil, fmt.Errorf("failed to get SDK client: %w", err)
 	}
 
 	logger := log.From(ctx)
 	logger.Infof("Fetching CLI events for execution ID: %s", executionID)
 
-	// Search for events with this execution ID
 	limit := int64(100)
 	req := operations.SearchWorkspaceEventsRequest{
 		ExecutionID: &executionID,
@@ -92,87 +152,105 @@ func runRepro(ctx context.Context, flags ReproFlags) error {
 
 	res, err := s.Events.Search(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to fetch CLI events: %w", err)
+		return nil, fmt.Errorf("failed to fetch CLI events: %w", err)
 	}
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("API returned status code %d when searching for events", res.StatusCode)
+		return nil, fmt.Errorf("API returned status code %d when searching for events", res.StatusCode)
 	}
 
 	if res.CliEventBatch == nil || len(res.CliEventBatch) == 0 {
-		return fmt.Errorf("no CLI events found for execution ID: %s", executionID)
+		return nil, fmt.Errorf("no CLI events found for execution ID: %s", executionID)
 	}
 
-	eventsForExecution := res.CliEventBatch
+	return res.CliEventBatch, nil
+}
 
-	// Collect interaction types for logging
+func collectInteractionTypes(events []shared.CliEvent) []string {
 	var interactionTypes []string
-	for _, event := range eventsForExecution {
+	for _, event := range events {
 		interactionTypes = append(interactionTypes, string(event.InteractionType))
 	}
-	logger.Infof("Found %d events (%s)", len(eventsForExecution), strings.Join(interactionTypes, ", "))
+	return interactionTypes
+}
 
-	// Find the generation event and collect workflow data from any event
-	var genEvent *shared.CliEvent
-	var workspaceID string
-	var workflowPreRaw, workflowPostRaw *string
-
-	for _, event := range eventsForExecution {
-		// Collect workflow data from any event that has it
-		if event.WorkflowPreRaw != nil && workflowPreRaw == nil {
-			workflowPreRaw = event.WorkflowPreRaw
-		}
-		if event.WorkflowPostRaw != nil && workflowPostRaw == nil {
-			workflowPostRaw = event.WorkflowPostRaw
-		}
-
+func findGenEvent(events []shared.CliEvent) *shared.CliEvent {
+	for _, event := range events {
 		if event.InteractionType == shared.InteractionTypeTargetGenerate && event.GenerateConfigPreRaw != nil && *event.GenerateConfigPreRaw != "" {
-			genEvent = &event
+			return &event
 		}
+	}
+	return nil
+}
+
+func extractWorkflow(events []shared.CliEvent) string {
+	var workflowRaw *string
+
+	for _, event := range events {
+		if event.WorkflowPreRaw != nil && workflowRaw == nil && *event.WorkflowPreRaw != "" {
+			workflowRaw = event.WorkflowPreRaw
+		}
+	}
+
+	return *workflowRaw
+}
+
+func extractWorkspaceID(events []shared.CliEvent) string {
+	for _, event := range events {
 		if event.WorkspaceID != "" {
-			workspaceID = event.WorkspaceID
+			return event.WorkspaceID
 		}
 	}
+	return ""
+}
 
-	if genEvent == nil {
-		return fmt.Errorf("no generation event found for execution ID: %s (found interaction types: %s)", executionID, strings.Join(interactionTypes, ", "))
-	}
-	logger.Infof("Found generation event for target: %s", getValue(genEvent.GenerateTarget))
-
-	// Fetch workspace and org info
-	var orgSlug, workspaceSlug string
-	if workspaceID != "" {
-		wsReq := operations.GetWorkspaceRequest{
-			WorkspaceID: &workspaceID,
-		}
-		wRes, err := s.Workspaces.GetByID(ctx, wsReq)
-		if err != nil {
-			logger.Warnf("Failed to fetch workspace info: %v", err)
-		} else if wRes.Workspace != nil {
-			if wRes.Workspace.Slug != "" {
-				workspaceSlug = wRes.Workspace.Slug
-			}
-			// Get organization info
-			if wRes.Workspace.OrganizationID != "" {
-				orgReq := operations.GetOrganizationRequest{
-					OrganizationID: wRes.Workspace.OrganizationID,
-				}
-				orgRes, err := s.Organizations.Get(ctx, orgReq)
-				if err != nil {
-					logger.Warnf("Failed to fetch organization info: %v", err)
-				} else if orgRes.Organization != nil && orgRes.Organization.Slug != "" {
-					orgSlug = orgRes.Organization.Slug
-				}
-			}
-		}
+func fetchWorkspaceInfo(ctx context.Context, workspaceID string, logger log.Logger) slugs {
+	if workspaceID == "" {
+		return slugs{}
 	}
 
-	// Determine output directory
-	outputDir := flags.Directory
-	if outputDir == "" {
-		outputDir = filepath.Join("/tmp", fmt.Sprintf("%s.%s", orgSlug, workspaceSlug))
+	s, err := core.GetSDKFromContext(ctx)
+	if err != nil {
+		logger.Warnf("Failed to get SDK client: %v", err)
+		return slugs{}
 	}
 
+	wsReq := operations.GetWorkspaceRequest{
+		WorkspaceID: &workspaceID,
+	}
+	wRes, err := s.Workspaces.GetByID(ctx, wsReq)
+	if err != nil {
+		logger.Warnf("Failed to fetch workspace info: %v", err)
+		return slugs{}
+	}
+
+	if wRes.Workspace == nil {
+		return slugs{}
+	}
+
+	result := slugs{workspace: wRes.Workspace.Slug}
+	if wRes.Workspace.OrganizationID == "" {
+		return result
+	}
+
+	orgReq := operations.GetOrganizationRequest{
+		OrganizationID: wRes.Workspace.OrganizationID,
+	}
+	orgRes, err := s.Organizations.Get(ctx, orgReq)
+	if err != nil {
+		logger.Warnf("Failed to fetch organization info: %v", err)
+		return result
+	}
+
+	if orgRes.Organization == nil {
+		return result
+	}
+
+	result.org = orgRes.Organization.Slug
+	return result
+}
+
+func setupDirectoryStructure(outputDir string, events []shared.CliEvent, logger log.Logger) error {
 	// Check if directory exists and clean it out
 	if _, err := os.Stat(outputDir); err == nil {
 		logger.Infof("Directory %s already exists, cleaning it out", outputDir)
@@ -186,24 +264,18 @@ func runRepro(ctx context.Context, flags ReproFlags) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Print generation details
-	printGenerationDetails(logger, genEvent, orgSlug, workspaceSlug)
-
-	// Create .speakeasy directory
 	speakeasyDir := filepath.Join(outputDir, ".speakeasy")
 	if err := os.MkdirAll(speakeasyDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .speakeasy directory: %w", err)
 	}
 
-	// Create logs directory and save CLI events
 	logsDir := filepath.Join(speakeasyDir, "logs")
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create logs directory: %w", err)
 	}
 
-	// Save CLI events to JSON file
 	eventsFile := filepath.Join(logsDir, "repro-cli-events.json")
-	eventsJSON, err := json.MarshalIndent(eventsForExecution, "", "  ")
+	eventsJSON, err := json.MarshalIndent(events, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal CLI events to JSON: %w", err)
 	}
@@ -212,107 +284,101 @@ func runRepro(ctx context.Context, flags ReproFlags) error {
 	}
 	logger.Infof("Saved CLI events to %s", eventsFile)
 
-	// Check if we should skip spec download - only skip if we don't have source info
-	skipSpecDownload := genEvent.SourceNamespaceName == nil || genEvent.SourceRevisionDigest == nil
+	return nil
+}
 
-	var inputPath string
-	if skipSpecDownload {
-		logger.Warnf("Source namespace or revision digest missing - will use original workflow without modifications")
-	} else {
-		location := fmt.Sprintf("registry.speakeasyapi.dev/%s/%s/%s@%s", orgSlug, workspaceSlug, *genEvent.SourceNamespaceName, *genEvent.SourceRevisionDigest)
-		d := workflow.Document{
-			Location: workflow.LocationString(location),
-		}
-
-		// Use the temp directory as base location for download
-		tempLocation := workflow.GetTempDir()
-		documentOut, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, tempLocation)
-		if err != nil {
-			return fmt.Errorf("failed to download spec: %w", err)
-		}
-
-		// Copy spec to input location
-		inputPath = filepath.Join(speakeasyDir, "input.openapi.yaml")
-		if err := utils.CopyFile(documentOut.LocalFilePath, inputPath); err != nil {
-			return fmt.Errorf("failed to copy spec to input location: %w", err)
-		}
+func downloadSpec(ctx context.Context, genEvent *shared.CliEvent, s slugs, speakeasyDir string, logger log.Logger) (string, bool, error) {
+	if genEvent.SourceNamespaceName == nil || genEvent.SourceRevisionDigest == nil {
+		logger.Warnf("Source namespace or revision digest missing - will use original workflow")
+		return "", true, nil
 	}
 
-	// Write gen.yaml (prefer pre, fallback to post)
+	// Download the merged/overlayed spec that was actually used for generation
+	location := fmt.Sprintf("registry.speakeasyapi.dev/%s/%s/%s@%s", s.org, s.workspace, *genEvent.SourceNamespaceName, *genEvent.SourceRevisionDigest)
+	d := workflow.Document{
+		Location: workflow.LocationString(location),
+	}
+
+	tempLocation := workflow.GetTempDir()
+	documentOut, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, tempLocation)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to download spec: %w", err)
+	}
+
+	inputPath := filepath.Join(speakeasyDir, inputSpecFilename)
+	if err := utils.CopyFile(documentOut.LocalFilePath, inputPath); err != nil {
+		return "", false, fmt.Errorf("failed to copy spec to input location: %w", err)
+	}
+
+	return inputPath, false, nil
+}
+
+func writeGenConfig(genEvent *shared.CliEvent, speakeasyDir, executionID string) error {
 	genConfig := genEvent.GenerateConfigPreRaw
 	if genConfig == nil || *genConfig == "" {
 		return fmt.Errorf("no gen.yaml found in any event for execution ID: %s", executionID)
 	}
 
 	genPath := filepath.Join(speakeasyDir, "gen.yaml")
-	if err := os.WriteFile(genPath, []byte(*genConfig), 0644); err != nil {
-		return fmt.Errorf("failed to write gen.yaml: %w", err)
-	}
+	return os.WriteFile(genPath, []byte(*genConfig), 0644)
+}
 
-	// Write workflow files
-	// Check if we have a workflow to work with (use collected data, prefer pre, fallback to post)
-	workflowRaw := workflowPreRaw
-	if workflowRaw == nil {
-		workflowRaw = workflowPostRaw
-	}
-
-	if workflowRaw == nil {
+func writeWorkflowFiles(workflowRaw string, speakeasyDir string, skipSpecDownload, useRawWorkflow bool, executionID string, logger log.Logger) error {
+	if workflowRaw == "" {
 		return fmt.Errorf("no workflow found in any event for execution ID: %s", executionID)
 	}
 
-	// Always write the original workflow
 	workflowPath := filepath.Join(speakeasyDir, "workflow.original.yaml")
-	if err := os.WriteFile(workflowPath, []byte(*workflowRaw), 0644); err != nil {
+	if err := os.WriteFile(workflowPath, []byte(workflowRaw), 0644); err != nil {
 		return fmt.Errorf("failed to write workflow.original.yaml: %w", err)
 	}
 
-	if skipSpecDownload || flags.UseRawWorkflow {
-		// Use raw workflow without modifications
+	if skipSpecDownload || useRawWorkflow {
 		workflowModPath := filepath.Join(speakeasyDir, "workflow.yaml")
-		if err := os.WriteFile(workflowModPath, []byte(*workflowRaw), 0644); err != nil {
+		if err := os.WriteFile(workflowModPath, []byte(workflowRaw), 0644); err != nil {
 			return fmt.Errorf("failed to write workflow.yaml: %w", err)
 		}
-		logger.Infof("Using original workflow without modifications")
-	} else {
-		// Parse and modify workflow to use local input
-		var wf workflow.Workflow
-		if err := yaml.Unmarshal([]byte(*workflowRaw), &wf); err != nil {
-			return fmt.Errorf("failed to parse workflow: %w", err)
-		}
-
-		// Modify all sources to point to local input
-		for sourceID, source := range wf.Sources {
-			source.Inputs = []workflow.Document{{Location: workflow.LocationString(".speakeasy/input.openapi.yaml")}}
-			source.Overlays = nil
-			source.Transformations = nil
-			source.Output = nil
-			source.Ruleset = nil
-			source.Registry = nil
-			wf.Sources[sourceID] = source
-		}
-
-		// Write modified workflow
-		modifiedWorkflow, err := yaml.Marshal(&wf)
-		if err != nil {
-			return fmt.Errorf("failed to marshal modified workflow: %w", err)
-		}
-
-		workflowModPath := filepath.Join(speakeasyDir, "workflow.yaml")
-		if err := os.WriteFile(workflowModPath, modifiedWorkflow, 0644); err != nil {
-			return fmt.Errorf("failed to write workflow.yaml: %w", err)
-		}
-		logger.Infof("Modified workflow to use local input spec")
+		logger.Infof("Using original workflow (--use-raw-workflow enabled)")
+		return nil
 	}
 
+	var wf workflow.Workflow
+	if err := yaml.Unmarshal([]byte(workflowRaw), &wf); err != nil {
+		return fmt.Errorf("failed to parse workflow: %w", err)
+	}
+
+	for sourceID, source := range wf.Sources {
+		source.Inputs = []workflow.Document{{Location: workflow.LocationString(".speakeasy/" + inputSpecFilename)}}
+		source.Overlays = nil
+		source.Transformations = nil
+		source.Output = nil
+		source.Ruleset = nil
+		source.Registry = nil
+		wf.Sources[sourceID] = source
+	}
+
+	modifiedWorkflow, err := yaml.Marshal(&wf)
+	if err != nil {
+		return fmt.Errorf("failed to marshal modified workflow: %w", err)
+	}
+
+	workflowModPath := filepath.Join(speakeasyDir, "workflow.yaml")
+	if err := os.WriteFile(workflowModPath, modifiedWorkflow, 0644); err != nil {
+		return fmt.Errorf("failed to write workflow.yaml: %w", err)
+	}
+	logger.Infof("Modified workflow to use local merged/overlayed spec")
+
+	return nil
+}
+
+func finishAndRegenerate(outputDir string, logger log.Logger) error {
 	logger.Infof("\nRunning speakeasy run --output=console...")
 
-	// Get the current executable path
 	execPath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("failed to get executable path: %w", err)
 	}
 
-	// Run speakeasy run using exec
 	cmd := exec.Command(execPath, "run", "--output=console")
 	cmd.Dir = outputDir
 	cmd.Stdout = os.Stdout
@@ -337,73 +403,87 @@ func getValue(ptr *string) string {
 	return *ptr
 }
 
-func printGenerationDetails(logger log.Logger, genEvent *shared.CliEvent, orgSlug, workspaceSlug string) {
+func printGenerationDetails(logger log.Logger, genEvent *shared.CliEvent, s slugs) {
 	logger.Infof("Generation Details:")
 
-	if !genEvent.CreatedAt.IsZero() {
-		logger.Infof("  Created At: %s", genEvent.CreatedAt.Format(time.RFC3339))
-	}
-	if orgSlug != "" && workspaceSlug != "" {
-		logger.Infof("  Workspace: https://app.speakeasy.com/org/%s/%s", orgSlug, workspaceSlug)
-	}
-	if genEvent.SpeakeasyAPIKeyName != "" {
-		logger.Infof("  API Key Name: %s", genEvent.SpeakeasyAPIKeyName)
-	}
-	if genEvent.SpeakeasyVersion != "" {
-		logger.Infof("  CLI Version: %s", genEvent.SpeakeasyVersion)
-	}
-	if genEvent.GenerateTarget != nil {
-		logger.Infof("  Target: %s", *genEvent.GenerateTarget)
-	}
-	if genEvent.GenerateTargetName != nil {
-		logger.Infof("  Target Name: %s", *genEvent.GenerateTargetName)
-	}
-	if genEvent.GenerateTargetVersion != nil {
-		logger.Infof("  Target Version: %s", *genEvent.GenerateTargetVersion)
-	}
-	if genEvent.GenerateRepoURL != nil && *genEvent.GenerateRepoURL != "" {
-		logger.Infof("  Repo URL: %s", *genEvent.GenerateRepoURL)
-	}
-	if genEvent.GhActionRunLink != nil && *genEvent.GhActionRunLink != "" {
-		logger.Infof("  GitHub Action Run: %s", *genEvent.GhActionRunLink)
-	}
-	if genEvent.GenerateGenLockID != nil {
-		logger.Infof("  Gen Lock ID: %s", *genEvent.GenerateGenLockID)
+	printIfNotEmpty := func(condition bool, format string, args ...interface{}) {
+		if condition {
+			logger.Infof(format, args...)
+		}
 	}
 
-	if genEvent.Success {
+	printIfNotEmpty(!genEvent.CreatedAt.IsZero(), "  Created At: %s", genEvent.CreatedAt.Format(time.RFC3339))
+	printIfNotEmpty(s.org != "" && s.workspace != "", "  Workspace: https://app.speakeasy.com/org/%s/%s", s.org, s.workspace)
+	printIfNotEmpty(genEvent.SpeakeasyAPIKeyName != "", "  API Key Name: %s", genEvent.SpeakeasyAPIKeyName)
+	printIfNotEmpty(genEvent.SpeakeasyVersion != "", "  CLI Version: %s", genEvent.SpeakeasyVersion)
+	printIfNotEmpty(genEvent.GenerateTarget != nil, "  Target: %s", getValue(genEvent.GenerateTarget))
+	printIfNotEmpty(genEvent.GenerateTargetName != nil, "  Target Name: %s", getValue(genEvent.GenerateTargetName))
+	printIfNotEmpty(genEvent.GenerateTargetVersion != nil, "  Target Version: %s", getValue(genEvent.GenerateTargetVersion))
+	printIfNotEmpty(genEvent.GenerateRepoURL != nil && *genEvent.GenerateRepoURL != "", "  Repo URL: %s", getValue(genEvent.GenerateRepoURL))
+	printIfNotEmpty(genEvent.GhActionRunLink != nil && *genEvent.GhActionRunLink != "", "  GitHub Action Run: %s", getValue(genEvent.GhActionRunLink))
+	printIfNotEmpty(genEvent.GenerateGenLockID != nil, "  Gen Lock ID: %s", getValue(genEvent.GenerateGenLockID))
+
+	printStatus(logger, genEvent)
+	printIfNotEmpty(genEvent.SourceNamespaceName != nil, "  Source Namespace: %s", getValue(genEvent.SourceNamespaceName))
+	printConfigStatus(logger, genEvent)
+	printWorkflowStatus(logger, genEvent)
+}
+
+func printStatus(logger log.Logger, genEvent *shared.CliEvent) {
+	switch {
+	case genEvent.Success:
 		logger.Infof("  Status: Success")
-	} else if genEvent.Error != nil {
+	case genEvent.Error != nil:
 		logger.Infof("  Error: %s", *genEvent.Error)
-	} else {
+	default:
 		logger.Infof("  Status: Failed")
 	}
+}
 
-	if genEvent.SourceNamespaceName != nil {
-		logger.Infof("  Source Namespace: %s", *genEvent.SourceNamespaceName)
-	}
-
-	// Check config status
+func printConfigStatus(logger log.Logger, genEvent *shared.CliEvent) {
 	hasPreConfig := genEvent.GenerateConfigPreRaw != nil
 	hasPostConfig := genEvent.GenerateConfigPostRaw != nil
-	if !hasPreConfig && !hasPostConfig {
-		logger.Infof("  Config: gen.yaml not found")
-	} else if hasPreConfig && hasPostConfig {
-		logger.Infof("  Config: gen.yaml (pre & post)")
-	} else if hasPreConfig {
-		logger.Infof("  Config: gen.yaml (pre only)")
-	} else if hasPostConfig {
-		logger.Infof("  Config: gen.yaml (post only)")
-	}
 
-	// Check workflow status
+	configStatus := getConfigStatus(hasPreConfig, hasPostConfig)
+	if configStatus != "" {
+		logger.Infof("  Config: %s", configStatus)
+	}
+}
+
+func getConfigStatus(hasPreConfig, hasPostConfig bool) string {
+	switch {
+	case !hasPreConfig && !hasPostConfig:
+		return "gen.yaml not found"
+	case hasPreConfig && hasPostConfig:
+		return "gen.yaml (pre & post)"
+	case hasPreConfig:
+		return "gen.yaml (pre only)"
+	case hasPostConfig:
+		return "gen.yaml (post only)"
+	default:
+		return ""
+	}
+}
+
+func printWorkflowStatus(logger log.Logger, genEvent *shared.CliEvent) {
 	hasPreWorkflow := genEvent.WorkflowPreRaw != nil
 	hasPostWorkflow := genEvent.WorkflowPostRaw != nil
-	if hasPreWorkflow && hasPostWorkflow {
-		logger.Infof("  Workflow: available (pre & post)")
-	} else if hasPreWorkflow {
-		logger.Infof("  Workflow: available (pre only)")
-	} else if hasPostWorkflow {
-		logger.Infof("  Workflow: available (post only)")
+
+	workflowStatus := getWorkflowStatus(hasPreWorkflow, hasPostWorkflow)
+	if workflowStatus != "" {
+		logger.Infof("  Workflow: %s", workflowStatus)
+	}
+}
+
+func getWorkflowStatus(hasPreWorkflow, hasPostWorkflow bool) string {
+	switch {
+	case hasPreWorkflow && hasPostWorkflow:
+		return "available (pre & post)"
+	case hasPreWorkflow:
+		return "available (pre only)"
+	case hasPostWorkflow:
+		return "available (post only)"
+	default:
+		return ""
 	}
 }

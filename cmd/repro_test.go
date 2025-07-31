@@ -154,8 +154,8 @@ paths:
 	t.Logf("Execution ID: %s", executionID)
 
 	// Now run repro
-	reproCmd := exec.Command("/tmp/speakeasy-test", "repro", "--execution-id", executionID, 
-	"--directory", reproDir)
+	reproCmd := exec.Command("/tmp/speakeasy-test", "repro", "--execution-id", executionID,
+		"--directory", reproDir)
 	reproCmd.Dir = originalDir
 	var reproOutput bytes.Buffer
 	reproCmd.Stdout = &reproOutput
