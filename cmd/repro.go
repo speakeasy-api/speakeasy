@@ -175,24 +175,46 @@ func collectInteractionTypes(events []shared.CliEvent) []string {
 }
 
 func findGenEvent(events []shared.CliEvent) *shared.CliEvent {
+	var bestEvent *shared.CliEvent
 	for _, event := range events {
-		if event.InteractionType == shared.InteractionTypeTargetGenerate && event.GenerateConfigPreRaw != nil && *event.GenerateConfigPreRaw != "" {
-			return &event
+		// If not generate config, skip
+		if event.InteractionType != shared.InteractionTypeTargetGenerate {
+			continue
+		}
+
+		if bestEvent == nil {
+			bestEvent = &event
+		}
+
+		if event.GenerateConfigPreRaw != nil && *event.GenerateConfigPreRaw != "" {
+			bestEvent = &event
 		}
 	}
-	return nil
+
+	return bestEvent
 }
 
 func extractWorkflow(events []shared.CliEvent) string {
-	var workflowRaw *string
+	var workflowPreRaw, workflowPostRaw *string
 
+	// Collect workflow data from events (prefer pre, fallback to post)
 	for _, event := range events {
-		if event.WorkflowPreRaw != nil && workflowRaw == nil && *event.WorkflowPreRaw != "" {
-			workflowRaw = event.WorkflowPreRaw
+		if event.WorkflowPreRaw != nil && *event.WorkflowPreRaw != "" {
+			workflowPreRaw = event.WorkflowPreRaw
+		}
+		if event.WorkflowPostRaw != nil && *event.WorkflowPostRaw != "" {
+			workflowPostRaw = event.WorkflowPostRaw
 		}
 	}
 
-	return *workflowRaw
+	// Prefer pre, fallback to post
+	if workflowPreRaw != nil && *workflowPreRaw != "" {
+		return *workflowPreRaw
+	}
+	if workflowPostRaw != nil && *workflowPostRaw != "" {
+		return *workflowPostRaw
+	}
+	return ""
 }
 
 func extractWorkspaceID(events []shared.CliEvent) string {
@@ -314,7 +336,14 @@ func downloadSpec(ctx context.Context, genEvent *shared.CliEvent, s slugs, speak
 }
 
 func writeGenConfig(genEvent *shared.CliEvent, speakeasyDir, executionID string) error {
-	genConfig := genEvent.GenerateConfigPreRaw
+	// Prefer pre config, fallback to post config
+	var genConfig *string
+	if genEvent.GenerateConfigPreRaw != nil && *genEvent.GenerateConfigPreRaw != "" {
+		genConfig = genEvent.GenerateConfigPreRaw
+	} else if genEvent.GenerateConfigPostRaw != nil && *genEvent.GenerateConfigPostRaw != "" {
+		genConfig = genEvent.GenerateConfigPostRaw
+	}
+	
 	if genConfig == nil || *genConfig == "" {
 		return fmt.Errorf("no gen.yaml found in any event for execution ID: %s", executionID)
 	}
