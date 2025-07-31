@@ -99,11 +99,6 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	if err != nil {
 		return "", nil, err
 	}
-	
-	// Always write to output location with default of .speakeasy/logs/out.openapi.yaml
-	if outputLocation == "" {
-		outputLocation = filepath.Join(".speakeasy", "logs", "out.openapi.yaml")
-	}
 
 	var currentDocument string
 	if w.FrozenWorkflowLock {
@@ -164,9 +159,10 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	// Always write to output location
-	if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
-		return "", nil, fmt.Errorf("failed to write to output location: %w %s", err, outputLocation)
+	if !w.FrozenWorkflowLock {
+		if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
+			return "", nil, fmt.Errorf("failed to write to output location: %w %s", err, outputLocation)
+		}
 	}
 	sourceRes.OutputPath = outputLocation
 
