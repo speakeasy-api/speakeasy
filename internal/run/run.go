@@ -133,6 +133,16 @@ func (w *Workflow) Run(ctx context.Context) error {
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
 
+	// If there's an error and telemetry is not disabled, show repro message
+	if err != nil && !utils.IsZeroTelemetryOrganization(ctx) {
+		cliEvent := events.GetTelemetryEventFromContext(ctx)
+		if cliEvent != nil && cliEvent.ExecutionID != "" && cliEvent.SourceNamespaceName != nil && *cliEvent.SourceNamespaceName != "" {
+			logger := log.From(ctx)
+			logger.Errorf("\nTo get help, send the following reproduction command to the Speakeasy team:")
+			logger.Errorf("\n    speakeasy repro --execution-id %s\n", cliEvent.ExecutionID)
+		}
+	}
+
 	return err
 }
 
@@ -296,6 +306,15 @@ func enrichTelemetryWithCompletedWorkflow(ctx context.Context, w *Workflow) {
 			lockFileOldBytes, _ := yaml.Marshal(w.lockfileOld)
 			lockFileOldString := string(lockFileOldBytes)
 			cliEvent.WorkflowLockPreRaw = &lockFileOldString
+		}
+		// Capture the workflow YAML content
+		workflowBytes, _ := yaml.Marshal(w.workflow)
+		workflowString := string(workflowBytes)
+		cliEvent.WorkflowPostRaw = &workflowString
+
+		// Set the original workflow content if available
+		if w.workflowRaw != "" {
+			cliEvent.WorkflowPreRaw = &w.workflowRaw
 		}
 	}
 }
