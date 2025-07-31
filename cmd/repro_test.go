@@ -59,6 +59,43 @@ func getProjectRoot(t *testing.T) string {
 	return ""
 }
 
+// buildTempBinary builds the speakeasy CLI to a temporary location and returns the path
+func buildTempBinary(t *testing.T) string {
+	binaryPath := getSpeakeasyBinary()
+	
+	// Delete the binary if it exists
+	os.Remove(binaryPath)
+	
+	// Build the speakeasy CLI
+	t.Logf("Building speakeasy CLI to: %s", binaryPath)
+	projectRoot := getProjectRoot(t)
+	t.Logf("Project root directory: %s", projectRoot)
+	
+	// Build from the project root
+	buildCmd := exec.Command("go", "build", "-o", binaryPath, ".")
+	buildCmd.Dir = projectRoot
+	buildOutput, err := buildCmd.CombinedOutput()
+	t.Logf("Build output: %s", string(buildOutput))
+	require.NoError(t, err, "Failed to build speakeasy CLI: %s", string(buildOutput))
+	
+	// Check it exists
+	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+		t.Fatalf("Speakeasy binary not found at %s", binaryPath)
+	}
+	
+	// Make the binary executable
+	err = os.Chmod(binaryPath, 0755)
+	require.NoError(t, err, "Failed to make binary executable")
+	
+	// Check version
+	versionCmd := exec.Command(binaryPath, "--version")
+	versionOutput, err := versionCmd.CombinedOutput()
+	t.Logf("Version output: %s", string(versionOutput))
+	require.NoError(t, err, "Failed to get speakeasy version")
+	
+	return binaryPath
+}
+
 func TestReproEndToEnd(t *testing.T) {
 	// Create test directories
 	originalDir := getOriginalDir()
@@ -167,40 +204,13 @@ paths:
 	err = os.WriteFile(filepath.Join(speakeasyDir, "openapi.yaml"), openapiContent, 0644)
 	require.NoError(t, err, "Failed to write openapi.yaml")
 
-	// Delete the binary if it exists
-	os.Remove(getSpeakeasyBinary())
-
-	// Build the speakeasy CLI
-	t.Logf("Building speakeasy CLI to: %s", getSpeakeasyBinary())
-	projectRoot := getProjectRoot(t)
-	t.Logf("Project root directory: %s", projectRoot)
-	
-	// Build from the project root
-	buildCmd := exec.Command("go", "build", "-o", getSpeakeasyBinary(), ".")
-	buildCmd.Dir = projectRoot
-	buildOutput, err := buildCmd.CombinedOutput()
-	t.Logf("Build output: %s", string(buildOutput))
-	require.NoError(t, err, "Failed to build speakeasy CLI: %s", string(buildOutput))
-
-	// Check it exists
-	if _, err := os.Stat(getSpeakeasyBinary()); os.IsNotExist(err) {
-		t.Fatalf("Speakeasy binary not found at %s", getSpeakeasyBinary())
-	}
-
-	// Make the binary executable
-	err = os.Chmod(getSpeakeasyBinary(), 0755)
-	require.NoError(t, err, "Failed to make binary executable")
-
-	// Check version
-	versionCmd := exec.Command(getSpeakeasyBinary(), "--version")
-	versionOutput, err := versionCmd.CombinedOutput()
-	t.Logf("Version output: %s", string(versionOutput))
-	require.NoError(t, err, "Failed to get speakeasy version")
+	// Build the speakeasy CLI binary
+	speakeasyBinary := buildTempBinary(t)
 
 	// Run speakeasy run command in the original directory
 	t.Logf("Running speakeasy from: %s", originalDir)
-	t.Logf("Speakeasy binary: %s", getSpeakeasyBinary())
-	runCmd := exec.Command(getSpeakeasyBinary(), "run", "--output=console", "--pinned")
+	t.Logf("Speakeasy binary: %s", speakeasyBinary)
+	runCmd := exec.Command(speakeasyBinary, "run", "--output=console", "--pinned")
 	runCmd.Dir = originalDir
 	var runOutput bytes.Buffer
 	runCmd.Stdout = &runOutput
@@ -232,7 +242,7 @@ paths:
 	// Now run repro
 	t.Logf("Running repro command with execution ID: %s", executionID)
 	t.Logf("Repro directory: %s", reproDir)
-	reproCmd := exec.Command(getSpeakeasyBinary(), "repro", "--execution-id", executionID,
+	reproCmd := exec.Command(speakeasyBinary, "repro", "--execution-id", executionID,
 		"--directory", reproDir)
 	reproCmd.Dir = originalDir
 	var reproOutput bytes.Buffer
