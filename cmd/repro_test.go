@@ -166,6 +166,14 @@ paths:
 			t.Logf("Execution ID: %s", executionID)
 		}
 	}
+	if executionID == "" {
+		for _, line := range lines {
+			if strings.HasPrefix(line, "Speakeasy Reproduction ID:") {
+				executionID = strings.TrimSpace(strings.Split(line, "Speakeasy Reproduction ID:")[1])
+				t.Logf("Execution ID: %s", executionID)
+			}
+		}
+	}
 
 	if executionID == "" {
 		t.Fatalf("No execution ID found in run output")

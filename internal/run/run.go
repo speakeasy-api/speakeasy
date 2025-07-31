@@ -242,11 +242,6 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 		additionalLines = append(additionalLines, "⚠ Critical warnings found. Please review the logs above.")
 	}
 
-	cliEvent := events.GetTelemetryEventFromContext(ctx)
-	if cliEvent != nil && cliEvent.ExecutionID != "" {
-		additionalLines = append(additionalLines, fmt.Sprintf("Execution ID: %s", cliEvent.ExecutionID))
-	}
-
 	msg := styles.RenderSuccessMessage(
 		fmt.Sprintf("%s", "Generation Summary"),
 		additionalLines...,
