@@ -9,19 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/speakeasy-api/speakeasy/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
-func getTempDir() string {
-	// if /tmp/ is a dir then return it otherwise fallback to os.TempDir()
-	if _, err := os.Stat("/tmp"); err == nil {
-		return "/tmp"
-	}
-	return os.TempDir()
-}
 
 func getReproDir() string {
-	return filepath.Join(getTempDir(), "speakeasy-test-repro")
+	return filepath.Join(testutils.GetTempDir(), "speakeasy-test-repro")
 }
 
 func getOriginalDir() string {
@@ -33,68 +27,9 @@ func getReproSubDir() string {
 }
 
 func getSpeakeasyBinary() string {
-	return filepath.Join(getTempDir(), "speakeasy-test")
+	return filepath.Join(testutils.GetTempDir(), "speakeasy-test")
 }
 
-// getProjectRoot returns the project root directory
-func getProjectRoot(t *testing.T) string {
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	// Go up directories until we find go.mod
-	dir := wd
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-
-	t.Fatal("Could not find project root (go.mod not found)")
-	return ""
-}
-
-// buildTempBinary builds the speakeasy CLI to a temporary location and returns the path
-func buildTempBinary(t *testing.T) string {
-	binaryPath := getSpeakeasyBinary()
-	
-	// Delete the binary if it exists
-	os.Remove(binaryPath)
-	
-	// Build the speakeasy CLI
-	t.Logf("Building speakeasy CLI to: %s", binaryPath)
-	projectRoot := getProjectRoot(t)
-	t.Logf("Project root directory: %s", projectRoot)
-	
-	// Build from the project root
-	buildCmd := exec.Command("go", "build", "-o", binaryPath, ".")
-	buildCmd.Dir = projectRoot
-	buildOutput, err := buildCmd.CombinedOutput()
-	t.Logf("Build output: %s", string(buildOutput))
-	require.NoError(t, err, "Failed to build speakeasy CLI: %s", string(buildOutput))
-	
-	// Check it exists
-	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		t.Fatalf("Speakeasy binary not found at %s", binaryPath)
-	}
-	
-	// Make the binary executable
-	err = os.Chmod(binaryPath, 0755)
-	require.NoError(t, err, "Failed to make binary executable")
-	
-	// Check version
-	versionCmd := exec.Command(binaryPath, "--version")
-	versionOutput, err := versionCmd.CombinedOutput()
-	t.Logf("Version output: %s", string(versionOutput))
-	require.NoError(t, err, "Failed to get speakeasy version")
-	
-	return binaryPath
-}
 
 func TestReproEndToEnd(t *testing.T) {
 	// Create test directories
@@ -205,7 +140,7 @@ paths:
 	require.NoError(t, err, "Failed to write openapi.yaml")
 
 	// Build the speakeasy CLI binary
-	speakeasyBinary := buildTempBinary(t)
+	speakeasyBinary := testutils.BuildTempBinary(t, getSpeakeasyBinary())
 
 	// Run speakeasy run command in the original directory
 	t.Logf("Running speakeasy from: %s", originalDir)
