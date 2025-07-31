@@ -138,7 +138,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 		cliEvent := events.GetTelemetryEventFromContext(ctx)
 		if cliEvent != nil && cliEvent.ExecutionID != "" && cliEvent.SourceNamespaceName != nil && *cliEvent.SourceNamespaceName != "" {
 			logger := log.From(ctx)
-			logger.Errorf("\nTo get help, send the following reproduction command to the Speakeasy team on Slack:")
+			logger.Errorf("\nTo get help, send the following reproduction command to the Speakeasy team:")
 			logger.Errorf("\n    speakeasy repro --execution-id %s\n", cliEvent.ExecutionID)
 		}
 	}
