@@ -343,7 +343,7 @@ func writeGenConfig(genEvent *shared.CliEvent, speakeasyDir, executionID string)
 	} else if genEvent.GenerateConfigPostRaw != nil && *genEvent.GenerateConfigPostRaw != "" {
 		genConfig = genEvent.GenerateConfigPostRaw
 	}
-	
+
 	if genConfig == nil || *genConfig == "" {
 		return fmt.Errorf("no gen.yaml found in any event for execution ID: %s", executionID)
 	}
