@@ -3,12 +3,12 @@ package run
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy/registry"
+	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -83,9 +83,11 @@ func NewWorkflow(
 		return nil, fmt.Errorf("failed to load workflow.yaml: %w", err)
 	}
 
-	// Read the raw workflow file content
-	workflowPath := filepath.Join(projectDir, ".speakeasy", "workflow.yaml")
-	workflowRawBytes, _ := os.ReadFile(workflowPath)
+	// Marshal the workflow to get the YAML content
+	workflowRawBytes, err := yaml.Marshal(wf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal workflow: %w", err)
+	}
 	workflowRaw := string(workflowRawBytes)
 
 	// Load the current lockfile so that we don't overwrite all targets
