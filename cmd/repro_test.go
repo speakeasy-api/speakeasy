@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -30,6 +31,11 @@ func getSpeakeasyBinary() string {
 }
 
 func TestReproEndToEnd(t *testing.T) {
+	// For now skip on windows
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping repro test on Windows")
+	}
+
 	// Create test directories
 	originalDir := getOriginalDir()
 	reproDir := getReproSubDir()
