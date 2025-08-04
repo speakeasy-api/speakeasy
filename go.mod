@@ -6,10 +6,6 @@ replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixva
 
 replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.8-fixhiddencomps-fixed
 
-replace github.com/speakeasy-api/versioning-reports => ../versioning-reports
-
-replace github.com/speakeasy-api/sdk-gen-config => ../sdk-gen-config
-
 replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
 
 require (
@@ -47,7 +43,7 @@ require (
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.20.0
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
-	github.com/speakeasy-api/versioning-reports v0.6.0
+	github.com/speakeasy-api/versioning-reports v0.6.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
