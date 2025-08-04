@@ -178,10 +178,9 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		// Old & new spec and other details are updated in RunSource method
 		changelogStep := rootStep.NewSubstep(fmt.Sprintf("Calculating Changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target)))
 		go changelogStep.ListenForSubsteps(logListener)
-		requiredInfo := w.SourceResults[t.Source]
-		changelogContent, err = sdkchangelog.ComputeSDKChangelog(ctx, sdkchangelog.Requirements{
-			OldSpecPath: requiredInfo.oldSpecPath,
-			NewSpecPath: requiredInfo.newSpecPath,
+		changelogContent, err = sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
+			OldSpecPath: w.SourceResults[t.Source].oldSpecPath,
+			NewSpecPath: w.SourceResults[t.Source].newSpecPath,
 			OutDir:      outDir,
 			Lang:        t.Target,
 			Verbose:     w.Verbose,

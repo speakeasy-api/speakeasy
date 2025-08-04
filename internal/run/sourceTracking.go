@@ -29,11 +29,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 )
 
-type downloadedSpecInfo struct {
-	oldSpecPath string
-	newSpecPath string
-}
-
 type changesComputed struct {
 	report      *reports.ReportResult
 	oldSpecPath string

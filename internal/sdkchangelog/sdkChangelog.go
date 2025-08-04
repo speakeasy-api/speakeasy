@@ -18,7 +18,7 @@ type Requirements struct {
 	Target      string
 }
 
-func ComputeSDKChangelog(ctx context.Context, changelogRequirements Requirements) (string, error) {
+func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requirements) (string, error) {
 	// Check if we have valid spec paths before proceeding
 	if changelogRequirements.OldSpecPath == "" || changelogRequirements.NewSpecPath == "" {
 		// If we don't have valid spec paths, skip changelog generation
