@@ -467,7 +467,7 @@ func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, targe
 }
 
 // A bit of a hack for being able to set and get arbitrary keys in a temp file for populating PR description
-// Using already existing machinery for version reports
+// Using version-report machinery
 func storePullRequestMetadata(ctx context.Context, key string, report string, reportType string) error {
 	if reportType != "pr_report" && reportType != "commit_report" {
 		return fmt.Errorf("Unknown report type passed -> %s", reportType)

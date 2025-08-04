@@ -58,8 +58,9 @@ type SourceResult struct {
 	MergeResult   MergeResult
 	CLIVersion    string
 	// The path to the output OAS spec
-	OutputPath     string
-	AdditionalInfo downloadedSpecInfo
+	OutputPath  string
+	oldSpecPath string
+	newSpecPath string
 }
 
 type LintingError struct {
@@ -195,14 +196,14 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	// If the source has a previous tracked revision, compute changes against it
 	if w.lockfileOld != nil && !w.SkipChangeReport {
 		if targetLockOld, ok := w.lockfileOld.Targets[targetID]; ok && !utils.IsZeroTelemetryOrganization(ctx) {
-			report, specInfo, err := w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
+			changesComputed, err := w.computeChanges(ctx, rootStep, targetLockOld, currentDocument)
 			if err != nil {
 				// Don't fail the whole workflow if this fails
 				logger.Warnf("failed to compute OpenAPI changes: %s", err.Error())
 			}
-			sourceRes.ChangeReport = report
-			sourceRes.AdditionalInfo = specInfo
-			sourceRes.AdditionalInfo.newSpecPath = currentDocument
+			sourceRes.ChangeReport = changesComputed.report
+			sourceRes.newSpecPath = currentDocument
+			sourceRes.oldSpecPath = changesComputed.oldSpecPath
 		}
 	}
 

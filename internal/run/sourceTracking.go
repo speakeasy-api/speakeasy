@@ -34,6 +34,12 @@ type downloadedSpecInfo struct {
 	newSpecPath string
 }
 
+type changesComputed struct {
+	report      *reports.ReportResult
+	oldSpecPath string
+	newSpecPath string
+}
+
 // embedSourceConfig implements bundler.EmbedSourceConfig interface
 type embedSourceConfig struct {
 	originalSource  *workflow.Source
@@ -77,14 +83,16 @@ func createLocalizedSource(originalSource workflow.Source, sourceResult *SourceR
 	return &localizedSource
 }
 
-func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (*reports.ReportResult, downloadedSpecInfo, error) {
+func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (changesComputed, error) {
 	changesStep := rootStep.NewSubstep("Computing Document Changes")
 	var err error = nil
 	var r *reports.ReportResult = nil
-	var sourceDirectoryInfo downloadedSpecInfo = downloadedSpecInfo{}
+	var computedChanges changesComputed = changesComputed{
+		report: r,
+	}
 	if !registry.IsRegistryEnabled(ctx) {
 		changesStep.Skip("API Registry not enabled")
-		return r, sourceDirectoryInfo, err
+		return computedChanges, err
 	}
 
 	defer func() {
@@ -107,7 +115,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	} else {
 		changesStep.Skip("no previous revision found")
 
-		return r, sourceDirectoryInfo, err
+		return computedChanges, err
 	}
 
 	changesStep.NewSubstep("Downloading prior revision")
@@ -115,33 +123,31 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	d := workflow.Document{Location: workflow.LocationString(oldRegistryLocation)}
 	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
 	if err != nil {
-		return r, sourceDirectoryInfo, err
+		return computedChanges, err
 	}
 
-	sourceDirectoryInfo = downloadedSpecInfo{
-		oldSpecPath: oldDocPath.LocalFilePath,
-	}
+	computedChanges.oldSpecPath = oldDocPath.LocalFilePath
 
 	changesStep.NewSubstep("Computing changes")
 
 	c, err := changes.GetChanges(ctx, oldDocPath.LocalFilePath, newDocPath)
 
 	if err != nil {
-		return r, sourceDirectoryInfo, fmt.Errorf("error computing changes: %w", err)
+		return computedChanges, fmt.Errorf("error computing changes: %w", err)
 	}
 
 	changesStep.NewSubstep("Uploading changes report")
 	report, err := reports.UploadReport(ctx, c.GetHTMLReport(), shared.TypeChanges)
 	if err != nil {
-		return r, sourceDirectoryInfo, fmt.Errorf("failed to persist report: %w", err)
+		return computedChanges, fmt.Errorf("failed to persist report: %w", err)
 	}
-	r = &report
+	computedChanges.report = &report
 
-	log.From(ctx).Info(r.Message)
+	log.From(ctx).Info(computedChanges.report.Message)
 
 	summary, err := c.GetSummary()
 	if err != nil || summary == nil {
-		return r, sourceDirectoryInfo, fmt.Errorf("failed to get report summary: %w", err)
+		return computedChanges, fmt.Errorf("failed to get report summary: %w", err)
 	}
 
 	// Do not write github action changes if we have already processed this source
@@ -153,7 +159,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	w.computedChanges[targetLock.Source] = true
 
 	changesStep.SucceedWorkflow()
-	return r, sourceDirectoryInfo, nil
+	return computedChanges, nil
 }
 
 func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult) (err error) {
