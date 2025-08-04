@@ -49,6 +49,9 @@ type QuickstartFlags struct {
 
 	// Hidden flag for bypassing interactive prompts
 	SkipInteractive bool `json:"skip-interactive"`
+
+	// Hidden flag for MCP TypeScript target
+	MCP bool `json:"mcp"`
 }
 
 //go:embed sample_openapi.yaml
@@ -99,6 +102,12 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Description: "whether to use defaults - this will skip all prompts",
 			Hidden:      true,
 		},
+		// Hidden flag for MCP TypeScript target
+		flag.BooleanFlag{
+			Name:        "mcp",
+			Description: "preselect the mcp-typescript target",
+			Hidden:      true,
+		},
 	},
 }
 
@@ -147,6 +156,12 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 
 	if flags.TargetType != "" {
 		quickstartObj.Defaults.TargetType = &flags.TargetType
+	}
+
+	// Handle the hidden --mcp flag
+	if flags.MCP {
+		mcpTarget := "mcp-typescript"
+		quickstartObj.Defaults.TargetType = &mcpTarget
 	}
 
 	if flags.From != "" {
@@ -200,6 +215,8 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
 	if targetType == "terraform" {
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
+	} else if targetType == "mcp-typescript" {
+		description = "We recommend a git repo for each MCP Server. To use the current directory, leave empty."
 	}
 
 	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive {

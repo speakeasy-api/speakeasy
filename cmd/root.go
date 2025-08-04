@@ -42,6 +42,7 @@ Generate from OpenAPI Specs:
 - Client and Server SDKs in GO, Python, TypeScript, Java, PHP, C#, Ruby
 - Postman collections
 - Terraform providers
+- MCP Servers
 
 [Quickstart guide](https://www.speakeasy.com/docs/create-client-sdks)
 
@@ -94,6 +95,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, cleanCmd)
 
 	addCommand(rootCmd, AskCmd)
+	addCommand(rootCmd, reproCmd)
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {

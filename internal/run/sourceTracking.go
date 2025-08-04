@@ -272,7 +272,9 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 
 	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
 	// Always add the openapi document version as a tag
-	tags = append(tags, annotations.Version)
+	if ocicommon.IsValidTagName(annotations.Version) && annotations.Version != "" {
+		tags = append(tags, annotations.Version)
+	}
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(resolved, resolved), &bundler.OCIBuildOptions{
 		Tags:        tags,

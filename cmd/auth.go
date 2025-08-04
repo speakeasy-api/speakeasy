@@ -9,6 +9,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/spf13/cobra"
+	"slices"
 	"strings"
 )
 
@@ -58,7 +59,10 @@ func logoutExec(cmd *cobra.Command, args []string) error {
 func switchExec(cmd *cobra.Command, args []string) error {
 	var items []list.Item
 
-	for _, workspace := range config.GetAuthenticatedWorkspaces() {
+	workspaces := config.GetAuthenticatedWorkspaces()
+	slices.Sort(workspaces)
+
+	for _, workspace := range workspaces {
 		// Always show speakeasy-self at the beginning
 		if workspace == "speakeasy-self@speakeasy-self" {
 			items = append([]list.Item{interactivity.Item[string]{

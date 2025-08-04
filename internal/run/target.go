@@ -228,6 +228,10 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	}
 	w.generationAccess = generationAccess
 
+	if !w.ShouldCompile {
+		log.From(ctx).Warnf("Compilation was skipped. The generated SDK may not be ready for use without manual compilation. To enable compilation DO NOT pass the --skip-compile flag.")
+	}
+
 	if t.CodeSamples != nil {
 		codeSamplesStep := rootStep.NewSubstep("Generating Code Samples")
 		namespaceName, digest, err := w.runCodeSamples(ctx, codeSamplesStep, *t.CodeSamples, t.Target, sourcePath, t.Output)
