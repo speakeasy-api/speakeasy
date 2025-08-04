@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	sdkchangelog "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/logging"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/auth"
@@ -24,13 +22,13 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/sdkchangelog"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/codesamples"
 	"github.com/speakeasy-api/speakeasy/registry"
-	"github.com/speakeasy-api/versioning-reports/versioning"
 	"go.uber.org/zap"
 )
 
@@ -175,28 +173,28 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}()
 	}
 
-	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
-	go genStep.ListenForSubsteps(logListener)
-	// Old & new spec and other details are updated in RunSource method
 	changelogContent := ""
 	if os.Getenv("SDK_CHANGELOG_JULY_2025") == "true" {
+		// Old & new spec and other details are updated in RunSource method
+		changelogStep := rootStep.NewSubstep(fmt.Sprintf("Calculating Changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target)))
+		go changelogStep.ListenForSubsteps(logListener)
 		requiredInfo := w.SourceResults[t.Source]
-		oldConfig, newConfig := sdkchangelog.CreateConfigsFromSpecPaths(sdkchangelog.SpecComparison{
-			OldSpecPath: requiredInfo.AdditionalInfo.oldSpecPath,
-			NewSpecPath: requiredInfo.AdditionalInfo.newSpecPath,
-			OutputDir:   outDir,
+		changelogContent, err = sdkchangelog.ComputeSDKChangelog(ctx, sdkchangelog.Requirements{
+			OldSpecPath: requiredInfo.oldSpecPath,
+			NewSpecPath: requiredInfo.newSpecPath,
+			OutDir:      outDir,
 			Lang:        t.Target,
 			Verbose:     w.Verbose,
-			Logger:      log.From(ctx),
+			Target:      target,
 		})
-		diff := sdkchangelog.Changes(oldConfig, newConfig)
-		changelogContent = sdkchangelog.ToMarkdown(diff)
-		err = writeSdkChangelogToDisk(ctx, changelogContent, target, log.From(ctx))
 		if err != nil {
-			// Swallow error so that we dont block generation
-			log.From(ctx).Warnf("Error updating new changelog: %s", err.Error())
+			// Dont error out so that we don't block generation
+			log.From(ctx).Warnf("Error computing SDK changelog: %s", err.Error())
 		}
 	}
+
+	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
+	go genStep.ListenForSubsteps(logListener)
 
 	generationAccess, err := sdkgen.Generate(
 		ctx,
@@ -444,51 +442,4 @@ func (w *Workflow) CancelGeneration() error {
 	}
 
 	return fmt.Errorf("Generation is not cancellable")
-}
-
-// target refers to workflow target name
-// The version reports written here are read in sdk-generation-action to generate commit message
-// and PR description
-func writeSdkChangelogToDisk(ctx context.Context, changelogContent string, target string, logger logging.Logger) error {
-	// Add Release message
-	err := storePullRequestMetadata(ctx, fmt.Sprintf("SDK_CHANGELOG_%s", target), changelogContent, "pr_report")
-	if err != nil {
-		log.From(ctx).Warnf("error computing changes: %s", err.Error())
-		return err
-	}
-
-	// Add Commit message
-	err = storePullRequestMetadata(ctx, fmt.Sprintf("COMMIT_MESSAGE_%s", target), changelogContent, "commit_report")
-	if err != nil {
-		log.From(ctx).Warnf("error computing changes: %s", err.Error())
-		return err
-	}
-	return nil
-}
-
-// A bit of a hack for being able to set and get arbitrary keys in a temp file for populating PR description
-// Using version-report machinery
-func storePullRequestMetadata(ctx context.Context, key string, report string, reportType string) error {
-	if reportType != "pr_report" && reportType != "commit_report" {
-		return fmt.Errorf("Unknown report type passed -> %s", reportType)
-	}
-	versionReport := versioning.VersionReport{
-		Key: key,
-		// Lowest priority
-		Priority:     1,
-		MustGenerate: false,
-		BumpType:     versioning.BumpNone,
-		NewVersion:   "",
-	}
-	if reportType == "pr_report" {
-		versionReport.PRReport += report
-	} else if reportType == "commit_report" {
-		versionReport.CommitReport += report
-	}
-	err := versioning.AddVersionReport(ctx, versionReport)
-	if err != nil {
-		log.From(ctx).Warnf("failed to add version report. key: %s, report: %s, error: %s", key, report, err)
-		return err
-	}
-	return nil
 }
