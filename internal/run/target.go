@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/sdkchangelog"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -171,6 +173,25 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}()
 	}
 
+	changelogContent := ""
+	if os.Getenv("SDK_CHANGELOG_JULY_2025") == "true" {
+		// Old & new spec and other details are updated in RunSource method
+		log.From(ctx).Infof("Calculating changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target))
+		changelogContent, err = sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
+			OldSpecPath: w.SourceResults[t.Source].oldSpecPath,
+			NewSpecPath: w.SourceResults[t.Source].newSpecPath,
+			OutDir:      outDir,
+			Lang:        t.Target,
+			Verbose:     w.Verbose,
+			Target:      target,
+		})
+		if err != nil {
+			// Dont error out so that we don't block generation
+			log.From(ctx).Warnf("Error computing SDK changelog: %s", err.Error())
+		}
+		log.From(ctx).Infof("Calculating changelog for SDK %s SDK succeeded", utils.CapitalizeFirst(t.Target))
+	}
+
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
@@ -198,6 +219,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			SkipVersioning:        w.SkipVersioning,
 			CancellableGeneration: w.CancellableGeneration,
 			StreamableGeneration:  w.StreamableGeneration,
+			ReleaseNotes:          changelogContent,
 		},
 	)
 	if err != nil {
