@@ -154,7 +154,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	w.computedChanges[targetLock.Source] = true
 
 	changesStep.SucceedWorkflow()
-	return computedChanges, nil
+	return computedChanges, err
 }
 
 func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult) (err error) {
