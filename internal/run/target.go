@@ -176,8 +176,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	changelogContent := ""
 	if os.Getenv("SDK_CHANGELOG_JULY_2025") == "true" {
 		// Old & new spec and other details are updated in RunSource method
-		changelogStep := rootStep.NewSubstep(fmt.Sprintf("Calculating Changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target)))
-		go changelogStep.ListenForSubsteps(logListener)
+		log.From(ctx).Infof("Calculating changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target))
 		changelogContent, err = sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
 			OldSpecPath: w.SourceResults[t.Source].oldSpecPath,
 			NewSpecPath: w.SourceResults[t.Source].newSpecPath,
@@ -190,6 +189,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			// Dont error out so that we don't block generation
 			log.From(ctx).Warnf("Error computing SDK changelog: %s", err.Error())
 		}
+		log.From(ctx).Infof("Calculating changelog for SDK %s SDK succeeded", utils.CapitalizeFirst(t.Target))
 	}
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
