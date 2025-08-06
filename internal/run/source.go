@@ -237,8 +237,11 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart, w.SkipGenerateLintReport, target)
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
-
-	step.SucceedWorkflow()
+	if err != nil {
+		step.Fail()
+	} else {
+		step.Succeed()
+	}
 
 	return res, err
 }
