@@ -238,9 +238,9 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
 	if err != nil {
-		step.Fail()
+		step.FailWorkflow()
 	} else {
-		step.Succeed()
+		step.SucceedWorkflow()
 	}
 
 	return res, err
