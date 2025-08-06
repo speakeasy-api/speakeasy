@@ -45,6 +45,7 @@ type InputField struct {
 	Placeholder                string
 	Value                      string
 	AutocompleteFileExtensions []string
+	SuggestionsFunc            func() ([]string, error)
 }
 
 func NewMultiInput(title, description string, required bool, inputs ...InputField) MultiInput {
@@ -67,6 +68,16 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 		t.Cursor.Style = styles.Cursor
 		if len(input.AutocompleteFileExtensions) > 0 {
 			suggestions := charm_internal.SchemaFilesInCurrentDir("", input.AutocompleteFileExtensions)
+			t.SetSuggestions(suggestions)
+			t.ShowSuggestions = len(suggestions) > 0
+			t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
+		}
+
+		if input.SuggestionsFunc != nil {
+			suggestions, err := input.SuggestionsFunc()
+			if err != nil {
+				return m
+			}
 			t.SetSuggestions(suggestions)
 			t.ShowSuggestions = len(suggestions) > 0
 			t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)

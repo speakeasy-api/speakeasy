@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
@@ -12,8 +13,38 @@ import (
 )
 
 const AutoCompleteAnnotation = "autocomplete_extensions"
+const AutoCompleteSuggestionsAnnotation = "autocomplete_suggestions"
 
 var OpenAPIFileExtensions = []string{".yaml", ".yml", ".json"}
+
+// Thread-safe suggestions registry
+type suggestionsRegistry struct {
+	mu    sync.RWMutex
+	funcs map[string]func() ([]string, error)
+}
+
+var globalSuggestionsRegistry = &suggestionsRegistry{
+	funcs: make(map[string]func() ([]string, error)),
+}
+
+func RegisterSuggestionsFunc(id string, fn func() ([]string, error)) {
+	globalSuggestionsRegistry.mu.Lock()
+	defer globalSuggestionsRegistry.mu.Unlock()
+	globalSuggestionsRegistry.funcs[id] = fn
+}
+
+func GetSuggestionsFunc(id string) (func() ([]string, error), bool) {
+	globalSuggestionsRegistry.mu.RLock()
+	defer globalSuggestionsRegistry.mu.RUnlock()
+	fn, exists := globalSuggestionsRegistry.funcs[id]
+	return fn, exists
+}
+
+func UnregisterSuggestionsFunc(id string) {
+	globalSuggestionsRegistry.mu.Lock()
+	defer globalSuggestionsRegistry.mu.Unlock()
+	delete(globalSuggestionsRegistry.funcs, id)
+}
 
 func NewBranchPrompt(title, description string, output *bool) *huh.Group {
 	return huh.NewGroup(huh.NewConfirm().

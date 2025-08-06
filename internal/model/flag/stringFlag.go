@@ -1,6 +1,8 @@
 package flag
 
 import (
+	"fmt"
+
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/spf13/cobra"
 )
@@ -12,6 +14,7 @@ type StringFlag struct {
 	AutocompleteFileExtensions   []string
 	Deprecated                   bool
 	DeprecationMessage           string
+	SuggestionsFunc              func() ([]string, error)
 }
 
 func (f StringFlag) Init(cmd *cobra.Command) error {
@@ -26,6 +29,18 @@ func (f StringFlag) Init(cmd *cobra.Command) error {
 	}
 	if len(f.AutocompleteFileExtensions) > 0 {
 		if err := cmd.Flags().SetAnnotation(f.Name, charm.AutoCompleteAnnotation, f.AutocompleteFileExtensions); err != nil {
+			return err
+		}
+	}
+	if f.SuggestionsFunc != nil {
+		// Generate unique ID for this flag
+		funcID := fmt.Sprintf("%s_%s", cmd.CommandPath(), f.Name)
+
+		// Register the function in the thread-safe registry
+		charm.RegisterSuggestionsFunc(funcID, f.SuggestionsFunc)
+
+		// Store the function ID in annotation
+		if err := cmd.Flags().SetAnnotation(f.Name, "suggestions_func_id", []string{funcID}); err != nil {
 			return err
 		}
 	}
