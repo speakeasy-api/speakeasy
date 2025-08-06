@@ -17,6 +17,8 @@ import (
 )
 
 func TestQuickstart(t *testing.T) {
+	t.Parallel()
+
 	now := time.Now()
 	t.Logf("Building binary")
 	// Build the binary once to warm up the cache
@@ -31,6 +33,8 @@ func TestQuickstart(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
+			t.Parallel()
+
 			if shouldSkipTarget(t, target) {
 				return
 			}
@@ -67,17 +71,6 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 	// Don't delete test directory - leave it for debugging
 	t.Logf("Test directory for %s: %s", target, testDir)
 
-	// Change to test directory
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer func() {
-		err := os.Chdir(originalDir)
-		require.NoError(t, err)
-	}()
-
-	err = os.Chdir(testDir)
-	require.NoError(t, err)
-
 	// Run quickstart
 	now := time.Now()
 	t.Logf("Running quickstart for target %s", target)
@@ -87,6 +80,7 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 		"--target", target,
 		"--output", "console",
 	)
+	quickstartCmd.Dir = testDir
 
 	quickstartOutput, err := quickstartCmd.CombinedOutput()
 	if err != nil {
@@ -102,16 +96,13 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 		generatedDir = findGeneratedDirectory(t, testDir, target)
 	}
 
-	// Change to the generated directory
-	err = os.Chdir(generatedDir)
-	require.NoError(t, err, "Failed to change to generated directory %s", generatedDir)
-
 	verifyBasicStructure(t, generatedDir, target)
 
 	// Run speakeasy run
 	now = time.Now()
 	t.Logf("Running speakeasy run for target %s", target)
 	runCmd := exec.Command(tempBinary, "run", "--output", "console", "--pinned")
+	runCmd.Dir = generatedDir
 	runOutput, err := runCmd.CombinedOutput()
 
 	if err != nil {
