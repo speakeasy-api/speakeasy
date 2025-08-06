@@ -31,6 +31,8 @@ func getSpeakeasyBinary() string {
 }
 
 func TestReproEndToEnd(t *testing.T) {
+	t.Parallel()
+
 	// For now skip on windows - building the temp binary is not working on windows
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping repro test on Windows")
