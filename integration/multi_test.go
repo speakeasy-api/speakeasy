@@ -3,16 +3,21 @@ package integration_tests
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMultiFileStability(t *testing.T) {
-	// If windows, skip
+	t.Parallel()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows")
+	}
+
 	temp := setupTestDir(t)
 
 	// Copy the multi-file OpenAPI spec files
