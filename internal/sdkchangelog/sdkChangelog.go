@@ -76,7 +76,7 @@ func storeKeyValueForPullRequestDescription(ctx context.Context, key string, rep
 	versionReport := versioning.VersionReport{
 		Key: key,
 		// Lowest priority
-		Priority:     1,
+		Priority:     6,
 		MustGenerate: false,
 		BumpType:     versioning.BumpNone,
 		NewVersion:   "",
