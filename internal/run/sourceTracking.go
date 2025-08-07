@@ -147,8 +147,8 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 
 	// Do not write github action changes if we have already processed this source
 	// If we don't do this check we will see duplicate openapi changes summaries in the PR
-	if _, ok := w.computedChanges[targetLock.Source]; !ok {
-		github.GenerateChangesSummary(ctx, r.URL, *summary)
+	if _, ok := w.computedChanges[targetLock.Source]; !ok && computedChanges.report != nil {
+		github.GenerateChangesSummary(ctx, computedChanges.report.URL, *summary)
 	}
 
 	w.computedChanges[targetLock.Source] = true
