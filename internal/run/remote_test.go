@@ -5,6 +5,8 @@ import (
 )
 
 func TestParseGitHubRepoURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		url      string
@@ -54,6 +56,8 @@ func TestParseGitHubRepoURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			gotOrg, gotRepo, err := parseGitHubRepoURL(tt.url)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseGitHubRepoURL() error = %v, wantErr %v", err, tt.wantErr)

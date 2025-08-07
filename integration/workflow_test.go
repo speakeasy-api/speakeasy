@@ -25,7 +25,8 @@ import (
 // These integration tests MUST be run in serial because we deal with changing working directories during the test.
 // If running locally make sure you are running test functions individually TestGenerationWorkflows, TestSpecWorkflows, etc.
 // If all test groups are run at the same time you will see test failures.
-
+//
+//lint:ignore tparallel Integration tests must run serially due to working directory changes
 func TestWorkflowWithEnvVar(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -71,6 +72,7 @@ func TestWorkflowWithEnvVar(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		//lint:ignore tparallel Integration tests must run serially due to working directory changes
 		t.Run(tt.name, func(t *testing.T) {
 			temp := setupTestDir(t)
 
@@ -336,7 +338,9 @@ func (c *cmdRunner) Run() error { //nolint:unused // Reserved for executeI debug
 	return c.rootCmd.Execute()
 }
 
-func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests must run serially due to working directory changes
+func TestSpecWorkflows(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		inputDocs       []string
@@ -579,6 +583,8 @@ func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests m
 }
 
 func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	t.Parallel()
+
 	spec := `{
 		"openapi": "3.0.0",
 		"info": {
