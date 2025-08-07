@@ -37,6 +37,9 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 	})
 
 	diff := changes.Changes(oldConfig, newConfig)
+	if len(diff.Changes) == 0 {
+		return "", nil
+	}
 	changelogContent, err := storeSDKChangelogForPullRequestDescription(ctx, changelogRequirements.Target, diff)
 	if err != nil {
 		// Swallow error so that we dont block generation
