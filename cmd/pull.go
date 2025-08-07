@@ -23,8 +23,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/sdk"
 	"oras.land/oras-go/v2/registry/remote"
 	orasauth "oras.land/oras-go/v2/registry/remote/auth"
-
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 )
 
 type pullFlags struct {
@@ -43,7 +41,7 @@ var pullCmd = &model.ExecutableCommand[pullFlags]{
 			Name:        "namespace",
 			Description: "The namespace to pull from",
 			Required:    true,
-			SuggestionsFunc: func() ([]string, error) {
+			SuggestionsFunc: func(previousValues map[string]string) ([]string, error) {
 				return getNamespaces()
 			},
 		},
@@ -51,8 +49,12 @@ var pullCmd = &model.ExecutableCommand[pullFlags]{
 			Name:         "revision",
 			Description:  "The revision to pull",
 			DefaultValue: "latest",
-			SuggestionsFunc: func() ([]string, error) {
-				return getTags()
+			Required:     true,
+			SuggestionsFunc: func(previousValues map[string]string) ([]string, error) {
+				if namespace, exists := previousValues["namespace"]; exists && namespace != "" {
+					return getTags(namespace)
+				}
+				return []string{}, nil
 			},
 		},
 		flag.StringFlag{
@@ -177,8 +179,7 @@ func extractBundle(bundleResult *loader.OpenAPIBundleResult, outputDir string) e
 // getTags connects to a remote OCI registry and retrieves all tags for a given repository.
 // It takes a context and the repository name (e.g., "ghcr.io/oras-project/oras-go-demo") as input.
 // It returns a slice of strings containing all the tags, or an error if one occurred.
-func getTags() ([]string, error) {
-	namespace := "first-source"
+func getTags(namespace string) ([]string, error) {
 	// Get server URL and determine if insecure
 	serverURL := auth.GetServerURL()
 	insecurePublish := false
@@ -245,21 +246,16 @@ func getNamespaces() ([]string, error) {
 		return nil, fmt.Errorf("failed to initialize speakeasy client: %w", err)
 	}
 
-	// Get targets from the events API
-	res, err := client.Events.GetTargets(context.Background(), operations.GetWorkspaceTargetsRequest{})
+	// Get namespaces from the artifacts API
+	res, err := client.Artifacts.GetNamespaces(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get targets: %w", err)
+		return nil, fmt.Errorf("failed to get namespaces: %w", err)
 	}
 
-	// Extract unique namespaces from targets
-	seenNamespaces := make(map[string]bool)
+	// Extract namespace names from the response
 	var namespaces []string
-
-	for _, target := range res.TargetSDKList {
-		if target.SourceNamespaceName != nil && !seenNamespaces[*target.SourceNamespaceName] {
-			seenNamespaces[*target.SourceNamespaceName] = true
-			namespaces = append(namespaces, *target.SourceNamespaceName)
-		}
+	for _, namespace := range res.GetNamespacesResponse.GetItems() {
+		namespaces = append(namespaces, namespace.GetName())
 	}
 
 	return namespaces, nil

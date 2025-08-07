@@ -20,20 +20,20 @@ var OpenAPIFileExtensions = []string{".yaml", ".yml", ".json"}
 // Thread-safe suggestions registry
 type suggestionsRegistry struct {
 	mu    sync.RWMutex
-	funcs map[string]func() ([]string, error)
+	funcs map[string]func(previousValues map[string]string) ([]string, error)
 }
 
 var globalSuggestionsRegistry = &suggestionsRegistry{
-	funcs: make(map[string]func() ([]string, error)),
+	funcs: make(map[string]func(previousValues map[string]string) ([]string, error)),
 }
 
-func RegisterSuggestionsFunc(id string, fn func() ([]string, error)) {
+func RegisterSuggestionsFunc(id string, fn func(previousValues map[string]string) ([]string, error)) {
 	globalSuggestionsRegistry.mu.Lock()
 	defer globalSuggestionsRegistry.mu.Unlock()
 	globalSuggestionsRegistry.funcs[id] = fn
 }
 
-func GetSuggestionsFunc(id string) (func() ([]string, error), bool) {
+func GetSuggestionsFunc(id string) (func(previousValues map[string]string) ([]string, error), bool) {
 	globalSuggestionsRegistry.mu.RLock()
 	defer globalSuggestionsRegistry.mu.RUnlock()
 	fn, exists := globalSuggestionsRegistry.funcs[id]

@@ -198,17 +198,17 @@ func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[str
 
 		// Check for dynamic suggestions function ID
 		if ann, ok := flag.Annotations["suggestions_func_id"]; ok && len(ann) > 0 {
-			funcID := ann[0]
-			if fn, exists := charm.GetSuggestionsFunc(funcID); exists {
-				inputs[i].SuggestionsFunc = fn
-			}
+			inputs[i].SuggestionsFuncID = ann[0]
 		}
 
 		// Fallback to static suggestions (for backward compatibility)
 		if ann, ok := flag.Annotations[charm.AutoCompleteSuggestionsAnnotation]; ok && len(ann) > 0 {
-			inputs[i].SuggestionsFunc = func() ([]string, error) {
+			// Register static suggestions in the global registry
+			funcID := fmt.Sprintf("static_%s_%d", flag.Name, i)
+			charm.RegisterSuggestionsFunc(funcID, func(previousValues map[string]string) ([]string, error) {
 				return ann, nil
-			}
+			})
+			inputs[i].SuggestionsFuncID = funcID
 		}
 	}
 

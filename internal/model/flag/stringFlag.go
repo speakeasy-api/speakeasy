@@ -14,7 +14,7 @@ type StringFlag struct {
 	AutocompleteFileExtensions   []string
 	Deprecated                   bool
 	DeprecationMessage           string
-	SuggestionsFunc              func() ([]string, error)
+	SuggestionsFunc              func(previousValues map[string]string) ([]string, error)
 }
 
 func (f StringFlag) Init(cmd *cobra.Command) error {
@@ -44,6 +44,7 @@ func (f StringFlag) Init(cmd *cobra.Command) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

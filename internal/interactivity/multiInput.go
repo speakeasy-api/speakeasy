@@ -45,7 +45,10 @@ type InputField struct {
 	Placeholder                string
 	Value                      string
 	AutocompleteFileExtensions []string
-	SuggestionsFunc            func() ([]string, error)
+	SuggestionsFuncID          string
+	// Cache for suggestions to avoid repeated fetches
+	suggestionsCache []string
+	cacheInitialized bool
 }
 
 func NewMultiInput(title, description string, required bool, inputs ...InputField) MultiInput {
@@ -73,16 +76,6 @@ func NewMultiInput(title, description string, required bool, inputs ...InputFiel
 			t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
 		}
 
-		if input.SuggestionsFunc != nil {
-			suggestions, err := input.SuggestionsFunc()
-			if err != nil {
-				return m
-			}
-			t.SetSuggestions(suggestions)
-			t.ShowSuggestions = len(suggestions) > 0
-			t.KeyMap.AcceptSuggestion.SetEnabled(len(suggestions) > 0)
-		}
-
 		m.inputModels[i] = t
 	}
 
@@ -101,6 +94,42 @@ func (m *MultiInput) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmd := m.updateInputs(msg)
 
 	return m, cmd
+}
+
+// getSuggestionsForField returns suggestions for a field with caching support
+func (m *MultiInput) getSuggestionsForField(fieldIndex int) []string {
+	if fieldIndex >= len(m.inputs) {
+		return nil
+	}
+
+	input := &m.inputs[fieldIndex]
+
+	// Handle file-based autocomplete (not cached)
+	if len(input.AutocompleteFileExtensions) > 0 {
+		return charm_internal.SchemaFilesInCurrentDir("", input.AutocompleteFileExtensions)
+	}
+
+	// If cache is already initialized, return cached suggestions
+	if input.cacheInitialized {
+		return input.suggestionsCache
+	}
+
+	var suggestions []string
+
+	// Handle independent suggestions from global registry
+	if input.SuggestionsFuncID != "" {
+		if fn, exists := charm_internal.GetSuggestionsFunc(input.SuggestionsFuncID); exists {
+			if result, err := fn(m.getFilledValues()); err == nil {
+				suggestions = result
+			}
+		}
+	}
+
+	// Cache the suggestions (only for non-autocomplete suggestions)
+	input.suggestionsCache = suggestions
+	input.cacheInitialized = true
+
+	return suggestions
 }
 
 func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
@@ -133,10 +162,10 @@ func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 
 		return m.Focus(m.focusIndex)
 	default:
-		if len(m.inputs) > m.focusIndex && len(m.inputs[m.focusIndex].AutocompleteFileExtensions) > 0 {
-			if suggestions := charm_internal.SuggestionCallback(charm_internal.SuggestionCallbackConfig{
-				FileExtensions: m.inputs[m.focusIndex].AutocompleteFileExtensions,
-			})(m.inputModels[m.focusIndex].Value()); len(suggestions) > 0 {
+		// Get suggestions from cache or fetch them once
+		if len(m.inputs) > m.focusIndex {
+			suggestions := m.getSuggestionsForField(m.focusIndex)
+			if len(suggestions) > 0 {
 				m.inputModels[m.focusIndex].ShowSuggestions = true
 				m.inputModels[m.focusIndex].KeyMap.AcceptSuggestion.SetEnabled(true)
 				m.inputModels[m.focusIndex].SetSuggestions(suggestions)
