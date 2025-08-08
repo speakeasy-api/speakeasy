@@ -37,6 +37,9 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 	})
 
 	diff := changes.Changes(oldConfig, newConfig)
+	if len(diff.Changes) == 0 {
+		return "", nil
+	}
 	changelogContent, err := storeSDKChangelogForPullRequestDescription(ctx, changelogRequirements.Target, diff)
 	if err != nil {
 		// Swallow error so that we dont block generation
@@ -75,8 +78,8 @@ func storeKeyValueForPullRequestDescription(ctx context.Context, key string, rep
 	}
 	versionReport := versioning.VersionReport{
 		Key: key,
-		// Lowest priority
-		Priority:     1,
+		// Higher number means higher priority. Highest priority comes first in the PR description
+		Priority:     6,
 		MustGenerate: false,
 		BumpType:     versioning.BumpNone,
 		NewVersion:   "",

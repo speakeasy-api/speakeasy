@@ -130,9 +130,9 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 	}
 	prMD := ""
 	if len(summary.Text) > 0 {
-		prMD = "<details>\n<summary>## OpenAPI Change Summary</summary>\n" + summary.Text + "\n" + "</details>"
+		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\n" + summary.Text + "\n" + "</details>\n"
 	} else {
-		prMD = "<details open>\n<summary>## OpenAPI Change Summary</summary>\nNo specification changes\n" + "</details>"
+		prMD = "<details open>\n<summary>OpenAPI Change Summary</summary>\nNo specification changes\n" + "</details>\n"
 	}
 
 	// New form -- the above form is deprecated.
