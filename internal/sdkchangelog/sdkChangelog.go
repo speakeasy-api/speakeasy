@@ -78,7 +78,7 @@ func storeKeyValueForPullRequestDescription(ctx context.Context, key string, rep
 	}
 	versionReport := versioning.VersionReport{
 		Key: key,
-		// Lowest priority
+		// Higher number means higher priority. Highest priority comes first in the PR description
 		Priority:     6,
 		MustGenerate: false,
 		BumpType:     versioning.BumpNone,
