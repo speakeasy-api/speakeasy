@@ -70,6 +70,7 @@ type GenerateOptions struct {
 
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
+	ReleaseNotes          string
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
@@ -145,6 +146,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generate.WithRepoDetails(opts.Repo, opts.RepoSubDir),
 		generate.WithCLIVersion(opts.CLIVersion),
 		generate.WithForceGeneration(),
+		generate.WithChangelogReleaseNotes(opts.ReleaseNotes),
 	}
 
 	if opts.Verbose {
