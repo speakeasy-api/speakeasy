@@ -26,7 +26,7 @@ import (
 )
 
 type pullFlags struct {
-	Namespace string `json:"namespace"`
+	Spec      string `json:"spec"`
 	Revision  string `json:"revision"`
 	OutputDir string `json:"output-dir"`
 }
@@ -38,8 +38,8 @@ var pullCmd = &model.ExecutableCommand[pullFlags]{
 	RequiresAuth: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
-			Name:        "namespace",
-			Description: "The namespace to pull from",
+			Name:        "spec",
+			Description: "The name of the spec to want to pull",
 			Required:    true,
 			SuggestionsFunc: func(previousValues map[string]string) ([]string, error) {
 				return getNamespaces()
@@ -51,8 +51,8 @@ var pullCmd = &model.ExecutableCommand[pullFlags]{
 			DefaultValue: "latest",
 			Required:     true,
 			SuggestionsFunc: func(previousValues map[string]string) ([]string, error) {
-				if namespace, exists := previousValues["namespace"]; exists && namespace != "" {
-					return getTags(namespace)
+				if spec, exists := previousValues["spec"]; exists && spec != "" {
+					return getTags(spec)
 				}
 				return []string{}, nil
 			},
@@ -60,7 +60,7 @@ var pullCmd = &model.ExecutableCommand[pullFlags]{
 		flag.StringFlag{
 			Name:         "output-dir",
 			Description:  "The directory to output the image to",
-			DefaultValue: "/tmp",
+			DefaultValue: getCurrentWorkingDirectory(),
 		},
 	},
 }
@@ -68,7 +68,7 @@ var pullCmd = &model.ExecutableCommand[pullFlags]{
 func runPull(ctx context.Context, flags pullFlags) error {
 	logger := log.From(ctx)
 
-	logger.Infof("Pulling from namespace: %s", flags.Namespace)
+	logger.Infof("Pulling from spec: %s", flags.Spec)
 
 	// Get server URL and determine if insecure
 	serverURL := auth.GetServerURL()
@@ -86,7 +86,7 @@ func runPull(ctx context.Context, flags pullFlags) error {
 	}
 
 	// Create repository access
-	access := ocicommon.NewRepositoryAccess(apiKey, flags.Namespace, ocicommon.RepositoryAccessOptions{
+	access := ocicommon.NewRepositoryAccess(apiKey, flags.Spec, ocicommon.RepositoryAccessOptions{
 		Insecure: insecurePublish,
 	})
 
@@ -259,4 +259,13 @@ func getNamespaces() ([]string, error) {
 	}
 
 	return namespaces, nil
+}
+
+func getCurrentWorkingDirectory() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+
+	return cwd
 }
