@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -62,7 +61,7 @@ type slugs struct {
 }
 
 var reproCmd = &model.ExecutableCommand[ReproFlags]{
-	Usage:        "repro [target]",
+	Usage:        "repro [repro-id]",
 	Short:        "Reproduce a failed generation locally",
 	Long:         utils.RenderMarkdown(reproLong),
 	Run:          runRepro,
@@ -562,46 +561,29 @@ func getWorkflowStatus(hasPreWorkflow, hasPostWorkflow bool) string {
 
 // parseReproTarget parses the target format: {org-slug}_{workspace-slug}_{execution-id}
 func parseReproTarget(target string) (orgSlug, workspaceSlug, executionID string, err error) {
-	// Split by underscore
-	parts := strings.Split(target, "_")
-	if len(parts) < 3 {
-		return "", "", "", fmt.Errorf("target must be in format: {org-slug}_{workspace-slug}_{execution-id}")
-	}
-
-	// The execution ID is always the last part (UUID format)
-	// Everything before the last two underscores is org_workspace
-	uuidPattern := `^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`
-	
-	// Find the UUID in the parts (should be the last element that matches)
-	executionIDIndex := -1
-	for i := len(parts) - 1; i >= 0; i-- {
-		if matched, _ := regexp.MatchString(uuidPattern, parts[i]); matched {
-			executionIDIndex = i
-			break
-		}
-	}
-	
-	if executionIDIndex < 2 {
-		return "", "", "", fmt.Errorf("target must be in format: {org-slug}_{workspace-slug}_{execution-id}")
-	}
-	
-	executionID = parts[executionIDIndex]
-	
-	// Everything before the execution ID, split at the last underscore before it
-	prefix := strings.Join(parts[:executionIDIndex], "_")
-	
-	// Find the last underscore in the prefix to split org and workspace
-	// We need at least one underscore to separate org and workspace
-	lastUnderscore := strings.LastIndex(prefix, "_")
+	// Find the last underscore - everything after it is the execution ID
+	lastUnderscore := strings.LastIndex(target, "_")
 	if lastUnderscore == -1 {
-		// If there's no underscore, the whole prefix is the org and workspace is the part before executionID
-		orgSlug = parts[0]
-		workspaceSlug = parts[executionIDIndex-1]
-	} else {
-		orgSlug = prefix[:lastUnderscore]
-		workspaceSlug = prefix[lastUnderscore+1:]
+		return "", "", "", fmt.Errorf("target must be in format: {org-slug}_{workspace-slug}_{execution-id}")
 	}
-
+	
+	// Split into prefix and execution ID
+	prefix := target[:lastUnderscore]
+	executionID = target[lastUnderscore+1:]
+	
+	if executionID == "" {
+		return "", "", "", fmt.Errorf("execution ID must not be empty")
+	}
+	
+	// Find the second-to-last underscore to split org and workspace
+	secondLastUnderscore := strings.LastIndex(prefix, "_")
+	if secondLastUnderscore == -1 {
+		return "", "", "", fmt.Errorf("target must be in format: {org-slug}_{workspace-slug}_{execution-id}")
+	}
+	
+	orgSlug = prefix[:secondLastUnderscore]
+	workspaceSlug = prefix[secondLastUnderscore+1:]
+	
 	if orgSlug == "" || workspaceSlug == "" {
 		return "", "", "", fmt.Errorf("org slug and workspace slug must not be empty")
 	}
