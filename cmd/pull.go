@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"archive/zip"
 	"bytes"
 
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/loader"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
@@ -20,9 +18,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
-	"github.com/speakeasy-api/speakeasy/internal/sdk"
-	"oras.land/oras-go/v2/registry/remote"
-	orasauth "oras.land/oras-go/v2/registry/remote/auth"
 )
 
 type pullFlags struct {
@@ -41,21 +36,12 @@ var pullCmd = &model.ExecutableCommand[pullFlags]{
 			Name:        "spec",
 			Description: "The name of the spec to want to pull",
 			Required:    true,
-			SuggestionsFunc: func(previousValues map[string]string) ([]string, error) {
-				return getNamespaces()
-			},
 		},
 		flag.StringFlag{
 			Name:         "revision",
 			Description:  "The revision to pull",
 			DefaultValue: "latest",
 			Required:     true,
-			SuggestionsFunc: func(previousValues map[string]string) ([]string, error) {
-				if spec, exists := previousValues["spec"]; exists && spec != "" {
-					return getTags(spec)
-				}
-				return []string{}, nil
-			},
 		},
 		flag.StringFlag{
 			Name:         "output-dir",
@@ -174,91 +160,6 @@ func extractBundle(bundleResult *loader.OpenAPIBundleResult, outputDir string) e
 	}
 
 	return nil
-}
-
-// getTags connects to a remote OCI registry and retrieves all tags for a given repository.
-// It takes a context and the repository name (e.g., "ghcr.io/oras-project/oras-go-demo") as input.
-// It returns a slice of strings containing all the tags, or an error if one occurred.
-func getTags(namespace string) ([]string, error) {
-	// Get server URL and determine if insecure
-	serverURL := auth.GetServerURL()
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
-	reg := strings.TrimPrefix(serverURL, "http://")
-	reg = strings.TrimPrefix(reg, "https://")
-
-	// Get API key
-	apiKey := config.GetSpeakeasyAPIKey()
-	if apiKey == "" {
-		return nil, fmt.Errorf("no API key available, please run 'speakeasy auth' to authenticate")
-	}
-
-	// Create repository access
-	access := ocicommon.NewRepositoryAccess(apiKey, namespace, ocicommon.RepositoryAccessOptions{
-		Insecure: insecurePublish,
-	})
-	accessResult, err := access.Acquire(context.Background(), reg)
-	if err != nil {
-		return nil, fmt.Errorf("error acquiring oci access: %w", err)
-	}
-
-	repositoryURL := path.Join(reg, accessResult.Repository)
-
-	// Create a new instance of a remote repository client.
-	repo, err := remote.NewRepository(repositoryURL)
-	if err != nil {
-		return nil, fmt.Errorf("error creating remote repository client: %w", err)
-	}
-
-	rh := retryablehttp.NewClient()
-
-	// TODO: remove this once we have a logger
-	rh.Logger = nil
-	repo.Client = access.WrapClient(&orasauth.Client{
-		Client:     rh.StandardClient(),
-		Header:     orasauth.DefaultClient.Header,
-		Cache:      orasauth.NewCache(),
-		Credential: accessResult.CredentialFunc,
-	})
-
-	var allTags []string
-	// The `Tags` method paginates through the tags from the registry.
-	// We provide a callback function that appends each page of tags to our slice.
-	err = repo.Tags(context.Background(), "", func(tags []string) error {
-		allTags = append(allTags, tags...)
-		// Return nil to continue fetching subsequent pages.
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to list tags for repository %s: %w", repositoryURL, err)
-	}
-
-	return allTags, nil
-}
-
-func getNamespaces() ([]string, error) {
-	// Initialize speakeasy client
-	client, err := sdk.InitSDK()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize speakeasy client: %w", err)
-	}
-
-	// Get namespaces from the artifacts API
-	res, err := client.Artifacts.GetNamespaces(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get namespaces: %w", err)
-	}
-
-	// Extract namespace names from the response
-	var namespaces []string
-	for _, namespace := range res.GetNamespacesResponse.GetItems() {
-		namespaces = append(namespaces, namespace.GetName())
-	}
-
-	return namespaces, nil
 }
 
 func getCurrentWorkingDirectory() string {
