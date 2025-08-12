@@ -106,7 +106,6 @@ func runPull(ctx context.Context, flags pullFlags) error {
 }
 
 func extractBundle(bundleResult *loader.OpenAPIBundleResult, outputDir string) error {
-	// Read the bundle content
 	buf, err := io.ReadAll(bundleResult.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read bundle content: %w", err)
