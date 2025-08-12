@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -224,7 +225,16 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
 	if cliEvent != nil && cliEvent.ExecutionID != "" {
-		logger.Infof("speakeasy repro --execution-id %s", cliEvent.ExecutionID)
+		// Get org and workspace slugs from context
+		orgSlug := core.GetOrgSlugFromContext(ctx)
+		workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+		
+		if orgSlug != "" && workspaceSlug != "" {
+			logger.Infof("speakeasy repro %s_%s_%s", orgSlug, workspaceSlug, cliEvent.ExecutionID)
+		} else {
+			// Fallback if we can't get org/workspace info
+			logger.Infof("speakeasy repro {org-slug}_{workspace-slug}_%s", cliEvent.ExecutionID)
+		}
 	}
 
 	logger.Successf("\nSDK for %s generated successfully ✓", opts.Language)
