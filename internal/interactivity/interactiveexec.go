@@ -195,21 +195,6 @@ func requestFlagValues(title string, required bool, flags []*pflag.Flag) map[str
 		if ann, ok := flag.Annotations[charm.AutoCompleteAnnotation]; ok && len(ann) > 0 {
 			inputs[i].AutocompleteFileExtensions = ann
 		}
-
-		// Check for dynamic suggestions function ID
-		if ann, ok := flag.Annotations["suggestions_func_id"]; ok && len(ann) > 0 {
-			inputs[i].SuggestionsFuncID = ann[0]
-		}
-
-		// Fallback to static suggestions (for backward compatibility)
-		if ann, ok := flag.Annotations[charm.AutoCompleteSuggestionsAnnotation]; ok && len(ann) > 0 {
-			// Register static suggestions in the global registry
-			funcID := fmt.Sprintf("static_%s_%d", flag.Name, i)
-			charm.RegisterSuggestionsFunc(funcID, func(previousValues map[string]string) ([]string, error) {
-				return ann, nil
-			})
-			inputs[i].SuggestionsFuncID = funcID
-		}
 	}
 
 	multiInputPrompt := NewMultiInput(title, description, required, inputs...)
