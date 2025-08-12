@@ -228,12 +228,9 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		// Get org and workspace slugs from context
 		orgSlug := core.GetOrgSlugFromContext(ctx)
 		workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
-		
+
 		if orgSlug != "" && workspaceSlug != "" {
-			logger.Infof("speakeasy repro %s_%s_%s", orgSlug, workspaceSlug, cliEvent.ExecutionID)
-		} else {
-			// Fallback if we can't get org/workspace info
-			logger.Infof("speakeasy repro {org-slug}_{workspace-slug}_%s", cliEvent.ExecutionID)
+			logger.Successf("speakeasy repro %s_%s_%s", orgSlug, workspaceSlug, cliEvent.ExecutionID)
 		}
 	}
 

@@ -28,7 +28,7 @@ import (
 )
 
 type ReproFlags struct {
-	Target         string `json:"target"` // Format: {org-slug}-{workspace-slug}-{execution-id}
+	ReproID        string `json:"repro-id"` // Format: {org-slug}-{workspace-slug}-{execution-id}
 	Directory      string `json:"directory"`
 	UseRawWorkflow bool   `json:"use-raw-workflow"`
 }
@@ -86,12 +86,12 @@ func reproPreRun(cmd *cobra.Command, flags *ReproFlags) error {
 	if len(args) != 1 {
 		return fmt.Errorf("exactly one argument required: {org-slug}_{workspace-slug}_{execution-id}")
 	}
-	flags.Target = args[0]
+	flags.ReproID = args[0]
 	return nil
 }
 
 func runRepro(ctx context.Context, flags ReproFlags) error {
-	target := flags.Target
+	target := flags.ReproID
 	logger := log.From(ctx)
 
 	// Parse the target format: {org-slug}-{workspace-slug}-{execution-id}
