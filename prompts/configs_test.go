@@ -35,7 +35,7 @@ func TestTargetSpecificForms_Ruby_Quickstart(t *testing.T) {
 	tm.SendKeys(tea.KeyEnter)
 	tm.AssertContains(t,
 		"┃ Choose a module",
-		"┃ https://ruby-doc.org/core-2.5.3/Module.html",
+		"┃ The top level module names for your sdk https://ruby-doc.org/3.2.6/syntax/modules_and_classes_rdoc.html",
 		"┃ OpenApiSdk",
 	)
 	tm.SendKeys(tea.KeyEnter)
