@@ -55,7 +55,7 @@ var quickstartScopedKeys = map[string][]string{
 	},
 	"ruby": {
 		"packageName",
-		"author",
+		"module",
 	},
 }
 
