@@ -12,6 +12,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestTargetSpecificForms_Ruby_Quickstart(t *testing.T) {
+	t.Parallel()
+
+	targetName := "ruby"
+	groups, targetFormFields := setupTargetSpecificFormsQuickstart(t, targetName)
+
+	if len(groups) != 2 {
+		t.Errorf("expected 4 groups, got %d", len(groups))
+	}
+
+	if len(targetFormFields) != 2 {
+		t.Errorf("expected 3 target form fields, got %d", len(targetFormFields))
+	}
+
+	tm := charmtest.ModelFromHuhGroup(t, groups...)
+	tm.AssertContains(t,
+		"┃ Choose a packageName",
+		"┃ The distribution name of the Ruby Package. https://guides.rubygems.org/name-your-gem/",
+		"┃ openapi",
+	)
+	tm.SendKeys(tea.KeyEnter)
+	tm.AssertContains(t,
+		"┃ Choose a module",
+		"┃ https://ruby-doc.org/core-2.5.3/Module.html",
+		"┃ OpenApiSdk",
+	)
+	tm.SendKeys(tea.KeyEnter)
+	tm.Quit(t)
+	tm.AssertFormStringEqual(t, "packageName", "openapi")
+	// Assert the target form fields used by consuming code matches the expected values.
+	assert.Equal(t,
+		"OpenApiSdk",
+		targetFormFields.GetField("module").GetValueString(),
+	)
+}
+
 func TestTargetSpecificForms_Go_Quickstart(t *testing.T) {
 	t.Parallel()
 
