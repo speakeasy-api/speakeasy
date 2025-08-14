@@ -566,24 +566,24 @@ func parseReproTarget(target string) (orgSlug, workspaceSlug, executionID string
 	if lastUnderscore == -1 {
 		return "", "", "", fmt.Errorf("target must be in format: {org-slug}_{workspace-slug}_{execution-id}")
 	}
-	
+
 	// Split into prefix and execution ID
 	prefix := target[:lastUnderscore]
 	executionID = target[lastUnderscore+1:]
-	
+
 	if executionID == "" {
 		return "", "", "", fmt.Errorf("execution ID must not be empty")
 	}
-	
+
 	// Find the second-to-last underscore to split org and workspace
 	secondLastUnderscore := strings.LastIndex(prefix, "_")
 	if secondLastUnderscore == -1 {
 		return "", "", "", fmt.Errorf("target must be in format: {org-slug}_{workspace-slug}_{execution-id}")
 	}
-	
+
 	orgSlug = prefix[:secondLastUnderscore]
 	workspaceSlug = prefix[secondLastUnderscore+1:]
-	
+
 	if orgSlug == "" || workspaceSlug == "" {
 		return "", "", "", fmt.Errorf("org slug and workspace slug must not be empty")
 	}
@@ -601,7 +601,7 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 		logger.Infof("Already authenticated to workspace %s/%s", orgSlug, workspaceSlug)
 		return ctx, nil
 	}
-	
+
 	// Special case for test scenarios - if we're using a test workspace, just continue
 	if orgSlug == "test" && workspaceSlug == "org-test-workspace" {
 		logger.Warnf("Using test workspace credentials, continuing with current authentication")
@@ -612,7 +612,7 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 	workspaceKey := fmt.Sprintf("%s@%s", orgSlug, workspaceSlug)
 	if apiKey := config.GetWorkspaceAPIKey(orgSlug, workspaceSlug); apiKey != "" {
 		logger.Infof("Switching to workspace %s/%s", orgSlug, workspaceSlug)
-		
+
 		// Clear current auth and set the workspace API key
 		if err := config.ClearSpeakeasyAuthInfo(); err != nil {
 			return ctx, err
@@ -620,13 +620,13 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 		if err := config.SetSpeakeasyAPIKey(apiKey); err != nil {
 			return ctx, err
 		}
-		
+
 		// Re-authenticate with the new key
 		authCtx, err := auth.Authenticate(ctx, false)
 		if err != nil {
 			return ctx, fmt.Errorf("failed to authenticate with saved workspace key: %w", err)
 		}
-		
+
 		return authCtx, nil
 	}
 
@@ -634,20 +634,20 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 	logger.Warnf("Not authenticated to workspace %s/%s", orgSlug, workspaceSlug)
 	logger.Infof("Please authenticate with: speakeasy auth login")
 	logger.Infof("Then select the workspace %s when prompted", workspaceKey)
-	
+
 	// Attempt to authenticate
 	authCtx, err := auth.Authenticate(ctx, true)
 	if err != nil {
 		return ctx, fmt.Errorf("authentication failed: %w", err)
 	}
-	
+
 	// Verify we're now in the correct workspace
 	newOrgSlug := core.GetOrgSlugFromContext(authCtx)
 	newWorkspaceSlug := core.GetWorkspaceSlugFromContext(authCtx)
-	
+
 	if newOrgSlug != orgSlug || newWorkspaceSlug != workspaceSlug {
 		return authCtx, fmt.Errorf("authenticated to %s/%s but expected %s/%s. Please run 'speakeasy auth switch' and select the correct workspace", newOrgSlug, newWorkspaceSlug, orgSlug, workspaceSlug)
 	}
-	
+
 	return authCtx, nil
 }

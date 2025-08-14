@@ -34,12 +34,12 @@ func getSpeakeasyBinary() string {
 
 func TestParseReproTarget(t *testing.T) {
 	tests := []struct {
-		name          string
-		target        string
-		expectedOrg   string
-		expectedWs    string
-		expectedID    string
-		expectError   bool
+		name        string
+		target      string
+		expectedOrg string
+		expectedWs  string
+		expectedID  string
+		expectError bool
 	}{
 		{
 			name:        "Valid target",

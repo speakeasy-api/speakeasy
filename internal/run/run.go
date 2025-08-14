@@ -140,11 +140,11 @@ func (w *Workflow) Run(ctx context.Context) error {
 		if cliEvent != nil && cliEvent.ExecutionID != "" && cliEvent.SourceNamespaceName != nil && *cliEvent.SourceNamespaceName != "" {
 			logger := log.From(ctx)
 			logger.Errorf("\nTo get help, send the following reproduction command to the Speakeasy team:")
-			
+
 			// Get org and workspace slugs from context
 			orgSlug := core.GetOrgSlugFromContext(ctx)
 			workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
-			
+
 			if orgSlug != "" && workspaceSlug != "" {
 				logger.Errorf("\n    speakeasy repro %s_%s_%s\n", orgSlug, workspaceSlug, cliEvent.ExecutionID)
 			} else {
