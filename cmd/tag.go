@@ -69,7 +69,7 @@ var tagApplyCmd = &model.ExecutableCommand[tagApplyFlagsArgs]{
 		flag.StringFlag{ // TODO: maybe it would be better to just take in a registry URL
 			Name:        "namespace-name",
 			Shorthand:   "n",
-			Description: "the revision to tag",
+			Description: "the namespace to tag",
 			Required:    true,
 		},
 		flag.StringFlag{
