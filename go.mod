@@ -48,7 +48,6 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stoewer/go-strcase v1.3.1
 	github.com/stretchr/testify v1.10.0
-	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.15.0
 	golang.org/x/term v0.30.0
