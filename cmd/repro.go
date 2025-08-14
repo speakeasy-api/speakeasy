@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -573,6 +574,10 @@ func parseReproTarget(target string) (orgSlug, workspaceSlug, executionID string
 
 	if executionID == "" {
 		return "", "", "", fmt.Errorf("execution ID must not be empty")
+	}
+
+	if err := uuid.Validate(executionID); err != nil {
+		return "", "", "", fmt.Errorf("execution ID must be a valid UUID: %w", err)
 	}
 
 	// Find the second-to-last underscore to split org and workspace
