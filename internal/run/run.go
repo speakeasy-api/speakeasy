@@ -17,6 +17,7 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -139,7 +140,17 @@ func (w *Workflow) Run(ctx context.Context) error {
 		if cliEvent != nil && cliEvent.ExecutionID != "" && cliEvent.SourceNamespaceName != nil && *cliEvent.SourceNamespaceName != "" {
 			logger := log.From(ctx)
 			logger.Errorf("\nTo get help, send the following reproduction command to the Speakeasy team:")
-			logger.Errorf("\n    speakeasy repro --execution-id %s\n", cliEvent.ExecutionID)
+
+			// Get org and workspace slugs from context
+			orgSlug := core.GetOrgSlugFromContext(ctx)
+			workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+
+			if orgSlug != "" && workspaceSlug != "" {
+				logger.Errorf("\n    speakeasy repro %s_%s_%s\n", orgSlug, workspaceSlug, cliEvent.ExecutionID)
+			} else {
+				// Fallback if we can't get org/workspace info
+				logger.Errorf("\n    speakeasy repro {org-slug}_{workspace-slug}_%s\n", cliEvent.ExecutionID)
+			}
 		}
 	}
 
