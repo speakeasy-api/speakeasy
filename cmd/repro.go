@@ -237,29 +237,6 @@ func extractWorkflow(events []shared.CliEvent) string {
 	return ""
 }
 
-func extractWorkflowLock(events []shared.CliEvent) string {
-	var workflowLockPreRaw, workflowLockPostRaw *string
-
-	// Collect workflow lock data from events (prefer pre, fallback to post)
-	for _, event := range events {
-		if event.WorkflowLockPreRaw != nil && *event.WorkflowLockPreRaw != "" {
-			workflowLockPreRaw = event.WorkflowLockPreRaw
-		}
-		if event.WorkflowLockPostRaw != nil && *event.WorkflowLockPostRaw != "" {
-			workflowLockPostRaw = event.WorkflowLockPostRaw
-		}
-	}
-
-	// Prefer pre, fallback to post
-	if workflowLockPreRaw != nil && *workflowLockPreRaw != "" {
-		return *workflowLockPreRaw
-	}
-	if workflowLockPostRaw != nil && *workflowLockPostRaw != "" {
-		return *workflowLockPostRaw
-	}
-	return ""
-}
-
 func extractWorkspaceID(events []shared.CliEvent) string {
 	for _, event := range events {
 		if event.WorkspaceID != "" {
