@@ -65,13 +65,12 @@ func GetStudioSecret() string {
 }
 
 func GetWorkspaceAPIKey(orgSlug, workspaceSlug string) string {
-	keys := vCfg.Sub(workspaceKeysKey)
-
-	if keys != nil {
-		return keys.GetString(getWorkspaceKey(orgSlug, workspaceSlug))
+	keys := vCfg.GetStringMapString(workspaceKeysKey)
+	if keys == nil {
+		keys = make(map[string]string)
 	}
 
-	return ""
+	return keys[getWorkspaceKey(orgSlug, workspaceSlug)]
 }
 
 func SetWorkspaceAPIKey(orgSlug, workspaceSlug, key string) error {
