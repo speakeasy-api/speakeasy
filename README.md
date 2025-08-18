@@ -211,34 +211,17 @@ Check out the [roadmap](https://www.speakeasyapi.dev/roadmap) for whats coming u
 
 ## CLI  
 
+### Installation
+
+Install Speakeasy CLI via:
+
+- Homebrew
+- Winget
+- Chocolatey
+- Shell Script / GitHub Actions
+
+Refer to the [Speakeasy CLI installation documentation](https://www.speakeasy.com/docs/create-client-sdks#install-the-speakeasy-cli) for more information. CLI releases are also directly available in the [repository releases](https://github.com/speakeasy-api/speakeasy/releases).
+
 ### Usage
 
-```
-speakeasy [flags]
-```
-
-#### Options
-
-```
-  -h, --help              help for speakeasy
-      --logLevel string   the log level (available options: [info, warn, error]) (default "info")
-```
-
-#### Sub Commands
-
-* [speakeasy auth](docs/auth/README.md)	 - Authenticate the CLI
-* [speakeasy billing](docs/billing/README.md)	 - Manage billing related operations
-* [speakeasy bump](docs/bump.md)	 - Bumps the version of a Speakeasy Generation Target
-* [speakeasy clean](docs/clean.md)	 - Clean up cache, stale temp folders, and old CLI binaries.
-* [speakeasy configure](docs/configure/README.md)	 - Configure your Speakeasy SDK Setup.
-* [speakeasy lint](docs/lint/README.md)	 - Lint/Validate OpenAPI documents and Speakeasy configuration files
-* [speakeasy merge](docs/merge.md)	 - Merge multiple OpenAPI documents into a single document
-* [speakeasy openapi](docs/openapi/README.md)	 - Utilities for working with OpenAPI documents
-* [speakeasy overlay](docs/overlay/README.md)	 - Work with OpenAPI Overlays
-* [speakeasy quickstart](docs/quickstart.md)	 - Guided setup to help you create a new SDK in minutes.
-* [speakeasy run](docs/run.md)	 - Run all the workflows defined in your workflow.yaml file. This can include multiple SDK generations from different OpenAPI sources
-* [speakeasy status](docs/status.md)	 - Review status of current workspace
-* [speakeasy suggest](docs/suggest/README.md)	 - Automatically improve your OpenAPI document with an LLM
-* [speakeasy tag](docs/tag/README.md)	 - Add tags to a given revision of your API. Specific to a registry namespace
-* [speakeasy test](docs/test.md)	 - For each workflow target, starts the mock API server and runs testing.
-* [speakeasy update](docs/update.md)	 - Update the Speakeasy CLI to the latest version
+Refer to the [Speakeasy CLI Reference](https://www.speakeasy.com/docs/speakeasy-reference/cli) for usage documentation. Additionally, every CLI command and subcommand supports a `--help` flag for usage information.
