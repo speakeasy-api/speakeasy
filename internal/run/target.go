@@ -174,7 +174,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	}
 
 	changelogContent := ""
-	if os.Getenv("INPUT_ENABLE_SDK_CHANGELOG_JULY_2025") == "true" {
+	if os.Getenv("INPUT_ENABLE_SDK_CHANGELOG") == "true" {
 		// Old & new spec and other details are updated in RunSource method
 		log.From(ctx).Infof("Calculating changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target))
 		changelogContent, err = sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
