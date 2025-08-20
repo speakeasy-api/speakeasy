@@ -185,11 +185,16 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			Verbose:     w.Verbose,
 			Target:      target,
 		})
+		if changelogContent == "" {
+			log.From(ctx).Warnf("New Changelog Content was empty for %s SDK. As a result it will not appear in the PR description", utils.CapitalizeFirst(t.Target))
+		}
 		if err != nil {
 			// Dont error out so that we don't block generation
 			log.From(ctx).Warnf("Error computing SDK changelog: %s", err.Error())
 		}
 		log.From(ctx).Infof("Calculating changelog for SDK %s SDK succeeded", utils.CapitalizeFirst(t.Target))
+	} else {
+		log.From(ctx).Infof("New SDK changelog is disabled for SDK %s SDK", utils.CapitalizeFirst(t.Target))
 	}
 
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
