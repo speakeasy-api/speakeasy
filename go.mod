@@ -37,11 +37,11 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/openapi v0.2.4
-	github.com/speakeasy-api/openapi-generation/v2 v2.686.7
+	github.com/speakeasy-api/openapi-generation/v2 v2.687.1
 	github.com/speakeasy-api/openapi-overlay v0.10.3
 	github.com/speakeasy-api/sdk-gen-config v1.31.3
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.20.5
+	github.com/speakeasy-api/speakeasy-core v0.20.6
 	github.com/speakeasy-api/speakeasy-proxy v0.0.2
 	github.com/speakeasy-api/versioning-reports v0.6.1
 	github.com/spf13/cobra v1.9.1
