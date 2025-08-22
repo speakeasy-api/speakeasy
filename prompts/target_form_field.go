@@ -283,7 +283,6 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 		return nil
 	default:
-		fmt.Println("default", value)
 		return nil
 	}
 }
