@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -232,7 +231,6 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		value = unwrap(f.Value)
 		switch value.(type) {
 		case int64:
-
 			var intValue string
 
 			input := charm.NewInlineInput(&intValue).Key(f.Name)
@@ -268,17 +266,6 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 				})
 			}
 
-			// Add validation to ensure the input is a valid integer
-			input = input.Validate(func(s string) error {
-				if s == "" {
-					return nil // Allow empty values
-				}
-				_, err := strconv.Atoi(strings.TrimSpace(s))
-				if err != nil {
-					return errors.New("must be a valid integer")
-				}
-				return nil
-			})
 			return input
 		}
 		return nil
