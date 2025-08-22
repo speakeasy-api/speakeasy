@@ -24,6 +24,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/loader"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -59,12 +60,9 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 	str := fmt.Sprintf("%d. %s", index+1, i.Name)
 
-	fn := lipgloss.NewStyle().PaddingLeft(4).Render
+	fn := styles.Margins.PaddingLeft(0).Render
 	if index == m.Index() {
-		fn = lipgloss.NewStyle().
-			PaddingLeft(4).
-			Foreground(lipgloss.Color("170")).
-			Render
+		fn = styles.Focused.PaddingLeft(0).Render
 	}
 
 	fmt.Fprint(w, fn(str))
@@ -130,23 +128,27 @@ func pullExec(cmd *cobra.Command, args []string) error {
 	// Initialize spinner
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	s.Style = lipgloss.NewStyle().Foreground(styles.Colors.Yellow)
 
 	// initialise specs list
 	specsList := list.New([]list.Item{}, ItemDelegate{}, 10, 20)
-	specsList.Title = "All specs"
-	specsList.SetShowTitle(false)
-	// remove specsList subtitle
+	specsList.Title = "Select a spec"
+	specsList.Styles.Title = styles.HeavilyEmphasized
+	specsList.SetShowTitle(true)
 
 	// initialise revisions list
 	revisionsList := list.New([]list.Item{}, ItemDelegate{}, 10, 20)
-	revisionsList.Title = "All tags in spec namespace"
-	revisionsList.SetShowTitle(false)
+	revisionsList.Title = "Select a revision"
+	revisionsList.Styles.Title = styles.HeavilyEmphasized
+	revisionsList.SetShowTitle(true)
 
 	// initialise output dir input
 	outputDir := textinput.New()
 	outputDir.Placeholder = "Enter the directory to output the image to"
 	outputDir.Prompt = "Output directory: "
+	outputDir.PromptStyle = styles.Focused.Bold(true)
+	outputDir.TextStyle = styles.Focused
+	outputDir.Cursor.Style = styles.Cursor
 	outputDir.Focus()
 
 	// run the model
@@ -260,11 +262,8 @@ func (m *pullModel) HandleKeypress(key string) tea.Cmd {
 func (m *pullModel) View() string {
 	var s strings.Builder
 
-	title := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Background(lipgloss.Color("#7D56F4")).
-		Padding(0, 1).
-		Render("speakeasy pull")
+	title := styles.HeavilyEmphasized.Render("speakeasy pull")
+
 	s.WriteString(title + "\n\n")
 
 	switch m.step {
@@ -276,19 +275,20 @@ func (m *pullModel) View() string {
 		}
 	case 2:
 		if m.loadingRevisions {
-			s.WriteString(fmt.Sprintf("Loading revisions... %s", m.spinner.View()))
+			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Render("Loading revisions..."), m.spinner.View()))
 		} else {
-			s.WriteString(fmt.Sprintf("Selected spec: %s\n", m.selectedSpec.Name))
+			s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
 			s.WriteString(m.revisionsList.View())
 		}
 	case 3:
-		s.WriteString(fmt.Sprintf("Selected spec: %s\n", m.selectedSpec.Name))
-		s.WriteString(fmt.Sprintf("Selected revision: %s\n", m.selectedRevision.Name))
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
 		s.WriteString(m.outputDir.View())
 	case 4:
-		s.WriteString(fmt.Sprintf("Selected spec: %s\n", m.selectedSpec.Name))
-		s.WriteString(fmt.Sprintf("Selected revision: %s\n", m.selectedRevision.Name))
-		s.WriteString(fmt.Sprintf("Selected output directory: %s\n", m.selectedOutputDir))
+		s.WriteString(styles.MakeSection("Summary", "", styles.Colors.Yellow))
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected output directory:"), styles.Focused.Render(m.selectedOutputDir)))
 		// add a clickable button to run the pull
 		button := interactivity.Button{
 			Label:    "Pull",
