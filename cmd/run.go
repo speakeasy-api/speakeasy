@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -230,7 +231,7 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
 	// Helps ensure that the mapFlag ends up with a value for all the targets being run
-	checkAndGetMapFlagValue := func(flagName, singleFlag string, mapFlag map[string]string) (map[string]string, error) {
+	checkAndGetMapFlagValue := func(flagName, singleFlag string, mapFlag map[string]string, validLangs []string) (map[string]string, error) {
 		// If the single flag value is set, ensure we aren't running all targets, then set the map flag to the single flag value
 		if singleFlag != "" && len(mapFlag) == 0 {
 			if flags.Target == "all" {
@@ -241,11 +242,16 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		} else if len(mapFlag) > 0 {
 			// Ensure the map flag contains an entry for all targets we are running
 			if flags.Target != "all" {
-				if _, ok := mapFlag[flags.Target]; !ok {
+				_, ok := mapFlag[flags.Target]
+				if !ok && (validLangs == nil || slices.Contains(validLangs, flags.Target)) {
 					return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, flags.Target)
 				}
 			} else {
 				for _, target := range targets {
+					if validLangs != nil && !slices.Contains(validLangs, target) {
+						continue
+					}
+
 					if _, ok := mapFlag[target]; !ok {
 						return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, target)
 					}
@@ -259,14 +265,14 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// Ensure installationURLs are properly set
-	installationURLs, err := checkAndGetMapFlagValue("installationURL", flags.InstallationURL, flags.InstallationURLs)
+	installationURLs, err := checkAndGetMapFlagValue("installationURL", flags.InstallationURL, flags.InstallationURLs, []string{"go", "typescript", "python", "php", "ruby"})
 	if err != nil {
 		return err
 	}
 	flags.InstallationURLs = installationURLs
 
 	// Ensure repoSubdirs are properly set
-	repoSubdirs, err := checkAndGetMapFlagValue("repoSubdir", flags.RepoSubdir, flags.RepoSubdirs)
+	repoSubdirs, err := checkAndGetMapFlagValue("repoSubdir", flags.RepoSubdir, flags.RepoSubdirs, nil)
 	if err != nil {
 		return err
 	}
@@ -357,7 +363,6 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		ctx,
 		opts...,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -416,7 +421,6 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		ctx,
 		opts...,
 	)
-
 	if err != nil {
 		return err
 	}
