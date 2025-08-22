@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -214,7 +215,66 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 
 		return confirm.Value(value)
+	case *interface{}:
+		var intValue string
+		switch v := f.Value.(type) {
+		case *int:
+			if v != nil {
+				intValue = fmt.Sprintf("%d", *v)
+			}
+		case *int64:
+			if v != nil {
+				intValue = fmt.Sprintf("%d", *v)
+			}
+		}
+
+		input := charm.NewInlineInput(&intValue).Key(f.Name)
+
+		if f.Title != "" {
+			input = input.Title(f.Title)
+		} else {
+			input = input.Title("Choose a " + f.Name)
+		}
+
+		if f.DescriptionFunc != nil {
+			fn := func() string {
+				return f.DescriptionFunc(intValue)
+			}
+			input = input.DescriptionFunc(fn, &intValue).Inline(false).Prompt("")
+		}
+
+		if f.SuggestionsFunc != nil {
+			fn := func() []string {
+				return f.SuggestionsFunc(targetFormFields)
+			}
+			input = input.SuggestionsFunc(fn, &intValue)
+		}
+
+		if f.ValidationRegex != nil {
+			input = input.Validate(func(s string) error {
+				if !f.ValidationRegex.MatchString(strings.TrimSpace(s)) {
+					return errors.New(f.ValidationMessage)
+				}
+
+				return nil
+			})
+		}
+
+		// Add validation to ensure the input is a valid integer
+		input = input.Validate(func(s string) error {
+			if s == "" {
+				return nil // Allow empty values
+			}
+			_, err := strconv.Atoi(strings.TrimSpace(s))
+			if err != nil {
+				return errors.New("must be a valid integer")
+			}
+			return nil
+		})
+
+		return input
 	default:
+		fmt.Println("default", value)
 		return nil
 	}
 }
