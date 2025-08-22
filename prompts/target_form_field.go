@@ -169,21 +169,7 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		f.Value = f.ValueFunc(targetFormFields)
 	}
 
-	// unwrap f.Value
-	unwrap := func(x interface{}) interface{} {
-		rv := reflect.ValueOf(x)
-		for rv.IsValid() && (rv.Kind() == reflect.Interface || rv.Kind() == reflect.Ptr) {
-			if rv.IsNil() {
-				return nil
-			}
-			rv = rv.Elem()
-		}
-		return rv.Interface()
-	}
-
-	value := unwrap(f.Value)
-
-	switch value := value.(type) {
+	switch value := f.Value.(type) {
 	case *string:
 		input := charm.NewInlineInput(value).Key(f.Name)
 
@@ -230,55 +216,72 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 
 		return confirm.Value(value)
-	case int64:
-		var intValue string
-
-		input := charm.NewInlineInput(&intValue).Key(f.Name)
-		f.Value = &intValue
-
-		if f.Title != "" {
-			input = input.Title(f.Title)
-		} else {
-			input = input.Title("Choose a " + f.Name)
-		}
-
-		if f.DescriptionFunc != nil {
-			fn := func() string {
-				return f.DescriptionFunc(intValue)
-			}
-			input = input.DescriptionFunc(fn, &intValue).Inline(false).Prompt("")
-		}
-
-		if f.SuggestionsFunc != nil {
-			fn := func() []string {
-				return f.SuggestionsFunc(targetFormFields)
-			}
-			input = input.SuggestionsFunc(fn, &intValue)
-		}
-
-		if f.ValidationRegex != nil {
-			input = input.Validate(func(s string) error {
-				if !f.ValidationRegex.MatchString(strings.TrimSpace(s)) {
-					return errors.New(f.ValidationMessage)
+	case interface{}, *interface{}:
+		// unwrap f.Value
+		unwrap := func(x interface{}) interface{} {
+			rv := reflect.ValueOf(x)
+			for rv.IsValid() && (rv.Kind() == reflect.Interface || rv.Kind() == reflect.Ptr) {
+				if rv.IsNil() {
+					return nil
 				}
+				rv = rv.Elem()
+			}
+			return rv.Interface()
+		}
 
+		value = unwrap(f.Value)
+		switch value.(type) {
+		case int64:
+
+			var intValue string
+
+			input := charm.NewInlineInput(&intValue).Key(f.Name)
+			f.Value = &intValue
+
+			if f.Title != "" {
+				input = input.Title(f.Title)
+			} else {
+				input = input.Title("Choose a " + f.Name)
+			}
+
+			if f.DescriptionFunc != nil {
+				fn := func() string {
+					return f.DescriptionFunc(intValue)
+				}
+				input = input.DescriptionFunc(fn, &intValue).Inline(false).Prompt("")
+			}
+
+			if f.SuggestionsFunc != nil {
+				fn := func() []string {
+					return f.SuggestionsFunc(targetFormFields)
+				}
+				input = input.SuggestionsFunc(fn, &intValue)
+			}
+
+			if f.ValidationRegex != nil {
+				input = input.Validate(func(s string) error {
+					if !f.ValidationRegex.MatchString(strings.TrimSpace(s)) {
+						return errors.New(f.ValidationMessage)
+					}
+
+					return nil
+				})
+			}
+
+			// Add validation to ensure the input is a valid integer
+			input = input.Validate(func(s string) error {
+				if s == "" {
+					return nil // Allow empty values
+				}
+				_, err := strconv.Atoi(strings.TrimSpace(s))
+				if err != nil {
+					return errors.New("must be a valid integer")
+				}
 				return nil
 			})
+			return input
 		}
-
-		// Add validation to ensure the input is a valid integer
-		input = input.Validate(func(s string) error {
-			if s == "" {
-				return nil // Allow empty values
-			}
-			_, err := strconv.Atoi(strings.TrimSpace(s))
-			if err != nil {
-				return errors.New("must be a valid integer")
-			}
-			return nil
-		})
-
-		return input
+		return nil
 	default:
 		fmt.Println("default", value)
 		return nil
