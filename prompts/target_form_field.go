@@ -3,6 +3,7 @@ package prompts
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -168,7 +169,21 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		f.Value = f.ValueFunc(targetFormFields)
 	}
 
-	switch value := f.Value.(type) {
+	// unwrap f.Value
+	unwrap := func(x interface{}) interface{} {
+		rv := reflect.ValueOf(x)
+		for rv.IsValid() && (rv.Kind() == reflect.Interface || rv.Kind() == reflect.Ptr) {
+			if rv.IsNil() {
+				return nil
+			}
+			rv = rv.Elem()
+		}
+		return rv.Interface()
+	}
+
+	value := unwrap(f.Value)
+
+	switch value := value.(type) {
 	case *string:
 		input := charm.NewInlineInput(value).Key(f.Name)
 
@@ -215,20 +230,11 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 
 		return confirm.Value(value)
-	case *interface{}:
+	case int64:
 		var intValue string
-		switch v := f.Value.(type) {
-		case *int:
-			if v != nil {
-				intValue = fmt.Sprintf("%d", *v)
-			}
-		case *int64:
-			if v != nil {
-				intValue = fmt.Sprintf("%d", *v)
-			}
-		}
 
 		input := charm.NewInlineInput(&intValue).Key(f.Name)
+		f.Value = &intValue
 
 		if f.Title != "" {
 			input = input.Title(f.Title)

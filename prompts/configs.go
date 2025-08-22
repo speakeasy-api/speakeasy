@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -301,7 +302,13 @@ func saveLanguageConfigValues(
 		case *int64:
 			configuration.Languages[targetName].Cfg[fieldName] = fromPointer(value)
 		case *string:
-			configuration.Languages[targetName].Cfg[fieldName] = fromPointer(value)
+			// try converting string to int
+			intValue, err := strconv.Atoi(*value)
+			if err == nil {
+				configuration.Languages[targetName].Cfg[fieldName] = intValue
+			} else {
+				configuration.Languages[targetName].Cfg[fieldName] = fromPointer(value)
+			}
 		}
 	}
 }
