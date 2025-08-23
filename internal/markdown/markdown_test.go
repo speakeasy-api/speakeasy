@@ -9,6 +9,8 @@ import (
 )
 
 func TestCreateMarkdownTable(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		contents [][]string
 	}
@@ -104,6 +106,8 @@ func TestCreateMarkdownTable(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := markdown.CreateMarkdownTable(tt.args.contents)
 			assert.Equal(t, strings.TrimPrefix(tt.want, "\n"), got)
 		})
