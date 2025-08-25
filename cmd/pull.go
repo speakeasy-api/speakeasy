@@ -35,6 +35,11 @@ import (
 	orasauth "oras.land/oras-go/v2/registry/remote/auth"
 )
 
+var (
+	itemStyle         = lipgloss.NewStyle().Margin(0, 2)
+	selectedItemStyle = lipgloss.NewStyle().Margin(0, 2).Foreground(styles.Colors.Yellow)
+)
+
 // Item represents a list item
 type Item struct {
 	ID   string `json:"id"`
@@ -60,15 +65,17 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 	str := fmt.Sprintf("%d. %s", index+1, i.Name)
 
-	//fn := styles.Margins.PaddingLeft(0).Render
-	fn := lipgloss.NewStyle().PaddingLeft(1).Render
+	fn := itemStyle.Render
 	if index == m.Index() {
-		fn = styles.Focused.PaddingLeft(0).Render
+		fn = func(s ...string) string {
+			return selectedItemStyle.Render("> " + strings.Join(s, " "))
+		}
 	}
 
 	fmt.Fprint(w, fn(str))
 }
 
+// TODO: move this to an internal model package
 type pullModel struct {
 	specsList     list.Model
 	revisionsList list.Model
@@ -160,8 +167,8 @@ func pullExec(cmd *cobra.Command, args []string) error {
 	outputDir.SetValue(getCurrentWorkingDirectory())
 	outputDir.Placeholder = "Enter the directory to output the image to"
 	outputDir.Prompt = "Output directory: "
-	outputDir.PromptStyle = styles.Focused.Bold(true)
-	outputDir.TextStyle = styles.Focused
+	outputDir.PromptStyle = styles.Focused.Bold(true).Margin(0, 2)
+	outputDir.TextStyle = styles.Focused.Margin(0, 2)
 	outputDir.Cursor.Style = styles.Cursor
 	outputDir.Focus()
 
@@ -281,25 +288,25 @@ func (m *pullModel) View() string {
 	switch m.step {
 	case 1:
 		if m.loadingSpecs {
-			s.WriteString(fmt.Sprintf("Loading specs... %s", m.spinner.View()))
+			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Margin(0, 2).Render("Loading specs..."), m.spinner.View()))
 		} else {
 			s.WriteString(m.specsList.View())
 		}
 	case 2:
 		if m.loadingRevisions {
-			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Render("Loading revisions..."), m.spinner.View()))
+			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Margin(0, 2).Render("Loading revisions..."), m.spinner.View()))
 		} else {
-			s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+			s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
 			s.WriteString(m.revisionsList.View())
 		}
 	case 3:
-		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
-		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
 		s.WriteString(m.outputDir.View())
 	case 4:
-		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
-		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
-		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected output directory:"), styles.Focused.Render(m.selectedOutputDir)))
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected output directory:"), styles.Focused.Render(m.selectedOutputDir)))
 		// add a clickable button to run the pull
 		button := interactivity.Button{
 			Label:    "Pull",
