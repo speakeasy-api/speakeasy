@@ -60,7 +60,8 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 	str := fmt.Sprintf("%d. %s", index+1, i.Name)
 
-	fn := styles.Margins.PaddingLeft(0).Render
+	//fn := styles.Margins.PaddingLeft(0).Render
+	fn := lipgloss.NewStyle().PaddingLeft(1).Render
 	if index == m.Index() {
 		fn = styles.Focused.PaddingLeft(0).Render
 	}
@@ -115,7 +116,8 @@ func pullExec(cmd *cobra.Command, args []string) error {
 	missingFlags := []string{}
 
 	flags := cmd.Flags()
-	flags.VisitAll(func(f *pflag.Flag) {
+
+	retrieveRequiredFlags := func(f *pflag.Flag) {
 		if slices.Contains([]string{"help", "version", "logLevel"}, f.Name) {
 			return
 		}
@@ -123,7 +125,16 @@ func pullExec(cmd *cobra.Command, args []string) error {
 		if !f.Changed {
 			missingFlags = append(missingFlags, f.Name)
 		}
-	})
+	}
+	flags.VisitAll(retrieveRequiredFlags)
+
+	if len(missingFlags) == 0 {
+		return runPull(cmd.Context(), pullFlags{
+			Spec:      flags.Lookup("spec").Value.String(),
+			Revision:  flags.Lookup("revision").Value.String(),
+			OutputDir: flags.Lookup("output-dir").Value.String(),
+		})
+	}
 
 	// Initialize spinner
 	s := spinner.New()
@@ -131,19 +142,22 @@ func pullExec(cmd *cobra.Command, args []string) error {
 	s.Style = lipgloss.NewStyle().Foreground(styles.Colors.Yellow)
 
 	// initialise specs list
-	specsList := list.New([]list.Item{}, ItemDelegate{}, 10, 20)
+	specsList := list.New([]list.Item{}, ItemDelegate{}, 20, 20)
 	specsList.Title = "Select a spec"
 	specsList.Styles.Title = styles.HeavilyEmphasized
 	specsList.SetShowTitle(true)
 
 	// initialise revisions list
-	revisionsList := list.New([]list.Item{}, ItemDelegate{}, 10, 20)
+	revisionsList := list.New([]list.Item{}, ItemDelegate{}, 20, 20)
+	revisionsList.Styles.TitleBar.Width(20)
 	revisionsList.Title = "Select a revision"
 	revisionsList.Styles.Title = styles.HeavilyEmphasized
 	revisionsList.SetShowTitle(true)
 
 	// initialise output dir input
 	outputDir := textinput.New()
+	// set default value to the current working directory
+	outputDir.SetValue(getCurrentWorkingDirectory())
 	outputDir.Placeholder = "Enter the directory to output the image to"
 	outputDir.Prompt = "Output directory: "
 	outputDir.PromptStyle = styles.Focused.Bold(true)
@@ -163,8 +177,6 @@ func pullExec(cmd *cobra.Command, args []string) error {
 	}
 
 	filledValues := model.Run()
-
-	fmt.Println(filledValues)
 
 	runPull(cmd.Context(), pullFlags{
 		Spec:      filledValues["spec"],
@@ -285,7 +297,6 @@ func (m *pullModel) View() string {
 		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
 		s.WriteString(m.outputDir.View())
 	case 4:
-		s.WriteString(styles.MakeSection("Summary", "", styles.Colors.Yellow))
 		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
 		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
 		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Render("Selected output directory:"), styles.Focused.Render(m.selectedOutputDir)))
