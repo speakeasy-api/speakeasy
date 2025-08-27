@@ -88,7 +88,6 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, testCmd)
 	addCommand(rootCmd, defaultCodeSamplesCmd)
 	updateInit(version, artifactArch)
-	proxyInit()
 	languageServerInit(version)
 	bumpInit()
 	addCommand(rootCmd, tagCmd)
