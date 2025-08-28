@@ -12,6 +12,8 @@ import (
 )
 
 func TestBuildErrorCodesOverlay(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		name, in, out string
 	}
@@ -24,6 +26,8 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 
 	for _, tt := range toTest {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 
 			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, tt.in)
@@ -49,6 +53,8 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 }
 
 func TestDiagnose(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		name, schema  string
 		expectedCount int
@@ -60,6 +66,8 @@ func TestDiagnose(t *testing.T) {
 
 	for _, tt := range toTest {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 			_, _, model, err := schemas.LoadDocument(ctx, tt.schema)
 			require.NoError(t, err)

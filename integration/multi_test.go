@@ -1,17 +1,19 @@
 package integration_tests
 
 import (
-	"github.com/google/go-cmp/cmp"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMultiFileStability(t *testing.T) {
+	t.Parallel()
+
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test on Windows")
 	}

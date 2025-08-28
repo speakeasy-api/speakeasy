@@ -11,6 +11,8 @@ import (
 )
 
 func TestConvertSwaggerYAML(t *testing.T) {
+	t.Parallel()
+
 	// Create a buffer to store the filtered spec
 	var buf bytes.Buffer
 
@@ -39,6 +41,8 @@ func TestConvertSwaggerYAML(t *testing.T) {
 }
 
 func TestConvertSwaggerJSON(t *testing.T) {
+	t.Parallel()
+
 	// Create a buffer to store the filtered spec
 	var buf bytes.Buffer
 

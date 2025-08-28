@@ -27,6 +27,8 @@ import (
 // If all test groups are run at the same time you will see test failures.
 
 func TestWorkflowWithEnvVar(t *testing.T) {
+	t.Parallel()
+
 	temp := setupTestDir(t)
 
 	// Create workflow file and associated resources
@@ -281,6 +283,8 @@ func (c *cmdRunner) Run() error {
 }
 
 func TestSpecWorkflows(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		inputDocs       []string
@@ -511,6 +515,8 @@ func TestSpecWorkflows(t *testing.T) {
 }
 
 func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	t.Parallel()
+
 	spec := `{
 		"openapi": "3.0.0",
 		"info": {
