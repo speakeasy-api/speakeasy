@@ -29,46 +29,6 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	groups := []*huh.Group{}
 	targetFields := []huh.Field{}
 
-	if newTarget {
-		targetGroup := new(string)
-
-		targetFields = append(targetFields, huh.NewSelect[string]().
-			Title("What would you like to generate?").
-			Options([]huh.Option[string]{
-				huh.NewOption("Software Development Kit (SDK)", targetGroupSDK),
-				huh.NewOption("Terraform Provider", targetGroupTerraform),
-				huh.NewOption("Model Context Protocol (MCP) Server", targetGroupMCP),
-			}...).
-			Value(targetGroup))
-
-		targetFields = append(targetFields, huh.NewSelect[string]().
-			TitleFunc(func() string {
-				switch *targetGroup {
-				case targetGroupMCP:
-					return "Which MCP Server would you like to generate?"
-				case targetGroupSDK:
-					return "Which SDK language would you like to generate?"
-				case targetGroupTerraform:
-					return "Which Terraform Provider language would you like to generate?"
-				default:
-					return ""
-				}
-			}, targetGroup).
-			OptionsFunc(func() []huh.Option[string] {
-				switch *targetGroup {
-				case targetGroupMCP:
-					return getMCPTargetOptions()
-				case targetGroupSDK:
-					return getSDKTargetOptions()
-				case targetGroupTerraform:
-					return getTerraformTargetOptions()
-				default:
-					return nil
-				}
-			}, targetGroup).
-			Value(targetType))
-	}
-
 	if !newTarget || targetName == nil || *targetName == "" {
 		originalTargetName := ""
 		if targetName != nil {
@@ -96,7 +56,9 @@ func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, target
 	}
 
 	targetFields = append(targetFields, rendersSelectSource(currentWorkflow, sourceName)...)
-	groups = append(groups, huh.NewGroup(targetFields...))
+	if len(targetFields) > 0 {
+		groups = append(groups, huh.NewGroup(targetFields...))
+	}
 
 	if len(currentWorkflow.Targets) > 0 {
 		groups = append(groups,
@@ -177,12 +139,72 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetType, outDir string) (string, *workflow.Target, error) {
 	sourceName := getSourcesFromWorkflow(currentWorkflow)[0]
-	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
-	if _, err := charm.NewForm(huh.NewForm(prompts...),
+
+	// Execute first form: Target group selection
+	targetGroup := new(string)
+	targetGroupForm := huh.NewForm(huh.NewGroup(huh.NewSelect[string]().
+		Title("What would you like to generate?").
+		Options([]huh.Option[string]{
+			huh.NewOption("Software Development Kit (SDK)", targetGroupSDK),
+			huh.NewOption("Terraform Provider", targetGroupTerraform),
+			huh.NewOption("Model Context Protocol (MCP) Server", targetGroupMCP),
+		}...).
+		Value(targetGroup)))
+
+	if _, err := charm.NewForm(targetGroupForm,
 		charm.WithTitle("Let's set up a new target for your workflow."),
 		charm.WithDescription("A target defines what language to generate and how.")).
 		ExecuteForm(); err != nil {
 		return "", nil, err
+	}
+
+	// Execute second form: Specific target type selection
+	targetSelectionForm := huh.NewForm(huh.NewGroup(huh.NewSelect[string]().
+		Title(func() string {
+			switch *targetGroup {
+			case targetGroupMCP:
+				return "Which MCP Server would you like to generate?"
+			case targetGroupSDK:
+				return "Which SDK language would you like to generate?"
+			case targetGroupTerraform:
+				return "Which Terraform Provider would you like to generate?"
+			default:
+				return "Select target type"
+			}
+		}()).
+		Options(func() []huh.Option[string] {
+			switch *targetGroup {
+			case targetGroupMCP:
+				return getMCPTargetOptions()
+			case targetGroupSDK:
+				return getSDKTargetOptions()
+			case targetGroupTerraform:
+				return getTerraformTargetOptions()
+			default:
+				return []huh.Option[string]{}
+			}
+		}()...).
+		Value(&targetType)))
+
+	if _, err := charm.NewForm(targetSelectionForm,
+		charm.WithTitle("Select your target type"),
+		charm.WithDescription("Choose the specific implementation you'd like to generate.")).
+		ExecuteForm(); err != nil {
+		return "", nil, err
+	}
+
+	remainingPrompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
+
+	// If there are any additional prompts needed to configure the target, show these.
+	if len(remainingPrompts) > 0 {
+		targetConfigurationForm := huh.NewForm(remainingPrompts...)
+
+		if _, err := charm.NewForm(targetConfigurationForm,
+			charm.WithTitle("Complete your target configuration"),
+			charm.WithDescription("Provide additional details for your target.")).
+			ExecuteForm(); err != nil {
+			return "", nil, err
+		}
 	}
 
 	target := workflow.Target{
