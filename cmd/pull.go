@@ -5,20 +5,96 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"archive/zip"
 	"bytes"
 
+	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/loader"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/model"
-	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/sdk"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"oras.land/oras-go/v2/registry/remote"
+	orasauth "oras.land/oras-go/v2/registry/remote/auth"
 )
+
+var (
+	itemStyle         = lipgloss.NewStyle().Margin(0, 2)
+	selectedItemStyle = lipgloss.NewStyle().Margin(0, 2).Foreground(styles.Colors.Yellow)
+)
+
+// Item represents a list item
+type Item struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// FilterValue implements list.Item interface
+func (i Item) FilterValue() string {
+	return i.Name
+}
+
+// ItemDelegate handles rendering of list items
+type ItemDelegate struct{}
+
+func (d ItemDelegate) Height() int                               { return 1 }
+func (d ItemDelegate) Spacing() int                              { return 0 }
+func (d ItemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
+func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(Item)
+	if !ok {
+		return
+	}
+
+	str := fmt.Sprintf("%d. %s", index+1, i.Name)
+
+	fn := itemStyle.Render
+	if index == m.Index() {
+		fn = func(s ...string) string {
+			return selectedItemStyle.Render("> " + strings.Join(s, " "))
+		}
+	}
+
+	fmt.Fprint(w, fn(str))
+}
+
+// TODO: move this to an internal model package
+type pullModel struct {
+	specsList     list.Model
+	revisionsList list.Model
+	outputDir     textinput.Model
+
+	// state
+	selectedSpec      Item
+	selectedRevision  Item
+	selectedOutputDir string
+
+	// loading states
+	loadingSpecs     bool
+	loadingRevisions bool
+
+	// Current step
+	step int
+
+	spinner spinner.Model
+}
 
 type pullFlags struct {
 	Spec      string `json:"spec"`
@@ -26,29 +102,248 @@ type pullFlags struct {
 	OutputDir string `json:"output-dir"`
 }
 
-var pullCmd = &model.ExecutableCommand[pullFlags]{
-	Usage:        "pull",
-	Short:        "pull",
-	Run:          runPull,
-	RequiresAuth: true,
-	Flags: []flag.Flag{
-		flag.StringFlag{
-			Name:        "spec",
-			Description: "The name of the spec to want to pull",
-			Required:    true,
-		},
-		flag.StringFlag{
-			Name:         "revision",
-			Description:  "The revision to pull",
-			DefaultValue: "latest",
-			Required:     true,
-		},
-		flag.StringFlag{
-			Name:         "output-dir",
-			Description:  "The directory to output the image to",
-			DefaultValue: getCurrentWorkingDirectory(),
-		},
-	},
+var pullCmd = &cobra.Command{
+	Use:   "pull",
+	Short: "pull a spec from the registry",
+	Long:  "pull a spec from the registry",
+	RunE:  pullExec,
+}
+
+func pullInit() {
+	pullCmd.Flags().String("spec", "", "The name of the spec to want to pull")
+	pullCmd.Flags().String("revision", "latest", "The revision to pull")
+	pullCmd.Flags().String("output-dir", getCurrentWorkingDirectory(), "The directory to output the image to")
+
+	rootCmd.AddCommand(pullCmd)
+}
+
+func pullExec(cmd *cobra.Command, args []string) error {
+	// find all flags that are not set, and run them interactively.
+	// then pass them down to the actual runner.
+	missingFlags := []string{}
+
+	flags := cmd.Flags()
+
+	retrieveRequiredFlags := func(f *pflag.Flag) {
+		if slices.Contains([]string{"help", "version", "logLevel"}, f.Name) {
+			return
+		}
+
+		if !f.Changed {
+			missingFlags = append(missingFlags, f.Name)
+		}
+	}
+	flags.VisitAll(retrieveRequiredFlags)
+
+	if len(missingFlags) == 0 {
+		return runPull(cmd.Context(), pullFlags{
+			Spec:      flags.Lookup("spec").Value.String(),
+			Revision:  flags.Lookup("revision").Value.String(),
+			OutputDir: flags.Lookup("output-dir").Value.String(),
+		})
+	}
+
+	// Initialize spinner
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(styles.Colors.Yellow)
+
+	// initialise specs list
+	specsList := list.New([]list.Item{}, ItemDelegate{}, 20, 20)
+	specsList.Title = "Select a spec"
+	specsList.Styles.Title = styles.HeavilyEmphasized
+	specsList.SetShowTitle(true)
+
+	// initialise revisions list
+	revisionsList := list.New([]list.Item{}, ItemDelegate{}, 20, 20)
+	revisionsList.Styles.TitleBar.Width(20)
+	revisionsList.Title = "Select a revision"
+	revisionsList.Styles.Title = styles.HeavilyEmphasized
+	revisionsList.SetShowTitle(true)
+
+	// initialise output dir input
+	outputDir := textinput.New()
+	// set default value to the current working directory
+	outputDir.SetValue(getCurrentWorkingDirectory())
+	outputDir.Placeholder = "Enter the directory to output the image to"
+	outputDir.Prompt = "Output directory: "
+	outputDir.PromptStyle = styles.Focused.Bold(true).Margin(0, 2)
+	outputDir.TextStyle = styles.Focused.Margin(0, 2)
+	outputDir.Cursor.Style = styles.Cursor
+	outputDir.Focus()
+
+	// run the model
+	model := pullModel{
+		specsList:        specsList,
+		revisionsList:    revisionsList,
+		outputDir:        outputDir,
+		step:             1,
+		loadingSpecs:     true,
+		loadingRevisions: false,
+		spinner:          s,
+	}
+
+	filledValues := model.Run()
+
+	runPull(cmd.Context(), pullFlags{
+		Spec:      filledValues["spec"],
+		Revision:  filledValues["revision"],
+		OutputDir: filledValues["output-dir"],
+	})
+
+	return nil
+}
+
+func (m *pullModel) Init() tea.Cmd {
+	return tea.Batch(
+		getNamepacesCmd(), m.spinner.Tick,
+	)
+}
+
+func (m *pullModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch keypress := msg.String(); keypress {
+		case "ctrl+c", "esc":
+			return m, tea.Quit
+		case "enter":
+			switch m.step {
+			case 1:
+				if !m.loadingSpecs && m.specsList.SelectedItem() != nil {
+					m.selectedSpec = m.specsList.SelectedItem().(Item)
+					m.step = 2
+					m.loadingRevisions = true
+					return m, getTagsCmd(m.selectedSpec.Name)
+				}
+			case 2:
+				if !m.loadingRevisions && m.revisionsList.SelectedItem() != nil {
+					m.selectedRevision = m.revisionsList.SelectedItem().(Item)
+					m.step = 3
+					return m, m.outputDir.Cursor.BlinkCmd()
+				}
+			case 3:
+				m.selectedOutputDir = m.outputDir.Value()
+				m.step = 4
+				return m, nil
+			case 4:
+				return m, tea.Quit
+			}
+		}
+	case getNamespacesMsg:
+		m.loadingSpecs = false
+		var items []list.Item
+		for _, item := range msg.items {
+			items = append(items, item)
+		}
+		m.specsList.SetItems(items)
+	case getTagsMsg:
+		m.loadingRevisions = false
+		var items []list.Item
+		for _, item := range msg.items {
+			items = append(items, item)
+		}
+		m.revisionsList.SetItems(items)
+	}
+
+	switch m.step {
+	case 1:
+		if !m.loadingSpecs {
+			var cmd tea.Cmd
+			m.specsList, cmd = m.specsList.Update(msg)
+			cmds = append(cmds, cmd)
+		}
+	case 2:
+		if !m.loadingRevisions {
+			var cmd tea.Cmd
+			m.revisionsList, cmd = m.revisionsList.Update(msg)
+			cmds = append(cmds, cmd)
+		}
+	case 3:
+		var cmd tea.Cmd
+		m.outputDir, cmd = m.outputDir.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	// Update spinner
+	var spinnerCmd tea.Cmd
+	m.spinner, spinnerCmd = m.spinner.Update(msg)
+	cmds = append(cmds, spinnerCmd)
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m *pullModel) HandleKeypress(key string) tea.Cmd {
+	return nil
+}
+
+func (m *pullModel) View() string {
+	var s strings.Builder
+
+	title := styles.HeavilyEmphasized.Render("speakeasy pull")
+
+	s.WriteString(title + "\n\n")
+
+	switch m.step {
+	case 1:
+		if m.loadingSpecs {
+			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Margin(0, 2).Render("Loading specs..."), m.spinner.View()))
+		} else {
+			s.WriteString(m.specsList.View())
+		}
+	case 2:
+		if m.loadingRevisions {
+			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Margin(0, 2).Render("Loading revisions..."), m.spinner.View()))
+		} else {
+			s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+			s.WriteString(m.revisionsList.View())
+		}
+	case 3:
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
+		s.WriteString(m.outputDir.View())
+	case 4:
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
+		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected output directory:"), styles.Focused.Render(m.selectedOutputDir)))
+		// add a clickable button to run the pull
+		button := interactivity.Button{
+			Label:    "Pull",
+			Disabled: false,
+			Hovered:  false,
+			Clicked:  false,
+		}
+		s.WriteString(button.View())
+	}
+
+	return s.String()
+}
+
+func (m *pullModel) OnUserExit() {}
+
+func (m *pullModel) SetWidth(width int) {
+}
+
+func (m *pullModel) getFilledValues() map[string]string {
+	inputResults := make(map[string]string)
+
+	inputResults["spec"] = m.selectedSpec.Name
+	inputResults["revision"] = m.selectedRevision.Name
+	inputResults["output-dir"] = m.selectedOutputDir
+
+	return inputResults
+}
+
+func (m *pullModel) Run() map[string]string {
+	newM, err := charm_internal.RunModel(m)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	resultingModel := newM.(*pullModel)
+
+	return resultingModel.getFilledValues()
 }
 
 func runPull(ctx context.Context, flags pullFlags) error {
@@ -168,4 +463,130 @@ func getCurrentWorkingDirectory() string {
 	}
 
 	return cwd
+}
+
+type getNamespacesMsg struct{ items []Item }
+
+func getNamepacesCmd() tea.Cmd {
+	return func() tea.Msg {
+		namespaces, err := getNamespaces()
+		if err != nil {
+			return err
+		}
+
+		items := []Item{}
+		for _, namespace := range namespaces {
+			items = append(items, Item{ID: namespace, Name: namespace})
+		}
+
+		return getNamespacesMsg{items: items}
+	}
+}
+
+func getNamespaces() ([]string, error) {
+	// Initialize speakeasy client
+	client, err := sdk.InitSDK()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize speakeasy client: %w", err)
+	}
+
+	// Get targets from the events API
+	res, err := client.Events.GetTargets(context.Background(), operations.GetWorkspaceTargetsRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get targets: %w", err)
+	}
+
+	// Extract unique namespaces from targets
+	seenNamespaces := make(map[string]bool)
+	var namespaces []string
+
+	for _, target := range res.TargetSDKList {
+		if target.SourceNamespaceName != nil && !seenNamespaces[*target.SourceNamespaceName] {
+			seenNamespaces[*target.SourceNamespaceName] = true
+			namespaces = append(namespaces, *target.SourceNamespaceName)
+		}
+	}
+
+	return namespaces, nil
+}
+
+type getTagsMsg struct{ items []Item }
+
+func getTagsCmd(namespace string) tea.Cmd {
+	return func() tea.Msg {
+		tags, err := getTags(namespace)
+		if err != nil {
+			return err
+		}
+
+		items := []Item{}
+		for _, tag := range tags {
+			items = append(items, Item{ID: tag, Name: tag})
+		}
+
+		return getTagsMsg{items: items}
+	}
+}
+
+// getTags connects to a remote OCI registry and retrieves all tags for a given repository.
+// It takes a context and the repository name (e.g., "ghcr.io/oras-project/oras-go-demo") as input.
+// It returns a slice of strings containing all the tags, or an error if one occurred.
+func getTags(namespace string) ([]string, error) {
+	// Get server URL and determine if insecure
+	serverURL := auth.GetServerURL()
+	insecurePublish := false
+	if strings.HasPrefix(serverURL, "http://") {
+		insecurePublish = true
+	}
+	reg := strings.TrimPrefix(serverURL, "http://")
+	reg = strings.TrimPrefix(reg, "https://")
+
+	// Get API key
+	apiKey := config.GetSpeakeasyAPIKey()
+	if apiKey == "" {
+		return nil, fmt.Errorf("no API key available, please run 'speakeasy auth' to authenticate")
+	}
+
+	// Create repository access
+	access := ocicommon.NewRepositoryAccess(apiKey, namespace, ocicommon.RepositoryAccessOptions{
+		Insecure: insecurePublish,
+	})
+	accessResult, err := access.Acquire(context.Background(), reg)
+	if err != nil {
+		return nil, fmt.Errorf("error acquiring oci access: %w", err)
+	}
+
+	repositoryURL := path.Join(reg, accessResult.Repository)
+
+	// Create a new instance of a remote repository client.
+	repo, err := remote.NewRepository(repositoryURL)
+	if err != nil {
+		return nil, fmt.Errorf("error creating remote repository client: %w", err)
+	}
+
+	rh := retryablehttp.NewClient()
+
+	// TODO: remove this once we have a logger
+	rh.Logger = nil
+	repo.Client = access.WrapClient(&orasauth.Client{
+		Client:     rh.StandardClient(),
+		Header:     orasauth.DefaultClient.Header,
+		Cache:      orasauth.NewCache(),
+		Credential: accessResult.CredentialFunc,
+	})
+
+	var allTags []string
+	// The `Tags` method paginates through the tags from the registry.
+	// We provide a callback function that appends each page of tags to our slice.
+	err = repo.Tags(context.Background(), "", func(tags []string) error {
+		allTags = append(allTags, tags...)
+		// Return nil to continue fetching subsequent pages.
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list tags for repository %s: %w", repositoryURL, err)
+	}
+
+	return allTags, nil
 }
