@@ -225,3 +225,22 @@ Refer to the [Speakeasy CLI installation documentation](https://www.speakeasy.co
 ### Usage
 
 Refer to the [Speakeasy CLI Reference](https://www.speakeasy.com/docs/speakeasy-reference/cli) for usage documentation. Additionally, every CLI command and subcommand supports a `--help` flag for usage information.
+
+## Claude Code Integration
+
+The Speakeasy CLI includes enhanced support for [Claude Code](https://claude.ai/code) and other automation tools:
+
+### Mise Integration
+```bash
+# Use mise for consistent tooling
+mise install
+mise run speakeasy -- generate sdk
+```
+
+### Automation-Friendly Features
+- **Non-interactive mode detection** - Automatically adjusts behavior in CI/CD
+- **Structured configuration** - Uses `.speakeasy/workflow.yaml` for consistent operations  
+- **Clear exit codes** - Reliable error handling for scripts
+- **Workflow files** - JSON/YAML outputs for parsing results
+
+For detailed integration guidance, see [docs/CLAUDE_CODE_INTEGRATION.md](docs/CLAUDE_CODE_INTEGRATION.md).
