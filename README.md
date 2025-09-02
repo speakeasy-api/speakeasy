@@ -243,4 +243,4 @@ mise run speakeasy -- generate sdk
 - **Clear exit codes** - Reliable error handling for scripts
 - **Workflow files** - JSON/YAML outputs for parsing results
 
-For detailed integration guidance, see [docs/CLAUDE_CODE_INTEGRATION.md](docs/CLAUDE_CODE_INTEGRATION.md).
+For detailed integration guidance, see [CLAUDE.md](CLAUDE.md#claude-code-integration).
