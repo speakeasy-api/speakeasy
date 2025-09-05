@@ -28,6 +28,7 @@ linters:
     # - spancheck
     # - staticcheck
     # - testifylint
+    - tparallel
     # - unconvert
     # - unparam
     # - unused

@@ -11,6 +11,8 @@ import (
 )
 
 func TestFilterOperations(t *testing.T) {
+	t.Parallel()
+
 	// Create a buffer to store the filtered spec
 	var buf bytes.Buffer
 
