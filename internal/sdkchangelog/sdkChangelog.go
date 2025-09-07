@@ -18,7 +18,15 @@ type Requirements struct {
 	Target      string
 }
 
-func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requirements) (string, error) {
+func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requirements) (changelogContent string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.From(ctx).Errorf("Panic recovered in ComputeAndStoreSDKChangelog: %v", r)
+			changelogContent = ""
+			err = fmt.Errorf("panic occurred during SDK changelog generation: %v", r)
+		}
+	}()
+
 	// Check if we have valid spec paths before proceeding
 	if changelogRequirements.OldSpecPath == "" || changelogRequirements.NewSpecPath == "" {
 		// If we don't have valid spec paths, skip changelog generation
@@ -40,7 +48,7 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 	if len(diff.Changes) == 0 {
 		return "", nil
 	}
-	changelogContent, err := storeSDKChangelogForPullRequestDescription(ctx, changelogRequirements.Target, diff)
+	changelogContent, err = storeSDKChangelogForPullRequestDescription(ctx, changelogRequirements.Target, diff)
 	if err != nil {
 		// Swallow error so that we dont block generation
 		log.From(ctx).Warnf("Error generating new changelog: %s", err.Error())
