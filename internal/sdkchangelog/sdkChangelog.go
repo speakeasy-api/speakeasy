@@ -19,7 +19,6 @@ type Requirements struct {
 }
 
 func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requirements) (changelogContent string, err error) {
-	// Add panic recovery to prevent crashes during changelog generation
 	defer func() {
 		if r := recover(); r != nil {
 			log.From(ctx).Errorf("Panic recovered in ComputeAndStoreSDKChangelog: %v", r)
