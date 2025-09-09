@@ -11,7 +11,9 @@ jobs:
         name: Release
         runs-on:
             group: windows-latest-large
-        if: startsWith(github.event.head_commit.message, 'ci:') != true
+        if: |
+          startsWith(github.event.head_commit.message, 'feat')
+            || startsWith(github.event.head_commit.message, 'fix')
         steps:
             - name: Setup environment
               run: |-
