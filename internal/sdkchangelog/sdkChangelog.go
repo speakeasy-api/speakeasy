@@ -44,8 +44,13 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 		Logger:      log.From(ctx),
 	})
 
-	diff := changes.Changes(oldConfig, newConfig)
+	diff, err := changes.Changes(oldConfig, newConfig)
+	if err != nil {
+		log.From(ctx).Errorf("an error occurred while computing changes between prior generation and current generation for %s target (language: %s). error: %s", changelogRequirements.Target, changelogRequirements.Lang, err.Error())
+		return "", err
+	}
 	if len(diff.Changes) == 0 {
+		log.From(ctx).Infof("0 changes detected for %s target changelog (language: %s)", changelogRequirements.Target, changelogRequirements.Lang)
 		return "", nil
 	}
 	changelogContent, err = storeSDKChangelogForPullRequestDescription(ctx, changelogRequirements.Target, diff)
