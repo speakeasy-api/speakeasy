@@ -239,6 +239,10 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 		)
 	}
 
+	if len(fields) == 0 {
+		return nil
+	}
+
 	var groups []*huh.Group
 	// group two secrets together on a screen
 	for i := 0; i < len(fields); i += 2 {
