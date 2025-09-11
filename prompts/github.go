@@ -239,7 +239,6 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 		)
 	}
 
-	// If there are no fields to prompt for, return early
 	if len(fields) == 0 {
 		return nil
 	}
