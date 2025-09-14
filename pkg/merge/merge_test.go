@@ -15,6 +15,8 @@ import (
 )
 
 func Test_merge_determinism(t *testing.T) {
+	t.Parallel()
+
 	// test data not included
 	t.Skip()
 	absSchemas := [][]byte{}
@@ -54,6 +56,8 @@ func Test_merge_determinism(t *testing.T) {
 }
 
 func Test_merge_Success(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		inSchemas [][]byte
 	}
@@ -789,6 +793,8 @@ externalDocs:
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, _ := merge(tt.args.inSchemas, !tt.jsonOut)
 
 			assert.Equal(t, tt.want, string(got))
@@ -797,6 +803,8 @@ externalDocs:
 }
 
 func Test_MergeByResolvingLocalReferences_WithFileRefs(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	tempDir, err := os.MkdirTemp("", "merge-test-*")
