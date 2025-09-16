@@ -193,7 +193,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 		return "", nil, err
 	}
 
-	remainingPrompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
+	remainingPrompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
 
 	// If there are any additional prompts needed to configure the target, show these.
 	if len(remainingPrompts) > 0 {
