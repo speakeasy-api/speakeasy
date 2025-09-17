@@ -129,7 +129,8 @@ func pullExec(cmd *cobra.Command, args []string) error {
 			return
 		}
 
-		if !f.Changed {
+		// If the flag has not been changed from its default value, and the default value is empty, it is missing
+		if !f.Changed && f.Value.String() == "" {
 			missingFlags = append(missingFlags, f.Name)
 		}
 	}
