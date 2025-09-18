@@ -3,11 +3,6 @@ package suggest
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/auth"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
-	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +10,12 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
+	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"gopkg.in/yaml.v3"
@@ -43,7 +44,7 @@ func SuggestAndWrite(
 		yamlOut = true
 	}
 
-	schemaBytes, _, model, err := schemas.LoadDocument(ctx, schemaLocation)
+	schemaBytes, doc, err := schemas.LoadDocument(ctx, schemaLocation)
 	if err != nil {
 		return err
 	}
@@ -75,7 +76,7 @@ func SuggestAndWrite(
 		}
 	} else {
 		log.From(ctx).Infof("\nApplying overlay...")
-		root := model.Index.GetRootNode()
+		root := doc.GetRootNode()
 		if err := overlay.ApplyTo(root); err != nil {
 			return err
 		}
@@ -94,7 +95,7 @@ func SuggestAndWrite(
 }
 
 func SuggestOperationIDs(ctx context.Context, schema []byte, schemaPath string) (*overlay.Overlay, error) {
-	summary, err := openapi.GetOASSummary(schema, schemaPath)
+	summary, err := openapi.GetOASSummary(ctx, schema, schemaPath)
 	if err != nil || summary == nil {
 		return nil, fmt.Errorf("failed to get OAS summary: %w", err)
 	}

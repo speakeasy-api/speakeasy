@@ -15,6 +15,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
+	"github.com/speakeasy-api/speakeasy-core/bundler/localize"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy-core/fsextras"
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
@@ -126,7 +127,6 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	changesStep.NewSubstep("Computing changes")
 
 	c, err := changes.GetChanges(ctx, oldDocPath.LocalFilePath, newDocPath)
-
 	if err != nil {
 		return computedChanges, fmt.Errorf("error computing changes: %w", err)
 	}
@@ -229,7 +229,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	resolved := fsextras.NewMemFS()
 	registryStep.NewSubstep("Snapshotting Resolved Layer")
 
-	rootDocumentPath, err := pl.Localize(ctx, resolved, bundler.LocalizeOptions{
+	rootDocumentPath, err := pl.Localize(ctx, resolved, localize.LocalizeOptions{
 		DocumentPath: sourceResult.OutputPath,
 		OutputRoot:   bundler.BundleRoot.String(),
 	})

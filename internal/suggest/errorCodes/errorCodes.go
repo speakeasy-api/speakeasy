@@ -5,66 +5,70 @@ import (
 	"fmt"
 	"slices"
 
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/openapi/openapi"
+	"github.com/speakeasy-api/openapi/yml"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"gopkg.in/yaml.v3"
 )
 
 func BuildErrorCodesOverlay(ctx context.Context, schemaPath string) (*overlay.Overlay, error) {
-	_, _, model, err := schemas.LoadDocument(ctx, schemaPath)
+	_, doc, err := schemas.LoadDocument(ctx, schemaPath)
 	if err != nil {
 		return nil, err
 	}
 
 	groups := initErrorGroups()
-	groups.DeduplicateComponentNames(model.Model)
+	groups.DeduplicateComponentNames(ctx, doc)
 
-	builder := builder{document: model.Model, errorGroups: groups}
-	o := builder.Build()
+	builder := builder{document: doc, errorGroups: groups}
+	o := builder.Build(ctx)
 	return &o, nil
 }
 
 type builder struct {
-	document    v3.Document
+	document    *openapi.OpenAPI
 	errorGroups errorGroupSlice
 }
 
-func (b *builder) Build() overlay.Overlay {
+type operation struct {
+	operation *openapi.Operation
+	path      string
+	method    string
+}
+
+func (b *builder) Build(ctx context.Context) overlay.Overlay {
 	// Track which operations are missing which response codes
-	operationToMissingCodes := map[openapi.OperationElem][]string{}
+	operationToMissingCodes := map[operation][]string{}
 	// Track if certain response codes are already defined elsewhere in the document so we don't duplicate them
 	codeUsedComponents := map[string]map[string]int{}
 
-	for op := range openapi.IterateOperations(b.document) {
-		operation := op.Operation
+	for item := range openapi.Walk(ctx, b.document) {
+		_ = item.Match(openapi.Matcher{
+			Operation: func(o *openapi.Operation) error {
+				method, path := openapi.ExtractMethodAndPath(item.Location)
+				op := operation{operation: o, path: path, method: method}
 
-		codes := orderedmap.New[string, *v3.Response]()
-		if operation.Responses != nil && operation.Responses.Codes != nil {
-			codes = operation.Responses.Codes
-		}
-
-		// TODO account for "complex" error responses that may not actually be returned by the endpoint
-		for _, code := range b.errorGroups.AllCodes() {
-			if response, matchedCode := getResponseForCode(codes, code); response != nil {
-				// If the response code is defined and is a ref, record the ref
-				low := response.GoLow()
-				if low.IsReference() {
-					// The matchedCode will be, for example, 4XX if that's what's defined in the actual spec
-					incrementCount(codeUsedComponents, matchedCode, low.GetReference())
+				// TODO account for "complex" error responses that may not actually be returned by the endpoint
+				for _, code := range b.errorGroups.AllCodes() {
+					if response, matchedCode := getResponseForCode(o.GetResponses(), code); response != nil {
+						// If the response code is defined and is a ref, record the ref
+						if response.IsReference() {
+							// The matchedCode will be, for example, 4XX if that's what's defined in the actual spec
+							incrementCount(codeUsedComponents, matchedCode, response.GetReference().String())
+						}
+					} else {
+						// Otherwise, record that the response code is missing
+						operationToMissingCodes[op] = append(operationToMissingCodes[op], code)
+					}
 				}
-			} else {
-				// Otherwise, record that the response code is missing
-				operationToMissingCodes[op] = append(operationToMissingCodes[op], code)
-			}
-		}
+
+				return nil
+			},
+		})
 	}
 
-	builder := yamlutil.NewBuilder(false)
 	codeToExistingComponent := keepOnlyMostUsed(codeUsedComponents)
 
 	// Create an update action for each target that has missing codes
@@ -79,10 +83,10 @@ func (b *builder) Build() overlay.Overlay {
 		for _, code := range missingCodes {
 			ref, exists := b.getReferenceForCode(codeToExistingComponent, code)
 
-			codeKey := builder.NewKeyNode(code)
+			codeKey := yml.CreateStringNode(code)
 			codeKey.Style = yaml.SingleQuotedStyle // Produces a warning otherwise
 
-			nodes = append(nodes, codeKey, builder.NewMultinode("$ref", ref))
+			nodes = append(nodes, codeKey, yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("$ref"), yml.CreateStringNode(ref)}))
 			if !exists {
 				missingGroup := b.errorGroups.FindCode(code)
 				if !slices.ContainsFunc(missingComponents, func(g errorGroup) bool { return g.responseName == missingGroup.responseName }) {
@@ -91,16 +95,16 @@ func (b *builder) Build() overlay.Overlay {
 			}
 		}
 
-		target := overlay.NewTargetSelector(operation.Path, operation.Method) + `["responses"]`
+		target := overlay.NewTargetSelector(operation.path, operation.method) + `["responses"]`
 
 		action := overlay.Action{
 			Target: target,
-			Update: *builder.NewMappingNode(nodes...),
+			Update: *yml.CreateMapNode(ctx, nodes),
 		}
 		suggestions.AddModificationExtension(&action, &suggestions.ModificationExtension{
 			Type:   suggestions.ModificationTypeErrorNames,
-			Before: fmt.Sprintf("%s:\n\tcatch(SDKError) { ... }", operation.Operation.OperationId),
-			After:  fmt.Sprintf("%s:\n\tcatch(Unauthorized) { ... }", operation.Operation.OperationId),
+			Before: fmt.Sprintf("%s:\n\tcatch(SDKError) { ... }", operation.operation.GetOperationID()),
+			After:  fmt.Sprintf("%s:\n\tcatch(Unauthorized) { ... }", operation.operation.GetOperationID()),
 		})
 		actions = append(actions, action)
 	}
@@ -109,20 +113,20 @@ func (b *builder) Build() overlay.Overlay {
 	var missingSchemaNodes []*yaml.Node
 	var missingComponentNodes []*yaml.Node
 	for _, missingComponent := range missingComponents {
-		missingSchemaNodes = append(missingSchemaNodes, getSchemaNodes(missingComponent)...)
-		missingComponentNodes = append(missingComponentNodes, getComponentNodes(missingComponent)...)
+		missingSchemaNodes = append(missingSchemaNodes, getSchemaNodes(ctx, missingComponent)...)
+		missingComponentNodes = append(missingComponentNodes, getComponentNodes(ctx, missingComponent)...)
 	}
 
 	if len(missingSchemaNodes) > 0 {
-		schemasNode := *builder.NewMappingNode(missingSchemaNodes...)
+		schemasNode := *yml.CreateMapNode(ctx, missingSchemaNodes)
 
 		// If components.schemas doesn't already exist, appending will fail silently
 		// If components.schemas does exist, we don't want to overwrite it
-		missingSchemasComponents := b.document.Components == nil || b.document.Components.Schemas == nil || b.document.Components.Schemas.IsZero()
+		missingSchemasComponents := b.document.GetComponents().GetSchemas().Len() == 0
 		if missingSchemasComponents {
 			actions = append(actions, overlay.Action{
 				Target: "$.components",
-				Update: *builder.NewNode("schemas", &schemasNode),
+				Update: *yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("schemas"), &schemasNode}),
 			})
 		} else {
 			actions = append(actions, overlay.Action{
@@ -133,15 +137,15 @@ func (b *builder) Build() overlay.Overlay {
 	}
 
 	if len(missingComponentNodes) > 0 {
-		responsesNode := *builder.NewMappingNode(missingComponentNodes...)
+		responsesNode := *yml.CreateMapNode(ctx, missingComponentNodes)
 
 		// If components.responses doesn't already exist, appending will fail silently
 		// If components.responses does exist, we don't want to overwrite it
-		missingResponseComponents := b.document.Components == nil || b.document.Components.Responses == nil || b.document.Components.Responses.IsZero()
+		missingResponseComponents := b.document.GetComponents().GetResponses().Len() == 0
 		if missingResponseComponents {
 			actions = append(actions, overlay.Action{
 				Target: "$.components",
-				Update: *builder.NewNode("responses", &responsesNode),
+				Update: *yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("responses"), &responsesNode}),
 			})
 		} else {
 			actions = append(actions, overlay.Action{
@@ -170,7 +174,7 @@ func incrementCount(m map[string]map[string]int, code, path string) {
 }
 
 // returns the response and the actual code that was matched
-func getResponseForCode(responses *orderedmap.Map[string, *v3.Response], code string) (*v3.Response, string) {
+func getResponseForCode(responses *openapi.Responses, code string) (*openapi.ReferencedResponse, string) {
 	for _, c := range possibleCodes(code) {
 		if v, ok := responses.Get(c); ok {
 			return v, c
@@ -237,25 +241,21 @@ func keepOnlyMostUsed(codeUsedComponents map[string]map[string]int) map[string]s
 //	  message:
 //	    type: string
 //	additionalProperties: true
-func getSchemaNodes(group errorGroup) []*yaml.Node {
-	builder := yamlutil.NewBuilder(false)
-
-	propertiesNode := builder.NewMappingNode(
-		builder.NewKeyNode("message"),
-		builder.NewMappingNode(
-			builder.NewNodeItem("type", "string")...,
-		),
+func getSchemaNodes(ctx context.Context, group errorGroup) []*yaml.Node {
+	propertiesNode := yml.CreateMapNode(
+		ctx,
+		[]*yaml.Node{yml.CreateStringNode("message"), yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("type"), yml.CreateStringNode("string")})},
 	)
 
 	var nodes []*yaml.Node
-	nodes = append(nodes, builder.NewNodeItem("type", "object")...)
-	nodes = append(nodes, builder.NewNodeItem("x-speakeasy-suggested-error", "true")...)
-	nodes = append(nodes, builder.NewKeyNode("properties"), propertiesNode)
-	nodes = append(nodes, builder.NewNodeItem("additionalProperties", "true")...)
+	nodes = append(nodes, yml.CreateStringNode("type"), yml.CreateStringNode("object"))
+	nodes = append(nodes, yml.CreateStringNode("x-speakeasy-suggested-error"), yml.CreateBoolNode(true))
+	nodes = append(nodes, yml.CreateStringNode("properties"), propertiesNode)
+	nodes = append(nodes, yml.CreateStringNode("additionalProperties"), yml.CreateBoolNode(true))
 
 	return []*yaml.Node{
-		builder.NewKeyNode(group.schemaName),
-		builder.NewMappingNode(nodes...),
+		yml.CreateStringNode(group.schemaName),
+		yml.CreateMapNode(ctx, nodes),
 	}
 }
 
@@ -267,15 +267,16 @@ func getSchemaNodes(group errorGroup) []*yaml.Node {
 //	    application/json:
 //	        schema:
 //	            $ref: '#/components/schemas/InternalServerError'
-func getComponentNodes(group errorGroup) []*yaml.Node {
-	builder := yamlutil.NewBuilder(false)
-
+func getComponentNodes(ctx context.Context, group errorGroup) []*yaml.Node {
 	var nodes []*yaml.Node
-	nodes = append(nodes, builder.NewNodeItem("description", group.description)...)
-	nodes = append(nodes, builder.NewKeyNode("content"))
-	nodes = append(nodes, builder.NewNode("application/json", builder.NewNode("schema", builder.NewMultinode("$ref", "#/components/schemas/"+group.schemaName))))
+	nodes = append(nodes, yml.CreateStringNode("description"), yml.CreateStringNode(group.description))
 
-	return []*yaml.Node{builder.NewKeyNode(group.responseName), builder.NewMappingNode(nodes...)}
+	schema := yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("$ref"), yml.CreateStringNode("#/components/schemas/" + group.schemaName)})
+	content := yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("application/json"), yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("schema"), schema})})
+
+	nodes = append(nodes, yml.CreateStringNode("content"), content)
+
+	return []*yaml.Node{yml.CreateStringNode(group.responseName), yml.CreateMapNode(ctx, nodes)}
 }
 
 func findUnusedName(baseName string, usedNames []string) string {

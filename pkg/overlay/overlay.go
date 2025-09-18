@@ -3,13 +3,13 @@ package overlay
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
-	"io"
 )
 
 type ChangeType int
@@ -92,15 +92,15 @@ func Summarize(o *overlay.Overlay) *Summary {
 }
 
 func ApplyWithSourceLocation(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlOut bool, w io.Writer, strict bool) error {
-	return apply(document, o, sourceLocation, utils.HasYAMLExt(sourceLocation), yamlOut, w, strict)
+	return apply(document, o, sourceLocation, yamlOut, w, strict)
 }
 
 // ApplyDirect is used by the Registry to apply overlays from registry-based documents which do not have local file references
-func ApplyDirect(document *yaml.Node, o *overlay.Overlay, yamlIn, yamlOut bool, w io.Writer, strict bool) error {
-	return apply(document, o, "", yamlIn, yamlOut, w, strict)
+func ApplyDirect(document *yaml.Node, o *overlay.Overlay, yamlOut bool, w io.Writer, strict bool) error {
+	return apply(document, o, "", yamlOut, w, strict)
 }
 
-func apply(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlIn, yamlOut bool, w io.Writer, strict bool) error {
+func apply(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlOut bool, w io.Writer, strict bool) error {
 	if err := o.Validate(); err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func apply(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlI
 		}
 	}
 
-	bytes, err := schemas.RenderDocument(document, sourceLocation, yamlIn, yamlOut)
+	bytes, err := schemas.Render(document, sourceLocation, yamlOut)
 	if err != nil {
 		return fmt.Errorf("failed to Render document: %w", err)
 	}

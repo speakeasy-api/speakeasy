@@ -44,7 +44,11 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 		Logger:      log.From(ctx),
 	})
 
-	diff := changes.Changes(oldConfig, newConfig)
+	diff, err := changes.Changes(oldConfig, newConfig)
+	if err != nil {
+		log.From(ctx).Warnf("Error computing changes: %s", err.Error())
+		return "", err
+	}
 	if len(diff.Changes) == 0 {
 		return "", nil
 	}

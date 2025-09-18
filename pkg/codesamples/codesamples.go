@@ -10,8 +10,8 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/yml"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
@@ -34,7 +34,6 @@ type CodeSampleExampleSource struct {
 
 func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, isSilent bool, opts workflow.CodeSamples) (string, error) {
 	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
-	isJSON := filepath.Ext(schema) == ".json"
 
 	if isSilent {
 		logger := log.From(ctx)
@@ -90,7 +89,7 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 		snippets := targetToCodeSamples[target]
 		actions = append(actions, overlay.Action{
 			Target: target,
-			Update: *rootCodeSampleNode(snippets, opts, isJSON),
+			Update: *rootCodeSampleNode(ctx, snippets, opts),
 		})
 	}
 
@@ -201,25 +200,23 @@ func getStyle(opts workflow.CodeSamples) CodeSamplesStyle {
 	return Default
 }
 
-func rootCodeSampleNode(snippets []usagegen.UsageSnippet, opts workflow.CodeSamples, isJSON bool) *yaml.Node {
-	builder := yamlutil.NewBuilder(isJSON)
-
+func rootCodeSampleNode(ctx context.Context, snippets []usagegen.UsageSnippet, opts workflow.CodeSamples) *yaml.Node {
 	var content []*yaml.Node
 	for _, snippet := range snippets {
-		content = append(content, singleCodeSampleNode(snippet, opts, builder))
+		content = append(content, singleCodeSampleNode(ctx, snippet, opts))
 	}
 
 	switch getStyle(opts) {
 	case Default:
-		return builder.NewListNode("x-codeSamples", content)
+		return yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("x-codeSamples"), yml.CreateOrUpdateSliceNode(ctx, content, nil)})
 	case ReadMe:
-		return builder.NewNode("x-readme", builder.NewListNode("code-samples", content))
+		return yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("x-readme"), yml.CreateMapNode(ctx, []*yaml.Node{yml.CreateStringNode("code-samples"), yml.CreateOrUpdateSliceNode(ctx, content, nil)})})
 	}
 
 	panic("unrecognized style")
 }
 
-func singleCodeSampleNode(snippet usagegen.UsageSnippet, opts workflow.CodeSamples, builder *yamlutil.Builder) *yaml.Node {
+func singleCodeSampleNode(ctx context.Context, snippet usagegen.UsageSnippet, opts workflow.CodeSamples) *yaml.Node {
 	lang := snippet.Language
 	if opts.LangOverride != nil {
 		lang = *opts.LangOverride
@@ -236,28 +233,20 @@ func singleCodeSampleNode(snippet usagegen.UsageSnippet, opts workflow.CodeSampl
 		}
 	}
 
-	var kvs []string
+	var kvs []*yaml.Node
 	switch getStyle(opts) {
 	case Default:
-		kvs = append(kvs, "lang", lang)
+		kvs = append(kvs, yml.CreateStringNode("lang"), yml.CreateStringNode(lang))
 		if label != nil {
-			kvs = append(kvs, "label", *label)
+			kvs = append(kvs, yml.CreateStringNode("label"), yml.CreateStringNode(*label))
 		}
-		kvs = append(kvs, "source", snippet.Snippet)
+		kvs = append(kvs, yml.CreateStringNode("source"), yml.CreateStringNode(snippet.Snippet))
 	case ReadMe:
 		if label != nil {
-			kvs = append(kvs, "name", *label)
+			kvs = append(kvs, yml.CreateStringNode("name"), yml.CreateStringNode(*label))
 		}
-		kvs = append(kvs, "language", lang, "code", snippet.Snippet)
+		kvs = append(kvs, yml.CreateStringNode("language"), yml.CreateStringNode(lang), yml.CreateStringNode("code"), yml.CreateStringNode(snippet.Snippet))
 	}
 
-	return builder.NewMultinode(kvs...)
-}
-
-func styleForNode(isJSON bool) yaml.Style {
-	if isJSON {
-		return yaml.DoubleQuotedStyle
-	}
-
-	return 0
+	return yml.CreateMapNode(ctx, kvs)
 }

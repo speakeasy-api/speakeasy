@@ -208,7 +208,6 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	selectedRegistryUri := ""
 	if useRemoteSource {
 		selectedRecentGeneration, err := selectRecentGeneration(ctx, recentGenerations)
-
 		if err != nil {
 			useRemoteSource = false
 		}
@@ -268,7 +267,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	if authHeader == "" && len(fileLocation) > 0 {
 		_, contents, _ := openapi.GetSchemaContents(ctx, fileLocation, "", "")
 		if len(contents) > 0 {
-			summary, _ = openapi.GetOASSummary(contents, fileLocation)
+			summary, _ = openapi.GetOASSummary(ctx, contents, fileLocation)
 		}
 	}
 
@@ -665,7 +664,6 @@ func selectRecentGeneration(ctx context.Context, generations []remote.RecentGene
 		&evtId,
 	)
 	_, err := charm_internal.NewForm(huh.NewForm(selectPrompt)).ExecuteForm()
-
 	if err != nil {
 		return nil, err
 	}
@@ -727,7 +725,6 @@ func fetchTemplate(ctx context.Context, templateID string) (*shared.SchemaStoreI
 func saveTemplateToDisk(ctx context.Context, schemaStoreItem *shared.SchemaStoreItem) (string, error) {
 	tempDir := os.TempDir()
 	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", schemaStoreItem.ID, schemaStoreItem.Format)))
-
 	if err != nil {
 		return "", ErrMsgFailedToSaveTemplate
 	}

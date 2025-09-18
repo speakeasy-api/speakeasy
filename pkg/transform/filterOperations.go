@@ -8,10 +8,8 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/pb33f/libopenapi"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"gopkg.in/yaml.v3"
 )
@@ -51,12 +49,11 @@ type args struct {
 	schemaPath string
 }
 
-func filterOperations(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	overlay := BuildFilterOperationsOverlay(model, args.include, args.includeOps, nil)
+func filterOperations(ctx context.Context, schemaPath string, doc *openapi.OpenAPI, args args) (*openapi.OpenAPI, error) {
+	overlay := BuildFilterOperationsOverlay(doc, args.include, args.includeOps, nil)
 
-	root := model.Index.GetRootNode()
-	if err := overlay.ApplyTo(root); err != nil {
-		return doc, model, err
+	if err := overlay.ApplyTo(doc.GetRootNode()); err != nil {
+		return doc, err
 	}
 
 	newSpec := bytes.Buffer{}
@@ -86,13 +83,13 @@ func filterOperations(ctx context.Context, doc libopenapi.Document, model *libop
 	return doc, model, err
 }
 
-func BuildRemoveInvalidOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], opToErr map[string]error) overlay.Overlay {
-	return BuildFilterOperationsOverlay(model, false, slices.Collect(maps.Keys(opToErr)), opToErr)
+func BuildRemoveInvalidOperationsOverlay(doc *openapi.OpenAPI, opToErr map[string]error) overlay.Overlay {
+	return BuildFilterOperationsOverlay(doc, false, slices.Collect(maps.Keys(opToErr)), opToErr)
 }
 
-func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string, opToErr map[string]error) overlay.Overlay {
-	actionFn := func(method, path string, operation *v3.Operation) (map[string]string, *overlay.Action, *suggestions.ModificationExtension) {
-		operationID := operation.OperationId
+func BuildFilterOperationsOverlay(doc *openapi.OpenAPI, include bool, ops []string, opToErr map[string]error) overlay.Overlay {
+	actionFn := func(method, path string, operation *openapi.Operation) (map[string]string, *overlay.Action, *suggestions.ModificationExtension) {
+		operationID := operation.GetOperationID()
 
 		if operationID == "" {
 			operationID = fmt.Sprintf("%s_%s", method, path)

@@ -1,10 +1,10 @@
 package errorCodes
 
 import (
+	"context"
 	"slices"
 
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/openapi/openapi"
 )
 
 type errorGroup struct {
@@ -65,15 +65,16 @@ func (e errorGroupSlice) AllCodes() []string {
 	return codes
 }
 
-func (e errorGroupSlice) DeduplicateComponentNames(document v3.Document) {
+func (e errorGroupSlice) DeduplicateComponentNames(ctx context.Context, document *openapi.OpenAPI) {
 	var schemaNames []string
-	for s := range openapi.IterateSchemas(document) {
-		schemaNames = append(schemaNames, s.Name)
+	var responseNames []string
+
+	for name := range document.GetComponents().GetSchemas().All() {
+		schemaNames = append(schemaNames, name)
 	}
 
-	var responseNames []string
-	for r := range openapi.IterateResponses(document) {
-		responseNames = append(responseNames, r.Name)
+	for name := range document.GetComponents().GetResponses().All() {
+		responseNames = append(responseNames, name)
 	}
 
 	for i, group := range e {

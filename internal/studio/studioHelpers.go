@@ -246,7 +246,7 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 	if err != nil {
 		return components.SourceResponseData{}, fmt.Errorf("error unmarshalling input spec: %w", err)
 	}
-	formattedInputSpec, err := schemas.RenderDocument(inputNode, inputPath, !isJSON, !isJSON)
+	formattedInputSpec, err := schemas.Render(inputNode, inputPath, !isJSON)
 	if err != nil {
 		return components.SourceResponseData{}, fmt.Errorf("error formatting input spec: %w", err)
 	}
@@ -346,7 +346,6 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow, workingDir string)
 
 			// Produce the lexically shortest path based on the base path and the location
 			shortestPath, err := filepath.Rel(workingDir, input.Location)
-
 			if err != nil {
 				shortestPath = input.Location
 			}
@@ -428,7 +427,6 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 	}
 
 	asString, err := utils.ReadFileToString(overlay.Document.Location.Resolve())
-
 	if err != nil {
 		return "", err
 	}

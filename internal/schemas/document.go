@@ -3,23 +3,23 @@ package schemas
 import (
 	"context"
 	"fmt"
-	"github.com/pb33f/libopenapi"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	coreOpenapi "github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/download"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/registry"
 )
 
-func LoadDocument(ctx context.Context, schemaLocation string) ([]byte, *libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+func LoadDocument(ctx context.Context, schemaLocation string) ([]byte, *openapi.OpenAPI, error) {
 	docPath, err := ResolveDocument(ctx, workflow.Document{Location: workflow.LocationString(schemaLocation)}, nil, nil)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return openapi.LoadDocument(ctx, docPath)
+	return coreOpenapi.LoadDocument(ctx, docPath)
 }
 
 func ResolveDocument(ctx context.Context, d workflow.Document, outputLocation *string, step *workflowTracking.WorkflowStep) (string, error) {

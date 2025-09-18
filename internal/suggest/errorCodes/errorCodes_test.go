@@ -2,13 +2,14 @@ package errorCodes_test
 
 import (
 	"context"
+	"os"
+	"testing"
+
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
-	"os"
-	"testing"
 )
 
 func TestBuildErrorCodesOverlay(t *testing.T) {
@@ -28,9 +29,9 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 
 			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, tt.in)
 
-			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
+			_, doc, err := schemas.LoadDocument(ctx, tt.in)
 			require.NoError(t, err)
-			root := model.Index.GetRootNode()
+			root := doc.GetRootNode()
 			err = overlay.ApplyTo(root)
 			require.NoError(t, err)
 
@@ -61,10 +62,10 @@ func TestDiagnose(t *testing.T) {
 	for _, tt := range toTest {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			_, _, model, err := schemas.LoadDocument(ctx, tt.schema)
+			_, doc, err := schemas.LoadDocument(ctx, tt.schema)
 			require.NoError(t, err)
 
-			diagnosis := errorCodes.Diagnose(model.Model)
+			diagnosis := errorCodes.Diagnose(ctx, doc)
 			if tt.expectedCount == 0 {
 				require.Len(t, diagnosis, 0)
 				return
