@@ -315,14 +315,18 @@ func writeToOutputLocation(ctx context.Context, documentPath string, outputLocat
 		return err
 	}
 
-	// If we have yaml and need json, convert it
-	if utils.HasYAMLExt(documentPath) && !utils.HasYAMLExt(outputLocation) {
-		jsonBytes, err := schemas.Format(ctx, documentPath, false)
+	// Check if we need to convert between formats based on file extensions
+	sourceIsYAML := utils.HasYAMLExt(documentPath)
+	targetIsYAML := utils.HasYAMLExt(outputLocation)
+
+	// If formats differ, convert appropriately
+	if sourceIsYAML != targetIsYAML {
+		formattedBytes, err := schemas.Format(ctx, documentPath, targetIsYAML)
 		if err != nil {
 			return fmt.Errorf("failed to format document: %w", err)
 		}
 
-		return os.WriteFile(outputLocation, jsonBytes, 0o644)
+		return os.WriteFile(outputLocation, formattedBytes, 0o644)
 	} else {
 		// Otherwise, just copy the file over
 		return utils.CopyFile(documentPath, outputLocation)
