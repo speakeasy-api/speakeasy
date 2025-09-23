@@ -41,6 +41,7 @@ const (
 	// Generator steps
 	SourceStepStart    SourceStepID = "Started"
 	SourceStepGenerate SourceStepID = "Generating SDK"
+	SourceStepApplyCodeChanges SourceStepID = "Applying Code Changes"
 	SourceStepCompile  SourceStepID = "Compiling SDK"
 	SourceStepComplete SourceStepID = "Completed"
 	SourceStepCancel   SourceStepID = "Cancelling"
