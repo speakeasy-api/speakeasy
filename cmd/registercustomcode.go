@@ -9,7 +9,9 @@ import (
 )
 
 type RegisterCustomCodeFlags struct {
-	OutDir string `json:"out-dir"`
+	OutDir  string `json:"out-dir"`
+	List    bool   `json:"list"`
+	Resolve bool   `json:"resolve"`
 }
 
 var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
@@ -23,10 +25,20 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 			Shorthand:   "o",
 			Description: "output directory for the registercustomcode command",
 		},
+		flag.BooleanFlag{
+			Name:        "list",
+			Shorthand:   "l",
+			Description: "list custom code patches",
+		},
+		flag.BooleanFlag{
+			Name:        "resolve",
+			Shorthand:   "r",
+			Description: "resolve custom code conflicts",
+		},
 	},
 }
 
-func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) error {
+func registerCustomCode(_ context.Context, flags RegisterCustomCodeFlags) error {
 	outDir := flags.OutDir
 	if outDir == "" {
 		outDir = "."
@@ -41,6 +53,16 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 		return err
 	}
 
+	// If --list flag is provided, call ListCustomCodePatches
+	if flags.List {
+		return g.ListCustomCodePatches(outDir)
+	}
+
+	// If --resolve flag is provided, call ResolveCustomCodeConflicts
+	if flags.Resolve {
+		return g.ResolveCustomCodeConflicts(outDir)
+	}
+
 	// Call the registercustomcode functionality
-	return g.RegisterCustomCode(ctx, outDir)
+	return g.RegisterCustomCode(outDir)
 }
