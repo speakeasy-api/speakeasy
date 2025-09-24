@@ -38,6 +38,12 @@ jobs:
             # on your needs.
             - name: Configure git for private modules
               run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.BOT_REPO_TOKEN }}
             - name: Setup Choco
               uses: crazy-max/ghaction-chocolatey@2526f467ccbd337d307fe179959cabbeca0bc8c0 # v3.4.0
               with:
