@@ -6,8 +6,6 @@ replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixva
 
 replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed
 
-replace github.com/speakeasy-api/sdk-gen-config => ../sdk-gen-config
-
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/KimMachineGun/automemlimit v0.7.1
@@ -42,7 +40,7 @@ require (
 	github.com/speakeasy-api/openapi v1.7.3
 	github.com/speakeasy-api/openapi-generation/v2 v2.714.1
 	github.com/speakeasy-api/openapi-overlay v0.10.3
-	github.com/speakeasy-api/sdk-gen-config v1.32.1
+	github.com/speakeasy-api/sdk-gen-config v1.33.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.20.9
 	github.com/speakeasy-api/versioning-reports v0.6.1
