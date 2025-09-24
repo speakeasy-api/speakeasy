@@ -3,7 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"maps"
+	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -45,6 +48,7 @@ type RunFlags struct {
 	GitHub             bool              `json:"github"`
 	GitHubRepos        string            `json:"github-repos"`
 	Minimal            bool              `json:"minimal"`
+	Dependent          string            `json:"dependent"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -180,6 +184,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Name:        "minimal",
 			Description: "only run the steps that are strictly necessary to generate the SDK",
 		},
+		flag.StringFlag{
+			Name:        "dependent",
+			Description: "execute speakeasy run for the specified dependent (or 'all' for all dependents). All other flags will be forwarded to the dependent run",
+			Hidden:      true,
+		},
 	},
 }
 
@@ -195,6 +204,8 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		return err
 	}
 
+	dependents := slices.Collect(maps.Keys(wf.Dependents))
+
 	if flags.GitHubRepos != "" {
 		flags.GitHub = true
 		if err := cmd.Flags().Set("github", "true"); err != nil {
@@ -202,13 +213,22 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		}
 	}
 
-	if flags.Target == "" && flags.Source == "" {
+	if flags.Target == "" && flags.Source == "" && flags.Dependent == "" {
+		sourcesOnly := len(wf.Targets) == 0 && len(wf.Dependents) == 0
+
 		if len(wf.Targets) == 1 {
 			flags.Target = targets[0]
-		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
+		} else if sourcesOnly && len(wf.Sources) == 1 {
 			flags.Source = sources[0]
-		} else if len(wf.Targets) == 0 && len(wf.Sources) > 1 {
-			flags.Source, err = askForSource(sources)
+		} else if sourcesOnly && len(wf.Sources) > 1 {
+			flags.Source, err = askForSource(sources, true)
+			if err != nil {
+				return err
+			}
+		} else if len(wf.Targets) == 0 && len(wf.Dependents) == 1 {
+			flags.Dependent = dependents[0]
+		} else if len(wf.Targets) == 0 && len(wf.Dependents) > 1 {
+			flags.Dependent, err = askForDependent(dependents)
 			if err != nil {
 				return err
 			}
@@ -227,6 +247,22 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	// Needed later
 	if err := cmd.Flags().Set("target", flags.Target); err != nil {
 		return err
+	}
+
+	// Dependent only allows a single source for now
+	if flags.Dependent != "" {
+		if len(sources) == 1 {
+			flags.Source = sources[0]
+		} else {
+			flags.Source, err = askForSource(sources, false)
+			if err != nil {
+				return err
+			}
+		}
+
+		if flags.Dependent == "rebuild-source-only" {
+			flags.Dependent = ""
+		}
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
@@ -303,14 +339,15 @@ func askForTarget(title, description, confirmation string, targets []string, all
 	return target, nil
 }
 
-func askForSource(sources []string) (string, error) {
+func askForSource(sources []string, allowAll bool) (string, error) {
 	var sourceOptions []huh.Option[string]
 
 	for _, sourceName := range sources {
 		sourceOptions = append(sourceOptions, huh.NewOption(sourceName, sourceName))
 	}
-
-	sourceOptions = append(sourceOptions, huh.NewOption("✱ All", "all"))
+	if allowAll {
+		sourceOptions = append(sourceOptions, huh.NewOption("✱ All", "all"))
+	}
 
 	source := ""
 
@@ -320,6 +357,26 @@ func askForSource(sources []string) (string, error) {
 	}
 
 	return source, nil
+}
+
+func askForDependent(dependents []string) (string, error) {
+	dependentOptions := []huh.Option[string]{}
+
+	for _, dependentName := range dependents {
+		dependentOptions = append(dependentOptions, huh.NewOption(dependentName, dependentName))
+	}
+
+	dependentOptions = append(dependentOptions, huh.NewOption("✱ All", "all"))
+	dependentOptions = append(dependentOptions, huh.NewOption("→ None (rebuild source only)", "rebuild-source-only"))
+
+	dependent := ""
+
+	prompt := charm.NewSelectPrompt("Which SDK would you like to regenerate?", "You may choose an individual SDK or 'all'.", dependentOptions, &dependent)
+	if _, err := charm.NewForm(huh.NewForm(prompt), charm.WithTitle("Let's rebuild your source and regenerate SDKs.")).ExecuteForm(); err != nil {
+		return "", err
+	}
+
+	return dependent, nil
 }
 
 var minimalOpts = []run.Opt{
@@ -394,6 +451,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 			return run.RunGitHubRepos(ctx, flags.Target, flags.SetVersion, flags.Force, flags.GitHubRepos)
 		}
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
+	}
+
+	if flags.Dependent != "" {
+		return run.RunDependent(ctx, flags.Source, flags.Dependent, stringifyFlags(flags, []string{"dependent", "source"}))
 	}
 
 	opts := []run.Opt{
@@ -478,4 +539,75 @@ func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags, ru
 	}
 
 	return nil, false
+}
+
+// String returns the command line arguments representation of the RunFlags
+func (f RunFlags) String() string {
+	return stringifyFlags(f, nil)
+}
+
+// stringifyFlags converts a struct to command line arguments using JSON tags
+// A bit annoying to have to do it this way, temporary hack
+func stringifyFlags(flags RunFlags, flagsToDrop []string) string {
+	var args []string
+
+	v := reflect.ValueOf(flags)
+	t := reflect.TypeOf(flags)
+
+	for i := 0; i < v.NumField(); i++ {
+		field := t.Field(i)
+		value := v.Field(i)
+
+		// Get the JSON tag
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" || jsonTag == "-" {
+			continue
+		}
+
+		// Skip flags that are in the flagsToDrop slice
+		if flagsToDrop != nil && slices.Contains(flagsToDrop, jsonTag) {
+			continue
+		}
+
+		// Skip zero values for most types
+		if value.IsZero() {
+			continue
+		}
+
+		// Handle different field types
+		switch field.Type.Kind() {
+		case reflect.String:
+			if value.String() != "" {
+				args = append(args, fmt.Sprintf("--%s=%s", jsonTag, value.String()))
+			}
+		case reflect.Bool:
+			if value.Bool() {
+				args = append(args, fmt.Sprintf("--%s", jsonTag))
+			}
+		case reflect.Slice:
+			if value.Len() > 0 {
+				// Handle string slices
+				if field.Type.Elem().Kind() == reflect.String {
+					var sliceValues []string
+					for j := 0; j < value.Len(); j++ {
+						sliceValues = append(sliceValues, value.Index(j).String())
+					}
+					args = append(args, fmt.Sprintf("--%s=%s", jsonTag, strings.Join(sliceValues, ",")))
+				}
+			}
+		case reflect.Map:
+			if value.Len() > 0 {
+				// Handle map[string]string
+				if field.Type.Key().Kind() == reflect.String && field.Type.Elem().Kind() == reflect.String {
+					var mapPairs []string
+					for _, key := range value.MapKeys() {
+						mapPairs = append(mapPairs, fmt.Sprintf("%s:%s", key.String(), value.MapIndex(key).String()))
+					}
+					args = append(args, fmt.Sprintf("--%s=%s", jsonTag, strings.Join(mapPairs, ",")))
+				}
+			}
+		}
+	}
+
+	return strings.Join(args, " ")
 }
