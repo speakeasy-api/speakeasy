@@ -15,6 +15,12 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64  # Windows ARM64 can be enabled if needed
     ldflags:
       - "-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X main.artifactArch={{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
 archives:
@@ -32,6 +38,26 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+dockers_v2:
+  - id: speakeasy
+    dockerfile: Dockerfile
+    ids: [speakeasy]
+    images:
+      - ghcr.io/speakeasy-api/speakeasy
+    tags:
+      - "{{ .Tag }}"
+      - "latest"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.title: "{{ .ProjectName }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .Commit }}"
+      org.opencontainers.image.source: "{{ .GitURL }}"
+      org.opencontainers.image.created: "{{ .Date }}"
+
 brews:
   - name: speakeasy
     repository:
