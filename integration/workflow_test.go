@@ -27,37 +27,88 @@ import (
 // If all test groups are run at the same time you will see test failures.
 
 func TestWorkflowWithEnvVar(t *testing.T) {
-	temp := setupTestDir(t)
-
-	// Create workflow file and associated resources
-	workflowFile := &workflow.Workflow{
-		Version: workflow.WorkflowVersion,
-		Sources: make(map[string]workflow.Source),
-		Targets: make(map[string]workflow.Target),
-	}
-	workflowFile.Sources["first-source"] = workflow.Source{
-		Inputs: []workflow.Document{
-			{
-				Location: workflow.LocationString("${MY_ENV_VAR}"),
+	tests := []struct {
+		name     string
+		env      map[string]string
+		location workflow.LocationString
+		want     string
+	}{
+		{
+			name: "simple substitution",
+			env: map[string]string{
+				"MY_FILE_FULL_PATH": "spec.yaml",
 			},
+			location: workflow.LocationString("${MY_FILE_FULL_PATH}"),
+			want:     "spec.yaml",
+		},
+		{
+			name: "fallback substitution",
+			env: map[string]string{
+				"MY_FILE_PATH": "",
+				"MY_FILE_EXT":  "",
+			},
+			location: workflow.LocationString("${MY_FILE_PATH:-spec}.${MY_FILE_EXT:-yaml}"),
+			want:     "spec.yaml",
+		},
+		{
+			name: "colon plus substitution",
+			env: map[string]string{
+				"MY_FILE_APPEND": "enabled",
+			},
+			location: workflow.LocationString("spec${MY_FILE_APPEND:+.yaml}"),
+			want:     "spec.yaml",
+		},
+		{
+			name: "multiple substitutions",
+			env: map[string]string{
+				"MY_FILE_DIR":  "specs",
+				"MY_FILE_NAME": "spec",
+				"MY_FILE_EXT":  "yaml",
+			},
+			location: workflow.LocationString("${MY_FILE_DIR}/${MY_FILE_NAME}.${MY_FILE_EXT}"),
+			want:     "specs/spec.yaml",
 		},
 	}
-	workflowFile.Targets["test-target"] = workflow.Target{
-		Target: "typescript",
-		Source: "first-source",
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			temp := setupTestDir(t)
+
+			for key, value := range tt.env {
+				t.Setenv(key, value)
+			}
+
+			resolved := tt.location.Resolve()
+			require.Equal(t, tt.want, resolved)
+
+			workflowFile := &workflow.Workflow{
+				Version: workflow.WorkflowVersion,
+				Sources: make(map[string]workflow.Source),
+				Targets: make(map[string]workflow.Target),
+			}
+			workflowFile.Sources["first-source"] = workflow.Source{
+				Inputs: []workflow.Document{
+					{Location: tt.location},
+				},
+			}
+			workflowFile.Targets["test-target"] = workflow.Target{
+				Target: "typescript",
+				Source: "first-source",
+			}
+
+			require.NoError(t, os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755))
+			require.NoError(t, workflow.Save(temp, workflowFile))
+
+			destPath := filepath.Join(temp, resolved)
+			require.NoError(t, os.MkdirAll(filepath.Dir(destPath), 0o755))
+			require.NoError(t, copyFile(filepath.Join("resources", "spec.yaml"), destPath))
+
+			require.NoError(t, execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile").Run())
+
+			_, err := os.Stat(filepath.Join(temp, "README.md"))
+			require.NoError(t, err)
+		})
 	}
-
-	err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
-	require.NoError(t, err)
-	err = workflow.Save(temp, workflowFile)
-
-	require.NoError(t, os.Setenv("MY_ENV_VAR", "spec.yaml"))
-	require.NoError(t, copyFile(filepath.Join("resources", "spec.yaml"), filepath.Join(temp, "spec.yaml")))
-
-	require.NoError(t, execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile").Run())
-	// check README.md exists
-	_, err = os.Stat(filepath.Join(temp, "README.md"))
-	require.NoError(t, err)
 }
 
 func TestGenerationWorkflows(t *testing.T) {
