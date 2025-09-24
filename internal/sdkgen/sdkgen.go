@@ -148,6 +148,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generate.WithCLIVersion(opts.CLIVersion),
 		generate.WithForceGeneration(),
 		generate.WithChangelogReleaseNotes(opts.ReleaseNotes),
+		generate.WithApplyCustomCode(),
 	}
 
 	if opts.Verbose {
