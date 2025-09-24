@@ -360,13 +360,14 @@ func askForSource(sources []string, allowAll bool) (string, error) {
 }
 
 func askForDependent(dependents []string) (string, error) {
-	dependentOptions := []huh.Option[string]{huh.NewOption("✱ All", "all")}
+	dependentOptions := []huh.Option[string]{}
 
 	for _, dependentName := range dependents {
 		dependentOptions = append(dependentOptions, huh.NewOption(dependentName, dependentName))
 	}
 
-	dependentOptions = append(dependentOptions, huh.NewOption("-> Rebuild source only", "rebuild-source-only"))
+	dependentOptions = append(dependentOptions, huh.NewOption("✱ All", "all"))
+	dependentOptions = append(dependentOptions, huh.NewOption("→ None (rebuild source only)", "rebuild-source-only"))
 
 	dependent := ""
 
