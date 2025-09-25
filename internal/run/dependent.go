@@ -34,21 +34,20 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 		return err
 	}
 
+	if wf.Sources[source].Output == nil {
+		return fmt.Errorf("source %s must have an output location specified", source)
+	}
+
 	log.From(ctx).Infof("\n=== Building source %s ===\n", source)
 
 	// Build source
-	if err := runSpeakeasyFromLocation(ctx, ".", "run", "--source "+source, nil); err != nil {
+	if err := runSpeakeasyFromLocation(ctx, ".", "run", "--source "+source); err != nil {
 		return fmt.Errorf("failed to build source %s: %w", source, err)
 	}
 
-	log.From(ctx).Infof("\n\n=== Tagging source %s ===\n", source)
+	sourceLocation := *wf.Sources[source].Output
 
-	// Tag promote
-	tag := "local-" + randStringBytes(5)
-	if err := runSpeakeasyFromLocation(ctx, ".", "tag", fmt.Sprintf("promote --sources %s --tags %s", source, tag), nil); err != nil {
-		return fmt.Errorf("failed to tag promote source %s: %w", source, err)
-	}
-
+	// Run dependents
 	dependents := []string{dependent}
 	if dependent == "all" {
 		dependents = slices.Collect(maps.Keys(wf.Dependents))
@@ -62,7 +61,7 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 
 		log.From(ctx).Infof("\n\n=== Rebuilding SDK %s ===\n", dependent)
 
-		if err := processDependent(ctx, dependent, r, flagsString, tag); err != nil {
+		if err := processDependent(ctx, dependent, r, flagsString, sourceLocation); err != nil {
 			return fmt.Errorf("failed to process dependent %s: %w", dependent, err)
 		}
 	}
@@ -70,7 +69,7 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 	return nil
 }
 
-func processDependent(ctx context.Context, dependentName string, dependent workflow.Dependent, flagsString string, sourceTag string) error {
+func processDependent(ctx context.Context, dependentName string, dependent workflow.Dependent, flagsString string, sourceLocation string) error {
 	logger := log.From(ctx)
 
 	location := dependent.Location
@@ -101,10 +100,12 @@ func processDependent(ctx context.Context, dependentName string, dependent workf
 		logger.Printf("Successfully ran %s => %s", cloneCommand, location)
 	}
 
+	flagsString = fmt.Sprintf("--source-location %s %s", sourceLocation, flagsString)
+
 	// Run speakeasy run from the location
 	logger.Printf("Running speakeasy run from %s with flags: %s", location, flagsString)
 
-	if err := runSpeakeasyFromLocation(ctx, location, "run", flagsString, map[string]string{"tag": sourceTag}); err != nil {
+	if err := runSpeakeasyFromLocation(ctx, location, "run", flagsString); err != nil {
 		return fmt.Errorf("failed to run speakeasy from %s: %w", location, err)
 	}
 
@@ -142,7 +143,7 @@ func cloneRepository(ctx context.Context, cloneCommand, location string) error {
 	return nil
 }
 
-func runSpeakeasyFromLocation(ctx context.Context, location, command, flagsString string, env map[string]string) error {
+func runSpeakeasyFromLocation(ctx context.Context, location, command, flagsString string) error {
 	// Get the current executable path to run speakeasy from the same binary
 	execPath, err := os.Executable()
 	if err != nil {
@@ -163,15 +164,6 @@ func runSpeakeasyFromLocation(ctx context.Context, location, command, flagsStrin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-
-	// Set up environment variables
-	cmd.Env = os.Environ() // Start with current environment
-	if env != nil {
-		// Add custom environment variables
-		for key, value := range env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
-		}
-	}
 
 	return cmd.Run()
 }

@@ -102,8 +102,15 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		return "", nil, err
 	}
 
+	frozenSource := false
+
 	var currentDocument string
-	if w.FrozenWorkflowLock {
+	if w.SourceLocation != "" {
+		rootStep.NewSubstep("Using Source Location Override")
+		currentDocument = w.SourceLocation
+		frozenSource = true
+	} else if w.FrozenWorkflowLock {
+		frozenSource = true
 		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused")
 		if err != nil {
 			return "", nil, err
@@ -144,7 +151,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		return "", nil, err
 	}
 
-	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
+	if len(source.Overlays) > 0 && !frozenSource {
 		w.OnSourceResult(sourceRes, SourceStepOverlay)
 		sourceRes.OverlayResult, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
@@ -153,7 +160,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = sourceRes.OverlayResult.Location
 	}
 
-	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
+	if len(source.Transformations) > 0 && !frozenSource {
 		w.OnSourceResult(sourceRes, SourceStepTransform)
 		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
@@ -161,7 +168,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	if !w.FrozenWorkflowLock {
+	if !frozenSource {
 		if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
 			return "", nil, fmt.Errorf("failed to write to output location: %w %s", err, outputLocation)
 		}
