@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -49,6 +48,7 @@ type RunFlags struct {
 	GitHubRepos        string            `json:"github-repos"`
 	Minimal            bool              `json:"minimal"`
 	Dependent          string            `json:"dependent"`
+	SourceLocation     string            `json:"source-location"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -189,6 +189,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Description: "execute speakeasy run for the specified dependent (or 'all' for all dependents). All other flags will be forwarded to the dependent run",
 			Hidden:      true,
 		},
+		flag.StringFlag{
+			Name:        "source-location",
+			Description: "override the location of the source, for example to a local copy of your OpenAPI document",
+			Hidden:      true,
+		},
 	},
 }
 
@@ -204,7 +209,11 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		return err
 	}
 
-	dependents := slices.Collect(maps.Keys(wf.Dependents))
+	var dependents []string
+	for dependent := range wf.Dependents {
+		dependents = append(dependents, dependent)
+	}
+	slices.Sort(dependents) // Must sort or else order will be different on each run
 
 	if flags.GitHubRepos != "" {
 		flags.GitHub = true
@@ -410,6 +419,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+		run.WithSourceLocation(flags.SourceLocation),
 	}
 
 	if flags.Minimal {
@@ -472,6 +482,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+		run.WithSourceLocation(flags.SourceLocation),
 	}
 
 	if flags.Minimal {
