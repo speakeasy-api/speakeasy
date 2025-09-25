@@ -106,8 +106,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	var currentDocument string
 	if w.SourceLocation != "" {
-		step := rootStep.NewSubstep("Using Source Location Override")
-		step.Succeed()
+		rootStep.NewSubstep("Using Source Location Override")
 		currentDocument = w.SourceLocation
 		frozenSource = true
 	} else if w.FrozenWorkflowLock {
