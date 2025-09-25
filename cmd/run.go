@@ -210,7 +210,7 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	var dependents []string
-	if !env.IsGithubAction() { // Dependents are never relevant in GitHub Actions. This check is essential to ensure the right source/target gets chosen when dependents are set.
+	if !env.IsCI() { // Dependents are never relevant in GitHub Actions. This check is essential to ensure the right source/target gets chosen when dependents are set.
 		for dependent := range wf.Dependents {
 			dependents = append(dependents, dependent)
 		}
@@ -371,7 +371,7 @@ func askForSource(sources []string, allowAll bool) (string, error) {
 }
 
 func askForDependent(dependents []string) (string, error) {
-	if !utils.IsInteractive() || env.IsGithubAction() {
+	if !utils.IsInteractive() || env.IsCI() {
 		return "", nil
 	}
 
