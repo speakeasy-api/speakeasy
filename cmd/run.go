@@ -187,7 +187,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.StringFlag{
 			Name:        "dependent",
 			Description: "execute speakeasy run for the specified dependent (or 'all' for all dependents). All other flags will be forwarded to the dependent run",
-			// Hidden:      true,
+			Hidden:      true,
 		},
 		flag.StringFlag{
 			Name:        "source-location",
