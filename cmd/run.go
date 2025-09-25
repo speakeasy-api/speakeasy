@@ -210,10 +210,12 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	var dependents []string
-	for dependent := range wf.Dependents {
-		dependents = append(dependents, dependent)
+	if !env.IsCI() { // Dependents are never relevant in GitHub Actions. This check is essential to ensure the right source/target gets chosen when dependents are set.
+		for dependent := range wf.Dependents {
+			dependents = append(dependents, dependent)
+		}
+		slices.Sort(dependents) // Must sort or else order will be different on each run
 	}
-	slices.Sort(dependents) // Must sort or else order will be different on each run
 
 	if flags.GitHubRepos != "" {
 		flags.GitHub = true
@@ -223,7 +225,7 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	if flags.Target == "" && flags.Source == "" && flags.Dependent == "" {
-		sourcesOnly := len(wf.Targets) == 0 && len(wf.Dependents) == 0
+		sourcesOnly := len(wf.Targets) == 0 && len(dependents) == 0
 
 		if len(wf.Targets) == 1 {
 			flags.Target = targets[0]
@@ -234,9 +236,9 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 			if err != nil {
 				return err
 			}
-		} else if len(wf.Targets) == 0 && len(wf.Dependents) == 1 {
+		} else if len(wf.Targets) == 0 && len(dependents) == 1 {
 			flags.Dependent = dependents[0]
-		} else if len(wf.Targets) == 0 && len(wf.Dependents) > 1 {
+		} else if len(wf.Targets) == 0 && len(dependents) > 1 {
 			flags.Dependent, err = askForDependent(dependents)
 			if err != nil {
 				return err
@@ -369,6 +371,10 @@ func askForSource(sources []string, allowAll bool) (string, error) {
 }
 
 func askForDependent(dependents []string) (string, error) {
+	if !utils.IsInteractive() || env.IsCI() {
+		return "", nil
+	}
+
 	dependentOptions := []huh.Option[string]{}
 
 	for _, dependentName := range dependents {
