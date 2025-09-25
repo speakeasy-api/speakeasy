@@ -45,7 +45,10 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 		return fmt.Errorf("failed to build source %s: %w", source, err)
 	}
 
-	sourceLocation := *wf.Sources[source].Output
+	sourceLocation, err := filepath.Abs(*wf.Sources[source].Output)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path for source output: %w", err)
+	}
 
 	// Run dependents
 	dependents := []string{dependent}
