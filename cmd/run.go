@@ -271,7 +271,7 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		}
 	}
 
-	// We must set these after prompting for them or else the user will be prompted a second time 
+	// We must set these after prompting for them or else the user will be prompted a second time
 	if err := cmd.Flags().Set("source", flags.Source); err != nil {
 		return err
 	}
