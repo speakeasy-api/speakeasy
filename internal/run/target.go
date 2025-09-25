@@ -200,6 +200,8 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
+	println(fmt.Sprintf("Using spec path: %s", sourcePath))
+
 	generationAccess, err := sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{

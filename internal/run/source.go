@@ -168,7 +168,8 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
-	if !frozenSource {
+	// Must not be frozen source check! We DO want to write for source overrides
+	if !w.FrozenWorkflowLock {
 		if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
 			return "", nil, fmt.Errorf("failed to write to output location: %w %s", err, outputLocation)
 		}
