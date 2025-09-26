@@ -484,6 +484,10 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!skipCompile),
 	)
+	if err != nil {
+		return false, err
+	}
+	wf.FromQuickstart = true
 
 	// Execute the workflow based on output mode
 	switch output {
