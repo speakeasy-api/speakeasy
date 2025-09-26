@@ -6,6 +6,8 @@ replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixva
 
 replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed
 
+replace github.com/speakeasy-api/sdk-gen-config => ../sdk-gen-config
+
 require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/KimMachineGun/automemlimit v0.7.1
@@ -61,7 +63,7 @@ require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
-	dario.cat/mergo v1.0.1 // indirect
+	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
