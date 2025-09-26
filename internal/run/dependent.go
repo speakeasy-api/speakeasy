@@ -29,7 +29,7 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 		return fmt.Errorf("source must be specified")
 	}
 
-	wf, _, err := utils.GetWorkflowAndDir()
+	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,8 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 		return fmt.Errorf("failed to build source %s: %w", source, err)
 	}
 
-	sourceLocation, err := filepath.Abs(*wf.Sources[source].Output)
+	sourceLocation := filepath.Join(projectDir, *wf.Sources[source].Output)
+	sourceLocation, err = filepath.Abs(sourceLocation)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path for source output: %w", err)
 	}
@@ -64,7 +65,7 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 
 		log.From(ctx).Infof("\n\n=== Rebuilding SDK %s ===\n", dependent)
 
-		if err := processDependent(ctx, dependent, r, flagsString, sourceLocation); err != nil {
+		if err := processDependent(ctx, dependent, r, flagsString, sourceLocation, projectDir); err != nil {
 			return fmt.Errorf("failed to process dependent %s: %w", dependent, err)
 		}
 	}
@@ -72,13 +73,16 @@ func RunDependent(ctx context.Context, source, dependent string, flagsString str
 	return nil
 }
 
-func processDependent(ctx context.Context, dependentName string, dependent workflow.Dependent, flagsString string, sourceLocation string) error {
+func processDependent(ctx context.Context, dependentName string, dependent workflow.Dependent, flagsString string, sourceLocation string, projectDir string) error {
 	logger := log.From(ctx)
 
 	location := dependent.Location
 	if location == "" {
 		return fmt.Errorf("dependent %s has no location specified", dependentName)
 	}
+
+	// Resolve location relative to projectDir
+	location = filepath.Join(projectDir, location)
 
 	// Check if location exists
 	if _, err := os.Stat(location); os.IsNotExist(err) {

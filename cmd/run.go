@@ -255,11 +255,6 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		flags.Target = targets[0]
 	}
 
-	// Needed later
-	if err := cmd.Flags().Set("target", flags.Target); err != nil {
-		return err
-	}
-
 	// Dependent only allows a single source for now
 	if flags.Dependent != "" {
 		if len(sources) == 1 {
@@ -274,6 +269,17 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		if flags.Dependent == "rebuild-source-only" {
 			flags.Dependent = ""
 		}
+	}
+
+	// We must set these after prompting for them or else the user will be prompted a second time
+	if err := cmd.Flags().Set("source", flags.Source); err != nil {
+		return err
+	}
+	if err := cmd.Flags().Set("target", flags.Target); err != nil {
+		return err
+	}
+	if err := cmd.Flags().Set("dependent", flags.Dependent); err != nil {
+		return err
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
