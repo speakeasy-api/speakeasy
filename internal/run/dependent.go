@@ -99,7 +99,7 @@ func processDependent(ctx context.Context, dependentName string, dependent workf
 		if !interactivity.SimpleConfirm(prompt, true) {
 			logger.Printf("\n🚫 Repository clone declined.")
 			logger.Printf("💡 You can override the dependent location by creating a local workflow configuration file.")
-			
+
 			// Ask if they want to create workflow.local.yaml for local overrides
 			localWorkflowPath := filepath.Join(projectDir, ".speakeasy", "workflow.local.yaml")
 			prompt := fmt.Sprintf("Would you like to create %s to customize dependent locations?", localWorkflowPath)
@@ -111,7 +111,7 @@ func processDependent(ctx context.Context, dependentName string, dependent workf
 					logger.Printf("📝 You can now uncomment and modify the dependents section to set custom locations.")
 				}
 			}
-			
+
 			return fmt.Errorf("location %s does not exist and user declined to clone", location)
 		}
 
@@ -194,22 +194,22 @@ func runSpeakeasyFromLocation(ctx context.Context, location, command, flagsStrin
 func CreateWorkflowLocalFile(workflowDir string) error {
 	workflowPath := filepath.Join(workflowDir, ".speakeasy", "workflow.yaml")
 	localWorkflowPath := filepath.Join(workflowDir, ".speakeasy", "workflow.local.yaml")
-	
+
 	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
 		return fmt.Errorf("workflow.yaml file not found at %s", workflowPath)
 	}
-	
+
 	if _, err := os.Stat(localWorkflowPath); err == nil {
 		return fmt.Errorf("workflow.local.yaml already exists at %s", localWorkflowPath)
 	}
-	
+
 	workflowContent, err := os.ReadFile(workflowPath)
 	if err != nil {
 		return fmt.Errorf("failed to read workflow.yaml: %w", err)
 	}
-	
+
 	commentedContent := commentOutYAMLContent(string(workflowContent))
-	
+
 	instructions := `# Local Workflow Configuration Override File
 # 
 # This file allows you to override any field from workflow.yaml for local development.
@@ -222,20 +222,20 @@ func CreateWorkflowLocalFile(workflowDir string) error {
 # speakeasyVersion: "1.234.0"
 
 `
-	
+
 	finalContent := instructions + commentedContent
-	
+
 	if err := os.WriteFile(localWorkflowPath, []byte(finalContent), 0644); err != nil {
 		return fmt.Errorf("failed to write workflow.local.yaml: %w", err)
 	}
-	
+
 	return nil
 }
 
 func commentOutYAMLContent(content string) string {
 	lines := strings.Split(content, "\n")
 	var commentedLines []string
-	
+
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" {
 			commentedLines = append(commentedLines, line)
@@ -243,6 +243,6 @@ func commentOutYAMLContent(content string) string {
 			commentedLines = append(commentedLines, "# "+line)
 		}
 	}
-	
+
 	return strings.Join(commentedLines, "\n")
 }
