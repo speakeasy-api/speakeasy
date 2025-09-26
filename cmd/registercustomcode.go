@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/registercustomcode"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
@@ -108,17 +108,11 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 		return fmt.Errorf("could not determine schema path for target '%s'", target)
 	}
 
-	// Create generator instance
-	g, err := generate.New()
-	if err != nil {
-		return err
-	}
-
 	// If --list flag is provided, call ListCustomCodePatch
 	if flags.List {
-		return g.ListCustomCodePatch(outDir)
+		return registercustomcode.ListCustomCodePatch(outDir)
 	}
 
 	// Call the registercustomcode functionality
-	return g.RegisterCustomCode(outDir, targetConfig.Target, schemaPath)
+	return registercustomcode.RegisterCustomCode(ctx, outDir, targetConfig.Target, schemaPath)
 }
