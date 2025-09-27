@@ -294,7 +294,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		localWfExists = true
 	}
 
-	// Try to migrate existing workflows, but only if they aren't on a pinned version and a local workflow doesn't exist. 
+	// Try to migrate existing workflows, but only if they aren't on a pinned version and a local workflow doesn't exist.
 	// If a local workflow exists, calling updateWorkflowFile will cause local overrides to be persisted to the real workflow.yaml file.
 	// There's probably a more robust solution here, perhaps applying the local override at a different point in the process, but this is good enough for now.
 	if wf.SpeakeasyVersion.String() == "latest" && !localWfExists {
