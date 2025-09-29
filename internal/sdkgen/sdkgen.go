@@ -151,8 +151,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generate.WithChangelogReleaseNotes(opts.ReleaseNotes),
 	}
 
-	if !opts.SkipCustomCode {
-		generatorOpts = append(generatorOpts, generate.WithApplyCustomCode())
+	if opts.SkipCustomCode {
+		generatorOpts = append(generatorOpts, generate.WithSkipApplyCustomCode())
 	}
 
 	if opts.Verbose {

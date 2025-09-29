@@ -71,12 +71,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 		return fmt.Errorf("failed to stage changes after applying existing patch: %w", err)
 	}
 
-	// Step 9: Pause for user inspection
-	if err := pauseForUserInspection(ctx); err != nil {
-		return fmt.Errorf("user inspection interrupted: %w", err)
-	}
-
-	// Step 10: Apply the new custom code diff
+	// Step 9: Apply the new custom code diff
 	if customCodeDiff != "" {
 		// Emit the new patch before applying it
 		if err := emitNewPatch(ctx, customCodeDiff); err != nil {
@@ -89,7 +84,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 		}
 	}
 
-	// Step 11: Capture the full combined diff (existing patch + new changes)
+	// Step 10: Capture the full combined diff (existing patch + new changes)
 	fullCustomCodeDiff, err := captureCustomCodeDiff()
 	if err != nil {
 		return fmt.Errorf("failed to capture full custom code diff: %w", err)
@@ -97,17 +92,17 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 
 	// TODO: compile and lint
 
-	// Step 12: Update gen.lock with full combined patch
+	// Step 11: Update gen.lock with full combined patch
 	if err := updateGenLockWithPatch(outDir, fullCustomCodeDiff); err != nil {
 		return fmt.Errorf("failed to update gen.lock: %w", err)
 	}
 
-	// Step 13: Commit just gen.lock with new patch
+	// Step 12: Commit just gen.lock with new patch
 	if err := commitGenLock(); err != nil {
 		return fmt.Errorf("failed to commit gen.lock: %w", err)
 	}
 
-	// Step 14: Emit/output the full patch for visibility
+	// Step 13: Emit/output the full patch for visibility
 	if err := emitFullPatch(ctx, fullCustomCodeDiff); err != nil {
 		logger.Warn("Failed to emit full patch", zap.Error(err))
 	}
@@ -473,28 +468,6 @@ func updateGenLockWithPatch(outDir, patchset string) error {
 		return fmt.Errorf("failed to save gen.lock: %w", err)
 	}
 
-	return nil
-}
-
-// User interaction
-func pauseForUserInspection(ctx context.Context) error {
-	logger := log.From(ctx)
-	logger.Info("Pausing for user inspection")
-
-	fmt.Println("\n" + strings.Repeat("*", 80))
-	fmt.Println("PAUSED: Existing patch has been applied and changes staged.")
-	fmt.Println("You can now inspect the applied changes before the new patch is applied.")
-	fmt.Println("Press any key to continue...")
-	fmt.Println(strings.Repeat("*", 80))
-
-	// Read a single byte from stdin (user pressing any key)
-	var input [1]byte
-	_, err := os.Stdin.Read(input[:])
-	if err != nil {
-		return fmt.Errorf("failed to read user input: %w", err)
-	}
-
-	fmt.Println("Continuing with new patch application...")
 	return nil
 }
 
