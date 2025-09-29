@@ -175,6 +175,10 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
 	}
 
+	if w.SourceLocation != "" && len(sourceIDs) > 1 {
+		return fmt.Errorf("cannot specify a source location when more than one source is required")
+	}
+
 	for _, sourceID := range sourceIDs {
 		if sourceID == "" {
 			continue

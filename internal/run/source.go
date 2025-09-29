@@ -102,8 +102,15 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		return "", nil, err
 	}
 
+	frozenSource := false
+
 	var currentDocument string
-	if w.FrozenWorkflowLock {
+	if w.SourceLocation != "" {
+		rootStep.NewSubstep("Using Source Location Override")
+		currentDocument = w.SourceLocation
+		frozenSource = true
+	} else if w.FrozenWorkflowLock {
+		frozenSource = true
 		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused")
 		if err != nil {
 			return "", nil, err
@@ -144,7 +151,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		return "", nil, err
 	}
 
-	if len(source.Overlays) > 0 && !w.FrozenWorkflowLock {
+	if len(source.Overlays) > 0 && !frozenSource {
 		w.OnSourceResult(sourceRes, SourceStepOverlay)
 		sourceRes.OverlayResult, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
@@ -153,7 +160,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = sourceRes.OverlayResult.Location
 	}
 
-	if len(source.Transformations) > 0 && !w.FrozenWorkflowLock {
+	if len(source.Transformations) > 0 && !frozenSource {
 		w.OnSourceResult(sourceRes, SourceStepTransform)
 		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
@@ -161,6 +168,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 	}
 
+	// Must not be frozen source check! We DO want to write for source overrides
 	if !w.FrozenWorkflowLock {
 		if err := writeToOutputLocation(ctx, currentDocument, outputLocation); err != nil {
 			return "", nil, fmt.Errorf("failed to write to output location: %w %s", err, outputLocation)
@@ -315,14 +323,18 @@ func writeToOutputLocation(ctx context.Context, documentPath string, outputLocat
 		return err
 	}
 
-	// If we have yaml and need json, convert it
-	if utils.HasYAMLExt(documentPath) && !utils.HasYAMLExt(outputLocation) {
-		jsonBytes, err := schemas.Format(ctx, documentPath, false)
+	// Check if we need to convert between formats based on file extensions
+	sourceIsYAML := utils.HasYAMLExt(documentPath)
+	targetIsYAML := utils.HasYAMLExt(outputLocation)
+
+	// If formats differ, convert appropriately
+	if sourceIsYAML != targetIsYAML {
+		formattedBytes, err := schemas.Format(ctx, documentPath, targetIsYAML)
 		if err != nil {
 			return fmt.Errorf("failed to format document: %w", err)
 		}
 
-		return os.WriteFile(outputLocation, jsonBytes, 0o644)
+		return os.WriteFile(outputLocation, formattedBytes, 0o644)
 	} else {
 		// Otherwise, just copy the file over
 		return utils.CopyFile(documentPath, outputLocation)

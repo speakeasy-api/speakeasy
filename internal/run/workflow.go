@@ -36,6 +36,7 @@ type Workflow struct {
 	SkipCleanup            bool
 	FromQuickstart         bool
 	SkipGenerateLintReport bool
+	SourceLocation         string
 	RepoSubDirs            map[string]string
 	InstallationURLs       map[string]string
 	RegistryTags           []string
@@ -140,6 +141,18 @@ func WithWorkflowName(name string) Opt {
 func WithSource(source string) Opt {
 	return func(w *Workflow) {
 		w.Source = source
+	}
+}
+
+func WithSourceLocation(sourceLocation string) Opt {
+	return func(w *Workflow) {
+		w.SourceLocation = sourceLocation
+		if sourceLocation != "" {
+			// Implies no snapshot
+			w.SkipSnapshot = true
+			// Implies no change report
+			w.SkipChangeReport = true
+		}
 	}
 }
 
