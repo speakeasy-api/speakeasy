@@ -272,17 +272,13 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// We must set these after prompting for them or else the user will be prompted a second time
-	if flags.Source != "" {
-		if err := cmd.Flags().Set("source", flags.Source); err != nil {
-			return err
-		}
+	if err := cmd.Flags().Set("source", flags.Source); err != nil {
+		return err
 	}
-	if flags.Target != "" {
-		if err := cmd.Flags().Set("target", flags.Target); err != nil {
-			return err
-		}
+	if err := cmd.Flags().Set("target", flags.Target); err != nil {
+		return err
 	}
-	if flags.Dependent != "" {
+	if flags.Dependent != "" { // We don't want to set this flag unnecessarily, as it will break old (pinned) versions of the CLI
 		if err := cmd.Flags().Set("dependent", flags.Dependent); err != nil {
 			return err
 		}
