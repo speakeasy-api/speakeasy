@@ -439,7 +439,7 @@ func applyNewPatch(customCodeDiff string) error {
 	defer os.Remove(patchFile)
 
 	// Apply the patch with 3-way merge
-	cmd := exec.Command("git", "apply", "-3", "--theirs", patchFile)
+	cmd := exec.Command("git", "apply", "-3", patchFile)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to apply new patch: %w\nOutput: %s", err, string(output))
 	}
