@@ -6,20 +6,21 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
 )
 
 // RegisterCustomCode registers custom code changes by capturing them as patches in gen.lock
 func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate func() error) error {
-	_, outDir, err := utils.GetWorkflowAndDir()
+	wf, outDir, err := utils.GetWorkflowAndDir()
 
 	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
 
@@ -34,7 +35,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	}
 
 	// Step 3: Check if workflow.yaml references local openapi spec and validate no spec changes
-	if err := checkNoLocalSpecChanges(ctx, outDir); err != nil {
+	if err := checkNoLocalSpecChanges(ctx, wf); err != nil {
 		return fmt.Errorf("openapi spec validation failed: %w", err)
 	}
 
@@ -195,27 +196,10 @@ func checkNoSpeakeasyChanges(ctx context.Context) error {
 	return nil
 }
 
-func checkNoLocalSpecChanges(ctx context.Context, outDir string) error {
+func checkNoLocalSpecChanges(ctx context.Context, workflow *workflow.Workflow) error {
 	logger := log.From(ctx)
 	logger.Info("Checking if workflow.yaml references local OpenAPI specs and validating no spec changes")
 
-	// Look for workflow.yaml to determine if there's a local openapi spec
-	workflowPath := filepath.Join(outDir, ".speakeasy", "workflow.yaml")
-	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
-		logger.Info("No workflow.yaml found, skipping local spec validation")
-		return nil
-	}
-
-	// Read workflow.yaml to find local spec references
-	workflowData, err := os.ReadFile(workflowPath)
-	if err != nil {
-		return fmt.Errorf("failed to read workflow.yaml: %w", err)
-	}
-
-	var workflow map[string]interface{}
-	if err := yaml.Unmarshal(workflowData, &workflow); err != nil {
-		return fmt.Errorf("failed to parse workflow.yaml: %w", err)
-	}
 
 	// Extract local spec paths from workflow
 	localSpecPaths := extractLocalSpecPaths(workflow)
@@ -252,40 +236,28 @@ func checkNoLocalSpecChanges(ctx context.Context, outDir string) error {
 	return nil
 }
 
-func extractLocalSpecPaths(workflow map[string]interface{}) []string {
+func extractLocalSpecPaths(wf *workflow.Workflow) []string {
 	var paths []string
 
-	// Handle different workflow.yaml formats
-	// Format 1: sources -> source_name -> inputs -> location
-	if sources, ok := workflow["sources"].(map[string]interface{}); ok {
-		for _, source := range sources {
-			if sourceMap, ok := source.(map[string]interface{}); ok {
-				if inputs, ok := sourceMap["inputs"].([]interface{}); ok {
-					for _, input := range inputs {
-						if inputMap, ok := input.(map[string]interface{}); ok {
-							if location, ok := inputMap["location"].(string); ok {
-								paths = append(paths, extractLocalPath(location)...)
-							}
-						}
-					}
-				}
+	// Check sources directly
+	for _, source := range wf.Sources {
+		for _, input := range source.Inputs {
+			if isLocalPath(input.Location) {
+				resolvedPath := input.Location.Resolve()
+				paths = append(paths, resolvedPath)
 			}
 		}
 	}
 
-	// Format 2: targets -> target_name -> source -> inputs -> location
-	if targets, ok := workflow["targets"].(map[string]interface{}); ok {
-		for _, target := range targets {
-			if targetMap, ok := target.(map[string]interface{}); ok {
-				if source, ok := targetMap["source"].(map[string]interface{}); ok {
-					if inputs, ok := source["inputs"].([]interface{}); ok {
-						for _, input := range inputs {
-							if inputMap, ok := input.(map[string]interface{}); ok {
-								if location, ok := inputMap["location"].(string); ok {
-									paths = append(paths, extractLocalPath(location)...)
-								}
-							}
-						}
+	// Check sources referenced by targets
+	for _, target := range wf.Targets {
+		if source, exists := wf.Sources[target.Source]; exists {
+			for _, input := range source.Inputs {
+				if isLocalPath(input.Location) {
+					resolvedPath := input.Location.Resolve()
+					// Avoid duplicates
+					if !slices.Contains(paths, resolvedPath) {
+						paths = append(paths, resolvedPath)
 					}
 				}
 			}
@@ -295,18 +267,29 @@ func extractLocalSpecPaths(workflow map[string]interface{}) []string {
 	return paths
 }
 
-func extractLocalPath(location string) []string {
-	var paths []string
+func isLocalPath(location workflow.LocationString) bool {
+	resolvedPath := location.Resolve()
 
-	// Check if this is a local file path (not a URL or registry path)
-	if !strings.HasPrefix(location, "http") && !strings.Contains(location, "registry.") && !strings.HasPrefix(location, "git+") {
-		// Handle relative paths and absolute paths
-		if strings.HasPrefix(location, "./") || strings.HasPrefix(location, "../") || strings.HasPrefix(location, "/") || (!strings.Contains(location, "://") && !strings.Contains(location, "@")) {
-			paths = append(paths, location)
-		}
+	// Check if this is a remote URL
+	if strings.HasPrefix(resolvedPath, "https://") || strings.HasPrefix(resolvedPath, "http://") {
+		return false
 	}
 
-	return paths
+	// Check if this is a registry reference
+	if strings.Contains(resolvedPath, "registry.speakeasyapi.dev") {
+		return false
+	}
+
+	// Check if this is a git reference
+	if strings.HasPrefix(resolvedPath, "git+") {
+		return false
+	}
+
+	// Local paths (relative or absolute)
+	return strings.HasPrefix(resolvedPath, "./") ||
+		strings.HasPrefix(resolvedPath, "../") ||
+		strings.HasPrefix(resolvedPath, "/") ||
+		(!strings.Contains(resolvedPath, "://") && !strings.Contains(resolvedPath, "@"))
 }
 
 func generateCleanSDK(ctx context.Context, workflow *run.Workflow, runGenerate func() error) error {
