@@ -56,6 +56,11 @@ func shouldSkipTarget(t *testing.T, target string) bool {
 		return true
 	}
 
+	if target == "docs" {
+		t.Skipf("Skipping %s as it's not currently supported by quickstart", target)
+		return true
+	}
+
 	// Skip php on windows for now as linting breaks
 	if runtime.GOOS == "windows" && target == "php" {
 		t.Skipf("Skipping %s on windows for now as linting breaks", target)

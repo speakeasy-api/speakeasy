@@ -10,10 +10,10 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 )
 
 var additionalRelevantConfigs = []string{
@@ -70,7 +70,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 		output = existingConfig
 	} else {
 		var err error
-		output, err = config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
+		output, err = config.GetDefaultConfig(true, targets.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
 		if err != nil {
 			return nil, errors.Wrapf(err, "error generating config for target %s of type %s", targetName, target.Target)
 		}
@@ -113,12 +113,12 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 		}
 	}
 
-	t, err := generate.GetTargetFromTargetString(target.Target)
+	t, err := targets.GetTargetFromTargetString(target.Target)
 	if err != nil {
 		return nil, err
 	}
 
-	defaultConfigs, err := generate.GetLanguageConfigFields(t, true)
+	defaultConfigs, err := targets.GetLanguageConfigFields(t, true)
 	if err != nil {
 		return nil, err
 	}

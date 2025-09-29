@@ -15,13 +15,13 @@ import (
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
@@ -40,7 +40,7 @@ func ParseSourcesAndTargets() ([]string, []string, error) {
 		return nil, nil, err
 	}
 
-	if err := wf.Validate(generate.GetSupportedTargetNames()); err != nil {
+	if err := wf.Validate(targets.GetTargets()); err != nil {
 		return nil, nil, err
 	}
 

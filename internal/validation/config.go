@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
@@ -93,13 +93,13 @@ func ValidateConfig(target string, cfg *sdkGenConfig.Config, publishingEnabled b
 }
 
 func ValidateTarget(target string, config map[string]any, publishingEnabled bool) []error {
-	t, err := generate.GetTargetFromTargetString(target)
+	t, err := targets.GetTargetFromTargetString(target)
 	if err != nil {
 		return []error{err}
 	}
 
 	// TODO: newSDK???
-	fields, err := generate.GetLanguageConfigFields(t, false)
+	fields, err := targets.GetLanguageConfigFields(t, false)
 	if err != nil {
 		return []error{err}
 	}

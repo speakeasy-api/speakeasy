@@ -28,12 +28,12 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/prompts"
 )
 
@@ -179,7 +179,7 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		nextState = *state
 	}
 
-	if err := quickstartObj.WorkflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
+	if err := quickstartObj.WorkflowFile.Validate(targets.GetTargets()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 

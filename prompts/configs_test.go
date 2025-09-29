@@ -5,9 +5,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/speakeasy-api/huh"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/charmtest"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/stretchr/testify/assert"
 )
@@ -114,19 +114,19 @@ func setupTargetSpecificFormsQuickstart(t *testing.T, targetName string) ([]*huh
 
 	quickstart := &prompts.Quickstart{}
 
-	target, err := generate.GetTargetFromTargetString(targetName)
+	target, err := targets.GetTargetFromTargetString(targetName)
 
 	if err != nil {
 		t.Fatalf("error getting target for name %s: %s", targetName, err)
 	}
 
-	existingConfiguration, err := config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
+	existingConfiguration, err := config.GetDefaultConfig(true, targets.GetLanguageConfigDefaults, map[string]bool{target.Target: true})
 
 	if err != nil {
 		t.Fatalf("error getting default config for %s: %s", target.Target, err)
 	}
 
-	genConfigFields, err := generate.GetLanguageConfigFields(target, true)
+	genConfigFields, err := targets.GetLanguageConfigFields(target, true)
 
 	if err != nil {
 		t.Fatalf("error getting generator target configuration fields for %s: %s", target.Target, err)

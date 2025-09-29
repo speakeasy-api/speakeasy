@@ -5,11 +5,11 @@ import (
 	"os"
 	"slices"
 
-	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 )
 
 var prioritySDKTargets = []string{
@@ -75,7 +75,7 @@ func getTerraformTargetOptions() []huh.Option[string] {
 }
 
 func getTargetMaturity(target string) string {
-	return generate.GetTargetNameMaturity(target)
+	return targets.GetTargetNameMaturity(target)
 }
 
 func targetOption(target, maturity string) huh.Option[string] {
@@ -83,11 +83,7 @@ func targetOption(target, maturity string) huh.Option[string] {
 }
 
 func GetSupportedTargetNames() []string {
-	targetNames := generate.GetSupportedTargetNames()
-
-	slices.Sort(targetNames)
-
-	return targetNames
+	return targets.GetTargets()
 }
 
 func getCurrentInputs(currentSource *workflow.Source) []string {

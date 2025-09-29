@@ -23,7 +23,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
@@ -31,6 +30,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/prompts"
 )
 
@@ -255,7 +255,7 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		existingSourceName = newName
 	}
 
-	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
+	if err := workflowFile.Validate(targets.GetTargets()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
@@ -415,7 +415,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.Wrapf(err, "failed to save config file for target %s", targetName)
 	}
 
-	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
+	if err := workflowFile.Validate(targets.GetTargets()); err != nil {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
@@ -987,7 +987,7 @@ func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) (
 		var targetLanguage string
 		for lang := range cfg.Config.Languages {
 			// A problem with some old gen.yaml files pulling in non language entries
-			if slices.Contains(generate.GetSupportedTargetNames(), lang) {
+			if slices.Contains(targets.GetTargets(), lang) {
 				targetLanguage = lang
 				if lang == "docs" {
 					break

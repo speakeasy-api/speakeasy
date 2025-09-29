@@ -11,16 +11,16 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/changelogs"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 )
 
 func GeneratorSupportedTargetNames() []string {
-	return generate.GetSupportedTargetNames()
+	return targets.GetTargets()
 }
 
 var (
@@ -148,7 +148,8 @@ func getLatestVersionInfo(ctx context.Context, flags GenerateSDKVersionFlags) er
 
 	lang := flags.Language
 	if lang != "" {
-		if !slices.Contains(generate.GetSupportedTargetNames(), lang) {
+		supportedTargets := targets.GetTargets()
+		if !slices.Contains(supportedTargets, lang) || lang == targets.DocsTarget {
 			return fmt.Errorf("unsupported language %s", lang)
 		}
 
@@ -190,7 +191,8 @@ func getChangelogs(ctx context.Context, flags GenerateSDKChangelogFlags) error {
 
 	lang := flags.Language
 	if lang != "" {
-		if !slices.Contains(generate.GetSupportedTargetNames(), lang) {
+		supportedTargets := targets.GetTargets()
+		if !slices.Contains(supportedTargets, lang) || lang == targets.DocsTarget {
 			return fmt.Errorf("unsupported language %s", lang)
 		}
 

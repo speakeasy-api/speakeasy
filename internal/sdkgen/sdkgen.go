@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -25,6 +26,7 @@ import (
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
 )
@@ -272,7 +274,12 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 		return err
 	}
 
-	if _, err := g.LoadConfig(ctx, outDir, generate.GetSupportedTargetNames()...); err != nil {
+	supportedTargets := slices.Clone(targets.GetTargets())
+	supportedTargets = slices.DeleteFunc(supportedTargets, func(name string) bool {
+		return name == targets.DocsTarget
+	})
+
+	if _, err := g.LoadConfig(ctx, outDir, supportedTargets...); err != nil {
 		return err
 	}
 

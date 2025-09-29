@@ -9,11 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/speakeasy-api/huh"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/targets"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
@@ -116,7 +116,7 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		target = targetPtr
 	}
 
-	if err := target.Validate(generate.GetSupportedTargetNames(), quickstart.WorkflowFile.Sources); err != nil {
+	if err := target.Validate(targets.GetTargets(), quickstart.WorkflowFile.Sources); err != nil {
 		return nil, errors.Wrap(err, "failed to validate target")
 	}
 
@@ -215,7 +215,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 		target.Output = &outDir
 	}
 
-	if err := target.Validate(generate.GetSupportedTargetNames(), currentWorkflow.Sources); err != nil {
+	if err := target.Validate(targets.GetTargets(), currentWorkflow.Sources); err != nil {
 		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
@@ -247,7 +247,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 		newTarget.Output = &outDir
 	}
 
-	if err := newTarget.Validate(generate.GetSupportedTargetNames(), currentWorkflow.Sources); err != nil {
+	if err := newTarget.Validate(targets.GetTargets(), currentWorkflow.Sources); err != nil {
 		return "", nil, errors.Wrap(err, "failed to validate target")
 	}
 
