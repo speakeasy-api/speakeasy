@@ -51,22 +51,27 @@ func RegisterCustomCode(ctx context.Context, outDir, target, schemaPath string) 
 		return fmt.Errorf("failed to generate clean SDK: %w", err)
 	}
 
-	// Step 6: Apply existing custom code patch from gen.lock
+	// Step 6: Commit clean generation to preserve metadata
+	if err := commitCleanGeneration(); err != nil {
+		return fmt.Errorf("failed to commit clean generation: %w", err)
+	}
+
+	// Step 7: Apply existing custom code patch from gen.lock
 	if err := applyCustomCodePatch(outDir); err != nil {
 		return fmt.Errorf("failed to apply existing patch: %w", err)
 	}
 
-	// Step 7: Stage all changes after applying existing patch
+	// Step 8: Stage all changes after applying existing patch
 	if err := stageAllChanges(); err != nil {
 		return fmt.Errorf("failed to stage changes after applying existing patch: %w", err)
 	}
 
-	// Step 8: Pause for user inspection
+	// Step 9: Pause for user inspection
 	if err := pauseForUserInspection(ctx); err != nil {
 		return fmt.Errorf("user inspection interrupted: %w", err)
 	}
 
-	// Step 9: Apply the new custom code diff
+	// Step 10: Apply the new custom code diff
 	if customCodeDiff != "" {
 		// Emit the new patch before applying it
 		if err := emitNewPatch(ctx, customCodeDiff); err != nil {
@@ -79,15 +84,10 @@ func RegisterCustomCode(ctx context.Context, outDir, target, schemaPath string) 
 		}
 	}
 
-	// Step 10: Capture the full combined diff (existing patch + new changes)
+	// Step 11: Capture the full combined diff (existing patch + new changes)
 	fullCustomCodeDiff, err := captureCustomCodeDiff()
 	if err != nil {
 		return fmt.Errorf("failed to capture full custom code diff: %w", err)
-	}
-
-	// Step 11: Reset to clean state and regenerate clean SDK
-	if err := resetToCleanState(ctx); err != nil {
-		return fmt.Errorf("failed to reset to clean state: %w", err)
 	}
 
 	// TODO: compile and lint
@@ -352,6 +352,22 @@ func unstageAllChanges() error {
 	resetCmd := exec.Command("git", "reset")
 	if output, err := resetCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to reset changes: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func commitCleanGeneration() error {
+	// Add all changes
+	addCmd := exec.Command("git", "add", ".")
+	if output, err := addCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to add changes for clean generation commit: %w\nOutput: %s", err, string(output))
+	}
+
+	// Commit the clean generation
+	commitCmd := exec.Command("git", "commit", "-m", "clean generation")
+	if output, err := commitCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to commit clean generation: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
