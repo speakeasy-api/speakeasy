@@ -272,9 +272,12 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// We must set these after prompting for them or else the user will be prompted a second time
-	if err := cmd.Flags().Set("source", flags.Source); err != nil {
-		return err
+	if flags.Source != "" {
+		if err := cmd.Flags().Set("source", flags.Source); err != nil {
+			return err
+		}
 	}
+	// Not checking target flag not empty for safety, don't want to change how it was working before
 	if err := cmd.Flags().Set("target", flags.Target); err != nil {
 		return err
 	}
