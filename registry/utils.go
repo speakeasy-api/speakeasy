@@ -3,9 +3,10 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/config"
 	"os"
 	"path/filepath"
+
+	"github.com/speakeasy-api/speakeasy/internal/config"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
@@ -28,7 +29,11 @@ func ResolveSpeakeasyRegistryBundle(ctx context.Context, d workflow.Document, ou
 
 	registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location.Resolve())
 	if registryBreakdown == nil {
-		return nil, fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
+		extraMetadata := ""
+		if d.Location.Resolve() != d.Location.Reference() {
+			extraMetadata = fmt.Sprintf(" (resolved to %s)", d.Location.Resolve())
+		}
+		return nil, fmt.Errorf("failed to parse speakeasy registry reference %s%s", d.Location.Reference(), extraMetadata)
 	}
 
 	keyForWorkspace := config.GetWorkspaceAPIKey(organizationSlug, workspaceSlug)
