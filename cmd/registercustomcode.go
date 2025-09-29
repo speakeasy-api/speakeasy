@@ -2,19 +2,27 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/registercustomcode"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 )
 
 type RegisterCustomCodeFlags struct {
 	Target  string `json:"target"`
-	OutDir  string `json:"out-dir"`
-	List    bool   `json:"list"`
-	Resolve bool   `json:"resolve"`
+	Show    bool   `json:"show"`
+	InstallationURL	string	`json:"installationURL"`
+	InstallationURLs   map[string]string `json:"installationURLs"`
+	Repo               string            `json:"repo"`
+	RepoSubdir         string            `json:"repo-subdir"`
+	RepoSubdirs        map[string]string `json:"repo-subdirs"`
+	SkipVersioning     bool              `json:"skip-versioning"`
+	Output             string            `json:"output"`
+	SetVersion         string            `json:"set-version"`
+
 }
 
 var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
@@ -24,95 +32,93 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 	Run:    registerCustomCode,
 	Flags:  []flag.Flag{
 		flag.StringFlag{
-			Name:        "target",
-			Shorthand:   "t",
-			Description: "target to run. specify 'all' to run all targets",
+			Name:		 "target",
+			Shorthand:	 "t",
+			Description: "target - DONOTSPECIFY",
+		},
+		flag.BooleanFlag{
+			Name:        "show",
+			Shorthand:   "s",
+			Description: "show custom code patches",
 		},
 		flag.StringFlag{
-			Name:        "out-dir",
-			Shorthand:   "o",
-			Description: "output directory for the registercustomcode command",
+			Name:        "installationURL",
+			Shorthand:   "i",
+			Description: "the language specific installation URL for installation instructions if the SDK is not published to a package manager",
 		},
-		flag.BooleanFlag{
-			Name:        "list",
-			Shorthand:   "l",
-			Description: "list custom code patches",
+		flag.MapFlag{
+			Name:        "installationURLs",
+			Description: "a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager",
 		},
-		flag.BooleanFlag{
-			Name:        "resolve",
+		flag.StringFlag{
+			Name:        "repo",
 			Shorthand:   "r",
-			Description: "resolve custom code conflicts",
+			Description: "the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions",
+		},
+		flag.BooleanFlag{
+			Name:         "skip-versioning",
+			Description:  "skip automatic SDK version increments",
+			DefaultValue: false,
+		},
+
+		flag.StringFlag{
+			Name:        "set-version",
+			Description: "the manual version to apply to the generated SDK",
+		},
+		flag.EnumFlag{
+			Name:          "output",
+			Shorthand:     "o",
+			Description:   "What to output while running",
+			AllowedValues: []string{"summary", "mermaid", "console"},
+			DefaultValue:  "summary",
 		},
 	},
 }
 
 func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) error {
-	outDir := flags.OutDir
-	if outDir == "" {
-		outDir = "."
-	}
 
-	// Load workflow to get target and schemaPath
-	wf, _, err := utils.GetWorkflowAndDir()
-	if err != nil {
-		return fmt.Errorf("failed to load workflow: %w", err)
+	opts := []run.Opt{
+		run.WithTarget("all"),
+		run.WithRepo(flags.Repo),
+		run.WithRepoSubDirs(flags.RepoSubdirs),
+		run.WithInstallationURLs(flags.InstallationURLs),
+		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithSetVersion(flags.SetVersion),
 	}
-
-	// Get the target from the command flag or use the single available target
-	var target string
-	var schemaPath string
+	workflow, err := run.NewWorkflow(
+		ctx,
+		opts...,
+	)
 	
-	if flags.Target != "" {
-		target = flags.Target
-	} else if len(wf.Targets) == 1 {
-		// If no target specified but there's exactly one target, use it
-		for tid := range wf.Targets {
-			target = tid
-			break
-		}
-	}
-
-	if target == "" {
-		return fmt.Errorf("no target specified and no targets found in workflow")
-	}
-
-	// Get the target configuration
-	targetConfig, exists := wf.Targets[target]
-	if !exists {
-		return fmt.Errorf("target '%s' not found in workflow", target)
-	}
-
-	// Get the schema path from the target's source
-	source, sourcePath, err := wf.GetTargetSource(target)
-	if err != nil {
-		return fmt.Errorf("failed to get target source: %w", err)
-	}
-
-	if source != nil {
-		// Source is defined in workflow, use the source inputs
-		for _, input := range source.Inputs {
-			if input.Location != "" {
-				schemaPath = string(input.Location)
-				break
-			}
-		}
-	} else if sourcePath != "" {
-		// Direct source path specified
-		schemaPath = sourcePath
-	} else {
-		// Use the target source as the schema path
-		schemaPath = targetConfig.Source
-	}
-
-	if schemaPath == "" {
-		return fmt.Errorf("could not determine schema path for target '%s'", target)
-	}
-
-	// If --list flag is provided, call ListCustomCodePatch
-	if flags.List {
-		return registercustomcode.ListCustomCodePatch(outDir)
+	// If --show flag is provided, show existing customcode
+	if flags.Show {
+		return registercustomcode.ShowCustomCodePatch()
 	}
 
 	// Call the registercustomcode functionality
-	return registercustomcode.RegisterCustomCode(ctx, outDir, targetConfig.Target, schemaPath)
+	return registercustomcode.RegisterCustomCode(ctx, workflow, func() error {
+		switch flags.Output {
+			case "summary":
+				err = workflow.RunWithVisualization(ctx)
+				if err != nil {
+					return err
+				}
+			case "mermaid":
+				err = workflow.Run(ctx)
+				workflow.RootStep.Finalize(err == nil)
+				mermaid, err := workflow.RootStep.ToMermaidDiagram()
+				if err != nil {
+					return err
+				}
+				log.From(ctx).Println("\n" + styles.MakeSection("Mermaid diagram of workflow", mermaid, styles.Colors.Blue))
+			case "console":
+				err = workflow.Run(ctx)
+				// workflow.RootStep.Finalize(err == nil)
+				if err != nil {
+					return err
+				}
+		}
+		return nil
+	})
+
 }

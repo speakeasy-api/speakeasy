@@ -9,14 +9,18 @@ import (
 	"strings"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
 // RegisterCustomCode registers custom code changes by capturing them as patches in gen.lock
-func RegisterCustomCode(ctx context.Context, outDir, target, schemaPath string) error {
+func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate func() error) error {
+	_, outDir, err := utils.GetWorkflowAndDir()
+
 	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
 
 	// Step 1: Verify main is up to date with origin/main
@@ -47,7 +51,7 @@ func RegisterCustomCode(ctx context.Context, outDir, target, schemaPath string) 
 	}
 
 	// Step 5: Generate clean SDK (without custom code) on main branch
-	if err := generateCleanSDK(ctx, outDir, target, schemaPath); err != nil {
+	if err := generateCleanSDK(ctx, workflow, runGenerate); err != nil {
 		return fmt.Errorf("failed to generate clean SDK: %w", err)
 	}
 
@@ -111,13 +115,13 @@ func RegisterCustomCode(ctx context.Context, outDir, target, schemaPath string) 
 	return nil
 }
 
-// ListCustomCodePatch displays the custom code patch stored in the gen.lock file
-func ListCustomCodePatch(outDir string) error {
-	cfg, err := config.Load(outDir)
+// ShowCustomCodePatch displays the custom code patch stored in the gen.lock file
+func ShowCustomCodePatch() error {
+	_, outDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return err
 	}
-
+	cfg, err := config.Load(outDir)
 	customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]
 	if !exists {
 		fmt.Println("No custom code patch found in gen.lock")
@@ -305,20 +309,18 @@ func extractLocalPath(location string) []string {
 	return paths
 }
 
-func generateCleanSDK(ctx context.Context, outDir, target, schemaPath string) error {
+func generateCleanSDK(ctx context.Context, workflow *run.Workflow, runGenerate func() error) error {
 	logger := log.From(ctx)
-	logger.Info("Generating clean SDK (without custom code)", zap.String("target", target), zap.String("schemaPath", schemaPath), zap.String("outDir", outDir))
+	err := runGenerate()
 
-	// Use sdkgen.Generate with SkipCustomCode option
-	_, err := sdkgen.Generate(ctx, sdkgen.GenerateOptions{
-		Language:       target,
-		SchemaPath:     schemaPath,
-		OutDir:         outDir,
-		SkipVersioning: true,
-		SkipCustomCode: true, // This is the key difference from normal generation
-		Compile:        false,
-	})
+	defer func() {
+		// we should leave temp directories for debugging if run fails
+		if err == nil || env.IsGithubAction() {
+			workflow.Cleanup()
+		}
+	}()
 
+	
 	if err != nil {
 		return fmt.Errorf("failed to generate SDK: %w", err)
 	}
