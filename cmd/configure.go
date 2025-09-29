@@ -64,7 +64,7 @@ var configureCmd = &model.CommandGroup{
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           utils.RenderMarkdown(configureLong),
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd, configureLocalWorkflowCmd},
 }
 
 type ConfigureSourcesFlags struct {
@@ -174,6 +174,24 @@ var configureTestingCmd = &model.ExecutableCommand[ConfigureTestsFlags]{
 		},
 	},
 	RequiresAuth: true,
+}
+
+type ConfigureLocalWorkflowFlags struct {
+	WorkflowDirectory string `json:"workflow-directory"`
+}
+
+var configureLocalWorkflowCmd = &model.ExecutableCommand[ConfigureLocalWorkflowFlags]{
+	Usage: "local-workflow",
+	Short: "Create a local workflow configuration file.",
+	Long:  "Copies workflow.yaml to workflow.local.yaml with all settings commented out for local overrides.",
+	Run:   configureLocalWorkflow,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "workflow-directory",
+			Shorthand:   "d",
+			Description: "directory of speakeasy workflow file",
+		},
+	},
 }
 
 func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
@@ -1050,6 +1068,44 @@ func getActionWorkingDirectoryFromFlag(rootDir string, workflowDir string) strin
 	}
 
 	return actionWorkingDir
+}
+
+func configureLocalWorkflow(ctx context.Context, flags ConfigureLocalWorkflowFlags) error {
+	logger := log.From(ctx)
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(workingDir, flags.WorkflowDirectory)
+	workflowDir := filepath.Join(workingDir, actionWorkingDir)
+
+	localWorkflowPath := filepath.Join(workflowDir, ".speakeasy", "workflow.local.yaml")
+
+	// Check if workflow.yaml exists first
+	workflowPath := filepath.Join(workflowDir, ".speakeasy", "workflow.yaml")
+	if _, err := os.Stat(workflowPath); os.IsNotExist(err) {
+		return renderAndPrintWorkflowNotFound("local-workflow", logger)
+	}
+
+	// Check if workflow.local.yaml already exists
+	if _, err := os.Stat(localWorkflowPath); err == nil {
+		logger.Println(styles.Info.Render(fmt.Sprintf("workflow.local.yaml already exists at %s", localWorkflowPath)))
+		logger.Println(styles.Info.Render("Remove the existing file if you want to regenerate it."))
+		return nil
+	}
+
+	if err := run.CreateWorkflowLocalFile(workflowDir); err != nil {
+		return errors.Wrapf(err, "failed to create workflow.local.yaml")
+	}
+
+	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
+	successMsg := fmt.Sprintf("Successfully created workflow.local.yaml 🎉\n\nLocation: %s\n\nYou can now uncomment and modify any field in this file to override values from workflow.yaml for local development.", localWorkflowPath)
+	success := styles.Success.Render(successMsg)
+	logger.PrintfStyled(boxStyle, "%s", success)
+
+	return nil
 }
 
 func renderAndPrintWorkflowNotFound(cmd string, logger log.Logger) error {

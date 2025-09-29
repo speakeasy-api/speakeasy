@@ -31,19 +31,18 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/inkeep/ai-api-go v0.3.1
 	github.com/invopop/yaml v0.3.1
-	github.com/pb33f/doctor v0.0.20
 	github.com/pb33f/libopenapi v0.22.3
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.47.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi v1.7.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.700.6-0.20250912001838-79a70af10106
+	github.com/speakeasy-api/openapi v1.7.3
+	github.com/speakeasy-api/openapi-generation/v2 v2.716.17-0.20250929020354-dec74264b457
 	github.com/speakeasy-api/openapi-overlay v0.10.3
-	github.com/speakeasy-api/sdk-gen-config v1.31.9-0.20250911233945-a1825680047e
+	github.com/speakeasy-api/sdk-gen-config v1.35.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.20.8-0.20250917022359-fad7144e3ab5
+	github.com/speakeasy-api/speakeasy-core v0.20.10-0.20250929021426-a80d362e5f94
 	github.com/speakeasy-api/versioning-reports v0.6.1
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.9
@@ -62,7 +61,7 @@ require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
-	dario.cat/mergo v1.0.1 // indirect
+	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
@@ -70,6 +69,7 @@ require (
 	github.com/MichaelMure/go-term-text v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
+	github.com/a8m/envsubst v1.4.3 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/alecthomas/chroma/v2 v2.8.0 // indirect
@@ -186,6 +186,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/otiai10/copy v1.14.0 // indirect
+	github.com/pb33f/doctor v0.0.20 // indirect
 	github.com/pb33f/libopenapi-validator v0.3.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect

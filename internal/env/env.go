@@ -29,6 +29,10 @@ func IsLocalDev() bool {
 	return os.Getenv("SPEAKEASY_ENVIRONMENT") == "local"
 }
 
+func IsCI() bool {
+	return os.Getenv("CI") == "true" || IsGithubAction()
+}
+
 // Returns the SPEAKEASY_RUN_LOCATION environment variable value. For example,
 // this is set by Speakeasy maintained GitHub Actions to "action".
 func SpeakeasyRunLocation() string {
