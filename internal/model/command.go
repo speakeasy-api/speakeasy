@@ -350,9 +350,6 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 	// 	return ErrInstallFailed.Wrap(err)
 	// }
 	vLocation := "/home/runner/work/branchgen-pr-test/branchgen-pr-test/bin/speakeasy"
-	ctx := cmd.Context()
-	logger := log.From(ctx)
-	logger.PrintfStyled(styles.DimmedItalic, "new code")
 	cmdParts := utils.GetCommandParts(cmd)
 	if cmdParts[0] == "speakeasy" {
 		cmdParts = cmdParts[1:]
