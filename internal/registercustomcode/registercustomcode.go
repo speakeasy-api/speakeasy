@@ -74,11 +74,6 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 
 	// Step 9: Apply the new custom code diff
 	if customCodeDiff != "" {
-		// Emit the new patch before applying it
-		if err := emitNewPatch(ctx, customCodeDiff); err != nil {
-			logger.Warn("Failed to emit new patch", zap.Error(err))
-		}
-
 		if err := applyNewPatch(customCodeDiff); err != nil {
 			logger.Warn("Conflicts detected when applying new patch")
 			return fmt.Errorf("conflicts detected when applying new patch: %w", err)
@@ -94,7 +89,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	// Step 10.5: Compile SDK to verify custom code changes
 	if workflow != nil && workflow.Target != "" {
 		logger.Info("Compiling SDK to verify custom code changes...")
-		if err := compileSDK(ctx, workflow.Target, outDir); err != nil {
+		if err := compileAndLintSDK(ctx, workflow.Target, outDir); err != nil {
 			return fmt.Errorf("custom code changes failed compilation: %w", err)
 		}
 		logger.Info("✓ SDK compiled successfully")
@@ -112,10 +107,6 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 		return fmt.Errorf("failed to commit gen.lock: %w", err)
 	}
 
-	// Step 13: Emit/output the full patch for visibility
-	if err := emitFullPatch(ctx, fullCustomCodeDiff); err != nil {
-		logger.Warn("Failed to emit full patch", zap.Error(err))
-	}
 
 	logger.Info("Successfully registered custom code changes")
 	return nil
@@ -153,6 +144,12 @@ func verifyMainUpToDate(ctx context.Context) error {
 	logger.Info("Verifying main branch is up to date with origin/main")
 
 	// Fetch origin/main
+	/** GO GIT
+		err = repo.Fetch(&git.FetchOptions{
+		// Optional: configure authentication if needed
+		// Auth: &http.BasicAuth{Username: "user", Password: "password"},
+	})
+	*/
 	cmd := exec.Command("git", "fetch", "origin", "main")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to fetch origin/main: %w\nOutput: %s", err, string(output))
@@ -160,6 +157,9 @@ func verifyMainUpToDate(ctx context.Context) error {
 
 	// Check if main is up to date with origin/main
 	cmd = exec.Command("git", "rev-list", "--count", "main..origin/main")
+	/**
+	No go-git support
+	*/
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to check main status: %w", err)
@@ -178,6 +178,33 @@ func checkNoSpeakeasyChanges(ctx context.Context) error {
 	logger := log.From(ctx)
 	logger.Info("Checking that changeset doesn't include .speakeasy directory changes")
 
+	/**
+	* Can be done with GO GIT, but it's not so obvious
+	    head, err := repo.Head()
+    if err != nil {
+        // Handle error
+    }
+    commit, err := repo.CommitObject(head.Hash())
+    if err != nil {
+        // Handle error
+    }
+    tree, err := commit.Tree()
+    if err != nil {
+        // Handle error
+    }
+	patch, err := tree1.Diff(tree2)
+    if err != nil {
+        // Handle error
+    }
+
+    var buf bytes.Buffer
+    encoder := diff.NewUnifiedEncoder(&buf)
+    err = encoder.Encode(patch)
+    if err != nil {
+        // Handle error
+    }
+    fmt.Println(buf.String()) // Prints the unified diff
+	*/
 	cmd := exec.Command("git", "diff", "--name-only", "main")
 	output, err := cmd.Output()
 	if err != nil {
@@ -363,22 +390,18 @@ func commitCleanGeneration() error {
 	return nil
 }
 
-func resetToCleanState(ctx context.Context) error {
-	logger := log.From(ctx)
-	logger.Info("Resetting to clean state")
-
-	// Reset all changes to get back to a clean state
-	cmd := exec.Command("git", "reset", "--hard", "HEAD")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to reset to clean state: %w\nOutput: %s", err, string(output))
-	}
-
-	logger.Info("Successfully reset to clean state")
-	return nil
-}
 
 func commitGenLock() error {
 	// Add only the gen.lock file
+	/** GO GIT
+	w, err := repo.Worktree()
+	_, err = w.Add(".speakeasy/gen.lock")
+	w.Commit("Register custom code changes", &git.CommitOptions{
+		Author: &object.Signature{
+			Name: "speakeasybot",
+			Email: "..."
+		}}})
+	*/
 	cmd := exec.Command("git", "add", ".speakeasy/gen.lock")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to add gen.lock: %w", err)
@@ -402,11 +425,6 @@ func applyCustomCodePatch(outDir string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Add and commit changes before applying custom code patch
-	if err := stageAllChanges(); err != nil {
-		return fmt.Errorf("failed to add changes: %w", err)
-	}
-
 	// Check if there's a custom code patch in the management section
 	if customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]; exists {
 		if patchStr, ok := customCodePatch.(string); ok && patchStr != "" {
@@ -423,10 +441,6 @@ func applyCustomCodePatch(outDir string) error {
 				return fmt.Errorf("failed to apply patch: %w\nOutput: %s", err, string(output))
 			}
 		}
-	}
-
-	if err := unstageAllChanges(); err != nil {
-		return fmt.Errorf("failed to reset changes: %w", err)
 	}
 
 	return nil
@@ -481,47 +495,15 @@ func updateGenLockWithPatch(outDir, patchset string) error {
 	return nil
 }
 
-func emitNewPatch(ctx context.Context, newPatch string) error {
-	logger := log.From(ctx)
-	logger.Info("Emitting new custom code patch")
-
-	if newPatch == "" {
-		fmt.Println("No new custom code changes to apply.")
-		return nil
-	}
-
-	fmt.Println("\n" + strings.Repeat("-", 80))
-	fmt.Println("NEW CUSTOM CODE PATCH (about to apply)")
-	fmt.Println(strings.Repeat("-", 80))
-	fmt.Println(newPatch)
-	fmt.Println(strings.Repeat("-", 80))
-	fmt.Println("")
-
-	return nil
-}
-
-func emitFullPatch(ctx context.Context, fullPatch string) error {
-	logger := log.From(ctx)
-	logger.Info("Emitting full custom code patch")
-
-	if fullPatch == "" {
-		fmt.Println("No custom code changes detected.")
-		return nil
-	}
-
-	fmt.Println("\n" + strings.Repeat("=", 80))
-	fmt.Println("FULL CUSTOM CODE PATCH")
-	fmt.Println(strings.Repeat("=", 80))
-	fmt.Println(fullPatch)
-	fmt.Println(strings.Repeat("=", 80))
-	fmt.Println("")
-
-	return nil
-}
-
 // compileSDK compiles the SDK to verify custom code changes don't break compilation
-func compileSDK(ctx context.Context, target, outDir string) error {
-	// If target is "all", detect the actual language from the SDK config
+func compileAndLintSDK(ctx context.Context, target, outDir string) error {
+	// Create generator instance
+	g, err := generate.New()
+	if err != nil {
+		return fmt.Errorf("failed to create generator: %w", err)
+	}
+
+	// If target is "all", detect each target language from the SDK config
 	if target == "all" {
 		cfg, err := config.Load(outDir)
 		if err != nil {
@@ -530,24 +512,22 @@ func compileSDK(ctx context.Context, target, outDir string) error {
 
 		// Get the first (and usually only) language from the config
 		for lang := range cfg.Config.Languages {
-			target = lang
-			break
+			fmt.Println("Language: " + lang)
+			// Call the public Compile method
+			if err := g.Compile(ctx, lang, outDir); err != nil {
+				return err
+			}
+			if err := g.Lint(ctx, lang, outDir); err != nil {
+				return err
+			}
 		}
-
-		if target == "all" {
-			return fmt.Errorf("could not detect target language from config in %s", outDir)
+	} else {
+		if err := g.Compile(ctx, target, outDir); err != nil {
+				return err
 		}
-	}
-
-	// Create generator instance
-	g, err := generate.New()
-	if err != nil {
-		return fmt.Errorf("failed to create generator: %w", err)
-	}
-
-	// Call the public Compile method
-	if err := g.Compile(ctx, target, outDir); err != nil {
-		return err
+		if err := g.Lint(ctx, target, outDir); err != nil {
+			return err
+		}
 	}
 
 	return nil

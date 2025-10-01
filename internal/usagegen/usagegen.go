@@ -60,6 +60,7 @@ func Generate(
 		generate.WithFileSystem(&fileSystem{buf: tmpOutput}),
 		generate.WithRunLocation("cli"),
 		generate.WithGenVersion(strings.TrimPrefix(changelog.GetLatestVersion(), "v")),
+		generate.WithSkipApplyCustomCode(),
 		generate.WithForceGeneration(),
 	}
 
