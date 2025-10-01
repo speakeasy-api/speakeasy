@@ -59,6 +59,7 @@ The PR description should be formatted as:
 ## Important Notes
 
 - **CRITICAL: Exclude any PRs with titles starting with "chore:" from BOTH the PR title and description**
+- **Never added this footer**: 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 - Focus on user-facing changes and improvements
 - Group by language, ignoring v2 suffixes
 - The branch should be created off main
