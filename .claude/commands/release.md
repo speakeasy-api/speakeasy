@@ -31,7 +31,7 @@ The PR title should follow this format with semicolons separating each language-
 - Separate each language's changes with semicolons (`;`)
 - Each section should have its own type prefix (`feat` or `fix`)
 - Group languages together only if they have the same type and similar changes
-- Use "core" for general/WASM/infrastructure changes
+- Use "core" for changes which affect all languages
 - Order: fixes first, then features
 - Be specific about what was fixed or added for each language
 
