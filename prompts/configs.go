@@ -153,7 +153,7 @@ func PromptForTargetConfig(targetName string, wf *workflow.Workflow, target *wor
 func setDevContainerDefaults(output *config.Configuration, wf *workflow.Workflow, target *workflow.Target) {
 	if target.Target == "go" || target.Target == "typescript" || target.Target == "python" {
 		if source, ok := wf.Sources[target.Source]; ok {
-			schemaPath := ""
+			var schemaPath string
 			if source.Output != nil {
 				schemaPath = *source.Output
 			} else {

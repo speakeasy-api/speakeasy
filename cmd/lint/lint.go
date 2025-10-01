@@ -174,7 +174,7 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 func lintConfig(ctx context.Context, flags lintConfigFlags) error {
 	// To support the old version of this command, check if there is no workflow.yaml. If there isn't, run the old version
 	wf, _, err := utils.GetWorkflowAndDir()
-	if wf == nil {
+	if wf == nil || err != nil {
 		log.From(ctx).Info("No workflow.yaml found, running legacy version of this command...")
 		return sdkgen.ValidateConfig(ctx, flags.Dir)
 	}

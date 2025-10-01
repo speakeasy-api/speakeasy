@@ -33,4 +33,4 @@ linters:
     # - unused
     # - usestdlibvars
     # - usetesting
-    # - wastedassign
+    - wastedassign

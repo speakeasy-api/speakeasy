@@ -2,15 +2,16 @@ package transform
 
 import (
 	"context"
+	"io"
+	"strings"
+	"unicode"
+
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"gopkg.in/yaml.v3"
-	"io"
-	"strings"
-	"unicode"
 )
 
 func CleanupDocument(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
@@ -66,6 +67,10 @@ func Cleanup(ctx context.Context, doc libopenapi.Document, model *libopenapi.Doc
 	}
 
 	docNew, model, err := openapi.Load(updatedDoc, doc.GetConfiguration().BasePath)
+
+	if err != nil {
+		return doc, model, err
+	}
 
 	return *docNew, model, nil
 }

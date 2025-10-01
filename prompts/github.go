@@ -293,7 +293,7 @@ func FindGithubRepository(outDir string) *git.Repository {
 	if err != nil {
 		return nil
 	}
-	prior := ""
+	var prior string
 	for {
 		if _, err := os.Stat(path.Join(gitFolder, ".git")); err == nil {
 			break

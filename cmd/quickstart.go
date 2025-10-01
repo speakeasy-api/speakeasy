@@ -485,6 +485,10 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		run.WithShouldCompile(!skipCompile),
 	)
 
+	if err != nil {
+		return false, fmt.Errorf("failed to parse workflow: %w", err)
+	}
+
 	// Execute the workflow based on output mode
 	switch output {
 	case "summary":

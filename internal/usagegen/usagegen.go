@@ -225,7 +225,7 @@ func parseOperationInfoAndCodeSample(lang, usageOutputSection string) (*UsageSni
 }
 
 func writeExampleCode(lang, path, code string) error {
-	outFile := ""
+	var outFile string
 	switch lang {
 	case "go":
 		outFile = path + "/main.go"

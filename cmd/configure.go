@@ -728,6 +728,10 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 		run.WithBoostrapTests(),
 	)
 
+	if err != nil {
+		return fmt.Errorf("failed to parse workflow: %w", err)
+	}
+
 	if err = wf.RunWithVisualization(ctx); err != nil {
 		return errors.Wrapf(err, "failed to generate tests")
 	}
