@@ -27,17 +27,17 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 
 	// Step 1: Verify main is up to date with origin/main
 	if err := verifyMainUpToDate(ctx); err != nil {
-		return fmt.Errorf("main branch verification failed: %w", err)
+		return fmt.Errorf("In order to register your custom code, your local branch must be up to date with origin/main: %w", err)
 	}
 
 	// Step 2: Check changeset doesn't include .speakeasy directory changes
 	if err := checkNoSpeakeasyChanges(ctx); err != nil {
-		return fmt.Errorf("changeset validation failed: %w", err)
+		return fmt.Errorf("Registering custom code in the .speakeasy directory is not supported: %w", err)
 	}
 
 	// Step 3: Check if workflow.yaml references local openapi spec and validate no spec changes
 	if err := checkNoLocalSpecChanges(ctx, wf); err != nil {
-		return fmt.Errorf("openapi spec validation failed: %w", err)
+		return fmt.Errorf("Registering custom code in your openapi spec and related files is not supported: %w", err)
 	}
 
 	// Step 4: Capture patchset with git diff for custom code changes
@@ -48,8 +48,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 
 	// If no custom code changes detected, return early
 	if customCodeDiff == "" {
-		logger.Info("No custom code changes detected, nothing to register")
-		return nil
+		return fmt.Errorf("No custom code changes detected, nothing to register")
 	}
 
 	// Step 5: Generate clean SDK (without custom code) on main branch
@@ -75,8 +74,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	// Step 9: Apply the new custom code diff
 	if customCodeDiff != "" {
 		if err := applyNewPatch(customCodeDiff); err != nil {
-			logger.Warn("Conflicts detected when applying new patch")
-			return fmt.Errorf("conflicts detected when applying new patch: %w", err)
+			return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again: %w", err)
 		}
 	}
 
@@ -87,14 +85,13 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	}
 
 	// Step 10.5: Compile SDK to verify custom code changes
+	target := "all"
 	if workflow != nil && workflow.Target != "" {
-		logger.Info("Compiling SDK to verify custom code changes...")
-		if err := compileAndLintSDK(ctx, workflow.Target, outDir); err != nil {
-			return fmt.Errorf("custom code changes failed compilation: %w", err)
-		}
-		logger.Info("✓ SDK compiled successfully")
-	} else {
-		logger.Warn("Skipping compilation: no target specified")
+		target = workflow.Target
+	}
+	logger.Info("Compiling SDK to verify custom code changes...")
+	if err := compileAndLintSDK(ctx, target, outDir); err != nil {
+		return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again: %w", err)
 	}
 
 	// Step 11: Update gen.lock with full combined patch
@@ -107,13 +104,14 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 		return fmt.Errorf("failed to commit gen.lock: %w", err)
 	}
 
-
-	logger.Info("Successfully registered custom code changes")
+	logger.Info("Successfully registered custom code changes.  Code changes will be applied on top of your code after generation.")
 	return nil
 }
 
 // ShowCustomCodePatch displays the custom code patch stored in the gen.lock file
-func ShowCustomCodePatch() error {
+func ShowCustomCodePatch(ctx context.Context) error {
+	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
+
 	_, outDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
@@ -121,19 +119,19 @@ func ShowCustomCodePatch() error {
 	cfg, err := config.Load(outDir)
 	customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]
 	if !exists {
-		fmt.Println("No custom code patch found in gen.lock")
+		logger.Warn("No existing custom code patch found")
 		return nil
 	}
 
 	patchStr, ok := customCodePatch.(string)
 	if !ok || patchStr == "" {
-		fmt.Println("No custom code patch found in gen.lock")
+		logger.Warn("No existing custom code patch found")
 		return nil
 	}
 
-	fmt.Println("Found custom code patch:")
-	fmt.Println("----------------------")
-	fmt.Printf("%s\n", patchStr)
+	logger.Info("Found custom code patch:")
+	logger.Info("----------------------")
+	logger.Info(fmt.Sprintf("%s\n", patchStr))
 
 	return nil
 }
