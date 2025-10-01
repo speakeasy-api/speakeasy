@@ -100,6 +100,10 @@ func runTagPromote(ctx context.Context, flags tagPromoteFlagsArgs) error {
 
 	lockfile, err := workflow.LoadLockfile(projectDir)
 
+	if err != nil || lockfile == nil {
+		return fmt.Errorf("failed to load workflow.lock: %w", err)
+	}
+
 	revisions, err := getRevisions(ctx, flags.Sources, flags.CodeSamples, wf, lockfile)
 	if err != nil {
 		return err
