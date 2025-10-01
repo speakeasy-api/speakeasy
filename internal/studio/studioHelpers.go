@@ -512,13 +512,11 @@ func updateSourceAndTarget(workflowRunner run.Workflow, sourceID, overlayPath st
 	}
 
 	for targetID, input := range runRequestBody.Targets {
-		sdkPath := ""
-
 		wfTarget, ok := workflowRunner.GetWorkflowFile().Targets[targetID]
 		if !ok {
 			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", targetID))
 		}
-		sdkPath = workflowRunner.ProjectDir
+		sdkPath := workflowRunner.ProjectDir
 		if wfTarget.Output != nil {
 			sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
 		}

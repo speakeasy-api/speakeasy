@@ -128,7 +128,7 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		}
 		log.From(ctx).Infof("wrote changes summary to \"%s\"", filepath)
 	}
-	prMD := ""
+	var prMD string
 	if len(summary.Text) > 0 {
 		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\n" + summary.Text + "\n" + "</details>\n"
 	} else {
@@ -158,7 +158,7 @@ func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {
 	}
 
 	logger := log.From(ctx)
-	md := ""
+	var md string
 	chart, err := summary.ToMermaidDiagram()
 	if err == nil {
 		md = fmt.Sprintf("# Generation Workflow Summary\n\n_This is a breakdown of the 'Generate Target' step above_\n%s", chart)

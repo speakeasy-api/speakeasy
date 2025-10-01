@@ -185,9 +185,6 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		return nil, err
 	}
 
-	short := strings.Trim(c.Short, " .")
-	short = utils.CapitalizeFirst(short)
-
 	cmd := &cobra.Command{
 		Use:     c.Usage,
 		Short:   c.Short,

@@ -168,7 +168,7 @@ func errorsToTabContents(schema []byte, errs []error) []interactivity.Inspectabl
 	for _, err := range errs {
 		vErr := errors.GetValidationErr(err)
 
-		s := ""
+		var s string
 		var details *string
 
 		// Need to account for non-validation errors
