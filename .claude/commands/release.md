@@ -11,14 +11,15 @@ Create a release PR with summarized changes from merged pull requests.
 4. Group changes by programming language (python, typescript, java, go, csharp, php, ruby, terraform)
 5. Ignore "v2" suffixes when categorizing (pythonv2 → python, typescriptv2 → typescript)
 6. Create a user-facing summary for each language with relevant changes
-7. **Create a PR title that includes**:
+7. You should use `gh` to go and read the descriptions of each and every PR to workout if this is a public facing change or internal change. This PR should only include public changes.
+8. **Create a PR title that includes**:
    - Which languages have been updated
    - Whether changes are features or fixes
    - Brief description of what was changed
    - Format: `feat/fix(lang1,lang2): brief description of changes`
-8. Create a new branch off main with format: `release/vX.Y.Z` or `release/YYYY-MM-DD`
-9. Commit the changes with the summarized message
-10. Push the branch and create a PR with the full changelog
+9. Create a new branch off main with format: `release/vX.Y.Z` or `release/YYYY-MM-DD`
+10. Commit the changes with the summarized message
+11. Push the branch and create a PR with the full changelog
 
 ## PR Title Format
 
