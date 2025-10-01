@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -24,6 +26,13 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	wf, outDir, err := utils.GetWorkflowAndDir()
 
 	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
+
+	// Record the current git hash at the very beginning for error recovery
+	originalHash, err := getCurrentGitHash()
+	if err != nil {
+		return fmt.Errorf("failed to get current git hash: %w", err)
+	}
+	logger.Info("Recorded original git hash for error recovery", zap.String("hash", originalHash.String()))
 
 	// Step 1: Verify main is up to date with origin/main
 	if err := verifyMainUpToDate(ctx); err != nil {
@@ -74,7 +83,8 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	// Step 9: Apply the new custom code diff
 	if customCodeDiff != "" {
 		if err := applyNewPatch(customCodeDiff); err != nil {
-			return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again: %w", err)
+			removeCleanGenerationCommit(ctx, originalHash)
+			return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
 		}
 	}
 
@@ -91,7 +101,8 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	}
 	logger.Info("Compiling SDK to verify custom code changes...")
 	if err := compileAndLintSDK(ctx, target, outDir); err != nil {
-		return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again: %w", err)
+		removeCleanGenerationCommit(ctx, originalHash)
+		return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
 	}
 
 	// Step 11: Update gen.lock with full combined patch
@@ -528,5 +539,81 @@ func compileAndLintSDK(ctx context.Context, target, outDir string) error {
 		}
 	}
 
+	return nil
+}
+
+// getCurrentGitHash returns the current git commit hash
+func getCurrentGitHash() (plumbing.Hash, error) {
+	repo, err := git.PlainOpenWithOptions(".", &git.PlainOpenOptions{
+		DetectDotGit: true,
+	})
+	if err != nil {
+		return plumbing.Hash{}, fmt.Errorf("failed to open git repository: %w", err)
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return plumbing.Hash{}, fmt.Errorf("failed to get HEAD reference: %w", err)
+	}
+
+	return head.Hash(), nil
+}
+
+// removeCleanGenerationCommit removes the clean generation commit by:
+// 1. stash local changes
+// 2. reset --hard to the original git hash
+// 3. stash pop those local changes
+func removeCleanGenerationCommit(ctx context.Context, originalHash plumbing.Hash) error {
+	logger := log.From(ctx).With(zap.String("method", "removeCleanGenerationCommit"))
+	logger.Info("Starting error recovery process", zap.String("target_hash", originalHash.String()))
+
+	// Step 1: Stash local changes using git command
+	logger.Info("Stashing local changes")
+	stashCmd := exec.Command("git", "stash", "push", "-m", "RegisterCustomCode error recovery stash")
+	stashOutput, stashErr := stashCmd.CombinedOutput()
+	stashSuccessful := stashErr == nil && !strings.Contains(string(stashOutput), "No local changes to save")
+
+	if stashErr != nil && !strings.Contains(string(stashOutput), "No local changes to save") {
+		logger.Warn("Failed to stash changes, continuing with reset", zap.Error(stashErr), zap.String("output", string(stashOutput)))
+	} else if stashSuccessful {
+		logger.Info("Successfully stashed changes")
+	} else {
+		logger.Info("No changes to stash")
+	}
+
+	// Step 2: Reset --hard to the original git hash using go-git
+	logger.Info("Resetting to original git hash", zap.String("hash", originalHash.String()))
+	repo, err := git.PlainOpenWithOptions(".", &git.PlainOpenOptions{
+		DetectDotGit: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to open git repository for recovery: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree for recovery: %w", err)
+	}
+
+	err = worktree.Reset(&git.ResetOptions{
+		Commit: originalHash,
+		Mode:   git.HardReset,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reset to original hash %s: %w", originalHash.String(), err)
+	}
+
+	// Step 3: Stash pop those local changes (if we successfully stashed)
+	if stashSuccessful {
+		logger.Info("Popping stashed changes")
+		popCmd := exec.Command("git", "stash", "pop")
+		if popOutput, popErr := popCmd.CombinedOutput(); popErr != nil {
+			logger.Error("Failed to pop stashed changes, but reset was successful", zap.Error(popErr), zap.String("output", string(popOutput)))
+			return fmt.Errorf("reset successful but failed to restore stashed changes: %w", popErr)
+		}
+		logger.Info("Successfully restored stashed changes")
+	}
+
+	logger.Info("Error recovery completed successfully")
 	return nil
 }
