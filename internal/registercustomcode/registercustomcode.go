@@ -11,6 +11,7 @@ import (
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -90,7 +91,16 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 		return fmt.Errorf("failed to capture full custom code diff: %w", err)
 	}
 
-	// TODO: compile and lint
+	// Step 10.5: Compile SDK to verify custom code changes
+	if workflow != nil && workflow.Target != "" {
+		logger.Info("Compiling SDK to verify custom code changes...")
+		if err := compileSDK(ctx, workflow.Target, outDir); err != nil {
+			return fmt.Errorf("custom code changes failed compilation: %w", err)
+		}
+		logger.Info("✓ SDK compiled successfully")
+	} else {
+		logger.Warn("Skipping compilation: no target specified")
+	}
 
 	// Step 11: Update gen.lock with full combined patch
 	if err := updateGenLockWithPatch(outDir, fullCustomCodeDiff); err != nil {
@@ -505,6 +515,40 @@ func emitFullPatch(ctx context.Context, fullPatch string) error {
 	fmt.Println(fullPatch)
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println("")
+
+	return nil
+}
+
+// compileSDK compiles the SDK to verify custom code changes don't break compilation
+func compileSDK(ctx context.Context, target, outDir string) error {
+	// If target is "all", detect the actual language from the SDK config
+	if target == "all" {
+		cfg, err := config.Load(outDir)
+		if err != nil {
+			return fmt.Errorf("failed to load config to detect language: %w", err)
+		}
+
+		// Get the first (and usually only) language from the config
+		for lang := range cfg.Config.Languages {
+			target = lang
+			break
+		}
+
+		if target == "all" {
+			return fmt.Errorf("could not detect target language from config in %s", outDir)
+		}
+	}
+
+	// Create generator instance
+	g, err := generate.New()
+	if err != nil {
+		return fmt.Errorf("failed to create generator: %w", err)
+	}
+
+	// Call the public Compile method
+	if err := g.Compile(ctx, target, outDir); err != nil {
+		return err
+	}
 
 	return nil
 }
