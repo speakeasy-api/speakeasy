@@ -4,6 +4,7 @@ Create a release PR with summarized changes from merged pull requests.
 
 ## Steps
 
+0. Switch to the main branch if not already
 1. Run the upgrade.bash script to get the list of merged PRs and upgrade dependencies
 2. Fetch all merged PRs from openapi-generation repo since the last release
 3. **IMPORTANT: Filter out PRs with titles starting with "chore:" - these MUST be excluded from both the PR title and description**
