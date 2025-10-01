@@ -22,7 +22,7 @@ import (
 )
 
 // RegisterCustomCode registers custom code changes by capturing them as patches in gen.lock
-func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate func() error) error {
+func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, resolve bool, runGenerate func() error) error {
 	wf, outDir, err := utils.GetWorkflowAndDir()
 
 	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
@@ -56,7 +56,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	}
 
 	// If no custom code changes detected, return early
-	if customCodeDiff == "" {
+	if customCodeDiff == "" && resolve == false{
 		return fmt.Errorf("No custom code changes detected, nothing to register")
 	}
 

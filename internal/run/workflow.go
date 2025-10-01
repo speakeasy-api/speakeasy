@@ -62,6 +62,7 @@ type Workflow struct {
 	SourceResults   map[string]*SourceResult
 	TargetResults   map[string]*TargetResult
 	OnSourceResult  SourceResultCallback
+	SkipApplyCustomCode bool
 	Duration        time.Duration
 	criticalWarns   []string
 	Error           error
@@ -287,6 +288,12 @@ func WithSourceUpdates(onSourceResult SourceResultCallback) Opt {
 
 	return func(w *Workflow) {
 		w.OnSourceResult = func(sourceRes *SourceResult, sourceStep SourceStepID) error { return nil }
+	}
+}
+
+func WithSkipApplyCustomCode() Opt {
+	return func(w *Workflow) {
+		w.SkipApplyCustomCode = true
 	}
 }
 

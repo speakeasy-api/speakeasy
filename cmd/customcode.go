@@ -12,8 +12,8 @@ import (
 )
 
 type RegisterCustomCodeFlags struct {
-	Target  string `json:"target"`
 	Show    bool   `json:"show"`
+	Resolve bool   `json:"resolve"`
 	InstallationURL	string	`json:"installationURL"`
 	InstallationURLs   map[string]string `json:"installationURLs"`
 	Repo               string            `json:"repo"`
@@ -26,20 +26,19 @@ type RegisterCustomCodeFlags struct {
 }
 
 var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
-	Usage:  "registercustomcode",
+	Usage:  "customcode",
 	Short:  "Register custom code with the OpenAPI generation system.",
 	Long:   `Register custom code with the OpenAPI generation system.`,
 	Run:    registerCustomCode,
 	Flags:  []flag.Flag{
-		flag.StringFlag{
-			Name:		 "target",
-			Shorthand:	 "t",
-			Description: "target - DONOTSPECIFY",
-		},
 		flag.BooleanFlag{
 			Name:        "show",
 			Shorthand:   "s",
 			Description: "show custom code patches",
+		},
+		flag.BooleanFlag{
+			Name:		 "resolve",
+			Description: "resolve conflicts between custom code patches and local changes",
 		},
 		flag.StringFlag{
 			Name:        "installationURL",
@@ -78,6 +77,7 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 		run.WithRepoSubDirs(flags.RepoSubdirs),
 		run.WithInstallationURLs(flags.InstallationURLs),
 		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithSkipApplyCustomCode(),
 	}
 	workflow, err := run.NewWorkflow(
 		ctx,
@@ -90,7 +90,7 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 	}
 
 	// Call the registercustomcode functionality
-	return registercustomcode.RegisterCustomCode(ctx, workflow, func() error {
+	return registercustomcode.RegisterCustomCode(ctx, workflow, flags.Resolve, func() error {
 		switch flags.Output {
 			case "summary":
 				err = workflow.RunWithVisualization(ctx)
