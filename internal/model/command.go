@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	// "os/exec"
+	"os/exec"
 	"slices"
 	"strings"
 	"time"
@@ -349,26 +349,29 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 	// if err != nil {
 	// 	return ErrInstallFailed.Wrap(err)
 	// }
+	vLocation := "/home/runner/work/branchgen-pr-test/branchgen-pr-test/bin/speakeasy"
+	ctx := cmd.Context()
+	logger := log.From(ctx)
+	logger.PrintfStyled(styles.DimmedItalic, "new code")
+	cmdParts := utils.GetCommandParts(cmd)
+	if cmdParts[0] == "speakeasy" {
+		cmdParts = cmdParts[1:]
+	}
 
-	// cmdParts := utils.GetCommandParts(cmd)
-	// if cmdParts[0] == "speakeasy" {
-	// 	cmdParts = cmdParts[1:]
-	// }
+	// The pinned flag was introduced in 1.256.0
+	// For earlier versions, it isn't necessary because we don't try auto-upgrading
+	if ok, _ := pinningWasReleased(desiredVersion); ok {
+		cmdParts = append(cmdParts, "--pinned")
+	}
 
-	// // The pinned flag was introduced in 1.256.0
-	// // For earlier versions, it isn't necessary because we don't try auto-upgrading
-	// if ok, _ := pinningWasReleased(desiredVersion); ok {
-	// 	cmdParts = append(cmdParts, "--pinned")
-	// }
+	newCmd := exec.Command(vLocation, cmdParts...)
+	newCmd.Stdin = os.Stdin
+	newCmd.Stdout = os.Stdout
+	newCmd.Stderr = os.Stderr
 
-	// newCmd := exec.Command(vLocation, cmdParts...)
-	// newCmd.Stdin = os.Stdin
-	// newCmd.Stdout = os.Stdout
-	// newCmd.Stderr = os.Stderr
-
-	// if err = newCmd.Run(); err != nil {
-	// 	return fmt.Errorf("failed to run with version %s: %w", desiredVersion, err)
-	// }
+	if err := newCmd.Run(); err != nil {
+		return fmt.Errorf("failed to run with version %s: %w", desiredVersion, err)
+	}
 
 	// If the workflow succeeded, make the used version the default
 	// if shouldPromote && !env.IsGithubAction() && !env.IsLocalDev() {
