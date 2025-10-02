@@ -79,6 +79,7 @@ func (e *LintingError) Error() string {
 func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string) (string, *SourceResult, error) {
 	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
 	source := w.workflow.Sources[sourceID]
+	hasRemoteInputs := workflowSourceHasRemoteInputs(source)
 	sourceRes := &SourceResult{
 		Source:    sourceID,
 		Diagnosis: suggestions.Diagnosis{},
@@ -109,7 +110,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		rootStep.NewSubstep("Using Source Location Override")
 		currentDocument = w.SourceLocation
 		frozenSource = true
-	} else if w.FrozenWorkflowLock {
+	} else if w.FrozenWorkflowLock && hasRemoteInputs {
 		frozenSource = true
 		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused")
 		if err != nil {
@@ -310,6 +311,17 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(path)))
+}
+
+// Returns true if any of the source inputs are remote.
+func workflowSourceHasRemoteInputs(source workflow.Source) bool {
+	for _, input := range source.Inputs {
+		if input.IsRemote() {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Reformats yaml to json if necessary and writes to the output location
