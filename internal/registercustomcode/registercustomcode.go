@@ -147,6 +147,24 @@ func ShowCustomCodePatch(ctx context.Context) error {
 	return nil
 }
 
+// ApplyCustomCodePatchOnly applies only the existing custom code patch without running generation
+func ApplyCustomCodePatchOnly(ctx context.Context) error {
+	logger := log.From(ctx).With(zap.String("method", "ApplyCustomCodePatchOnly"))
+
+	_, outDir, err := utils.GetWorkflowAndDir()
+	if err != nil {
+		return err
+	}
+
+	// Apply existing custom code patch from gen.lock
+	if err := applyCustomCodePatch(outDir); err != nil {
+		return fmt.Errorf("failed to apply custom code patch: %w", err)
+	}
+
+	logger.Info("Successfully applied custom code patch")
+	return nil
+}
+
 // Git validation helpers
 func verifyMainUpToDate(ctx context.Context) error {
 	logger := log.From(ctx)
@@ -427,7 +445,7 @@ func commitGenLock() error {
 }
 
 // Patch management
-func applyCustomCodePatch(outDir string) error {
+func applyCustomCodePatch(outDir string, ) error {
 	// Load the current configuration and lock file
 	cfg, err := config.Load(outDir)
 	if err != nil {
@@ -446,6 +464,36 @@ func applyCustomCodePatch(outDir string) error {
 
 			// Apply the patch with 3-way merge
 			cmd := exec.Command("git", "apply", "-3", patchFile)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				return fmt.Errorf("failed to apply patch: %w\nOutput: %s", err, string(output))
+			}
+		}
+	}
+
+	return nil
+}
+
+func ApplyCustomCodePatchReverse(ctx context.Context) error {
+	fmt.Println("Reverse apply patch")
+	_, outDir, _ := utils.GetWorkflowAndDir()
+	// Load the current configuration and lock file
+	cfg, err := config.Load(outDir)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Check if there's a custom code patch in the management section
+	if customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]; exists {
+		if patchStr, ok := customCodePatch.(string); ok && patchStr != "" {
+			// Create a temporary patch file
+			patchFile := filepath.Join(outDir, ".speakeasy", "temp_patch.patch")
+			if err := os.WriteFile(patchFile, []byte(patchStr), 0644); err != nil {
+				return fmt.Errorf("failed to write patch file: %w", err)
+			}
+			defer os.Remove(patchFile)
+
+			// Apply the patch with 3-way merge
+			cmd := exec.Command("git", "apply", "-R", "--3way", "--index", patchFile)
 			if output, err := cmd.CombinedOutput(); err != nil {
 				return fmt.Errorf("failed to apply patch: %w\nOutput: %s", err, string(output))
 			}
