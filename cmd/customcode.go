@@ -14,6 +14,7 @@ import (
 type RegisterCustomCodeFlags struct {
 	Show    bool   `json:"show"`
 	Resolve bool   `json:"resolve"`
+	ApplyOnly bool   `json:"apply-only"`
 	InstallationURL	string	`json:"installationURL"`
 	InstallationURLs   map[string]string `json:"installationURLs"`
 	Repo               string            `json:"repo"`
@@ -39,6 +40,11 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 		flag.BooleanFlag{
 			Name:		 "resolve",
 			Description: "resolve conflicts between custom code patches and local changes",
+		},
+		flag.BooleanFlag{
+			Name:        "apply-only",
+			Shorthand:   "a",
+			Description: "only apply existing custom code patches without running generation",
 		},
 		flag.StringFlag{
 			Name:        "installationURL",
@@ -87,6 +93,11 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 	// If --show flag is provided, show existing customcode
 	if flags.Show {
 		return registercustomcode.ShowCustomCodePatch(ctx)
+	}
+
+	// If --apply-only flag is provided, only apply existing patches
+	if flags.ApplyOnly {
+		return registercustomcode.ApplyCustomCodePatchReverse(ctx)
 	}
 
 	// Call the registercustomcode functionality

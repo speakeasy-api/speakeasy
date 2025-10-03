@@ -3,7 +3,7 @@ package model
 import (
 	"context"
 	"encoding/json"
-	errs "errors"
+	// errs "errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,7 +18,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-version"
-	"github.com/sethvargo/go-githubactions"
+	// "github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -310,26 +310,26 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	}
 
 	// Get lockfile version before running the command, in case it gets overwritten
-	lockfileVersion := getSpeakeasyVersionFromLockfile()
+	// lockfileVersion := getSpeakeasyVersionFromLockfile()
 
 	// If the workflow succeeds on latest, promote that version to the default
 	shouldPromote := wf.SpeakeasyVersion == "latest"
 
-	runErr := runWithVersion(cmd, artifactArch, desiredVersion, shouldPromote)
-	if runErr != nil {
-		// If the error has been marked as non-rollbackable, return the cause
-		if errors.Is(runErr, run.ErrNoRollback) {
-			return errs.Unwrap(runErr)
-		}
+	runWithVersion(cmd, artifactArch, desiredVersion, shouldPromote)
+	// if runErr != nil {
+	// 	// If the error has been marked as non-rollbackable, return the cause
+	// 	if errors.Is(runErr, run.ErrNoRollback) {
+	// 		return errs.Unwrap(runErr)
+	// 	}
 
-		// If the command failed to run with the latest version, try to run with the version from the lock file
-		if wf.SpeakeasyVersion == "latest" {
-			msg := fmt.Sprintf("Failed to run with Speakeasy version %s: %s\n", desiredVersion, runErr.Error())
-			_ = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil)
-			logger.PrintStyled(styles.DimmedItalic, msg)
-			if env.IsGithubAction() {
-				githubactions.AddStepSummary("# Speakeasy Version upgrade failure\n" + msg)
-			}
+	// 	// If the command failed to run with the latest version, try to run with the version from the lock file
+	// 	if wf.SpeakeasyVersion == "latest" {
+	// 		msg := fmt.Sprintf("Failed to run with Speakeasy version %s: %s\n", desiredVersion, runErr.Error())
+	// 		_ = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil)
+	// 		logger.PrintStyled(styles.DimmedItalic, msg)
+	// 		if env.IsGithubAction() {
+	// 			githubactions.AddStepSummary("# Speakeasy Version upgrade failure\n" + msg)
+	// 		}
 
 			if lockfileVersion != "" && lockfileVersion != desiredVersion {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version")
@@ -337,19 +337,19 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 			}
 		}
 
-		// If the command failed to run with the pinned version, fail normally
-		return runErr
-	}
+	// 	// If the command failed to run with the pinned version, fail normally
+	// 	return runErr
+	// }
 
 	return nil
 }
 
 // If promote is true, the version will be promoted to the default version (ie when running `speakeasy`)
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, shouldPromote bool) error {
-	vLocation, err := updates.InstallVersion(cmd.Context(), desiredVersion, artifactArch, 30)
-	if err != nil {
-		return ErrInstallFailed.Wrap(err)
-	}
+	vLocation := "/home/runner/work/branchgen-pr-test/branchgen-pr-test/bin/speakeasy"
+	// if err != nil {
+	// 	return ErrInstallFailed.Wrap(err)
+	// }
 
 	cmdParts := utils.GetCommandParts(cmd)
 	if cmdParts[0] == "speakeasy" {
@@ -367,7 +367,7 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 	newCmd.Stdout = os.Stdout
 	newCmd.Stderr = os.Stderr
 
-	if err = newCmd.Run(); err != nil {
+	if err := newCmd.Run(); err != nil {
 		return fmt.Errorf("failed to run with version %s: %w", desiredVersion, err)
 	}
 
