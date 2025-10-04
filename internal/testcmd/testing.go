@@ -52,7 +52,7 @@ func CheckTestingEnabled(ctx context.Context) error {
 		return fmt.Errorf("Account type not found. Ensure you are logged in via the `speakeasy auth login` command or SPEAKEASY_API_KEY environment variable.")
 	}
 
-	if !slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, *accountType) {
+	if !IsBusinessTierOrAbove(ctx, *accountType) {
 		return fmt.Errorf("testing is not supported on the %s account tier. Contact %s for more information", *accountType, styles.RenderSalesEmail())
 	}
 
@@ -64,7 +64,40 @@ func CheckTestingEnabled(ctx context.Context) error {
 }
 
 func CheckTestingAccountType(accountType shared.AccountType) bool {
-	return slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, accountType)
+	return IsBusinessTierOrAboveAccountType(accountType)
+}
+
+// IsBusinessTierOrAbove checks if the account type supports business-tier features.
+// This includes Business, Enterprise, and OSS account types.
+func IsBusinessTierOrAbove(ctx context.Context, accountType shared.AccountType) bool {
+	// Check standard Business and Enterprise tiers
+	if slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, accountType) {
+		return true
+	}
+	
+	// Check for OSS account type by comparing string representation
+	// Since OSS is not in the external SDK enum, we check the string value
+	if string(accountType) == "OSS" {
+		return true
+	}
+	
+	return false
+}
+
+// IsBusinessTierOrAboveAccountType checks if the account type supports business-tier features.
+// This is a helper function for cases where we only have the AccountType enum.
+func IsBusinessTierOrAboveAccountType(accountType shared.AccountType) bool {
+	// Check standard Business and Enterprise tiers
+	if slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, accountType) {
+		return true
+	}
+	
+	// Check for OSS account type by comparing string representation
+	if string(accountType) == "OSS" {
+		return true
+	}
+	
+	return false
 }
 
 // RebuildTests will prepare the arazzo and gen.lock files for a target ready to rebuild tests.
