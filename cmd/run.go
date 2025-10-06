@@ -144,7 +144,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.EnumFlag{
 			Name:          "output",
 			Shorthand:     "o",
-			Description:   "What to output while running",
+			Description:   "What to output while running (summary: visual workflow summary, mermaid: Mermaid diagram of workflow, console: basic console output)",
 			AllowedValues: []string{"summary", "mermaid", "console"},
 			DefaultValue:  "summary",
 		},
