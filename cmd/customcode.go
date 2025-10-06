@@ -56,11 +56,6 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 			Shorthand:   "r",
 			Description: "the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions",
 		},
-		flag.BooleanFlag{
-			Name:         "skip-versioning",
-			Description:  "skip automatic SDK version increments",
-			DefaultValue: false,
-		},
 		flag.EnumFlag{
 			Name:          "output",
 			Shorthand:     "o",
@@ -78,7 +73,7 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 		run.WithRepo(flags.Repo),
 		run.WithRepoSubDirs(flags.RepoSubdirs),
 		run.WithInstallationURLs(flags.InstallationURLs),
-		run.WithSkipVersioning(flags.SkipVersioning),
+		run.WithSkipVersioning(true),
 		run.WithSkipApplyCustomCode(),
 	}
 	workflow, err := run.NewWorkflow(
