@@ -158,7 +158,7 @@ func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
 //   - failure: A -> B -> C
 func (w *WorkflowStep) LastStepToString() string {
 	step := w
-	var status Status = StatusSucceeded
+	var status Status
 	var stepNames = []string{}
 
 	for {

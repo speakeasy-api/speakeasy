@@ -37,8 +37,8 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi v1.7.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.716.17-0.20250929024523-1018154474a2
+	github.com/speakeasy-api/openapi v1.7.7
+	github.com/speakeasy-api/openapi-generation/v2 v2.721.2-0.20251006224423-7f2bac5c62fc
 	github.com/speakeasy-api/openapi-overlay v0.10.3
 	github.com/speakeasy-api/sdk-gen-config v1.35.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7

@@ -103,7 +103,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 
-	oldRegistryLocation := ""
+	var oldRegistryLocation string
 	if targetLock.SourceRevisionDigest != "" && targetLock.SourceNamespace != "" {
 		oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
 			targetLock.SourceNamespace, targetLock.SourceRevisionDigest)

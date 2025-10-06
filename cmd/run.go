@@ -144,7 +144,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.EnumFlag{
 			Name:          "output",
 			Shorthand:     "o",
-			Description:   "What to output while running",
+			Description:   "What to output while running (summary: visual workflow summary, mermaid: Mermaid diagram of workflow, console: basic console output)",
 			AllowedValues: []string{"summary", "mermaid", "console"},
 			DefaultValue:  "summary",
 		},
@@ -272,14 +272,19 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// We must set these after prompting for them or else the user will be prompted a second time
-	if err := cmd.Flags().Set("source", flags.Source); err != nil {
-		return err
+	if flags.Source != "" {
+		if err := cmd.Flags().Set("source", flags.Source); err != nil {
+			return err
+		}
 	}
+	// Not checking target flag not empty for safety, don't want to change how it was working before
 	if err := cmd.Flags().Set("target", flags.Target); err != nil {
 		return err
 	}
-	if err := cmd.Flags().Set("dependent", flags.Dependent); err != nil {
-		return err
+	if flags.Dependent != "" { // We don't want to set this flag unnecessarily, as it will break old (pinned) versions of the CLI
+		if err := cmd.Flags().Set("dependent", flags.Dependent); err != nil {
+			return err
+		}
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
