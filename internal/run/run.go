@@ -249,8 +249,12 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 		additionalLines = append(additionalLines, "Review all targets with `speakeasy status`.")
 	}
 
-	if t.CodeSamples != nil {
+	// Covers the case where code samples are configured to be written to a local file
+	if t.CodeSamples != nil && t.CodeSamples.Output != "" {
 		additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+		// Covers the case where code samples are configured to be published to a registry URI
+	} else if t.CodeSamples != nil && t.CodeSamples.Registry != nil {
+		additionalLines = append(additionalLines, fmt.Sprintf("Code samples uploaded to: %s", string(t.CodeSamples.Registry.Location)))
 	}
 
 	if len(w.criticalWarns) > 0 {
