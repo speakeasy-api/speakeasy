@@ -343,7 +343,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 			if lockfileVersion != "" && lockfileVersion != desiredVersion {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version")
-				return runWithVersion(cmd, artifactArch, "latest", false)
+				return runWithVersion(cmd, artifactArch, "anyrandomstring", false)
 			}
 		}
 
