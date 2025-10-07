@@ -2,6 +2,8 @@ package registry
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -22,5 +24,18 @@ func AddTags(ctx context.Context, namespaceName, revisionDigest string, tags []s
 		},
 	})
 
+	if isMismatchedWorkspaceError(err) {
+		return fmt.Errorf("The current workspace does not match the original workspace for this registry entry. Ensure you are in the correct workspace.")
+	}
 	return err
+}
+
+func isMismatchedWorkspaceError(err error) bool {
+	message := err.Error()
+
+	if strings.Contains(message, "resolving for reference") {
+		return true
+	}
+
+	return false
 }
