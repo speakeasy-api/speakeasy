@@ -14,7 +14,9 @@ import (
 type RegisterCustomCodeFlags struct {
 	Show    bool   `json:"show"`
 	Resolve bool   `json:"resolve"`
-	ApplyOnly bool   `json:"apply-only"`
+	Apply bool   `json:"apply"`
+	ApplyReverse bool	`json:"apply-reverse"`
+	LatestHash bool   `json:"latest-hash"`
 	InstallationURL	string	`json:"installationURL"`
 	InstallationURLs   map[string]string `json:"installationURLs"`
 	Repo               string            `json:"repo"`
@@ -40,7 +42,15 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 		flag.BooleanFlag{
 			Name:        "apply-only",
 			Shorthand:   "a",
-			Description: "only apply existing custom code patches without running generation",
+			Description: "apply existing custom code patches without running generation",
+		},
+		flag.BooleanFlag{
+			Name:		 "apply-reverse",
+			Description: "apply existing custom code patches (with -r flag) without running generation",
+		},
+		flag.BooleanFlag{
+			Name:		 "latest-hash",
+			Description: "show the latest commit hash from gen.lock that contains custom code changes",
 		},
 		flag.StringFlag{
 			Name:        "installationURL",
@@ -86,9 +96,19 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 		return registercustomcode.ShowCustomCodePatch(ctx)
 	}
 
-	// If --apply-only flag is provided, only apply existing patches
-	if flags.ApplyOnly {
-		return registercustomcode.ApplyCustomCodePatchReverse(ctx)
+	// If --apply flag is provided, only apply existing patches
+	if flags.Apply {
+		return registercustomcode.ApplyCustomCodePatch(ctx, false)
+	}
+
+	// If --apply-reverse flag is provided, only apply existing patches
+	if flags.ApplyReverse {
+		return registercustomcode.ApplyCustomCodePatch(ctx, true)
+	}
+
+	// If --latest-hash flag is provided, show the commit hash from gen.lock
+	if flags.LatestHash {
+		return registercustomcode.ShowLatestCommitHash(ctx)
 	}
 
 	// Call the registercustomcode functionality
