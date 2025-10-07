@@ -249,7 +249,7 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 		additionalLines = append(additionalLines, "Review all targets with `speakeasy status`.")
 	}
 
-	if t.CodeSamples != nil {
+	if t.CodeSamples != nil && t.CodeSamples.Output != "" {
 		additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
 	}
 
