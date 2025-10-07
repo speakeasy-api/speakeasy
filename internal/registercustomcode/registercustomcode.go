@@ -71,7 +71,7 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	}
 
 	// Step 7: Apply existing custom code patch from gen.lock
-	if err := applyCustomCodePatch(outDir); err != nil {
+	if err := ApplyCustomCodePatch(ctx, false); err != nil {
 		return fmt.Errorf("failed to apply existing patch: %w", err)
 	}
 
@@ -105,8 +105,16 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 		return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
 	}
 
-	// Step 11: Update gen.lock with full combined patch
-	if err := updateGenLockWithPatch(outDir, fullCustomCodeDiff); err != nil {
+	// Step 10.6: Create commit with custom code changes after successful compilation
+	customCodeCommitHash, err := commitCustomCodeChanges()
+	if err != nil {
+		removeCleanGenerationCommit(ctx, originalHash)
+		return fmt.Errorf("failed to commit custom code changes: %w", err)
+	}
+	logger.Info("Created commit with custom code changes", zap.String("commit_hash", customCodeCommitHash))
+
+	// Step 11: Update gen.lock with full combined patch and commit hash
+	if err := updateGenLockWithPatch(outDir, fullCustomCodeDiff, customCodeCommitHash); err != nil {
 		return fmt.Errorf("failed to update gen.lock: %w", err)
 	}
 
@@ -121,13 +129,17 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 
 // ShowCustomCodePatch displays the custom code patch stored in the gen.lock file
 func ShowCustomCodePatch(ctx context.Context) error {
-	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
+	logger := log.From(ctx).With(zap.String("method", "ShowCustomCodePatch"))
 
 	_, outDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
 	}
 	cfg, err := config.Load(outDir)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
 	customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]
 	if !exists {
 		logger.Warn("No existing custom code patch found")
@@ -140,6 +152,13 @@ func ShowCustomCodePatch(ctx context.Context) error {
 		return nil
 	}
 
+	// Check if there's a commit hash associated with this patch
+	if customCodeCommitHash, hashExists := cfg.LockFile.Management.AdditionalProperties["customCodeCommitHash"]; hashExists {
+		if commitHash, ok := customCodeCommitHash.(string); ok && commitHash != "" {
+			logger.Info("Custom Code Commit Hash:", zap.String("hash", commitHash))
+		}
+	}
+
 	logger.Info("Found custom code patch:")
 	logger.Info("----------------------")
 	logger.Info(fmt.Sprintf("%s\n", patchStr))
@@ -147,21 +166,28 @@ func ShowCustomCodePatch(ctx context.Context) error {
 	return nil
 }
 
-// ApplyCustomCodePatchOnly applies only the existing custom code patch without running generation
-func ApplyCustomCodePatchOnly(ctx context.Context) error {
-	logger := log.From(ctx).With(zap.String("method", "ApplyCustomCodePatchOnly"))
+// ShowLatestCommitHash displays the latest commit hash from gen.lock that contains custom code changes
+func ShowLatestCommitHash(ctx context.Context) error {
+	logger := log.From(ctx).With(zap.String("method", "ShowLatestCommitHash"))
 
 	_, outDir, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return err
 	}
-
-	// Apply existing custom code patch from gen.lock
-	if err := applyCustomCodePatch(outDir); err != nil {
-		return fmt.Errorf("failed to apply custom code patch: %w", err)
+	cfg, err := config.Load(outDir)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	logger.Info("Successfully applied custom code patch")
+	// Check if there's a commit hash stored in gen.lock
+	if customCodeCommitHash, hashExists := cfg.LockFile.Management.AdditionalProperties["customCodeCommitHash"]; hashExists {
+		if commitHash, ok := customCodeCommitHash.(string); ok && commitHash != "" {
+			fmt.Println(commitHash)
+			return nil
+		}
+	}
+
+	logger.Warn("No custom code commit hash found in gen.lock")
 	return nil
 }
 
@@ -418,6 +444,38 @@ func commitCleanGeneration() error {
 }
 
 
+func commitCustomCodeChanges() (string, error) {
+	// Add all changes (excluding gen.lock)
+	addCmd := exec.Command("git", "add", ".")
+	if output, err := addCmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("failed to add custom code changes: %w\nOutput: %s", err, string(output))
+	}
+
+	// Reset gen.lock if it was staged (we don't want it in this commit)
+	resetCmd := exec.Command("git", "reset", ".speakeasy/gen.lock")
+	if output, err := resetCmd.CombinedOutput(); err != nil {
+		// This is non-fatal - gen.lock might not exist or be staged
+		fmt.Printf("Warning: failed to unstage gen.lock: %v\nOutput: %s\n", err, string(output))
+	}
+
+	// Commit the custom code changes
+	commitMsg := "Apply custom code changes"
+	commitCmd := exec.Command("git", "commit", "-m", commitMsg)
+	if output, err := commitCmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("failed to commit custom code changes: %w\nOutput: %s", err, string(output))
+	}
+
+	// Get the commit hash
+	hashCmd := exec.Command("git", "rev-parse", "HEAD")
+	hashOutput, err := hashCmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get commit hash: %w", err)
+	}
+
+	commitHash := strings.TrimSpace(string(hashOutput))
+	return commitHash, nil
+}
+
 func commitGenLock() error {
 	// Add only the gen.lock file
 	/** GO GIT
@@ -444,37 +502,8 @@ func commitGenLock() error {
 	return nil
 }
 
-// Patch management
-func applyCustomCodePatch(outDir string, ) error {
-	// Load the current configuration and lock file
-	cfg, err := config.Load(outDir)
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
 
-	// Check if there's a custom code patch in the management section
-	if customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]; exists {
-		if patchStr, ok := customCodePatch.(string); ok && patchStr != "" {
-			// Create a temporary patch file
-			patchFile := filepath.Join(outDir, ".speakeasy", "temp_patch.patch")
-			if err := os.WriteFile(patchFile, []byte(patchStr), 0644); err != nil {
-				return fmt.Errorf("failed to write patch file: %w", err)
-			}
-			defer os.Remove(patchFile)
-
-			// Apply the patch with 3-way merge
-			cmd := exec.Command("git", "apply", "-3", patchFile)
-			if output, err := cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("failed to apply patch: %w\nOutput: %s", err, string(output))
-			}
-		}
-	}
-
-	return nil
-}
-
-func ApplyCustomCodePatchReverse(ctx context.Context) error {
-	fmt.Println("Reverse apply patch")
+func ApplyCustomCodePatch(ctx context.Context, reverse bool) error {
 	_, outDir, _ := utils.GetWorkflowAndDir()
 	// Load the current configuration and lock file
 	cfg, err := config.Load(outDir)
@@ -487,15 +516,24 @@ func ApplyCustomCodePatchReverse(ctx context.Context) error {
 		if patchStr, ok := customCodePatch.(string); ok && patchStr != "" {
 			// Create a temporary patch file
 			patchFile := filepath.Join(outDir, ".speakeasy", "temp_patch.patch")
+			fmt.Println("Saving patch to: %v", patchFile)
 			if err := os.WriteFile(patchFile, []byte(patchStr), 0644); err != nil {
 				return fmt.Errorf("failed to write patch file: %w", err)
 			}
 			defer os.Remove(patchFile)
 
 			// Apply the patch with 3-way merge
-			cmd := exec.Command("git", "apply", "-R", "--3way", "--index", patchFile)
+			args := []string{"apply", "--3way", "--index"}
+			if reverse {
+				args = append(args, "-R")
+			}
+			args = append(args, patchFile)
+			fmt.Println("running with args: %v", args)
+			cmd := exec.Command("git", args...)
 			if output, err := cmd.CombinedOutput(); err != nil {
 				return fmt.Errorf("failed to apply patch: %w\nOutput: %s", err, string(output))
+			} else {
+				fmt.Println("Not error: ", string(output))
 			}
 		}
 	}
@@ -524,7 +562,7 @@ func applyNewPatch(customCodeDiff string) error {
 	return nil
 }
 
-func updateGenLockWithPatch(outDir, patchset string) error {
+func updateGenLockWithPatch(outDir, patchset, commitHash string) error {
 	// Load the current configuration and lock file
 	cfg, err := config.Load(outDir)
 	if err != nil {
@@ -539,9 +577,14 @@ func updateGenLockWithPatch(outDir, patchset string) error {
 	// Store single patch (replaces any existing patch)
 	if patchset != "" {
 		cfg.LockFile.Management.AdditionalProperties["customCodePatch"] = patchset
+		// Store the commit hash that contains the custom code application
+		if commitHash != "" {
+			cfg.LockFile.Management.AdditionalProperties["customCodeCommitHash"] = commitHash
+		}
 	} else {
-		// Remove the patch if empty
+		// Remove the patch and commit hash if empty
 		delete(cfg.LockFile.Management.AdditionalProperties, "customCodePatch")
+		delete(cfg.LockFile.Management.AdditionalProperties, "customCodeCommitHash")
 	}
 
 	// Save the updated gen.lock
