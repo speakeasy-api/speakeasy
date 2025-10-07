@@ -38,10 +38,6 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 			Description: "show custom code patches",
 		},
 		flag.BooleanFlag{
-			Name:		 "resolve",
-			Description: "resolve conflicts between custom code patches and local changes",
-		},
-		flag.BooleanFlag{
 			Name:        "apply-only",
 			Shorthand:   "a",
 			Description: "only apply existing custom code patches without running generation",
@@ -101,7 +97,7 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 	}
 
 	// Call the registercustomcode functionality
-	return registercustomcode.RegisterCustomCode(ctx, workflow, flags.Resolve, func() error {
+	return registercustomcode.RegisterCustomCode(ctx, workflow, func() error {
 		switch flags.Output {
 			case "summary":
 				err = workflow.RunWithVisualization(ctx)
