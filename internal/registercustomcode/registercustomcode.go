@@ -54,10 +54,10 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	}
 	logger.Info("Recorded original git hash for error recovery", zap.String("hash", originalHash.String()))
 
-	// Step 1: Verify main is up to date with origin/main
-	if err := verifyMainUpToDate(ctx); err != nil {
-		return fmt.Errorf("In order to register your custom code, your local branch must be up to date with origin/main: %w", err)
-	}
+	// // Step 1: Verify main is up to date with origin/main
+	// if err := verifyMainUpToDate(ctx); err != nil {
+	// 	return fmt.Errorf("In order to register your custom code, your local branch must be up to date with origin/main: %w", err)
+	// }
 
 	// Step 2: Check changeset doesn't include .speakeasy directory changes
 	if err := checkNoSpeakeasyChanges(ctx); err != nil {
@@ -144,7 +144,7 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		}
 
 		// Step 12: Commit just gen.lock with new patch
-		if err := commitGenLock(); err != nil {
+		if err := commitGenLock(getTargetOutput(target)); err != nil {
 			return fmt.Errorf("failed to commit gen.lock: %w", err)
 		}
 
@@ -286,7 +286,7 @@ func checkNoSpeakeasyChanges(ctx context.Context) error {
     }
     fmt.Println(buf.String()) // Prints the unified diff
 	*/
-	cmd := exec.Command("git", "diff", "--name-only", "main")
+	cmd := exec.Command("git", "diff", "--name-only")
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to get changed files: %w", err)
@@ -324,7 +324,7 @@ func checkNoLocalSpecChanges(ctx context.Context, workflow *workflow.Workflow) e
 	logger.Info("Found local OpenAPI spec paths", zap.Strings("paths", localSpecPaths))
 
 	// Check if any of the local spec files have changes
-	cmd := exec.Command("git", "diff", "--name-only", "main")
+	cmd := exec.Command("git", "diff", "--name-only")
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to get changed files: %w", err)
@@ -515,7 +515,7 @@ func commitCustomCodeChanges() (string, error) {
 	return commitHash, nil
 }
 
-func commitGenLock() error {
+func commitGenLock(outDir string) error {
 	// Add only the gen.lock file
 	/** GO GIT
 	w, err := repo.Worktree()
@@ -526,7 +526,7 @@ func commitGenLock() error {
 			Email: "..."
 		}}})
 	*/
-	cmd := exec.Command("git", "add", ".speakeasy/gen.lock")
+	cmd := exec.Command("git", "add", fmt.Sprintf("%v/.speakeasy/gen.lock", outDir))
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to add gen.lock: %w", err)
 	}
