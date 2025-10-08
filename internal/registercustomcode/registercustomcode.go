@@ -15,15 +15,35 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/run"
 	"go.uber.org/zap"
 )
 
+// getTargetOutput returns the target output directory, defaulting to "." if nil
+func getTargetOutput(target workflow.Target) string {
+	if target.Output == nil {
+		return "."
+	}
+	return *target.Output
+}
+
+// getOtherTargetOutputs returns all target output directories except the current one
+func getOtherTargetOutputs(wf *workflow.Workflow, currentTargetName string) []string {
+	var otherOutputs []string
+	for targetName, target := range wf.Targets {
+		if targetName != currentTargetName {
+			output := getTargetOutput(target)
+			if output != "." {  // Don't exclude current directory
+				otherOutputs = append(otherOutputs, output)
+			}
+		}
+	}
+	return otherOutputs
+}
+
 // RegisterCustomCode registers custom code changes by capturing them as patches in gen.lock
-func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate func() error) error {
-	wf, outDir, err := utils.GetWorkflowAndDir()
+func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) error {
+	wf, _, err := utils.GetWorkflowAndDir()
 
 	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
 
@@ -48,21 +68,24 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 	if err := checkNoLocalSpecChanges(ctx, wf); err != nil {
 		return fmt.Errorf("Registering custom code in your openapi spec and related files is not supported: %w", err)
 	}
+	targetPatches := make(map[string]string)
+	for targetName, target := range wf.Targets {
+		// Step 4: Capture patchset with git diff for custom code changes
+		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
+		customCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
+		if err != nil {
+			return fmt.Errorf("failed to capture custom code diff: %w", err)
+		}
 
-	// Step 4: Capture patchset with git diff for custom code changes
-	customCodeDiff, err := captureCustomCodeDiff()
-	if err != nil {
-		return fmt.Errorf("failed to capture custom code diff: %w", err)
-	}
-
-	// If no custom code changes detected, return early
-	if customCodeDiff == ""{
-		return fmt.Errorf("No custom code changes detected, nothing to register")
-	}
-
-	// Step 5: Generate clean SDK (without custom code) on main branch
-	if err := generateCleanSDK(ctx, workflow, runGenerate); err != nil {
-		return fmt.Errorf("failed to generate clean SDK: %w", err)
+		// If no custom code changes detected, return early
+		if customCodeDiff == ""{
+			fmt.Println(fmt.Sprintf("No custom code changes detected in target %v, nothing to register", targetName))
+		}
+		targetPatches[targetName] = customCodeDiff
+		// Step 5: Generate clean SDK (without custom code) on main branch
+		if err := generateCleanSDK(ctx, targetName, runGenerate); err != nil {
+			return fmt.Errorf("failed to generate clean SDK: %w", err)
+		}
 	}
 
 	// Step 6: Commit clean generation to preserve metadata
@@ -70,58 +93,63 @@ func RegisterCustomCode(ctx context.Context, workflow *run.Workflow, runGenerate
 		return fmt.Errorf("failed to commit clean generation: %w", err)
 	}
 
-	// Step 7: Apply existing custom code patch from gen.lock
-	if err := ApplyCustomCodePatch(ctx, false); err != nil {
-		return fmt.Errorf("failed to apply existing patch: %w", err)
-	}
-
-	// Step 8: Stage all changes after applying existing patch
-	if err := stageAllChanges(); err != nil {
-		return fmt.Errorf("failed to stage changes after applying existing patch: %w", err)
-	}
-
-	// Step 9: Apply the new custom code diff
-	if customCodeDiff != "" {
-		if err := applyNewPatch(customCodeDiff); err != nil {
-			removeCleanGenerationCommit(ctx, originalHash)
-			return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
+	for targetName, target := range wf.Targets {
+		fmt.Println("Starting target", targetName)
+		fmt.Println(fmt.Sprintf("Patch: '%v'", targetPatches[targetName]))
+		if targetPatches[targetName] == "" {
+			continue
 		}
+		// Step 7: Apply existing custom code patch from gen.lock
+		if err := ApplyCustomCodePatch(ctx, target); err != nil {
+			return fmt.Errorf("failed to apply existing patch: %w", err)
+		}
+
+		// Step 8: Stage all changes after applying existing patch
+		if err := stageAllChanges(getTargetOutput(target)); err != nil {
+			return fmt.Errorf("failed to stage changes after applying existing patch: %w", err)
+		}
+
+		// Step 9: Apply the new custom code diff
+		if targetPatches[targetName] != "" {
+			if err := applyNewPatch(targetPatches[targetName]); err != nil {
+				removeCleanGenerationCommit(ctx, originalHash)
+				return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
+			}
+		}
+
+		// Step 10: Capture the full combined diff (existing patch + new changes)
+		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
+		fullCustomCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
+		if err != nil {
+			return fmt.Errorf("failed to capture full custom code diff: %w", err)
+		}
+		targetPatches[targetName] = fullCustomCodeDiff
+		logger.Info("Compiling SDK to verify custom code changes...")
+		if err := compileAndLintSDK(ctx, target); err != nil {
+			fmt.Println("err: ", err)
+			removeCleanGenerationCommit(ctx, originalHash)
+			return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
+		}
+		// Step 10.6: Create commit with custom code changes after successful compilation
+		customCodeCommitHash, err := commitCustomCodeChanges()
+		if err != nil {
+			removeCleanGenerationCommit(ctx, originalHash)
+			return fmt.Errorf("failed to commit custom code changes: %w", err)
+		}
+		logger.Info("Created commit with custom code changes", zap.String("commit_hash", customCodeCommitHash))
+
+		// Step 11: Update gen.lock with full combined patch and commit hash
+		if err := updateGenLockWithPatch(getTargetOutput(target), targetPatches[targetName], customCodeCommitHash); err != nil {
+			return fmt.Errorf("failed to update gen.lock: %w", err)
+		}
+
+		// Step 12: Commit just gen.lock with new patch
+		if err := commitGenLock(); err != nil {
+			return fmt.Errorf("failed to commit gen.lock: %w", err)
+		}
+
 	}
 
-	// Step 10: Capture the full combined diff (existing patch + new changes)
-	fullCustomCodeDiff, err := captureCustomCodeDiff()
-	if err != nil {
-		return fmt.Errorf("failed to capture full custom code diff: %w", err)
-	}
-
-	// Step 10.5: Compile SDK to verify custom code changes
-	target := "all"
-	if workflow != nil && workflow.Target != "" {
-		target = workflow.Target
-	}
-	logger.Info("Compiling SDK to verify custom code changes...")
-	if err := compileAndLintSDK(ctx, target, outDir); err != nil {
-		removeCleanGenerationCommit(ctx, originalHash)
-		return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
-	}
-
-	// Step 10.6: Create commit with custom code changes after successful compilation
-	customCodeCommitHash, err := commitCustomCodeChanges()
-	if err != nil {
-		removeCleanGenerationCommit(ctx, originalHash)
-		return fmt.Errorf("failed to commit custom code changes: %w", err)
-	}
-	logger.Info("Created commit with custom code changes", zap.String("commit_hash", customCodeCommitHash))
-
-	// Step 11: Update gen.lock with full combined patch and commit hash
-	if err := updateGenLockWithPatch(outDir, fullCustomCodeDiff, customCodeCommitHash); err != nil {
-		return fmt.Errorf("failed to update gen.lock: %w", err)
-	}
-
-	// Step 12: Commit just gen.lock with new patch
-	if err := commitGenLock(); err != nil {
-		return fmt.Errorf("failed to commit gen.lock: %w", err)
-	}
 
 	logger.Info("Successfully registered custom code changes.  Code changes will be applied on top of your code after generation.")
 	return nil
@@ -377,17 +405,9 @@ func isLocalPath(location workflow.LocationString) bool {
 		(!strings.Contains(resolvedPath, "://") && !strings.Contains(resolvedPath, "@"))
 }
 
-func generateCleanSDK(ctx context.Context, workflow *run.Workflow, runGenerate func() error) error {
+func generateCleanSDK(ctx context.Context, targetName string, runGenerate func(targetName string) error) error {
 	logger := log.From(ctx)
-	err := runGenerate()
-
-	defer func() {
-		// we should leave temp directories for debugging if run fails
-		if err == nil || env.IsGithubAction() {
-			workflow.Cleanup()
-		}
-	}()
-
+	err := runGenerate(targetName)
 	
 	if err != nil {
 		return fmt.Errorf("failed to generate SDK: %w", err)
@@ -398,19 +418,38 @@ func generateCleanSDK(ctx context.Context, workflow *run.Workflow, runGenerate f
 }
 
 // Git operations
-func captureCustomCodeDiff() (string, error) {
-	cmd := exec.Command("git", "diff", "HEAD")
-	output, err := cmd.Output()
+func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error) {
+	args := []string{"diff", "HEAD", outDir}
+	
+	// Filter excludePaths to only include children of outDir
+	cleanOutDir := filepath.Clean(outDir)
+	for _, excludePath := range excludePaths {
+		cleanExcludePath := filepath.Clean(excludePath)
+		
+		// Check if excludePath is a child of outDir (or equal to outDir)
+		rel, err := filepath.Rel(cleanOutDir, cleanExcludePath)
+		if err == nil && !strings.HasPrefix(rel, "..") && rel != "." {
+			args = append(args, ":^"+excludePath)
+		}
+	}
+	
+	cmd := exec.Command("git", args...)
+	fmt.Printf("Running git command: git %s\n", strings.Join(args, " "))
+	combinedOutput, err := cmd.CombinedOutput()
+
 	if err != nil {
 		return "", fmt.Errorf("failed to capture git diff: %w", err)
 	}
 
-	return string(output), nil
+	return string(combinedOutput), nil
 }
 
-func stageAllChanges() error {
+func stageAllChanges(dir string) error {
+	if dir == "" {
+		dir = "."
+	}
 	// Add all changes
-	addCmd := exec.Command("git", "add", ".")
+	addCmd := exec.Command("git", "add", dir)
 	if output, err := addCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to add changes: %w\nOutput: %s", err, string(output))
 	}
@@ -460,7 +499,7 @@ func commitCustomCodeChanges() (string, error) {
 
 	// Commit the custom code changes
 	commitMsg := "Apply custom code changes"
-	commitCmd := exec.Command("git", "commit", "-m", commitMsg)
+	commitCmd := exec.Command("git", "commit", "--allow-empty", "-m", commitMsg)
 	if output, err := commitCmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("failed to commit custom code changes: %w\nOutput: %s", err, string(output))
 	}
@@ -495,16 +534,19 @@ func commitGenLock() error {
 	// Commit with a descriptive message
 	commitMsg := "Register custom code changes"
 	cmd = exec.Command("git", "commit", "-m", commitMsg)
-	if err := cmd.Run(); err != nil {
+	if output, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("git commit output: %s\n", string(output))
 		return fmt.Errorf("failed to commit gen.lock: %w", err)
+	} else {
+		fmt.Printf("git commit output: %s\n", string(output))
 	}
 
 	return nil
 }
 
 
-func ApplyCustomCodePatch(ctx context.Context, reverse bool) error {
-	_, outDir, _ := utils.GetWorkflowAndDir()
+func ApplyCustomCodePatch(ctx context.Context, target workflow.Target) error {
+	outDir := getTargetOutput(target)
 	// Load the current configuration and lock file
 	cfg, err := config.Load(outDir)
 	if err != nil {
@@ -516,7 +558,6 @@ func ApplyCustomCodePatch(ctx context.Context, reverse bool) error {
 		if patchStr, ok := customCodePatch.(string); ok && patchStr != "" {
 			// Create a temporary patch file
 			patchFile := filepath.Join(outDir, ".speakeasy", "temp_patch.patch")
-			fmt.Println("Saving patch to: %v", patchFile)
 			if err := os.WriteFile(patchFile, []byte(patchStr), 0644); err != nil {
 				return fmt.Errorf("failed to write patch file: %w", err)
 			}
@@ -524,9 +565,6 @@ func ApplyCustomCodePatch(ctx context.Context, reverse bool) error {
 
 			// Apply the patch with 3-way merge
 			args := []string{"apply", "--3way", "--index"}
-			if reverse {
-				args = append(args, "-R")
-			}
 			args = append(args, patchFile)
 			fmt.Println("running with args: %v", args)
 			cmd := exec.Command("git", args...)
@@ -596,38 +634,18 @@ func updateGenLockWithPatch(outDir, patchset, commitHash string) error {
 }
 
 // compileSDK compiles the SDK to verify custom code changes don't break compilation
-func compileAndLintSDK(ctx context.Context, target, outDir string) error {
+func compileAndLintSDK(ctx context.Context, target workflow.Target) error {
 	// Create generator instance
 	g, err := generate.New()
 	if err != nil {
 		return fmt.Errorf("failed to create generator: %w", err)
 	}
 
-	// If target is "all", detect each target language from the SDK config
-	if target == "all" {
-		cfg, err := config.Load(outDir)
-		if err != nil {
-			return fmt.Errorf("failed to load config to detect language: %w", err)
-		}
-
-		// Get the first (and usually only) language from the config
-		for lang := range cfg.Config.Languages {
-			fmt.Println("Language: " + lang)
-			// Call the public Compile method
-			if err := g.Compile(ctx, lang, outDir); err != nil {
-				return err
-			}
-			if err := g.Lint(ctx, lang, outDir); err != nil {
-				return err
-			}
-		}
-	} else {
-		if err := g.Compile(ctx, target, outDir); err != nil {
-				return err
-		}
-		if err := g.Lint(ctx, target, outDir); err != nil {
+	if err := g.Compile(ctx, target.Target, getTargetOutput(target)); err != nil {
 			return err
-		}
+	}
+	if err := g.Lint(ctx, target.Target, getTargetOutput(target)); err != nil {
+		return err
 	}
 
 	return nil
