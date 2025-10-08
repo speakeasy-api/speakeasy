@@ -2,19 +2,23 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/registercustomcode"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/env"
+
 	"github.com/speakeasy-api/speakeasy/internal/run"
 )
 
 type RegisterCustomCodeFlags struct {
 	Show    bool   `json:"show"`
 	Resolve bool   `json:"resolve"`
-	Apply bool   `json:"apply"`
+	Apply bool   `json:"apply-only"`
 	ApplyReverse bool	`json:"apply-reverse"`
 	LatestHash bool   `json:"latest-hash"`
 	InstallationURL	string	`json:"installationURL"`
@@ -43,10 +47,6 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 			Name:        "apply-only",
 			Shorthand:   "a",
 			Description: "apply existing custom code patches without running generation",
-		},
-		flag.BooleanFlag{
-			Name:		 "apply-reverse",
-			Description: "apply existing custom code patches (with -r flag) without running generation",
 		},
 		flag.BooleanFlag{
 			Name:		 "latest-hash",
@@ -78,19 +78,6 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 
 func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) error {
 
-	opts := []run.Opt{
-		run.WithTarget("all"),
-		run.WithRepo(flags.Repo),
-		run.WithRepoSubDirs(flags.RepoSubdirs),
-		run.WithInstallationURLs(flags.InstallationURLs),
-		run.WithSkipVersioning(true),
-		run.WithSkipApplyCustomCode(),
-	}
-	workflow, err := run.NewWorkflow(
-		ctx,
-		opts...,
-	)
-	
 	// If --show flag is provided, show existing customcode
 	if flags.Show {
 		return registercustomcode.ShowCustomCodePatch(ctx)
@@ -98,12 +85,13 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 
 	// If --apply flag is provided, only apply existing patches
 	if flags.Apply {
-		return registercustomcode.ApplyCustomCodePatch(ctx, false)
-	}
-
-	// If --apply-reverse flag is provided, only apply existing patches
-	if flags.ApplyReverse {
-		return registercustomcode.ApplyCustomCodePatch(ctx, true)
+		wf, _, err := utils.GetWorkflowAndDir()
+		if err != nil {
+			return fmt.Errorf("Could not find workflow file")
+		}
+		for _, target := range wf.Targets {
+			return registercustomcode.ApplyCustomCodePatch(ctx, target)
+		}
 	}
 
 	// If --latest-hash flag is provided, show the commit hash from gen.lock
@@ -112,7 +100,26 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 	}
 
 	// Call the registercustomcode functionality
-	return registercustomcode.RegisterCustomCode(ctx, workflow, func() error {
+	return registercustomcode.RegisterCustomCode(ctx, func(targetName string) error {
+		opts := []run.Opt{
+			run.WithTarget(targetName),
+			run.WithRepo(flags.Repo),
+			run.WithRepoSubDirs(flags.RepoSubdirs),
+			run.WithInstallationURLs(flags.InstallationURLs),
+			run.WithSkipVersioning(true),
+			run.WithSkipApplyCustomCode(),
+		}
+		workflow, err := run.NewWorkflow(
+			ctx,
+			opts...,
+		)
+		defer func() {
+			// we should leave temp directories for debugging if run fails
+			if env.IsGithubAction() {
+				workflow.Cleanup()
+			}
+		}()
+
 		switch flags.Output {
 			case "summary":
 				err = workflow.RunWithVisualization(ctx)
@@ -135,6 +142,6 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 				}
 		}
 		return nil
-	})
+	}, )
 
 }
