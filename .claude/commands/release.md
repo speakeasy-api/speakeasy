@@ -23,7 +23,7 @@ Create a release PR with summarized changes from merged pull requests.
 
 
 The PR description should be formatted as:
-
+**IMPORTANT** exclude 🤖 Generated with [Claude Code](https://claude.com/claude-code) from PR descriptions
 ```markdown
 ## Core
 - [If any changes](link to pr)
