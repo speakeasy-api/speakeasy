@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/env"
 
 	"github.com/speakeasy-api/speakeasy/internal/run"
+	"go.uber.org/zap"
 )
 
 type RegisterCustomCodeFlags struct {
@@ -77,21 +78,38 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 }
 
 func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) error {
+	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
 
 	// If --show flag is provided, show existing customcode
 	if flags.Show {
-		return registercustomcode.ShowCustomCodePatch(ctx)
+		wf, _, err := utils.GetWorkflowAndDir()
+		if err != nil {
+			return fmt.Errorf("Could not find workflow file")
+		}
+		var allErrors []error
+		for targetName, target := range wf.Targets {
+			logger.Info("Showing target", zap.String("target_name", targetName))
+			if err := registercustomcode.ShowCustomCodePatch(ctx, target); err != nil {
+				allErrors = append(allErrors, fmt.Errorf("target %s: %w", targetName, err))
+			}
+		}
+		if len(allErrors) > 0 {
+			return fmt.Errorf("errors occurred: %v", allErrors)
+		}
+		return nil
 	}
 
-	// If --apply flag is provided, only apply existing patches
+	// If --apply-only flag is provided, only apply existing patches
 	if flags.Apply {
 		wf, _, err := utils.GetWorkflowAndDir()
 		if err != nil {
 			return fmt.Errorf("Could not find workflow file")
 		}
-		for _, target := range wf.Targets {
-			return registercustomcode.ApplyCustomCodePatch(ctx, target)
+		for targetName, target := range wf.Targets {
+			fmt.Println("Applying target ", targetName)
+			registercustomcode.ApplyCustomCodePatch(ctx, target)
 		}
+		return nil
 	}
 
 	// If --latest-hash flag is provided, show the commit hash from gen.lock
