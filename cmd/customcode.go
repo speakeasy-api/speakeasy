@@ -45,6 +45,10 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 			Description: "show custom code patches",
 		},
 		flag.BooleanFlag{
+			Name:        "resolve",
+			Description: "enter conflict resolution mode after a failed generation",
+		},
+		flag.BooleanFlag{
 			Name:        "apply-only",
 			Shorthand:   "a",
 			Description: "apply existing custom code patches without running generation",
@@ -97,6 +101,11 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 			return fmt.Errorf("errors occurred: %v", allErrors)
 		}
 		return nil
+	}
+
+	// If --resolve flag is provided, enter conflict resolution mode
+	if flags.Resolve {
+		return registercustomcode.ResolveCustomCodeConflicts(ctx)
 	}
 
 	// If --apply-only flag is provided, only apply existing patches
