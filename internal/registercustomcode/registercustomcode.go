@@ -41,6 +41,7 @@ func getOtherTargetOutputs(wf *workflow.Workflow, currentTargetName string) []st
 	return otherOutputs
 }
 
+
 // RegisterCustomCode registers custom code changes by capturing them as patches in gen.lock
 func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) error {
 	wf, _, err := utils.GetWorkflowAndDir()
@@ -94,8 +95,6 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	}
 
 	for targetName, target := range wf.Targets {
-		fmt.Println("Starting target", targetName)
-		fmt.Println(fmt.Sprintf("Patch: '%v'", targetPatches[targetName]))
 		if targetPatches[targetName] == "" {
 			continue
 		}
@@ -103,22 +102,24 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		if err := ApplyCustomCodePatch(ctx, target); err != nil {
 			return fmt.Errorf("failed to apply existing patch: %w", err)
 		}
-
-		// Step 8: Stage all changes after applying existing patch
-		if err := stageAllChanges(getTargetOutput(target)); err != nil {
-			return fmt.Errorf("failed to stage changes after applying existing patch: %w", err)
+		// Step 8: Apply the new custom code diff (with --index to stage changes)
+		if err := applyNewPatch(targetPatches[targetName]); err != nil {
+			removeCleanGenerationCommit(ctx, originalHash)
+			return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
 		}
 
-		// Step 9: Apply the new custom code diff
-		if targetPatches[targetName] != "" {
-			if err := applyNewPatch(targetPatches[targetName]); err != nil {
-				removeCleanGenerationCommit(ctx, originalHash)
-				return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
-			}
+		// Check if there are any changes after applying the patch. If no changes, continue the loop
+		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
+		hasChanges, err := checkForChangesWithExclusions(getTargetOutput(target), otherTargetOutputs)
+		if err != nil {
+			return fmt.Errorf("failed to check for changes: %w", err)
+		}
+		if !hasChanges {
+			fmt.Printf("No changes detected for target %s after applying existing patch, skipping\n", targetName)
+			continue
 		}
 
 		// Step 10: Capture the full combined diff (existing patch + new changes)
-		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
 		fullCustomCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
 		if err != nil {
 			return fmt.Errorf("failed to capture full custom code diff: %w", err)
@@ -126,7 +127,6 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		targetPatches[targetName] = fullCustomCodeDiff
 		logger.Info("Compiling SDK to verify custom code changes...")
 		if err := compileAndLintSDK(ctx, target); err != nil {
-			fmt.Println("err: ", err)
 			removeCleanGenerationCommit(ctx, originalHash)
 			return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
 		}
@@ -156,13 +156,11 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 }
 
 // ShowCustomCodePatch displays the custom code patch stored in the gen.lock file
-func ShowCustomCodePatch(ctx context.Context) error {
+func ShowCustomCodePatch(ctx context.Context, target workflow.Target) error {
 	logger := log.From(ctx).With(zap.String("method", "ShowCustomCodePatch"))
 
-	_, outDir, err := utils.GetWorkflowAndDir()
-	if err != nil {
-		return err
-	}
+	outDir := getTargetOutput(target)
+
 	cfg, err := config.Load(outDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -434,7 +432,6 @@ func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error)
 	}
 	
 	cmd := exec.Command("git", args...)
-	fmt.Printf("Running git command: git %s\n", strings.Join(args, " "))
 	combinedOutput, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -442,6 +439,33 @@ func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error)
 	}
 
 	return string(combinedOutput), nil
+}
+
+
+func checkForChangesWithExclusions(dir string, excludePaths []string) (bool, error) {
+	args := []string{"diff", "--cached", dir}
+	
+	// Filter excludePaths to only include children of dir
+	cleanDir := filepath.Clean(dir)
+	for _, excludePath := range excludePaths {
+		cleanExcludePath := filepath.Clean(excludePath)
+		
+		// Check if excludePath is a child of dir (or equal to dir)
+		rel, err := filepath.Rel(cleanDir, cleanExcludePath)
+		if err == nil && !strings.HasPrefix(rel, "..") && rel != "." {
+			args = append(args, ":^"+excludePath)
+		}
+	}
+	
+	cmd := exec.Command("git", args...)
+	output, err := cmd.CombinedOutput()
+	
+	if err != nil {
+		return false, fmt.Errorf("failed to check for changes: %w", err)
+	}
+	
+	// Check if output is empty (no changes) or has content (changes exist)
+	return strings.TrimSpace(string(output)) != "", nil
 }
 
 func stageAllChanges(dir string) error {
@@ -474,8 +498,8 @@ func commitCleanGeneration() error {
 	}
 
 	// Commit the clean generation
-	commitCmd := exec.Command("git", "commit", "-m", "clean generation")
-	if output, err := commitCmd.CombinedOutput(); err != nil {
+	cmd := exec.Command("git", "commit", "-m", "clean generation")
+	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to commit clean generation: %w\nOutput: %s", err, string(output))
 	}
 
@@ -484,23 +508,10 @@ func commitCleanGeneration() error {
 
 
 func commitCustomCodeChanges() (string, error) {
-	// Add all changes (excluding gen.lock)
-	addCmd := exec.Command("git", "add", ".")
-	if output, err := addCmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("failed to add custom code changes: %w\nOutput: %s", err, string(output))
-	}
-
-	// Reset gen.lock if it was staged (we don't want it in this commit)
-	resetCmd := exec.Command("git", "reset", ".speakeasy/gen.lock")
-	if output, err := resetCmd.CombinedOutput(); err != nil {
-		// This is non-fatal - gen.lock might not exist or be staged
-		fmt.Printf("Warning: failed to unstage gen.lock: %v\nOutput: %s\n", err, string(output))
-	}
-
-	// Commit the custom code changes
+	// Commit the staged changes (changes should already be staged by --index operations)
 	commitMsg := "Apply custom code changes"
-	commitCmd := exec.Command("git", "commit", "--allow-empty", "-m", commitMsg)
-	if output, err := commitCmd.CombinedOutput(); err != nil {
+	cmd := exec.Command("git", "commit", "-m", commitMsg, "--allow-empty")
+	if output, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("failed to commit custom code changes: %w\nOutput: %s", err, string(output))
 	}
 
@@ -517,15 +528,6 @@ func commitCustomCodeChanges() (string, error) {
 
 func commitGenLock(outDir string) error {
 	// Add only the gen.lock file
-	/** GO GIT
-	w, err := repo.Worktree()
-	_, err = w.Add(".speakeasy/gen.lock")
-	w.Commit("Register custom code changes", &git.CommitOptions{
-		Author: &object.Signature{
-			Name: "speakeasybot",
-			Email: "..."
-		}}})
-	*/
 	cmd := exec.Command("git", "add", fmt.Sprintf("%v/.speakeasy/gen.lock", outDir))
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to add gen.lock: %w", err)
@@ -535,10 +537,7 @@ func commitGenLock(outDir string) error {
 	commitMsg := "Register custom code changes"
 	cmd = exec.Command("git", "commit", "-m", commitMsg)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		fmt.Printf("git commit output: %s\n", string(output))
-		return fmt.Errorf("failed to commit gen.lock: %w", err)
-	} else {
-		fmt.Printf("git commit output: %s\n", string(output))
+		return fmt.Errorf("failed to commit gen.lock: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -561,17 +560,14 @@ func ApplyCustomCodePatch(ctx context.Context, target workflow.Target) error {
 			if err := os.WriteFile(patchFile, []byte(patchStr), 0644); err != nil {
 				return fmt.Errorf("failed to write patch file: %w", err)
 			}
-			defer os.Remove(patchFile)
+			// defer os.Remove(patchFile)
 
 			// Apply the patch with 3-way merge
 			args := []string{"apply", "--3way", "--index"}
 			args = append(args, patchFile)
-			fmt.Println("running with args: %v", args)
 			cmd := exec.Command("git", args...)
 			if output, err := cmd.CombinedOutput(); err != nil {
 				return fmt.Errorf("failed to apply patch: %w\nOutput: %s", err, string(output))
-			} else {
-				fmt.Println("Not error: ", string(output))
 			}
 		}
 	}
@@ -591,8 +587,8 @@ func applyNewPatch(customCodeDiff string) error {
 	}
 	defer os.Remove(patchFile)
 
-	// Apply the patch with 3-way merge
-	cmd := exec.Command("git", "apply", "-3", patchFile)
+	// Apply the patch with 3-way merge and stage changes
+	cmd := exec.Command("git", "apply", "-3", "--index", patchFile)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to apply new patch: %w\nOutput: %s", err, string(output))
 	}
