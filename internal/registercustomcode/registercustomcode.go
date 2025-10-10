@@ -246,8 +246,80 @@ func ShowLatestCommitHash(ctx context.Context) error {
 // ResolveCustomCodeConflicts enters conflict resolution mode to help users resolve conflicts
 // that occurred during generation when applying custom code patches
 func ResolveCustomCodeConflicts(ctx context.Context) error {
+	logger := log.From(ctx).With(zap.String("method", "ResolveCustomCodeConflicts"))
 
+	wf, _, err := utils.GetWorkflowAndDir()
+	if err != nil {
+		return err
+	}
+	
 	hadConflicts := false
+
+	for targetName, target := range wf.Targets {
+		outDir := getTargetOutput(target)
+
+		// Check if patch exists in gen.lock
+		cfg, err := config.Load(outDir)
+		if err != nil {
+			return fmt.Errorf("failed to load config for target %s: %w", targetName, err)
+		}
+
+		customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]
+		if !exists {
+			logger.Info(fmt.Sprintf("No custom code patch for target %s, skipping", targetName))
+			continue
+		}
+
+		patchStr, ok := customCodePatch.(string)
+		if !ok || patchStr == "" {
+			continue
+		}
+
+		logger.Info(fmt.Sprintf("Resolving conflicts for target %s", targetName))
+
+		// Step 1: Undo patch application - extract clean new generation from "ours" side
+		cmd := exec.Command("git", "checkout", "--ours", "--", outDir)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to checkout ours: %w\nOutput: %s", err, string(output))
+		}
+
+		// Step 2: Add other changes to worktree (stage the clean generation files)
+		if err := stageAllChanges(outDir); err != nil {
+			return fmt.Errorf("failed to stage changes for target %s: %w", targetName, err)
+		}
+
+		// Step 3: Commit as 'clean generation'
+		cmd = exec.Command("git", "commit", "-m", "clean generation (conflict resolution)", "--allow-empty")
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to commit clean generation: %w\nOutput: %s", err, string(output))
+		}
+
+		// Step 4: Apply old patch (will create conflicts)
+		patchFile := filepath.Join(outDir, ".speakeasy", "resolve_patch.patch")
+		if err := os.WriteFile(patchFile, []byte(patchStr), 0644); err != nil {
+			return fmt.Errorf("failed to write patch file: %w", err)
+		}
+		defer os.Remove(patchFile)
+
+		cmd = exec.Command("git", "apply", "-3", patchFile)
+		_, _ = cmd.CombinedOutput() // Expect failure with conflicts
+
+		// Step 5: Check if conflicts exist
+		cmd = exec.Command("git", "diff", "--name-only", "--diff-filter=U")
+		conflictOutput, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to check for conflicts: %w", err)
+		}
+
+		conflictFiles := strings.Split(strings.TrimSpace(string(conflictOutput)), "\n")
+		if len(conflictFiles) > 0 && conflictFiles[0] != "" {
+			hadConflicts = true
+			fmt.Printf("\nConflicts detected in target '%s':\n", targetName)
+			for _, file := range conflictFiles {
+				fmt.Printf("  - %s\n", file)
+			}
+		}
+	}
 
 	if hadConflicts {
 		fmt.Println("\nPlease:")
