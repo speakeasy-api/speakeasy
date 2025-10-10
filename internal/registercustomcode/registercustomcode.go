@@ -11,11 +11,11 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -33,14 +33,13 @@ func getOtherTargetOutputs(wf *workflow.Workflow, currentTargetName string) []st
 	for targetName, target := range wf.Targets {
 		if targetName != currentTargetName {
 			output := getTargetOutput(target)
-			if output != "." {  // Don't exclude current directory
+			if output != "." { // Don't exclude current directory
 				otherOutputs = append(otherOutputs, output)
 			}
 		}
 	}
 	return otherOutputs
 }
-
 
 // RegisterCustomCode registers custom code changes by capturing them as patches in gen.lock
 func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) error {
@@ -52,9 +51,9 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
 
 	// Check if we're completing conflict resolution
-	if isConflictResolutionMode() {
-		return completeConflictResolution(ctx, wf)
-	}
+	// if isConflictResolutionMode() {
+	// 	return completeConflictResolution(ctx, wf)
+	// }
 
 	// Record the current git hash at the very beginning for error recovery
 	originalHash, err := getCurrentGitHash()
@@ -85,9 +84,9 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		if err != nil {
 			return fmt.Errorf("failed to capture custom code diff: %w", err)
 		}
-
+		fmt.Println(fmt.Sprintf("Captured custom code diff for target %v:\n%s", targetName, customCodeDiff))
 		// If no custom code changes detected, return early
-		if customCodeDiff == ""{
+		if customCodeDiff == "" {
 			fmt.Println(fmt.Sprintf("No custom code changes detected in target %v, nothing to register", targetName))
 		}
 		targetPatches[targetName] = customCodeDiff
@@ -110,6 +109,8 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		if err := ApplyCustomCodePatch(ctx, target); err != nil {
 			return fmt.Errorf("failed to apply existing patch: %w", err)
 		}
+		fmt.Println(fmt.Sprintf("Applied existing custom code patch for target %v", targetName))
+		fmt.Println(targetPatches[targetName])
 		// Step 8: Apply the new custom code diff (with --index to stage changes)
 		if err := applyNewPatch(targetPatches[targetName]); err != nil {
 			removeCleanGenerationCommit(ctx, originalHash)
@@ -157,7 +158,6 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		}
 
 	}
-
 
 	logger.Info("Successfully registered custom code changes.  Code changes will be applied on top of your code after generation.")
 	return nil
@@ -440,31 +440,31 @@ func checkNoSpeakeasyChanges(ctx context.Context) error {
 	logger.Info("Checking that changeset doesn't include .speakeasy directory changes")
 
 	/**
-	* Can be done with GO GIT, but it's not so obvious
-	    head, err := repo.Head()
-    if err != nil {
-        // Handle error
-    }
-    commit, err := repo.CommitObject(head.Hash())
-    if err != nil {
-        // Handle error
-    }
-    tree, err := commit.Tree()
-    if err != nil {
-        // Handle error
-    }
-	patch, err := tree1.Diff(tree2)
-    if err != nil {
-        // Handle error
-    }
+		* Can be done with GO GIT, but it's not so obvious
+		    head, err := repo.Head()
+	    if err != nil {
+	        // Handle error
+	    }
+	    commit, err := repo.CommitObject(head.Hash())
+	    if err != nil {
+	        // Handle error
+	    }
+	    tree, err := commit.Tree()
+	    if err != nil {
+	        // Handle error
+	    }
+		patch, err := tree1.Diff(tree2)
+	    if err != nil {
+	        // Handle error
+	    }
 
-    var buf bytes.Buffer
-    encoder := diff.NewUnifiedEncoder(&buf)
-    err = encoder.Encode(patch)
-    if err != nil {
-        // Handle error
-    }
-    fmt.Println(buf.String()) // Prints the unified diff
+	    var buf bytes.Buffer
+	    encoder := diff.NewUnifiedEncoder(&buf)
+	    err = encoder.Encode(patch)
+	    if err != nil {
+	        // Handle error
+	    }
+	    fmt.Println(buf.String()) // Prints the unified diff
 	*/
 	cmd := exec.Command("git", "diff", "--name-only")
 	output, err := cmd.Output()
@@ -492,7 +492,6 @@ func checkNoSpeakeasyChanges(ctx context.Context) error {
 func checkNoLocalSpecChanges(ctx context.Context, workflow *workflow.Workflow) error {
 	logger := log.From(ctx)
 	logger.Info("Checking if workflow.yaml references local OpenAPI specs and validating no spec changes")
-
 
 	// Extract local spec paths from workflow
 	localSpecPaths := extractLocalSpecPaths(workflow)
@@ -588,7 +587,7 @@ func isLocalPath(location workflow.LocationString) bool {
 func generateCleanSDK(ctx context.Context, targetName string, runGenerate func(targetName string) error) error {
 	logger := log.From(ctx)
 	err := runGenerate(targetName)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to generate SDK: %w", err)
 	}
@@ -600,19 +599,19 @@ func generateCleanSDK(ctx context.Context, targetName string, runGenerate func(t
 // Git operations
 func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error) {
 	args := []string{"diff", "HEAD", outDir}
-	
+
 	// Filter excludePaths to only include children of outDir
 	cleanOutDir := filepath.Clean(outDir)
 	for _, excludePath := range excludePaths {
 		cleanExcludePath := filepath.Clean(excludePath)
-		
+
 		// Check if excludePath is a child of outDir (or equal to outDir)
 		rel, err := filepath.Rel(cleanOutDir, cleanExcludePath)
 		if err == nil && !strings.HasPrefix(rel, "..") && rel != "." {
 			args = append(args, ":^"+excludePath)
 		}
 	}
-	
+
 	cmd := exec.Command("git", args...)
 	combinedOutput, err := cmd.CombinedOutput()
 
@@ -623,29 +622,28 @@ func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error)
 	return string(combinedOutput), nil
 }
 
-
 func checkForChangesWithExclusions(dir string, excludePaths []string) (bool, error) {
 	args := []string{"diff", "--cached", dir}
-	
+
 	// Filter excludePaths to only include children of dir
 	cleanDir := filepath.Clean(dir)
 	for _, excludePath := range excludePaths {
 		cleanExcludePath := filepath.Clean(excludePath)
-		
+
 		// Check if excludePath is a child of dir (or equal to dir)
 		rel, err := filepath.Rel(cleanDir, cleanExcludePath)
 		if err == nil && !strings.HasPrefix(rel, "..") && rel != "." {
 			args = append(args, ":^"+excludePath)
 		}
 	}
-	
+
 	cmd := exec.Command("git", args...)
 	output, err := cmd.CombinedOutput()
-	
+
 	if err != nil {
 		return false, fmt.Errorf("failed to check for changes: %w", err)
 	}
-	
+
 	// Check if output is empty (no changes) or has content (changes exist)
 	return strings.TrimSpace(string(output)) != "", nil
 }
@@ -688,7 +686,6 @@ func commitCleanGeneration() error {
 	return nil
 }
 
-
 func commitCustomCodeChanges() (string, error) {
 	// Commit the staged changes (changes should already be staged by --index operations)
 	commitMsg := "Apply custom code changes"
@@ -724,7 +721,6 @@ func commitGenLock(outDir string) error {
 
 	return nil
 }
-
 
 func ApplyCustomCodePatch(ctx context.Context, target workflow.Target) error {
 	outDir := getTargetOutput(target)
@@ -820,7 +816,7 @@ func compileAndLintSDK(ctx context.Context, target workflow.Target) error {
 	}
 
 	if err := g.Compile(ctx, target.Target, getTargetOutput(target)); err != nil {
-			return err
+		return err
 	}
 	if err := g.Lint(ctx, target.Target, getTargetOutput(target)); err != nil {
 		return err
