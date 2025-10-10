@@ -51,9 +51,9 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	logger := log.From(ctx).With(zap.String("method", "RegisterCustomCode"))
 
 	// Check if we're completing conflict resolution
-	// if isConflictResolutionMode() {
-	// 	return completeConflictResolution(ctx, wf)
-	// }
+	if isConflictResolutionMode() {
+		return completeConflictResolution(ctx, wf)
+	}
 
 	// Record the current git hash at the very beginning for error recovery
 	originalHash, err := getCurrentGitHash()
@@ -76,20 +76,11 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	if err := checkNoLocalSpecChanges(ctx, wf); err != nil {
 		return fmt.Errorf("Registering custom code in your openapi spec and related files is not supported: %w", err)
 	}
-	targetPatches := make(map[string]string)
-	for targetName, target := range wf.Targets {
-		// Step 4: Capture patchset with git diff for custom code changes
-		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
-		customCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
-		if err != nil {
-			return fmt.Errorf("failed to capture custom code diff: %w", err)
-		}
-		fmt.Println(fmt.Sprintf("Captured custom code diff for target %v:\n%s", targetName, customCodeDiff))
-		// If no custom code changes detected, return early
-		if customCodeDiff == "" {
-			fmt.Println(fmt.Sprintf("No custom code changes detected in target %v, nothing to register", targetName))
-		}
-		targetPatches[targetName] = customCodeDiff
+	targetPatches, err := getPatchesPerTarget(wf)
+	if err != nil {
+		return err
+	}
+	for targetName, _ := range wf.Targets {
 		// Step 5: Generate clean SDK (without custom code) on main branch
 		if err := generateCleanSDK(ctx, targetName, runGenerate); err != nil {
 			return fmt.Errorf("failed to generate clean SDK: %w", err)
@@ -105,61 +96,88 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		if targetPatches[targetName] == "" {
 			continue
 		}
-		// Step 7: Apply existing custom code patch from gen.lock
-		if err := ApplyCustomCodePatch(ctx, target); err != nil {
-			return fmt.Errorf("failed to apply existing patch: %w", err)
-		}
-		fmt.Println(fmt.Sprintf("Applied existing custom code patch for target %v", targetName))
-		fmt.Println(targetPatches[targetName])
-		// Step 8: Apply the new custom code diff (with --index to stage changes)
-		if err := applyNewPatch(targetPatches[targetName]); err != nil {
-			removeCleanGenerationCommit(ctx, originalHash)
-			return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
-		}
-
-		// Check if there are any changes after applying the patch. If no changes, continue the loop
-		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
-		hasChanges, err := checkForChangesWithExclusions(getTargetOutput(target), otherTargetOutputs)
+		err = updateCustomPatchAndUpdateGenLock(ctx, wf, originalHash, targetPatches, target, targetName)
 		if err != nil {
-			return fmt.Errorf("failed to check for changes: %w", err)
-		}
-		if !hasChanges {
-			fmt.Printf("No changes detected for target %s after applying existing patch, skipping\n", targetName)
-			continue
-		}
-
-		// Step 10: Capture the full combined diff (existing patch + new changes)
-		fullCustomCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
-		if err != nil {
-			return fmt.Errorf("failed to capture full custom code diff: %w", err)
-		}
-		targetPatches[targetName] = fullCustomCodeDiff
-		logger.Info("Compiling SDK to verify custom code changes...")
-		if err := compileAndLintSDK(ctx, target); err != nil {
-			removeCleanGenerationCommit(ctx, originalHash)
-			return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
-		}
-		// Step 10.6: Create commit with custom code changes after successful compilation
-		customCodeCommitHash, err := commitCustomCodeChanges()
-		if err != nil {
-			removeCleanGenerationCommit(ctx, originalHash)
-			return fmt.Errorf("failed to commit custom code changes: %w", err)
-		}
-		logger.Info("Created commit with custom code changes", zap.String("commit_hash", customCodeCommitHash))
-
-		// Step 11: Update gen.lock with full combined patch and commit hash
-		if err := updateGenLockWithPatch(getTargetOutput(target), targetPatches[targetName], customCodeCommitHash); err != nil {
-			return fmt.Errorf("failed to update gen.lock: %w", err)
-		}
-
-		// Step 12: Commit just gen.lock with new patch
-		if err := commitGenLock(getTargetOutput(target)); err != nil {
-			return fmt.Errorf("failed to commit gen.lock: %w", err)
+			return err
 		}
 
 	}
 
 	logger.Info("Successfully registered custom code changes.  Code changes will be applied on top of your code after generation.")
+	return nil
+}
+
+
+func getPatchesPerTarget(wf *workflow.Workflow) (map[string]string, error){
+	targetPatches := make(map[string]string)
+	for targetName, target := range wf.Targets {
+		// Step 4: Capture patchset with git diff for custom code changes
+		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
+		customCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to capture custom code diff: %w", err)
+		}
+		fmt.Println(fmt.Sprintf("Captured custom code diff for target %v:\n%s", targetName, customCodeDiff))
+		// If no custom code changes detected, return early
+		if customCodeDiff == "" {
+			fmt.Println(fmt.Sprintf("No custom code changes detected in target %v, nothing to register", targetName))
+		}
+		targetPatches[targetName] = customCodeDiff
+	}
+	return targetPatches, nil
+}
+
+func updateCustomPatchAndUpdateGenLock(ctx context.Context, wf *workflow.Workflow, originalHash plumbing.Hash, targetPatches map[string]string, target workflow.Target, targetName string) error {
+	logger := log.From(ctx).With(zap.String("method", "updateCustomPatchAndUpdateGenLock"))
+	// Step 7: Apply existing custom code patch from gen.lock
+	if err := ApplyCustomCodePatch(ctx, target); err != nil {
+		return fmt.Errorf("failed to apply existing patch: %w", err)
+	}
+	// Step 8: Apply the new custom code diff (with --index to stage changes)
+	if err := applyNewPatch(targetPatches[targetName]); err != nil {
+		removeCleanGenerationCommit(ctx, originalHash)
+		return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
+	}
+
+	// Check if there are any changes after applying the patch. If no changes, continue the loop
+	otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
+	hasChanges, err := checkForChangesWithExclusions(getTargetOutput(target), otherTargetOutputs)
+	if err != nil {
+		return fmt.Errorf("failed to check for changes: %w", err)
+	}
+	if !hasChanges {
+		fmt.Printf("No changes detected for target %s after applying existing patch, skipping\n", targetName)
+		return nil
+	}
+
+	// Step 10: Capture the full combined diff (existing patch + new changes)
+	fullCustomCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
+	if err != nil {
+		return fmt.Errorf("failed to capture full custom code diff: %w", err)
+	}
+	targetPatches[targetName] = fullCustomCodeDiff
+	logger.Info("Compiling SDK to verify custom code changes...")
+	if err := compileAndLintSDK(ctx, target); err != nil {
+		removeCleanGenerationCommit(ctx, originalHash)
+		return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
+	}
+	// Step 10.6: Create commit with custom code changes after successful compilation
+	customCodeCommitHash, err := commitCustomCodeChanges()
+	if err != nil {
+		removeCleanGenerationCommit(ctx, originalHash)
+		return fmt.Errorf("failed to commit custom code changes: %w", err)
+	}
+	logger.Info("Created commit with custom code changes", zap.String("commit_hash", customCodeCommitHash))
+
+	// Step 11: Update gen.lock with full combined patch and commit hash
+	if err := updateGenLockWithPatch(getTargetOutput(target), targetPatches[targetName], customCodeCommitHash); err != nil {
+		return fmt.Errorf("failed to update gen.lock: %w", err)
+	}
+
+	// Step 12: Commit just gen.lock with new patch
+	if err := commitGenLock(getTargetOutput(target)); err != nil {
+		return fmt.Errorf("failed to commit gen.lock: %w", err)
+	}
 	return nil
 }
 
@@ -228,81 +246,8 @@ func ShowLatestCommitHash(ctx context.Context) error {
 // ResolveCustomCodeConflicts enters conflict resolution mode to help users resolve conflicts
 // that occurred during generation when applying custom code patches
 func ResolveCustomCodeConflicts(ctx context.Context) error {
-	logger := log.From(ctx).With(zap.String("method", "ResolveCustomCodeConflicts"))
-
-	// Load workflow to get targets
-	wf, _, err := utils.GetWorkflowAndDir()
-	if err != nil {
-		return fmt.Errorf("could not find workflow file: %w", err)
-	}
 
 	hadConflicts := false
-
-	for targetName, target := range wf.Targets {
-		outDir := getTargetOutput(target)
-
-		// Check if patch exists in gen.lock
-		cfg, err := config.Load(outDir)
-		if err != nil {
-			return fmt.Errorf("failed to load config for target %s: %w", targetName, err)
-		}
-
-		customCodePatch, exists := cfg.LockFile.Management.AdditionalProperties["customCodePatch"]
-		if !exists {
-			logger.Info(fmt.Sprintf("No custom code patch for target %s, skipping", targetName))
-			continue
-		}
-
-		patchStr, ok := customCodePatch.(string)
-		if !ok || patchStr == "" {
-			continue
-		}
-
-		logger.Info(fmt.Sprintf("Resolving conflicts for target %s", targetName))
-
-		// Step 1: Undo patch application - extract clean new generation from "ours" side
-		cmd := exec.Command("git", "checkout", "--ours", "--", outDir)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to checkout ours: %w\nOutput: %s", err, string(output))
-		}
-
-		// Step 2: Add other changes to worktree (stage the clean generation files)
-		if err := stageAllChanges(outDir); err != nil {
-			return fmt.Errorf("failed to stage changes for target %s: %w", targetName, err)
-		}
-
-		// Step 3: Commit as 'clean generation'
-		cmd = exec.Command("git", "commit", "-m", "clean generation (conflict resolution)", "--allow-empty")
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to commit clean generation: %w\nOutput: %s", err, string(output))
-		}
-
-		// Step 4: Apply old patch (will create conflicts)
-		patchFile := filepath.Join(outDir, ".speakeasy", "resolve_patch.patch")
-		if err := os.WriteFile(patchFile, []byte(patchStr), 0644); err != nil {
-			return fmt.Errorf("failed to write patch file: %w", err)
-		}
-		defer os.Remove(patchFile)
-
-		cmd = exec.Command("git", "apply", "-3", patchFile)
-		_, _ = cmd.CombinedOutput() // Expect failure with conflicts
-
-		// Step 5: Check if conflicts exist
-		cmd = exec.Command("git", "diff", "--name-only", "--diff-filter=U")
-		conflictOutput, err := cmd.Output()
-		if err != nil {
-			return fmt.Errorf("failed to check for conflicts: %w", err)
-		}
-
-		conflictFiles := strings.Split(strings.TrimSpace(string(conflictOutput)), "\n")
-		if len(conflictFiles) > 0 && conflictFiles[0] != "" {
-			hadConflicts = true
-			fmt.Printf("\nConflicts detected in target '%s':\n", targetName)
-			for _, file := range conflictFiles {
-				fmt.Printf("  - %s\n", file)
-			}
-		}
-	}
 
 	if hadConflicts {
 		fmt.Println("\nPlease:")
@@ -317,80 +262,92 @@ func ResolveCustomCodeConflicts(ctx context.Context) error {
 	return nil
 }
 
+// ensureAllConflictsResolvedAndStaged checks that all git conflicts are resolved and staged
+func ensureAllConflictsResolvedAndStaged() error {
+	// Check for unmerged paths (conflicts)
+	statusCmd := exec.Command("git", "status", "--porcelain")
+	output, err := statusCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to check git status: %w", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var unresolvedConflicts []string
+	var unstagedFiles []string
+
+	for _, line := range lines {
+		if len(line) < 3 {
+			continue
+		}
+
+		statusCode := line[:2]
+		filename := line[3:]
+
+		// Check for unmerged paths (conflicts)
+		// U = unmerged, AA = both added, UU = both modified, etc.
+		if strings.ContainsAny(statusCode, "U") || statusCode == "AA" || statusCode == "DD" {
+			unresolvedConflicts = append(unresolvedConflicts, filename)
+		}
+
+		// Check for unstaged modifications
+		if len(statusCode) >= 2 && statusCode[1] == 'M' {
+			unstagedFiles = append(unstagedFiles, filename)
+		}
+	}
+
+	if len(unresolvedConflicts) > 0 {
+		return fmt.Errorf("unresolved git conflicts found in files: %s. Please resolve conflicts and stage the files", strings.Join(unresolvedConflicts, ", "))
+	}
+
+	if len(unstagedFiles) > 0 {
+		return fmt.Errorf("unstaged changes found in files: %s. Please stage all resolved files with 'git add'", strings.Join(unstagedFiles, ", "))
+	}
+
+	// Check for conflict markers in staged changes
+	diffCmd := exec.Command("git", "diff", "--cached")
+	diffOutput, err := diffCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get staged changes: %w", err)
+	}
+
+	diffContent := string(diffOutput)
+	conflictMarkers := []string{"<<<<<<<", "=======", ">>>>>>>"}
+	
+	for _, marker := range conflictMarkers {
+		if strings.Contains(diffContent, marker) {
+			return fmt.Errorf("unresolved conflict markers found in staged changes. Please resolve all conflicts (remove %s markers) before continuing", marker)
+		}
+	}
+
+	return nil
+}
+
 // completeConflictResolution completes the conflict resolution process after user has resolved conflicts
 func completeConflictResolution(ctx context.Context, wf *workflow.Workflow) error {
 	logger := log.From(ctx).With(zap.String("method", "completeConflictResolution"))
 
+	// Ensure all conflicts are resolved and staged before continuing
+	if err := ensureAllConflictsResolvedAndStaged(); err != nil {
+		return err
+	}
+
+	// Record the current git hash at the very beginning for error recovery
+	originalHash, err := getCurrentGitHash()
+	if err != nil {
+		return fmt.Errorf("failed to get current git hash: %w", err)
+	}
+
 	logger.Info("Completing conflict resolution registration")
 
+	targetPatches, err := getPatchesPerTarget(wf)
+	if err != nil {
+		return err
+	}
 	for targetName, target := range wf.Targets {
-		outDir := getTargetOutput(target)
-
-		// Check for staged changes
-		cmd := exec.Command("git", "diff", "--cached", "--name-only", outDir)
-		output, err := cmd.Output()
-		if err != nil {
-			return fmt.Errorf("failed to check staged changes: %w", err)
-		}
-
-		if strings.TrimSpace(string(output)) == "" {
-			logger.Info(fmt.Sprintf("No staged changes for target %s, skipping", targetName))
-			continue
-		}
-
-		// Check for unresolved conflicts
-		cmd = exec.Command("git", "diff", "--cached", "--check")
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("unresolved conflicts remain:\n%s\nPlease resolve and stage all files", string(output))
-		}
-
-		// Capture resolved patch from staged changes
-		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
-		args := []string{"diff", "--cached", outDir}
-
-		// Filter excludePaths to only include children of outDir
-		cleanOutDir := filepath.Clean(outDir)
-		for _, excludePath := range otherTargetOutputs {
-			cleanExcludePath := filepath.Clean(excludePath)
-
-			// Check if excludePath is a child of outDir (or equal to outDir)
-			rel, err := filepath.Rel(cleanOutDir, cleanExcludePath)
-			if err == nil && !strings.HasPrefix(rel, "..") && rel != "." {
-				args = append(args, ":^"+excludePath)
-			}
-		}
-
-		cmd = exec.Command("git", args...)
-		resolvedPatch, err := cmd.Output()
-		if err != nil {
-			return fmt.Errorf("failed to capture resolved patch: %w", err)
-		}
-
-		// Commit resolved custom code
-		commitHash, err := commitCustomCodeChanges()
+		err = updateCustomPatchAndUpdateGenLock(ctx, wf, originalHash, targetPatches, target, targetName)
 		if err != nil {
 			return err
 		}
-
-		logger.Info("Created commit with resolved custom code", zap.String("commit_hash", commitHash))
-
-		// Update gen.lock
-		if err := updateGenLockWithPatch(outDir, string(resolvedPatch), commitHash); err != nil {
-			return err
-		}
-
-		// Compile/lint
-		logger.Info("Verifying resolved custom code...")
-		if err := compileAndLintSDK(ctx, target); err != nil {
-			return fmt.Errorf("resolved custom code failed compilation: %w", err)
-		}
-
-		// Commit gen.lock
-		if err := commitGenLock(outDir); err != nil {
-			return err
-		}
-
-		logger.Info(fmt.Sprintf("Successfully registered resolved patch for target %s", targetName))
 	}
 
 	fmt.Println("\nSuccessfully registered updated custom code patches.")
