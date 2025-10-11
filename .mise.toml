@@ -1,0 +1,31 @@
+[tools]
+# Speakeasy CLI can be installed via mise for consistent tooling
+# speakeasy = "latest"  # Uncomment when speakeasy is available in mise registry
+
+[tasks.speakeasy]
+description = "Run speakeasy commands with consistent environment"
+run = "./speakeasy $@"
+
+[tasks.build]
+description = "Build speakeasy CLI"
+run = "go build -o speakeasy ."
+
+[tasks.test]
+description = "Run tests"
+run = "go test ./..."
+
+[tasks.lint]
+description = "Run linters"
+run = "golangci-lint run"
+
+[tasks.install-dev]
+description = "Install development version of speakeasy CLI"
+run = """
+go build -o speakeasy .
+mkdir -p ~/.local/bin
+cp speakeasy ~/.local/bin/
+"""
+
+[env]
+# Ensure consistent Go environment
+GO111MODULE = "on"
