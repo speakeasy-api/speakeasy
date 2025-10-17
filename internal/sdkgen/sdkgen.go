@@ -68,6 +68,7 @@ type GenerateOptions struct {
 	Compile         bool
 	TargetName      string
 	SkipVersioning  bool
+	SkipCustomCode  bool
 
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
@@ -148,6 +149,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generate.WithCLIVersion(opts.CLIVersion),
 		generate.WithForceGeneration(),
 		generate.WithChangelogReleaseNotes(opts.ReleaseNotes),
+	}
+
+	if opts.SkipCustomCode {
+		generatorOpts = append(generatorOpts, generate.WithSkipApplyCustomCode())
 	}
 
 	if opts.Verbose {
