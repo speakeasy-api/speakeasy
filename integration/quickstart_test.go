@@ -88,8 +88,6 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 		"--output", "console",
 	)
 	quickstartCmd.Dir = testDir
-	quickstartCmd.Stdout = os.Stdout
-	quickstartCmd.Stderr = os.Stderr
 
 	quickstartOutput, err := quickstartCmd.CombinedOutput()
 	if err != nil {
