@@ -1,3 +1,6 @@
+
+
+
 <div align="center">
  <a href="https://www.speakeasy.com/" target="_blank">
   <img width="1500" height="500" alt="Speakeasy" src="https://github.com/user-attachments/assets/0e56055b-02a3-4476-9130-4be299e5a39c" />
@@ -80,107 +83,73 @@
    <p>
     <a href="https://www.speakeasy.com/docs/sdk-design/typescript/methodology-ts" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf">
-      <img width="100px" src="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf#gh-light-mode-only" alt="Scalar API Reference">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/72392c17-5a6d-4aad-a0e2-b411fc5c733e">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/92990464-eea5-446f-9084-39fc5172e9c2">
+      <img width="87px" src="https://github.com/user-attachments/assets/72392c17-5a6d-4aad-a0e2-b411fc5c733e#gh-light-mode-only" alt="TypeScript">
      </picture>
      </a>
-    <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-      <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-    </picture>
-      <a href="https://www.speakeasy.com/docs/sdk-design/python/methodology-python" target="_blank">
+      &nbsp;
+    <a href="https://www.speakeasy.com/docs/sdk-design/python/methodology-python" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/34a57c5b-e81d-4238-a1a4-2f1289630599">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/34a57c5b-e81d-4238-a1a4-2f1289630599">
-      <img width="100px" src="https://github.com/user-attachments/assets/34a57c5b-e81d-4238-a1a4-2f1289630599#gh-light-mode-only" alt="Python">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/51b6860a-ebba-4fa2-8445-95bde33dea7e">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/f9c02d4c-874d-4d4f-b9e7-b8add4447e14">
+      <img width="87px" src="https://github.com/user-attachments/assets/51b6860a-ebba-4fa2-8445-95bde33dea7e#gh-light-mode-only" alt="Python">
      </picture>
     </a>
-    <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-      <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-    </picture>
-      <a href="https://www.speakeasy.com/docs/sdk-design/golang/methodology-go" target="_blank">
+      &nbsp;
+    <a href="https://www.speakeasy.com/docs/sdk-design/golang/methodology-go" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/7be9379e-d3ae-44f7-afd0-a9fee526d402">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7be9379e-d3ae-44f7-afd0-a9fee526d402">
-      <img width="100px" src="https://github.com/user-attachments/assets/7be9379e-d3ae-44f7-afd0-a9fee526d402#gh-light-mode-only" alt="Golang">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/551a1f03-2ffa-4aa4-b738-966a66967a85">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/fea1f0e8-8876-4246-98f0-ea07aef26f7a">
+      <img width="87px" src="https://github.com/user-attachments/assets/551a1f03-2ffa-4aa4-b738-966a66967a85#gh-light-mode-only" alt="Golang">
      </picture>
     </a>
-    <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-      <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-    </picture>
+      &nbsp;
     <a href="https://www.speakeasy.com/docs/create-terraform" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/7899cbd5-13c0-445e-b4ca-429fd2259477">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7899cbd5-13c0-445e-b4ca-429fd2259477">
-      <img width="100px" src="https://github.com/user-attachments/assets/7899cbd5-13c0-445e-b4ca-429fd2259477#gh-light-mode-only" alt="Terraform">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/21f87545-2b49-491b-8239-4513d27f254a">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/e63b652b-ce02-47f6-aa9d-b8fb2ff52f9c">
+      <img width="87px" src="https://github.com/user-attachments/assets/21f87545-2b49-491b-8239-4513d27f254a#gh-light-mode-only" alt="Terraform">
      </picture>
     </a>
-    <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-      <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-    </picture>
+      &nbsp;
     <a href="https://www.speakeasy.com/docs/sdk-design/java/methodology-java" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb">
-      <img width="100px" src="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb#gh-light-mode-only" alt="Java">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/f14e0e61-df8b-45fb-8634-c7f7a327d24b">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/663376a1-530e-4466-93c0-d6d81106a650">
+      <img width="87px" src="https://github.com/user-attachments/assets/f14e0e61-df8b-45fb-8634-c7f7a327d24b#gh-light-mode-only" alt="Java">
      </picture>
     </a>
-   </p>
-    <p>
-      <a href="https://www.speakeasy.com/docs/sdk-design/csharp/methodology-csharp" target="_blank">
+      &nbsp;
+    <a href="https://www.speakeasy.com/docs/sdk-design/csharp/methodology-csharp" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/1f5c4a9c-f841-4c56-8d3c-bcb43ac4eef7">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/1f5c4a9c-f841-4c56-8d3c-bcb43ac4eef7">
-      <img width="100px" src="https://github.com/user-attachments/assets/1f5c4a9c-f841-4c56-8d3c-bcb43ac4eef7#gh-light-mode-only" alt="Csharp">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/0d9aec55-502b-491f-b6ca-5432917e26e0">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/915d6c9c-8f26-492c-92ef-a485064254d9">
+      <img width="87px" src="https://github.com/user-attachments/assets/0d9aec55-502b-491f-b6ca-5432917e26e0#gh-light-mode-only" alt="Csharp">
      </picture>
     </a>
-      <picture>
-        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-        <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-      </picture>
-      <a href="https://www.speakeasy.com/docs/sdk-design/php/methodology-php" target="_blank">
+      &nbsp;
+    <a href="https://www.speakeasy.com/docs/sdk-design/php/methodology-php" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c">
-      <img width="100px" src="https://github.com/user-attachments/assets/15f6a6c7-eb71-466c-bbaa-d7a974a25b5c#gh-light-mode-only" alt="PHP">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/b0e1b486-de15-488c-b367-ce1c8c4bdf36">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/dfe55b2c-aaa4-42b0-9b13-592c5964fd5f">
+      <img width="87px" src="https://github.com/user-attachments/assets/b0e1b486-de15-488c-b367-ce1c8c4bdf36#gh-light-mode-only" alt="PHP">
      </picture>
     </a>
-      <picture>
-        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-        <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-      </picture>
-      <a href="https://www.speakeasy.com/docs/sdk-design/ruby/methodology-ruby" target="_blank">
+      &nbsp;
+    <a href="https://www.speakeasy.com/docs/sdk-design/ruby/methodology-ruby" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993">
-      <img width="100px" src="https://github.com/user-attachments/assets/c01f4d21-c05a-4d77-a65a-c7f4e72b1993#gh-light-mode-only" alt="Ruby">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/87f12e15-e61d-40c4-8690-ccd2dd12268f">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/2206de37-79c7-4f70-947d-7c5c41337edb">
+      <img width="87px" src="https://github.com/user-attachments/assets/87f12e15-e61d-40c4-8690-ccd2dd12268f#gh-light-mode-only" alt="Ruby">
      </picture>
     </a>
-    <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-      <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-    </picture>
-    <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-      <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-    </picture>
+      &nbsp;
     <a href="https://www.speakeasy.com/docs/languages/unity/methodology-unity" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/69594a33-8ffc-4570-8144-be6080b07eb6">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/69594a33-8ffc-4570-8144-be6080b07eb6">
-      <img width="100px" src="https://github.com/user-attachments/assets/69594a33-8ffc-4570-8144-be6080b07eb6#gh-light-mode-only" alt="Unity">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/1966f876-1ca3-44d7-92c7-c2830e8a32e8">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/445b5109-1d32-4253-a9f4-fa720da5a490">
+      <img width="87px" src="https://github.com/user-attachments/assets/1966f876-1ca3-44d7-92c7-c2830e8a32e8#gh-light-mode-only" alt="Unity">
      </picture>
     </a>
    </p>
