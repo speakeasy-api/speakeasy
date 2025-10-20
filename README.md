@@ -21,50 +21,43 @@
   <h4><b>Trusted By:</b></h4>
   <h4>
    <p>
+    <a href="https://github.com/mistralai/client-python" target="_blank">
+     <picture>
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a5cde465-8be4-4865-b1d3-03222cdea0a1">
+      <img width="200px" src="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74#gh-light-mode-only" alt="Mistral">
+     </picture>
+    </a>
     <a href="https://github.com/vercel/sdk" target="_blank" margin-right="20px">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a6feb0ff-6cb4-406f-9797-246dcbd7ae01">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/e5096709-2a50-4010-a719-d5f4c84a7279">
-      <img width="200px" src="https://github.com/user-attachments/assets/a6feb0ff-6cb4-406f-9797-246dcbd7ae01#gh-light-mode-only" alt="Vercel">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7d1b97ed-22d8-4dff-bac5-66fe5dead2fe">
+      <img width="200px" src="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb#gh-light-mode-only" alt="Vercel">
      </picture>
      </a>
-      <picture>
-        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-        <img height="80" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-      </picture>
-      <a href="https://github.com/mistralai/client-python" target="_blank">
+    <a href="https://github.com/gleanwork/api-client-python" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2f7d466c-864e-4a42-aa7e-e9c251dec211">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/29bd2611-92f4-44fe-91d5-78e6781ca6c2">
-      <img width="200px" src="https://github.com/user-attachments/assets/2f7d466c-864e-4a42-aa7e-e9c251dec211#gh-light-mode-only" alt="Mistral">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a0f0852f-a491-450b-9183-94ad6f77da3c">
+      <img width="200px" src="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743#gh-light-mode-only" alt="Glean">
      </picture>
     </a>
-      <picture>
-        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-        <img height="80" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
-      </picture>
-      <a href="https://github.com/clerk/clerk-sdk-python" target="_blank">
+    <a href="https://github.com/clerk/clerk-sdk-python" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/b0351caf-bc9a-4f25-8eac-4e8f8bf0e078">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/2b0631bf-f2d0-436b-b008-fcabbb134d50">
-      <img width="200px" src="https://github.com/user-attachments/assets/b0351caf-bc9a-4f25-8eac-4e8f8bf0e078#gh-light-mode-only" alt="Clerk">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/dc4ee90f-7a48-4d7c-abe0-fd347addf785">
+      <img width="200px" src="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38#gh-light-mode-only" alt="Clerk">
      </picture>
     </a>
-      <picture>
-        <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758">
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
-        <img height="80" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line![fireworks-git](https://github.com/user-attachments/assets/26e80c87-c53c-4531-a607-cc78646bfdd7)
-">
-      </picture>
-      <a href="https://fireworks.ai/" target="_blank">
+    <a href="https://github.com/OpenRouterTeam/typescript-sdk" target="_blank">
      <picture>
-      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/eb4327bc-91fc-4195-b68f-399712d4a24d">
-      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/abb4c770-ab92-4595-81b0-a4736fb14b72">
-      <img width="200px" src="https://github.com/user-attachments/assets/eb4327bc-91fc-4195-b68f-399712d4a24d#gh-light-mode-only" alt="Fireworks">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92">
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/1b63bec3-bd07-41d2-97c7-70e9f3bb1fb5">
+      <img width="200px" src="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92#gh-light-mode-only" alt="OpenRouter">
      </picture>
     </a>
+
+      
    </p>
     <a href="https://speakeasy.com/customers"><p>
       Full showcase →
