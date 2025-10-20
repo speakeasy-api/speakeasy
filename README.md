@@ -16,7 +16,7 @@
 </div>
 
 <hr />
-
+<br />
 <div align="left">
   <h4><b>Trusted By:</b></h4>
   <h4>
@@ -68,6 +68,7 @@
     </p></a>
   </h4>
 </div>
+<br />
 
 ## A Modern OpenAPI Native Toolchain
 
@@ -153,6 +154,7 @@
   </h1>
 </div>
 
+<br/>
 <h2>
  <p>How it works</p>
    <picture>
@@ -160,6 +162,7 @@
    </picture>
   </a>
 </h2>
+<br />
 
 ### Features
 
@@ -171,6 +174,8 @@
 - Modern OpenAPI 3.X toolchain for linting, cleaning, diff-ing and editing specs. ([Powered by Overlays](https://www.speakeasy.com/openapi/overlays))
 
 Check out the [roadmap](https://www.speakeasyapi.dev/roadmap) for whats coming up soon!
+<br />
+<br />
 
 ## CLI  
 
