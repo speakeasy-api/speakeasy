@@ -82,7 +82,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/72392c17-5a6d-4aad-a0e2-b411fc5c733e">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/92990464-eea5-446f-9084-39fc5172e9c2">
-      <img width="87px" src="https://github.com/user-attachments/assets/72392c17-5a6d-4aad-a0e2-b411fc5c733e#gh-light-mode-only" alt="TypeScript">
+      <img width="70px" src="https://github.com/user-attachments/assets/72392c17-5a6d-4aad-a0e2-b411fc5c733e#gh-light-mode-only" alt="TypeScript">
      </picture>
      </a>
       &nbsp;
@@ -90,7 +90,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/51b6860a-ebba-4fa2-8445-95bde33dea7e">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/f9c02d4c-874d-4d4f-b9e7-b8add4447e14">
-      <img width="87px" src="https://github.com/user-attachments/assets/51b6860a-ebba-4fa2-8445-95bde33dea7e#gh-light-mode-only" alt="Python">
+      <img width="70px" src="https://github.com/user-attachments/assets/51b6860a-ebba-4fa2-8445-95bde33dea7e#gh-light-mode-only" alt="Python">
      </picture>
     </a>
       &nbsp;
@@ -98,7 +98,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/551a1f03-2ffa-4aa4-b738-966a66967a85">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/fea1f0e8-8876-4246-98f0-ea07aef26f7a">
-      <img width="87px" src="https://github.com/user-attachments/assets/551a1f03-2ffa-4aa4-b738-966a66967a85#gh-light-mode-only" alt="Golang">
+      <img width="70px" src="https://github.com/user-attachments/assets/551a1f03-2ffa-4aa4-b738-966a66967a85#gh-light-mode-only" alt="Golang">
      </picture>
     </a>
       &nbsp;
@@ -106,7 +106,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/21f87545-2b49-491b-8239-4513d27f254a">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/e63b652b-ce02-47f6-aa9d-b8fb2ff52f9c">
-      <img width="87px" src="https://github.com/user-attachments/assets/21f87545-2b49-491b-8239-4513d27f254a#gh-light-mode-only" alt="Terraform">
+      <img width="70px" src="https://github.com/user-attachments/assets/21f87545-2b49-491b-8239-4513d27f254a#gh-light-mode-only" alt="Terraform">
      </picture>
     </a>
       &nbsp;
@@ -114,7 +114,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/f14e0e61-df8b-45fb-8634-c7f7a327d24b">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/663376a1-530e-4466-93c0-d6d81106a650">
-      <img width="87px" src="https://github.com/user-attachments/assets/f14e0e61-df8b-45fb-8634-c7f7a327d24b#gh-light-mode-only" alt="Java">
+      <img width="70px" src="https://github.com/user-attachments/assets/f14e0e61-df8b-45fb-8634-c7f7a327d24b#gh-light-mode-only" alt="Java">
      </picture>
     </a>
       &nbsp;
@@ -122,7 +122,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/0d9aec55-502b-491f-b6ca-5432917e26e0">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/915d6c9c-8f26-492c-92ef-a485064254d9">
-      <img width="87px" src="https://github.com/user-attachments/assets/0d9aec55-502b-491f-b6ca-5432917e26e0#gh-light-mode-only" alt="Csharp">
+      <img width="70px" src="https://github.com/user-attachments/assets/0d9aec55-502b-491f-b6ca-5432917e26e0#gh-light-mode-only" alt="Csharp">
      </picture>
     </a>
       &nbsp;
@@ -130,7 +130,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/b0e1b486-de15-488c-b367-ce1c8c4bdf36">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/dfe55b2c-aaa4-42b0-9b13-592c5964fd5f">
-      <img width="87px" src="https://github.com/user-attachments/assets/b0e1b486-de15-488c-b367-ce1c8c4bdf36#gh-light-mode-only" alt="PHP">
+      <img width="70px" src="https://github.com/user-attachments/assets/b0e1b486-de15-488c-b367-ce1c8c4bdf36#gh-light-mode-only" alt="PHP">
      </picture>
     </a>
       &nbsp;
@@ -138,7 +138,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/87f12e15-e61d-40c4-8690-ccd2dd12268f">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/2206de37-79c7-4f70-947d-7c5c41337edb">
-      <img width="87px" src="https://github.com/user-attachments/assets/87f12e15-e61d-40c4-8690-ccd2dd12268f#gh-light-mode-only" alt="Ruby">
+      <img width="70px" src="https://github.com/user-attachments/assets/87f12e15-e61d-40c4-8690-ccd2dd12268f#gh-light-mode-only" alt="Ruby">
      </picture>
     </a>
       &nbsp;
@@ -146,7 +146,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/1966f876-1ca3-44d7-92c7-c2830e8a32e8">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/445b5109-1d32-4253-a9f4-fa720da5a490">
-      <img width="87px" src="https://github.com/user-attachments/assets/1966f876-1ca3-44d7-92c7-c2830e8a32e8#gh-light-mode-only" alt="Unity">
+      <img width="70px" src="https://github.com/user-attachments/assets/1966f876-1ca3-44d7-92c7-c2830e8a32e8#gh-light-mode-only" alt="Unity">
      </picture>
     </a>
    </p>
