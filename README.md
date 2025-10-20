@@ -25,7 +25,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a5cde465-8be4-4865-b1d3-03222cdea0a1">
-      <img height="56px" src="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74#gh-light-mode-only" alt="Mistral">
+      <img height="50px" src="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74#gh-light-mode-only" alt="Mistral">
      </picture>
     </a>
     &nbsp; &nbsp; &nbsp; &nbsp;
@@ -33,7 +33,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7d1b97ed-22d8-4dff-bac5-66fe5dead2fe">
-      <img height="56px" src="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb#gh-light-mode-only" alt="Vercel">
+      <img height="50px" src="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb#gh-light-mode-only" alt="Vercel">
      </picture>
      </a>
     &nbsp; &nbsp; &nbsp; &nbsp;
@@ -41,7 +41,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a0f0852f-a491-450b-9183-94ad6f77da3c">
-      <img height="56px" src="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743#gh-light-mode-only" alt="Glean">
+      <img height="50px" src="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743#gh-light-mode-only" alt="Glean">
      </picture>
     </a>
     &nbsp; &nbsp; &nbsp; &nbsp;
@@ -49,7 +49,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/dc4ee90f-7a48-4d7c-abe0-fd347addf785">
-      <img height="56px" src="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38#gh-light-mode-only" alt="Clerk">
+      <img height="50px" src="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38#gh-light-mode-only" alt="Clerk">
      </picture>
     </a>
     &nbsp; &nbsp; &nbsp; &nbsp;
@@ -57,7 +57,7 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/1b63bec3-bd07-41d2-97c7-70e9f3bb1fb5">
-      <img height="56px" src="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92#gh-light-mode-only" alt="OpenRouter">
+      <img height="50px" src="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92#gh-light-mode-only" alt="OpenRouter">
      </picture>
     </a>
 
