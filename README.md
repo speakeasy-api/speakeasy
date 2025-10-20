@@ -1,6 +1,3 @@
-
-
-
 <div align="center">
  <a href="https://www.speakeasy.com/" target="_blank">
   <img width="1500" height="500" alt="Speakeasy" src="https://github.com/user-attachments/assets/0e56055b-02a3-4476-9130-4be299e5a39c" />
