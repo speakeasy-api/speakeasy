@@ -25,35 +25,39 @@
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a5cde465-8be4-4865-b1d3-03222cdea0a1">
-      <img width="200px" src="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74#gh-light-mode-only" alt="Mistral">
+      <img height="50px" src="https://github.com/user-attachments/assets/bca19603-0a18-4425-8d0e-aabc81849e74#gh-light-mode-only" alt="Mistral">
      </picture>
     </a>
-    <a href="https://github.com/vercel/sdk" target="_blank" margin-right="20px">
+    &nbsp; &nbsp; &nbsp; &nbsp;
+    <a href="https://github.com/vercel/sdk" target="_blank">
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7d1b97ed-22d8-4dff-bac5-66fe5dead2fe">
-      <img width="200px" src="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb#gh-light-mode-only" alt="Vercel">
+      <img height="50px" src="https://github.com/user-attachments/assets/9f499468-d679-43d6-9a4c-bb6d8391ebeb#gh-light-mode-only" alt="Vercel">
      </picture>
      </a>
+    &nbsp; &nbsp; &nbsp; &nbsp;
     <a href="https://github.com/gleanwork/api-client-python" target="_blank">
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/a0f0852f-a491-450b-9183-94ad6f77da3c">
-      <img width="200px" src="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743#gh-light-mode-only" alt="Glean">
+      <img height="50px" src="https://github.com/user-attachments/assets/79db6f55-7061-41c5-9ba0-dd66eed86743#gh-light-mode-only" alt="Glean">
      </picture>
     </a>
+    &nbsp; &nbsp; &nbsp; &nbsp;
     <a href="https://github.com/clerk/clerk-sdk-python" target="_blank">
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/dc4ee90f-7a48-4d7c-abe0-fd347addf785">
-      <img width="200px" src="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38#gh-light-mode-only" alt="Clerk">
+      <img height="50px" src="https://github.com/user-attachments/assets/cc42df48-e54a-4c2b-bb54-83033a806e38#gh-light-mode-only" alt="Clerk">
      </picture>
     </a>
+    &nbsp; &nbsp; &nbsp; &nbsp;
     <a href="https://github.com/OpenRouterTeam/typescript-sdk" target="_blank">
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/1b63bec3-bd07-41d2-97c7-70e9f3bb1fb5">
-      <img width="200px" src="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92#gh-light-mode-only" alt="OpenRouter">
+      <img height="50px" src="https://github.com/user-attachments/assets/d7db99df-7882-481f-93e2-50e7acf51b92#gh-light-mode-only" alt="OpenRouter">
      </picture>
     </a>
 
@@ -74,7 +78,7 @@
 <div align="left">
   <h1>
    <p>
-    <a href="https://www.speakeasy.com/docs/sdk-design/typescript/methodology-ts" target="_blank" margin-right="20px">
+    <a href="https://www.speakeasy.com/docs/sdk-design/typescript/methodology-ts" target="_blank">
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/6c36bce3-34cf-4b68-b6e9-bd1522dfc8bf">
@@ -122,7 +126,7 @@
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/c160c3e7-22f8-4523-9e25-0df1802fd6fe">
       <img height="100px" src="https://github.com/user-attachments/assets/a7e32045-a53a-433a-908f-1f5338b17758#gh-light-mode-only" alt="Line">
     </picture>
-    <a href="https://www.speakeasy.com/docs/sdk-design/java/methodology-java" target="_blank" margin-right="20px">
+    <a href="https://www.speakeasy.com/docs/sdk-design/java/methodology-java" target="_blank">
      <picture>
       <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb">
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/9cc5a8d8-ce16-487d-9033-db4b364323cb">
