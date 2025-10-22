@@ -170,9 +170,7 @@ func fetchCLIEvents(ctx context.Context, executionID string) ([]shared.CliEvent,
 		Limit:       &limit,
 	}
 
-	res, err := s.Events.Search(ctx, req, operations.WithSetHeaders(map[string]string{
-		"x-dry-run": "true",
-	}))
+	res, err := s.Events.Search(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch CLI events: %w", err)
 	}
@@ -631,10 +629,15 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 		return ctx, fmt.Errorf("authentication failed: %w", err)
 	}
 
+	// Check if we authenticated as speakeasy-self
+	newWorkspaceSlug := core.GetWorkspaceSlugFromContext(authCtx)
+	if newWorkspaceSlug == "speakeasy-self" {
+		logger.Infof("Using admin workspace credentials to access %s/%s", orgSlug, workspaceSlug)
+		return authCtx, nil
+	}
+
 	// Verify we're now in the correct workspace
 	newOrgSlug := core.GetOrgSlugFromContext(authCtx)
-	newWorkspaceSlug := core.GetWorkspaceSlugFromContext(authCtx)
-
 	if newOrgSlug != orgSlug || newWorkspaceSlug != workspaceSlug {
 		return authCtx, fmt.Errorf("authenticated to %s/%s but expected %s/%s. Please run 'speakeasy auth switch' and select the correct workspace", newOrgSlug, newWorkspaceSlug, orgSlug, workspaceSlug)
 	}
