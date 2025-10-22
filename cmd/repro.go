@@ -170,7 +170,9 @@ func fetchCLIEvents(ctx context.Context, executionID string) ([]shared.CliEvent,
 		Limit:       &limit,
 	}
 
-	res, err := s.Events.Search(ctx, req)
+	res, err := s.Events.Search(ctx, req, operations.WithSetHeaders(map[string]string{
+		"x-dry-run": "true",
+	}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch CLI events: %w", err)
 	}
@@ -578,6 +580,12 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 	// Check if we're already in the correct workspace
 	currentOrgSlug := core.GetOrgSlugFromContext(ctx)
 	currentWorkspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+
+	// Allow admin users (speakeasy-self workspace) to access any workspace for repro purposes
+	if currentWorkspaceSlug == "speakeasy-self" {
+		logger.Infof("Using admin workspace credentials to access %s/%s", orgSlug, workspaceSlug)
+		return ctx, nil
+	}
 
 	if currentOrgSlug == orgSlug && currentWorkspaceSlug == workspaceSlug {
 		logger.Infof("Already authenticated to workspace %s/%s", orgSlug, workspaceSlug)
