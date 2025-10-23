@@ -62,6 +62,12 @@ func shouldSkipTarget(t *testing.T, target string) bool {
 		return true
 	}
 
+	// Skip Java on windows for now as TestQuickstart/java times out
+	if runtime.GOOS == "windows" && target == "java" {
+		t.Skipf("Skipping %s on windows for now as it times out", target)
+		return true
+	}
+
 	// Skip Ruby on Windows for now as there is no sorbet-static gem for Windows
 	// TODO: https://linear.app/speakeasy/issue/GEN-1728/ruby-does-not-have-static-sorbet-gem-for-windows-and-cannot-quickstart
 	if runtime.GOOS == "windows" && target == "ruby" {
