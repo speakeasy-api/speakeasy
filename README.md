@@ -157,8 +157,11 @@
 <br/>
 <h2>
  <p>How it works</p>
+ 
    <picture>
-    <img src="https://github.com/user-attachments/assets/50a87bdc-5109-46a9-a1b5-082a2b26435e" alt="Speakeasy Workflow">
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/41f1f1f2-2bf8-4505-83f2-aa4746a0bf95">
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/18978133-c8b5-46c3-95e4-b68c321f8ae4">
+    <img src="https://github.com/user-attachments/assets/41f1f1f2-2bf8-4505-83f2-aa4746a0bf95#gh-light-mode-only" alt="How it works diagram">
    </picture>
   </a>
 </h2>
