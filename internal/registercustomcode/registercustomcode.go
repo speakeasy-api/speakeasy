@@ -146,7 +146,22 @@ func updateCustomPatchAndUpdateGenLock(ctx context.Context, wf *workflow.Workflo
 		return fmt.Errorf("failed to check for changes: %w", err)
 	}
 	if !hasChanges {
-		fmt.Printf("No changes detected for target %s after applying existing patch, skipping\n", targetName)
+		// Check if there's actually a patch to clean up
+		if patchFileExists(getTargetOutput(target)) {
+			fmt.Printf("No changes detected for target %s after applying patches, cleaning up patch registration\n", targetName)
+
+			// Clean up: remove patch file and commit hash from gen.lock
+			if err := saveCustomCodePatch(getTargetOutput(target), "", ""); err != nil {
+				return fmt.Errorf("failed to clean up empty patch: %w", err)
+			}
+
+			// Commit the cleanup
+			if err := commitCustomCodeRegistration(getTargetOutput(target)); err != nil {
+				return fmt.Errorf("failed to commit patch cleanup: %w", err)
+			}
+		} else {
+			fmt.Printf("No changes detected for target %s, skipping\n", targetName)
+		}
 		return nil
 	}
 
@@ -408,6 +423,25 @@ func completeConflictResolution(ctx context.Context, wf *workflow.Workflow) erro
 		return err
 	}
 	for targetName, target := range wf.Targets {
+		if targetPatches[targetName] == "" {
+			// Check if there's actually a patch to clean up
+			if patchFileExists(getTargetOutput(target)) {
+				fmt.Printf("No changes detected for target %s after conflict resolution, cleaning up patch registration\n", targetName)
+
+				// Clean up: remove patch file and commit hash from gen.lock
+				if err := saveCustomCodePatch(getTargetOutput(target), "", ""); err != nil {
+					return fmt.Errorf("failed to clean up empty patch: %w", err)
+				}
+
+				// Commit the cleanup
+				if err := commitCustomCodeRegistration(getTargetOutput(target)); err != nil {
+					return fmt.Errorf("failed to commit patch cleanup: %w", err)
+				}
+			} else {
+				fmt.Printf("No changes detected for target %s after conflict resolution, skipping\n", targetName)
+			}
+			continue
+		}
 		err = updateCustomPatchAndUpdateGenLock(ctx, wf, originalHash, targetPatches, target, targetName)
 		if err != nil {
 			return err
@@ -731,9 +765,22 @@ func commitCustomCodeRegistration(outDir string) error {
 	genLockPath := fmt.Sprintf("%v/.speakeasy/gen.lock", outDir)
 	patchPath := getPatchFilePath(outDir)
 
-	cmd := exec.Command("git", "add", genLockPath, patchPath)
+	// Always add gen.lock
+	cmd := exec.Command("git", "add", genLockPath)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to add gen.lock and patch file: %w", err)
+		return fmt.Errorf("failed to add gen.lock: %w", err)
+	}
+
+	// Handle patch file - add if exists, stage deletion if removed
+	if patchFileExists(outDir) {
+		cmd = exec.Command("git", "add", patchPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to add patch file: %w", err)
+		}
+	} else {
+		// Stage deletion using git rm (won't fail if file not tracked)
+		cmd = exec.Command("git", "rm", "--ignore-unmatch", patchPath)
+		_ = cmd.Run() // Ignore errors - file might not exist in git
 	}
 
 	// Commit with a descriptive message
