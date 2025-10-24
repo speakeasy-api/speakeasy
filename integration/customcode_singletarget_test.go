@@ -1,0 +1,412 @@
+package integration_tests
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCustomCode(t *testing.T) {
+	t.Parallel()
+
+	// Build the speakeasy binary once for all subtests
+	speakeasyBinary := buildSpeakeasyBinaryOnce(t)
+
+	t.Run("BasicWorkflow", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeBasicWorkflow(t, speakeasyBinary)
+	})
+
+	t.Run("ConflictResolution", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeConflictResolution(t, speakeasyBinary)
+	})
+
+	t.Run("ConflictResolutionAcceptOurs", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeConflictResolutionAcceptOurs(t, speakeasyBinary)
+	})
+}
+
+// testCustomCodeBasicWorkflow tests basic custom code registration and reapplication
+func testCustomCodeBasicWorkflow(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	httpMetadataPath := filepath.Join(temp, "models", "components", "httpmetadata.go")
+	registerCustomCode(t, speakeasyBinary, temp, httpMetadataPath, 10, "\t// custom code")
+
+	runRegeneration(t, speakeasyBinary, temp, true)
+	verifyCustomCodePresent(t, httpMetadataPath, "// custom code")
+}
+
+// testCustomCodeConflictResolution tests conflict resolution workflow
+func testCustomCodeConflictResolution(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+
+	// Register custom code
+	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// custom code")
+
+	// Modify the spec to change line 477 from original description to "spec change"
+	specPath := filepath.Join(temp, "customcodespec.yaml")
+	modifyLineInFile(t, specPath, 477, "        description: 'spec change'")
+
+	// Run speakeasy run to regenerate - this should produce a conflict
+	runRegeneration(t, speakeasyBinary, temp, false)
+
+	// Run customcode --resolve to enter conflict resolution mode
+	resolveCmd := exec.Command(speakeasyBinary, "customcode", "--resolve", "--output", "console")
+	resolveCmd.Dir = temp
+	resolveOutput, resolveErr := resolveCmd.CombinedOutput()
+	require.NoError(t, resolveErr, "customcode --resolve should succeed: %s", string(resolveOutput))
+
+	// Check for conflict markers in the file
+	getUserByNameContent, err := os.ReadFile(getUserByNamePath)
+	require.NoError(t, err, "Failed to read getuserbyname.go")
+	require.Contains(t, string(getUserByNameContent), "<<<<<<<", "File should contain conflict markers")
+
+	// Resolve the conflict by accepting the patch (theirs)
+	checkoutCmd := exec.Command("git", "checkout", "--theirs", getUserByNamePath)
+	checkoutCmd.Dir = temp
+	checkoutOutput, checkoutErr := checkoutCmd.CombinedOutput()
+	require.NoError(t, checkoutErr, "git checkout --theirs should succeed: %s", string(checkoutOutput))
+
+	// Stage the resolved file
+	gitAddCmd := exec.Command("git", "add", getUserByNamePath)
+	gitAddCmd.Dir = temp
+	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
+	require.NoError(t, gitAddErr, "git add should succeed: %s", string(gitAddOutput))
+
+	// Run customcode command again to register the resolved changes
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed after conflict resolution: %s", string(customCodeOutput))
+
+	// Run speakeasy run again to verify patches are applied correctly
+	runRegeneration(t, speakeasyBinary, temp, true)
+
+	// Verify the custom code from the patch is present in the final file
+	verifyCustomCodePresent(t, getUserByNamePath, "// custom code")
+}
+
+// testCustomCodeConflictResolutionAcceptOurs tests conflict resolution by accepting spec changes (ours)
+func testCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+
+	// Register custom code
+	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// custom code")
+
+	// Modify the spec to change line 477 from original description to "spec change"
+	specPath := filepath.Join(temp, "customcodespec.yaml")
+	modifyLineInFile(t, specPath, 477, "        description: 'spec change'")
+
+	// Run speakeasy run to regenerate - this should produce a conflict
+	runRegeneration(t, speakeasyBinary, temp, false)
+
+	// Run customcode --resolve to enter conflict resolution mode
+	resolveCmd := exec.Command(speakeasyBinary, "customcode", "--resolve", "--output", "console")
+	resolveCmd.Dir = temp
+	resolveOutput, resolveErr := resolveCmd.CombinedOutput()
+	require.NoError(t, resolveErr, "customcode --resolve should succeed: %s", string(resolveOutput))
+
+	// Check for conflict markers in the file
+	getUserByNameContent, err := os.ReadFile(getUserByNamePath)
+	require.NoError(t, err, "Failed to read getuserbyname.go")
+	require.Contains(t, string(getUserByNameContent), "<<<<<<<", "File should contain conflict markers")
+
+	// Resolve the conflict by accepting the spec changes (ours)
+	checkoutCmd := exec.Command("git", "checkout", "--ours", getUserByNamePath)
+	checkoutCmd.Dir = temp
+	checkoutOutput, checkoutErr := checkoutCmd.CombinedOutput()
+	require.NoError(t, checkoutErr, "git checkout --ours should succeed: %s", string(checkoutOutput))
+
+	// Verify conflict markers are gone after checkout
+	getUserByNameContentAfterCheckout, err := os.ReadFile(getUserByNamePath)
+	require.NoError(t, err, "Failed to read getuserbyname.go after checkout")
+	require.NotContains(t, string(getUserByNameContentAfterCheckout), "<<<<<<<", "File should not contain conflict markers after checkout")
+
+	// Stage the resolved file
+	gitAddCmd := exec.Command("git", "add", getUserByNamePath)
+	gitAddCmd.Dir = temp
+	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
+	require.NoError(t, gitAddErr, "git add should succeed: %s", string(gitAddOutput))
+
+	// Run customcode command again to register the resolved changes
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed after conflict resolution: %s", string(customCodeOutput))
+
+	// Run speakeasy run again to verify patches are applied correctly
+	runRegeneration(t, speakeasyBinary, temp, true)
+
+	// Verify the spec change is present in the final file (not the custom code)
+	finalContent, err := os.ReadFile(getUserByNamePath)
+	require.NoError(t, err, "Failed to read getuserbyname.go after final regeneration")
+	require.Contains(t, string(finalContent), "spec change", "Spec change should be present after accepting ours")
+	require.NotContains(t, string(finalContent), "// custom code", "Custom code should not be present after accepting ours")
+}
+
+// buildSpeakeasyBinaryOnce builds the speakeasy binary and returns the path to it
+func buildSpeakeasyBinaryOnce(t *testing.T) string {
+	t.Helper()
+
+	_, filename, _, _ := runtime.Caller(0)
+	baseFolder := filepath.Join(filepath.Dir(filename), "..")
+	binaryPath := filepath.Join(baseFolder, "speakeasy-customcode-test-binary")
+
+	// Build the binary
+	cmd := exec.Command("go", "build", "-o", binaryPath, "./main.go")
+	cmd.Dir = baseFolder
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to build speakeasy binary: %s", string(output))
+
+	// Clean up the binary when test completes
+	t.Cleanup(func() {
+		os.Remove(binaryPath)
+	})
+
+	return binaryPath
+}
+
+// initGitRepo initializes a git repository in the specified directory
+func initGitRepo(t *testing.T, dir string) {
+	t.Helper()
+
+	// Initialize git repo
+	cmd := exec.Command("git", "init")
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to initialize git repo: %s", string(output))
+
+	// Configure git user for commits
+	cmd = exec.Command("git", "config", "user.email", "test@example.com")
+	cmd.Dir = dir
+	output, err = cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to configure git user.email: %s", string(output))
+
+	cmd = exec.Command("git", "config", "user.name", "Test User")
+	cmd.Dir = dir
+	output, err = cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to configure git user.name: %s", string(output))
+}
+
+// gitCommit creates a git commit with all changes in the specified directory
+func gitCommit(t *testing.T, dir, message string) {
+	t.Helper()
+
+	// Add all files
+	cmd := exec.Command("git", "add", ".")
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to git add: %s", string(output))
+
+	// Commit with message
+	cmd = exec.Command("git", "commit", "-m", message)
+	cmd.Dir = dir
+	output, err = cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to git commit: %s", string(output))
+}
+
+// verifyGitCommit verifies that a git commit exists with the expected message
+func verifyGitCommit(t *testing.T, dir, expectedMessage string) {
+	t.Helper()
+
+	// Check that .git directory exists
+	gitDir := filepath.Join(dir, ".git")
+	_, err := os.Stat(gitDir)
+	require.NoError(t, err, ".git directory should exist")
+
+	// Get the latest commit message
+	cmd := exec.Command("git", "log", "-1", "--pretty=%B")
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "Failed to get git log: %s", string(output))
+
+	// Verify commit message matches
+	commitMessage := strings.TrimSpace(string(output))
+	require.Equal(t, expectedMessage, commitMessage, "Commit message should match expected message")
+}
+
+// modifyLineInFile modifies a specific line in a file (1-indexed line number)
+func modifyLineInFile(t *testing.T, filePath string, lineNumber int, newContent string) {
+	t.Helper()
+
+	// Read the file
+	file, err := os.Open(filePath)
+	require.NoError(t, err, "Failed to open file: %s", filePath)
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	require.NoError(t, scanner.Err(), "Failed to read file: %s", filePath)
+
+	// Modify the specific line (convert 1-indexed to 0-indexed)
+	require.Less(t, lineNumber, len(lines)+1, "Line number %d is out of range (file has %d lines)", lineNumber, len(lines))
+	lines[lineNumber-1] = newContent
+
+	// Write back to the file
+	file, err = os.Create(filePath)
+	require.NoError(t, err, "Failed to open file for writing: %s", filePath)
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for _, line := range lines {
+		_, err := writer.WriteString(line + "\n")
+		require.NoError(t, err, "Failed to write line to file")
+	}
+	require.NoError(t, writer.Flush(), "Failed to flush writer")
+}
+
+// setupCustomCodeTestDir creates a test directory outside the speakeasy repo
+func setupCustomCodeTestDir(t *testing.T) string {
+	t.Helper()
+
+	// Check for custom test directory environment variable
+	baseDir := os.Getenv("SPEAKEASY_TEST_DIR")
+	if baseDir == "" {
+		// Fall back to system temp
+		baseDir = os.TempDir()
+	}
+
+	// Create unique test directory
+	testDir, err := os.MkdirTemp(baseDir, "speakeasy-customcode-*")
+	require.NoError(t, err, "Failed to create test directory")
+
+	// Clean up after test
+	// t.Cleanup(func() {
+	// 	os.RemoveAll(testDir)
+	// })
+
+	return testDir
+}
+
+// setupSDKGeneration sets up a test directory with SDK generation and git initialization
+func setupSDKGeneration(t *testing.T, speakeasyBinary, inputDoc string) string {
+	t.Helper()
+
+	temp := setupCustomCodeTestDir(t)
+
+	// Create workflow file and associated resources
+	workflowFile := &workflow.Workflow{
+		Version: workflow.WorkflowVersion,
+		Sources: make(map[string]workflow.Source),
+		Targets: make(map[string]workflow.Target),
+	}
+	workflowFile.Sources["first-source"] = workflow.Source{
+		Inputs: []workflow.Document{
+			{
+				Location: workflow.LocationString(inputDoc),
+			},
+		},
+	}
+
+	// Single go target with no output directory - generates to workspace root
+	target := workflow.Target{
+		Target: "go",
+		Source: "first-source",
+		// Output: nil - generates directly in workspace root
+	}
+	workflowFile.Targets["test-target"] = target
+
+	if isLocalFileReference(inputDoc) {
+		err := copyFile("resources/customcodespec.yaml", fmt.Sprintf("%s/%s", temp, inputDoc))
+		require.NoError(t, err)
+	}
+
+	err := os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
+	require.NoError(t, err)
+	err = workflow.Save(temp, workflowFile)
+	require.NoError(t, err)
+
+	// Run speakeasy run command using the built binary
+	runCmd := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
+	runCmd.Dir = temp
+	runOutput, runErr := runCmd.CombinedOutput()
+	require.NoError(t, runErr, "speakeasy run should succeed: %s", string(runOutput))
+
+	// Run go mod tidy to ensure go.sum is properly populated
+	// This is necessary because we used --skip-compile above
+	goModTidyCmd := exec.Command("go", "mod", "tidy")
+	goModTidyCmd.Dir = temp
+	output, err := goModTidyCmd.CombinedOutput()
+	require.NoError(t, err, "Failed to run go mod tidy: %s", string(output))
+
+	// SDK is generated in workspace root
+	checkForExpectedFiles(t, temp, expectedFilesByLanguage("go"))
+
+	// Initialize git repository in the workspace root
+	initGitRepo(t, temp)
+
+	// Commit all generated files with "clean generation" message
+	gitCommit(t, temp, "clean generation")
+
+	// Verify the commit was created with the correct message
+	verifyGitCommit(t, temp, "clean generation")
+
+	return temp
+}
+
+// registerCustomCode modifies a file and registers it as custom code
+func registerCustomCode(t *testing.T, speakeasyBinary, workingDir, filePath string, lineNum int, newContent string) {
+	t.Helper()
+
+	// Modify the file
+	modifyLineInFile(t, filePath, lineNum, newContent)
+
+	// Run customcode command
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = workingDir
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+
+	// Verify patches directory was created
+	patchesDir := filepath.Join(workingDir, ".speakeasy", "patches")
+	_, err := os.Stat(patchesDir)
+	require.NoError(t, err, "patches directory should exist at %s", patchesDir)
+
+	// Verify patch file was created
+	patchFile := filepath.Join(patchesDir, "custom-code.diff")
+	_, err = os.Stat(patchFile)
+	require.NoError(t, err, "patch file should exist at %s", patchFile)
+}
+
+// runRegeneration runs speakeasy run and checks if it succeeds or fails based on expectSuccess
+func runRegeneration(t *testing.T, speakeasyBinary, workingDir string, expectSuccess bool) {
+	t.Helper()
+
+	regenCmd := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
+	regenCmd.Dir = workingDir
+	regenOutput, regenErr := regenCmd.CombinedOutput()
+
+	if expectSuccess {
+		require.NoError(t, regenErr, "speakeasy run should succeed on regeneration: %s", string(regenOutput))
+	} else {
+		require.Error(t, regenErr, "speakeasy run should fail due to conflicts: %s", string(regenOutput))
+		require.Contains(t, string(regenOutput), "conflict", "Output should mention conflicts")
+	}
+}
+
+// verifyCustomCodePresent checks that custom code is present in the specified file
+func verifyCustomCodePresent(t *testing.T, filePath, expectedContent string) {
+	t.Helper()
+
+	content, err := os.ReadFile(filePath)
+	require.NoError(t, err, "Failed to read file: %s", filePath)
+	require.Contains(t, string(content), expectedContent, "Custom code should be present in file")
+}
