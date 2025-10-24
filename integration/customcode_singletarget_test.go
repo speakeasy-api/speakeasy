@@ -149,6 +149,20 @@ func testCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakeasyBinary st
 	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
 	require.NoError(t, customCodeErr, "customcode command should succeed after conflict resolution: %s", string(customCodeOutput))
 
+	// Verify patch file was removed or is empty
+	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
+	patchContent, err := os.ReadFile(patchFile)
+	if err == nil {
+		require.Empty(t, patchContent, "Patch file should be empty after accepting ours")
+	}
+	// If file doesn't exist, that's also fine
+
+	// Verify gen.lock doesn't contain customCodeCommitHash
+	genLockPath := filepath.Join(temp, ".speakeasy", "gen.lock")
+	genLockContent, err := os.ReadFile(genLockPath)
+	require.NoError(t, err, "Failed to read gen.lock")
+	require.NotContains(t, string(genLockContent), "customCodeCommitHash", "gen.lock should not contain customCodeCommitHash after accepting ours")
+
 	// Run speakeasy run again to verify patches are applied correctly
 	runRegeneration(t, speakeasyBinary, temp, true)
 
