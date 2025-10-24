@@ -97,7 +97,7 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 		} else if transformation.JQSymbolicExecution != nil {
 			transformStep.NewSubstep("Applying JQ symbolic execution")
 
-			if err := transform.JQSymbolicExecutionFromReader(ctx, in, inputPath, out, yamlOut); err != nil {
+			if err := transform.JQSymbolicExecutionFromReader(ctx, in, inputPath, yamlOut, out); err != nil {
 				return "", err
 			}
 		}
