@@ -94,6 +94,12 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 			if err := transform.NormalizeFromReader(ctx, in, inputPath, *transformation.Normalize.PrefixItems, out, yamlOut); err != nil {
 				return "", err
 			}
+		} else if transformation.JQSymbolicExecution != nil {
+			transformStep.NewSubstep("Applying JQ symbolic execution")
+
+			if err := transform.JQSymbolicExecutionFromReader(ctx, in, inputPath, yamlOut, out); err != nil {
+				return "", err
+			}
 		}
 
 		in = bytes.NewReader(out.Bytes())

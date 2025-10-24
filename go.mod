@@ -37,10 +37,11 @@ require (
 	github.com/samber/lo v1.47.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/openapi v1.7.3
+	github.com/speakeasy-api/jq v0.0.0-20251022153728-716f89d258bf
+	github.com/speakeasy-api/openapi v1.7.8
 	github.com/speakeasy-api/openapi-generation/v2 v2.730.5
 	github.com/speakeasy-api/openapi-overlay v0.10.3
-	github.com/speakeasy-api/sdk-gen-config v1.36.0
+	github.com/speakeasy-api/sdk-gen-config v1.37.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.20.9
 	github.com/speakeasy-api/versioning-reports v0.6.1
@@ -144,6 +145,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.23.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/itchyny/timefmt-go v0.1.6 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
@@ -217,6 +219,8 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/swaggest/jsonschema-go v0.3.78 // indirect
+	github.com/swaggest/refl v1.4.0 // indirect
 	github.com/testcontainers/testcontainers-go v0.38.0 // indirect
 	github.com/tetratelabs/wazero v1.8.2 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
