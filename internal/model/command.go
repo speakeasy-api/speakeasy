@@ -310,6 +310,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
 	} else if desiredVersion == "pinned" {
+		logger.PrintfStyled(styles.DimmedItalic, "Using pinned version (skipping blue/green speakeasy CLI upgrade)\n")
 		return nil
 	} else {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
