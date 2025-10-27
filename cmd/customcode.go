@@ -18,7 +18,6 @@ import (
 
 type RegisterCustomCodeFlags struct {
 	Show    bool   `json:"show"`
-	Resolve bool   `json:"resolve"`
 	Apply bool   `json:"apply-only"`
 	ApplyReverse bool	`json:"apply-reverse"`
 	LatestHash bool   `json:"latest-hash"`
@@ -43,10 +42,6 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 			Name:        "show",
 			Shorthand:   "s",
 			Description: "show custom code patches",
-		},
-		flag.BooleanFlag{
-			Name:        "resolve",
-			Description: "enter conflict resolution mode after a failed generation",
 		},
 		flag.BooleanFlag{
 			Name:        "apply-only",
@@ -101,11 +96,6 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 			return fmt.Errorf("errors occurred: %v", allErrors)
 		}
 		return nil
-	}
-
-	// If --resolve flag is provided, enter conflict resolution mode
-	if flags.Resolve {
-		return registercustomcode.ResolveCustomCodeConflicts(ctx)
 	}
 
 	// If --apply-only flag is provided, only apply existing patches

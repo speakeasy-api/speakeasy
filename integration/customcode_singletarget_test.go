@@ -34,6 +34,31 @@ func TestCustomCode(t *testing.T) {
 		t.Parallel()
 		testCustomCodeConflictResolutionAcceptOurs(t, speakeasyBinary)
 	})
+
+	t.Run("SequentialPatchesAppliedWithRegenerationBetween", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeSequentialPatchesAppliedWithRegenerationBetween(t, speakeasyBinary)
+	})
+
+	t.Run("SequentialPatchesAppliedWithoutRegenerationBetween", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween(t, speakeasyBinary)
+	})
+
+	t.Run("ConflictDetectionDuringCustomCodeRegistration", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeConflictDetectionDuringRegistration(t, speakeasyBinary)
+	})
+
+	t.Run("NewFilePreservation", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeNewFilePreservation(t, speakeasyBinary)
+	})
+
+	t.Run("NewFileDeletion", func(t *testing.T) {
+		t.Parallel()
+		testCustomCodeNewFileDeletion(t, speakeasyBinary)
+	})
 }
 
 // testCustomCodeBasicWorkflow tests basic custom code registration and reapplication
@@ -60,14 +85,14 @@ func testCustomCodeConflictResolution(t *testing.T, speakeasyBinary string) {
 	specPath := filepath.Join(temp, "customcodespec.yaml")
 	modifyLineInFile(t, specPath, 477, "        description: 'spec change'")
 
-	// Run speakeasy run to regenerate - this should produce a conflict
-	runRegeneration(t, speakeasyBinary, temp, false)
-
-	// Run customcode --resolve to enter conflict resolution mode
-	resolveCmd := exec.Command(speakeasyBinary, "customcode", "--resolve", "--output", "console")
-	resolveCmd.Dir = temp
-	resolveOutput, resolveErr := resolveCmd.CombinedOutput()
-	require.NoError(t, resolveErr, "customcode --resolve should succeed: %s", string(resolveOutput))
+	// Run speakeasy run to regenerate - this should detect conflict and automatically enter resolution mode
+	// The process should exit with code 2 after setting up conflict resolution
+	regenCmd := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
+	regenCmd.Dir = temp
+	regenOutput, regenErr := regenCmd.CombinedOutput()
+	require.Error(t, regenErr, "speakeasy run should exit with error after detecting conflicts: %s", string(regenOutput))
+	require.Contains(t, string(regenOutput), "CUSTOM CODE CONFLICTS DETECTED", "Output should show conflict detection banner")
+	require.Contains(t, string(regenOutput), "Entering automatic conflict resolution mode", "Output should indicate automatic resolution mode")
 
 	// Check for conflict markers in the file
 	getUserByNameContent, err := os.ReadFile(getUserByNamePath)
@@ -112,14 +137,14 @@ func testCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakeasyBinary st
 	specPath := filepath.Join(temp, "customcodespec.yaml")
 	modifyLineInFile(t, specPath, 477, "        description: 'spec change'")
 
-	// Run speakeasy run to regenerate - this should produce a conflict
-	runRegeneration(t, speakeasyBinary, temp, false)
-
-	// Run customcode --resolve to enter conflict resolution mode
-	resolveCmd := exec.Command(speakeasyBinary, "customcode", "--resolve", "--output", "console")
-	resolveCmd.Dir = temp
-	resolveOutput, resolveErr := resolveCmd.CombinedOutput()
-	require.NoError(t, resolveErr, "customcode --resolve should succeed: %s", string(resolveOutput))
+	// Run speakeasy run to regenerate - this should detect conflict and automatically enter resolution mode
+	// The process should exit with code 2 after setting up conflict resolution
+	regenCmd := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
+	regenCmd.Dir = temp
+	regenOutput, regenErr := regenCmd.CombinedOutput()
+	require.Error(t, regenErr, "speakeasy run should exit with error after detecting conflicts: %s", string(regenOutput))
+	require.Contains(t, string(regenOutput), "CUSTOM CODE CONFLICTS DETECTED", "Output should show conflict detection banner")
+	require.Contains(t, string(regenOutput), "Entering automatic conflict resolution mode", "Output should indicate automatic resolution mode")
 
 	// Check for conflict markers in the file
 	getUserByNameContent, err := os.ReadFile(getUserByNamePath)
@@ -171,6 +196,137 @@ func testCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakeasyBinary st
 	require.NoError(t, err, "Failed to read getuserbyname.go after final regeneration")
 	require.Contains(t, string(finalContent), "spec change", "Spec change should be present after accepting ours")
 	require.NotContains(t, string(finalContent), "// custom code", "Custom code should not be present after accepting ours")
+}
+
+// testCustomCodeSequentialPatchesAppliedWithRegenerationBetween tests that patches can be updated
+// by registering a first patch, regenerating, then registering a second patch on the same line
+func testCustomCodeSequentialPatchesAppliedWithRegenerationBetween(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+
+	// Step 1: Register first patch
+	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// first custom code")
+
+	// Step 2: Verify first patch applies correctly on regeneration
+	runRegeneration(t, speakeasyBinary, temp, true)
+	verifyCustomCodePresent(t, getUserByNamePath, "// first custom code")
+
+	// Step 2b: Commit the regenerated code with first patch applied
+	gitCommit(t, temp, "regenerated with first patch")
+
+	// Step 3: Modify the same line with different content (second patch)
+	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - updated")
+
+	// Step 4: Register second patch (should update existing patch)
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed for second patch: %s", string(customCodeOutput))
+
+	// Step 5: Verify patch file was updated (not appended)
+	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
+	patchContent, err := os.ReadFile(patchFile)
+	require.NoError(t, err, "Failed to read patch file")
+	require.Contains(t, string(patchContent), "second custom code - updated", "Patch should contain second custom code")
+	require.NotContains(t, string(patchContent), "first custom code", "Patch should not contain first custom code")
+
+	// Step 6: Verify second patch applies correctly on final regeneration
+	runRegeneration(t, speakeasyBinary, temp, true)
+
+	// Step 7: Verify final file contains only second patch content
+	finalContent, err := os.ReadFile(getUserByNamePath)
+	require.NoError(t, err, "Failed to read getuserbyname.go after final regeneration")
+	require.Contains(t, string(finalContent), "// second custom code - updated", "File should contain second custom code")
+	require.NotContains(t, string(finalContent), "// first custom code", "File should not contain first custom code")
+}
+
+// testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween tests that patches can be updated
+// by registering a first patch, then immediately registering a second patch on the same line without regenerating
+func testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+
+	// Step 1: Register first patch
+	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// first custom code")
+
+	// Step 2: Immediately modify the same line with different content (NO regeneration between)
+	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - updated")
+
+	// Step 3: Register second patch (should update existing patch)
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed for second patch: %s", string(customCodeOutput))
+
+	// Step 4: Verify patch file was updated (not appended)
+	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
+	patchContent, err := os.ReadFile(patchFile)
+	require.NoError(t, err, "Failed to read patch file")
+	require.Contains(t, string(patchContent), "second custom code - updated", "Patch should contain second custom code")
+	require.NotContains(t, string(patchContent), "first custom code", "Patch should not contain first custom code")
+
+	// Step 5: Verify second patch applies correctly on regeneration
+	runRegeneration(t, speakeasyBinary, temp, true)
+
+	// Step 6: Verify final file contains only second patch content
+	finalContent, err := os.ReadFile(getUserByNamePath)
+	require.NoError(t, err, "Failed to read getuserbyname.go after final regeneration")
+	require.Contains(t, string(finalContent), "// second custom code - updated", "File should contain second custom code")
+	require.NotContains(t, string(finalContent), "// first custom code", "File should not contain first custom code")
+}
+
+// testCustomCodeConflictDetectionDuringRegistration tests that conflicts are detected during customcode registration
+// when the old patch conflicts with new changes
+func testCustomCodeConflictDetectionDuringRegistration(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+
+	// Step 1: Modify the file
+	modifyLineInFile(t, getUserByNamePath, 10, "\t// first custom code")
+
+	// Step 2: Register first patch
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+
+	// Step 3: Run and commit
+	runRegeneration(t, speakeasyBinary, temp, true)
+	gitCommit(t, temp, "regenerated with first patch")
+
+	// Step 4: Modify the same line again
+	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - conflicting")
+
+	// Step 5: Modify the spec to change the same line (this will cause conflict during registration)
+	specPath := filepath.Join(temp, "customcodespec.yaml")
+	modifyLineInFile(t, specPath, 477, "        description: 'spec change for conflict'")
+
+	// Step 5b: Commit only the spec
+	gitAddCmd := exec.Command("git", "add", specPath)
+	gitAddCmd.Dir = temp
+	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
+	require.NoError(t, gitAddErr, "git add spec should succeed: %s", string(gitAddOutput))
+
+	gitCommitCmd := exec.Command("git", "commit", "-m", "update spec")
+	gitCommitCmd.Dir = temp
+	gitCommitOutput, gitCommitErr := gitCommitCmd.CombinedOutput()
+	require.NoError(t, gitCommitErr, "git commit spec should succeed: %s", string(gitCommitOutput))
+
+	// Step 6: Register custom code - should fail with conflict error
+	customCodeCmd = exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr = customCodeCmd.CombinedOutput()
+
+	// Step 7: Validate error - conflict happens when applying existing patch
+	require.Error(t, customCodeErr, "customcode command should fail due to conflicts: %s", string(customCodeOutput))
+	outputStr := string(customCodeOutput)
+	// The conflict occurs when applying the existing patch (not the new patch)
+	// because the spec changed and the old patch no longer applies cleanly
+	require.Contains(t, outputStr, "failed to apply existing patch", "Error message should mention failed to apply existing patch")
+	require.Contains(t, outputStr, "with conflicts", "Error message should mention conflicts")
 }
 
 // buildSpeakeasyBinaryOnce builds the speakeasy binary and returns the path to it
@@ -423,4 +579,145 @@ func verifyCustomCodePresent(t *testing.T, filePath, expectedContent string) {
 	content, err := os.ReadFile(filePath)
 	require.NoError(t, err, "Failed to read file: %s", filePath)
 	require.Contains(t, string(content), expectedContent, "Custom code should be present in file")
+}
+
+// testCustomCodeNewFilePreservation tests that custom code registration preserves entirely new files
+func testCustomCodeNewFilePreservation(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	// Create a new file with helper functions
+	helperFilePath := filepath.Join(temp, "utils", "helper.go")
+	helperFileContent := `package utils
+
+import "fmt"
+
+// FormatUserID formats a user ID with a prefix
+func FormatUserID(id int64) string {
+	return fmt.Sprintf("user_%d", id)
+}
+
+// ValidateUserID validates that a user ID is positive
+func ValidateUserID(id int64) bool {
+	return id > 0
+}
+`
+
+	// Create the utils directory
+	err := os.MkdirAll(filepath.Join(temp, "utils"), 0o755)
+	require.NoError(t, err, "Failed to create utils directory")
+
+	// Write the helper file
+	err = os.WriteFile(helperFilePath, []byte(helperFileContent), 0o644)
+	require.NoError(t, err, "Failed to write helper file")
+
+	// Stage the new file so git diff HEAD can capture it
+	gitAddCmd := exec.Command("git", "add", helperFilePath)
+	gitAddCmd.Dir = temp
+	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
+	require.NoError(t, gitAddErr, "git add should succeed: %s", string(gitAddOutput))
+
+	// Register custom code
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+
+	// Verify patch file was created
+	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
+	_, err = os.Stat(patchFile)
+	require.NoError(t, err, "patch file should exist at %s", patchFile)
+
+	// Verify the file exists after registration (before regeneration)
+	_, err = os.Stat(helperFilePath)
+	require.NoError(t, err, "Helper file should exist after registration")
+
+	// Run speakeasy run to regenerate the SDK
+	// This should apply the patch and preserve the new file
+	runRegeneration(t, speakeasyBinary, temp, true)
+
+	// Verify the new file still exists after regeneration
+	_, err = os.Stat(helperFilePath)
+	require.NoError(t, err, "Helper file should exist after regeneration")
+
+	// Verify the file contents are preserved exactly
+	verifyCustomCodePresent(t, helperFilePath, "FormatUserID")
+	verifyCustomCodePresent(t, helperFilePath, "ValidateUserID")
+	verifyCustomCodePresent(t, helperFilePath, "package utils")
+
+	// Read the entire file and verify exact content match
+	actualContent, err := os.ReadFile(helperFilePath)
+	require.NoError(t, err, "Failed to read helper file after regeneration")
+	require.Equal(t, helperFileContent, string(actualContent), "Helper file content should be preserved exactly")
+}
+
+// testCustomCodeNewFileDeletion tests that deleting a custom file is properly registered and persisted
+func testCustomCodeNewFileDeletion(t *testing.T, speakeasyBinary string) {
+	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	// Create a new file with helper functions
+	helperFilePath := filepath.Join(temp, "utils", "helper.go")
+	helperFileContent := `package utils
+
+import "fmt"
+
+// FormatUserID formats a user ID with a prefix
+func FormatUserID(id int64) string {
+	return fmt.Sprintf("user_%d", id)
+}
+`
+
+	// Create the utils directory
+	err := os.MkdirAll(filepath.Join(temp, "utils"), 0o755)
+	require.NoError(t, err, "Failed to create utils directory")
+
+	// Write the helper file
+	err = os.WriteFile(helperFilePath, []byte(helperFileContent), 0o644)
+	require.NoError(t, err, "Failed to write helper file")
+
+	// Stage the new file so git diff HEAD can capture it
+	gitAddCmd := exec.Command("git", "add", helperFilePath)
+	gitAddCmd.Dir = temp
+	_, err = gitAddCmd.CombinedOutput()
+	require.NoError(t, err, "git add should succeed")
+
+	// Register custom code (registers the new file)
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+
+	// Verify patch file was created
+	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
+	_, err = os.Stat(patchFile)
+	require.NoError(t, err, "patch file should exist after registering new file")
+
+	// Regenerate and verify the file is preserved
+	runRegeneration(t, speakeasyBinary, temp, true)
+	_, err = os.Stat(helperFilePath)
+	require.NoError(t, err, "Helper file should exist after first regeneration")
+
+	// Commit the regeneration so the file becomes part of HEAD
+	gitCommitCmd := exec.Command("git", "commit", "-am", "regeneration with custom file")
+	gitCommitCmd.Dir = temp
+	_, err = gitCommitCmd.CombinedOutput()
+	require.NoError(t, err, "git commit should succeed after regeneration")
+
+	// Now delete the file
+	err = os.Remove(helperFilePath)
+	require.NoError(t, err, "Failed to delete helper file")
+
+	// Register the deletion
+	customCodeCmd = exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr = customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed after deletion: %s", string(customCodeOutput))
+
+	// Verify patch file was removed (no custom code remaining)
+	_, err = os.Stat(patchFile)
+	require.True(t, os.IsNotExist(err), "patch file should not exist after deleting the only custom file")
+
+	// Regenerate and verify the file remains deleted
+	runRegeneration(t, speakeasyBinary, temp, true)
+	_, err = os.Stat(helperFilePath)
+	require.True(t, os.IsNotExist(err), "Helper file should not exist after regeneration with deletion registered")
 }
