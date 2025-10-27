@@ -309,6 +309,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		desiredVersion = latest.String()
 
 		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+	} else if desiredVersion == "pinned" {
+		return nil
 	} else {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
 	}
