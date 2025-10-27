@@ -80,6 +80,15 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	if err != nil {
 		return err
 	}
+
+	// Step 4.5: Reset working directory to HEAD after capturing patches
+	// This removes all user changes (staged and unstaged) so they don't get included in clean generation commit
+	logger.Info("Resetting working directory to HEAD before clean generation")
+	resetCmd := exec.Command("git", "reset", "--hard", "HEAD")
+	if output, err := resetCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to reset working directory: %w\nOutput: %s", err, string(output))
+	}
+
 	for targetName, _ := range wf.Targets {
 		// Step 5: Generate clean SDK (without custom code) on main branch
 		if err := generateCleanSDK(ctx, targetName, runGenerate); err != nil {
