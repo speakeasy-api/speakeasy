@@ -155,7 +155,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				if err == nil {
 					return nil
 				} else if errors.Is(err, ErrPinned) {
-					logger.PrintfStyled(styles.DimmedItalic, "Using pinned version (skipping blue/green speakeasy CLI upgrade)\n")
+					logger.Debug("Using pinned version (skipping blue/green speakeasy CLI upgrade)")
 				} else if errors.Is(err, ErrInstallFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
 					logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
 					logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
