@@ -89,10 +89,9 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		return fmt.Errorf("failed to reset working directory: %w\nOutput: %s", err, string(output))
 	}
 
-	for targetName, _ := range wf.Targets {
-		// Step 5: Generate clean SDK (without custom code) on main branch
-		if err := generateCleanSDK(ctx, targetName, runGenerate); err != nil {
-			return fmt.Errorf("failed to generate clean SDK: %w", err)
+	for _, target := range wf.Targets {
+		if err := RevertCustomCodePatch(ctx, target); err != nil {
+			return fmt.Errorf("failed to revert custom code patch: %w", err)
 		}
 	}
 
@@ -116,8 +115,7 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	return nil
 }
 
-
-func getPatchesPerTarget(wf *workflow.Workflow) (map[string]string, error){
+func getPatchesPerTarget(wf *workflow.Workflow) (map[string]string, error) {
 	targetPatches := make(map[string]string)
 	for targetName, target := range wf.Targets {
 		// Step 4: Capture patchset with git diff for custom code changes
@@ -275,7 +273,7 @@ func ResolveCustomCodeConflicts(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	
+
 	hadConflicts := false
 
 	for targetName, target := range wf.Targets {
@@ -400,7 +398,7 @@ func ensureAllConflictsResolvedAndStaged() error {
 
 	diffContent := string(diffOutput)
 	conflictMarkers := []string{"<<<<<<<", "=======", ">>>>>>>"}
-	
+
 	for _, marker := range conflictMarkers {
 		if strings.Contains(diffContent, marker) {
 			return fmt.Errorf("unresolved conflict markers found in staged changes. Please resolve all conflicts (remove %s markers) before continuing", marker)
@@ -431,6 +429,13 @@ func completeConflictResolution(ctx context.Context, wf *workflow.Workflow) erro
 	if err != nil {
 		return err
 	}
+
+	for _, target := range wf.Targets {
+		if err := RevertCustomCodePatch(ctx, target); err != nil {
+			return fmt.Errorf("failed to revert custom code patch: %w", err)
+		}
+	}
+
 	for targetName, target := range wf.Targets {
 		if targetPatches[targetName] == "" {
 			// Check if there's actually a patch to clean up
@@ -825,6 +830,34 @@ func ApplyCustomCodePatch(ctx context.Context, target workflow.Target) error {
 	cmd := exec.Command("git", args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to apply patch: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func RevertCustomCodePatch(ctx context.Context, target workflow.Target) error {
+	outDir := getTargetOutput(target)
+
+	// Check if patch file exists
+	if !patchFileExists(outDir) {
+		return nil // No patch to revert
+	}
+
+	// Read patch content to verify it's not empty
+	patchContent, err := readPatchFile(outDir)
+	if err != nil {
+		return fmt.Errorf("failed to read patch file: %w", err)
+	}
+	if patchContent == "" {
+		return nil // Empty patch, nothing to revert
+	}
+
+	// Revert the patch directly from file with reverse flag
+	patchFile := getPatchFilePath(outDir)
+	args := []string{"apply", "--reverse", "--index", patchFile}
+	cmd := exec.Command("git", args...)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to revert patch: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
