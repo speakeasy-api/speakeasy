@@ -22,6 +22,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/registercustomcode"
 	"github.com/speakeasy-api/speakeasy/internal/sdkchangelog"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -229,6 +230,27 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		},
 	)
 	if err != nil {
+		// Check if this is a custom code conflict
+		if strings.Contains(err.Error(), "CUSTOM_CODE_CONFLICT_DETECTED:") {
+			// Print banner
+			fmt.Println("\n" + strings.Repeat("=", 70))
+			fmt.Println("CUSTOM CODE CONFLICTS DETECTED")
+			fmt.Println(strings.Repeat("=", 70))
+			fmt.Println("\nThe SDK was generated successfully, but your custom code patches")
+			fmt.Println("conflict with the new generation and cannot be applied automatically.")
+			fmt.Println("\nEntering automatic conflict resolution mode...")
+			fmt.Println(strings.Repeat("=", 70) + "\n")
+
+			// Automatically trigger conflict resolution for all targets
+			if resolveErr := registercustomcode.ResolveCustomCodeConflicts(ctx); resolveErr != nil {
+				return sourceRes, nil, fmt.Errorf("automatic conflict resolution setup failed: %w", resolveErr)
+			}
+
+			// Exit with code 2 to indicate manual action needed
+			os.Exit(2)
+		}
+
+		// Real generation errors
 		return sourceRes, nil, err
 	}
 	w.generationAccess = generationAccess
