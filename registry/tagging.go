@@ -31,6 +31,10 @@ func AddTags(ctx context.Context, namespaceName, revisionDigest string, tags []s
 }
 
 func isMismatchedWorkspaceError(err error) bool {
+	if err == nil {
+		return false
+	}
+
 	message := err.Error()
 
 	if strings.Contains(message, "resolving for reference") {
