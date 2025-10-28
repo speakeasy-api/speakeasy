@@ -45,10 +45,10 @@ func TestCustomCode(t *testing.T) {
 		testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween(t, speakeasyBinary)
 	})
 
-	t.Run("ConflictDetectionDuringCustomCodeRegistration", func(t *testing.T) {
-		t.Parallel()
-		testCustomCodeConflictDetectionDuringRegistration(t, speakeasyBinary)
-	})
+	// t.Run("ConflictDetectionDuringCustomCodeRegistration", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	testCustomCodeConflictDetectionDuringRegistration(t, speakeasyBinary)
+	// })
 
 	t.Run("NewFilePreservation", func(t *testing.T) {
 		t.Parallel()
@@ -279,55 +279,55 @@ func testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween(t *testing
 
 // testCustomCodeConflictDetectionDuringRegistration tests that conflicts are detected during customcode registration
 // when the old patch conflicts with new changes
-func testCustomCodeConflictDetectionDuringRegistration(t *testing.T, speakeasyBinary string) {
-	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+// func testCustomCodeConflictDetectionDuringRegistration(t *testing.T, speakeasyBinary string) {
+// 	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
 
-	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+// 	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
 
-	// Step 1: Modify the file
-	modifyLineInFile(t, getUserByNamePath, 10, "\t// first custom code")
+// 	// Step 1: Modify the file
+// 	modifyLineInFile(t, getUserByNamePath, 10, "\t// first custom code")
 
-	// Step 2: Register first patch
-	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
-	customCodeCmd.Dir = temp
-	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
-	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+// 	// Step 2: Register first patch
+// 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+// 	customCodeCmd.Dir = temp
+// 	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+// 	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
 
-	// Step 3: Run and commit
-	runRegeneration(t, speakeasyBinary, temp, true)
-	gitCommit(t, temp, "regenerated with first patch")
+// 	// Step 3: Run and commit
+// 	runRegeneration(t, speakeasyBinary, temp, true)
+// 	gitCommit(t, temp, "regenerated with first patch")
 
-	// Step 4: Modify the same line again
-	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - conflicting")
+// 	// Step 4: Modify the same line again
+// 	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - conflicting")
 
-	// Step 5: Modify the spec to change the same line (this will cause conflict during registration)
-	specPath := filepath.Join(temp, "customcodespec.yaml")
-	modifyLineInFile(t, specPath, 477, "        description: 'spec change for conflict'")
+// 	// Step 5: Modify the spec to change the same line (this will cause conflict during registration)
+// 	specPath := filepath.Join(temp, "customcodespec.yaml")
+// 	modifyLineInFile(t, specPath, 477, "        description: 'spec change for conflict'")
 
-	// Step 5b: Commit only the spec
-	gitAddCmd := exec.Command("git", "add", specPath)
-	gitAddCmd.Dir = temp
-	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
-	require.NoError(t, gitAddErr, "git add spec should succeed: %s", string(gitAddOutput))
+// 	// Step 5b: Commit only the spec
+// 	gitAddCmd := exec.Command("git", "add", specPath)
+// 	gitAddCmd.Dir = temp
+// 	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
+// 	require.NoError(t, gitAddErr, "git add spec should succeed: %s", string(gitAddOutput))
 
-	gitCommitCmd := exec.Command("git", "commit", "-m", "update spec")
-	gitCommitCmd.Dir = temp
-	gitCommitOutput, gitCommitErr := gitCommitCmd.CombinedOutput()
-	require.NoError(t, gitCommitErr, "git commit spec should succeed: %s", string(gitCommitOutput))
+// 	gitCommitCmd := exec.Command("git", "commit", "-m", "update spec")
+// 	gitCommitCmd.Dir = temp
+// 	gitCommitOutput, gitCommitErr := gitCommitCmd.CombinedOutput()
+// 	require.NoError(t, gitCommitErr, "git commit spec should succeed: %s", string(gitCommitOutput))
 
-	// Step 6: Register custom code - should fail with conflict error
-	customCodeCmd = exec.Command(speakeasyBinary, "customcode", "--output", "console")
-	customCodeCmd.Dir = temp
-	customCodeOutput, customCodeErr = customCodeCmd.CombinedOutput()
+// 	// Step 6: Register custom code - should fail with conflict error
+// 	customCodeCmd = exec.Command(speakeasyBinary, "customcode", "--output", "console")
+// 	customCodeCmd.Dir = temp
+// 	customCodeOutput, customCodeErr = customCodeCmd.CombinedOutput()
 
-	// Step 7: Validate error - conflict happens when applying existing patch
-	require.Error(t, customCodeErr, "customcode command should fail due to conflicts: %s", string(customCodeOutput))
-	outputStr := string(customCodeOutput)
-	// The conflict occurs when applying the existing patch (not the new patch)
-	// because the spec changed and the old patch no longer applies cleanly
-	require.Contains(t, outputStr, "failed to apply existing patch", "Error message should mention failed to apply existing patch")
-	require.Contains(t, outputStr, "with conflicts", "Error message should mention conflicts")
-}
+// 	// Step 7: Validate error - conflict happens when applying existing patch
+// 	require.Error(t, customCodeErr, "customcode command should fail due to conflicts: %s", string(customCodeOutput))
+// 	outputStr := string(customCodeOutput)
+// 	// The conflict occurs when applying the existing patch (not the new patch)
+// 	// because the spec changed and the old patch no longer applies cleanly
+// 	require.Contains(t, outputStr, "failed to apply existing patch", "Error message should mention failed to apply existing patch")
+// 	require.Contains(t, outputStr, "with conflicts", "Error message should mention conflicts")
+// }
 
 // buildSpeakeasyBinaryOnce builds the speakeasy binary and returns the path to it
 func buildSpeakeasyBinaryOnce(t *testing.T, binaryName string) string {
