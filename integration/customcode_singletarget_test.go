@@ -18,7 +18,7 @@ func TestCustomCode(t *testing.T) {
 	t.Parallel()
 
 	// Build the speakeasy binary once for all subtests
-	speakeasyBinary := buildSpeakeasyBinaryOnce(t)
+	speakeasyBinary := buildSpeakeasyBinaryOnce(t, "speakeasy-customcode-test-binary")
 
 	t.Run("BasicWorkflow", func(t *testing.T) {
 		t.Parallel()
@@ -330,12 +330,12 @@ func testCustomCodeConflictDetectionDuringRegistration(t *testing.T, speakeasyBi
 }
 
 // buildSpeakeasyBinaryOnce builds the speakeasy binary and returns the path to it
-func buildSpeakeasyBinaryOnce(t *testing.T) string {
+func buildSpeakeasyBinaryOnce(t *testing.T, binaryName string) string {
 	t.Helper()
 
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
-	binaryPath := filepath.Join(baseFolder, "speakeasy-customcode-test-binary")
+	binaryPath := filepath.Join(baseFolder, binaryName)
 
 	// Build the binary
 	cmd := exec.Command("go", "build", "-o", binaryPath, "./main.go")
