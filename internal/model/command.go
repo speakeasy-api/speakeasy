@@ -36,6 +36,7 @@ import (
 )
 
 const ErrInstallFailed = errors.Error("failed to install Speakeasy version")
+const ErrPinned = errors.Error("speakeasyVersion: pinned, skipping blue/green speakeasy CLI upgrade")
 
 type Command interface {
 	Init() (*cobra.Command, error) // TODO: make private when rootCmd is refactored?
@@ -150,14 +151,17 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			pinned, _ := cmd.Flags().GetBool("pinned")
 			if !pinned && !env.IsLocalDev() {
 				err := runWithVersionFromWorkflowFile(cmd)
+				logger := log.From(cmd.Context())
 				if err == nil {
 					return nil
-				} else if !errors.Is(err, ErrInstallFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+				} else if errors.Is(err, ErrPinned) {
+					logger.Debug("Using pinned version (skipping blue/green speakeasy CLI upgrade)")
+				} else if errors.Is(err, ErrInstallFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+					logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
+					logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
+				} else {
 					return err
 				}
-				logger := log.From(cmd.Context())
-				logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
-				logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
 			}
 		}
 
@@ -309,6 +313,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		desiredVersion = latest.String()
 
 		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+	} else if desiredVersion == "pinned" {
+		return ErrPinned
 	} else {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
 	}
