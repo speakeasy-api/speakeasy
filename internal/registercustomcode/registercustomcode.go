@@ -276,6 +276,40 @@ func ResolveCustomCodeConflicts(ctx context.Context) error {
 
 	hadConflicts := false
 
+	// First pass: identify targets with conflicts and unstage those without conflicts
+	// This is necessary because git add . stages everything, including targets that weren't regenerated
+	for targetName, target := range wf.Targets {
+		outDir := getTargetOutput(target)
+
+		// Check if this target has conflicted files
+		checkConflictCmd := exec.Command("git", "diff", "--name-only", "--diff-filter=U", "--", outDir)
+		conflictCheckOutput, err := checkConflictCmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to check for conflicts in target %s: %w", targetName, err)
+		}
+
+		hasConflicts := strings.TrimSpace(string(conflictCheckOutput)) != ""
+
+		if !hasConflicts {
+			// Unstage and restore this target's files to prevent them from being included in conflict resolution
+			// This is necessary because the target was never regenerated in this run
+			logger.Info(fmt.Sprintf("Target %s has no conflicts, unstaging and restoring its files to HEAD", targetName))
+
+			// First unstage
+			unstageCmd := exec.Command("git", "reset", "--", outDir)
+			if output, err := unstageCmd.CombinedOutput(); err != nil {
+				logger.Warn(fmt.Sprintf("Failed to unstage target %s: %v\nOutput: %s", targetName, err, string(output)))
+			}
+
+			// Then restore to HEAD state (removes modifications from working directory)
+			checkoutCmd := exec.Command("git", "checkout", "HEAD", "--", outDir)
+			if output, err := checkoutCmd.CombinedOutput(); err != nil {
+				logger.Warn(fmt.Sprintf("Failed to restore target %s to HEAD: %v\nOutput: %s", targetName, err, string(output)))
+			}
+		}
+	}
+
+	// Second pass: process targets with conflicts
 	for targetName, target := range wf.Targets {
 		outDir := getTargetOutput(target)
 
@@ -286,6 +320,19 @@ func ResolveCustomCodeConflicts(ctx context.Context) error {
 		}
 		if patchStr == "" {
 			logger.Info(fmt.Sprintf("No custom code patch for target %s, skipping", targetName))
+			continue
+		}
+
+		// Check if this target actually has conflicted files from the current generation
+		// Only targets that were regenerated and have conflicts should be processed
+		checkConflictCmd := exec.Command("git", "diff", "--name-only", "--diff-filter=U", "--", outDir)
+		conflictCheckOutput, err := checkConflictCmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to check for conflicts in target %s: %w", targetName, err)
+		}
+
+		if strings.TrimSpace(string(conflictCheckOutput)) == "" {
+			logger.Info(fmt.Sprintf("Target %s has no conflicts (not regenerated in this run), skipping conflict resolution", targetName))
 			continue
 		}
 
@@ -425,19 +472,48 @@ func completeConflictResolution(ctx context.Context, wf *workflow.Workflow) erro
 
 	logger.Info("Completing conflict resolution registration")
 
+	// First, identify which targets were part of the conflict resolution
+	targetsInResolution := make(map[string]bool)
+	for targetName, target := range wf.Targets {
+		outDir := getTargetOutput(target)
+		checkCommitCmd := exec.Command("git", "log", "-1", "--grep=clean generation (conflict resolution)", "--format=%H", "--", outDir)
+		commitOutput, err := checkCommitCmd.Output()
+		if err == nil && strings.TrimSpace(string(commitOutput)) != "" {
+			targetsInResolution[targetName] = true
+			logger.Info(fmt.Sprintf("Target %s was part of conflict resolution", targetName))
+		}
+	}
+
 	targetPatches, err := getPatchesPerTarget(wf)
 	if err != nil {
 		return err
 	}
 
-	for _, target := range wf.Targets {
+	// Only revert patches for targets that were part of conflict resolution
+	for targetName, target := range wf.Targets {
+		if !targetsInResolution[targetName] {
+			logger.Info(fmt.Sprintf("Skipping patch revert for target %s (not part of conflict resolution)", targetName))
+			continue
+		}
+
 		if err := RevertCustomCodePatch(ctx, target); err != nil {
-			return fmt.Errorf("failed to revert custom code patch: %w", err)
+			// If reverting fails, it might be because the patch was already removed (user accepted ours)
+			// Log but continue - we'll handle this in the next phase
+			logger.Warn(fmt.Sprintf("Could not revert patch for target %s (may already be reverted): %v", targetName, err))
 		}
 	}
 
 	for targetName, target := range wf.Targets {
 		if targetPatches[targetName] == "" {
+			// Check if this target was part of the conflict resolution using the map we built earlier
+			if !targetsInResolution[targetName] {
+				// This target was not part of conflict resolution (wasn't regenerated)
+				// Keep its existing patch unchanged
+				logger.Info(fmt.Sprintf("Target %s was not part of conflict resolution, preserving existing patch", targetName))
+				continue
+			}
+
+			// Target was part of conflict resolution but has no new patches
 			// Check if there's actually a patch to clean up
 			if patchFileExists(getTargetOutput(target)) {
 				fmt.Printf("No changes detected for target %s after conflict resolution, cleaning up patch registration\n", targetName)
