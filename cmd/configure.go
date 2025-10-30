@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -493,10 +494,10 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	}
 
 	secrets := make(map[string]string)
-	var publishPaths, generationWorkflowFilePaths []string
+	workflowPaths := make(map[string]targetWorkflowPaths)
 
 	for _, name := range chosenTargets {
-		generationWorkflow, generationWorkflowFilePath, newPaths, err := writePublishingFile(workflowFile, workflowFile.Targets[name], name, rootDir, actionWorkingDir)
+		generationWorkflow, targetWorkflowPaths, err := writePublishingFile(workflowFile, workflowFile.Targets[name], name, rootDir, actionWorkingDir)
 		if err != nil {
 			return err
 		}
@@ -504,10 +505,7 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 			secrets[key] = val
 		}
 
-		if len(newPaths) > 0 {
-			publishPaths = append(publishPaths, newPaths...)
-		}
-		generationWorkflowFilePaths = append(generationWorkflowFilePaths, generationWorkflowFilePath)
+		workflowPaths[name] = targetWorkflowPaths
 	}
 
 	if err := workflow.Save(filepath.Join(rootDir, actionWorkingDir), workflowFile); err != nil {
@@ -532,6 +530,12 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	status := []string{
 		fmt.Sprintf("Speakeasy workflow written to - %s", workflowFilePath),
 	}
+
+	var publishPaths, generationWorkflowFilePaths []string
+	for _, wfp := range workflowPaths {
+		publishPaths = append(publishPaths, wfp.publishWorkflowPaths...)
+		generationWorkflowFilePaths = append(generationWorkflowFilePaths, wfp.generationWorkflowPath)
+	}
 	if len(publishPaths) > 0 {
 		status = append(status, "GitHub action (generate) written to:")
 		for _, path := range generationWorkflowFilePaths {
@@ -548,13 +552,45 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 		}
 	}
 
-	var agenda []string
+	agenda := []string{
+		fmt.Sprintf("• In your repo navigate to %s and set up the following repository secrets:", secretPath),
+	}
+
 	for key := range secrets {
 		if key != config.GithubAccessToken {
 			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
 		}
 	}
-	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to kick of your first publish.", actionPath))
+
+	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to kick off your first publish.", actionPath))
+
+	// Add instructions for NPM Trusted Publishing (typescript/mcp-typescript)
+	for name, wfp := range workflowPaths {
+		target := workflowFile.Targets[name]
+		if target.Publishing.NPM != nil {
+			var publishPath string
+			switch len(wfp.publishWorkflowPaths) {
+			case 0:
+				// No publish path means generation and publishing are combined into a single workflow
+				publishPath = wfp.generationWorkflowPath
+			case 1:
+				publishPath = wfp.publishWorkflowPaths[0]
+			default:
+				// For typescript/mcp-typescript, if the publish and generation workflow files
+				// are distinct (pr mode), then we only expect a single publish path.
+				return errors.Wrapf(err, "multiple publish workflow paths found for target %s", name)
+			}
+
+			config := NPMTrustedPublishingConfig{
+				target:      target,
+				workflowDir: filepath.Join(rootDir, actionWorkingDir),
+				actionPath:  actionPath,
+				publishPath: publishPath,
+				remoteURL:   remoteURL,
+			}
+			agenda = append(agenda, getNPMTrustedPublishingInstructions(ctx, config)...)
+		}
+	}
 
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
 	for _, statusMsg := range status {
@@ -562,17 +598,64 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	}
 	logger.Println(styles.Info.Render("\n"))
 
-	if len(agenda) != 0 {
-		agenda = append([]string{
-			fmt.Sprintf("• In your repo navigate to %s and setup the following repository secrets:", secretPath),
-		}, agenda...)
-
-		msg := styles.RenderInstructionalMessage("For your publishing setup to be complete perform the following steps.",
-			agenda...)
-		logger.Println(msg)
-	}
+	msg := styles.RenderInstructionalMessage("For your publishing setup to be complete perform the following steps.",
+		agenda...)
+	logger.Println(msg)
 
 	return nil
+}
+
+type NPMTrustedPublishingConfig = struct {
+	target      workflow.Target
+	workflowDir string
+	remoteURL   string
+	actionPath  string
+	publishPath string
+}
+
+func getNPMTrustedPublishingInstructions(ctx context.Context, npmConfig NPMTrustedPublishingConfig) []string {
+	packageName := "<packageName>"
+	outDir := ""
+	if npmConfig.target.Output != nil {
+		outDir = *npmConfig.target.Output
+	}
+	cfg, err := config.Load(filepath.Join(npmConfig.workflowDir, outDir))
+	if err == nil {
+		if langCfg, ok := cfg.Config.Languages[npmConfig.target.Target]; ok {
+			if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
+				packageName = pkgName
+			}
+		}
+	}
+
+	if npmConfig.remoteURL != "" {
+	}
+
+	repoOwner := "<user>"
+	repoName := "<repository>"
+	if npmConfig.remoteURL != "" {
+		// Expected format: "https://github.com/<user>/<repository>"
+		re := regexp.MustCompile(`^https://github\.com/([^/]+)/([^/]+)/?$`)
+		matches := re.FindStringSubmatch(npmConfig.remoteURL)
+		if len(matches) == 3 {
+			repoOwner = matches[1]
+			repoName = matches[2]
+		}
+	}
+
+	agenda := []string{fmt.Sprintf("• Access your newly published package's settings at https://www.npmjs.com/package/%s/access.", packageName)}
+	configLines := []string{
+		fmt.Sprintf("\t\t- Organization or user: %s", repoOwner),
+		fmt.Sprintf("\t\t- Repository: %s", repoName),
+		fmt.Sprintf("\t\t- Workflow filename: %s", npmConfig.publishPath),
+		"\t\t- Environment name: <Leave Blank>",
+	}
+	agenda = append(agenda, fmt.Sprintf("\t◦ Add 'GitHub Actions' as a 'Trusted Publisher' with the following configuration:\n%s", strings.Join(configLines, "\n")))
+	agenda = append(agenda, fmt.Sprintf("\t◦ Optionally, disallow tokens by selecting the most restrictive option in the 'Publishing access' section (recommended)"))
+	agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish a new version of your package.", npmConfig.actionPath))
+	agenda = append(agenda, fmt.Sprintf("• Your package's latest version should now include a 'Provenance' at https://www.npmjs.com/package/%s#provenance", packageName))
+
+	return agenda
 }
 
 func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
@@ -898,7 +981,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 	}
 
 	if len(secrets) > 2 || !autoConfigureRepoSuccess {
-		agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and setup the following repository secrets:", secretPath))
+		agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and set up the following repository secrets:", secretPath))
 	}
 
 	for key := range secrets {
@@ -955,35 +1038,42 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir, workflowFi
 	return generationWorkflow, generationWorkflowFilePath, nil
 }
 
-func writePublishingFile(wf *workflow.Workflow, target workflow.Target, targetName, currentWorkingDir, workflowFileDir string) (*config.GenerateWorkflow, string, []string, error) {
-	generationWorkflowFilePath := filepath.Join(currentWorkingDir, ".github/workflows/sdk_generation.yaml")
+type targetWorkflowPaths struct {
+	generationWorkflowPath string
+	publishWorkflowPaths   []string
+}
+
+func writePublishingFile(wf *workflow.Workflow, target workflow.Target, targetName, currentWorkingDir, workflowFileDir string) (*config.GenerateWorkflow, targetWorkflowPaths, error) {
+	paths := targetWorkflowPaths{}
+	paths.generationWorkflowPath = filepath.Join(currentWorkingDir, ".github/workflows/sdk_generation.yaml")
 	if len(wf.Targets) > 1 {
 		sanitizedName := strings.ReplaceAll(strings.ToLower(targetName), "-", "_")
-		generationWorkflowFilePath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
+		paths.generationWorkflowPath = filepath.Join(currentWorkingDir, fmt.Sprintf(".github/workflows/sdk_generation_%s.yaml", sanitizedName))
 	}
 
 	if _, err := os.Stat(filepath.Join(currentWorkingDir, ".github/workflows")); os.IsNotExist(err) {
 		err = os.MkdirAll(filepath.Join(currentWorkingDir, ".github/workflows"), 0o755)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, paths, err
 		}
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
-	if err := prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
-		return nil, "", nil, fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", generationWorkflowFilePath)
+	if err := prompts.ReadGenerationFile(generationWorkflow, paths.generationWorkflowPath); err != nil {
+		return nil, paths, fmt.Errorf("you cannot run configure publishing when a github workflow file %s does not exist, try speakeasy configure github", paths.generationWorkflowPath)
 	}
 
 	publishPaths, err := prompts.WritePublishing(wf, generationWorkflow, targetName, currentWorkingDir, workflowFileDir, target)
 	if err != nil {
-		return nil, "", nil, errors.Wrapf(err, "failed to write publishing configs")
+		return nil, paths, errors.Wrapf(err, "failed to write publishing configs")
 	}
 
-	if err = prompts.WriteGenerationFile(generationWorkflow, generationWorkflowFilePath); err != nil {
-		return nil, "", nil, errors.Wrapf(err, "failed to write github workflow file")
+	paths.publishWorkflowPaths = publishPaths
+	if err = prompts.WriteGenerationFile(generationWorkflow, paths.generationWorkflowPath); err != nil {
+		return nil, paths, errors.Wrapf(err, "failed to write github workflow file")
 	}
 
-	return generationWorkflow, generationWorkflowFilePath, publishPaths, nil
+	return generationWorkflow, paths, nil
 }
 
 func handleLegacySDKTarget(workingDir string, workflowFile *workflow.Workflow) ([]string, []huh.Option[string]) {

@@ -440,30 +440,24 @@ func WriteTestingFiles(ctx context.Context, wf *workflow.Workflow, currentWorkin
 }
 
 // WritePublishing writes a github action file for a given target for publishing to a package manager.
-// If filenameAddendum is provided, it will be appended to the filename (i.e. sdk_publish_lending.yaml).
+// If multiple targets are defined in the workflow, the filename will be suffixed with the target name.
 // Returns the paths to the files written.
 func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow, targetName, currentWorkingDir, workflowFileDir string, target workflow.Target) ([]string, error) {
-	secrets := make(map[string]string)
-	secrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
-	secrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
+	genSecrets := genWorkflow.Jobs.Generate.Secrets
+	genSecrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
+	genSecrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
 
 	var terraformOutDir *string
 
 	if target.Publishing != nil {
 		for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
-			secrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
+			genSecrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 		}
 
 		if target.Target == "terraform" {
 			terraformOutDir = target.Output
 		}
 	}
-
-	currentSecrets := genWorkflow.Jobs.Generate.Secrets
-	for secret, value := range secrets {
-		currentSecrets[secret] = value
-	}
-	genWorkflow.Jobs.Generate.Secrets = currentSecrets
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if target.Target == "terraform" {
@@ -495,7 +489,7 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 			publishingFile = defaultPublishingFile()
 		}
 
-		// backfill id-token write permissions
+		// backfill `id-token: write` permission (OIDC)
 		if publishingFile.Permissions.IDToken != config.GithubWritePermission {
 			publishingFile.Permissions.IDToken = config.GithubWritePermission
 		}
@@ -521,8 +515,9 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 			publishingFile.Jobs.Publish.With["working_directory"] = workflowFileDir
 		}
 
-		for name, value := range secrets {
-			publishingFile.Jobs.Publish.Secrets[name] = value
+		pubSecrets := publishingFile.Jobs.Publish.Secrets
+		for name, value := range genSecrets {
+			pubSecrets[name] = value
 		}
 
 		// Write a github publishing file.
