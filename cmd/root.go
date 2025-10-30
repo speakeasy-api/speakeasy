@@ -163,8 +163,8 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string, cm
 
 	wf, _, _ := utils.GetWorkflow()
 
-	// If a workflow file is present and specifies that the speakeasyVersion is "latest", don't display update notifications as it will be automatically updated when the command is run.
-	if wf != nil && wf.SpeakeasyVersion.String() == "latest" {
+	// If we are running the run command and a workflow file is present and specifies that the speakeasyVersion is "latest", don't display update notifications as it will be automatically updated when the command is run.
+	if cmd.Name() == "run" && wf != nil && wf.SpeakeasyVersion.String() == "latest" {
 		return
 	}
 
