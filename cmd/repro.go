@@ -579,6 +579,12 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 	currentOrgSlug := core.GetOrgSlugFromContext(ctx)
 	currentWorkspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
 
+	// Allow admin users (speakeasy-self workspace) to access any workspace for repro purposes
+	if currentWorkspaceSlug == "speakeasy-self" {
+		logger.Infof("Using admin workspace credentials to access %s/%s", orgSlug, workspaceSlug)
+		return ctx, nil
+	}
+
 	if currentOrgSlug == orgSlug && currentWorkspaceSlug == workspaceSlug {
 		logger.Infof("Already authenticated to workspace %s/%s", orgSlug, workspaceSlug)
 		return ctx, nil
@@ -623,10 +629,15 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 		return ctx, fmt.Errorf("authentication failed: %w", err)
 	}
 
+	// Check if we authenticated as speakeasy-self
+	newWorkspaceSlug := core.GetWorkspaceSlugFromContext(authCtx)
+	if newWorkspaceSlug == "speakeasy-self" {
+		logger.Infof("Using admin workspace credentials to access %s/%s", orgSlug, workspaceSlug)
+		return authCtx, nil
+	}
+
 	// Verify we're now in the correct workspace
 	newOrgSlug := core.GetOrgSlugFromContext(authCtx)
-	newWorkspaceSlug := core.GetWorkspaceSlugFromContext(authCtx)
-
 	if newOrgSlug != orgSlug || newWorkspaceSlug != workspaceSlug {
 		return authCtx, fmt.Errorf("authenticated to %s/%s but expected %s/%s. Please run 'speakeasy auth switch' and select the correct workspace", newOrgSlug, newWorkspaceSlug, orgSlug, workspaceSlug)
 	}
