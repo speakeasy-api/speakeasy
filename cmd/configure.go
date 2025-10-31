@@ -553,7 +553,7 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	}
 
 	agenda := []string{
-		fmt.Sprintf("• In your repo navigate to %s and set up the following repository secrets:", secretPath),
+		fmt.Sprintf("• On GitHub navigate to %s and set up the following repository secrets:", secretPath),
 	}
 
 	for key := range secrets {
@@ -562,9 +562,10 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 		}
 	}
 
-	agenda = append(agenda, fmt.Sprintf("• Push your repository to github! Navigate to %s to kick off your first publish.", actionPath))
+	agenda = append(agenda, fmt.Sprintf("• Push your repository to GitHub and navigate to %s to kick off your first publish!", actionPath))
 
 	// Add instructions for NPM Trusted Publishing (typescript/mcp-typescript)
+	npmTrustedPublishingConfigs := make(map[string]NPMTrustedPublishingConfig)
 	for name, wfp := range workflowPaths {
 		target := workflowFile.Targets[name]
 		if target.Publishing.NPM != nil {
@@ -581,16 +582,34 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 				return errors.Wrapf(err, "multiple publish workflow paths found for target %s", name)
 			}
 
-			config := NPMTrustedPublishingConfig{
-				target:      target,
-				workflowDir: filepath.Join(rootDir, actionWorkingDir),
-				actionPath:  actionPath,
-				publishPath: publishPath,
-				remoteURL:   remoteURL,
+			// Get the packageName from the config file
+			packageName := "<packageName>"
+			outDir := ""
+			if target.Output != nil {
+				outDir = *target.Output
 			}
-			agenda = append(agenda, getNPMTrustedPublishingInstructions(ctx, config)...)
+			workflowDir := filepath.Join(rootDir, actionWorkingDir)
+			configPath := filepath.Join(workflowDir, outDir)
+			cfg, err := config.Load(configPath)
+			if err == nil {
+				if langCfg, ok := cfg.Config.Languages[target.Target]; ok {
+					if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
+						packageName = pkgName
+					}
+				}
+			}
+
+			npmTrustedPublishingConfigs[name] = NPMTrustedPublishingConfig{
+				target:          target,
+				workflowDir:     filepath.Join(rootDir, actionWorkingDir),
+				actionPath:      actionPath,
+				publishFileName: filepath.Base(publishPath),
+				packageName:     packageName,
+				remoteURL:       remoteURL,
+			}
 		}
 	}
+	agenda = append(agenda, getNPMTrustedPublishingInstructions(ctx, npmTrustedPublishingConfigs)...)
 
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
 	for _, statusMsg := range status {
@@ -606,54 +625,63 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 }
 
 type NPMTrustedPublishingConfig = struct {
-	target      workflow.Target
-	workflowDir string
-	remoteURL   string
-	actionPath  string
-	publishPath string
+	target          workflow.Target
+	workflowDir     string
+	actionPath      string
+	publishFileName string
+	packageName     string
+	remoteURL       string
 }
 
-func getNPMTrustedPublishingInstructions(ctx context.Context, npmConfig NPMTrustedPublishingConfig) []string {
-	packageName := "<packageName>"
-	outDir := ""
-	if npmConfig.target.Output != nil {
-		outDir = *npmConfig.target.Output
+func getNPMTrustedPublishingInstructions(ctx context.Context, npmConfigs map[string]NPMTrustedPublishingConfig) []string {
+	var agenda []string
+
+	// Collect unique action paths
+	actionPaths := make(map[string][]string)
+	for _, npmConfig := range npmConfigs {
+		if _, exists := actionPaths[npmConfig.actionPath]; !exists {
+			actionPaths[npmConfig.actionPath] = []string{}
+		}
+		actionPaths[npmConfig.actionPath] = append(actionPaths[npmConfig.actionPath], npmConfig.publishFileName)
 	}
-	cfg, err := config.Load(filepath.Join(npmConfig.workflowDir, outDir))
-	if err == nil {
-		if langCfg, ok := cfg.Config.Languages[npmConfig.target.Target]; ok {
-			if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
-				packageName = pkgName
+
+	for targetName, npmConfig := range npmConfigs {
+		repoOwner := "<user>"
+		repoName := "<repository>"
+		if npmConfig.remoteURL != "" {
+			// Expected format: "https://github.com/<user>/<repository>"
+			re := regexp.MustCompile(`^https://github\.com/([^/]+)/([^/]+)/?$`)
+			matches := re.FindStringSubmatch(npmConfig.remoteURL)
+			if len(matches) == 3 {
+				repoOwner = matches[1]
+				repoName = matches[2]
 			}
 		}
+
+		if len(npmConfigs) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Access your newly published package's settings at https://www.npmjs.com/package/%s/access", npmConfig.packageName))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• [%s] Access the '%s' package's settings at https://www.npmjs.com/package/%s/access", strings.ToUpper(npmConfig.target.Target), targetName, npmConfig.packageName))
+		}
+
+		configLines := []string{
+			fmt.Sprintf("\t\t- Organization or user: %s", repoOwner),
+			fmt.Sprintf("\t\t- Repository: %s", repoName),
+			fmt.Sprintf("\t\t- Workflow filename: %s", npmConfig.publishFileName),
+			"\t\t- Environment name: <Leave Blank>",
+		}
+		agenda = append(agenda, fmt.Sprintf("\t◦ Add 'GitHub Actions' as a 'Trusted Publisher' with the following configuration:\n%s", strings.Join(configLines, "\n")))
 	}
 
-	if npmConfig.remoteURL != "" {
-	}
-
-	repoOwner := "<user>"
-	repoName := "<repository>"
-	if npmConfig.remoteURL != "" {
-		// Expected format: "https://github.com/<user>/<repository>"
-		re := regexp.MustCompile(`^https://github\.com/([^/]+)/([^/]+)/?$`)
-		matches := re.FindStringSubmatch(npmConfig.remoteURL)
-		if len(matches) == 3 {
-			repoOwner = matches[1]
-			repoName = matches[2]
+	for actionPath, packageNames := range actionPaths {
+		if len(packageNames) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish a new version of the %s package.", actionPath, packageNames[0]))
+			agenda = append(agenda, fmt.Sprintf("• Your package's latest version should now include a 'Provenance' at https://www.npmjs.com/package/%s#provenance", packageNames[0]))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish new versions of your packages.", actionPath))
+			agenda = append(agenda, "• Your packages' latest versions should now be labelled with a green check mark and include a 'Provenance'.")
 		}
 	}
-
-	agenda := []string{fmt.Sprintf("• Access your newly published package's settings at https://www.npmjs.com/package/%s/access.", packageName)}
-	configLines := []string{
-		fmt.Sprintf("\t\t- Organization or user: %s", repoOwner),
-		fmt.Sprintf("\t\t- Repository: %s", repoName),
-		fmt.Sprintf("\t\t- Workflow filename: %s", npmConfig.publishPath),
-		"\t\t- Environment name: <Leave Blank>",
-	}
-	agenda = append(agenda, fmt.Sprintf("\t◦ Add 'GitHub Actions' as a 'Trusted Publisher' with the following configuration:\n%s", strings.Join(configLines, "\n")))
-	agenda = append(agenda, fmt.Sprintf("\t◦ Optionally, disallow tokens by selecting the most restrictive option in the 'Publishing access' section (recommended)"))
-	agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish a new version of your package.", npmConfig.actionPath))
-	agenda = append(agenda, fmt.Sprintf("• Your package's latest version should now include a 'Provenance' at https://www.npmjs.com/package/%s#provenance", packageName))
 
 	return agenda
 }
@@ -981,7 +1009,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 	}
 
 	if len(secrets) > 2 || !autoConfigureRepoSuccess {
-		agenda = append(agenda, fmt.Sprintf("• In your repo navigate to %s and set up the following repository secrets:", secretPath))
+		agenda = append(agenda, fmt.Sprintf("• On GitHub navigate to %s and set up the following repository secrets:", secretPath))
 	}
 
 	for key := range secrets {
