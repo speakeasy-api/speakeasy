@@ -19,6 +19,7 @@ Create a release PR with summarized changes from merged pull requests.
 1. Create a new branch off main with format: `release/vX.Y.Z` or `release/YYYY-MM-DD-HH:mm`
 1. Commit the changes with the summarized message
 1. Push the branch and create a PR with the full changelog
+1. Open the PR with the default browser
 
 
 
