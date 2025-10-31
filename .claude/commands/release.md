@@ -6,8 +6,8 @@ Create a release PR with summarized changes from merged pull requests.
 
 1. Switch to the main branch if not already
 1. Run the ./scripts/upgrade.bash script to get the list of merged PRs caused by upgrading openapi-generation dep
-1. **IMPORTANT: Filter out PRs which are internal changes. PRs with titles starting with "chore:" are almost definitely internal change.
-1. You should use `gh` to go and read the descriptions of each and every PR to workout if this is a public facing change or internal change. This PR should only include public changes.
+1. **IMPORTANT: Filter out PRs which are internal changes. PRs with titles starting with "chore:" are almost definitely internal change. You can verify if it's an internal PR or public PR by reading any files changed under `changelogs/` in the PR. If no files were changed under this directory, this is an internal PR. Read the `changelogs/` directory for more context.
+1. You should use `gh` to go and read the descriptions and `changelogs/` directory.
 1. Create a user-facing summary for each language with relevant changes
 1. Group changes by programming language (python, typescript, java, go, csharp, php, ruby, terraform)
 1. Ignore "v2" suffixes when categorizing (pythonv2 → python, typescriptv2 → typescript)
@@ -19,6 +19,7 @@ Create a release PR with summarized changes from merged pull requests.
 1. Create a new branch off main with format: `release/vX.Y.Z` or `release/YYYY-MM-DD-HH:mm`
 1. Commit the changes with the summarized message
 1. Push the branch and create a PR with the full changelog
+1. Open the PR with the default browser
 
 
 
