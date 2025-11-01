@@ -34,6 +34,8 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 			switch progressUpdate.Step.ID {
 			case generate.ProgressStepGenSDK:
 				step = run.SourceStepGenerate
+			case generate.ProgressStepApplyCustomCode:
+				step = run.SourceStepApplyCodeChanges
 			case generate.ProgressStepCompileSDK:
 				step = run.SourceStepCompile
 			case generate.ProgressStepCancel:
