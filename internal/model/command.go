@@ -312,7 +312,11 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		}
 		desiredVersion = latest.String()
 
-		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+		// Check if we're actually running the latest version
+		currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
+		if newerVersion, err := updates.GetNewerVersion(ctx, artifactArch, currentVersion); err == nil && newerVersion == nil {
+			logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+		}
 	} else if desiredVersion == "pinned" {
 		return ErrPinned
 	} else {
