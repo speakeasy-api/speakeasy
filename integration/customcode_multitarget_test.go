@@ -47,7 +47,7 @@ func testMultiTargetCustomCodeBasicWorkflow(t *testing.T, speakeasyBinary string
 	goFilePath := filepath.Join(temp, "go", "models", "operations", "getuserbyname.go")
 
 	// Step 1: Modify only the go target file
-	modifyLineInFile(t, goFilePath, 10, "\t// custom code in go target")
+	modifyLineInFile(t, goFilePath, 11, "\t// custom code in go target")
 
 	// Step 2: Register custom code
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -91,7 +91,7 @@ func testMultiTargetCustomCodeAllTargetsModified(t *testing.T, speakeasyBinary s
 
 	// Step 1: Modify all target files with target-specific custom code
 	// Modify comment lines that are safe to change
-	modifyLineInFile(t, goFilePath, 10, "\t// custom code in go target")
+	modifyLineInFile(t, goFilePath, 11, "\t// custom code in go target")
 	modifyLineInFile(t, tsFilePath, 9, "// custom code in typescript target")
 
 	// Step 2: Register custom code
@@ -211,7 +211,7 @@ func testMultiTargetIncrementalCustomCode(t *testing.T, speakeasyBinary string) 
 	tsFilePath := filepath.Join(temp, "typescript", "src", "models", "operations", "getuserbyname.ts")
 
 	// Step 1: Add initial custom code to all targets
-	modifyLineInFile(t, goFilePath, 10, "\t// initial custom code in go target")
+	modifyLineInFile(t, goFilePath, 11, "\t// initial custom code in go target")
 	modifyLineInFile(t, tsFilePath, 9, "// initial custom code in typescript target")
 
 	// Step 2: Register custom code for all targets
@@ -245,7 +245,7 @@ func testMultiTargetIncrementalCustomCode(t *testing.T, speakeasyBinary string) 
 	gitCommit(t, temp, "regeneration with initial custom code")
 
 	// Step 6: Add MORE custom code to go target only (on a different line)
-	modifyLineInFile(t, goFilePath, 8, "// additional custom code in go target")
+	modifyLineInFile(t, goFilePath, 9, "// additional custom code in go target")
 
 	// Step 7: Register the new custom code (should update go patch only)
 	customCodeCmd2 := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -279,7 +279,7 @@ func testMultiTargetCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakea
 	tsFilePath := filepath.Join(temp, "typescript", "src", "models", "operations", "getuserbyname.ts")
 
 	// Step 1: Add custom code to ALL targets
-	modifyLineInFile(t, goFilePath, 10, "\t// custom code in go target")
+	modifyLineInFile(t, goFilePath, 11, "\t// custom code in go target")
 	modifyLineInFile(t, tsFilePath, 9, "// custom code in typescript target")
 
 	// Step 2: Register custom code for all targets

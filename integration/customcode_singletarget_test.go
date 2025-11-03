@@ -66,7 +66,7 @@ func testCustomCodeBasicWorkflow(t *testing.T, speakeasyBinary string) {
 	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
 
 	httpMetadataPath := filepath.Join(temp, "models", "components", "httpmetadata.go")
-	registerCustomCode(t, speakeasyBinary, temp, httpMetadataPath, 10, "\t// custom code")
+	registerCustomCodeByPrefix(t, speakeasyBinary, temp, httpMetadataPath, "// Raw HTTP response", "\t// custom code")
 
 	runRegeneration(t, speakeasyBinary, temp, true)
 	verifyCustomCodePresent(t, httpMetadataPath, "// custom code")
@@ -79,7 +79,7 @@ func testCustomCodeConflictResolution(t *testing.T, speakeasyBinary string) {
 	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
 
 	// Register custom code
-	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// custom code")
+	registerCustomCodeByPrefix(t, speakeasyBinary, temp, getUserByNamePath, "// The name that needs to be fetched", "\t// custom code")
 
 	// Modify the spec to change line 477 from original description to "spec change"
 	specPath := filepath.Join(temp, "customcodespec.yaml")
@@ -131,7 +131,7 @@ func testCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakeasyBinary st
 	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
 
 	// Register custom code
-	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// custom code")
+	registerCustomCodeByPrefix(t, speakeasyBinary, temp, getUserByNamePath, "// The name that needs to be fetched", "\t// custom code")
 
 	// Modify the spec to change line 477 from original description to "spec change"
 	specPath := filepath.Join(temp, "customcodespec.yaml")
@@ -206,7 +206,7 @@ func testCustomCodeSequentialPatchesAppliedWithRegenerationBetween(t *testing.T,
 	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
 
 	// Step 1: Register first patch
-	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// first custom code")
+	registerCustomCodeByPrefix(t, speakeasyBinary, temp, getUserByNamePath, "// The name that needs to be fetched", "\t// first custom code")
 
 	// Step 2: Verify first patch applies correctly on regeneration
 	runRegeneration(t, speakeasyBinary, temp, true)
@@ -216,7 +216,7 @@ func testCustomCodeSequentialPatchesAppliedWithRegenerationBetween(t *testing.T,
 	gitCommit(t, temp, "regenerated with first patch")
 
 	// Step 3: Modify the same line with different content (second patch)
-	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - updated")
+	modifyLineInFileByPrefix(t, getUserByNamePath, "\t// first custom code", "\t// second custom code - updated")
 
 	// Step 4: Register second patch (should update existing patch)
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -249,10 +249,10 @@ func testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween(t *testing
 	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
 
 	// Step 1: Register first patch
-	registerCustomCode(t, speakeasyBinary, temp, getUserByNamePath, 10, "\t// first custom code")
+	registerCustomCodeByPrefix(t, speakeasyBinary, temp, getUserByNamePath, "// The name that needs to be fetched", "\t// first custom code")
 
 	// Step 2: Immediately modify the same line with different content (NO regeneration between)
-	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - updated")
+	modifyLineInFileByPrefix(t, getUserByNamePath, "\t// first custom code", "\t// second custom code - updated")
 
 	// Step 3: Register second patch (should update existing patch)
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -276,58 +276,6 @@ func testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween(t *testing
 	require.Contains(t, string(finalContent), "// second custom code - updated", "File should contain second custom code")
 	require.NotContains(t, string(finalContent), "// first custom code", "File should not contain first custom code")
 }
-
-// testCustomCodeConflictDetectionDuringRegistration tests that conflicts are detected during customcode registration
-// when the old patch conflicts with new changes
-// func testCustomCodeConflictDetectionDuringRegistration(t *testing.T, speakeasyBinary string) {
-// 	temp := setupSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
-
-// 	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
-
-// 	// Step 1: Modify the file
-// 	modifyLineInFile(t, getUserByNamePath, 10, "\t// first custom code")
-
-// 	// Step 2: Register first patch
-// 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
-// 	customCodeCmd.Dir = temp
-// 	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
-// 	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
-
-// 	// Step 3: Run and commit
-// 	runRegeneration(t, speakeasyBinary, temp, true)
-// 	gitCommit(t, temp, "regenerated with first patch")
-
-// 	// Step 4: Modify the same line again
-// 	modifyLineInFile(t, getUserByNamePath, 10, "\t// second custom code - conflicting")
-
-// 	// Step 5: Modify the spec to change the same line (this will cause conflict during registration)
-// 	specPath := filepath.Join(temp, "customcodespec.yaml")
-// 	modifyLineInFile(t, specPath, 477, "        description: 'spec change for conflict'")
-
-// 	// Step 5b: Commit only the spec
-// 	gitAddCmd := exec.Command("git", "add", specPath)
-// 	gitAddCmd.Dir = temp
-// 	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
-// 	require.NoError(t, gitAddErr, "git add spec should succeed: %s", string(gitAddOutput))
-
-// 	gitCommitCmd := exec.Command("git", "commit", "-m", "update spec")
-// 	gitCommitCmd.Dir = temp
-// 	gitCommitOutput, gitCommitErr := gitCommitCmd.CombinedOutput()
-// 	require.NoError(t, gitCommitErr, "git commit spec should succeed: %s", string(gitCommitOutput))
-
-// 	// Step 6: Register custom code - should fail with conflict error
-// 	customCodeCmd = exec.Command(speakeasyBinary, "customcode", "--output", "console")
-// 	customCodeCmd.Dir = temp
-// 	customCodeOutput, customCodeErr = customCodeCmd.CombinedOutput()
-
-// 	// Step 7: Validate error - conflict happens when applying existing patch
-// 	require.Error(t, customCodeErr, "customcode command should fail due to conflicts: %s", string(customCodeOutput))
-// 	outputStr := string(customCodeOutput)
-// 	// The conflict occurs when applying the existing patch (not the new patch)
-// 	// because the spec changed and the old patch no longer applies cleanly
-// 	require.Contains(t, outputStr, "failed to apply existing patch", "Error message should mention failed to apply existing patch")
-// 	require.Contains(t, outputStr, "with conflicts", "Error message should mention conflicts")
-// }
 
 // buildSpeakeasyBinaryOnce builds the speakeasy binary and returns the path to it
 func buildSpeakeasyBinaryOnce(t *testing.T, binaryName string) string {
@@ -443,6 +391,13 @@ func modifyLineInFile(t *testing.T, filePath string, lineNumber int, newContent 
 	require.NoError(t, writer.Flush(), "Failed to flush writer")
 }
 
+func modifyLineInFileByPrefix(t *testing.T, filePath string, oldContentPrefix string, newContent string) {
+	t.Helper()
+
+	lineNum := findLineNumberByPrefix(t, filePath, oldContentPrefix)
+	modifyLineInFile(t, filePath, lineNum, newContent)
+}
+
 // setupCustomCodeTestDir creates a test directory outside the speakeasy repo
 func setupCustomCodeTestDir(t *testing.T) string {
 	t.Helper()
@@ -530,6 +485,35 @@ func setupSDKGeneration(t *testing.T, speakeasyBinary, inputDoc string) string {
 	verifyGitCommit(t, temp, "clean generation")
 
 	return temp
+}
+
+// findLineNumberByPrefix finds the line number (1-indexed) of the first line containing the prefix
+func findLineNumberByPrefix(t *testing.T, filePath, prefix string) int {
+	t.Helper()
+
+	file, err := os.Open(filePath)
+	require.NoError(t, err, "Failed to open file: %s", filePath)
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lineNumber := 1
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), prefix) {
+			return lineNumber
+		}
+		lineNumber++
+	}
+	require.NoError(t, scanner.Err(), "Failed to read file: %s", filePath)
+	require.Fail(t, "Could not find line with prefix: %s", prefix)
+	return -1 // Never reached
+}
+
+// registerCustomCodeByPrefix finds a line by prefix and registers custom code at that line
+func registerCustomCodeByPrefix(t *testing.T, speakeasyBinary, workingDir, filePath, linePrefix string, newContent string) {
+	t.Helper()
+
+	lineNum := findLineNumberByPrefix(t, filePath, linePrefix)
+	registerCustomCode(t, speakeasyBinary, workingDir, filePath, lineNum, newContent)
 }
 
 // registerCustomCode modifies a file and registers it as custom code
