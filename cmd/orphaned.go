@@ -15,10 +15,10 @@ import (
 )
 
 type OrphanedFilesFlags struct {
-	Directory  string `json:"directory"`
-	Verbose    bool   `json:"verbose"`
+	Directory   string `json:"directory"`
+	Verbose     bool   `json:"verbose"`
 	SkipMdFiles bool   `json:"skip-md"`
-	Delete     bool   `json:"delete"`
+	Delete      bool   `json:"delete"`
 }
 
 var orphanedFilesCmd = &model.ExecutableCommand[OrphanedFilesFlags]{
@@ -489,4 +489,3 @@ func cleanupEmptyDirectories(baseDir string, dirsToCheck map[string]bool, verbos
 
 	return removed
 }
-
