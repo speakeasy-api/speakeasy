@@ -131,8 +131,9 @@ func runOrphanedFiles(ctx context.Context, flags OrphanedFilesFlags) error {
 			continue
 		}
 
-		// Skip files with "hooks" in the path
-		if strings.Contains(clean, "hooks") {
+		// Skip files in hooks directories
+		pathParts := strings.Split(clean, string(filepath.Separator))
+		if containsString(pathParts, "hooks") {
 			continue
 		}
 
@@ -355,13 +356,38 @@ func firstNonSpaceIndex(s string) int {
 	return -1
 }
 
+// containsString checks if a string slice contains a specific string
+func containsString(slice []string, target string) bool {
+	for _, s := range slice {
+		if s == target {
+			return true
+		}
+	}
+	return false
+}
+
 // containsSpeakeasy checks if a file contains the string "speakeasy.com"
+// Uses buffered reading for memory efficiency with large files
 func containsSpeakeasy(filePath string) bool {
-	content, err := os.ReadFile(filePath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return false // If we can't read the file, assume it doesn't contain the string
 	}
-	return strings.Contains(string(content), "speakeasy.com")
+	defer file.Close()
+
+	// Use a buffered scanner to read line by line
+	scanner := bufio.NewScanner(file)
+	const maxCapacity = 1024 * 1024 // 1MB buffer for long lines
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "speakeasy.com") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // findGenLockFiles recursively searches for gen.lock files in the given directory
@@ -390,11 +416,11 @@ func findGenLockFiles(baseDir string) ([]string, error) {
 	return genLockPaths, err
 }
 
-// walkGeneratedDirs walks through all src directories and returns all file paths found
+// walkGeneratedDirs walks through all directories and returns all file paths found
 func walkGeneratedDirs(baseDir string, skipMdFiles bool) ([]string, error) {
 	var allFiles []string
 
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip files we can't access
 		}
