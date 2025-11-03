@@ -95,6 +95,7 @@ func Init(version, artifactArch string) {
 
 	addCommand(rootCmd, AskCmd)
 	addCommand(rootCmd, reproCmd)
+	addCommand(rootCmd, orphanedFilesCmd)
 	pullInit()
 }
 
