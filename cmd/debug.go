@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
@@ -180,133 +180,31 @@ func findOrphanedFiles(ctx context.Context, flags FindOrphanedFilesFlags) error 
 	return nil
 }
 
-// parseGeneratedFiles scans a YAML file and extracts the entries under the
-// top-level `generatedFiles:` key without relying on external YAML packages.
-// It supports simple YAML lists of strings in the form:
-//
-// generatedFiles:
-//   - path/one
-//   - path/two
-//
-// The function does not implement full YAML parsing; it is designed for the
-// structure emitted by Speakeasy in gen.lock.
+// genLockFile represents the structure of a gen.lock file
+// We only need the generatedFiles field, so we use yaml.Node to avoid
+// unmarshaling the entire file structure.
+type genLockFile struct {
+	GeneratedFiles []string `yaml:"generatedFiles"`
+}
+
+// parseGeneratedFiles reads a YAML file and extracts the entries under the
+// top-level `generatedFiles:` key using the yaml library.
 func parseGeneratedFiles(path string) ([]string, error) {
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	var (
-		inList           bool
-		files            []string
-		listIndentSpaces int
-	)
-
-	scanner := bufio.NewScanner(f)
-	lineNum := 0
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-
-		// Normalize line endings and ignore comments that fully occupy a line
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			// allow blank lines
-			continue
-		}
-
-		// Detect start of generatedFiles list
-		if !inList {
-			// Accept lines like "generatedFiles:" with optional leading spaces
-			if !strings.HasPrefix(trimmed, "generatedFiles:") {
-				continue
-			}
-			inList = true
-			// Indentation is the number of leading spaces before 'g'
-			listIndentSpaces = countLeadingSpaces(line)
-			continue
-		}
-
-		// If we're in the list, capture items beginning with '-' at a deeper indent
-		// than the list key. Break when indentation decreases to list level or a
-		// new top-level key appears.
-		indent := countLeadingSpaces(line)
-
-		// If indentation is less than or equal to the list key, we likely exited the list
-		if indent <= listIndentSpaces {
-			// End of list
-			break
-		}
-
-		// Expect a dash item possibly after indentation: "- value"
-		// Find first non-space index
-		i := firstNonSpaceIndex(line)
-		if i == -1 {
-			// shouldn't happen since trimmed != ""
-			continue
-		}
-		if line[i] != '-' {
-			// Non-item encountered at greater indent
-			if len(files) > 0 {
-				break // End of the block
-			}
-			continue
-		}
-
-		// After '-' may be a space, then the value
-		val := strings.TrimSpace(line[i+1:])
-		if val == "" {
-			// Multiline or complex YAML not supported
-			return nil, fmt.Errorf("unsupported YAML structure for generatedFiles at line %d: empty item", lineNum)
-		}
-
-		// Strip surrounding quotes if present
-		if (strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"")) ||
-			(strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'")) {
-			if len(val) < 2 {
-				continue
-			}
-			val = val[1 : len(val)-1]
-		}
-
-		files = append(files, val)
+	var lockFile genLockFile
+	if err := yaml.Unmarshal(data, &lockFile); err != nil {
+		return nil, fmt.Errorf("failed to parse gen.lock file: %w", err)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	if len(lockFile.GeneratedFiles) == 0 {
+		return nil, fmt.Errorf("no generatedFiles entries found in gen.lock")
 	}
 
-	if len(files) == 0 {
-		return nil, errors.New("no generatedFiles entries found in gen.lock")
-	}
-
-	return files, nil
-}
-
-func countLeadingSpaces(s string) int {
-	n := 0
-	for _, r := range s {
-		if r != ' ' && r != '\t' {
-			return n
-		}
-		if r == ' ' {
-			n++
-			continue
-		}
-		// treat tab as +2 spaces (arbitrary but consistent)
-		n += 2
-	}
-	return n
-}
-
-func firstNonSpaceIndex(s string) int {
-	for i, r := range s {
-		if r != ' ' && r != '\t' {
-			return i
-		}
-	}
-	return -1
+	return lockFile.GeneratedFiles, nil
 }
 
 // containsSpeakeasy checks if a file contains the string "speakeasy.com"
