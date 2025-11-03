@@ -1,0 +1,53 @@
+name: Release PR Automation
+
+on:
+  schedule:
+    # Run every hour
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-release-pr:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: "go.mod"
+          cache: false
+      
+      - name: Install GitHub CLI
+        run: |
+          type -p curl >/dev/null || apt install curl -y
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt update
+          apt install gh -y
+      
+      - name: Configure git for private modules
+        run: |
+          git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN || secrets.GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
+        env:
+          GOPRIVATE: github.com/speakeasy-api/*
+      
+      - name: Run release PR script
+        run: |
+          chmod +x .github/scripts/create-release-pr.sh
+          .github/scripts/create-release-pr.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BOT_REPO_TOKEN: ${{ secrets.BOT_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
