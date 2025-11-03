@@ -43,9 +43,9 @@ jobs:
           GOPRIVATE: github.com/speakeasy-api/*
       
       - name: Run release PR script
+        working-directory: ${{ github.workspace }}
         run: |
-          chmod +x .github/scripts/create-release-pr.sh
-          .github/scripts/create-release-pr.sh
+          go run .github/scripts/create-release-pr.go
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BOT_REPO_TOKEN: ${{ secrets.BOT_REPO_TOKEN || secrets.GITHUB_TOKEN }}
