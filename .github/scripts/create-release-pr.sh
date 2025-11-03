@@ -46,7 +46,7 @@ echo "Semver change detected: ${SEMVER_CHANGE}"
 
 # Get merged PRs since START_DATE
 echo "Fetching merged PRs since ${START_DATE}..."
-PRS_JSON=$(gh pr list --repo speakeasy-api/openapi-generation --state merged --search "merged:>${START_DATE}" --json number,title,url,body,labels,files --limit 100)
+PRS_JSON=$(gh pr list --repo speakeasy-api/openapi-generation --state merged --search "merged:>${START_DATE}" --json number,title,url,body,labels --limit 100)
 
 # Check if we have any PRs
 PR_COUNT=$(echo "$PRS_JSON" | jq 'length')
@@ -79,13 +79,14 @@ is_internal_pr() {
     return 0
   fi
   
-  # Check if PR has changelog files
+  # Check if PR has changelog files (fetch files for this PR)
   local files=$(gh pr view "$pr_num" --repo speakeasy-api/openapi-generation --json files -q '.[].path' 2>/dev/null || echo "")
-  if echo "$files" | grep -q "changelogs/"; then
+  if [[ -n "$files" ]] && echo "$files" | grep -q "changelogs/"; then
     return 1  # Has changelogs, not internal
   fi
   
-  return 0  # No changelogs, internal
+  # If no changelogs found, consider it internal
+  return 0
 }
 
 # Process each PR
@@ -116,9 +117,9 @@ while IFS= read -r pr_data; do
   
   lang=$(normalize_lang "$lang")
   
-  # Check files for language hints
+  # Check files for language hints (fetch files if lang still unknown)
   if [[ -z "$lang" ]]; then
-    files=$(echo "$pr_data" | jq -r '.files[].path' 2>/dev/null || echo "")
+    files=$(gh pr view "$pr_num" --repo speakeasy-api/openapi-generation --json files -q '.[].path' 2>/dev/null || echo "")
     for file in $files; do
       if echo "$file" | grep -qE "(python|typescript|java|go|csharp|php|ruby|terraform)"; then
         lang=$(echo "$file" | grep -oiE "(pythonv2|typescriptv2|python|typescript|java|go|csharp|php|ruby|terraform)" | head -1)
