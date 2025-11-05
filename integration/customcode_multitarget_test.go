@@ -36,6 +36,16 @@ func TestMultiTargetCustomCode(t *testing.T) {
 		t.Parallel()
 		testMultiTargetCustomCodeConflictResolutionAcceptOurs(t, speakeasyBinary)
 	})
+
+	t.Run("ConflictResolutionAcceptOursMultipleResolutions", func(t *testing.T) {
+		t.Parallel()
+		testMultiTargetCustomCodeConflictMultipleResultionsAcceptOurs(t, speakeasyBinary)
+	})
+
+	t.Run("ConflictResolutionAcceptTheirs", func(t *testing.T) {
+		t.Parallel()
+		testMultiTargetCustomCodeConflictResolutionAcceptTheirs(t, speakeasyBinary)
+	})
 }
 
 // testMultiTargetCustomCodeBasicWorkflow tests basic custom code registration and reapplication
@@ -47,7 +57,7 @@ func testMultiTargetCustomCodeBasicWorkflow(t *testing.T, speakeasyBinary string
 	goFilePath := filepath.Join(temp, "go", "models", "operations", "getuserbyname.go")
 
 	// Step 1: Modify only the go target file
-	modifyLineInFile(t, goFilePath, 11, "\t// custom code in go target")
+	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// custom code in go target")
 
 	// Step 2: Register custom code
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -91,8 +101,8 @@ func testMultiTargetCustomCodeAllTargetsModified(t *testing.T, speakeasyBinary s
 
 	// Step 1: Modify all target files with target-specific custom code
 	// Modify comment lines that are safe to change
-	modifyLineInFile(t, goFilePath, 11, "\t// custom code in go target")
-	modifyLineInFile(t, tsFilePath, 9, "// custom code in typescript target")
+	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// custom code in go target")
+	modifyLineInFileByPrefix(t, tsFilePath, "* The name that needs to be", "// custom code in typescript target")
 
 	// Step 2: Register custom code
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -211,8 +221,8 @@ func testMultiTargetIncrementalCustomCode(t *testing.T, speakeasyBinary string) 
 	tsFilePath := filepath.Join(temp, "typescript", "src", "models", "operations", "getuserbyname.ts")
 
 	// Step 1: Add initial custom code to all targets
-	modifyLineInFile(t, goFilePath, 11, "\t// initial custom code in go target")
-	modifyLineInFile(t, tsFilePath, 9, "// initial custom code in typescript target")
+	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// initial custom code in go target")
+	modifyLineInFileByPrefix(t, tsFilePath, "* The name that needs to be", "// initial custom code in typescript target")
 
 	// Step 2: Register custom code for all targets
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -245,7 +255,7 @@ func testMultiTargetIncrementalCustomCode(t *testing.T, speakeasyBinary string) 
 	gitCommit(t, temp, "regeneration with initial custom code")
 
 	// Step 6: Add MORE custom code to go target only (on a different line)
-	modifyLineInFile(t, goFilePath, 9, "// additional custom code in go target")
+	modifyLineInFileByPrefix(t, goFilePath, "// successful operation", "// additional custom code in go target")
 
 	// Step 7: Register the new custom code (should update go patch only)
 	customCodeCmd2 := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -270,7 +280,7 @@ func testMultiTargetIncrementalCustomCode(t *testing.T, speakeasyBinary string) 
 }
 
 // testMultiTargetCustomCodeConflictResolutionAcceptOurs tests conflict resolution in one target
-// while preserving custom code in other targets when accepting spec changes (ours)
+// while preserving custom code in other targets when accepting custom code changes (ours)
 func testMultiTargetCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakeasyBinary string) {
 	temp := setupMultiTargetSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
 
@@ -279,8 +289,8 @@ func testMultiTargetCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakea
 	tsFilePath := filepath.Join(temp, "typescript", "src", "models", "operations", "getuserbyname.ts")
 
 	// Step 1: Add custom code to ALL targets
-	modifyLineInFile(t, goFilePath, 11, "\t// custom code in go target")
-	modifyLineInFile(t, tsFilePath, 9, "// custom code in typescript target")
+	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// custom code in go target")
+	modifyLineInFileByPrefix(t, tsFilePath, "* @deprecated This namespace", "// custom code in typescript target")
 
 	// Step 2: Register custom code for all targets
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -299,7 +309,7 @@ func testMultiTargetCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakea
 
 	// Step 4: Modify the spec to cause conflict in GO target only (line 477 affects GetUserByName)
 	specPath := filepath.Join(temp, "customcodespec.yaml")
-	modifyLineInFile(t, specPath, 477, "        description: 'spec change'")
+	modifyLineInFileByPrefix(t, specPath, "        description: 'The name that needs to be fetched", "        description: 'spec change'")
 
 	// Step 5: Run speakeasy run - should detect conflict in GO target only
 	regenCmd := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
@@ -369,7 +379,7 @@ func testMultiTargetCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakea
 	require.NoError(t, err, "Failed to read typescript gen.lock")
 	require.Contains(t, string(tsGenLockContent), "customCodeCommitHash", "TypeScript gen.lock should still contain customCodeCommitHash")
 
-	// Step 13: Run regeneration again
+	// // Step 13: Run regeneration again
 	runRegeneration(t, speakeasyBinary, temp, true)
 
 	// Step 14: Verify final state
@@ -378,6 +388,303 @@ func testMultiTargetCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakea
 	require.NoError(t, err, "Failed to read go file after final regeneration")
 	require.Contains(t, string(goContentFinal), "spec change", "Go file should contain spec change")
 	require.NotContains(t, string(goContentFinal), "custom code in go target", "Go file should not contain custom code after accepting ours")
+
+	// TypeScript file should still contain its custom code
+	tsContentFinal, err := os.ReadFile(tsFilePath)
+	require.NoError(t, err, "Failed to read typescript file after final regeneration")
+	require.Contains(t, string(tsContentFinal), "custom code in typescript target", "TypeScript file should still contain its custom code")
+}
+
+
+// testMultiTargetCustomCodeConflictMultipleResultionsAcceptOurs tests conflict resolution in two targets
+// sequentially.
+func testMultiTargetCustomCodeConflictMultipleResultionsAcceptOurs(t *testing.T, speakeasyBinary string) {
+	temp := setupMultiTargetSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	// Paths to all target files
+	goFilePath := filepath.Join(temp, "go", "models", "operations", "getuserbyname.go")
+	tsFilePath := filepath.Join(temp, "typescript", "src", "models", "operations", "getuserbyname.ts")
+
+	// Step 1: Add custom code to ALL targets
+	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// custom code in go target")
+	modifyLineInFileByPrefix(t, tsFilePath, "* The name that needs to be", "// custom code in typescript target")
+
+	// Step 2: Register custom code for all targets
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+
+	// Step 3: Verify patch files were created for both targets
+	goPatchFile := filepath.Join(temp, "go", ".speakeasy", "patches", "custom-code.diff")
+	_, err := os.Stat(goPatchFile)
+	require.NoError(t, err, "Go patch file should exist")
+
+	tsPatchFile := filepath.Join(temp, "typescript", ".speakeasy", "patches", "custom-code.diff")
+	_, err = os.Stat(tsPatchFile)
+	require.NoError(t, err, "TypeScript patch file should exist")
+
+	// Step 4: Modify the spec to cause conflict in GO target only (line 477 affects GetUserByName)
+	specPath := filepath.Join(temp, "customcodespec.yaml")
+	modifyLineInFileByPrefix(t, specPath, "        description: 'The name that needs to be fetched", "        description: 'spec change'")
+
+// ------First Round
+	// Step 5: Run speakeasy run - should detect conflict in GO target only
+	regenCmd := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
+	regenCmd.Dir = temp
+	regenOutput, regenErr := regenCmd.CombinedOutput()
+	require.Error(t, regenErr, "speakeasy run should exit with error after detecting conflicts: %s", string(regenOutput))
+	require.Contains(t, string(regenOutput), "CUSTOM CODE CONFLICTS DETECTED", "Output should show conflict detection banner")
+	require.Contains(t, string(regenOutput), "Entering automatic conflict resolution mode", "Output should indicate automatic resolution mode")
+
+	// Step 6: Verify conflict markers present in GO file only
+	goContentAfterConflict, err := os.ReadFile(goFilePath)
+	require.NoError(t, err, "Failed to read go file after conflict")
+	require.Contains(t, string(goContentAfterConflict), "<<<<<<<", "Go file should contain conflict markers")
+
+	// TypeScript file should NOT have conflict markers
+	tsContentAfterConflict, err := os.ReadFile(tsFilePath)
+	require.NoError(t, err, "Failed to read typescript file after conflict")
+	require.NotContains(t, string(tsContentAfterConflict), "<<<<<<<", "TypeScript file should not contain conflict markers")
+	require.Contains(t, string(tsContentAfterConflict), "custom code in typescript target", "TypeScript file should still have its custom code")
+
+	// Step 7: Resolve the go conflict by accepting spec changes (ours)
+	checkoutCmd := exec.Command("git", "checkout", "--ours", goFilePath)
+	checkoutCmd.Dir = temp
+	checkoutOutput, checkoutErr := checkoutCmd.CombinedOutput()
+	require.NoError(t, checkoutErr, "git checkout --ours should succeed: %s", string(checkoutOutput))
+
+	// Step 8: Verify conflict markers are gone in go file
+	goContentAfterCheckout, err := os.ReadFile(goFilePath)
+	require.NoError(t, err, "Failed to read go file after checkout")
+	require.NotContains(t, string(goContentAfterCheckout), "<<<<<<<", "Go file should not contain conflict markers after checkout")
+
+	// Step 9: Stage the resolved go file
+	gitAddCmd := exec.Command("git", "add", goFilePath)
+	gitAddCmd.Dir = temp
+	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
+	require.NoError(t, gitAddErr, "git add should succeed: %s", string(gitAddOutput))
+
+	// Step 10: Run customcode command to register the resolution
+	customCodeCmd2 := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd2.Dir = temp
+	customCodeOutput2, customCodeErr2 := customCodeCmd2.CombinedOutput()
+	require.NoError(t, customCodeErr2, "customcode command should succeed after conflict resolution: %s", string(customCodeOutput2))
+
+	// Step 11: Verify patch files status
+	// Go patch file should be empty or removed
+	goPatchContent, err := os.ReadFile(goPatchFile)
+	if err == nil {
+		require.Empty(t, goPatchContent, "Go patch file should be empty after accepting ours")
+	}
+
+	// TypeScript patch file should still exist with its content
+	tsPatchContent, err := os.ReadFile(tsPatchFile)
+	require.NoError(t, err, "TypeScript patch file should still exist")
+	require.NotEmpty(t, tsPatchContent, "TypeScript patch file should not be empty")
+	require.Contains(t, string(tsPatchContent), "custom code in typescript target", "TypeScript patch should contain typescript custom code")
+
+	// Step 12: Verify gen.lock files
+	// Go's gen.lock should NOT contain customCodeCommitHash
+	goGenLockPath := filepath.Join(temp, "go", ".speakeasy", "gen.lock")
+	goGenLockContent, err := os.ReadFile(goGenLockPath)
+	require.NoError(t, err, "Failed to read go gen.lock")
+	require.NotContains(t, string(goGenLockContent), "customCodeCommitHash", "Go gen.lock should not contain customCodeCommitHash after accepting ours")
+
+	// TypeScript's gen.lock should still contain customCodeCommitHash
+	tsGenLockPath := filepath.Join(temp, "typescript", ".speakeasy", "gen.lock")
+	tsGenLockContent, err := os.ReadFile(tsGenLockPath)
+	require.NoError(t, err, "Failed to read typescript gen.lock")
+	require.Contains(t, string(tsGenLockContent), "customCodeCommitHash", "TypeScript gen.lock should still contain customCodeCommitHash")
+
+// ------Second Round
+
+	// Step 13: Run regeneration again - should detect conflict in TS target.
+	regenCmd2 := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
+	regenCmd2.Dir = temp
+	regenOutput2, regenErr2 := regenCmd2.CombinedOutput()
+	require.Error(t, regenErr2, "speakeasy run should exit with error after detecting conflicts: %s", string(regenOutput2))
+	require.Contains(t, string(regenOutput2), "CUSTOM CODE CONFLICTS DETECTED", "Output should show conflict detection banner")
+	require.Contains(t, string(regenOutput2), "Entering automatic conflict resolution mode", "Output should indicate automatic resolution mode")
+
+
+	// Step 14: Verify conflict markers present in TS file only
+	tsContentAfterConflict2, err := os.ReadFile(tsFilePath)
+	require.NoError(t, err, "Failed to read ts file after conflict")
+	require.Contains(t, string(tsContentAfterConflict2), "<<<<<<<", "TS file should contain conflict markers")
+
+	// Go file should NOT have conflict markers
+	goContentAfterConflict2, err := os.ReadFile(goFilePath)
+	require.NoError(t, err, "Failed to read typescript file after conflict")
+	require.NotContains(t, string(goContentAfterConflict2), "<<<<<<<", "GO file should not contain conflict markers")
+
+	// Step 15: Resolve the ts conflict by accepting spec changes (ours)
+	checkoutCmd2 := exec.Command("git", "checkout", "--ours", tsFilePath)
+	checkoutCmd2.Dir = temp
+	checkoutOutput2, checkoutErr2 := checkoutCmd2.CombinedOutput()
+	require.NoError(t, checkoutErr2, "git checkout --ours should succeed: %s", string(checkoutOutput2))
+
+	// Step 16: Verify conflict markers are gone in ts file
+	tsContentAfterCheckout2, err := os.ReadFile(tsFilePath)
+	require.NoError(t, err, "Failed to read ts file after checkout")
+	require.NotContains(t, string(tsContentAfterCheckout2), "<<<<<<<", "TS file should not contain conflict markers after checkout")
+
+	// Step 17: Stage the resolved ts file
+	gitAddCmd2 := exec.Command("git", "add", tsFilePath)
+	gitAddCmd2.Dir = temp
+	gitAddOutput2, gitAddErr2 := gitAddCmd2.CombinedOutput()
+	require.NoError(t, gitAddErr2, "git add should succeed: %s", string(gitAddOutput2))
+
+	// Step 18: Run customcode command to register the resolution
+	customCodeCmd3 := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd3.Dir = temp
+	customCodeOutput3, customCodeErr3 := customCodeCmd3.CombinedOutput()
+	require.NoError(t, customCodeErr3, "customcode command should succeed after conflict resolution: %s", string(customCodeOutput3))
+
+	// Step 19: Verify patch files status
+	// TS patch file should be empty or removed
+	tsPatchContent2, err := os.ReadFile(tsPatchFile)
+	if err == nil {
+		require.Empty(t, tsPatchContent2, "TS patch file should be empty after accepting ours")
+	}
+
+	// Step 20: Verify gen.lock files
+	// Go's gen.lock should NOT contain customCodeCommitHash
+	goGenLockPath2 := filepath.Join(temp, "go", ".speakeasy", "gen.lock")
+	goGenLockContent2, err := os.ReadFile(goGenLockPath2)
+	require.NoError(t, err, "Failed to read go gen.lock")
+	require.NotContains(t, string(goGenLockContent2), "customCodeCommitHash", "Go gen.lock should not contain customCodeCommitHash after accepting ours")
+
+	// TypeScript's gen.lock should NOT contain customCodeCommitHash
+	tsGenLockPath2 := filepath.Join(temp, "typescript", ".speakeasy", "gen.lock")
+	tsGenLockContent2, err := os.ReadFile(tsGenLockPath2)
+	require.NoError(t, err, "Failed to read typescript gen.lock")
+	require.NotContains(t, string(tsGenLockContent2), "customCodeCommitHash", "TS gen.lock should not contain customCodeCommitHash after accepting ours")
+// -----------------
+
+	// Step 21: Verify final state
+	// Go file should contain spec change, should NOT contain custom code
+	goContentFinal, err := os.ReadFile(goFilePath)
+	require.NoError(t, err, "Failed to read go file after final regeneration")
+	require.Contains(t, string(goContentFinal), "spec change", "Go file should contain spec change")
+	require.NotContains(t, string(goContentFinal), "custom code in go target", "Go file should not contain custom code after accepting ours")
+
+	// TypeScript file should still contain its custom code
+	tsContentFinal, err := os.ReadFile(tsFilePath)
+	require.NoError(t, err, "Failed to read typescript file after final regeneration")
+	require.Contains(t, string(tsContentFinal), "spec change", "Go file should contain spec change")
+	require.NotContains(t, string(tsContentFinal), "custom code in typescript target", "TypeScript file should still contain its custom code")
+}
+
+// testMultiTargetCustomCodeConflictResolutionAcceptTheirs tests conflict resolution in one target
+// while preserving custom code in other targets when accepting custom code changes (theirs)
+func testMultiTargetCustomCodeConflictResolutionAcceptTheirs(t *testing.T, speakeasyBinary string) {
+	temp := setupMultiTargetSDKGeneration(t, speakeasyBinary, "customcodespec.yaml")
+
+	// Paths to all target files
+	goFilePath := filepath.Join(temp, "go", "models", "operations", "getuserbyname.go")
+	tsFilePath := filepath.Join(temp, "typescript", "src", "models", "operations", "getuserbyname.ts")
+
+	// Step 1: Add custom code to ALL targets
+	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// custom code in go target")
+	modifyLineInFileByPrefix(t, tsFilePath, "* @deprecated This namespace", "// custom code in typescript target")
+
+	// Step 2: Register custom code for all targets
+	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd.Dir = temp
+	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
+	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+
+	// Step 3: Verify patch files were created for both targets
+	goPatchFile := filepath.Join(temp, "go", ".speakeasy", "patches", "custom-code.diff")
+	_, err := os.Stat(goPatchFile)
+	require.NoError(t, err, "Go patch file should exist")
+
+	tsPatchFile := filepath.Join(temp, "typescript", ".speakeasy", "patches", "custom-code.diff")
+	_, err = os.Stat(tsPatchFile)
+	require.NoError(t, err, "TypeScript patch file should exist")
+
+	// Step 4: Modify the spec to cause conflict in GO target only (line 477 affects GetUserByName)
+	specPath := filepath.Join(temp, "customcodespec.yaml")
+	modifyLineInFileByPrefix(t, specPath, "        description: 'The name that needs to be fetched", "        description: 'spec change'")
+
+	// Step 5: Run speakeasy run - should detect conflict in GO target only
+	regenCmd := exec.Command(speakeasyBinary, "run", "-t", "all", "--pinned", "--skip-compile")
+	regenCmd.Dir = temp
+	regenOutput, regenErr := regenCmd.CombinedOutput()
+	require.Error(t, regenErr, "speakeasy run should exit with error after detecting conflicts: %s", string(regenOutput))
+	require.Contains(t, string(regenOutput), "CUSTOM CODE CONFLICTS DETECTED", "Output should show conflict detection banner")
+	require.Contains(t, string(regenOutput), "Entering automatic conflict resolution mode", "Output should indicate automatic resolution mode")
+
+	// Step 6: Verify conflict markers present in GO file only
+	goContentAfterConflict, err := os.ReadFile(goFilePath)
+	require.NoError(t, err, "Failed to read go file after conflict")
+	require.Contains(t, string(goContentAfterConflict), "<<<<<<<", "Go file should contain conflict markers")
+
+	// TypeScript file should NOT have conflict markers
+	tsContentAfterConflict, err := os.ReadFile(tsFilePath)
+	require.NoError(t, err, "Failed to read typescript file after conflict")
+	require.NotContains(t, string(tsContentAfterConflict), "<<<<<<<", "TypeScript file should not contain conflict markers")
+	require.Contains(t, string(tsContentAfterConflict), "custom code in typescript target", "TypeScript file should still have its custom code")
+
+	// Step 7: Resolve the go conflict by accepting custom code changes (theirs)
+	checkoutCmd := exec.Command("git", "checkout", "--theirs", goFilePath)
+	checkoutCmd.Dir = temp
+	checkoutOutput, checkoutErr := checkoutCmd.CombinedOutput()
+	require.NoError(t, checkoutErr, "git checkout --theirs should succeed: %s", string(checkoutOutput))
+
+	// Step 8: Verify conflict markers are gone in go file
+	goContentAfterCheckout, err := os.ReadFile(goFilePath)
+	require.NoError(t, err, "Failed to read go file after checkout")
+	require.NotContains(t, string(goContentAfterCheckout), "<<<<<<<", "Go file should not contain conflict markers after checkout")
+
+	// Step 9: Stage the resolved go file
+	gitAddCmd := exec.Command("git", "add", goFilePath)
+	gitAddCmd.Dir = temp
+	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
+	require.NoError(t, gitAddErr, "git add should succeed: %s", string(gitAddOutput))
+
+	// Step 10: Run customcode command to register the resolution
+	customCodeCmd2 := exec.Command(speakeasyBinary, "customcode", "--output", "console")
+	customCodeCmd2.Dir = temp
+	customCodeOutput2, customCodeErr2 := customCodeCmd2.CombinedOutput()
+	require.NoError(t, customCodeErr2, "customcode command should succeed after conflict resolution: %s", string(customCodeOutput2))
+
+	// Step 11: Verify patch files status
+	// Go patch file should still exist with content since we accepted theirs (custom code)
+	goPatchContent, err := os.ReadFile(goPatchFile)
+	require.NoError(t, err, "Go patch file should still exist")
+	require.NotEmpty(t, goPatchContent, "Go patch file should not be empty after accepting theirs")
+	require.Contains(t, string(goPatchContent), "custom code in go target", "Go patch should contain go custom code")
+
+	// TypeScript patch file should still exist with its content
+	tsPatchContent, err := os.ReadFile(tsPatchFile)
+	require.NoError(t, err, "TypeScript patch file should still exist")
+	require.NotEmpty(t, tsPatchContent, "TypeScript patch file should not be empty")
+	require.Contains(t, string(tsPatchContent), "custom code in typescript target", "TypeScript patch should contain typescript custom code")
+
+	// Step 12: Verify gen.lock files
+	// Go's gen.lock should still contain customCodeCommitHash since we kept custom code
+	goGenLockPath := filepath.Join(temp, "go", ".speakeasy", "gen.lock")
+	goGenLockContent, err := os.ReadFile(goGenLockPath)
+	require.NoError(t, err, "Failed to read go gen.lock")
+	require.Contains(t, string(goGenLockContent), "customCodeCommitHash", "Go gen.lock should contain customCodeCommitHash after accepting theirs")
+
+	// TypeScript's gen.lock should still contain customCodeCommitHash
+	tsGenLockPath := filepath.Join(temp, "typescript", ".speakeasy", "gen.lock")
+	tsGenLockContent, err := os.ReadFile(tsGenLockPath)
+	require.NoError(t, err, "Failed to read typescript gen.lock")
+	require.Contains(t, string(tsGenLockContent), "customCodeCommitHash", "TypeScript gen.lock should still contain customCodeCommitHash")
+
+	// Step 13: Run regeneration again
+	runRegeneration(t, speakeasyBinary, temp, true)
+
+	// Step 14: Verify final state
+	// Go file should contain custom code (since we accepted theirs), and should NOT contain spec change
+	goContentFinal, err := os.ReadFile(goFilePath)
+	require.NoError(t, err, "Failed to read go file after final regeneration")
+	require.NotContains(t, string(goContentFinal), "spec change", "Go file should not contain spec change after accepting theirs")
+	require.Contains(t, string(goContentFinal), "custom code in go target", "Go file should contain custom code after accepting theirs")
 
 	// TypeScript file should still contain its custom code
 	tsContentFinal, err := os.ReadFile(tsFilePath)

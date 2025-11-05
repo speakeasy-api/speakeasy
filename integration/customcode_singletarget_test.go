@@ -45,11 +45,6 @@ func TestCustomCode(t *testing.T) {
 		testCustomCodeSequentialPatchesAppliedWithoutRegenerationBetween(t, speakeasyBinary)
 	})
 
-	// t.Run("ConflictDetectionDuringCustomCodeRegistration", func(t *testing.T) {
-	// 	t.Parallel()
-	// 	testCustomCodeConflictDetectionDuringRegistration(t, speakeasyBinary)
-	// })
-
 	t.Run("NewFilePreservation", func(t *testing.T) {
 		t.Parallel()
 		testCustomCodeNewFilePreservation(t, speakeasyBinary)

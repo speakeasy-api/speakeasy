@@ -62,17 +62,13 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	}
 	logger.Info("Recorded original git hash for error recovery", zap.String("hash", originalHash.String()))
 
-	// // Step 1: Verify main is up to date with origin/main
-	// if err := verifyMainUpToDate(ctx); err != nil {
-	// 	return fmt.Errorf("In order to register your custom code, your local branch must be up to date with origin/main: %w", err)
-	// }
 
-	// Step 2: Check changeset doesn't include .speakeasy directory changes
+	// Step 1: Check changeset doesn't include .speakeasy directory changes
 	if err := checkNoSpeakeasyChanges(ctx); err != nil {
 		return fmt.Errorf("Registering custom code in the .speakeasy directory is not supported: %w", err)
 	}
 
-	// Step 3: Check if workflow.yaml references local openapi spec and validate no spec changes
+	// Step 2: Check if workflow.yaml references local openapi spec and validate no spec changes
 	if err := checkNoLocalSpecChanges(ctx, wf); err != nil {
 		return fmt.Errorf("Registering custom code in your openapi spec and related files is not supported: %w", err)
 	}
@@ -81,7 +77,7 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		return err
 	}
 
-	// Step 4.5: Reset working directory to HEAD after capturing patches
+	// Step 3: Reset working directory to HEAD after capturing patches
 	// This removes all user changes (staged and unstaged) so they don't get included in clean generation commit
 	logger.Info("Resetting working directory to HEAD before clean generation")
 	resetCmd := exec.Command("git", "reset", "--hard", "HEAD")
@@ -95,8 +91,8 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 		}
 	}
 
-	// Step 6: Commit clean generation to preserve metadata
-	if err := commitCleanGeneration(); err != nil {
+	// Step 4: Commit clean generation to preserve metadata
+	if err := commitRevertCustomCode(); err != nil {
 		return fmt.Errorf("failed to commit clean generation: %w", err)
 	}
 
@@ -115,25 +111,6 @@ func RegisterCustomCode(ctx context.Context, runGenerate func(string) error) err
 	return nil
 }
 
-func getPatchesPerTarget(wf *workflow.Workflow) (map[string]string, error) {
-	targetPatches := make(map[string]string)
-	for targetName, target := range wf.Targets {
-		// Step 4: Capture patchset with git diff for custom code changes
-		otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
-		customCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to capture custom code diff: %w", err)
-		}
-		fmt.Println(fmt.Sprintf("Captured custom code diff for target %v:\n%s", targetName, customCodeDiff))
-		// If no custom code changes detected, return early
-		if customCodeDiff == "" {
-			fmt.Println(fmt.Sprintf("No custom code changes detected in target %v, nothing to register", targetName))
-		}
-		targetPatches[targetName] = customCodeDiff
-	}
-	return targetPatches, nil
-}
-
 func updateCustomPatchAndUpdateGenLock(ctx context.Context, wf *workflow.Workflow, originalHash plumbing.Hash, targetPatches map[string]string, target workflow.Target, targetName string) error {
 	logger := log.From(ctx).With(zap.String("method", "updateCustomPatchAndUpdateGenLock"))
 	// Step 7: Apply existing custom code patch from gen.lock
@@ -142,7 +119,7 @@ func updateCustomPatchAndUpdateGenLock(ctx context.Context, wf *workflow.Workflo
 	}
 	// Step 8: Apply the new custom code diff (with --index to stage changes)
 	if err := applyNewPatch(targetPatches[targetName]); err != nil {
-		removeCleanGenerationCommit(ctx, originalHash)
+		removeReverseCustomCode(ctx, originalHash)
 		return fmt.Errorf("conflicts detected when applying new patch.  Please resolve any conflicts, and run `customcode` again.")
 	}
 
@@ -180,13 +157,13 @@ func updateCustomPatchAndUpdateGenLock(ctx context.Context, wf *workflow.Workflo
 	targetPatches[targetName] = fullCustomCodeDiff
 	logger.Info("Compiling SDK to verify custom code changes...")
 	if err := compileAndLintSDK(ctx, target); err != nil {
-		removeCleanGenerationCommit(ctx, originalHash)
+		removeReverseCustomCode(ctx, originalHash)
 		return fmt.Errorf("custom code changes failed compilation or linting.  Please resolve any compilation/linting errors and run `customcode` again.")
 	}
 	// Step 10.6: Create commit with custom code changes after successful compilation
 	customCodeCommitHash, err := commitCustomCodeChanges()
 	if err != nil {
-		removeCleanGenerationCommit(ctx, originalHash)
+		removeReverseCustomCode(ctx, originalHash)
 		return fmt.Errorf("failed to commit custom code changes: %w", err)
 	}
 	logger.Info("Created commit with custom code changes", zap.String("commit_hash", customCodeCommitHash))
@@ -544,73 +521,29 @@ func completeConflictResolution(ctx context.Context, wf *workflow.Workflow) erro
 	return nil
 }
 
-// Git validation helpers
-func verifyMainUpToDate(ctx context.Context) error {
-	logger := log.From(ctx)
-	logger.Info("Verifying main branch is up to date with origin/main")
-
-	// Fetch origin/main
-	/** GO GIT
-		err = repo.Fetch(&git.FetchOptions{
-		// Optional: configure authentication if needed
-		// Auth: &http.BasicAuth{Username: "user", Password: "password"},
-	})
-	*/
-	cmd := exec.Command("git", "fetch", "origin", "main")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to fetch origin/main: %w\nOutput: %s", err, string(output))
-	}
-
-	// Check if main is up to date with origin/main
-	cmd = exec.Command("git", "rev-list", "--count", "main..origin/main")
-	/**
-	No go-git support
-	*/
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to check main status: %w", err)
-	}
-
-	count := strings.TrimSpace(string(output))
-	if count != "0" {
-		return fmt.Errorf("main is not up to date with origin/main (%s commits behind)", count)
-	}
-
-	logger.Info("Main branch is up to date with origin/main")
-	return nil
+func getPatchesPerTarget(wf *workflow.Workflow) (map[string]string, error) {
+       targetPatches := make(map[string]string)
+       for targetName, target := range wf.Targets {
+               // Step 4: Capture patchset with git diff for custom code changes
+               otherTargetOutputs := getOtherTargetOutputs(wf, targetName)
+               customCodeDiff, err := captureCustomCodeDiff(getTargetOutput(target), otherTargetOutputs)
+               if err != nil {
+                       return nil, fmt.Errorf("failed to capture custom code diff: %w", err)
+               }
+               fmt.Println(fmt.Sprintf("Captured custom code diff for target %v:\n%s", targetName, customCodeDiff))
+               // If no custom code changes detected, return early
+               if customCodeDiff == "" {
+                       fmt.Println(fmt.Sprintf("No custom code changes detected in target %v, nothing to register", targetName))
+               }
+               targetPatches[targetName] = customCodeDiff
+       }
+       return targetPatches, nil
 }
 
 func checkNoSpeakeasyChanges(ctx context.Context) error {
 	logger := log.From(ctx)
 	logger.Info("Checking that changeset doesn't include .speakeasy directory changes")
 
-	/**
-		* Can be done with GO GIT, but it's not so obvious
-		    head, err := repo.Head()
-	    if err != nil {
-	        // Handle error
-	    }
-	    commit, err := repo.CommitObject(head.Hash())
-	    if err != nil {
-	        // Handle error
-	    }
-	    tree, err := commit.Tree()
-	    if err != nil {
-	        // Handle error
-	    }
-		patch, err := tree1.Diff(tree2)
-	    if err != nil {
-	        // Handle error
-	    }
-
-	    var buf bytes.Buffer
-	    encoder := diff.NewUnifiedEncoder(&buf)
-	    err = encoder.Encode(patch)
-	    if err != nil {
-	        // Handle error
-	    }
-	    fmt.Println(buf.String()) // Prints the unified diff
-	*/
 	cmd := exec.Command("git", "diff", "--name-only")
 	output, err := cmd.Output()
 	if err != nil {
@@ -729,18 +662,6 @@ func isLocalPath(location workflow.LocationString) bool {
 		(!strings.Contains(resolvedPath, "://") && !strings.Contains(resolvedPath, "@"))
 }
 
-func generateCleanSDK(ctx context.Context, targetName string, runGenerate func(targetName string) error) error {
-	logger := log.From(ctx)
-	err := runGenerate(targetName)
-
-	if err != nil {
-		return fmt.Errorf("failed to generate SDK: %w", err)
-	}
-
-	logger.Info("Clean SDK generation completed successfully")
-	return nil
-}
-
 // Git operations
 func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error) {
 	args := []string{"diff", "HEAD", outDir}
@@ -806,16 +727,8 @@ func stageAllChanges(dir string) error {
 	return nil
 }
 
-func unstageAllChanges() error {
-	resetCmd := exec.Command("git", "reset")
-	if output, err := resetCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to reset changes: %w\nOutput: %s", err, string(output))
-	}
 
-	return nil
-}
-
-func commitCleanGeneration() error {
+func commitRevertCustomCode() error {
 	// Add all changes
 	addCmd := exec.Command("git", "add", ".")
 	if output, err := addCmd.CombinedOutput(); err != nil {
@@ -823,9 +736,9 @@ func commitCleanGeneration() error {
 	}
 
 	// Commit the clean generation (allow empty if nothing changed)
-	cmd := exec.Command("git", "commit", "-m", "clean generation", "--allow-empty")
+	cmd := exec.Command("git", "commit", "-m", "reverse apply custom code", "--allow-empty")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to commit clean generation: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("failed to commit: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil
@@ -1094,11 +1007,11 @@ func getCurrentGitHash() (plumbing.Hash, error) {
 	return head.Hash(), nil
 }
 
-// removeCleanGenerationCommit removes the clean generation commit by:
+// removeReverseCustomCode removes the reverse custom code commit by:
 // 1. stash local changes
 // 2. reset --hard to the original git hash
 // 3. stash pop those local changes
-func removeCleanGenerationCommit(ctx context.Context, originalHash plumbing.Hash) error {
+func removeReverseCustomCode(ctx context.Context, originalHash plumbing.Hash) error {
 	logger := log.From(ctx).With(zap.String("method", "removeCleanGenerationCommit"))
 	logger.Info("Starting error recovery process", zap.String("target_hash", originalHash.String()))
 
