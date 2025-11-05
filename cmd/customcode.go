@@ -48,24 +48,6 @@ var registerCustomCodeCmd = &model.ExecutableCommand[RegisterCustomCodeFlags]{
 			Shorthand:   "a",
 			Description: "apply existing custom code patches without running generation",
 		},
-		flag.BooleanFlag{
-			Name:		 "latest-hash",
-			Description: "show the latest commit hash from gen.lock that contains custom code changes",
-		},
-		flag.StringFlag{
-			Name:        "installationURL",
-			Shorthand:   "i",
-			Description: "the language specific installation URL for installation instructions if the SDK is not published to a package manager",
-		},
-		flag.MapFlag{
-			Name:        "installationURLs",
-			Description: "a map from target ID to installation URL for installation instructions if the SDK is not published to a package manager",
-		},
-		flag.StringFlag{
-			Name:        "repo",
-			Shorthand:   "r",
-			Description: "the repository URL for the SDK, if the published (-p) flag isn't used this will be used to generate installation instructions",
-		},
 		flag.EnumFlag{
 			Name:          "output",
 			Shorthand:     "o",
@@ -104,16 +86,10 @@ func registerCustomCode(ctx context.Context, flags RegisterCustomCodeFlags) erro
 		if err != nil {
 			return fmt.Errorf("Could not find workflow file")
 		}
-		for targetName, target := range wf.Targets {
-			fmt.Println("Applying target ", targetName)
+		for _, target := range wf.Targets {
 			registercustomcode.ApplyCustomCodePatch(ctx, target)
 		}
 		return nil
-	}
-
-	// If --latest-hash flag is provided, show the commit hash from gen.lock
-	if flags.LatestHash {
-		return registercustomcode.ShowLatestCommitHash(ctx)
 	}
 
 	// Call the registercustomcode functionality

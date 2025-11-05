@@ -595,38 +595,52 @@ func ValidateUserID(id int64) bool {
 	gitAddOutput, gitAddErr := gitAddCmd.CombinedOutput()
 	require.NoError(t, gitAddErr, "git add should succeed: %s", string(gitAddOutput))
 
-	// Register custom code
+	// Try to register custom code with new file - should fail
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
 	customCodeCmd.Dir = temp
 	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
-	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
+	require.Error(t, customCodeErr, "customcode command should fail with new file: %s", string(customCodeOutput))
+	require.Contains(t, string(customCodeOutput), "Cannot register new files through customcode", "Error should mention new files not supported")
 
-	// Verify patch file was created
+	// Commit the new file to make it part of the codebase
+	gitCommitCmd := exec.Command("git", "commit", "-m", "Add helper file")
+	gitCommitCmd.Dir = temp
+	_, err = gitCommitCmd.CombinedOutput()
+	require.NoError(t, err, "git commit should succeed")
+
+	// Now make a modification to an existing file to test normal customcode flow
+	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+	registerCustomCodeByPrefix(t, speakeasyBinary, temp, getUserByNamePath, "// The name that needs to be fetched", "\t// custom code in existing file")
+
+	// Verify patch file was created for the modification
 	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
 	_, err = os.Stat(patchFile)
-	require.NoError(t, err, "patch file should exist at %s", patchFile)
+	require.NoError(t, err, "patch file should exist for file modifications")
 
 	// Verify the file exists after registration (before regeneration)
 	_, err = os.Stat(helperFilePath)
 	require.NoError(t, err, "Helper file should exist after registration")
 
 	// Run speakeasy run to regenerate the SDK
-	// This should apply the patch and preserve the new file
+	// This should apply the patch for the existing file modification and preserve the committed helper file
 	runRegeneration(t, speakeasyBinary, temp, true)
 
-	// Verify the new file still exists after regeneration
+	// Verify the helper file still exists after regeneration (it was committed, so should be preserved)
 	_, err = os.Stat(helperFilePath)
 	require.NoError(t, err, "Helper file should exist after regeneration")
 
-	// Verify the file contents are preserved exactly
+	// Verify the helper file contents are preserved exactly
 	verifyCustomCodePresent(t, helperFilePath, "FormatUserID")
 	verifyCustomCodePresent(t, helperFilePath, "ValidateUserID")
 	verifyCustomCodePresent(t, helperFilePath, "package utils")
 
-	// Read the entire file and verify exact content match
+	// Read the entire helper file and verify exact content match
 	actualContent, err := os.ReadFile(helperFilePath)
 	require.NoError(t, err, "Failed to read helper file after regeneration")
 	require.Equal(t, helperFileContent, string(actualContent), "Helper file content should be preserved exactly")
+
+	// Verify the custom code modification was applied to the existing file
+	verifyCustomCodePresent(t, getUserByNamePath, "// custom code in existing file")
 }
 
 // testCustomCodeNewFileDeletion tests that deleting a custom file is properly registered and persisted
@@ -659,44 +673,38 @@ func FormatUserID(id int64) string {
 	_, err = gitAddCmd.CombinedOutput()
 	require.NoError(t, err, "git add should succeed")
 
-	// Register custom code (registers the new file)
-	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
-	customCodeCmd.Dir = temp
-	customCodeOutput, customCodeErr := customCodeCmd.CombinedOutput()
-	require.NoError(t, customCodeErr, "customcode command should succeed: %s", string(customCodeOutput))
-
-	// Verify patch file was created
-	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
-	_, err = os.Stat(patchFile)
-	require.NoError(t, err, "patch file should exist after registering new file")
-
-	// Regenerate and verify the file is preserved
-	runRegeneration(t, speakeasyBinary, temp, true)
-	_, err = os.Stat(helperFilePath)
-	require.NoError(t, err, "Helper file should exist after first regeneration")
-
-	// Commit the regeneration so the file becomes part of HEAD
-	gitCommitCmd := exec.Command("git", "commit", "-am", "regeneration with custom file")
+	// Commit the new file to make it part of the codebase
+	gitCommitCmd := exec.Command("git", "commit", "-m", "Add helper file")
 	gitCommitCmd.Dir = temp
 	_, err = gitCommitCmd.CombinedOutput()
-	require.NoError(t, err, "git commit should succeed after regeneration")
+	require.NoError(t, err, "git commit should succeed")
 
 	// Now delete the file
 	err = os.Remove(helperFilePath)
 	require.NoError(t, err, "Failed to delete helper file")
 
-	// Register the deletion
-	customCodeCmd = exec.Command(speakeasyBinary, "customcode", "--output", "console")
-	customCodeCmd.Dir = temp
-	customCodeOutput, customCodeErr = customCodeCmd.CombinedOutput()
-	require.NoError(t, customCodeErr, "customcode command should succeed after deletion: %s", string(customCodeOutput))
+	// Commit the deletion
+	gitCommitDeleteCmd := exec.Command("git", "commit", "-am", "Delete helper file")
+	gitCommitDeleteCmd.Dir = temp
+	_, err = gitCommitDeleteCmd.CombinedOutput()
+	require.NoError(t, err, "git commit for deletion should succeed")
 
-	// Verify patch file was removed (no custom code remaining)
+	// Now make a modification to an existing file to test normal customcode flow
+	getUserByNamePath := filepath.Join(temp, "models", "operations", "getuserbyname.go")
+	registerCustomCodeByPrefix(t, speakeasyBinary, temp, getUserByNamePath, "// The name that needs to be fetched", "\t// custom code for deletion test")
+
+	// Verify patch file was created for the modification
+	patchFile := filepath.Join(temp, ".speakeasy", "patches", "custom-code.diff")
 	_, err = os.Stat(patchFile)
-	require.True(t, os.IsNotExist(err), "patch file should not exist after deleting the only custom file")
+	require.NoError(t, err, "patch file should exist for file modifications")
 
-	// Regenerate and verify the file remains deleted
+	// Run regeneration to test that the custom code is preserved and deleted file stays deleted
 	runRegeneration(t, speakeasyBinary, temp, true)
+	
+	// Verify the helper file does NOT exist after regeneration (it was deleted and committed)
 	_, err = os.Stat(helperFilePath)
-	require.True(t, os.IsNotExist(err), "Helper file should not exist after regeneration with deletion registered")
+	require.True(t, os.IsNotExist(err), "Helper file should not exist after regeneration (was deleted)")
+
+	// Verify the custom code modification was applied to the existing file
+	verifyCustomCodePresent(t, getUserByNamePath, "// custom code for deletion test")
 }

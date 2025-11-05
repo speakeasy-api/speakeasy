@@ -675,6 +675,11 @@ func isLocalPath(location workflow.LocationString) bool {
 
 // Git operations
 func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error) {
+	// First, check for new files and deletions in the staged changes
+	if err := checkForNewFilesOrDeletions(outDir); err != nil {
+		return "", err
+	}
+
 	args := []string{"diff", "HEAD", outDir}
 
 	// Filter excludePaths to only include children of outDir
@@ -697,6 +702,59 @@ func captureCustomCodeDiff(outDir string, excludePaths []string) (string, error)
 	}
 
 	return string(combinedOutput), nil
+}
+
+// checkForNewFilesOrDeletions checks if there are any new files or file deletions
+// in the staged changes and returns an error if found, as these are not supported
+func checkForNewFilesOrDeletions(outDir string) error {
+	// Check for new files (A) and deletions (D) using git diff with filter
+	cmd := exec.Command("git", "diff", "--name-status", "--diff-filter=AD", "HEAD", outDir)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to check for new files or deletions: %w", err)
+	}
+
+	outputStr := strings.TrimSpace(string(output))
+	if outputStr == "" {
+		// No additions or deletions found
+		return nil
+	}
+
+	lines := strings.Split(outputStr, "\n")
+	var newFiles []string
+	var deletedFiles []string
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		
+		// Format is "STATUS\tFILENAME"
+		parts := strings.SplitN(line, "\t", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		
+		status := parts[0]
+		filename := parts[1]
+		
+		if status == "A" {
+			newFiles = append(newFiles, filename)
+		} else if status == "D" {
+			deletedFiles = append(deletedFiles, filename)
+		}
+	}
+
+	// Return error if we found new files or deletions
+	if len(newFiles) > 0 {
+		return fmt.Errorf("Cannot register new files through customcode. New files found: %s", strings.Join(newFiles, ", "))
+	}
+	
+	if len(deletedFiles) > 0 {
+		return fmt.Errorf("Cannot register file deletions through customcode. Deleted files found: %s", strings.Join(deletedFiles, ", "))
+	}
+
+	return nil
 }
 
 func checkForChangesWithExclusions(dir string, excludePaths []string) (bool, error) {

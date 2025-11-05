@@ -32,7 +32,7 @@ func TestMultiTargetCustomCode(t *testing.T) {
 		testMultiTargetIncrementalCustomCode(t, speakeasyBinary)
 	})
 
-	t.Run("ConflictResolutionAcceptOurs", func(t *testing.T) {
+	t.Run("ConflictResolutionAcceptOurs1", func(t *testing.T) {
 		t.Parallel()
 		testMultiTargetCustomCodeConflictResolutionAcceptOurs(t, speakeasyBinary)
 	})
@@ -296,7 +296,7 @@ func testMultiTargetCustomCodeConflictResolutionAcceptOurs(t *testing.T, speakea
 
 	// Step 1: Add custom code to ALL targets
 	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// custom code in go target")
-	modifyLineInFileByPrefix(t, tsFilePath, "* @deprecated This namespace", "// custom code in typescript target")
+	modifyLineInFileByPrefix(t, tsFilePath, "* @internal", "// custom code in typescript target")
 
 	// Step 2: Register custom code for all targets
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
@@ -593,7 +593,7 @@ func testMultiTargetCustomCodeConflictResolutionAcceptTheirs(t *testing.T, speak
 
 	// Step 1: Add custom code to ALL targets
 	modifyLineInFileByPrefix(t, goFilePath, "// The name that needs to be", "\t// custom code in go target")
-	modifyLineInFileByPrefix(t, tsFilePath, "* @deprecated This namespace", "// custom code in typescript target")
+	modifyLineInFileByPrefix(t, tsFilePath, "* @internal", "// custom code in typescript target")
 
 	// Step 2: Register custom code for all targets
 	customCodeCmd := exec.Command(speakeasyBinary, "customcode", "--output", "console")
