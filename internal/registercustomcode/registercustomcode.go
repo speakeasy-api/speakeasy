@@ -456,8 +456,19 @@ func completeConflictResolution(ctx context.Context, wf *workflow.Workflow) erro
 		checkCommitCmd := exec.Command("git", "log", "-1", "--grep=clean generation (conflict resolution)", "--format=%H", "--", outDir)
 		commitOutput, err := checkCommitCmd.Output()
 		if err == nil && strings.TrimSpace(string(commitOutput)) != "" {
-			targetsInResolution[targetName] = true
-			logger.Info(fmt.Sprintf("Target %s was part of conflict resolution", targetName))
+			// Get the most recent commit hash
+			headCommitCmd := exec.Command("git", "rev-parse", "HEAD")
+			headCommitOutput, headErr := headCommitCmd.Output()
+			if headErr == nil {
+				commitHash := strings.TrimSpace(string(commitOutput))
+				headCommitHash := strings.TrimSpace(string(headCommitOutput))
+				
+				// Only consider it part of resolution if the commit is the HEAD commit
+				if commitHash == headCommitHash {
+					targetsInResolution[targetName] = true
+					logger.Info(fmt.Sprintf("Target %s was part of conflict resolution", targetName))
+				}
+			}
 		}
 	}
 
