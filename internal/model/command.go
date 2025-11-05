@@ -318,6 +318,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	} else {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
 	}
+
 	// Get lockfile version before running the command, in case it gets overwritten
 	lockfileVersion := getSpeakeasyVersionFromLockfile()
 
@@ -342,7 +343,7 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 			if lockfileVersion != "" && lockfileVersion != desiredVersion {
 				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version")
-				return runWithVersion(cmd, artifactArch, "anyrandomstring", false)
+				return runWithVersion(cmd, artifactArch, lockfileVersion, false)
 			}
 		}
 
@@ -352,7 +353,6 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 	return nil
 }
-
 
 // If promote is true, the version will be promoted to the default version (ie when running `speakeasy`)
 func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, shouldPromote bool) error {
@@ -390,7 +390,6 @@ func runWithVersion(cmd *cobra.Command, artifactArch, desiredVersion string, sho
 
 	return nil
 }
-
 
 func promoteVersion(ctx context.Context, vLocation string) error {
 	mutex := locks.CLIUpdateLock()

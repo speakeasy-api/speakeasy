@@ -113,7 +113,6 @@ func addCommand(cmd *cobra.Command, command model.Command) {
 func CmdForTest(version, artifactArch string) *cobra.Command {
 	setupRootCmd(version, artifactArch)
 
-
 	return rootCmd
 }
 

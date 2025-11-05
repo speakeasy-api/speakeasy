@@ -20,7 +20,6 @@ type RegisterCustomCodeFlags struct {
 	Show    bool   `json:"show"`
 	Apply bool   `json:"apply-only"`
 	ApplyReverse bool	`json:"apply-reverse"`
-	LatestHash bool   `json:"latest-hash"`
 	InstallationURL	string	`json:"installationURL"`
 	InstallationURLs   map[string]string `json:"installationURLs"`
 	Repo               string            `json:"repo"`
