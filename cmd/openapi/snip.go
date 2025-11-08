@@ -40,27 +40,27 @@ You can specify multiple operations by:
 
 Remove specific operations by operation ID:
 ` + "```" + `
-speakeasy openapi transform snip --schema ./spec.yaml --operationId deleteUser --operationId adminDebug
+speakeasy openapi snip --schema ./spec.yaml --operationId deleteUser --operationId adminDebug
 ` + "```" + `
 
 Remove operations by path and method:
 ` + "```" + `
-speakeasy openapi transform snip --schema ./spec.yaml --operation /users/{id}:DELETE --operation /admin:GET
+speakeasy openapi snip --schema ./spec.yaml --operation /users/{id}:DELETE --operation /admin:GET
 ` + "```" + `
 
 Keep only specified operations (remove everything else):
 ` + "```" + `
-speakeasy openapi transform snip --schema ./spec.yaml --keep --operation /users:GET --operation /users:POST
+speakeasy openapi snip --schema ./spec.yaml --keep --operation /users:GET --operation /users:POST
 ` + "```" + `
 
 Write to a file instead of stdout:
 ` + "```" + `
-speakeasy openapi transform snip --schema ./spec.yaml --out ./public-spec.yaml --operation /internal:GET
+speakeasy openapi snip --schema ./spec.yaml --out ./public-spec.yaml --operation /internal:GET
 ` + "```" + `
 
 Pipe to other commands:
 ` + "```" + `
-speakeasy openapi transform snip --schema ./spec.yaml --operation /debug:GET | speakeasy openapi lint
+speakeasy openapi snip --schema ./spec.yaml --operation /debug:GET | speakeasy openapi lint
 ` + "```"
 
 type snipFlags struct {
