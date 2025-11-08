@@ -17,7 +17,7 @@ func TestSnip_RemoveByOperationID(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Call Snip to remove operations by operation ID
-	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"deletePet", "findPetsByStatus"}, false, true, &buf)
+	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"deletePet", "findPetsByStatus"}, false, &buf)
 	require.NoError(t, err)
 
 	// Parse the snipped spec using the openapi package
@@ -48,7 +48,7 @@ func TestSnip_RemoveByPathMethod(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Remove operations by path:method format
-	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"/pet/{petId}:DELETE", "/pet/findByStatus:GET"}, false, true, &buf)
+	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"/pet/{petId}:DELETE", "/pet/findByStatus:GET"}, false, &buf)
 	require.NoError(t, err)
 
 	snippedDoc, _, err := openapi.Unmarshal(ctx, &buf)
@@ -70,7 +70,7 @@ func TestSnip_KeepMode(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Keep only specified operations, remove everything else
-	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"getPetById"}, true, true, &buf)
+	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"getPetById"}, true, &buf)
 	require.NoError(t, err)
 
 	snippedDoc, _, err := openapi.Unmarshal(ctx, &buf)
@@ -96,7 +96,7 @@ func TestSnip_MixedOperationFormats(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Mix operation ID and path:method formats
-	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"deletePet", "/pet/findByStatus:GET"}, false, true, &buf)
+	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"deletePet", "/pet/findByStatus:GET"}, false, &buf)
 	require.NoError(t, err)
 
 	snippedDoc, _, err := openapi.Unmarshal(ctx, &buf)
@@ -118,7 +118,7 @@ func TestSnip_NoOperationsSpecified(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Should error when no operations are specified
-	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{}, false, true, &buf)
+	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{}, false, &buf)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no operations specified")
 }
@@ -129,17 +129,17 @@ func TestSnip_InvalidOperationFormat(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Should error on operation without method (missing colon)
-	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"/pet"}, false, true, &buf)
+	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"/pet"}, false, &buf)
 	require.NoError(t, err, "Operation without colon is treated as operation ID, not an error")
 
 	// Should error on empty path or method
 	buf.Reset()
-	err = Snip(ctx, "../../integration/resources/part1.yaml", []string{":GET"}, false, true, &buf)
+	err = Snip(ctx, "../../integration/resources/part1.yaml", []string{":GET"}, false, &buf)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid operation format")
 
 	buf.Reset()
-	err = Snip(ctx, "../../integration/resources/part1.yaml", []string{"/pet:"}, false, true, &buf)
+	err = Snip(ctx, "../../integration/resources/part1.yaml", []string{"/pet:"}, false, &buf)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid operation format")
 }
@@ -150,7 +150,7 @@ func TestSnip_NonExistentOperation(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Should not error when removing non-existent operations (graceful handling)
-	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"nonExistentOperation"}, false, true, &buf)
+	err := Snip(ctx, "../../integration/resources/part1.yaml", []string{"nonExistentOperation"}, false, &buf)
 	require.NoError(t, err)
 
 	// Document should still be valid

@@ -118,12 +118,12 @@ func runSnip(ctx context.Context, flags snipFlags) error {
 	allOperations = append(allOperations, flags.Operations...)
 
 	// Setup output
-	out, yamlOut, err := setupOutput(ctx, flags.Out)
+	out, _, err := setupOutput(ctx, flags.Out)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
 	// Run the snip transform
-	return transform.Snip(ctx, flags.Schema, allOperations, flags.Keep, yamlOut, out)
+	return transform.Snip(ctx, flags.Schema, allOperations, flags.Keep, out)
 }

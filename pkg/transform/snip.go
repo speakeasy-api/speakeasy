@@ -20,7 +20,7 @@ import (
 // The function supports two modes:
 //   - Remove mode (keepMode=false): Removes the specified operations
 //   - Keep mode (keepMode=true): Keeps only the specified operations, removes everything else
-func Snip(ctx context.Context, schemaPath string, operations []string, keepMode bool, yamlOut bool, w io.Writer) error {
+func Snip(ctx context.Context, schemaPath string, operations []string, keepMode bool, w io.Writer) error {
 	// Open and read the input file
 	f, err := os.Open(schemaPath)
 	if err != nil {
@@ -73,9 +73,7 @@ func Snip(ctx context.Context, schemaPath string, operations []string, keepMode 
 
 	// Write success message to stderr so stdout can be piped
 	if keepMode {
-		totalOps := removed + len(operations)
 		fmt.Fprintf(os.Stderr, "✅ Kept %d operation(s), removed %d operation(s)\n", len(operations), removed)
-		_ = totalOps // Keep compiler happy
 	} else {
 		fmt.Fprintf(os.Stderr, "✅ Removed %d operation(s) and cleaned unused components\n", removed)
 	}
