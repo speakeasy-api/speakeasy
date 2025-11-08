@@ -3,9 +3,10 @@ package openapi
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/cmd/lint"
 	"os"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy/cmd/lint"
 
 	"github.com/pb33f/openapi-changes/tui"
 	"github.com/pkg/errors"
@@ -21,6 +22,8 @@ import (
 )
 
 const openapiLong = "# OpenAPI \n The `openapi` command provides a set of commands for visualizing, linting and transforming OpenAPI documents."
+
+var outputTypes = []string{"summary", "console", "html"}
 
 var OpenAPICmd = &model.CommandGroup{
 	Usage:          "openapi",
@@ -75,8 +78,8 @@ var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 		flag.EnumFlag{
 			Name:          "format",
 			Shorthand:     "f",
-			Description:   "output format",
-			AllowedValues: []string{"summary", "console", "html"},
+			Description:   fmt.Sprintf("output format (available options: %s)", outputTypes),
+			AllowedValues: outputTypes,
 			DefaultValue:  "summary",
 		},
 	},
