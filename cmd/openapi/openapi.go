@@ -27,7 +27,7 @@ var OpenAPICmd = &model.CommandGroup{
 	Short:          "Utilities for working with OpenAPI documents",
 	Long:           utils.RenderMarkdown(openapiLong),
 	InteractiveMsg: "What do you want to do?",
-	Commands:       []model.Command{openapiLintCmd, openapiDiffCmd, transformCmd},
+	Commands:       []model.Command{openapiLintCmd, openapiDiffCmd, transformCmd, snipCmd},
 }
 
 var openapiLintCmd = &model.ExecutableCommand[lint.LintOpenapiFlags]{
