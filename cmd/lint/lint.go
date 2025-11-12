@@ -45,6 +45,8 @@ type LintOpenapiFlags struct {
 	MaxValidationWarnings int    `json:"max-validation-warnings"`
 	Ruleset               string `json:"ruleset"`
 	NonInteractive        bool   `json:"non-interactive"`
+	Suggestions           bool   `json:"suggestions"`
+	DryRun                bool   `json:"dry-run"`
 }
 
 const lintOpenAPILong = `# Lint 
@@ -94,6 +96,14 @@ var LintOpenapiCmd = &model.ExecutableCommand[LintOpenapiFlags]{
 		flag.BooleanFlag{
 			Name:        "non-interactive",
 			Description: "force non-interactive mode even when running in a terminal",
+		},
+		flag.BooleanFlag{
+			Name:        "suggestions",
+			Description: "fetch and display SDK generation suggestions",
+		},
+		flag.BooleanFlag{
+			Name:        "dry-run",
+			Description: "run dry-run SDK generation to surface target-specific warnings",
 		},
 	},
 }
@@ -155,7 +165,7 @@ func lintOpenapi(ctx context.Context, flags LintOpenapiFlags) error {
 	}
 
 	// Run diagnostic dry run to surface generator warnings
-	if err := runAndDisplayDiagnostics(ctx, flags.SchemaPath, res); err != nil {
+	if err := runAndDisplayDiagnostics(ctx, flags.SchemaPath, res, flags.Suggestions, flags.DryRun); err != nil {
 		// Don't fail the command if diagnostics fail, just log the error
 		log.From(ctx).Warnf("Failed to run diagnostics: %s", err.Error())
 	}
@@ -195,7 +205,7 @@ func lintOpenapiInteractive(ctx context.Context, flags LintOpenapiFlags) error {
 	}
 
 	// Display all results in organized tabs
-	if err := displayAllResultsInTabs(ctx, flags.SchemaPath, schema, res); err != nil {
+	if err := displayAllResultsInTabs(ctx, flags.SchemaPath, schema, res, flags.Suggestions, flags.DryRun); err != nil {
 		// Don't fail the command if diagnostics fail, just log the error
 		log.From(ctx).Warnf("Failed to display results: %s", err.Error())
 	}
@@ -235,7 +245,7 @@ func validateArazzo(ctx context.Context, flags lintArazzoFlags) error {
 }
 
 // runAndDisplayDiagnostics runs diagnostics on the schema and displays them in non-interactive mode
-func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validationResult *validation.ValidationResult) error {
+func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validationResult *validation.ValidationResult, runSuggestions, runDryRun bool) error {
 	logger := log.From(ctx)
 
 	// Skip diagnostics if there were validation errors
@@ -243,41 +253,52 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 		return nil
 	}
 
-	logger.Info("Running SDK generation diagnostics...\n")
-
-	// First, collect diagnostic suggestions about the OpenAPI structure
-	diagnosis, err := suggest.Diagnose(ctx, schemaPath)
-	if err != nil {
-		return fmt.Errorf("failed to run diagnostics: %w", err)
+	// Early return if neither suggestions nor dry-run are requested
+	if !runSuggestions && !runDryRun {
+		return nil
 	}
 
-	// Try to get workflow file to run target-specific dry-run generations
-	wf, projectDir, _ := utils.GetWorkflowAndDir()
-	targetWarnings := make(map[string][]error)
+	logger.Info("Running SDK generation diagnostics...\n")
 
-	if wf != nil && len(wf.Targets) > 0 {
-		// Run a dry-run generation for each target to collect target-specific warnings
-		for targetName, target := range wf.Targets {
-			warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
-			if err == nil && len(warnings) > 0 {
-				// Filter out warnings we've already seen
-				newWarnings := []error{}
-				for _, w := range warnings {
-					isNew := true
-					if validationResult != nil {
-						for _, existingW := range validationResult.Warnings {
-							if w.Error() == existingW.Error() {
-								isNew = false
-								break
+	// Collect diagnostic suggestions about the OpenAPI structure (if requested)
+	var diagnosis suggestions.Diagnosis
+	if runSuggestions {
+		var err error
+		diagnosis, err = suggest.Diagnose(ctx, schemaPath)
+		if err != nil {
+			return fmt.Errorf("failed to run diagnostics: %w", err)
+		}
+	}
+
+	// Try to get workflow file to run target-specific dry-run generations (if requested)
+	targetWarnings := make(map[string][]error)
+	if runDryRun {
+		wf, projectDir, _ := utils.GetWorkflowAndDir()
+
+		if wf != nil && len(wf.Targets) > 0 {
+			// Run a dry-run generation for each target to collect target-specific warnings
+			for targetName, target := range wf.Targets {
+				warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
+				if err == nil && len(warnings) > 0 {
+					// Filter out warnings we've already seen
+					newWarnings := []error{}
+					for _, w := range warnings {
+						isNew := true
+						if validationResult != nil {
+							for _, existingW := range validationResult.Warnings {
+								if w.Error() == existingW.Error() {
+									isNew = false
+									break
+								}
 							}
 						}
+						if isNew {
+							newWarnings = append(newWarnings, w)
+						}
 					}
-					if isNew {
-						newWarnings = append(newWarnings, w)
+					if len(newWarnings) > 0 {
+						targetWarnings[targetName] = newWarnings
 					}
-				}
-				if len(newWarnings) > 0 {
-					targetWarnings[targetName] = newWarnings
 				}
 			}
 		}
@@ -329,13 +350,11 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 		}
 	}
 
-	logger.PrintfStyled(styles.Info, "\nℹ Get automatic fixes in the Studio with %s\n", styles.HeavilyEmphasized.Render("speakeasy run --watch"))
-
 	return nil
 }
 
 // displayAllResultsInTabs displays validation results, diagnostics, and generation warnings in organized tabs
-func displayAllResultsInTabs(ctx context.Context, schemaPath string, schema []byte, validationResult *validation.ValidationResult) error {
+func displayAllResultsInTabs(ctx context.Context, schemaPath string, schema []byte, validationResult *validation.ValidationResult, runSuggestions, runDryRun bool) error {
 	logger := log.From(ctx)
 
 	var tabs []interactivity.Tab
@@ -389,73 +408,78 @@ func displayAllResultsInTabs(ctx context.Context, schemaPath string, schema []by
 		return nil
 	}
 
-	logger.Info("Running SDK generation diagnostics...\n")
-
-	// Tab 4: Suggestions (diagnostics)
-	diagnosis, err := suggest.Diagnose(ctx, schemaPath)
-	if err != nil {
-		return fmt.Errorf("failed to run diagnostics: %w", err)
+	// Only run diagnostics if requested
+	if runSuggestions || runDryRun {
+		logger.Info("Running SDK generation diagnostics...\n")
 	}
 
-	totalDiagnostics := 0
-	for _, diagnostics := range diagnosis {
-		totalDiagnostics += len(diagnostics)
+	// Tab 4: Suggestions (diagnostics) - only if requested
+	if runSuggestions {
+		diagnosis, err := suggest.Diagnose(ctx, schemaPath)
+		if err != nil {
+			return fmt.Errorf("failed to run diagnostics: %w", err)
+		}
+
+		totalDiagnostics := 0
+		for _, diagnostics := range diagnosis {
+			totalDiagnostics += len(diagnostics)
+		}
+
+		suggestionsTitle := fmt.Sprintf("Suggestions (%d)", totalDiagnostics)
+		if totalDiagnostics == 0 {
+			suggestionsTitle = "Suggestions ✓"
+		}
+
+		tabs = append(tabs, interactivity.Tab{
+			Title:       suggestionsTitle,
+			Content:     diagnosisToTabContents(diagnosis),
+			TitleColor:  styles.Colors.Blue,
+			BorderColor: styles.Colors.Blue,
+			Default:     false,
+		})
 	}
 
-	suggestionsTitle := fmt.Sprintf("Suggestions (%d)", totalDiagnostics)
-	if totalDiagnostics == 0 {
-		suggestionsTitle = "Suggestions ✓"
-	}
+	// Tabs 5+: Generation Warnings per target - only if requested
+	if runDryRun {
+		wf, projectDir, _ := utils.GetWorkflowAndDir()
 
-	tabs = append(tabs, interactivity.Tab{
-		Title:       suggestionsTitle,
-		Content:     diagnosisToTabContents(diagnosis),
-		TitleColor:  styles.Colors.Blue,
-		BorderColor: styles.Colors.Blue,
-		Default:     false,
-	})
+		if wf != nil && len(wf.Targets) > 0 {
+			// Sort target names for consistent ordering
+			targetNames := slices.Collect(maps.Keys(wf.Targets))
+			slices.Sort(targetNames)
 
-	// Tabs 5+: Generation Warnings per target
-	wf, projectDir, _ := utils.GetWorkflowAndDir()
+			for _, targetName := range targetNames {
+				target := wf.Targets[targetName]
+				warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
+				if err != nil {
+					// If we can't run generation for this target, skip it
+					continue
+				}
 
-	if wf != nil && len(wf.Targets) > 0 {
-		// Sort target names for consistent ordering
-		targetNames := slices.Collect(maps.Keys(wf.Targets))
-		slices.Sort(targetNames)
+				warningCount := len(warnings)
+				warningTitle := fmt.Sprintf("Generation Warnings (%s)", targetName)
 
-		for _, targetName := range targetNames {
-			target := wf.Targets[targetName]
-			warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
-			if err != nil {
-				// If we can't run generation for this target, skip it
-				continue
+				if warningCount > 0 {
+					warningTitle = fmt.Sprintf("Generation Warnings (%s) - %d", targetName, warningCount)
+				}
+
+				warningColor := styles.Colors.Green
+				if warningCount > 0 {
+					warningColor = styles.Colors.Yellow
+				}
+
+				tabs = append(tabs, interactivity.Tab{
+					Title:       warningTitle,
+					Content:     warningsToTabContents(warnings),
+					TitleColor:  warningColor,
+					BorderColor: warningColor,
+					Default:     false,
+				})
 			}
-
-			warningCount := len(warnings)
-			warningTitle := fmt.Sprintf("Generation Warnings (%s)", targetName)
-
-			if warningCount > 0 {
-				warningTitle = fmt.Sprintf("Generation Warnings (%s) - %d", targetName, warningCount)
-			}
-
-			warningColor := styles.Colors.Green
-			if warningCount > 0 {
-				warningColor = styles.Colors.Yellow
-			}
-
-			tabs = append(tabs, interactivity.Tab{
-				Title:       warningTitle,
-				Content:     warningsToTabContents(warnings),
-				TitleColor:  warningColor,
-				BorderColor: warningColor,
-				Default:     false,
-			})
 		}
 	}
 
 	interactivity.RunTabs(tabs)
-
-	logger.PrintfStyled(styles.Info, "\nℹ Get automatic fixes in the Studio with %s\n", styles.HeavilyEmphasized.Render("speakeasy run --watch"))
 
 	return nil
 }
