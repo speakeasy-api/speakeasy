@@ -36,6 +36,7 @@ type RunFlags struct {
 	SkipTesting        bool              `json:"skip-testing"`
 	SkipVersioning     bool              `json:"skip-versioning"`
 	SkipUploadSpec     bool              `json:"skip-upload-spec"`
+	SkipCustomCode     bool              `json:"skip-custom-code"`
 	FrozenWorkflowLock bool              `json:"frozen-workflow-lockfile"`
 	Force              bool              `json:"force"`
 	Output             string            `json:"output"`
@@ -128,6 +129,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.BooleanFlag{
 			Name:        "skip-upload-spec",
 			Description: "skip uploading the spec to the registry",
+		},
+		flag.BooleanFlag{
+			Name:        "skip-custom-code",
+			Description: "skip applying custom code patches during generation",
 		},
 		flag.BooleanFlag{
 			Name:         "frozen-workflow-lockfile",
@@ -439,6 +444,10 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSourceLocation(flags.SourceLocation),
 	}
 
+	if flags.SkipCustomCode {
+		opts = append(opts, run.WithSkipApplyCustomCode())
+	}
+
 	if flags.Minimal {
 		opts = append(opts, minimalOpts...)
 	}
@@ -500,6 +509,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
+	}
+
+	if flags.SkipCustomCode {
+		opts = append(opts, run.WithSkipApplyCustomCode())
 	}
 
 	if flags.Minimal {

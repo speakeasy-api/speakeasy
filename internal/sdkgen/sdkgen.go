@@ -68,6 +68,7 @@ type GenerateOptions struct {
 	Compile         bool
 	TargetName      string
 	SkipVersioning  bool
+	SkipCustomCode  bool
 
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
@@ -150,6 +151,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generate.WithChangelogReleaseNotes(opts.ReleaseNotes),
 	}
 
+	if opts.SkipCustomCode {
+		generatorOpts = append(generatorOpts, generate.WithSkipApplyCustomCode())
+	}
+
 	if opts.Verbose {
 		generatorOpts = append(generatorOpts, generate.WithVerboseOutput(true))
 	}
@@ -204,7 +209,12 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}
 
 		if len(errs) > 0 {
+			// Check if this is a custom code conflict
 			for _, err := range errs {
+				if strings.Contains(err.Error(), "CUSTOM_CODE_CONFLICT:") {
+					// Return special error that can be detected upstream
+					return fmt.Errorf("CUSTOM_CODE_CONFLICT_DETECTED: %w", err)
+				}
 				logger.Error("", zap.Error(err))
 			}
 
