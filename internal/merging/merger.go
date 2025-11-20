@@ -2,93 +2,127 @@ package merging
 
 import (
 	"bytes"
+	"fmt"
+	"io"
+	"strings"
 
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/epiclabs-io/diff3"
 )
 
-// TextMerger implements a text-based 3-way merge using diff-match-patch.
-// It treats "Current" (User) as the destination and applies "New" (Generator) changes as patches.
-type TextMerger struct {
-	engine *dmp.DiffMatchPatch
-}
+// TextMerger implements a text-based 3-way merge using the diff3 algorithm.
+// It performs proper 3-way merge with automatic resolution of non-overlapping changes
+// and injection of Git-style conflict markers for overlapping changes.
+type TextMerger struct{}
 
 func NewTextMerger() *TextMerger {
-	return &TextMerger{
-		engine: dmp.New(),
-	}
+	return &TextMerger{}
 }
 
+// Merge performs a 3-way merge: Merge(base, current, new)
+// - base: Pure generated content from previous run (merge base)
+// - current: File on disk with user edits
+// - new: Fresh generated content
+//
+// Returns:
+// - MergeStatusClean: All changes merged successfully
+// - MergeStatusConflict: Overlapping changes, conflict markers injected
+// - MergeStatusCreated: New file (no base)
+// - MergeStatusFastForward: Current equals new (no changes needed)
 func (m *TextMerger) Merge(base, current, new []byte) (*MergeResult, error) {
 	res := &MergeResult{
 		Status: MergeStatusClean,
 	}
 
-	// 1. Fast paths
+	// 1. Fast path: Identical content
 	if bytes.Equal(current, new) {
-		// Identical
 		res.Content = current
+		res.Status = MergeStatusFastForward
 		return res, nil
 	}
+
+	// 2. No base: Treat as new file
 	if base == nil || len(base) == 0 {
-		// No base means this is effectively a new file or we lost history.
-		// If User has content, and Generator has content, and they differ -> Conflict/Overwrite?
-		// For safety in RTE, if we have no base, we assume Generator is authoritative
-		// BUT if user file exists, we might want to warn.
-		// Standard behavior: Overwrite if no history tracking.
+		// No history - this is a new file or we lost tracking
+		// Generator is authoritative for new files
 		res.Content = new
 		res.Status = MergeStatusCreated
 		return res, nil
 	}
 
-	baseStr := string(base)
-	currStr := string(current)
-	newStr := string(new)
-
-	// 2. Calculate Patch: Base -> New (What did the generator change?)
-	// We want to apply Generator changes onto User's current file.
-	patches := m.engine.PatchMake(baseStr, newStr)
-
-	if len(patches) == 0 {
-		// No changes from generator
-		res.Content = current
+	// 3. Check if current equals base (user made no changes)
+	if bytes.Equal(current, base) {
+		// Fast-forward: Just use new content
+		res.Content = new
+		res.Status = MergeStatusFastForward
 		return res, nil
 	}
 
-	// 3. Apply Patch to Current
-	mergedStr, results := m.engine.PatchApply(patches, currStr)
-
-	// 4. Check for conflicts
-	// PatchApply returns a bool array indicating success of each patch.
-	// If any patch failed to apply, it means the context didn't match
-	// (likely due to user edits in the same region).
-	hasFailures := false
-	for _, success := range results {
-		if !success {
-			hasFailures = true
-			break
-		}
+	// 4. Check if new equals base (generator made no changes)
+	if bytes.Equal(new, base) {
+		// No generator changes, keep user's version
+		res.Content = current
+		res.Status = MergeStatusClean
+		return res, nil
 	}
 
-	if hasFailures {
+	// 5. Perform 3-way merge using diff3
+	result, err := diff3.Merge(
+		strings.NewReader(string(current)), // A (ours/current/user)
+		strings.NewReader(string(base)),    // O (original/base)
+		strings.NewReader(string(new)),     // B (theirs/new/generator)
+		true,                                // includeConflicts - inject markers
+		"CURRENT (User's changes)",
+		"NEW (Generated code)",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("diff3 merge failed: %w", err)
+	}
+
+	// 6. Read merged content
+	mergedBytes, err := io.ReadAll(result.Result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read merge result: %w", err)
+	}
+
+	res.Content = mergedBytes
+
+	// 7. Check for conflicts
+	if result.Conflicts {
 		res.Status = MergeStatusConflict
 		res.HasConflicts = true
 
-		// For MVP, we return the partially merged content.
-		// Ideally, we would inject conflict markers here.
-		// Since diffmatchpatch doesn't natively support git-style conflict markers easily,
-		// we will return the failed merge but flag it.
-		// A more advanced implementation would reconstruct the markers.
-
-		// Fallback strategy for conflicts:
-		// To be safe, we often output the NEW content but maybe back up CURRENT?
-		// Or we output the merged content with "fuzz".
-		res.Content = []byte(mergedStr)
-
-		// TODO: Implement proper conflict marker injection (<<<< ==== >>>>)
-		// For now, we mark it as conflict so the Engine can warn the user.
+		// Parse conflict markers to populate Conflicts slice
+		// This helps the engine report conflict locations
+		res.Conflicts = parseConflictMarkers(string(mergedBytes))
 	} else {
-		res.Content = []byte(mergedStr)
+		res.Status = MergeStatusClean
 	}
 
 	return res, nil
+}
+
+// parseConflictMarkers scans the merged content for conflict markers
+// and returns structured conflict information
+func parseConflictMarkers(content string) []Conflict {
+	var conflicts []Conflict
+	lines := strings.Split(content, "\n")
+
+	var inConflict bool
+	var startLine int
+
+	for i, line := range lines {
+		if strings.HasPrefix(line, "<<<<<<<") {
+			inConflict = true
+			startLine = i + 1 // Line numbers are 1-indexed
+		} else if strings.HasPrefix(line, ">>>>>>>") && inConflict {
+			conflicts = append(conflicts, Conflict{
+				StartLine: startLine,
+				EndLine:   i + 1,
+				Message:   "Overlapping changes between user edits and generated code",
+			})
+			inConflict = false
+		}
+	}
+
+	return conflicts
 }

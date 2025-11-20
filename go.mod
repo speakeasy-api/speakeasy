@@ -113,6 +113,7 @@ require (
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
+	github.com/epiclabs-io/diff3 v0.0.0-20241115194849-280ec18688b6 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/evanw/esbuild v0.24.0 // indirect
