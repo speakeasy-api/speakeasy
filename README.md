@@ -190,6 +190,7 @@ Install Speakeasy CLI via:
 - Winget
 - Chocolatey
 - Shell Script / GitHub Actions
+- Docker
 
 Refer to the [Speakeasy CLI installation documentation](https://www.speakeasy.com/docs/create-client-sdks#install-the-speakeasy-cli) for more information. CLI releases are also directly available in the [repository releases](https://github.com/speakeasy-api/speakeasy/releases).
 
