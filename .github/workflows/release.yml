@@ -67,10 +67,13 @@ jobs:
 
     docker:
         name: Build Docker Images
-        runs-on: 
+        runs-on:
             group: ubuntu-latest-large
         needs: release
         if: needs.release.outputs.tag != ''
+        env:
+            REGISTRY: ghcr.io
+            IMAGE_NAME: speakeasy-api/speakeasy
         steps:
             - name: Checkout repository
               uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -81,12 +84,12 @@ jobs:
               with:
                   name: dist
                   path: dist/
-            - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
-              with:
-                  go-version-file: "go.mod"
-                  cache: false
-            - name: Configure git for private modules
-              run: git config --global url."https://speakeasybot:${{ secrets.BOT_REPO_TOKEN }}@github.com".insteadOf "https://github.com"
+            - name: Organize binaries for Docker build
+              run: |
+                  mkdir -p linux/amd64 linux/arm64
+                  cp dist/speakeasy_linux_amd64_v1/speakeasy linux/amd64/speakeasy
+                  cp dist/speakeasy_linux_arm64_v8.0/speakeasy linux/arm64/speakeasy
+                  chmod +x linux/amd64/speakeasy linux/arm64/speakeasy
             - name: Set up QEMU
               uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
             - name: Set up Docker Buildx
@@ -97,11 +100,19 @@ jobs:
                   registry: ghcr.io
                   username: ${{ github.actor }}
                   password: ${{ secrets.BOT_REPO_TOKEN }}
-            - name: Build and push Docker images
-              uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
+            - name: Extract metadata (tags, labels) for Docker
+              id: meta
+              uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
               with:
-                  distribution: goreleaser
-                  version: latest
-                  args: release --skip=validate,publish,announce,build
-              env:
-                  GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
+                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  tags: |
+                      type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
+                      type=raw,value=latest
+            - name: Build and push Docker image
+              uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+              with:
+                  context: .
+                  platforms: linux/amd64,linux/arm64
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
