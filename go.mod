@@ -35,13 +35,14 @@ require (
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.47.0
+	github.com/sergi/go-diff v1.4.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.11.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.763.3
 	github.com/speakeasy-api/openapi-overlay v0.10.3
-	github.com/speakeasy-api/sdk-gen-config v1.42.0
+	github.com/speakeasy-api/sdk-gen-config v1.42.1-0.20251121174255-2476d8db4c49
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.20.11
 	github.com/speakeasy-api/versioning-reports v0.6.1
@@ -206,7 +207,6 @@ require (
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
-	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.5 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
@@ -264,3 +264,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
+
+replace github.com/speakeasy-api/sdk-gen-config => ../sdk-gen-config
