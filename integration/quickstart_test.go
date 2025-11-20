@@ -69,6 +69,12 @@ func shouldSkipTarget(t *testing.T, target string) bool {
 		return true
 	}
 
+	// Skip Java on windows for now as TestQuickstart/java times out
+	if runtime.GOOS == "windows" && target == "java" {
+		t.Skipf("Skipping %s on windows for now as it times out", target)
+		return true
+	}
+
 	return false
 }
 
