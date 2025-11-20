@@ -65,7 +65,8 @@ RUN addgroup -g 1001 speakeasy && \
 
 # Copy the binary from GoReleaser build context
 # GoReleaser will automatically use the correct binary for the target architecture
-COPY speakeasy /usr/local/bin/speakeasy
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/speakeasy /usr/local/bin/speakeasy
 
 # Make the binary executable (must be done as root before switching users)
 RUN chmod +x /usr/local/bin/speakeasy
