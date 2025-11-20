@@ -21,6 +21,8 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/git"
+	"github.com/speakeasy-api/speakeasy/internal/patches"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -194,6 +196,37 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			fileStatus,
 		),
 	)
+
+	// Try to open a git repository for the Round-Trip Engineering (3-way merge) feature.
+	// If a git repository exists, inject Git and FileSystem adapters for the persistentEdits feature.
+	if repo, err := git.NewLocalRepository(opts.OutDir); err == nil && !repo.IsNil() {
+		wrappedRepo := patches.WrapGitRepository(repo)
+		gitAdapter := patches.NewGitAdapter(wrappedRepo)
+		fsAdapter := patches.NewFSAdapter(opts.OutDir)
+
+		generatorOpts = append(generatorOpts,
+			generate.WithGit(gitAdapter),
+			generate.WithFileSystemInterface(fsAdapter),
+		)
+
+		// Pre-generation: detect file moves/deletions and update lockfile
+		// This scans for @generated-id headers and marks TrackedFiles with
+		// Deleted=true or MovedTo=<new path> so the generator knows about user changes.
+		if cfg, err := gen_config.Load(opts.OutDir); err == nil && cfg.LockFile != nil {
+			if cfg.Config != nil &&
+				cfg.Config.Generation.PersistentEdits != nil &&
+				cfg.Config.Generation.PersistentEdits.Enabled {
+				if err := patches.DetectFileChanges(opts.OutDir, cfg.LockFile); err != nil {
+					logger.Warnf("Failed to detect file changes: %v", err)
+				} else {
+					// Save updated lockfile with move/delete markers
+					if err := gen_config.SaveLockFile(opts.OutDir, cfg.LockFile); err != nil {
+						logger.Warnf("Failed to save lockfile with file change markers: %v", err)
+					}
+				}
+			}
+		}
+	}
 
 	g, err := generate.New(generatorOpts...)
 	if err != nil {

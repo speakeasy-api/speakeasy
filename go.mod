@@ -20,7 +20,7 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/fatih/structs v1.1.0
 	github.com/getkin/kin-openapi v0.133.0
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/go-git/go-git/v5 v5.16.4
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v58 v58.0.0
@@ -41,7 +41,7 @@ require (
 	github.com/speakeasy-api/openapi v1.11.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.770.0
 	github.com/speakeasy-api/openapi-overlay v0.10.3
-	github.com/speakeasy-api/sdk-gen-config v1.42.0
+	github.com/speakeasy-api/sdk-gen-config v1.42.1-0.20251121174255-2476d8db4c49
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.20.12
 	github.com/speakeasy-api/versioning-reports v0.6.1
@@ -206,7 +206,7 @@ require (
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
-	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
+	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.5 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
@@ -264,3 +264,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/speakeasy-api/openapi-generation/v2 => ../openapi-generation
+
+replace github.com/speakeasy-api/sdk-gen-config => ../sdk-gen-config
