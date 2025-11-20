@@ -44,6 +44,7 @@ dockers_v2:
       - "latest"
     platforms:
       - linux/amd64
+      - linux/arm64
     labels:
       org.opencontainers.image.title: "{{ .ProjectName }}"
       org.opencontainers.image.version: "{{ .Version }}"
