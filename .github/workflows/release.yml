@@ -32,14 +32,14 @@ jobs:
                   fetch-depth: 0
             - name: Conventional Commits
               id: changelog
-              uses: TriPSs/conventional-changelog-action@5f00b899ccbbcbc112bd6d715d5e76e7a9e4501d # v6.1.0
+              uses: TriPSs/conventional-changelog-action@84dadaf2c367cb52af02737cd9c7e888807219e7 # v6.2.0
               with:
                   github-token: ${{ secrets.github_token }}
                   skip-commit: "true"
                   output-file: "false"
                   skip-on-empty: "false"
                   preset: conventionalcommits
-            - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+            - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
               with:
                   go-version-file: "go.mod"
                   # Reference: https://github.com/actions/setup-go/issues/495
@@ -99,14 +99,14 @@ jobs:
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
             - name: Login to GitHub Container Registry
-              uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+              uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
               with:
                   registry: ghcr.io
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
             - name: Extract metadata (tags, labels) for Docker
               id: meta
-              uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+              uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
               with:
                   images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
                   tags: |
