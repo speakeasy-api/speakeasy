@@ -4,8 +4,15 @@ on:
         branches:
             - main
     workflow_dispatch:
+        inputs:
+            is_draft:
+                description: 'Is this a draft release?'
+                required: false
+                type: boolean
+                default: false
 permissions:
     contents: write
+    packages: write
 jobs:
     release:
         name: Release
@@ -50,20 +57,17 @@ jobs:
               with:
                   distribution: goreleaser
                   version: latest
-                  args: release --clean --skip=docker
+                  args: release --clean
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+                  IS_DRAFT: ${{ inputs.is_draft }}
             - name: Upload dist artifacts for docker build
               uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
               with:
                   name: dist
                   path: dist/
                   retention-days: 1
-            - name: Trigger changelog reconcile
-              run: gh workflow run changelog-reconcile.yml --repo speakeasy-api/marketing-site --ref main
-              env:
-                  GH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
 
     docker:
         name: Build Docker Images
@@ -99,7 +103,7 @@ jobs:
               with:
                   registry: ghcr.io
                   username: ${{ github.actor }}
-                  password: ${{ secrets.BOT_REPO_TOKEN }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
             - name: Extract metadata (tags, labels) for Docker
               id: meta
               uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
@@ -116,3 +120,14 @@ jobs:
                   push: true
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
+
+    reconcile:
+        name: Trigger Changelog Reconcile
+        runs-on: ubuntu-latest
+        needs: docker
+        if: needs.docker.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.is_draft == true))
+        steps:
+            - name: Trigger changelog reconcile
+              run: gh workflow run changelog-reconcile.yml --repo speakeasy-api/marketing-site --ref main
+              env:
+                  GH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
