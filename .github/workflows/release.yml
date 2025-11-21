@@ -110,7 +110,7 @@ jobs:
               with:
                   images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
                   tags: |
-                      type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
+                      type=semver,pattern={{raw}},value=${{ needs.release.outputs.tag }}
                       type=raw,value=latest
             - name: Build and push Docker image
               uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
