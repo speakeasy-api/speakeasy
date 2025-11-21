@@ -61,6 +61,7 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+                  IS_DRAFT: ${{ inputs.is_draft }}
             - name: Upload dist artifacts for docker build
               uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
               with:

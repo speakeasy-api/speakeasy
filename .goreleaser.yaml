@@ -34,7 +34,7 @@ changelog:
       - "^test:"
 
 release:
-  draft: {{ .Env.DRAFT }}
+  draft: ${{ .Env.IS_DRAFT }}
 
 brews:
   - name: speakeasy
