@@ -57,7 +57,7 @@ jobs:
               with:
                   distribution: goreleaser
                   version: latest
-                  args: release --clean
+                  args: release --clean ${{ inputs.is_draft == true && '--draft' || '' }}
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
@@ -110,7 +110,7 @@ jobs:
               with:
                   images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
                   tags: |
-                      type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
+                      type=semver,pattern={{raw}},value=${{ needs.release.outputs.tag }}
                       type=raw,value=latest
             - name: Build and push Docker image
               uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
