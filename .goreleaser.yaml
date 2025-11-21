@@ -33,9 +33,6 @@ changelog:
       - "^docs:"
       - "^test:"
 
-release:
-  draft: ${{ .Env.IS_DRAFT }}
-
 brews:
   - name: speakeasy
     repository:
