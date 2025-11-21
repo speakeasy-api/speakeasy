@@ -4,8 +4,15 @@ on:
         branches:
             - main
     workflow_dispatch:
+        inputs:
+            run_reconcile:
+                description: 'Run changelog reconcile (skip for draft releases)'
+                required: false
+                type: boolean
+                default: false
 permissions:
     contents: write
+    packages: write
 jobs:
     release:
         name: Release
@@ -50,7 +57,7 @@ jobs:
               with:
                   distribution: goreleaser
                   version: latest
-                  args: release --clean --skip=docker
+                  args: release --clean
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
@@ -60,10 +67,6 @@ jobs:
                   name: dist
                   path: dist/
                   retention-days: 1
-            - name: Trigger changelog reconcile
-              run: gh workflow run changelog-reconcile.yml --repo speakeasy-api/marketing-site --ref main
-              env:
-                  GH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
 
     docker:
         name: Build Docker Images
@@ -116,3 +119,14 @@ jobs:
                   push: true
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
+
+    reconcile:
+        name: Trigger Changelog Reconcile
+        runs-on: ubuntu-latest
+        needs: docker
+        if: needs.docker.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_reconcile == true))
+        steps:
+            - name: Trigger changelog reconcile
+              run: gh workflow run changelog-reconcile.yml --repo speakeasy-api/marketing-site --ref main
+              env:
+                  GH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
