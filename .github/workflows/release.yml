@@ -5,8 +5,8 @@ on:
             - main
     workflow_dispatch:
         inputs:
-            run_reconcile:
-                description: 'Run changelog reconcile (skip for draft releases)'
+            is_draft:
+                description: 'Is this a draft release?'
                 required: false
                 type: boolean
                 default: false
@@ -124,7 +124,7 @@ jobs:
         name: Trigger Changelog Reconcile
         runs-on: ubuntu-latest
         needs: docker
-        if: needs.docker.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_reconcile == true))
+        if: needs.docker.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.is_draft == true))
         steps:
             - name: Trigger changelog reconcile
               run: gh workflow run changelog-reconcile.yml --repo speakeasy-api/marketing-site --ref main
