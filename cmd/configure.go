@@ -100,8 +100,8 @@ type ConfigureTargetFlags struct {
 
 var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 	Usage:        "targets",
-	Short:        "Configure new target.",
-	Long:         "Guided prompts to configure a new target in your speakeasy workflow.",
+	Short:        "Configure new or existing targets.",
+	Long:         "Guided prompts to configure a new or existing target in your speakeasy workflow.",
 	Run:          configureTarget,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
