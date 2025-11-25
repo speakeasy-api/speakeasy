@@ -125,7 +125,7 @@ jobs:
         name: Trigger Changelog Reconcile
         runs-on: ubuntu-latest
         needs: docker
-        if: needs.docker.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.is_draft == true))
+        if: needs.docker.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.is_draft == false))
         steps:
             - name: Trigger changelog reconcile
               run: gh workflow run changelog-reconcile.yml --repo speakeasy-api/marketing-site --ref main
