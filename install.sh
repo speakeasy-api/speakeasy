@@ -1,6 +1,4 @@
 
-Copy
-
 #!/bin/sh
 set -e
 
