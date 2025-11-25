@@ -214,7 +214,7 @@ main() {
   do_install_binary
 
   printf "$YELLOW"
-  cat <<'ASCIIEOF'
+  cat <<'EOF'
       .-.         .--''-.
     .'   '.     /'       `.
     '.     '. ,'          |                       Buzz!
@@ -226,7 +226,7 @@ main() {
   '\__/'/ | | :' :' :'
         \  \ \
         '  ' 'MJP
-ASCIIEOF
+EOF
   printf "$RESET"
 
 }
