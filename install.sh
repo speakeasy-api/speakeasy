@@ -1,4 +1,3 @@
-
 #!/bin/sh
 set -e
 
@@ -228,5 +227,4 @@ EOF
   printf "$RESET"
 
 }
-
 main
