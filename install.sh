@@ -168,8 +168,12 @@ do_install_binary() {
 
   # Download zip to tmp directory
   echo "Downloading $download_url"
-  if ! (cd $tmp_dir && curl -sfL -O "$download_url"); then
-    fmt_error "Failed to download $download_url"
+  set +e
+  (cd $tmp_dir && curl -sfL -O "$download_url")
+  exit_code=$?
+  set -e
+  if [ $exit_code -ne 0 ]; then
+    fmt_error "Failed to download $download_url (curl exit code: $exit_code)"
     rm -rf $tmp_dir
     exit 1
   fi
@@ -227,4 +231,5 @@ EOF
   printf "$RESET"
 
 }
+
 main
