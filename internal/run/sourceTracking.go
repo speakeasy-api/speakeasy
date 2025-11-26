@@ -157,7 +157,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	return computedChanges, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult) (err error) {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult, lintingErr error) (err error) {
 	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
 
 	if !registry.IsRegistryEnabled(ctx) {
@@ -204,7 +204,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		apiKey = key
 	}
 
-	tags, err := w.getRegistryTags(ctx, sourceID)
+	tags, err := w.getRegistryTags(ctx, sourceID, lintingErr)
 	if err != nil {
 		return err
 	}
@@ -393,8 +393,11 @@ func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryL
 	return
 }
 
-func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {
-	tags := []string{"latest"}
+func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string, lintingErr error) ([]string, error) {
+	var tags []string = []string{"latest"}
+	if lintingErr != nil {
+		return tags, nil
+	}
 	if env.IsGithubAction() {
 		// implicitly add branch tag
 		var branch string

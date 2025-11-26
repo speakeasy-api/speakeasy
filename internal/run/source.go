@@ -177,29 +177,40 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 	sourceRes.OutputPath = outputLocation
 
+	var lintingErr error
 	if !w.SkipLinting {
 		w.OnSourceResult(sourceRes, SourceStepLint)
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir, targetLanguage)
 		if err != nil {
-			return "", sourceRes, &LintingError{Err: err, Document: currentDocument}
+			lintingErr = &LintingError{Err: err, Document: currentDocument}
 		}
 	}
 
+	var diagnoseErr error
 	step := rootStep.NewSubstep("Diagnosing OpenAPI")
-	sourceRes.Diagnosis, err = suggest.Diagnose(ctx, currentDocument)
-	if err != nil {
+	sourceRes.Diagnosis, diagnoseErr = suggest.Diagnose(ctx, currentDocument)
+	if diagnoseErr != nil {
 		step.Fail()
-		return "", sourceRes, err
+	} else {
+		step.Succeed()
 	}
-	step.Succeed()
 
 	w.OnSourceResult(sourceRes, SourceStepUpload)
 
-	if !w.SkipSnapshot {
-		err = w.snapshotSource(ctx, rootStep, sourceID, source, sourceRes)
+	// Upload if validation passed OR if the spec looks like an OpenAPI spec (even if invalid)
+	if !w.SkipSnapshot && (lintingErr == nil || validation.LooksLikeAnOpenAPISpec(currentDocument)) {
+		err = w.snapshotSource(ctx, rootStep, sourceID, source, sourceRes, lintingErr)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			logger.Warnf("failed to snapshot source: %s", err.Error())
 		}
+	}
+
+	// Return errors after snapshot attempt - prefer linting error over diagnose error
+	if lintingErr != nil {
+		return "", sourceRes, lintingErr
+	}
+	if diagnoseErr != nil {
+		return "", sourceRes, diagnoseErr
 	}
 
 	// If the source has a previous tracked revision, compute changes against it
