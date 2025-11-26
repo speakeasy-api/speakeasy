@@ -394,10 +394,9 @@ func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryL
 }
 
 func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string, lintingErr error) ([]string, error) {
-	var tags []string
-	// Only add "latest" tag if there's no linting error
-	if lintingErr == nil {
-		tags = append(tags, "latest")
+	var tags []string = []string{"latest"}
+	if lintingErr != nil {
+		return tags, nil
 	}
 	if env.IsGithubAction() {
 		// implicitly add branch tag
