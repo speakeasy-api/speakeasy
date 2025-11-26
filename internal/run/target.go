@@ -316,7 +316,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return
 	}
 
-	tags, err := w.getRegistryTags(ctx, "")
+	tags, err := w.getRegistryTags(ctx, "", nil)
 	if err != nil {
 		return
 	}

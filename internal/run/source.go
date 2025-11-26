@@ -199,7 +199,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	// Upload if validation passed OR if the spec looks like an OpenAPI spec (even if invalid)
 	if !w.SkipSnapshot && (lintingErr == nil || validation.LooksLikeAnOpenAPISpec(currentDocument)) {
-		err = w.snapshotSource(ctx, rootStep, sourceID, source, sourceRes)
+		err = w.snapshotSource(ctx, rootStep, sourceID, source, sourceRes, lintingErr)
 		if err != nil && !errors.Is(err, ocicommon.ErrAccessGated) {
 			logger.Warnf("failed to snapshot source: %s", err.Error())
 		}
