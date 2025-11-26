@@ -57,7 +57,7 @@ jobs:
               with:
                   distribution: goreleaser
                   version: latest
-                  args: release --clean ${{ inputs.is_draft == true && '--draft' || '' }}
+                  args: release --clean ${{ inputs.is_draft == true && '--draft' || '' }} ${{ vars.SKIP_CHOCOLATEY == 'true' && '--skip=chocolatey' || '' }}
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
@@ -117,7 +117,7 @@ jobs:
               with:
                   context: .
                   platforms: linux/amd64,linux/arm64
-                  push: true
+                  push: ${{ inputs.is_draft != true }}
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
 
