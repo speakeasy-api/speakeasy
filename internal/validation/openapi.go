@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strings"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 // OutputLimits defines the limits for validation output.
@@ -383,4 +385,41 @@ type validationResult interface {
 func generateReport(ctx context.Context, res validationResult) (reports.ReportResult, error) {
 	reportBytes := res.GenerateReport()
 	return reports.UploadReport(ctx, reportBytes, shared.TypeLinting)
+}
+
+// LooksLikeAnOpenAPISpec performs a basic check to determine if a file appears to be an OpenAPI spec.
+// It checks:
+// 1. The file can be unmarshaled as YAML (which also covers JSON)
+// 2. The file has the top-level keys: "openapi", "info", and "paths"
+//
+// This is a loose check intended to identify files that are likely OpenAPI specs even if they
+// have validation errors.
+func LooksLikeAnOpenAPISpec(schemaPath string) bool {
+	content, err := os.ReadFile(schemaPath)
+	if err != nil {
+		return false
+	}
+
+	return LooksLikeAnOpenAPISpecContent(content)
+}
+
+// LooksLikeAnOpenAPISpecContent performs a basic check on content to determine if it appears to be an OpenAPI spec.
+// It checks:
+// 1. The content can be unmarshaled as YAML (which also covers JSON)
+// 2. The content has the top-level keys: "openapi", "info", and "paths"
+func LooksLikeAnOpenAPISpecContent(content []byte) bool {
+	var doc map[string]any
+	if err := yaml.Unmarshal(content, &doc); err != nil {
+		return false
+	}
+
+	// Check for required top-level keys
+	requiredKeys := []string{"openapi", "info", "paths"}
+	for _, key := range requiredKeys {
+		if _, ok := doc[key]; !ok {
+			return false
+		}
+	}
+
+	return true
 }
