@@ -335,6 +335,6 @@ func stepToPhase(step generate.ProgressStepID) string {
 	case generate.ProgressStepLintMockServer:
 		return "Mock Server Linting"
 	default:
-		return "Generation"
+		return string(step)
 	}
 }
