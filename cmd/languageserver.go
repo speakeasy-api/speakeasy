@@ -24,7 +24,7 @@ func languageServerExec(version string) func(cmd *cobra.Command, args []string) 
 		// setup logging to be discarded, it will invalidate the LSP protocol
 		logger := log.NewNoop()
 
-		fs := fs.NewFileSystem()
+		fs := fs.NewFileSystem("")
 
 		return languageserver.NewServer(version, logger, fs).Run()
 	}

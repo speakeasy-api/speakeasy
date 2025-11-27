@@ -61,14 +61,36 @@ type TreeEntry struct {
 // GitAdapter implements the patches.Git interface using a GitRepository.
 // It provides all Git operations needed for Round-Trip Engineering.
 type GitAdapter struct {
-	repo GitRepository
+	repo    GitRepository
+	baseDir string // relative path from git root to generation root (e.g., "go-sdk")
 }
 
 var _ patches.Git = (*GitAdapter)(nil)
 
 // NewGitAdapter creates a new GitAdapter wrapping the given GitRepository.
-func NewGitAdapter(repo GitRepository) *GitAdapter {
-	return &GitAdapter{repo: repo}
+// baseDir is the relative path from the repository root to the generation output directory.
+// For example, if generating to "go-sdk/" subdirectory, baseDir should be "go-sdk".
+// If generating to the repo root, baseDir should be empty string.
+func NewGitAdapter(repo GitRepository, baseDir string) *GitAdapter {
+	// Normalize baseDir: use forward slashes, trim trailing slash, treat "." as empty
+	baseDir = strings.TrimSuffix(toGitPath(baseDir), "/")
+	if baseDir == "." {
+		baseDir = ""
+	}
+	return &GitAdapter{repo: repo, baseDir: baseDir}
+}
+
+// toGitPath converts OS-specific path separators to forward slashes for git.
+func toGitPath(p string) string {
+	return strings.ReplaceAll(p, "\\", "/")
+}
+
+// prependBaseDir adds the baseDir prefix to a generation-relative path.
+func (g *GitAdapter) prependBaseDir(p string) string {
+	if g.baseDir == "" {
+		return toGitPath(p)
+	}
+	return path.Join(g.baseDir, toGitPath(p))
 }
 
 // HasObject checks if a blob or commit exists in the local Git object database.
@@ -121,13 +143,24 @@ func (g *GitAdapter) WriteObject(content []byte) (string, error) {
 
 // CreateSnapshotTree builds a Git Tree object from a map of "path" -> "blobHash".
 // It handles nested directories by creating intermediate tree objects.
+// Paths are expected to be relative to the generation root.
+// NOTE: Snapshots are used internally by the generator for 3-way merge lookups.
+// The generator expects paths relative to its "chroot" (the generation root),
+// so we do NOT prepend baseDir here. This allows the generator to look up
+// "sdk.go" in both the new generation and the base snapshot using the same path.
 func (g *GitAdapter) CreateSnapshotTree(fileHashes map[string]string) (string, error) {
 	if g.repo.IsNil() {
 		return "", fmt.Errorf("git repository not initialized")
 	}
 
+	// Normalize paths to use forward slashes for git
+	normalizedHashes := make(map[string]string, len(fileHashes))
+	for filePath, hash := range fileHashes {
+		normalizedHashes[toGitPath(filePath)] = hash
+	}
+
 	// Build tree structure recursively
-	return g.buildTreeRecursive(fileHashes, "")
+	return g.buildTreeRecursive(normalizedHashes, "")
 }
 
 // buildTreeRecursive creates a tree object for the given prefix, handling nested directories.
@@ -278,9 +311,11 @@ func (g *GitAdapter) PushSnapshot(commitHash, uuid string) error {
 
 // SetConflictState sets up git's index to show a file as conflicted.
 // This enables standard git conflict resolution tools (git status, git mergetool, etc.).
-func (g *GitAdapter) SetConflictState(path string, base, ours, theirs []byte, isExecutable bool) error {
+// The path is expected to be relative to the generation root; baseDir is prepended
+// to create the path relative to the git root.
+func (g *GitAdapter) SetConflictState(filePath string, base, ours, theirs []byte, isExecutable bool) error {
 	if g.repo.IsNil() {
 		return fmt.Errorf("git repository not initialized")
 	}
-	return g.repo.SetConflictState(path, base, ours, theirs, isExecutable)
+	return g.repo.SetConflictState(g.prependBaseDir(filePath), base, ours, theirs, isExecutable)
 }

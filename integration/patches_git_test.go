@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/speakeasy-api/speakeasy/internal/patches"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -255,7 +256,7 @@ func (v *GitHistoryVerifier) CollectAllGenerationUUIDs(t *testing.T) []string {
 func extractGeneratedIDsFromDir(t *testing.T, dir string) map[string]string {
 	t.Helper()
 
-	uuidPattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
+	idPattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{12})`)
 	ids := make(map[string]string)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -280,10 +281,10 @@ func extractGeneratedIDsFromDir(t *testing.T, dir string) map[string]string {
 			return nil
 		}
 
-		match := uuidPattern.FindSubmatch(content)
+		match := idPattern.FindSubmatch(content)
 		if match != nil {
-			uuid := string(match[1])
-			ids[uuid] = path
+			id := string(match[1])
+			ids[id] = path
 		}
 
 		return nil
@@ -1051,4 +1052,268 @@ components:
 		assert.NoError(t, err, "Should be able to get tree from commit")
 		assert.NotEmpty(t, strings.TrimSpace(output), "Commit should have a tree")
 	}
+}
+
+// TestGitArchitecture_MultipleTypeScriptTargetsSameRepo verifies that two TypeScript targets
+// in the same repo (one at root, one in a subpackage) have independent non-conflicting IDs.
+//
+// This tests the scenario where:
+// 1. One target outputs to the root of the repo
+// 2. Another target outputs to packages/subpackage
+// 3. Both are TypeScript targets sharing the same source
+// 4. Each should have independent @generated-id tracking
+func TestGitArchitecture_MultipleTypeScriptTargetsSameRepo(t *testing.T) {
+	t.Parallel()
+	temp := setupDualTypeScriptTargetsTestDir(t)
+
+	// Run generation for both targets
+	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	require.NoError(t, err, "Generation should succeed for both targets")
+	gitCommitAll(t, temp, "initial generation")
+
+	// Find SDK files from both targets
+	rootSdkFile := filepath.Join(temp, "src", "sdk", "sdk.ts")
+	subpackageSdkFile := filepath.Join(temp, "packages", "subpackage", "src", "sdk", "sdk.ts")
+
+	require.FileExists(t, rootSdkFile, "Root TypeScript SDK file should exist")
+	require.FileExists(t, subpackageSdkFile, "Subpackage TypeScript SDK file should exist")
+
+	// Extract IDs from both SDK files
+	rootContent, err := os.ReadFile(rootSdkFile)
+	require.NoError(t, err)
+	rootID := extractGeneratedIDFromContent(rootContent)
+	require.NotEmpty(t, rootID, "Root SDK should have @generated-id")
+	t.Logf("Root SDK ID: %s", rootID)
+
+	subpackageContent, err := os.ReadFile(subpackageSdkFile)
+	require.NoError(t, err)
+	subpackageID := extractGeneratedIDFromContent(subpackageContent)
+	require.NotEmpty(t, subpackageID, "Subpackage SDK should have @generated-id")
+	t.Logf("Subpackage SDK ID: %s", subpackageID)
+
+	// Verify IDs are different (independent targets should have independent IDs)
+	assert.NotEqual(t, rootID, subpackageID,
+		"Root and subpackage SDKs should have different @generated-id values")
+
+	// Scan both directories and verify no ID collisions
+	rootScanner := patches.NewScanner(temp)
+	rootResult, err := rootScanner.Scan()
+	require.NoError(t, err)
+
+	// Build maps of IDs per target directory
+	rootIDs := make(map[string]string)    // id -> path
+	subpkgIDs := make(map[string]string)  // id -> path
+	allIDs := make(map[string][]string)   // id -> list of paths (for collision detection)
+
+	for id, path := range rootResult.UUIDToPath {
+		allIDs[id] = append(allIDs[id], path)
+
+		// Categorize by target
+		if strings.HasPrefix(path, "packages/subpackage/") || strings.HasPrefix(path, "packages\\subpackage\\") {
+			subpkgIDs[id] = path
+		} else {
+			rootIDs[id] = path
+		}
+	}
+
+	t.Logf("Found %d files in root target", len(rootIDs))
+	t.Logf("Found %d files in subpackage target", len(subpkgIDs))
+
+	// Verify no ID appears in both targets (would indicate collision)
+	for id := range rootIDs {
+		if _, existsInSubpkg := subpkgIDs[id]; existsInSubpkg {
+			t.Errorf("ID collision detected: %s appears in both root (%s) and subpackage (%s)",
+				id, rootIDs[id], subpkgIDs[id])
+		}
+	}
+
+	// Verify no duplicate IDs within the whole repo
+	for id, paths := range allIDs {
+		if len(paths) > 1 {
+			t.Errorf("Duplicate ID detected: %s appears in multiple files: %v", id, paths)
+		}
+	}
+
+	// Verify git refs exist for both targets
+	verifier := NewGitHistoryVerifier(t, temp)
+	refs := verifier.GetGenerationRefs(t)
+	t.Logf("Found %d generation refs", len(refs))
+
+	// Should have refs for files in both targets
+	require.NotEmpty(t, refs, "Should have generation refs")
+
+	// Verify refs survive GC
+	var commitHashes []string
+	for _, hash := range refs {
+		commitHashes = append(commitHashes, hash)
+	}
+	if len(commitHashes) > 0 {
+		verifier.ValidateGCSafety(t, nil, commitHashes)
+	}
+
+	// Now test that user modifications to both targets are preserved independently
+	// Modify root SDK
+	rootModified := strings.Replace(string(rootContent),
+		"export class SDK extends ClientSDK",
+		"// ROOT_USER_EDIT: Custom code for root SDK\nexport class SDK extends ClientSDK", 1)
+	err = os.WriteFile(rootSdkFile, []byte(rootModified), 0644)
+	require.NoError(t, err)
+
+	// Modify subpackage SDK
+	subpkgModified := strings.Replace(string(subpackageContent),
+		"export class SDK extends ClientSDK",
+		"// SUBPKG_USER_EDIT: Custom code for subpackage SDK\nexport class SDK extends ClientSDK", 1)
+	err = os.WriteFile(subpackageSdkFile, []byte(subpkgModified), 0644)
+	require.NoError(t, err)
+
+	gitCommitAll(t, temp, "user modifications to both SDKs")
+
+	// Regenerate
+	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	require.NoError(t, err, "Regeneration should succeed")
+
+	// Verify both user modifications are preserved
+	rootFinal, err := os.ReadFile(rootSdkFile)
+	require.NoError(t, err)
+	require.Contains(t, string(rootFinal), "ROOT_USER_EDIT: Custom code for root SDK",
+		"Root SDK user modification should be preserved")
+
+	subpkgFinal, err := os.ReadFile(subpackageSdkFile)
+	require.NoError(t, err)
+	require.Contains(t, string(subpkgFinal), "SUBPKG_USER_EDIT: Custom code for subpackage SDK",
+		"Subpackage SDK user modification should be preserved")
+
+	// Verify IDs are still preserved
+	rootFinalID := extractGeneratedIDFromContent(rootFinal)
+	require.Equal(t, rootID, rootFinalID, "Root SDK ID should be preserved after regeneration")
+
+	subpkgFinalID := extractGeneratedIDFromContent(subpkgFinal)
+	require.Equal(t, subpackageID, subpkgFinalID, "Subpackage SDK ID should be preserved after regeneration")
+
+	t.Log("Success: Multiple TypeScript targets have independent non-conflicting IDs")
+}
+
+// setupDualTypeScriptTargetsTestDir creates a test directory with two TypeScript targets:
+// - ts-root: outputs to the root of the repo
+// - ts-subpackage: outputs to packages/subpackage
+func setupDualTypeScriptTargetsTestDir(t *testing.T) string {
+	t.Helper()
+
+	// Create temp directory using runtime.Caller pattern (required for go run to work)
+	_, filename, _, _ := runtime.Caller(0)
+	integrationDir := filepath.Dir(filename)
+	temp := filepath.Join(integrationDir, "temp", "dual-ts-"+randStringBytes(7))
+
+	require.NoError(t, os.MkdirAll(temp, 0755))
+	t.Cleanup(func() {
+		os.RemoveAll(temp)
+	})
+
+	// Create a minimal OpenAPI spec
+	specContent := `openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+paths:
+  /pets:
+    get:
+      summary: List pets
+      operationId: listPets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+components:
+  schemas:
+    Pet:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+`
+	err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0644)
+	require.NoError(t, err)
+
+	// Create .speakeasy directory
+	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0755)
+	require.NoError(t, err)
+
+	// Create output directory for subpackage
+	err = os.MkdirAll(filepath.Join(temp, "packages", "subpackage"), 0755)
+	require.NoError(t, err)
+
+	// Create workflow.yaml with two TypeScript targets
+	workflowContent := `workflowVersion: 1.0.0
+sources:
+  test-source:
+    inputs:
+      - location: spec.yaml
+targets:
+  ts-root:
+    target: typescript
+    source: test-source
+  ts-subpackage:
+    target: typescript
+    source: test-source
+    output: packages/subpackage
+`
+	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "workflow.yaml"), []byte(workflowContent), 0644)
+	require.NoError(t, err)
+
+	// Create gen.yaml for root target
+	rootGenYaml := `configVersion: 2.0.0
+generation:
+  sdkClassName: SDK
+  maintainOpenAPIOrder: true
+  usageSnippets:
+    optionalPropertyRendering: withExample
+  persistentEdits:
+    enabled: true
+typescript:
+  version: 1.0.0
+  packageName: "@test/root-sdk"
+`
+	err = os.WriteFile(filepath.Join(temp, "gen.yaml"), []byte(rootGenYaml), 0644)
+	require.NoError(t, err)
+
+	// Create gen.yaml for subpackage target
+	subpkgGenYaml := `configVersion: 2.0.0
+generation:
+  sdkClassName: SDK
+  maintainOpenAPIOrder: true
+  usageSnippets:
+    optionalPropertyRendering: withExample
+  persistentEdits:
+    enabled: true
+typescript:
+  version: 1.0.0
+  packageName: "@test/subpackage-sdk"
+`
+	err = os.WriteFile(filepath.Join(temp, "packages", "subpackage", "gen.yaml"), []byte(subpkgGenYaml), 0644)
+	require.NoError(t, err)
+
+	// Create .genignore in both directories
+	genignoreContent := `package.json
+package-lock.json
+node_modules
+`
+	err = os.WriteFile(filepath.Join(temp, ".genignore"), []byte(genignoreContent), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(temp, "packages", "subpackage", ".genignore"), []byte(genignoreContent), 0644)
+	require.NoError(t, err)
+
+	// Initialize git repo
+	gitInit(t, temp)
+	gitCommitAll(t, temp, "initial commit")
+
+	return temp
 }

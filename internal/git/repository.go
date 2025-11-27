@@ -55,6 +55,22 @@ func (r *Repository) IsNil() bool {
 	return r.repo == nil
 }
 
+// Root returns the root directory of the repository (where .git is located).
+// Returns empty string if the repository is not initialized.
+func (r *Repository) Root() string {
+	if r.repo == nil {
+		return ""
+	}
+
+	// Get the worktree to find the filesystem root
+	wt, err := r.repo.Worktree()
+	if err != nil {
+		return ""
+	}
+
+	return wt.Filesystem.Root()
+}
+
 // HasObject checks if a blob or commit exists in the local object database.
 func (r *Repository) HasObject(hash string) bool {
 	if r.repo == nil {

@@ -49,6 +49,7 @@ type RunFlags struct {
 	Minimal            bool              `json:"minimal"`
 	Dependent          string            `json:"dependent"`
 	SourceLocation     string            `json:"source-location"`
+	AutoYes            bool              `json:"auto-yes"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -193,6 +194,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Name:        "source-location",
 			Description: "override the location of the source, for example to a local copy of your OpenAPI document",
 			Hidden:      true,
+		},
+		flag.BooleanFlag{
+			Name:        "auto-yes",
+			Shorthand:   "y",
+			Description: "auto confirm all prompts",
 		},
 	},
 }
@@ -437,6 +443,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
+		run.WithAutoYes(flags.AutoYes),
 	}
 
 	if flags.Minimal {
@@ -500,6 +507,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
+		run.WithAutoYes(flags.AutoYes),
 	}
 
 	if flags.Minimal {

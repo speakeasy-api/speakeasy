@@ -45,6 +45,7 @@ type Workflow struct {
 	// workflow configuration enabling testing.
 	SkipTesting   bool
 	BoostrapTests bool
+	AutoYes       bool
 
 	// Internal
 	workflowName       string
@@ -264,6 +265,12 @@ func WithSkipCleanup() Opt {
 func WithSkipTesting(skipTesting bool) Opt {
 	return func(w *Workflow) {
 		w.SkipTesting = skipTesting
+	}
+}
+
+func WithAutoYes(autoYes bool) Opt {
+	return func(w *Workflow) {
+		w.AutoYes = autoYes
 	}
 }
 
