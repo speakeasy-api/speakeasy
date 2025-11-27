@@ -2,7 +2,7 @@ package sdkgen
 
 import (
 	"context"
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,10 +27,16 @@ import (
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	genpatches "github.com/speakeasy-api/openapi-generation/v2/pkg/patches"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/prompts"
 	"go.uber.org/zap"
 )
+
+// PromptForCustomCode is a function variable that can be replaced in tests.
+// It defaults to the real prompt implementation.
+var PromptForCustomCode = prompts.PromptForCustomCode
 
 type GenerationAccess struct {
 	AccessAllowed bool
@@ -102,7 +108,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			AccessAllowed: generationAccess,
 			Message:       message,
 			Level:         level,
-		}, errors.New("generation access blocked")
+		}, stderrors.New("generation access blocked")
 	}
 
 	logger.Infof("Generating SDK for %s...\n", opts.Language)
@@ -209,22 +215,9 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			generate.WithFileSystem(fs.NewFileSystemWithRoot(opts.OutDir)),
 		)
 
-		// Pre-generation: detect file moves/deletions and update lockfile
-		// This scans for @generated-id headers and marks TrackedFiles with
-		// Deleted=true or MovedTo=<new path> so the generator knows about user changes.
-		if cfg, err := gen_config.Load(opts.OutDir); err == nil && cfg.LockFile != nil {
-			if cfg.Config != nil &&
-				cfg.Config.Generation.PersistentEdits != nil &&
-				cfg.Config.Generation.PersistentEdits.Enabled {
-				if err := patches.DetectFileChanges(opts.OutDir, cfg.LockFile); err != nil {
-					logger.Warnf("Failed to detect file changes: %v", err)
-				} else {
-					// Save updated lockfile with move/delete markers
-					if err := gen_config.SaveLockFile(opts.OutDir, cfg.LockFile); err != nil {
-						logger.Warnf("Failed to save lockfile with file change markers: %v", err)
-					}
-				}
-			}
+		// Pre-generation: detect file moves/deletions, prompt if needed, and update lockfile
+		if err := patches.PrepareForGeneration(opts.OutDir, opts.AutoYes, PromptForCustomCode, logger.Warnf); err != nil {
+			logger.Warnf("Error preparing for generation: %v", err)
 		}
 	}
 
@@ -255,6 +248,13 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		if len(errs) > 0 {
 			for _, err := range errs {
+				// Check if it's a ConflictsError - render pretty conflict message
+				var conflictErr *genpatches.ConflictsError
+				if stderrors.As(err, &conflictErr) {
+					renderConflictsError(logger, conflictErr)
+					// Don't log the generic error for conflicts - we rendered a nice message
+					continue
+				}
 				logger.Error("", zap.Error(err))
 			}
 
@@ -341,4 +341,29 @@ func GetGenLockID(outDir string) *string {
 	}
 
 	return nil
+}
+
+// renderConflictsError renders a git-status style error message for merge conflicts.
+func renderConflictsError(logger log.Logger, conflictErr *genpatches.ConflictsError) {
+	// Build file list with "both modified:" prefix like git status
+	var fileLines strings.Builder
+	for _, file := range conflictErr.Files {
+		fileLines.WriteString(fmt.Sprintf("    both modified:   %s\n", file))
+	}
+
+	// Render instructional error box
+	msg := styles.RenderInstructionalError(
+		"Merge Conflicts Detected",
+		fmt.Sprintf("%d file(s) have conflicts that must be resolved manually:\n%s", len(conflictErr.Files), fileLines.String()),
+		"To resolve:\n"+
+			"1. Open each file and resolve the conflict markers (<<<<<<, ======, >>>>>>)\n"+
+			"2. Remove the conflict markers after choosing the correct code\n"+
+			"3. Run: speakeasy run --skip-versioning",
+	)
+	logger.Println("\n" + msg)
+
+	// Emit GitHub Actions annotations for each conflicting file
+	for _, file := range conflictErr.Files {
+		logger.Printf("::error file=%s::Merge conflict detected - manual resolution required", file)
+	}
 }

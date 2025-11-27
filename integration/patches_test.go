@@ -994,8 +994,7 @@ components:
         - name
       properties:
         id:
-          type: integer
-          format: int64
+          type: string
         name:
           type: string
 `
