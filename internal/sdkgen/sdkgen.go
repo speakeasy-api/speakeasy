@@ -313,7 +313,7 @@ func stepToPhase(step generate.ProgressStepID) string {
 	case generate.ProgressStepSetup:
 		return "Setup"
 	case generate.ProgressStepValidate:
-		return "Validation"
+		return "OpenAPI Validation"
 	case generate.ProgressStepGenSDK:
 		return "Templating"
 	case generate.ProgressStepGenMockServer:
@@ -327,7 +327,7 @@ func stepToPhase(step generate.ProgressStepID) string {
 	case generate.ProgressStepCompileTests:
 		return "Test Compilation"
 	case generate.ProgressStepLintSDK:
-		return "Linting"
+		return "SDK Linting"
 	case generate.ProgressStepCompileUsage:
 		return "Usage Snippet Compilation"
 	case generate.ProgressStepCompileMockServer:
