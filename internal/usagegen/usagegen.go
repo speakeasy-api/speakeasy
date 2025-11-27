@@ -309,3 +309,7 @@ func (fs *fileSystem) Stat(name string) (fs.FileInfo, error) {
 func (fs *fileSystem) OpenFile(name string, flag int, perm fs.FileMode) (filesystem.File, error) {
 	return os.OpenFile(name, flag, perm)
 }
+
+func (fs *fileSystem) ScanForGeneratedIDs() (map[string]string, error) {
+	return nil, nil
+}
