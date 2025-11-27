@@ -117,19 +117,3 @@ func isBinaryFile(path string) bool {
 	return generate.IsBinaryContent(buf[:n])
 }
 
-// GetMovedFiles compares the scan result against the lockfile to detect file moves.
-// It returns a map of original paths to their new paths.
-func GetMovedFiles(scan *ScanResult, trackedFiles map[string]string) map[string]string {
-	// trackedFiles is map[path]uuid from lockfile
-	moved := make(map[string]string)
-
-	for originalPath, uuid := range trackedFiles {
-		if newPath, found := scan.UUIDToPath[uuid]; found {
-			if newPath != originalPath {
-				moved[originalPath] = newPath
-			}
-		}
-	}
-
-	return moved
-}
