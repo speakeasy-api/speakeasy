@@ -21,6 +21,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/fs"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/patches"
 
@@ -202,11 +203,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	if repo, err := git.NewLocalRepository(opts.OutDir); err == nil && !repo.IsNil() {
 		wrappedRepo := patches.WrapGitRepository(repo)
 		gitAdapter := patches.NewGitAdapter(wrappedRepo)
-		fsAdapter := patches.NewFSAdapter(opts.OutDir)
 
 		generatorOpts = append(generatorOpts,
 			generate.WithGit(gitAdapter),
-			generate.WithFileSystemInterface(fsAdapter),
+			generate.WithFileSystem(fs.NewFileSystemWithRoot(opts.OutDir)),
 		)
 
 		// Pre-generation: detect file moves/deletions and update lockfile
