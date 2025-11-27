@@ -28,8 +28,8 @@ func TestPersistentEdits_BasicHeaderGeneration(t *testing.T) {
 		filepath.Join(temp, "models", "components", "httpmetadata.go"),
 	}
 
-	uuidPattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
-	seenUUIDs := make(map[string]string) // uuid -> filename
+	idPattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{12})`)
+	seenIDs := make(map[string]string) // id -> filename
 
 	for _, file := range sampleFiles {
 		require.FileExists(t, file, "Sample file should exist")
@@ -37,20 +37,20 @@ func TestPersistentEdits_BasicHeaderGeneration(t *testing.T) {
 		content, err := os.ReadFile(file)
 		require.NoError(t, err, "Failed to read file: %s", file)
 
-		match := uuidPattern.FindSubmatch(content)
+		match := idPattern.FindSubmatch(content)
 		require.NotNil(t, match, "File %s should have @generated-id header", file)
 
-		uuid := string(match[1])
-		t.Logf("File %s has UUID: %s", filepath.Base(file), uuid)
+		id := string(match[1])
+		t.Logf("File %s has ID: %s", filepath.Base(file), id)
 
-		// Verify UUID is unique
-		if existingFile, exists := seenUUIDs[uuid]; exists {
-			t.Errorf("Duplicate UUID %s found in %s and %s", uuid, existingFile, file)
+		// Verify ID is unique
+		if existingFile, exists := seenIDs[id]; exists {
+			t.Errorf("Duplicate ID %s found in %s and %s", id, existingFile, file)
 		}
-		seenUUIDs[uuid] = file
+		seenIDs[id] = file
 	}
 
-	require.Len(t, seenUUIDs, 3, "Should have 3 unique UUIDs")
+	require.Len(t, seenIDs, 3, "Should have 3 unique IDs")
 }
 
 // TestPersistentEdits_UserModificationPreserved verifies that user edits are preserved during regeneration
@@ -239,9 +239,9 @@ func findGeneratedGoFiles(t *testing.T, dir string) []string {
 	return files
 }
 
-// extractGeneratedIDFromContent extracts the @generated-id UUID from file content
+// extractGeneratedIDFromContent extracts the @generated-id from file content
 func extractGeneratedIDFromContent(content []byte) string {
-	pattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
+	pattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{12})`)
 	match := pattern.FindSubmatch(content)
 	if len(match) > 1 {
 		return string(match[1])
@@ -287,7 +287,7 @@ func TestPersistentEdits_MultiTarget(t *testing.T) {
 	temp := setupMultiTargetPersistentEditsTestDir(t)
 
 	// Initial generation of both targets
-	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	err := executeI(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
 	require.NoError(t, err, "Initial generation should succeed")
 
 	// Commit initial generation
@@ -323,7 +323,7 @@ func TestPersistentEdits_MultiTarget(t *testing.T) {
 	gitCommitAll(t, temp, "user modifications to both SDKs")
 
 	// Regenerate both targets
-	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	err = executeI(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
 	require.NoError(t, err, "Regeneration should succeed")
 
 	// Verify user modifications are preserved in both targets
@@ -558,8 +558,8 @@ components:
 	err = workflow.Save(temp, workflowFile)
 	require.NoError(t, err)
 
-	// Create gen.yaml with persistent edits enabled for both targets
-	genYamlContent := `configVersion: 2.0.0
+	// Create gen.yaml for go target in go-sdk/
+	goGenYaml := `configVersion: 2.0.0
 generation:
   sdkClassName: SDK
   maintainOpenAPIOrder: true
@@ -570,21 +570,36 @@ generation:
 go:
   version: 1.0.0
   packageName: gosdk
+`
+	err = os.WriteFile(filepath.Join(temp, "go-sdk", "gen.yaml"), []byte(goGenYaml), 0644)
+	require.NoError(t, err)
+
+	// Create gen.yaml for typescript target in ts-sdk/
+	tsGenYaml := `configVersion: 2.0.0
+generation:
+  sdkClassName: SDK
+  maintainOpenAPIOrder: true
+  usageSnippets:
+    optionalPropertyRendering: withExample
+  persistentEdits:
+    enabled: true
 typescript:
   version: 1.0.0
   packageName: tssdk
 `
-	err = os.WriteFile(filepath.Join(temp, "gen.yaml"), []byte(genYamlContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "ts-sdk", "gen.yaml"), []byte(tsGenYaml), 0644)
 	require.NoError(t, err)
 
-	// Create .genignore
+	// Create .genignore in each target directory
 	genignoreContent := `go.mod
 go.sum
 package.json
 package-lock.json
 node_modules
 `
-	err = os.WriteFile(filepath.Join(temp, ".genignore"), []byte(genignoreContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "go-sdk", ".genignore"), []byte(genignoreContent), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(temp, "ts-sdk", ".genignore"), []byte(genignoreContent), 0644)
 	require.NoError(t, err)
 
 	// Initialize git repo
@@ -874,9 +889,8 @@ components:
 	require.Equal(t, originalID, finalID, "Generated ID should remain the same")
 }
 
-// TestPersistentEdits_ConflictUserAddedMethod verifies conflict handling when user adds a method
-// that the spec also tries to generate
-func TestPersistentEdits_ConflictUserAddedMethod(t *testing.T) {
+// TestPersistentEdits_UserAddedMethodSurvives verifies a realistic scenario where a user adds a method
+func TestPersistentEdits_UserAddedMethodSurvives(t *testing.T) {
 	t.Parallel()
 	temp := setupPersistentEditsTestDir(t)
 
@@ -1004,7 +1018,7 @@ components:
 
 	// Regenerate
 	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
-	require.NoError(t, err)
+	require.Error(t, err)
 
 	finalContent, err := os.ReadFile(petFile)
 	require.NoError(t, err)
@@ -1013,7 +1027,7 @@ components:
 	require.Contains(t, string(finalContent), "<<<<<<<", "Should have conflict start marker")
 	require.Contains(t, string(finalContent), "Current (Your changes)",
 		"Conflict should show user's version")
-	require.Contains(t, string(finalContent), "New (Generated)",
+	require.Contains(t, string(finalContent), "New (Generated by Speakeasy)",
 		"Conflict should show generated version")
 
 	// Git status should show conflict state (UU = both modified/unmerged)

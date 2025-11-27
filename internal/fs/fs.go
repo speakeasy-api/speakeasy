@@ -13,23 +13,14 @@ import (
 
 // FileSystem is a wrapper around the os.FS type that implements the filesystem.FileSystem interface needed by the openapi-generation package
 type FileSystem struct {
-	// rootDir is the root directory for scanning @generated-id headers.
-	// If empty, ScanForGeneratedIDs returns nil.
-	rootDir string
+	outDir string
 }
 
 var _ filesystem.FileSystem = &FileSystem{}
 
 // NewFileSystem creates a new FileSystem.
-// Deprecated: Use NewFileSystemWithRoot for persistent edits support.
-func NewFileSystem() *FileSystem {
-	return &FileSystem{}
-}
-
-// NewFileSystemWithRoot creates a new FileSystem with a root directory for scanning.
-// The rootDir is used when ScanForGeneratedIDs is called to locate files with @generated-id headers.
-func NewFileSystemWithRoot(rootDir string) *FileSystem {
-	return &FileSystem{rootDir: rootDir}
+func NewFileSystem(outDir string) *FileSystem {
+	return &FileSystem{outDir}
 }
 
 func (f *FileSystem) ReadFile(path string) ([]byte, error) {
@@ -64,20 +55,21 @@ func (f *FileSystem) RemoveAll(path string) error {
 	return os.RemoveAll(path)
 }
 
-// uuidPattern matches @generated-id: <UUID> in file headers
-var uuidPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
+// generatedIDPattern matches @generated-id: <ID> in file headers.
+// Short IDs are 12 hex chars (e.g., a1b2c3d4e5f6)
+var generatedIDPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{12})`)
 
 // ScanForGeneratedIDs scans the root directory for files with @generated-id headers.
-// Returns a map of UUID -> relative file path.
+// Returns a map of ID -> relative file path.
 // This is used to detect when users have moved generated files.
 func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
-	if f.rootDir == "" {
+	if f.outDir == "" {
 		return nil, nil
 	}
 
 	result := make(map[string]string)
 
-	err := filepath.WalkDir(f.rootDir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(f.outDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // Skip files we can't access
 		}
@@ -98,18 +90,18 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 		}
 
 		// Get relative path
-		relPath, err := filepath.Rel(f.rootDir, path)
+		relPath, err := filepath.Rel(f.outDir, path)
 		if err != nil {
 			return nil
 		}
 
-		// Try to extract UUID from file header
-		uuid, err := extractUUIDFromFile(path)
-		if err != nil || uuid == "" {
+		// Try to extract ID from file header
+		id, err := extractGeneratedIDFromFile(path)
+		if err != nil || id == "" {
 			return nil
 		}
 
-		result[uuid] = relPath
+		result[id] = relPath
 
 		return nil
 	})
@@ -117,8 +109,8 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 	return result, err
 }
 
-// extractUUIDFromFile reads the first few lines of a file looking for @generated-id.
-func extractUUIDFromFile(path string) (string, error) {
+// extractGeneratedIDFromFile reads the first few lines of a file looking for @generated-id.
+func extractGeneratedIDFromFile(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -130,7 +122,7 @@ func extractUUIDFromFile(path string) (string, error) {
 	// Only check first 20 lines - the ID should be near the top
 	for i := 0; i < 20 && scanner.Scan(); i++ {
 		line := scanner.Text()
-		if match := uuidPattern.FindStringSubmatch(line); len(match) > 1 {
+		if match := generatedIDPattern.FindStringSubmatch(line); len(match) > 1 {
 			return match[1], nil
 		}
 	}

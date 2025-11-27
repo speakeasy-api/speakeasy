@@ -21,8 +21,9 @@ func NewScanner(rootDir string) *Scanner {
 	return &Scanner{rootDir: rootDir}
 }
 
-// uuidPattern matches @generated-id: <UUID> in file headers
-var uuidPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
+// generatedIDPattern matches @generated-id: <ID> in file headers.
+// Short IDs are 12 hex chars (e.g., a1b2c3d4e5f6)
+var generatedIDPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{12})`)
 
 // ScanResult contains the mapping of UUIDs to file paths.
 type ScanResult struct {
@@ -68,14 +69,14 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 			return nil
 		}
 
-		// Try to extract UUID from file header
-		uuid, err := extractUUIDFromFile(path)
-		if err != nil || uuid == "" {
+		// Try to extract ID from file header (supports both UUID and short ID formats)
+		id, err := extractGeneratedIDFromFile(path)
+		if err != nil || id == "" {
 			return nil
 		}
 
-		result.UUIDToPath[uuid] = relPath
-		result.PathToUUID[relPath] = uuid
+		result.UUIDToPath[id] = relPath
+		result.PathToUUID[relPath] = id
 
 		return nil
 	})
@@ -83,8 +84,9 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 	return result, err
 }
 
-// extractUUIDFromFile reads the first few lines of a file looking for @generated-id.
-func extractUUIDFromFile(path string) (string, error) {
+// extractGeneratedIDFromFile reads the first few lines of a file looking for @generated-id.
+// Returns the ID (either legacy UUID or short 12-char ID format).
+func extractGeneratedIDFromFile(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -96,7 +98,7 @@ func extractUUIDFromFile(path string) (string, error) {
 	// Only check first 20 lines - the ID should be near the top
 	for i := 0; i < 20 && scanner.Scan(); i++ {
 		line := scanner.Text()
-		if match := uuidPattern.FindStringSubmatch(line); len(match) > 1 {
+		if match := generatedIDPattern.FindStringSubmatch(line); len(match) > 1 {
 			return match[1], nil
 		}
 	}

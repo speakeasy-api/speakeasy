@@ -1,14 +1,14 @@
 package patches
 
 import (
-	"crypto/sha1"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/sdk-gen-config/lockfile"
+	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/prompts"
 )
 
@@ -19,7 +19,7 @@ type PromptFunc func(summary string) (prompts.CustomCodeChoice, error)
 type FileChangeSummary struct {
 	Deleted  []string
 	Moved    map[string]string // original path -> new path
-	Modified []string
+	Modified []FileDiff
 }
 
 // GetFileChangeSummary extracts a summary of file changes from the lockfile
@@ -47,8 +47,52 @@ func GetFileChangeSummary(lockFile *config.LockFile) FileChangeSummary {
 	return summary
 }
 
-// FormatSummary formats the change summary as a git-status-like output, truncated to maxLines
-func (s FileChangeSummary) FormatSummary(maxLines int) string {
+// GetFileChangeSummaryWithDiffs extracts summary and computes diffs for modified files.
+// This is the enhanced version that includes actual diff content for modified files.
+func GetFileChangeSummaryWithDiffs(
+	outDir string,
+	lockFile *config.LockFile,
+	modifiedPaths []string,
+	gitRepo GitRepository,
+) FileChangeSummary {
+	summary := FileChangeSummary{
+		Moved:    make(map[string]string),
+		Modified: make([]FileDiff, 0, len(modifiedPaths)),
+	}
+
+	if lockFile == nil || lockFile.TrackedFiles == nil {
+		return summary
+	}
+
+	// Handle deleted and moved (same as GetFileChangeSummary)
+	for path := range lockFile.TrackedFiles.Keys() {
+		tracked, ok := lockFile.TrackedFiles.Get(path)
+		if !ok {
+			continue
+		}
+		if tracked.Deleted {
+			summary.Deleted = append(summary.Deleted, path)
+		} else if tracked.MovedTo != "" {
+			summary.Moved[path] = tracked.MovedTo
+		}
+	}
+
+	// Handle modified - compute diffs
+	for _, path := range modifiedPaths {
+		tracked, ok := lockFile.TrackedFiles.Get(path)
+		if !ok {
+			continue
+		}
+		fd, _ := ComputeFileDiff(outDir, path, tracked.PristineGitObject, gitRepo)
+		summary.Modified = append(summary.Modified, fd)
+	}
+
+	return summary
+}
+
+// FormatSummary formats the change summary as a git-status-like output, truncated to maxLines.
+// If showDiffs is true, includes truncated diff content for modified files.
+func (s FileChangeSummary) FormatSummary(maxLines int, showDiffs bool) string {
 	var lines []string
 
 	for _, path := range s.Deleted {
@@ -57,8 +101,22 @@ func (s FileChangeSummary) FormatSummary(maxLines int) string {
 	for from, to := range s.Moved {
 		lines = append(lines, fmt.Sprintf("  R %s -> %s", from, to))
 	}
-	for _, path := range s.Modified {
-		lines = append(lines, fmt.Sprintf("  M %s", path))
+	for _, fd := range s.Modified {
+		if showDiffs && fd.Stats.Added+fd.Stats.Removed > 0 {
+			lines = append(lines, fmt.Sprintf("  M %s (+%d/-%d)", fd.Path, fd.Stats.Added, fd.Stats.Removed))
+			// Add truncated diff (max 10 lines per file)
+			diffLines := strings.Split(strings.TrimSpace(fd.DiffText), "\n")
+			maxDiffLines := 10
+			for i, dl := range diffLines {
+				if i >= maxDiffLines {
+					lines = append(lines, fmt.Sprintf("      ... (%d more lines)", len(diffLines)-maxDiffLines))
+					break
+				}
+				lines = append(lines, "      "+dl)
+			}
+		} else {
+			lines = append(lines, fmt.Sprintf("  M %s", fd.Path))
+		}
 	}
 
 	total := len(lines)
@@ -77,8 +135,10 @@ func (s FileChangeSummary) IsEmpty() bool {
 
 // DetectFileChanges scans the output directory and updates the lockfile's TrackedFiles
 // with Deleted and MovedTo fields based on the current state of files on disk.
-// Returns isDirty (true if any tracked file has been deleted, moved, or has a checksum change)
-// and any error encountered.
+// Returns:
+//   - isDirty: true if any tracked file has been deleted, moved, or has a checksum change
+//   - modifiedPaths: list of paths that have content modifications (checksum mismatch)
+//   - error: any error encountered during scanning
 //
 // The function:
 // 1. Scans for @generated-id headers in all files
@@ -86,18 +146,19 @@ func (s FileChangeSummary) IsEmpty() bool {
 // 3. Marks files as Deleted if their UUID is no longer on disk
 // 4. Sets MovedTo if a file's UUID is found at a different path
 // 5. Detects checksum changes for files in their expected location
-func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, error) {
+func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string, error) {
 	if lockFile == nil || lockFile.TrackedFiles == nil {
-		return false, nil
+		return false, nil, nil
 	}
 
 	isDirty := false
+	var modifiedPaths []string
 
 	// Scan for @generated-id headers on disk
 	scanner := NewScanner(outDir)
 	scanResult, err := scanner.Scan()
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	// Build a map of UUID -> original path from lockfile
@@ -114,11 +175,6 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, error) {
 	for path := range lockFile.TrackedFiles.Keys() {
 		tracked, ok := lockFile.TrackedFiles.Get(path)
 		if !ok {
-			continue
-		}
-
-		// Skip files without UUIDs (can't track moves without identity)
-		if tracked.ID == "" {
 			continue
 		}
 
@@ -152,31 +208,16 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, error) {
 
 			// Check for content modification via checksum
 			if tracked.LastWriteChecksum != "" && fileExists {
-				currentChecksum, err := computeFileChecksum(fullPath)
+				currentChecksum, err := lockfile.ComputeFileChecksum(os.DirFS(outDir), path)
 				if err == nil && currentChecksum != tracked.LastWriteChecksum {
 					isDirty = true
+					modifiedPaths = append(modifiedPaths, path)
 				}
 			}
 		}
 	}
 
-	return isDirty, nil
-}
-
-// computeFileChecksum calculates the SHA-1 checksum of a file
-func computeFileChecksum(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	hash := sha1.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+	return isDirty, modifiedPaths, nil
 }
 
 // PrepareForGeneration detects custom code changes and optionally prompts the user.
@@ -204,7 +245,7 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 
 	if persistentEdits.IsEnabled() {
 		// Persistent edits enabled - detect changes and save lockfile
-		if _, err := DetectFileChanges(outDir, cfg.LockFile); err != nil {
+		if _, _, err := DetectFileChanges(outDir, cfg.LockFile); err != nil {
 			warnFunc("Failed to detect file changes: %v", err)
 		} else {
 			if err := config.SaveLockFile(outDir, cfg.LockFile); err != nil {
@@ -213,13 +254,19 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 		}
 	} else if !persistentEdits.IsNever() {
 		// Not enabled and not "never" - check for dirty files and prompt
-		isDirty, err := DetectFileChanges(outDir, cfg.LockFile)
+		isDirty, modifiedPaths, err := DetectFileChanges(outDir, cfg.LockFile)
 		if err != nil {
 			warnFunc("Failed to detect file changes: %v", err)
 		} else if isDirty && !autoYes {
-			// Get summary for display
-			summary := GetFileChangeSummary(cfg.LockFile)
-			summaryText := summary.FormatSummary(10)
+			// Initialize git repo for reading blobs (for diff display)
+			var gitRepo GitRepository
+			if repo, gitErr := git.NewLocalRepository(outDir); gitErr == nil && !repo.IsNil() {
+				gitRepo = WrapGitRepository(repo)
+			}
+
+			// Get summary with diffs for display
+			summary := GetFileChangeSummaryWithDiffs(outDir, cfg.LockFile, modifiedPaths, gitRepo)
+			summaryText := summary.FormatSummary(20, gitRepo != nil /* showDiffs only if git available */)
 
 			choice, err := promptFunc(summaryText)
 			if err != nil {

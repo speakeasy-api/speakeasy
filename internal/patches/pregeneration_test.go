@@ -1,10 +1,10 @@
 package patches
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -14,29 +14,31 @@ import (
 )
 
 // Helper to create a test file with @generated-id header
-func createTestFileWithUUID(t *testing.T, dir, relativePath, uuid, content string) string {
+// id should be a 12-char hex string (e.g., "a1b2c3d4e5f6")
+func createTestFileWithID(t *testing.T, dir, relativePath, id, content string) string {
 	fullPath := filepath.Join(dir, relativePath)
 	err := os.MkdirAll(filepath.Dir(fullPath), 0755)
 	require.NoError(t, err)
 
-	fileContent := fmt.Sprintf("// @generated-id: %s\n%s", uuid, content)
+	fileContent := fmt.Sprintf("// @generated-id: %s\n%s", id, content)
 	err = os.WriteFile(fullPath, []byte(fileContent), 0644)
 	require.NoError(t, err)
 
 	return fullPath
 }
 
-// Helper to compute SHA-1 checksum of content
+// Helper to compute SHA-1 checksum of content in lockfile format (sha1:<hex>)
+// Uses the same normalization as lockfile.ComputeFileChecksum
 func computeChecksum(content string) string {
-	hash := sha1.New()
-	hash.Write([]byte(content))
-	return fmt.Sprintf("%x", hash.Sum(nil))
+	sumHex, _ := lockfile.HashNormalizedSHA1(strings.NewReader(content))
+	return "sha1:" + sumHex
 }
 
 func TestDetectFileChanges_NilLockFile(t *testing.T) {
-	isDirty, err := DetectFileChanges("/tmp/test", nil)
+	isDirty, modifiedPaths, err := DetectFileChanges("/tmp/test", nil)
 	assert.NoError(t, err)
 	assert.False(t, isDirty)
+	assert.Empty(t, modifiedPaths)
 }
 
 func TestDetectFileChanges_NilTrackedFiles(t *testing.T) {
@@ -44,9 +46,10 @@ func TestDetectFileChanges_NilTrackedFiles(t *testing.T) {
 		LockVersion:  lockfile.LockV2,
 		TrackedFiles: nil,
 	}
-	isDirty, err := DetectFileChanges("/tmp/test", lockFile)
+	isDirty, modifiedPaths, err := DetectFileChanges("/tmp/test", lockFile)
 	assert.NoError(t, err)
 	assert.False(t, isDirty)
+	assert.Empty(t, modifiedPaths)
 }
 
 func TestDetectFileChanges_DeletedFile(t *testing.T) {
@@ -58,13 +61,14 @@ func TestDetectFileChanges_DeletedFile(t *testing.T) {
 	// Set up lockfile with a tracked file that doesn't exist on disk
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/deleted.go", lockfile.TrackedFile{
-		ID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+		ID: "aabbccddeeff", // 12 hex chars
 	})
 
 	// Detect changes - file doesn't exist, should be marked dirty
-	isDirty, err := DetectFileChanges(tempDir, lf)
+	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
 	assert.True(t, isDirty, "Should be dirty when file is deleted")
+	assert.Empty(t, modifiedPaths, "No modified paths for deleted file")
 
 	// Verify the tracked file is marked as deleted
 	tracked, ok := lf.TrackedFiles.Get("src/deleted.go")
@@ -79,21 +83,22 @@ func TestDetectFileChanges_MovedFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	uuid := "11111111-2222-3333-4444-555555555555"
+	id := "112233445566" // 12 hex chars
 
-	// Create file at NEW location with the UUID
-	createTestFileWithUUID(t, tempDir, "src/newlocation.go", uuid, "package foo")
+	// Create file at NEW location with the ID
+	createTestFileWithID(t, tempDir, "src/newlocation.go", id, "package foo")
 
 	// Set up lockfile with file tracked at OLD location
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/oldlocation.go", lockfile.TrackedFile{
-		ID: uuid,
+		ID: id,
 	})
 
-	// Detect changes - UUID found at different path
-	isDirty, err := DetectFileChanges(tempDir, lf)
+	// Detect changes - ID found at different path
+	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
 	assert.True(t, isDirty, "Should be dirty when file is moved")
+	assert.Empty(t, modifiedPaths, "No modified paths for moved file")
 
 	// Verify the tracked file has MovedTo set
 	tracked, ok := lf.TrackedFiles.Get("src/oldlocation.go")
@@ -108,9 +113,9 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	uuid := "22222222-3333-4444-5555-666666666666"
-	originalContent := "// @generated-id: " + uuid + "\npackage foo\n\nfunc Original() {}\n"
-	modifiedContent := "// @generated-id: " + uuid + "\npackage foo\n\nfunc Modified() {}\n"
+	id := "223344556677" // 12 hex chars
+	originalContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Original() {}\n"
+	modifiedContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Modified() {}\n"
 
 	// Create file on disk with MODIFIED content
 	fullPath := filepath.Join(tempDir, "src/modified.go")
@@ -122,14 +127,15 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 	// Set up lockfile with checksum of ORIGINAL content
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/modified.go", lockfile.TrackedFile{
-		ID:                uuid,
+		ID:                id,
 		LastWriteChecksum: computeChecksum(originalContent),
 	})
 
 	// Detect changes - checksum differs
-	isDirty, err := DetectFileChanges(tempDir, lf)
+	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
 	assert.True(t, isDirty, "Should be dirty when file checksum differs")
+	assert.Contains(t, modifiedPaths, "src/modified.go", "Should include modified file in modifiedPaths")
 
 	// File should not be marked as deleted or moved
 	tracked, ok := lf.TrackedFiles.Get("src/modified.go")
@@ -144,8 +150,8 @@ func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	uuid := "33333333-4444-5555-6666-777777777777"
-	content := "// @generated-id: " + uuid + "\npackage foo\n"
+	id := "334455667788" // 12 hex chars
+	content := "// @generated-id: " + id + "\npackage foo\n"
 
 	// Create file on disk
 	fullPath := filepath.Join(tempDir, "src/unchanged.go")
@@ -157,14 +163,15 @@ func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
 	// Set up lockfile with matching checksum
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/unchanged.go", lockfile.TrackedFile{
-		ID:                uuid,
+		ID:                id,
 		LastWriteChecksum: computeChecksum(content),
 	})
 
 	// Detect changes - nothing changed
-	isDirty, err := DetectFileChanges(tempDir, lf)
+	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
 	assert.False(t, isDirty, "Should NOT be dirty when file is unchanged")
+	assert.Empty(t, modifiedPaths, "No modified paths for unchanged file")
 }
 
 func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
@@ -173,24 +180,25 @@ func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	uuid := "44444444-5555-6666-7777-888888888888"
+	id := "445566778899" // 12 hex chars
 
 	// Create file at expected location
-	createTestFileWithUUID(t, tempDir, "src/restored.go", uuid, "package foo")
+	createTestFileWithID(t, tempDir, "src/restored.go", id, "package foo")
 
 	// Set up lockfile with stale Deleted marker
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/restored.go", lockfile.TrackedFile{
-		ID:      uuid,
+		ID:      id,
 		Deleted: true, // Stale marker from previous state
 	})
 
 	// Detect changes - file exists at expected location now
-	isDirty, err := DetectFileChanges(tempDir, lf)
+	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
 	// Not dirty because no actual change detected (no checksum to compare)
 	// But stale markers should be cleared
 	assert.False(t, isDirty)
+	assert.Empty(t, modifiedPaths)
 
 	// Verify stale markers are cleared
 	tracked, ok := lf.TrackedFiles.Get("src/restored.go")
@@ -205,26 +213,26 @@ func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
-	uuid1 := "55555555-6666-7777-8888-999999999999"
-	uuid2 := "66666666-7777-8888-9999-aaaaaaaaaaaa"
-	uuid3 := "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
+	id1 := "556677889900" // 12 hex chars
+	id2 := "667788990011" // 12 hex chars
+	id3 := "778899001122" // 12 hex chars
 
 	// Create file1 at expected location (unchanged)
-	createTestFileWithUUID(t, tempDir, "src/file1.go", uuid1, "package foo")
+	createTestFileWithID(t, tempDir, "src/file1.go", id1, "package foo")
 
 	// Create file2 at NEW location (moved)
-	createTestFileWithUUID(t, tempDir, "src/newdir/file2.go", uuid2, "package bar")
+	createTestFileWithID(t, tempDir, "src/newdir/file2.go", id2, "package bar")
 
 	// file3 doesn't exist on disk (deleted)
 
 	// Set up lockfile
 	lf := lockfile.New()
-	lf.TrackedFiles.Set("src/file1.go", lockfile.TrackedFile{ID: uuid1})
-	lf.TrackedFiles.Set("src/file2.go", lockfile.TrackedFile{ID: uuid2})
-	lf.TrackedFiles.Set("src/file3.go", lockfile.TrackedFile{ID: uuid3})
+	lf.TrackedFiles.Set("src/file1.go", lockfile.TrackedFile{ID: id1})
+	lf.TrackedFiles.Set("src/file2.go", lockfile.TrackedFile{ID: id2})
+	lf.TrackedFiles.Set("src/file3.go", lockfile.TrackedFile{ID: id3})
 
 	// Detect changes
-	isDirty, err := DetectFileChanges(tempDir, lf)
+	isDirty, _, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
 	assert.True(t, isDirty, "Should be dirty when some files are moved/deleted")
 
@@ -275,7 +283,7 @@ func TestFormatSummary_Empty(t *testing.T) {
 	summary := FileChangeSummary{
 		Moved: make(map[string]string),
 	}
-	result := summary.FormatSummary(10)
+	result := summary.FormatSummary(10, false)
 	assert.Empty(t, result)
 }
 
@@ -283,10 +291,10 @@ func TestFormatSummary_WithChanges(t *testing.T) {
 	summary := FileChangeSummary{
 		Deleted:  []string{"file1.go", "file2.go"},
 		Moved:    map[string]string{"old.go": "new.go"},
-		Modified: []string{"changed.go"},
+		Modified: []FileDiff{{Path: "changed.go"}},
 	}
 
-	result := summary.FormatSummary(10)
+	result := summary.FormatSummary(10, false)
 
 	assert.Contains(t, result, "D file1.go")
 	assert.Contains(t, result, "D file2.go")
@@ -300,7 +308,7 @@ func TestFormatSummary_Truncation(t *testing.T) {
 		Moved:   make(map[string]string),
 	}
 
-	result := summary.FormatSummary(3)
+	result := summary.FormatSummary(3, false)
 
 	// Should show 3 lines plus truncation message
 	lines := 0
@@ -314,27 +322,3 @@ func TestFormatSummary_Truncation(t *testing.T) {
 	assert.Contains(t, result, "... and 2 more")
 }
 
-func TestComputeFileChecksum(t *testing.T) {
-	// Create a temp file
-	tempDir, err := os.MkdirTemp("", "patches-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	content := "Hello, World!"
-	filePath := filepath.Join(tempDir, "test.txt")
-	err = os.WriteFile(filePath, []byte(content), 0644)
-	require.NoError(t, err)
-
-	// Compute checksum
-	checksum, err := computeFileChecksum(filePath)
-	require.NoError(t, err)
-
-	// Verify against known SHA-1 of "Hello, World!"
-	expectedChecksum := "0a0a9f2a6772942557ab5355d76af442f8f65e01"
-	assert.Equal(t, expectedChecksum, checksum)
-}
-
-func TestComputeFileChecksum_FileNotFound(t *testing.T) {
-	_, err := computeFileChecksum("/nonexistent/path/file.txt")
-	assert.Error(t, err)
-}

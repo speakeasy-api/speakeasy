@@ -206,13 +206,18 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	// Try to open a git repository for the Round-Trip Engineering (3-way merge) feature.
 	// If a git repository exists, inject Git and FileSystem adapters for the persistentEdits feature.
-	if repo, err := git.NewLocalRepository(opts.OutDir); err == nil && !repo.IsNil() {
+	repo, repoErr := git.NewLocalRepository(opts.OutDir)
+	if repoErr == nil && !repo.IsNil() {
 		wrappedRepo := patches.WrapGitRepository(repo)
-		gitAdapter := patches.NewGitAdapter(wrappedRepo)
+
+		// Use opts.OutDir as baseDir for GitAdapter. This allows translation between
+		// generation-relative paths (e.g., "sdk.go") and git-root-relative paths (e.g., "go-sdk/sdk.go").
+		// opts.OutDir is relative to cwd which should be at or inside the git root.
+		gitAdapter := patches.NewGitAdapter(wrappedRepo, opts.OutDir)
 
 		generatorOpts = append(generatorOpts,
 			generate.WithGit(gitAdapter),
-			generate.WithFileSystem(fs.NewFileSystemWithRoot(opts.OutDir)),
+			generate.WithFileSystem(fs.NewFileSystem(opts.OutDir)),
 		)
 
 		// Pre-generation: detect file moves/deletions, prompt if needed, and update lockfile
