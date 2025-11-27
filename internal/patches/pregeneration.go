@@ -233,7 +233,6 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, warnFunc func(format string, args ...any)) error {
 	cfg, err := config.Load(outDir)
 	if err != nil {
-		// If we can't load config, skip persistent edits check (matches original behavior)
 		return nil
 	}
 
