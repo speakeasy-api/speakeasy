@@ -16,6 +16,10 @@ type GitRepository interface {
 	// IsNil returns true if the repository is not initialized.
 	IsNil() bool
 
+	// Root returns the root directory of the repository (where .git is located).
+	// Returns empty string if the repository is not initialized.
+	Root() string
+
 	// HasObject checks if a blob or commit exists in the local object database.
 	HasObject(hash string) bool
 
@@ -91,6 +95,15 @@ func (g *GitAdapter) prependBaseDir(p string) string {
 		return toGitPath(p)
 	}
 	return path.Join(g.baseDir, toGitPath(p))
+}
+
+// RepoRoot returns the root directory of the git repository.
+// This is the directory containing .git (the worktree root).
+func (g *GitAdapter) RepoRoot() string {
+	if g.repo.IsNil() {
+		return ""
+	}
+	return g.repo.Root()
 }
 
 // HasObject checks if a blob or commit exists in the local Git object database.
