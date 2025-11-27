@@ -21,6 +21,10 @@ func (w *gitRepositoryWrapper) IsNil() bool {
 	return w.repo.IsNil()
 }
 
+func (w *gitRepositoryWrapper) Root() string {
+	return w.repo.Root()
+}
+
 func (w *gitRepositoryWrapper) HasObject(hash string) bool {
 	return w.repo.HasObject(hash)
 }
