@@ -214,7 +214,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			var cancelled bool
 			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
 			if cancelled {
-				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
+				return fmt.Errorf("generation was aborted for %s ✖", opts.Language)
 			}
 		} else {
 			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
@@ -226,7 +226,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			}
 
 			phase := stepToPhase(lastStep)
-			return fmt.Errorf("failed to generate %q: %s", opts.Language, phase)
+			return fmt.Errorf("failed to generate %q: step failed: %s", opts.Language, phase)
 		}
 
 		return nil
