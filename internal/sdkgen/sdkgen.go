@@ -166,17 +166,34 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generatorOpts = append(generatorOpts, generate.WithSkipVersioning(opts.SkipVersioning))
 	}
 
-	if opts.StreamableGeneration != nil {
-		generatorOpts = append(
-			generatorOpts,
-			generate.WithProgressUpdates(
-				opts.TargetName,
-				opts.StreamableGeneration.OnProgressUpdate,
-				opts.StreamableGeneration.GenSteps,
-				opts.StreamableGeneration.FileStatus,
-			),
-		)
+	// Track the current generation step for error reporting
+	var lastStep generate.ProgressStepID
+	trackProgress := func(update generate.ProgressUpdate) {
+		if update.Step != nil {
+			lastStep = update.Step.ID
+		}
+		// Forward to user-provided callback if present
+		if opts.StreamableGeneration != nil && opts.StreamableGeneration.OnProgressUpdate != nil {
+			opts.StreamableGeneration.OnProgressUpdate(update)
+		}
 	}
+
+	// Always enable step tracking for error reporting
+	genSteps := true
+	fileStatus := false
+	if opts.StreamableGeneration != nil {
+		genSteps = opts.StreamableGeneration.GenSteps || true
+		fileStatus = opts.StreamableGeneration.FileStatus
+	}
+	generatorOpts = append(
+		generatorOpts,
+		generate.WithProgressUpdates(
+			opts.TargetName,
+			trackProgress,
+			genSteps,
+			fileStatus,
+		),
+	)
 
 	g, err := generate.New(generatorOpts...)
 	if err != nil {
@@ -208,7 +225,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 				logger.Error("", zap.Error(err))
 			}
 
-			return fmt.Errorf("failed to generate SDKs for %s ✖", opts.Language)
+			phase := stepToPhase(lastStep)
+			return fmt.Errorf("failed to generate %q: %s", opts.Language, phase)
 		}
 
 		return nil
@@ -287,4 +305,36 @@ func GetGenLockID(outDir string) *string {
 	}
 
 	return nil
+}
+
+// stepToPhase maps a generation progress step to a human-readable phase name
+func stepToPhase(step generate.ProgressStepID) string {
+	switch step {
+	case generate.ProgressStepSetup:
+		return "Setup"
+	case generate.ProgressStepValidate:
+		return "Validation"
+	case generate.ProgressStepGenSDK:
+		return "Templating"
+	case generate.ProgressStepGenMockServer:
+		return "Mock Server Generation"
+	case generate.ProgressStepCleanup:
+		return "Cleanup"
+	case generate.ProgressStepLockFile:
+		return "Lock File Update"
+	case generate.ProgressStepCompileSDK:
+		return "Compilation"
+	case generate.ProgressStepCompileTests:
+		return "Test Compilation"
+	case generate.ProgressStepLintSDK:
+		return "Linting"
+	case generate.ProgressStepCompileUsage:
+		return "Usage Snippet Compilation"
+	case generate.ProgressStepCompileMockServer:
+		return "Mock Server Compilation"
+	case generate.ProgressStepLintMockServer:
+		return "Mock Server Linting"
+	default:
+		return "Generation"
+	}
 }
