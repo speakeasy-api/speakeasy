@@ -297,11 +297,6 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 				}
 			}
 		}
-
-		// Save lockfile with markers regardless
-		if err := config.SaveLockFile(outDir, cfg.LockFile); err != nil {
-			warnFunc("Failed to save lockfile with file change markers: %v", err)
-		}
 	}
 
 	return nil

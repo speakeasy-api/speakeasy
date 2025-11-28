@@ -225,6 +225,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			CancellableGeneration: w.CancellableGeneration,
 			StreamableGeneration:  w.StreamableGeneration,
 			ReleaseNotes:          changelogContent,
+			WorkflowStep:          genStep,
 		},
 	)
 	if err != nil {

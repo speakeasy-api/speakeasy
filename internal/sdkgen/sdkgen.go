@@ -24,6 +24,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/fs"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/patches"
+	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -81,6 +82,10 @@ type GenerateOptions struct {
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
 	ReleaseNotes          string
+
+	// WorkflowStep enables running prompts through the workflow visualizer.
+	// If nil, prompts will run directly without visualizer integration.
+	WorkflowStep *workflowTracking.WorkflowStep
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
@@ -221,7 +226,14 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		)
 
 		// Pre-generation: detect file moves/deletions, prompt if needed, and update lockfile
-		if err := patches.PrepareForGeneration(opts.OutDir, opts.AutoYes, PromptForCustomCode, logger.Warnf); err != nil {
+		// Use WorkflowStep for prompts if available (to pause visualizer), otherwise use direct prompts
+		promptFunc := PromptForCustomCode
+		if opts.WorkflowStep != nil {
+			promptFunc = func(summary string) (prompts.CustomCodeChoice, error) {
+				return prompts.PromptForCustomCodeWithStep(summary, opts.WorkflowStep)
+			}
+		}
+		if err := patches.PrepareForGeneration(opts.OutDir, opts.AutoYes, promptFunc, logger.Warnf); err != nil {
 			logger.Warnf("Error preparing for generation: %v", err)
 		}
 	}
