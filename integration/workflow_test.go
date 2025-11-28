@@ -280,10 +280,17 @@ func (r *subprocessRunner) Run() error {
 
 func execute(t *testing.T, wd string, args ...string) Runnable {
 	t.Helper()
-	_, filename, _, _ := runtime.Caller(0)
-	baseFolder := filepath.Join(filepath.Dir(filename), "..")
-	mainGo := filepath.Join(baseFolder, "main.go")
-	execCmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
+
+	// Use pre-built binary if available (set by TestMain), otherwise fall back to go run
+	var execCmd *exec.Cmd
+	if prebuiltBinary != "" {
+		execCmd = exec.Command(prebuiltBinary, args...)
+	} else {
+		_, filename, _, _ := runtime.Caller(0)
+		baseFolder := filepath.Join(filepath.Dir(filename), "..")
+		mainGo := filepath.Join(baseFolder, "main.go")
+		execCmd = exec.Command("go", append([]string{"run", mainGo}, args...)...)
+	}
 	execCmd.Env = os.Environ()
 	execCmd.Dir = wd
 

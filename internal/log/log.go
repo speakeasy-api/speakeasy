@@ -292,7 +292,21 @@ func (l Logger) format(level Level, msg string, err error) string {
 
 func (l Logger) Github(msg string) {
 	if l.listener != nil {
-		l.listener <- Msg{Type: MsgGithub, Msg: msg}
+		msgType := MsgGithub
+		cleanMsg := msg
+
+		// Normalize message to handle trailing whitespace/newlines from external libraries
+		trimmedMsg := strings.TrimSpace(msg)
+
+		// Detect "(skipped)" suffix on group messages and promote to richer type
+		if strings.HasPrefix(trimmedMsg, "::group::") && strings.HasSuffix(trimmedMsg, "(skipped)") {
+			msgType = MsgStepSkipped
+			// Remove suffix and any space before it
+			cleanMsg = strings.TrimSuffix(trimmedMsg, "(skipped)")
+			cleanMsg = strings.TrimSpace(cleanMsg)
+		}
+
+		l.listener <- Msg{Type: msgType, Msg: cleanMsg}
 	}
 
 	if env.IsGithubAction() {

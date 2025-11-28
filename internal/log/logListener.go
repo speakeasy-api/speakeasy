@@ -8,9 +8,10 @@ type Msg struct {
 type MsgType string
 
 var (
-	MsgInfo   MsgType = "info"
-	MsgWarn   MsgType = "warn"
-	MsgError  MsgType = "error"
-	MsgGithub MsgType = "github"
-	MsgStudio MsgType = "studio"
+	MsgInfo        MsgType = "info"
+	MsgWarn        MsgType = "warn"
+	MsgError       MsgType = "error"
+	MsgGithub      MsgType = "github"
+	MsgStudio      MsgType = "studio"
+	MsgStepSkipped MsgType = "step_skipped"
 )
