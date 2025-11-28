@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/log"
-
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
 type Status string
@@ -115,7 +115,7 @@ func (w *WorkflowStep) FailWorkflowWithoutNotifying() {
 }
 
 func (w *WorkflowStep) Finalize(succeeded bool) {
-	var msg UpdateMsg
+	var msg StatusMsg
 	if succeeded {
 		w.SucceedWorkflow()
 		msg = MsgSucceeded
@@ -137,20 +137,105 @@ func (w *WorkflowStep) notify() {
 	}
 }
 
+// RunPrompt sends a prompt form to the visualizer and blocks until completion.
+// The form's bound values will be populated when this returns.
+// Returns nil on success, huh.ErrUserAborted if user cancelled, or other error.
+// If the updates channel is nil (no visualizer), runs the form directly.
+func (w *WorkflowStep) RunPrompt(form *huh.Form) error {
+	if w == nil || w.updates == nil {
+		// No visualizer - run form directly
+		return form.Run()
+	}
+
+	respCh := make(chan error, 1)
+	w.updates <- PromptRequestMsg{
+		Form:   form,
+		RespCh: respCh,
+	}
+
+	// Block until the visualizer completes the form
+	return <-respCh
+}
+
 func (w *WorkflowStep) PrettyString() string {
 	return w.toString(0, 0)
 }
 
+// Custom Code step name for nesting
+const customCodeGroupStart = "Custom Code"
+
+// customCodeChildren are step names that should be nested under Custom Code
+var customCodeChildren = map[string]bool{
+	"Fetching custom code history":           true,
+	"Creating generation snapshot":           true,
+	"Merging custom edits":                   true,
+	"Merging custom edits (skipped)":         true,
+	"Pushing snapshot to remote":             true,
+	"Pushing snapshot to remote (skipped)":   true,
+	"Applying merged files":                  true,
+	"Applying merged files (skipped)":        true,
+}
+
 func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
-	msg := <-c
-	if msg.Type == log.MsgGithub && strings.HasPrefix(msg.Msg, "::group::") {
-		stepName := strings.TrimPrefix(msg.Msg, "::group::")
-		stepName = strings.TrimSpace(stepName)
+	var customCodeStep *WorkflowStep
+
+	for msg := range c {
+		// Handle skipped steps - find existing step and mark it + children as skipped
+		if msg.Type == log.MsgStepSkipped {
+			stepName := strings.TrimSpace(strings.TrimPrefix(msg.Msg, "::group::"))
+
+			// Determine where to find/create this step (nested under Custom Code if applicable)
+			parentStep := w
+			if customCodeStep != nil && customCodeChildren[stepName] {
+				parentStep = customCodeStep
+			}
+
+			// Look for existing step to mark as skipped retroactively
+			found := false
+			for _, step := range parentStep.substeps {
+				if step.name == stepName {
+					for _, child := range step.substeps {
+						child.Skip("skipped")
+					}
+					step.Skip("skipped")
+					found = true
+					break
+				}
+			}
+
+			// If not found, create it as skipped under the appropriate parent
+			if !found {
+				skippedStep := parentStep.NewSubstep(stepName)
+				skippedStep.Skip("skipped")
+			}
+			continue
+		}
+
+		var stepName string
+
+		if msg.Type == log.MsgGithub && strings.HasPrefix(msg.Msg, "::group::") {
+			stepName = strings.TrimSpace(strings.TrimPrefix(msg.Msg, "::group::"))
+		} else if msg.Type == log.MsgStudio {
+			stepName = msg.Msg
+		} else {
+			continue
+		}
+
+		// Handle Custom Code start - create parent section
+		if stepName == customCodeGroupStart {
+			customCodeStep = w.NewSubstep(customCodeGroupStart)
+			continue
+		}
+
+		// Handle Custom Code children - nest under parent
+		if customCodeStep != nil && customCodeChildren[stepName] {
+			customCodeStep.NewSubstep(stepName)
+			continue
+		}
+
+		// Default: add as sibling step
 		w.NewSubstep(stepName)
-	} else if msg.Type == log.MsgStudio {
-		w.NewSubstep(msg.Msg)
 	}
-	w.ListenForSubsteps(c)
 }
 
 // Example output:
