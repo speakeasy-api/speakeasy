@@ -166,17 +166,34 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		generatorOpts = append(generatorOpts, generate.WithSkipVersioning(opts.SkipVersioning))
 	}
 
-	if opts.StreamableGeneration != nil {
-		generatorOpts = append(
-			generatorOpts,
-			generate.WithProgressUpdates(
-				opts.TargetName,
-				opts.StreamableGeneration.OnProgressUpdate,
-				opts.StreamableGeneration.GenSteps,
-				opts.StreamableGeneration.FileStatus,
-			),
-		)
+	// Track the current generation step for error reporting
+	var lastStepID generate.ProgressStepID
+	trackProgress := func(update generate.ProgressUpdate) {
+		if update.Step != nil {
+			lastStepID = update.Step.ID
+		}
+		// Forward to user-provided callback if present
+		if opts.StreamableGeneration != nil && opts.StreamableGeneration.OnProgressUpdate != nil {
+			opts.StreamableGeneration.OnProgressUpdate(update)
+		}
 	}
+
+	// Enable step tracking by default for error reporting
+	genSteps := true
+	fileStatus := false
+	if opts.StreamableGeneration != nil {
+		genSteps = opts.StreamableGeneration.GenSteps || true
+		fileStatus = opts.StreamableGeneration.FileStatus
+	}
+	generatorOpts = append(
+		generatorOpts,
+		generate.WithProgressUpdates(
+			opts.TargetName,
+			trackProgress,
+			genSteps,
+			fileStatus,
+		),
+	)
 
 	g, err := generate.New(generatorOpts...)
 	if err != nil {
@@ -197,7 +214,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			var cancelled bool
 			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
 			if cancelled {
-				return fmt.Errorf("Generation was aborted for %s ✖", opts.Language)
+				return fmt.Errorf("generation was aborted for %s ✖", opts.Language)
 			}
 		} else {
 			errs = g.Generate(ctx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
@@ -208,7 +225,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 				logger.Error("", zap.Error(err))
 			}
 
-			return fmt.Errorf("failed to generate SDKs for %s ✖", opts.Language)
+			stepMessage := generate.ProgressMessages[lastStepID]
+			return fmt.Errorf("failed to generate %q: step failed: %s", opts.Language, stepMessage)
 		}
 
 		return nil
