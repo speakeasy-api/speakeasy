@@ -167,10 +167,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	}
 
 	// Track the current generation step for error reporting
-	var lastStep generate.ProgressStepID
+	var lastStepID generate.ProgressStepID
 	trackProgress := func(update generate.ProgressUpdate) {
 		if update.Step != nil {
-			lastStep = update.Step.ID
+			lastStepID = update.Step.ID
 		}
 		// Forward to user-provided callback if present
 		if opts.StreamableGeneration != nil && opts.StreamableGeneration.OnProgressUpdate != nil {
@@ -178,7 +178,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}
 	}
 
-	// Always enable step tracking for error reporting
+	// Enable step tracking by default for error reporting
 	genSteps := true
 	fileStatus := false
 	if opts.StreamableGeneration != nil {
@@ -225,8 +225,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 				logger.Error("", zap.Error(err))
 			}
 
-			phase := stepToPhase(lastStep)
-			return fmt.Errorf("failed to generate %q: step failed: %s", opts.Language, phase)
+			stepMessage := generate.ProgressMessages[lastStepID]
+			return fmt.Errorf("failed to generate %q: step failed: %s", opts.Language, stepMessage)
 		}
 
 		return nil
@@ -305,36 +305,4 @@ func GetGenLockID(outDir string) *string {
 	}
 
 	return nil
-}
-
-// stepToPhase maps a generation progress step to a human-readable phase name
-func stepToPhase(step generate.ProgressStepID) string {
-	switch step {
-	case generate.ProgressStepSetup:
-		return "Setup"
-	case generate.ProgressStepValidate:
-		return "OpenAPI Validation"
-	case generate.ProgressStepGenSDK:
-		return "Templating"
-	case generate.ProgressStepGenMockServer:
-		return "Mock Server Generation"
-	case generate.ProgressStepCleanup:
-		return "Cleanup"
-	case generate.ProgressStepLockFile:
-		return "Lock File Update"
-	case generate.ProgressStepCompileSDK:
-		return "Compilation"
-	case generate.ProgressStepCompileTests:
-		return "Test Compilation"
-	case generate.ProgressStepLintSDK:
-		return "SDK Linting"
-	case generate.ProgressStepCompileUsage:
-		return "Usage Snippet Compilation"
-	case generate.ProgressStepCompileMockServer:
-		return "Mock Server Compilation"
-	case generate.ProgressStepLintMockServer:
-		return "Mock Server Linting"
-	default:
-		return string(step)
-	}
 }
