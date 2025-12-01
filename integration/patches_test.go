@@ -1037,6 +1037,12 @@ components:
 	require.NoError(t, err)
 	require.Contains(t, string(statusOutput), "UU", "Git status should show unmerged conflict state")
 
+	// Verify the path in git status is relative, not absolute
+	require.Contains(t, string(statusOutput), "models/components/pet.go",
+		"Git status should show relative path, not absolute")
+	require.NotContains(t, string(statusOutput), temp,
+		"Git status should not contain absolute path")
+
 	// ID should be preserved regardless
 	finalID := extractGeneratedIDFromContent(finalContent)
 	require.Equal(t, originalID, finalID, "Generated ID should be preserved")

@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -208,6 +209,14 @@ func (r *Repository) ResolveRevision(revision string) (string, error) {
 func (r *Repository) SetConflictState(path string, base, ours, theirs []byte, isExecutable bool) error {
 	if r.repo == nil {
 		return fmt.Errorf("git repository not initialized")
+	}
+
+	// Ensure path is relative to the repository root
+	if filepath.IsAbs(path) {
+		relPath, err := filepath.Rel(r.Root(), path)
+		if err == nil {
+			path = relPath
+		}
 	}
 
 	// Read the current index

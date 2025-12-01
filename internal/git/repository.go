@@ -3,6 +3,8 @@ package git
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	gitc "github.com/go-git/go-git/v5"
@@ -93,18 +95,13 @@ func (r *Repository) FetchRef(refSpec string) error {
 		return nil
 	}
 
-	err := r.repo.Fetch(&gitc.FetchOptions{
-		RemoteName: "origin",
-		RefSpecs:   []config.RefSpec{config.RefSpec(refSpec)},
-		Force:      true,
-	})
+	cmd := exec.Command("git", "fetch", "--force", "origin", refSpec)
+	cmd.Dir = r.Root()
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	// NoErrAlreadyUpToDate means we already have it
-	if err == gitc.NoErrAlreadyUpToDate {
-		return nil
-	}
-
-	return err
+	return cmd.Run()
 }
 
 // PushRef pushes a ref to origin.
@@ -114,17 +111,13 @@ func (r *Repository) PushRef(refSpec string) error {
 		return nil
 	}
 
-	err := r.repo.Push(&gitc.PushOptions{
-		RemoteName: "origin",
-		RefSpecs:   []config.RefSpec{config.RefSpec(refSpec)},
-	})
+	cmd := exec.Command("git", "push", "origin", refSpec)
+	cmd.Dir = r.Root()
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	// NoErrAlreadyUpToDate means we already have it
-	if err == gitc.NoErrAlreadyUpToDate {
-		return nil
-	}
-
-	return err
+	return cmd.Run()
 }
 
 func (r *Repository) HeadHash() (string, error) {
