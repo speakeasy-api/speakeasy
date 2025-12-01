@@ -167,10 +167,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	}
 
 	// Track the current generation step for error reporting
-	var lastStepID generate.ProgressStepID
+	failedStepMessage := ""
 	trackProgress := func(update generate.ProgressUpdate) {
 		if update.Step != nil {
-			lastStepID = update.Step.ID
+			failedStepMessage = update.Step.Message
 		}
 		// Forward to user-provided callback if present
 		if opts.StreamableGeneration != nil && opts.StreamableGeneration.OnProgressUpdate != nil {
@@ -225,8 +225,11 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 				logger.Error("", zap.Error(err))
 			}
 
-			stepMessage := generate.ProgressMessages[lastStepID]
-			return fmt.Errorf("failed to generate %q: step failed: %s", opts.Language, stepMessage)
+			if failedStepMessage != "" {
+				return fmt.Errorf("generation failed for %q during step %q", opts.Language, failedStepMessage)
+			}
+
+			return fmt.Errorf("failed to generate %q", opts.Language)
 		}
 
 		return nil
