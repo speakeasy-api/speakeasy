@@ -102,8 +102,6 @@ func (r *Repository) FetchRef(refSpec string) error {
 	cmd := exec.Command("git", "fetch", "--force", "origin", refSpec)
 	cmd.Dir = r.Root()
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
 }
@@ -122,8 +120,6 @@ func (r *Repository) PushRef(refSpec string) error {
 	cmd := exec.Command("git", "push", "origin", refSpec)
 	cmd.Dir = r.Root()
 	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
 }

@@ -161,81 +161,81 @@ func (w *WorkflowStep) PrettyString() string {
 	return w.toString(0, 0)
 }
 
-// Custom Code step name for nesting
-const customCodeGroupStart = "Custom Code"
-
-// customCodeChildren are step names that should be nested under Custom Code
-var customCodeChildren = map[string]bool{
-	"Fetching custom code history":           true,
-	"Creating generation snapshot":           true,
-	"Merging custom edits":                   true,
-	"Merging custom edits (skipped)":         true,
-	"Pushing snapshot to remote":             true,
-	"Pushing snapshot to remote (skipped)":   true,
-	"Applying merged files":                  true,
-	"Applying merged files (skipped)":        true,
-}
-
+// ListenForSubsteps listens for progress messages and creates/updates workflow steps.
+// It handles both legacy MsgGithub/MsgStudio messages and new MsgStep messages with path-based hierarchy.
 func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
-	var customCodeStep *WorkflowStep
+	// Track steps by ID for status updates
+	stepsByID := make(map[string]*WorkflowStep)
 
 	for msg := range c {
-		// Handle skipped steps - find existing step and mark it + children as skipped
-		if msg.Type == log.MsgStepSkipped {
+		switch msg.Type {
+		case log.MsgGithub:
+			// Legacy: handle ::group:: messages
+			if strings.HasPrefix(msg.Msg, "::group::") {
+				stepName := strings.TrimSpace(strings.TrimPrefix(msg.Msg, "::group::"))
+				w.NewSubstep(stepName)
+			}
+
+		case log.MsgStudio:
+			// Legacy: handle studio messages
+			w.NewSubstep(msg.Msg)
+
+		case log.MsgStepSkipped:
+			// Legacy: handle skipped step messages
 			stepName := strings.TrimSpace(strings.TrimPrefix(msg.Msg, "::group::"))
+			skippedStep := w.findOrCreateSubstep(stepName)
+			skippedStep.Skip("skipped")
 
-			// Determine where to find/create this step (nested under Custom Code if applicable)
-			parentStep := w
-			if customCodeStep != nil && customCodeChildren[stepName] {
-				parentStep = customCodeStep
+		case log.MsgStep:
+			// New: handle path-based step messages with status updates
+			if msg.Step == nil || len(msg.Step.Path) == 0 {
+				continue
 			}
 
-			// Look for existing step to mark as skipped retroactively
-			found := false
-			for _, step := range parentStep.substeps {
-				if step.name == stepName {
-					for _, child := range step.substeps {
-						child.Skip("skipped")
-					}
-					step.Skip("skipped")
-					found = true
-					break
+			// Check if this is an update to an existing step
+			if existing, ok := stepsByID[msg.Step.ID]; ok {
+				existing.setStatus(msg.Step.Status)
+				continue
+			}
+
+			// Create/find the hierarchy and register the leaf step
+			parent := w
+			for i, name := range msg.Step.Path {
+				substep := parent.findOrCreateSubstep(name)
+				if i == len(msg.Step.Path)-1 {
+					// This is the leaf node - register it and set status
+					stepsByID[msg.Step.ID] = substep
+					substep.setStatus(msg.Step.Status)
 				}
+				parent = substep
 			}
-
-			// If not found, create it as skipped under the appropriate parent
-			if !found {
-				skippedStep := parentStep.NewSubstep(stepName)
-				skippedStep.Skip("skipped")
-			}
-			continue
 		}
-
-		var stepName string
-
-		if msg.Type == log.MsgGithub && strings.HasPrefix(msg.Msg, "::group::") {
-			stepName = strings.TrimSpace(strings.TrimPrefix(msg.Msg, "::group::"))
-		} else if msg.Type == log.MsgStudio {
-			stepName = msg.Msg
-		} else {
-			continue
-		}
-
-		// Handle Custom Code start - create parent section
-		if stepName == customCodeGroupStart {
-			customCodeStep = w.NewSubstep(customCodeGroupStart)
-			continue
-		}
-
-		// Handle Custom Code children - nest under parent
-		if customCodeStep != nil && customCodeChildren[stepName] {
-			customCodeStep.NewSubstep(stepName)
-			continue
-		}
-
-		// Default: add as sibling step
-		w.NewSubstep(stepName)
 	}
+}
+
+// findOrCreateSubstep finds an existing substep by name or creates a new one.
+func (w *WorkflowStep) findOrCreateSubstep(name string) *WorkflowStep {
+	for _, s := range w.substeps {
+		if s.name == name {
+			return s
+		}
+	}
+	return w.NewSubstep(name)
+}
+
+// setStatus updates the step's status based on a StepStatus value.
+func (w *WorkflowStep) setStatus(status log.StepStatus) {
+	switch status {
+	case log.StepStatusPending:
+		w.status = StatusRunning
+	case log.StepStatusSuccess:
+		w.status = StatusSucceeded
+	case log.StepStatusFailed:
+		w.status = StatusFailed
+	case log.StepStatusSkipped:
+		w.status = StatusSkipped
+	}
+	w.notify()
 }
 
 // Example output:

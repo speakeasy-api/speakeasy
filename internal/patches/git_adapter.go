@@ -305,7 +305,7 @@ func (g *GitAdapter) CommitSnapshot(treeHash, parentHash, message string) (strin
 	return g.repo.CommitTree(treeHash, parentHash, message)
 }
 
-// PushSnapshot syncs the ref to the server asynchronously.
+// PushSnapshot syncs the ref to the server synchronously.
 // It pushes the commit to refs/speakeasy/gen/<uuid>.
 func (g *GitAdapter) PushSnapshot(commitHash, uuid string) error {
 	if g.repo.IsNil() {
@@ -319,14 +319,12 @@ func (g *GitAdapter) PushSnapshot(commitHash, uuid string) error {
 		return fmt.Errorf("failed to create local ref %s: %w", refName, err)
 	}
 
-	// Push asynchronously - fire and forget
-	go func() {
-		refSpec := fmt.Sprintf("%s:%s", refName, refName)
-		if err := g.repo.PushRef(refSpec); err != nil {
-			// Log warning but don't fail - this is async
-			fmt.Printf("Warning: failed to push snapshot %s: %v\n", uuid, err)
-		}
-	}()
+	// Push synchronously to ensure the commit is available for future generations.
+	// If push fails, subsequent generations would create commits with unreachable parents.
+	refSpec := fmt.Sprintf("%s:%s", refName, refName)
+	if err := g.repo.PushRef(refSpec); err != nil {
+		return fmt.Errorf("failed to push snapshot %s: %w", uuid, err)
+	}
 
 	return nil
 }

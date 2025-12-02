@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -43,6 +45,7 @@ type Logger struct {
 	writer          io.Writer
 	warnCapture     *[]string
 	listener        chan Msg
+	pathPrefix      []string // For Scope() support - prefix for StartStep paths
 }
 
 var _ logging.Logger = (*Logger)(nil)
@@ -154,6 +157,7 @@ func (l Logger) Copy() Logger {
 		writer:          l.writer,
 		warnCapture:     l.warnCapture,
 		listener:        l.listener,
+		pathPrefix:      l.pathPrefix,
 	}
 }
 
@@ -313,6 +317,73 @@ func (l Logger) Github(msg string) {
 		l.Print(msg)
 	}
 }
+
+// Scope returns a Logger with the given name added to the path prefix.
+// All StartStep calls on the returned logger will have this prefix in their path.
+// Scopes can be nested: logger.Scope("A").Scope("B").StartStep("C") produces path ["A", "B", "C"].
+func (l Logger) Scope(name string) logging.Logger {
+	l2 := l.Copy()
+	// Deep copy to prevent shared state issues between scopes
+	l2.pathPrefix = make([]string, len(l.pathPrefix)+1)
+	copy(l2.pathPrefix, l.pathPrefix)
+	l2.pathPrefix[len(l.pathPrefix)] = name
+	return l2
+}
+
+// StartStep starts a trackable progress step that appears in the workflow UI.
+// The step is initially "pending" and can be updated via Succeed/Fail/Skip.
+// Path is formed by: [scope prefix...] + msg
+func (l Logger) StartStep(msg string) logging.Step {
+	if l.listener == nil {
+		return &noopStep{}
+	}
+
+	// Build full path from scope prefix + message
+	path := make([]string, len(l.pathPrefix)+1)
+	copy(path, l.pathPrefix)
+	path[len(l.pathPrefix)] = msg
+
+	id := uuid.NewString()
+	l.listener <- Msg{
+		Type: MsgStep,
+		Step: &StepMsg{ID: id, Path: path, Status: StepStatusPending},
+	}
+
+	return &loggerStep{id: id, path: path, listener: l.listener}
+}
+
+// loggerStep implements logging.Step for real step tracking.
+type loggerStep struct {
+	id       string
+	path     []string
+	listener chan Msg
+	once     sync.Once
+}
+
+func (s *loggerStep) Succeed() {
+	s.once.Do(func() {
+		s.listener <- Msg{Type: MsgStep, Step: &StepMsg{ID: s.id, Path: s.path, Status: StepStatusSuccess}}
+	})
+}
+
+func (s *loggerStep) Fail() {
+	s.once.Do(func() {
+		s.listener <- Msg{Type: MsgStep, Step: &StepMsg{ID: s.id, Path: s.path, Status: StepStatusFailed}}
+	})
+}
+
+func (s *loggerStep) Skip() {
+	s.once.Do(func() {
+		s.listener <- Msg{Type: MsgStep, Step: &StepMsg{ID: s.id, Path: s.path, Status: StepStatusSkipped}}
+	})
+}
+
+// noopStep is a no-op implementation of logging.Step.
+type noopStep struct{}
+
+func (s *noopStep) Succeed() {}
+func (s *noopStep) Fail()    {}
+func (s *noopStep) Skip()    {}
 
 /**
  * Formatters
