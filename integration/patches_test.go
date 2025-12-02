@@ -1046,6 +1046,48 @@ components:
 	// ID should be preserved regardless
 	finalID := extractGeneratedIDFromContent(finalContent)
 	require.Equal(t, originalID, finalID, "Generated ID should be preserved")
+
+	// Now resolve the conflict by choosing the generated version
+	// We'll keep the required field but restore our custom validate tag
+	resolvedContent := strings.Replace(
+		string(originalContent),
+		"`json:\"id,omitzero\"`",
+		"`json:\"id\" validate:\"required\"`", // Resolved: use generated json tag but keep user's validate
+		1,
+	)
+	err = os.WriteFile(petFile, []byte(resolvedContent), 0644)
+	require.NoError(t, err)
+
+	// Abort the in-progress merge since we manually resolved
+	cmd = exec.Command("git", "checkout", "--theirs", "models/components/pet.go")
+	cmd.Dir = temp
+	_ = cmd.Run() // ignore error, we're just trying to clean up
+
+	// Stage the resolved file to complete the merge
+	cmd = exec.Command("git", "add", "models/components/pet.go")
+	cmd.Dir = temp
+	err = cmd.Run()
+	require.NoError(t, err)
+
+	// Complete the merge with a commit
+	cmd = exec.Command("git", "commit", "-m", "resolved conflict")
+	cmd.Dir = temp
+	err = cmd.Run()
+	require.NoError(t, err)
+
+	// Re-run generation - this time it should succeed without conflicts
+	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--skip-versioning", "--output", "console").Run()
+	require.NoError(t, err, "Re-run after conflict resolution should succeed")
+
+	// Verify the file no longer has conflict markers
+	rerunContent, err := os.ReadFile(petFile)
+	require.NoError(t, err)
+	require.NotContains(t, string(rerunContent), "<<<<<<<", "File should not have conflict markers after successful re-run")
+	require.NotContains(t, string(rerunContent), ">>>>>>>", "File should not have conflict markers after successful re-run")
+
+	// ID should still be preserved
+	rerunID := extractGeneratedIDFromContent(rerunContent)
+	require.Equal(t, originalID, rerunID, "Generated ID should be preserved after re-run")
 }
 
 // TestPersistentEdits_NoConflictAdjacentEdits verifies that adjacent but non-overlapping
