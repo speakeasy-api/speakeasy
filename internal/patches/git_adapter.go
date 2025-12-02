@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/patches"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/merge"
 )
 
 // GitRepository defines the low-level Git operations needed by GitAdapter.
@@ -62,14 +62,14 @@ type TreeEntry struct {
 	Hash string // SHA-1 hash of the blob or subtree
 }
 
-// GitAdapter implements the patches.Git interface using a GitRepository.
+// GitAdapter implements the merge.Git interface using a GitRepository.
 // It provides all Git operations needed for Round-Trip Engineering.
 type GitAdapter struct {
 	repo    GitRepository
 	baseDir string // relative path from git root to generation root (e.g., "go-sdk")
 }
 
-var _ patches.Git = (*GitAdapter)(nil)
+var _ merge.Git = (*GitAdapter)(nil)
 
 // NewGitAdapter creates a new GitAdapter wrapping the given GitRepository.
 // baseDir is the relative path from the repository root to the generation output directory.

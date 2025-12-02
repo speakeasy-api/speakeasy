@@ -28,7 +28,7 @@ import (
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	genpatches "github.com/speakeasy-api/openapi-generation/v2/pkg/patches"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/merge"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/prompts"
@@ -266,7 +266,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		if len(errs) > 0 {
 			for _, err := range errs {
 				// Check if it's a ConflictsError - render pretty conflict message
-				var conflictErr *genpatches.ConflictsError
+				var conflictErr *merge.ConflictsError
 				if stderrors.As(err, &conflictErr) {
 					renderConflictsError(logger, conflictErr)
 					// Don't log the generic error for conflicts - we rendered a nice message
@@ -361,7 +361,7 @@ func GetGenLockID(outDir string) *string {
 }
 
 // renderConflictsError renders a git-status style error message for merge conflicts.
-func renderConflictsError(logger log.Logger, conflictErr *genpatches.ConflictsError) {
+func renderConflictsError(logger log.Logger, conflictErr *merge.ConflictsError) {
 	// Build file list with "both modified:" prefix like git status
 	var fileLines strings.Builder
 	for _, file := range conflictErr.Files {
