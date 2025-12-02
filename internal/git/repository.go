@@ -95,6 +95,10 @@ func (r *Repository) FetchRef(refSpec string) error {
 		return nil
 	}
 
+	if _, err := r.repo.Remote("origin"); err != nil {
+		return fmt.Errorf("remote 'origin' not found: %w", err)
+	}
+
 	cmd := exec.Command("git", "fetch", "--force", "origin", refSpec)
 	cmd.Dir = r.Root()
 	cmd.Env = os.Environ()
@@ -109,6 +113,10 @@ func (r *Repository) FetchRef(refSpec string) error {
 func (r *Repository) PushRef(refSpec string) error {
 	if r.repo == nil {
 		return nil
+	}
+
+	if _, err := r.repo.Remote("origin"); err != nil {
+		return fmt.Errorf("remote 'origin' not found: %w", err)
 	}
 
 	cmd := exec.Command("git", "push", "origin", refSpec)

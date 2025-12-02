@@ -228,47 +228,56 @@ func (g *GitAdapter) buildTreeRecursive(fileHashes map[string]string, prefix str
 		}
 	}
 
-	// Build tree entries
+	// Build tree entries (order doesn't matter yet, we'll sort after)
 	var treeEntries []TreeEntry
 
-	// Get sorted names for deterministic output
-	names := make([]string, 0, len(entries))
-	for name := range entries {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		info := entries[name]
-
+	for _, info := range entries {
 		if info.isTree {
 			// Recursively build subtree
-			childPrefix := name
+			childPrefix := info.name
 			if prefix != "" {
-				childPrefix = prefix + "/" + name
+				childPrefix = prefix + "/" + info.name
 			}
 			subtreeHash, err := g.buildTreeRecursive(fileHashes, childPrefix)
 			if err != nil {
 				return "", fmt.Errorf("failed to build subtree %s: %w", childPrefix, err)
 			}
 			treeEntries = append(treeEntries, TreeEntry{
-				Name: name,
+				Name: info.name,
 				Mode: "040000", // directory
 				Hash: subtreeHash,
 			})
 		} else {
 			// Regular file - determine mode from file extension
 			mode := "100644" // regular file
-			if isExecutableFile(name) {
+			if isExecutableFile(info.name) {
 				mode = "100755"
 			}
 			treeEntries = append(treeEntries, TreeEntry{
-				Name: name,
+				Name: info.name,
 				Mode: mode,
 				Hash: info.hash,
 			})
 		}
 	}
+
+	// Sort according to Git's rules: directories are compared as if they have a trailing "/"
+	// This matters because "/" (ASCII 47) comes after "-" (45) and "." (46)
+	// Example: "foo-bar" (file) must come before "foo" (directory) because "foo-bar" < "foo/"
+	sort.Slice(treeEntries, func(i, j int) bool {
+		n1 := treeEntries[i].Name
+		n2 := treeEntries[j].Name
+
+		// Directories (mode 040000) are compared with implicit trailing "/"
+		if treeEntries[i].Mode == "040000" {
+			n1 += "/"
+		}
+		if treeEntries[j].Mode == "040000" {
+			n2 += "/"
+		}
+
+		return n1 < n2
+	})
 
 	return g.repo.WriteTree(treeEntries)
 }

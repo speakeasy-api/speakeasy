@@ -287,7 +287,7 @@ func TestPersistentEdits_MultiTarget(t *testing.T) {
 	temp := setupMultiTargetPersistentEditsTestDir(t)
 
 	// Initial generation of both targets
-	err := executeI(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
 	require.NoError(t, err, "Initial generation should succeed")
 
 	// Commit initial generation
@@ -323,7 +323,7 @@ func TestPersistentEdits_MultiTarget(t *testing.T) {
 	gitCommitAll(t, temp, "user modifications to both SDKs")
 
 	// Regenerate both targets
-	err = executeI(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
 	require.NoError(t, err, "Regeneration should succeed")
 
 	// Verify user modifications are preserved in both targets
