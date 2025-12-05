@@ -42,7 +42,7 @@ require (
 	github.com/speakeasy-api/openapi v1.11.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.770.0
 	github.com/speakeasy-api/openapi-overlay v0.10.3
-	github.com/speakeasy-api/sdk-gen-config v1.42.1-0.20251121174255-2476d8db4c49
+	github.com/speakeasy-api/sdk-gen-config v1.43.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.20.12
 	github.com/speakeasy-api/versioning-reports v0.6.1
@@ -221,7 +221,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/swaggest/jsonschema-go v0.3.78 // indirect
+	github.com/swaggest/jsonschema-go v0.3.79 // indirect
 	github.com/swaggest/refl v1.4.0 // indirect
 	github.com/testcontainers/testcontainers-go v0.38.0 // indirect
 	github.com/tetratelabs/wazero v1.8.2 // indirect

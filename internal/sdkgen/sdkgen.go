@@ -78,6 +78,7 @@ type GenerateOptions struct {
 	Compile         bool
 	TargetName      string
 	SkipVersioning  bool
+	AllowPrompts    bool
 
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
@@ -227,10 +228,14 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		// Pre-generation: detect file moves/deletions, prompt if needed, and update lockfile
 		// Use WorkflowStep for prompts if available (to pause visualizer), otherwise use direct prompts
-		promptFunc := PromptForCustomCode
-		if opts.WorkflowStep != nil {
-			promptFunc = func(summary string) (prompts.CustomCodeChoice, error) {
-				return prompts.PromptForCustomCodeWithStep(summary, opts.WorkflowStep)
+		// Pass nil promptFunc if prompts are not allowed (e.g., console output mode, CI)
+		var promptFunc patches.PromptFunc
+		if opts.AllowPrompts {
+			promptFunc = PromptForCustomCode
+			if opts.WorkflowStep != nil {
+				promptFunc = func(summary string) (prompts.CustomCodeChoice, error) {
+					return prompts.PromptForCustomCodeWithStep(summary, opts.WorkflowStep)
+				}
 			}
 		}
 		if err := patches.PrepareForGeneration(opts.OutDir, opts.AutoYes, promptFunc, logger.Warnf); err != nil {

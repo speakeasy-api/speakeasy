@@ -444,6 +444,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
 		run.WithAutoYes(flags.AutoYes),
+		run.WithAllowPrompts(false), // Non-interactive mode
 	}
 
 	if flags.Minimal {
@@ -514,16 +515,19 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		opts = append(opts, minimalOpts...)
 	}
 
+	if flags.Verbose {
+		flags.Output = "console"
+	}
+
+	// Only allow prompts in summary mode (interactive visualization)
+	opts = append(opts, run.WithAllowPrompts(flags.Output == "summary"))
+
 	workflow, err := run.NewWorkflow(
 		ctx,
 		opts...,
 	)
 	if err != nil {
 		return err
-	}
-
-	if flags.Verbose {
-		flags.Output = "console"
 	}
 
 	switch flags.Output {

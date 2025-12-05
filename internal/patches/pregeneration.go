@@ -8,6 +8,7 @@ import (
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/lockfile"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/prompts"
 )
@@ -226,7 +227,7 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 // Parameters:
 //   - outDir: the output directory for generation
 //   - autoYes: if true, skip prompting (used in CI/workflow mode)
-//   - promptFunc: function to prompt user for custom code choice (can be nil if autoYes=true)
+//   - promptFunc: function to prompt user for custom code choice (nil to skip prompting)
 //   - warnFunc: function to log warnings
 //
 // Returns error only for fatal errors. If config or lockfile is missing, returns nil (opportunistic execution).
@@ -251,12 +252,12 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 				warnFunc("Failed to save lockfile with file change markers: %v", err)
 			}
 		}
-	} else if !persistentEdits.IsNever() {
+	} else if !persistentEdits.IsNever() && !env.IsCI() {
 		// Not enabled and not "never" - check for dirty files and prompt
 		isDirty, modifiedPaths, err := DetectFileChanges(outDir, cfg.LockFile)
 		if err != nil {
 			warnFunc("Failed to detect file changes: %v", err)
-		} else if isDirty && !autoYes {
+		} else if isDirty && !autoYes && promptFunc != nil {
 			// Initialize git repo for reading blobs (for diff display)
 			var gitRepo GitRepository
 			if repo, gitErr := git.NewLocalRepository(outDir); gitErr == nil && !repo.IsNil() {

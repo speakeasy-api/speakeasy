@@ -354,6 +354,7 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+		run.WithAllowPrompts(flags.Output == "summary" || flags.Output == ""),
 	)
 
 	defer func() {
@@ -485,6 +486,7 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		ctx,
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!skipCompile),
+		run.WithAllowPrompts(output == "summary" || output == ""),
 	)
 
 	if err != nil {

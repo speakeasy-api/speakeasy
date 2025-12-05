@@ -837,6 +837,7 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 		ctx,
 		run.WithTarget("all"),
 		run.WithBoostrapTests(),
+		run.WithAllowPrompts(true),
 	)
 
 	if err != nil {
