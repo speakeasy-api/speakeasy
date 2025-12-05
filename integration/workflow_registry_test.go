@@ -110,7 +110,6 @@ typescript:
 	require.NoError(t, err)
 
 	// exclude gen.lock -- we could (we do) reformat the document inside the frozen one
-	// Now that filesToString normalizes to forward slashes, we only need one delete
 	delete(frozenChecksums, ".speakeasy/gen.lock")
 	delete(initialChecksums, ".speakeasy/gen.lock")
 	// Compare checksums
