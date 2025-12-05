@@ -20,7 +20,7 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/fatih/structs v1.1.0
 	github.com/getkin/kin-openapi v0.133.0
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/go-git/go-git/v5 v5.16.4
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v58 v58.0.0
@@ -34,14 +34,15 @@ require (
 	github.com/pb33f/libopenapi v0.21.8
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/errors v0.9.1
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/samber/lo v1.47.0
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.11.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.770.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.772.0
 	github.com/speakeasy-api/openapi-overlay v0.10.3
-	github.com/speakeasy-api/sdk-gen-config v1.42.0
+	github.com/speakeasy-api/sdk-gen-config v1.43.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.20.12
 	github.com/speakeasy-api/versioning-reports v0.6.1
@@ -97,6 +98,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
+	github.com/creack/pty v1.1.24 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/daveshanley/vacuum v0.16.5 // indirect
@@ -194,7 +196,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/posthog/posthog-go v1.2.24 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/pterm/pterm v0.12.80 // indirect
@@ -206,7 +207,7 @@ require (
 	github.com/sahilm/fuzzy v0.1.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
-	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
+	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/sethvargo/go-envconfig v0.9.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.5 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
@@ -220,7 +221,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/swaggest/jsonschema-go v0.3.78 // indirect
+	github.com/swaggest/jsonschema-go v0.3.79 // indirect
 	github.com/swaggest/refl v1.4.0 // indirect
 	github.com/testcontainers/testcontainers-go v0.38.0 // indirect
 	github.com/tetratelabs/wazero v1.8.2 // indirect

@@ -1,4 +1,4 @@
-package fs
+package patches
 
 import (
 	"bufio"
@@ -6,70 +6,45 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/filesystem"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 )
 
-// FileSystem is a wrapper around the os.FS type that implements the filesystem.FileSystem interface needed by the openapi-generation package
-type FileSystem struct {
-	outDir string
+// Scanner scans a directory for files containing @generated-id UUIDs.
+// This enables tracking file identity across renames/moves.
+type Scanner struct {
+	rootDir string
 }
 
-var _ filesystem.FileSystem = &FileSystem{}
-
-// NewFileSystem creates a new FileSystem.
-func NewFileSystem(outDir string) *FileSystem {
-	return &FileSystem{outDir}
-}
-
-func (f *FileSystem) ReadFile(path string) ([]byte, error) {
-	return os.ReadFile(path)
-}
-
-func (f *FileSystem) WriteFile(path string, data []byte, perm os.FileMode) error {
-	return os.WriteFile(path, data, perm)
-}
-
-func (f *FileSystem) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
-}
-
-func (f *FileSystem) Open(path string) (fs.File, error) {
-	return os.Open(path)
-}
-
-func (f *FileSystem) OpenFile(path string, flag int, perm os.FileMode) (filesystem.File, error) {
-	return os.OpenFile(path, flag, perm)
-}
-
-func (f *FileSystem) Stat(path string) (os.FileInfo, error) {
-	return os.Stat(path)
-}
-
-func (f *FileSystem) Remove(path string) error {
-	return os.Remove(path)
-}
-
-func (f *FileSystem) RemoveAll(path string) error {
-	return os.RemoveAll(path)
+// NewScanner creates a new Scanner for the given root directory.
+func NewScanner(rootDir string) *Scanner {
+	return &Scanner{rootDir: rootDir}
 }
 
 // generatedIDPattern matches @generated-id: <ID> in file headers.
 // Short IDs are 12 hex chars (e.g., a1b2c3d4e5f6)
 var generatedIDPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{12})`)
 
-// ScanForGeneratedIDs scans the root directory for files with @generated-id headers.
-// Returns a map of ID -> relative file path.
-// This is used to detect when users have moved generated files.
-func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
-	if f.outDir == "" {
-		return nil, nil
+// ScanResult contains the mapping of UUIDs to file paths.
+type ScanResult struct {
+	// UUIDToPath maps file UUIDs to their current relative paths.
+	// Used to detect file moves/renames.
+	UUIDToPath map[string]string
+
+	// PathToUUID maps relative paths to their UUIDs.
+	PathToUUID map[string]string
+}
+
+// Scan walks the directory tree and finds all files with @generated-id headers.
+// It returns a bidirectional mapping between UUIDs and file paths.
+func (s *Scanner) Scan() (*ScanResult, error) {
+	result := &ScanResult{
+		UUIDToPath: make(map[string]string),
+		PathToUUID: make(map[string]string),
 	}
 
-	result := make(map[string]string)
-
-	err := filepath.WalkDir(f.outDir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(s.rootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // Skip files we can't access
 		}
@@ -90,18 +65,22 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 		}
 
 		// Get relative path
-		relPath, err := filepath.Rel(f.outDir, path)
+		relPath, err := filepath.Rel(s.rootDir, path)
 		if err != nil {
 			return nil
 		}
 
-		// Try to extract ID from file header
+		// Normalize to forward slashes (git/lockfile convention)
+		relPath = strings.ReplaceAll(relPath, "\\", "/")
+
+		// Try to extract ID from file header (supports both UUID and short ID formats)
 		id, err := extractGeneratedIDFromFile(path)
 		if err != nil || id == "" {
 			return nil
 		}
 
-		result[id] = relPath
+		result.UUIDToPath[id] = relPath
+		result.PathToUUID[relPath] = id
 
 		return nil
 	})
@@ -110,6 +89,7 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 }
 
 // extractGeneratedIDFromFile reads the first few lines of a file looking for @generated-id.
+// Returns the ID (either legacy UUID or short 12-char ID format).
 func extractGeneratedIDFromFile(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
