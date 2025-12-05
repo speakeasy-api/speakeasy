@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 )
@@ -68,6 +69,9 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 		if err != nil {
 			return nil
 		}
+
+		// Normalize to forward slashes (git/lockfile convention)
+		relPath = strings.ReplaceAll(relPath, "\\", "/")
 
 		// Try to extract ID from file header (supports both UUID and short ID formats)
 		id, err := extractGeneratedIDFromFile(path)

@@ -219,6 +219,9 @@ func (r *Repository) SetConflictState(path string, base, ours, theirs []byte, is
 		}
 	}
 
+	// Git index always uses forward slashes, even on Windows
+	path = strings.ReplaceAll(path, "\\", "/")
+
 	// Read the current index
 	idx, err := r.repo.Storer.Index()
 	if err != nil {
