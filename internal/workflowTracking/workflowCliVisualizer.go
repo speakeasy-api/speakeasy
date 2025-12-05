@@ -130,7 +130,7 @@ func (m cliVisualizer) HandleKeypress(key string) tea.Cmd {
 	}
 	return nil
 }
-func (m cliVisualizer) SetWidth(width int)                {}
+func (m cliVisualizer) SetWidth(width int) {}
 
 func (m cliVisualizer) View() string {
 	// If showing a prompt form, render that instead

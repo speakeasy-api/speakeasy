@@ -143,19 +143,21 @@ type mockGitRepo struct {
 	isNil bool
 }
 
-func (m *mockGitRepo) IsNil() bool                { return m.isNil }
-func (m *mockGitRepo) Root() string               { return "" }
-func (m *mockGitRepo) HasObject(hash string) bool { _, ok := m.blobs[hash]; return ok }
+func (m *mockGitRepo) IsNil() bool                         { return m.isNil }
+func (m *mockGitRepo) Root() string                        { return "" }
+func (m *mockGitRepo) HasObject(hash string) bool          { _, ok := m.blobs[hash]; return ok }
 func (m *mockGitRepo) GetBlob(hash string) ([]byte, error) { return m.blobs[hash], nil }
 func (m *mockGitRepo) WriteBlob(content []byte) (string, error) {
 	return "", nil
 }
-func (m *mockGitRepo) WriteTree(entries []TreeEntry) (string, error)                 { return "", nil }
-func (m *mockGitRepo) CommitTree(treeHash, parentHash, message string) (string, error) { return "", nil }
-func (m *mockGitRepo) GetRef(refName string) (string, error)                         { return "", nil }
-func (m *mockGitRepo) UpdateRef(refName, newHash, oldHash string) error              { return nil }
-func (m *mockGitRepo) FetchRef(refSpec string) error                                 { return nil }
-func (m *mockGitRepo) PushRef(refSpec string) error                                  { return nil }
+func (m *mockGitRepo) WriteTree(entries []TreeEntry) (string, error) { return "", nil }
+func (m *mockGitRepo) CommitTree(treeHash, parentHash, message string) (string, error) {
+	return "", nil
+}
+func (m *mockGitRepo) GetRef(refName string) (string, error)            { return "", nil }
+func (m *mockGitRepo) UpdateRef(refName, newHash, oldHash string) error { return nil }
+func (m *mockGitRepo) FetchRef(refSpec string) error                    { return nil }
+func (m *mockGitRepo) PushRef(refSpec string) error                     { return nil }
 func (m *mockGitRepo) SetConflictState(path string, base, ours, theirs []byte, isExecutable bool) error {
 	return nil
 }

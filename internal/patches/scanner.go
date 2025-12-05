@@ -118,4 +118,3 @@ func isBinaryFile(path string) bool {
 	n, _ := file.Read(buf)
 	return generate.IsBinaryContent(buf[:n])
 }
-

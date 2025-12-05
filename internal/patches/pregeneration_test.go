@@ -321,4 +321,3 @@ func TestFormatSummary_Truncation(t *testing.T) {
 	assert.Equal(t, 3, lines)
 	assert.Contains(t, result, "... and 2 more")
 }
-

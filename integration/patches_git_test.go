@@ -1101,9 +1101,9 @@ func TestGitArchitecture_MultipleTypeScriptTargetsSameRepo(t *testing.T) {
 	require.NoError(t, err)
 
 	// Build maps of IDs per target directory
-	rootIDs := make(map[string]string)    // id -> path
-	subpkgIDs := make(map[string]string)  // id -> path
-	allIDs := make(map[string][]string)   // id -> list of paths (for collision detection)
+	rootIDs := make(map[string]string)   // id -> path
+	subpkgIDs := make(map[string]string) // id -> path
+	allIDs := make(map[string][]string)  // id -> list of paths (for collision detection)
 
 	for id, path := range rootResult.UUIDToPath {
 		allIDs[id] = append(allIDs[id], path)
