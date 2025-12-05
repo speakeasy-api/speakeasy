@@ -275,9 +275,6 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 				switch choice {
 				case prompts.CustomCodeChoiceYes:
 					// Enable persistent edits in config
-					if cfg.Config.Generation.PersistentEdits == nil {
-						cfg.Config.Generation.PersistentEdits = &config.PersistentEdits{}
-					}
 					enabled := config.PersistentEditsEnabledTrue
 					cfg.Config.Generation.PersistentEdits.Enabled = &enabled
 					if err := config.SaveConfig(outDir, cfg.Config); err != nil {
@@ -285,9 +282,6 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 					}
 				case prompts.CustomCodeChoiceDontAskAgain:
 					// Set to never in config
-					if cfg.Config.Generation.PersistentEdits == nil {
-						cfg.Config.Generation.PersistentEdits = &config.PersistentEdits{}
-					}
 					never := config.PersistentEditsEnabledNever
 					cfg.Config.Generation.PersistentEdits.Enabled = &never
 					if err := config.SaveConfig(outDir, cfg.Config); err != nil {

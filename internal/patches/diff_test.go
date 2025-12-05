@@ -143,8 +143,9 @@ type mockGitRepo struct {
 	isNil bool
 }
 
-func (m *mockGitRepo) IsNil() bool                         { return m.isNil }
-func (m *mockGitRepo) HasObject(hash string) bool          { _, ok := m.blobs[hash]; return ok }
+func (m *mockGitRepo) IsNil() bool                { return m.isNil }
+func (m *mockGitRepo) Root() string               { return "" }
+func (m *mockGitRepo) HasObject(hash string) bool { _, ok := m.blobs[hash]; return ok }
 func (m *mockGitRepo) GetBlob(hash string) ([]byte, error) { return m.blobs[hash], nil }
 func (m *mockGitRepo) WriteBlob(content []byte) (string, error) {
 	return "", nil
