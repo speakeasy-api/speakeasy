@@ -810,19 +810,23 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	}
 	t.Log("Verified: speakeasy refs not present in fresh clone (as expected)")
 
-	// Step 5: Modify a generated file in Environment B
-	sdkFile := filepath.Join(envBDir, "sdk.go")
-	require.FileExists(t, sdkFile, "sdk.go should exist in envB")
+	// Step 5: Modify a generated model file in Environment B
+	// We use a model file instead of sdk.go because version bumps modify sdk.go's
+	// version constants and can cause conflicts with edits near the package declaration.
+	petFile := filepath.Join(envBDir, "models", "components", "pet.go")
+	require.FileExists(t, petFile, "pet.go should exist in envB")
 
-	content, err := os.ReadFile(sdkFile)
+	content, err := os.ReadFile(petFile)
 	require.NoError(t, err)
 	originalID := extractGeneratedIDFromContent(content)
-	require.NotEmpty(t, originalID, "sdk.go should have @generated-id")
+	require.NotEmpty(t, originalID, "pet.go should have @generated-id")
 
+	// Add a custom method at the end of the file (after the struct closing brace)
+	// This is less likely to conflict with generator changes
 	modifiedContent := strings.Replace(string(content),
-		"package testsdk",
-		"package testsdk\n\n// ENVB_USER_EDIT: Developer B's customization", 1)
-	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0644)
+		"}\n",
+		"}\n\n// ENVB_USER_EDIT: Developer B's customization\nfunc (p *Pet) CustomMethod() string {\n\treturn \"custom\"\n}\n", 1)
+	err = os.WriteFile(petFile, []byte(modifiedContent), 0644)
 	require.NoError(t, err)
 	gitCommitAllInDir(t, envBDir, "developer B user edit")
 
