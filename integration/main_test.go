@@ -31,7 +31,11 @@ func TestMain(m *testing.M) {
 	// Pre-build the speakeasy binary once to avoid ~20s compilation overhead per test
 	_, filename, _, _ := runtime.Caller(0)
 	baseFolder := filepath.Join(filepath.Dir(filename), "..")
-	binaryPath := filepath.Join(os.TempDir(), "speakeasy-test-binary")
+	binaryName := "speakeasy-test-binary"
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+	binaryPath := filepath.Join(os.TempDir(), binaryName)
 
 	fmt.Println("Pre-building speakeasy binary for integration tests...")
 	buildCmd := exec.Command("go", "build", "-o", binaryPath, filepath.Join(baseFolder, "main.go"))
