@@ -723,16 +723,27 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	require.NoError(t, err, "git init --bare failed: %s", string(output))
 	t.Logf("Created bare remote at %s", remoteDir)
 
+	// Configure bare remote to not convert line endings
+	for _, args := range [][]string{
+		{"config", "core.autocrlf", "false"},
+	} {
+		cmd = exec.Command("git", args...)
+		cmd.Dir = remoteDir
+		cmd.CombinedOutput()
+	}
+
 	// Step 2: Clone to Environment A and set up for generation
 	cmd = exec.Command("git", "clone", remoteDir, ".")
 	cmd.Dir = envADir
 	output, err = cmd.CombinedOutput()
 	require.NoError(t, err, "git clone to envA failed: %s", string(output))
 
-	// Configure git user in envA
+	// Configure git user in envA and disable line ending conversion for consistency
 	for _, args := range [][]string{
 		{"config", "user.email", "test@example.com"},
 		{"config", "user.name", "Test User"},
+		{"config", "core.autocrlf", "false"},
+		{"config", "core.eol", "lf"},
 	} {
 		cmd = exec.Command("git", args...)
 		cmd.Dir = envADir
@@ -777,10 +788,12 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	output, err = cmd.CombinedOutput()
 	require.NoError(t, err, "git clone to envB failed: %s", string(output))
 
-	// Configure git user in envB
+	// Configure git user in envB and disable line ending conversion for consistency
 	for _, args := range [][]string{
 		{"config", "user.email", "devb@example.com"},
 		{"config", "user.name", "Developer B"},
+		{"config", "core.autocrlf", "false"},
+		{"config", "core.eol", "lf"},
 	} {
 		cmd = exec.Command("git", args...)
 		cmd.Dir = envBDir
