@@ -69,28 +69,27 @@ func (r *Repository) writeBlobGoGit(content []byte) (string, error) {
 }
 
 // GetBlob retrieves the content of a blob by its SHA-1 hash.
+// Uses native git commands to ensure we can read objects fetched by native git fetch.
 func (r *Repository) GetBlob(hash string) ([]byte, error) {
 	// Strip "sha1:" prefix if present (common in some systems)
 	hash = strings.TrimPrefix(hash, "sha1:")
 
-	h := plumbing.NewHash(hash)
-	blob, err := r.repo.BlobObject(h)
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return nil, fmt.Errorf("repository root not found")
+	}
+
+	// Use native git to read blob content.
+	// This is necessary because go-git's storer may not see objects
+	// that were fetched via native git fetch commands.
+	cmd := exec.Command("git", "cat-file", "blob", hash)
+	cmd.Dir = repoRoot
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to find blob %s: %w", hash, err)
+		return nil, fmt.Errorf("failed to read blob %s: %w", hash, err)
 	}
 
-	reader, err := blob.Reader()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open blob reader: %w", err)
-	}
-	defer reader.Close()
-
-	buf := new(bytes.Buffer)
-	if _, err := buf.ReadFrom(reader); err != nil {
-		return nil, fmt.Errorf("failed to read blob content: %w", err)
-	}
-
-	return buf.Bytes(), nil
+	return output, nil
 }
 
 // TreeEntry represents a file or directory in a git tree.
