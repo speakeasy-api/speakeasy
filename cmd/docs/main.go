@@ -28,6 +28,7 @@ func main() {
 		filepath.Join(*outDir, "getting-started.mdx"),
 		filepath.Join(*outDir, "_meta.tsx"),
 		filepath.Join(*outDir, "mise-toolkit.mdx"),
+		filepath.Join(*outDir, "docker.mdx"),
 	}
 
 	if _, err := removeDocs(*outDir, exclusionList); err != nil {
