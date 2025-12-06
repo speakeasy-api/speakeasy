@@ -821,11 +821,9 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	originalID := extractGeneratedIDFromContent(content)
 	require.NotEmpty(t, originalID, "pet.go should have @generated-id")
 
-	// Add a custom method at the end of the file (after the struct closing brace)
-	// This is less likely to conflict with generator changes
-	modifiedContent := strings.Replace(string(content),
-		"}\n",
-		"}\n\n// ENVB_USER_EDIT: Developer B's customization\nfunc (p *Pet) CustomMethod() string {\n\treturn \"custom\"\n}\n", 1)
+	// Add a custom method at the end of the file
+	// We append to the very end of the file to avoid conflict with generated getters
+	modifiedContent := string(content) + "\n// ENVB_USER_EDIT: Developer B's customization\nfunc (p *Pet) CustomMethod() string {\n\treturn \"custom\"\n}\n"
 	err = os.WriteFile(petFile, []byte(modifiedContent), 0644)
 	require.NoError(t, err)
 	gitCommitAllInDir(t, envBDir, "developer B user edit")
@@ -837,10 +835,12 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	gitCommitAllInDir(t, envBDir, "generation 2 in envB")
 
 	// Step 7: Verify user edit was preserved (proving 3-way merge worked)
-	finalContent, err := os.ReadFile(sdkFile)
+	finalContent, err := os.ReadFile(petFile)
 	require.NoError(t, err)
 	require.Contains(t, string(finalContent), "ENVB_USER_EDIT: Developer B's customization",
 		"User modification should be preserved after generation (3-way merge worked)")
+	require.Contains(t, string(finalContent), "func (p *Pet) CustomMethod()",
+		"Custom method should be preserved after generation")
 
 	// Verify ID is preserved
 	finalID := extractGeneratedIDFromContent(finalContent)
