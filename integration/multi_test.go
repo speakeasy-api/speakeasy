@@ -3,7 +3,6 @@ package integration_tests
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -13,9 +12,6 @@ import (
 )
 
 func TestMultiFileStability(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on Windows")
-	}
 	// If windows, skip
 	temp := setupTestDir(t)
 

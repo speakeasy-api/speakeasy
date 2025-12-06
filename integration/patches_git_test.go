@@ -723,16 +723,27 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	require.NoError(t, err, "git init --bare failed: %s", string(output))
 	t.Logf("Created bare remote at %s", remoteDir)
 
+	// Configure bare remote to not convert line endings
+	for _, args := range [][]string{
+		{"config", "core.autocrlf", "false"},
+	} {
+		cmd = exec.Command("git", args...)
+		cmd.Dir = remoteDir
+		cmd.CombinedOutput()
+	}
+
 	// Step 2: Clone to Environment A and set up for generation
 	cmd = exec.Command("git", "clone", remoteDir, ".")
 	cmd.Dir = envADir
 	output, err = cmd.CombinedOutput()
 	require.NoError(t, err, "git clone to envA failed: %s", string(output))
 
-	// Configure git user in envA
+	// Configure git user in envA and disable line ending conversion for consistency
 	for _, args := range [][]string{
 		{"config", "user.email", "test@example.com"},
 		{"config", "user.name", "Test User"},
+		{"config", "core.autocrlf", "false"},
+		{"config", "core.eol", "lf"},
 	} {
 		cmd = exec.Command("git", args...)
 		cmd.Dir = envADir
@@ -777,10 +788,12 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	output, err = cmd.CombinedOutput()
 	require.NoError(t, err, "git clone to envB failed: %s", string(output))
 
-	// Configure git user in envB
+	// Configure git user in envB and disable line ending conversion for consistency
 	for _, args := range [][]string{
 		{"config", "user.email", "devb@example.com"},
 		{"config", "user.name", "Developer B"},
+		{"config", "core.autocrlf", "false"},
+		{"config", "core.eol", "lf"},
 	} {
 		cmd = exec.Command("git", args...)
 		cmd.Dir = envBDir
@@ -797,19 +810,21 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	}
 	t.Log("Verified: speakeasy refs not present in fresh clone (as expected)")
 
-	// Step 5: Modify a generated file in Environment B
-	sdkFile := filepath.Join(envBDir, "sdk.go")
-	require.FileExists(t, sdkFile, "sdk.go should exist in envB")
+	// Step 5: Modify a generated model file in Environment B
+	// We use a model file instead of sdk.go because version bumps modify sdk.go's
+	// version constants and can cause conflicts with edits near the package declaration.
+	petFile := filepath.Join(envBDir, "models", "components", "pet.go")
+	require.FileExists(t, petFile, "pet.go should exist in envB")
 
-	content, err := os.ReadFile(sdkFile)
+	content, err := os.ReadFile(petFile)
 	require.NoError(t, err)
 	originalID := extractGeneratedIDFromContent(content)
-	require.NotEmpty(t, originalID, "sdk.go should have @generated-id")
+	require.NotEmpty(t, originalID, "pet.go should have @generated-id")
 
-	modifiedContent := strings.Replace(string(content),
-		"package testsdk",
-		"package testsdk\n\n// ENVB_USER_EDIT: Developer B's customization", 1)
-	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0644)
+	// Add a custom method at the end of the file
+	// We append to the very end of the file to avoid conflict with generated getters
+	modifiedContent := string(content) + "\n// ENVB_USER_EDIT: Developer B's customization\nfunc (p *Pet) CustomMethod() string {\n\treturn \"custom\"\n}\n"
+	err = os.WriteFile(petFile, []byte(modifiedContent), 0644)
 	require.NoError(t, err)
 	gitCommitAllInDir(t, envBDir, "developer B user edit")
 
@@ -820,10 +835,12 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	gitCommitAllInDir(t, envBDir, "generation 2 in envB")
 
 	// Step 7: Verify user edit was preserved (proving 3-way merge worked)
-	finalContent, err := os.ReadFile(sdkFile)
+	finalContent, err := os.ReadFile(petFile)
 	require.NoError(t, err)
 	require.Contains(t, string(finalContent), "ENVB_USER_EDIT: Developer B's customization",
 		"User modification should be preserved after generation (3-way merge worked)")
+	require.Contains(t, string(finalContent), "func (p *Pet) CustomMethod()",
+		"Custom method should be preserved after generation")
 
 	// Verify ID is preserved
 	finalID := extractGeneratedIDFromContent(finalContent)

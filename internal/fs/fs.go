@@ -94,6 +94,8 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 		if err != nil {
 			return nil
 		}
+		// Normalize to forward slashes for cross-platform consistency
+		relPath = filepath.ToSlash(relPath)
 
 		// Try to extract ID from file header
 		id, err := extractGeneratedIDFromFile(path)
