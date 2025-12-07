@@ -252,7 +252,7 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 				warnFunc("Failed to save lockfile with file change markers: %v", err)
 			}
 		}
-	} else if !persistentEdits.IsNever() && !env.IsCI() {
+	} else if !persistentEdits.IsNever() && !env.IsCI() && os.Getenv("PROMPT_CUSTOM_CODE") == "true" {
 		// Not enabled and not "never" - check for dirty files and prompt
 		isDirty, modifiedPaths, err := DetectFileChanges(outDir, cfg.LockFile)
 		if err != nil {
