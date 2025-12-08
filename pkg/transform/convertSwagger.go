@@ -1,51 +1,45 @@
 package transform
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	"fmt"
 	"io"
 	"os"
-	"strings"
 
-	"github.com/getkin/kin-openapi/openapi2"
-	"github.com/getkin/kin-openapi/openapi2conv"
-	"github.com/invopop/yaml"
+	"github.com/speakeasy-api/openapi/openapi"
+	"github.com/speakeasy-api/openapi/swagger"
 )
 
+// ConvertSwagger upgrades a Swagger 2.0 document to OpenAPI 3.0 using the speakeasy-api/openapi library
 func ConvertSwagger(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
-	schemaBytes, err := os.ReadFile(schemaPath)
+	// Read the Swagger 2.0 document
+	data, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read swagger document: %w", err)
 	}
 
-	var swaggerDoc openapi2.T
-	if strings.Contains(schemaPath, ".json") {
-		err = json.Unmarshal(schemaBytes, &swaggerDoc)
-	} else {
-		err = yaml.Unmarshal(schemaBytes, &swaggerDoc)
-	}
+	// Unmarshal using swagger.Unmarshal (returns swagger doc, validation errors, and error)
+	swaggerDoc, validationErrs, err := swagger.Unmarshal(ctx, bytes.NewReader(data))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal swagger document: %w", err)
 	}
 
-	openAPIV3Spec, err := openapi2conv.ToV3(&swaggerDoc)
-	if err != nil {
-		return err
+	// Log validation errors but continue (they're warnings)
+	if len(validationErrs) > 0 {
+		// Validation errors are non-fatal, just warnings
+		fmt.Fprintf(w, "# Swagger document has %d validation warnings\n", len(validationErrs))
 	}
 
-	var outBytes []byte
-	if yamlOut {
-		outBytes, err = yaml.Marshal(openAPIV3Spec)
-	} else {
-		outBytes, err = json.Marshal(openAPIV3Spec)
-	}
+	// Upgrade to OpenAPI 3.0
+	openapi3Doc, err := swagger.Upgrade(ctx, swaggerDoc)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to upgrade swagger to openapi 3.0: %w", err)
 	}
 
-	_, err = w.Write(outBytes)
-	if err != nil {
-		return err
+	// Marshal the OpenAPI 3.0 document
+	if err := openapi.Marshal(ctx, openapi3Doc, w); err != nil {
+		return fmt.Errorf("failed to marshal openapi document: %w", err)
 	}
 
 	return nil
