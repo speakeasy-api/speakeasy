@@ -3,7 +3,9 @@ package git
 import (
 	"bytes"
 	"fmt"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +18,33 @@ import (
 
 // WriteBlob writes content to the git object database and returns the SHA-1 hash.
 func (r *Repository) WriteBlob(content []byte) (string, error) {
+	// On Windows, use native git commands due to go-git file locking issues
+	// that cause "Access is denied" errors when writing/renaming blob objects
+	if runtime.GOOS == "windows" {
+		return r.writeBlobNative(content)
+	}
+	return r.writeBlobGoGit(content)
+}
+
+// writeBlobNative writes a blob using native git commands (for Windows compatibility).
+func (r *Repository) writeBlobNative(content []byte) (string, error) {
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return "", fmt.Errorf("repository root not found")
+	}
+
+	cmd := exec.Command("git", "hash-object", "-w", "--stdin")
+	cmd.Dir = repoRoot
+	cmd.Stdin = bytes.NewReader(content)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git hash-object failed: %w", err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// writeBlobGoGit writes a blob using go-git (for non-Windows platforms).
+func (r *Repository) writeBlobGoGit(content []byte) (string, error) {
 	obj := r.repo.Storer.NewEncodedObject()
 	obj.SetType(plumbing.BlobObject)
 	obj.SetSize(int64(len(content)))
@@ -40,28 +69,27 @@ func (r *Repository) WriteBlob(content []byte) (string, error) {
 }
 
 // GetBlob retrieves the content of a blob by its SHA-1 hash.
+// Uses native git commands to ensure we can read objects fetched by native git fetch.
 func (r *Repository) GetBlob(hash string) ([]byte, error) {
 	// Strip "sha1:" prefix if present (common in some systems)
 	hash = strings.TrimPrefix(hash, "sha1:")
 
-	h := plumbing.NewHash(hash)
-	blob, err := r.repo.BlobObject(h)
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return nil, fmt.Errorf("repository root not found")
+	}
+
+	// Use native git to read blob content.
+	// This is necessary because go-git's storer may not see objects
+	// that were fetched via native git fetch commands.
+	cmd := exec.Command("git", "cat-file", "blob", hash)
+	cmd.Dir = repoRoot
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to find blob %s: %w", hash, err)
+		return nil, fmt.Errorf("failed to read blob %s: %w", hash, err)
 	}
 
-	reader, err := blob.Reader()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open blob reader: %w", err)
-	}
-	defer reader.Close()
-
-	buf := new(bytes.Buffer)
-	if _, err := buf.ReadFrom(reader); err != nil {
-		return nil, fmt.Errorf("failed to read blob content: %w", err)
-	}
-
-	return buf.Bytes(), nil
+	return output, nil
 }
 
 // TreeEntry represents a file or directory in a git tree.
@@ -74,6 +102,43 @@ type TreeEntry struct {
 // WriteTree creates a tree object from the provided entries and returns its hash.
 // Note: This creates a single tree object (flat). For deep trees, hashes must be pre-calculated.
 func (r *Repository) WriteTree(entries []TreeEntry) (string, error) {
+	// On Windows, use native git commands due to go-git file locking issues
+	if runtime.GOOS == "windows" {
+		return r.writeTreeNative(entries)
+	}
+	return r.writeTreeGoGit(entries)
+}
+
+// writeTreeNative creates a tree object using native git commands (for Windows compatibility).
+func (r *Repository) writeTreeNative(entries []TreeEntry) (string, error) {
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return "", fmt.Errorf("repository root not found")
+	}
+
+	// Build tree input for git mktree
+	// Format: <mode> SP <type> SP <hash> TAB <name> LF
+	var treeInput strings.Builder
+	for _, e := range entries {
+		objType := "blob"
+		if e.Mode == "040000" {
+			objType = "tree"
+		}
+		fmt.Fprintf(&treeInput, "%s %s %s\t%s\n", e.Mode, objType, e.Hash, e.Name)
+	}
+
+	cmd := exec.Command("git", "mktree")
+	cmd.Dir = repoRoot
+	cmd.Stdin = strings.NewReader(treeInput.String())
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git mktree failed: %w", err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// writeTreeGoGit creates a tree object using go-git (for non-Windows platforms).
+func (r *Repository) writeTreeGoGit(entries []TreeEntry) (string, error) {
 	var treeEntries []object.TreeEntry
 
 	for _, e := range entries {
@@ -121,6 +186,44 @@ func (r *Repository) WriteTree(entries []TreeEntry) (string, error) {
 
 // CommitTree creates a commit object pointing to a tree and parent(s).
 func (r *Repository) CommitTree(treeHash, parent, message string) (string, error) {
+	// On Windows, use native git commands due to go-git file locking issues
+	if runtime.GOOS == "windows" {
+		return r.commitTreeNative(treeHash, parent, message)
+	}
+	return r.commitTreeGoGit(treeHash, parent, message)
+}
+
+// commitTreeNative creates a commit object using native git commands (for Windows compatibility).
+func (r *Repository) commitTreeNative(treeHash, parent, message string) (string, error) {
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return "", fmt.Errorf("repository root not found")
+	}
+
+	args := []string{"commit-tree", treeHash, "-m", message}
+	if parent != "" {
+		args = append(args, "-p", parent)
+	}
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = repoRoot
+	// Set environment for consistent commit identity
+	cmd.Env = append(cmd.Environ(),
+		"GIT_AUTHOR_NAME=Speakeasy Bot",
+		"GIT_AUTHOR_EMAIL=bot@speakeasyapi.dev",
+		"GIT_COMMITTER_NAME=Speakeasy Bot",
+		"GIT_COMMITTER_EMAIL=bot@speakeasyapi.dev",
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git commit-tree failed: %w", err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// commitTreeGoGit creates a commit object using go-git (for non-Windows platforms).
+func (r *Repository) commitTreeGoGit(treeHash, parent, message string) (string, error) {
 	tHash := plumbing.NewHash(treeHash)
 
 	var parents []plumbing.Hash
@@ -220,8 +323,99 @@ func (r *Repository) SetConflictState(path string, base, ours, theirs []byte, is
 	}
 
 	// Git index always uses forward slashes, even on Windows
-	path = strings.ReplaceAll(path, "\\", "/")
+	path = filepath.ToSlash(path)
 
+	// On Windows, use native git commands due to go-git file locking issues
+	// that cause "Access is denied" errors when writing blobs
+	if runtime.GOOS == "windows" {
+		return r.setConflictStateNative(path, base, ours, theirs, isExecutable)
+	}
+
+	return r.setConflictStateGoGit(path, base, ours, theirs, isExecutable)
+}
+
+// setConflictStateNative uses native git commands to set up conflict state.
+// This is used on Windows where go-git has file locking issues.
+func (r *Repository) setConflictStateNative(path string, base, ours, theirs []byte, isExecutable bool) error {
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return fmt.Errorf("repository root not found")
+	}
+
+	// Determine file mode for git
+	modeStr := "100644"
+	if isExecutable {
+		modeStr = "100755"
+	}
+
+	// Helper to write blob using native git
+	writeBlob := func(content []byte) (string, error) {
+		cmd := exec.Command("git", "hash-object", "-w", "--stdin")
+		cmd.Dir = repoRoot
+		cmd.Stdin = bytes.NewReader(content)
+		output, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("git hash-object failed: %w", err)
+		}
+		return strings.TrimSpace(string(output)), nil
+	}
+
+	// Write the blob objects
+	var baseHash string
+	var err error
+	if base != nil {
+		baseHash, err = writeBlob(base)
+		if err != nil {
+			return fmt.Errorf("failed to write base blob: %w", err)
+		}
+	}
+
+	oursHash, err := writeBlob(ours)
+	if err != nil {
+		return fmt.Errorf("failed to write ours blob: %w", err)
+	}
+
+	theirsHash, err := writeBlob(theirs)
+	if err != nil {
+		return fmt.Errorf("failed to write theirs blob: %w", err)
+	}
+
+	// First, remove any existing entry for this path from the index
+	cmd := exec.Command("git", "update-index", "--force-remove", "--", path)
+	cmd.Dir = repoRoot
+	// Ignore error - file might not be in index
+	_ = cmd.Run()
+
+	// Build index entries for conflict stages
+	// Format for --index-info: <mode> SP <hash> SP <stage> TAB <path>
+	var indexInfo strings.Builder
+
+	// Stage 1: Base (ancestor) - only if base exists
+	if base != nil && baseHash != "" {
+		fmt.Fprintf(&indexInfo, "%s %s 1\t%s\n", modeStr, baseHash, path)
+	}
+
+	// Stage 2: Ours (current)
+	fmt.Fprintf(&indexInfo, "%s %s 2\t%s\n", modeStr, oursHash, path)
+
+	// Stage 3: Theirs (incoming)
+	fmt.Fprintf(&indexInfo, "%s %s 3\t%s\n", modeStr, theirsHash, path)
+
+	// Update the index with conflict entries
+	cmd = exec.Command("git", "update-index", "--index-info")
+	cmd.Dir = repoRoot
+	cmd.Stdin = strings.NewReader(indexInfo.String())
+
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to update index: %w: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// setConflictStateGoGit uses go-git to set up conflict state.
+// This is preferred on non-Windows platforms.
+func (r *Repository) setConflictStateGoGit(path string, base, ours, theirs []byte, isExecutable bool) error {
 	// Read the current index
 	idx, err := r.repo.Storer.Index()
 	if err != nil {

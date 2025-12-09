@@ -54,10 +54,9 @@ typescript:
 	gitInit(t, temp)
 
 	// Run the initial generation
-	// Note: Using executeI (inline) to capture debug output
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
-	cmdErr := executeI(t, temp, initialArgs...).Run()
+	cmdErr := execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files
@@ -70,15 +69,20 @@ typescript:
 	rerunChecksums, err := filesToString(temp)
 	require.NoError(t, err)
 
-	// Find differences to help debug
+	// Find differences to help debug test failures
+	tempDir := os.TempDir()
 	for key, val := range initialChecksums {
 		if rerunVal, ok := rerunChecksums[key]; ok {
 			if val != rerunVal {
 				t.Logf("File differs: %s", key)
 				// Save files for comparison
-				_ = os.WriteFile("/tmp/initial_"+filepath.Base(key), []byte(val), 0644)
-				_ = os.WriteFile("/tmp/rerun_"+filepath.Base(key), []byte(rerunVal), 0644)
-				t.Logf("Saved to /tmp/initial_%s and /tmp/rerun_%s", filepath.Base(key), filepath.Base(key))
+				initialPath := filepath.Join(tempDir, "initial_"+filepath.Base(key))
+				rerunPath := filepath.Join(tempDir, "rerun_"+filepath.Base(key))
+				_ = os.WriteFile(initialPath, []byte(val), 0644)
+				_ = os.WriteFile(rerunPath, []byte(rerunVal), 0644)
+				t.Logf("Saved to %s and %s", initialPath, rerunPath)
+				t.Logf("Initial (first 200): %s", truncate(val, 200))
+				t.Logf("Rerun (first 200): %s", truncate(rerunVal, 200))
 			}
 		} else {
 			t.Logf("File missing in rerun: %s", key)
@@ -107,9 +111,7 @@ typescript:
 
 	// exclude gen.lock -- we could (we do) reformat the document inside the frozen one
 	delete(frozenChecksums, ".speakeasy/gen.lock")
-	delete(frozenChecksums, ".speakeasy\\gen.lock") // windows
 	delete(initialChecksums, ".speakeasy/gen.lock")
-	delete(initialChecksums, ".speakeasy\\gen.lock") // windows
 	// Compare checksums
 	require.Equal(t, initialChecksums, frozenChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 }
@@ -231,6 +233,8 @@ func filesToString(dir string) (map[string]string, error) {
 				return err
 			}
 			relPath, _ := filepath.Rel(dir, path)
+			// Normalize path separators to forward slashes for cross-platform consistency
+			relPath = filepath.ToSlash(relPath)
 			checksums[relPath] = string(data)
 		}
 		return nil

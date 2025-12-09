@@ -74,6 +74,7 @@ func (r *Repository) Root() string {
 }
 
 // HasObject checks if a blob or commit exists in the local object database.
+// Uses native git commands to ensure we see objects fetched by native git fetch.
 func (r *Repository) HasObject(hash string) bool {
 	if r.repo == nil {
 		return false
@@ -81,11 +82,18 @@ func (r *Repository) HasObject(hash string) bool {
 
 	// Strip "sha1:" prefix if present
 	hash = strings.TrimPrefix(hash, "sha1:")
-	h := plumbing.NewHash(hash)
 
-	// Try to get the object - if it exists, return true
-	_, err := r.repo.Storer.EncodedObject(plumbing.AnyObject, h)
-	return err == nil
+	// Use native git to check object existence.
+	// This is necessary because go-git's storer may not see objects
+	// that were fetched via native git fetch commands.
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return false
+	}
+
+	cmd := exec.Command("git", "cat-file", "-e", hash)
+	cmd.Dir = repoRoot
+	return cmd.Run() == nil
 }
 
 // FetchRef fetches a specific ref from origin.
