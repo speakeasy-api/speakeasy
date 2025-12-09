@@ -38,7 +38,7 @@ require (
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.11.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.776.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.776.3
 	github.com/speakeasy-api/openapi-overlay v0.10.3
 	github.com/speakeasy-api/sdk-gen-config v1.43.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -156,7 +156,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
-	github.com/mailru/easyjson v0.9.0 // indirect
+	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
