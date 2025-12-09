@@ -354,6 +354,7 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!flags.SkipCompile),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+		run.WithAllowPrompts(flags.Output == "summary" || flags.Output == ""),
 	)
 
 	defer func() {
@@ -373,6 +374,19 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	relPath, _ := filepath.Rel(workingDir, outDir)
 	if workingDir != outDir && relPath != "" {
 		changeDirMsg = fmt.Sprintf("`cd %s` before moving forward with your SDK", relPath)
+	}
+
+	// Initialize git repository BEFORE running workflow so that generation can detect it
+	// for the persistent edits / custom code feature
+	if initialiseRepo {
+		_, err = git.InitLocalRepository(outDir)
+		if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
+			log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
+		} else if err == nil {
+			log.From(ctx).Infof("Initialized new git repository at %s", outDir)
+		} else { // If the error is ErrRepositoryAlreadyExists, ignore it
+			err = nil
+		}
 	}
 
 	// Execute the workflow based on output mode
@@ -414,17 +428,6 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 
 	// Print a message and save the workflow if there were MVS removals
 	handleMVSChanges(ctx, wf.GetWorkflowFile(), outDir)
-
-	if initialiseRepo {
-		_, err = git.InitLocalRepository(outDir)
-		if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
-			log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
-		} else if err == nil {
-			log.From(ctx).Infof("Initialized new git repository at %s", outDir)
-		} else { // If the error is ErrRepositoryAlreadyExists, ignore it
-			err = nil
-		}
-	}
 
 	if changeDirMsg != "" {
 		logger.Println(styles.RenderWarningMessage("! ATTENTION DO THIS !", changeDirMsg))
@@ -483,6 +486,7 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		ctx,
 		run.WithTarget(initialTarget),
 		run.WithShouldCompile(!skipCompile),
+		run.WithAllowPrompts(output == "summary" || output == ""),
 	)
 
 	if err != nil {

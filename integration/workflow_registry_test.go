@@ -1,10 +1,11 @@
 package integration_tests
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
@@ -36,10 +37,27 @@ func TestStability(t *testing.T) {
 	err = workflow.Save(temp, workflowFile)
 	require.NoError(t, err)
 
+	// Create gen.yaml with persistentEdits enabled for stability
+	genYamlContent := `configVersion: 2.0.0
+generation:
+  sdkClassName: SDK
+  persistentEdits:
+    enabled: "true"
+typescript:
+  version: 0.0.1
+  packageName: openapi
+`
+	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "gen.yaml"), []byte(genYamlContent), 0644)
+	require.NoError(t, err)
+
+	// Initialize git repo (required for persistentEdits)
+	gitInit(t, temp)
+
 	// Run the initial generation
+	// Note: Using executeI (inline) to capture debug output
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
-	cmdErr := execute(t, temp, initialArgs...).Run()
+	cmdErr := executeI(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
 
 	// Calculate checksums of generated files
@@ -51,6 +69,27 @@ func TestStability(t *testing.T) {
 	require.NoError(t, cmdErr)
 	rerunChecksums, err := filesToString(temp)
 	require.NoError(t, err)
+
+	// Find differences to help debug
+	for key, val := range initialChecksums {
+		if rerunVal, ok := rerunChecksums[key]; ok {
+			if val != rerunVal {
+				t.Logf("File differs: %s", key)
+				// Save files for comparison
+				_ = os.WriteFile("/tmp/initial_"+filepath.Base(key), []byte(val), 0644)
+				_ = os.WriteFile("/tmp/rerun_"+filepath.Base(key), []byte(rerunVal), 0644)
+				t.Logf("Saved to /tmp/initial_%s and /tmp/rerun_%s", filepath.Base(key), filepath.Base(key))
+			}
+		} else {
+			t.Logf("File missing in rerun: %s", key)
+		}
+	}
+	for key := range rerunChecksums {
+		if _, ok := initialChecksums[key]; !ok {
+			t.Logf("New file in rerun: %s", key)
+		}
+	}
+
 	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical")
 	// Modify the workflow file to simulate a change
 	// Shouldn't do anything; we'll validate that later.
@@ -169,11 +208,22 @@ func TestRegistryFlow_JSON(t *testing.T) {
 	require.NoError(t, cmdErr)
 }
 
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 func filesToString(dir string) (map[string]string, error) {
 	checksums := make(map[string]string)
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		// Skip .git directory - git objects change on each run due to timestamps
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
 		}
 		if !info.IsDir() {
 			data, err := os.ReadFile(path)

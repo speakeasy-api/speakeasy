@@ -128,10 +128,12 @@ get_tmp_dir() {
 
 do_checksum() {
   checksum_url=$(get_checksum_url $version)
-  get_checksum_url $version
-  expected_checksum=$(curl -sL $checksum_url | grep $asset_name | awk '{print $1}')
+  expected_checksum=$(curl -sfL $checksum_url | grep $asset_name | awk '{print $1}')
 
-
+  if [ -z "$expected_checksum" ]; then
+    fmt_error "Failed to retrieve expected checksum for $asset_name from $checksum_url"
+    exit 1
+  fi
 
   if command_exists sha256sum; then
     checksum=$(sha256sum $asset_name | awk '{print $1}')
@@ -143,7 +145,7 @@ do_checksum() {
   fi
 
   if [ "$checksum" != "$expected_checksum" ]; then
-    fmt_error "Checksums do not match"
+    fmt_error "Checksums do not match (expected: $expected_checksum, got: $checksum)"
     exit 1
   fi
 }
@@ -164,9 +166,17 @@ do_install_binary() {
 
   local tmp_dir=$(get_tmp_dir)
 
-  # Download tar.gz to tmp directory
+  # Download zip to tmp directory
   echo "Downloading $download_url"
-  (cd $tmp_dir && curl -sL -O "$download_url")
+  set +e
+  (cd $tmp_dir && curl -sfL -O "$download_url")
+  exit_code=$?
+  set -e
+  if [ $exit_code -ne 0 ]; then
+    fmt_error "Failed to download $download_url (curl exit code: $exit_code)"
+    rm -rf $tmp_dir
+    exit 1
+  fi
 
   (cd $tmp_dir && do_checksum)
 
@@ -223,4 +233,3 @@ EOF
 }
 
 main
-

@@ -95,6 +95,7 @@ func Init(version, artifactArch string) {
 
 	addCommand(rootCmd, AskCmd)
 	addCommand(rootCmd, reproCmd)
+	addCommand(rootCmd, orphanedFilesCmd)
 	pullInit()
 }
 
@@ -157,6 +158,13 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string, cm
 
 	// When using the --pinned flag, don't display update notifications
 	if flag := cmd.Flag("pinned"); flag != nil && flag.Value.String() == "true" {
+		return
+	}
+
+	wf, _, _ := utils.GetWorkflow()
+
+	// If we are running the run command and a workflow file is present and specifies that the speakeasyVersion is "latest", don't display update notifications as it will be automatically updated when the command is run.
+	if cmd.Name() == "run" && wf != nil && wf.SpeakeasyVersion.String() == "latest" {
 		return
 	}
 
