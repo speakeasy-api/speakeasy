@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/AlekSi/pointer"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/config"
