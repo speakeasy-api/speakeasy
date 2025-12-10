@@ -3,6 +3,7 @@ package patches
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -86,7 +87,7 @@ func NewGitAdapter(repo GitRepository, baseDir string) *GitAdapter {
 
 // toGitPath converts OS-specific path separators to forward slashes for git.
 func toGitPath(p string) string {
-	return strings.ReplaceAll(p, "\\", "/")
+	return filepath.ToSlash(p)
 }
 
 // prependBaseDir adds the baseDir prefix to a generation-relative path.

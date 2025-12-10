@@ -11,8 +11,8 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 
 	"github.com/hashicorp/go-version"
-	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
+	"github.com/speakeasy-api/openapi/overlay/loader"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 )
 
