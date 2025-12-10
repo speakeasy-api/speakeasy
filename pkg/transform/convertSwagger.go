@@ -13,8 +13,18 @@ import (
 
 // ConvertSwagger upgrades a Swagger 2.0 document to OpenAPI 3.0 using the speakeasy-api/openapi library
 func ConvertSwagger(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
-	// Read the Swagger 2.0 document
 	data, err := os.ReadFile(schemaPath)
+	if err != nil {
+		return fmt.Errorf("failed to read swagger document: %w", err)
+	}
+
+	return ConvertSwaggerFromReader(ctx, bytes.NewReader(data), schemaPath, w, yamlOut)
+}
+
+// ConvertSwaggerFromReader upgrades a Swagger 2.0 document to OpenAPI 3.0 from an io.Reader
+func ConvertSwaggerFromReader(ctx context.Context, r io.Reader, schemaPath string, w io.Writer, yamlOut bool) error {
+	// Read all data from the reader
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("failed to read swagger document: %w", err)
 	}
