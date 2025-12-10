@@ -20,7 +20,6 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/fatih/structs v1.1.0
 	github.com/go-git/go-git/v5 v5.16.4
-	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v58 v58.0.0
@@ -38,7 +37,7 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
-	github.com/speakeasy-api/openapi v1.11.3
+	github.com/speakeasy-api/openapi v1.12.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.778.0
 	github.com/speakeasy-api/sdk-gen-config v1.43.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
