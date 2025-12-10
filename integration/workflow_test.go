@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -282,16 +281,11 @@ func (r *subprocessRunner) Run() error {
 func execute(t *testing.T, wd string, args ...string) Runnable {
 	t.Helper()
 
-	// Use pre-built binary if available (set by TestMain), otherwise fall back to go run
-	var execCmd *exec.Cmd
-	if prebuiltBinary != "" {
-		execCmd = exec.Command(prebuiltBinary, args...)
-	} else {
-		_, filename, _, _ := runtime.Caller(0)
-		baseFolder := filepath.Join(filepath.Dir(filename), "..")
-		mainGo := filepath.Join(baseFolder, "main.go")
-		execCmd = exec.Command("go", append([]string{"run", mainGo}, args...)...)
-	}
+	// Build the binary lazily on first execute() call
+	binaryPath, err := ensureBinary()
+	require.NoError(t, err, "failed to build speakeasy binary")
+
+	execCmd := exec.Command(binaryPath, args...)
 	execCmd.Env = os.Environ()
 	execCmd.Dir = wd
 
