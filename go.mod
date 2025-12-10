@@ -37,8 +37,8 @@ require (
 	github.com/sethvargo/go-githubactions v1.1.0
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
-	github.com/speakeasy-api/openapi v1.11.3
-	github.com/speakeasy-api/openapi-generation/v2 v2.774.0
+	github.com/speakeasy-api/openapi v1.12.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.776.2-0.20251210032459-23b2e2db81ba
 	github.com/speakeasy-api/openapi-overlay v0.10.3
 	github.com/speakeasy-api/sdk-gen-config v1.43.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -83,7 +83,6 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
 	github.com/charmbracelet/x/ansi v0.9.3 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
