@@ -25,6 +25,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
+	"github.com/speakeasy-api/speakeasy/pkg/transform"
 )
 
 type SourceResultCallback func(sourceRes *SourceResult, sourceStep SourceStepID) error
@@ -159,6 +160,16 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			return "", nil, err
 		}
 		currentDocument = sourceRes.OverlayResult.Location
+	}
+
+	// Automatically convert Swagger 2.0 documents to OpenAPI 3.0
+	// Note: This is handled here rather than as a transformation type in source.Transformations
+	// as we don't want to expose this as a controllable transformation in a workflow file
+	if !frozenSource {
+		currentDocument, err = maybeConvertSwagger(ctx, rootStep, currentDocument, logger)
+		if err != nil {
+			return "", nil, err
+		}
 	}
 
 	if len(source.Transformations) > 0 && !frozenSource {
@@ -324,6 +335,10 @@ func getTempApplyPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(path)))
 }
 
+func getTempConvertedPath(path string) string {
+	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("converted_%s%s", randStringBytes(10), filepath.Ext(path)))
+}
+
 // Returns true if any of the source inputs are remote.
 func workflowSourceHasRemoteInputs(source workflow.Source) bool {
 	for _, input := range source.Inputs {
@@ -408,4 +423,42 @@ func maybeReformatDocument(ctx context.Context, documentPath string, rootStep *w
 	}
 
 	return documentPath, false, nil
+}
+
+// maybeConvertSwagger checks if a document is Swagger 2.0 and automatically converts it to OpenAPI 3.0
+func maybeConvertSwagger(ctx context.Context, rootStep *workflowTracking.WorkflowStep, documentPath string, logger log.Logger) (string, error) {
+	isSwagger, err := schemas.IsSwaggerDocument(ctx, documentPath)
+	if err != nil {
+		logger.Warnf("failed to check if document is Swagger: %s", err.Error())
+		return documentPath, nil
+	}
+
+	if !isSwagger {
+		return documentPath, nil
+	}
+
+	convertStep := rootStep.NewSubstep("Converting Swagger 2.0 to OpenAPI 3.0")
+	logger.Infof("Detected Swagger 2.0 document, automatically converting to OpenAPI 3.0...")
+
+	convertedPath := getTempConvertedPath(documentPath)
+	if err := os.MkdirAll(filepath.Dir(convertedPath), os.ModePerm); err != nil {
+		convertStep.Fail()
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
+	}
+
+	convertedFile, err := os.Create(convertedPath)
+	if err != nil {
+		convertStep.Fail()
+		return "", fmt.Errorf("failed to create converted file: %w", err)
+	}
+	defer convertedFile.Close()
+
+	yamlOut := utils.HasYAMLExt(documentPath)
+	if err := transform.ConvertSwagger(ctx, documentPath, yamlOut, convertedFile); err != nil {
+		convertStep.Fail()
+		return "", fmt.Errorf("failed to convert Swagger to OpenAPI: %w", err)
+	}
+
+	convertStep.Succeed()
+	return convertedPath, nil
 }

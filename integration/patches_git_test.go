@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -695,14 +694,9 @@ func TestGitArchitecture_DeltaCompressionEfficiency(t *testing.T) {
 func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	t.Parallel()
 
-	// Create temp directories inside the module tree (required for `go run` to work)
-	// Using the integration folder as base ensures go.mod is findable
-	_, filename, _, _ := runtime.Caller(0)
-	integrationDir := filepath.Dir(filename)
-
-	remoteDir := filepath.Join(integrationDir, "temp", "remote-"+randStringBytes(7)+".git")
-	envADir := filepath.Join(integrationDir, "temp", "envA-"+randStringBytes(7))
-	envBDir := filepath.Join(integrationDir, "temp", "envB-"+randStringBytes(7))
+	remoteDir := filepath.Join(integrationTestsDir(), "remote-"+randStringBytes(7)+".git")
+	envADir := filepath.Join(integrationTestsDir(), "envA-"+randStringBytes(7))
+	envBDir := filepath.Join(integrationTestsDir(), "envB-"+randStringBytes(7))
 
 	// Create directories
 	require.NoError(t, os.MkdirAll(remoteDir, 0755))
@@ -1216,10 +1210,7 @@ func TestGitArchitecture_MultipleTypeScriptTargetsSameRepo(t *testing.T) {
 func setupDualTypeScriptTargetsTestDir(t *testing.T) string {
 	t.Helper()
 
-	// Create temp directory using runtime.Caller pattern (required for go run to work)
-	_, filename, _, _ := runtime.Caller(0)
-	integrationDir := filepath.Dir(filename)
-	temp := filepath.Join(integrationDir, "temp", "dual-ts-"+randStringBytes(7))
+	temp := filepath.Join(integrationTestsDir(), "dual-ts-"+randStringBytes(7))
 
 	require.NoError(t, os.MkdirAll(temp, 0755))
 	t.Cleanup(func() {
