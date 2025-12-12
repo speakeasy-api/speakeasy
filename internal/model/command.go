@@ -305,17 +305,25 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 	// Get the latest version, or use the pinned version
 	desiredVersion := wf.SpeakeasyVersion.String()
-	if desiredVersion == "latest" {
-		latest, err := updates.GetLatestVersion(ctx, artifactArch)
-		if err != nil {
-			return ErrInstallFailed
-		}
-		desiredVersion = latest.String()
+	lockfileVersion := getSpeakeasyVersionFromLockfile()
 
-		// Check if we're actually running the latest version
-		currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
-		if newerVersion, err := updates.GetNewerVersion(ctx, artifactArch, currentVersion); err == nil && newerVersion == nil {
-			logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+	if desiredVersion == "latest" {
+		// If SPEAKEASY_DISABLE_AUTO_UPDATE is set, use the lockfile version instead of upgrading to latest
+		if env.DisableAutoUpdate() && lockfileVersion != "" {
+			desiredVersion = lockfileVersion
+			logger.PrintfStyled(styles.DimmedItalic, "Auto-update disabled, using version from gen.lock: %s\n", desiredVersion)
+		} else {
+			latest, err := updates.GetLatestVersion(ctx, artifactArch)
+			if err != nil {
+				return ErrInstallFailed
+			}
+			desiredVersion = latest.String()
+
+			// Check if we're actually running the latest version
+			currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
+			if newerVersion, err := updates.GetNewerVersion(ctx, artifactArch, currentVersion); err == nil && newerVersion == nil {
+				logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+			}
 		}
 	} else if desiredVersion == "pinned" {
 		return ErrPinned
@@ -323,11 +331,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
 	}
 
-	// Get lockfile version before running the command, in case it gets overwritten
-	lockfileVersion := getSpeakeasyVersionFromLockfile()
-
 	// If the workflow succeeds on latest, promote that version to the default
-	shouldPromote := wf.SpeakeasyVersion == "latest"
+	shouldPromote := wf.SpeakeasyVersion == "latest" && !env.DisableAutoUpdate()
 
 	runErr := runWithVersion(cmd, artifactArch, desiredVersion, shouldPromote)
 	if runErr != nil {
@@ -336,22 +341,17 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 			return errs.Unwrap(runErr)
 		}
 
-		// If the command failed to run with the latest version, try to run with the version from the lock file
-		if wf.SpeakeasyVersion == "latest" {
+		// Log the failure for troubleshooting
+		if wf.SpeakeasyVersion == "latest" && !env.DisableAutoUpdate() {
 			msg := fmt.Sprintf("Failed to run with Speakeasy version %s: %s\n", desiredVersion, runErr.Error())
 			_ = log.SendToLogProxy(ctx, log.LogProxyLevelError, msg, nil)
 			logger.PrintStyled(styles.DimmedItalic, msg)
 			if env.IsGithubAction() {
 				githubactions.AddStepSummary("# Speakeasy Version upgrade failure\n" + msg)
 			}
-
-			if lockfileVersion != "" && lockfileVersion != desiredVersion {
-				logger.PrintfStyled(styles.DimmedItalic, "Rerunning with previous successful version")
-				return runWithVersion(cmd, artifactArch, lockfileVersion, false)
-			}
 		}
 
-		// If the command failed to run with the pinned version, fail normally
+		// Fail immediately without retrying - the GitHub Actions fallback job will handle retry with the lockfile version
 		return runErr
 	}
 

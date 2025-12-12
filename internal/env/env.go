@@ -42,3 +42,10 @@ func IsCI() bool {
 func SpeakeasyRunLocation() string {
 	return os.Getenv("SPEAKEASY_RUN_LOCATION")
 }
+
+// DisableAutoUpdate returns true if the SPEAKEASY_DISABLE_AUTO_UPDATE environment variable is set to "true".
+// When this is enabled, the CLI will use the version from gen.lock instead of automatically upgrading to the latest version.
+// This is used by the GitHub Actions fallback job to retry generation with the last known working version.
+func DisableAutoUpdate() bool {
+	return os.Getenv("SPEAKEASY_DISABLE_AUTO_UPDATE") == "true"
+}
