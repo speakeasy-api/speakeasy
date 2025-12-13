@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -33,6 +34,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/prompts"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -65,7 +67,7 @@ var configureCmd = &model.CommandGroup{
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           utils.RenderMarkdown(configureLong),
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd, configureLocalWorkflowCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd, configureLocalWorkflowCmd, configureDependabotCmd},
 }
 
 type ConfigureSourcesFlags struct {
@@ -186,6 +188,20 @@ var configureLocalWorkflowCmd = &model.ExecutableCommand[ConfigureLocalWorkflowF
 	Short: "Create a local workflow configuration file.",
 	Long:  "Copies workflow.yaml to workflow.local.yaml with all settings commented out for local overrides.",
 	Run:   configureLocalWorkflow,
+	Flags: []flag.Flag{
+		flag.StringFlag{
+			Name:        "workflow-directory",
+			Shorthand:   "d",
+			Description: "directory of speakeasy workflow file",
+		},
+	},
+}
+
+var configureDependabotCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+	Usage: "dependabot",
+	Short: "Configure Dependabot for your repository.",
+	Long:  "Creates or updates a dependabot.yml file to automate dependency updates for your SDK.",
+	Run:   configureDependabot,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "workflow-directory",
@@ -1035,6 +1051,29 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 
 	logger.Println(styles.Info.Render("\n\n" + fmt.Sprintf("For more information see - %s", githubSetupDocs)))
 
+	// Prompt to configure Dependabot
+	configureDependabotNow := false
+	_, err = charm.NewForm(huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[bool]().
+				Title("\nWould you also like to configure Dependabot for automated dependency updates?").
+				Options(
+					huh.NewOption("Yes", true),
+					huh.NewOption("No", false),
+				).
+				Value(&configureDependabotNow),
+		),
+	)).ExecuteForm()
+	if err != nil {
+		return err
+	}
+
+	if configureDependabotNow {
+		if err := configureDependabot(ctx, flags); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -1242,4 +1281,147 @@ func renderAndPrintWorkflowNotFound(cmd string, logger log.Logger) error {
 		}...)
 	logger.Println(msg)
 	return ErrWorkflowFileNotFound
+}
+
+// DependabotConfig represents the structure of dependabot.yml
+type DependabotConfig struct {
+	Version int                `yaml:"version"`
+	Updates []DependabotUpdate `yaml:"updates"`
+}
+
+// DependabotUpdate represents a single update entry in dependabot.yml
+type DependabotUpdate struct {
+	PackageEcosystem string                 `yaml:"package-ecosystem"`
+	Directory        string                 `yaml:"directory"`
+	Schedule         DependabotSchedule     `yaml:"schedule"`
+	Extra            map[string]interface{} `yaml:",inline"`
+}
+
+// DependabotSchedule represents the schedule for updates
+type DependabotSchedule struct {
+	Interval string                 `yaml:"interval"`
+	Extra    map[string]interface{} `yaml:",inline"`
+}
+
+func configureDependabot(ctx context.Context, flags ConfigureGithubFlags) error {
+	logger := log.From(ctx)
+
+	rootDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	// GitHub files always go at repo root
+	dependabotDir := filepath.Join(rootDir, ".github")
+	dependabotPath := filepath.Join(dependabotDir, "dependabot.yml")
+
+	// Create .github directory if it doesn't exist
+	if _, err := os.Stat(dependabotDir); os.IsNotExist(err) {
+		if err = os.MkdirAll(dependabotDir, 0o755); err != nil {
+			return errors.Wrapf(err, "failed to create .github directory")
+		}
+	}
+
+	// Try to detect targets from workflow file to add appropriate ecosystems
+	actionWorkingDir := getActionWorkingDirectoryFromFlag(rootDir, flags.WorkflowDirectory)
+	workflowFile, _, _ := workflow.Load(filepath.Join(rootDir, actionWorkingDir))
+
+	neededEcosystems := []string{"github-actions"} // Always include
+	if workflowFile != nil {
+		for _, target := range workflowFile.Targets {
+			eco := targetToEcosystem(target.Target)
+			if eco != "" && !slices.Contains(neededEcosystems, eco) {
+				neededEcosystems = append(neededEcosystems, eco)
+			}
+		}
+	}
+
+	var existingConfig DependabotConfig
+	var isUpdate bool
+
+	// Check if dependabot.yml already exists and parse it
+	if _, err := os.Stat(dependabotPath); err == nil {
+		fileContent, err := os.ReadFile(dependabotPath)
+		if err != nil {
+			return errors.Wrapf(err, "failed to read existing dependabot.yml")
+		}
+		if err := yaml.Unmarshal(fileContent, &existingConfig); err != nil {
+			return errors.Wrapf(err, "failed to parse existing dependabot.yml")
+		}
+		isUpdate = true
+	} else {
+		existingConfig = DependabotConfig{Version: 2}
+	}
+
+	// Find existing ecosystems
+	existingEcosystems := make(map[string]bool)
+	for _, update := range existingConfig.Updates {
+		existingEcosystems[update.PackageEcosystem] = true
+	}
+
+	// Add missing ecosystems
+	var addedEcosystems []string
+	for _, eco := range neededEcosystems {
+		if !existingEcosystems[eco] {
+			existingConfig.Updates = append(existingConfig.Updates, DependabotUpdate{
+				PackageEcosystem: eco,
+				Directory:        "/",
+				Schedule:         DependabotSchedule{Interval: "weekly"},
+			})
+			addedEcosystems = append(addedEcosystems, eco)
+		}
+	}
+
+	// If nothing to add, inform user and exit
+	if isUpdate && len(addedEcosystems) == 0 {
+		logger.Println(styles.Info.Render(fmt.Sprintf("dependabot.yml at %s already has all needed ecosystems configured.", dependabotPath)))
+		return nil
+	}
+
+	// Write the config
+	var buf bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&buf)
+	yamlEncoder.SetIndent(2)
+	if err := yamlEncoder.Encode(&existingConfig); err != nil {
+		return errors.Wrapf(err, "failed to encode dependabot.yml")
+	}
+
+	if err := os.WriteFile(dependabotPath, buf.Bytes(), 0o644); err != nil {
+		return errors.Wrapf(err, "failed to write dependabot.yml")
+	}
+
+	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
+	var successMsg string
+	if isUpdate {
+		successMsg = fmt.Sprintf("Successfully updated dependabot.yml 🎉\n\nLocation: %s\nAdded ecosystems: %s", dependabotPath, strings.Join(addedEcosystems, ", "))
+	} else {
+		successMsg = fmt.Sprintf("Successfully created dependabot.yml 🎉\n\nLocation: %s", dependabotPath)
+	}
+	success := styles.Success.Render(successMsg)
+	logger.PrintfStyled(boxStyle, "%s", success)
+
+	return nil
+}
+
+func targetToEcosystem(target string) string {
+	switch target {
+	case "typescript", "mcp-typescript":
+		return "npm"
+	case "python":
+		return "pip"
+	case "go":
+		return "gomod"
+	case "java":
+		return "maven"
+	case "csharp":
+		return "nuget"
+	case "php":
+		return "composer"
+	case "ruby":
+		return "bundler"
+	case "terraform":
+		return "terraform"
+	default:
+		return ""
+	}
 }
