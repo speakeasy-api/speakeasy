@@ -1,0 +1,31 @@
+name: Validate Shell Scripts
+
+on:
+    pull_request:
+        paths:
+            - "**/*.sh"
+            - ".github/workflows/validate-shell.yml"
+
+jobs:
+    bats:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+            - uses: bats-core/bats-action@42fcc8700f773c075a16a90eb11674c0318ad507 # 3.0.1
+            - run: bats integration/shell/
+    run_install_sh:
+        runs-on: ${{ matrix.runner }}
+        strategy:
+            matrix:
+                runner: [ubuntu-latest, macos-latest]
+        steps:
+            - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+            - run: ./install.sh
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - run: speakeasy version
+    shellcheck:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+            - uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
