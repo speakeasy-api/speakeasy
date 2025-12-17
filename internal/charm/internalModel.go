@@ -13,6 +13,7 @@ type InternalModel interface {
 	HandleKeypress(key string) tea.Cmd // A convenience method for handling keypresses. Should usually return nil.
 	View() string
 	SetWidth(width int)
+	SetHeight(height int)
 	OnUserExit()
 }
 
@@ -46,6 +47,7 @@ func (m modelWrapper) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m.model.SetWidth(msg.Width)
+		m.model.SetHeight(msg.Height)
 	}
 
 	// Capture the updated model to preserve state changes

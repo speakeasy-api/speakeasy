@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,9 +11,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-
-	"archive/zip"
-	"bytes"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -94,6 +93,10 @@ type pullModel struct {
 	step int
 
 	spinner spinner.Model
+
+	// terminal dimensions
+	width  int
+	height int
 }
 
 type pullFlags struct {
@@ -324,6 +327,21 @@ func (m *pullModel) View() string {
 func (m *pullModel) OnUserExit() {}
 
 func (m *pullModel) SetWidth(width int) {
+	m.width = width
+	// Update list widths
+	m.specsList.SetWidth(width)
+	m.revisionsList.SetWidth(width)
+}
+
+func (m *pullModel) SetHeight(height int) {
+	m.height = height
+	// Update list heights - reserve space for title, spinner, and padding
+	listHeight := height - 10 // Reserve space for header, instructions, etc.
+	if listHeight < 5 {
+		listHeight = 5 // Minimum height
+	}
+	m.specsList.SetHeight(listHeight)
+	m.revisionsList.SetHeight(listHeight)
 }
 
 func (m *pullModel) getFilledValues() map[string]string {
@@ -584,7 +602,6 @@ func getTags(namespace string) ([]string, error) {
 		// Return nil to continue fetching subsequent pages.
 		return nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags for repository %s: %w", repositoryURL, err)
 	}

@@ -1,12 +1,13 @@
 package charm
 
 import (
+	"slices"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"slices"
 )
 
 type Key struct {
@@ -92,6 +93,9 @@ func (m FormModel) HandleKeypress(key string) tea.Cmd {
 
 // SetWidth Not yet implemented.
 func (m FormModel) SetWidth(width int) {}
+
+// SetHeight Not yet implemented.
+func (m FormModel) SetHeight(height int) {}
 
 func (m FormModel) View() string {
 	if m.form.State == huh.StateCompleted {

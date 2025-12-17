@@ -139,6 +139,9 @@ func (m *MultiInput) HandleKeypress(key string) tea.Cmd {
 // SetWidth Not yet implemented.
 func (m *MultiInput) SetWidth(width int) {}
 
+// SetHeight Not yet implemented.
+func (m *MultiInput) SetHeight(height int) {}
+
 func (m *MultiInput) Focus(index int) tea.Cmd {
 	var cmd tea.Cmd
 
