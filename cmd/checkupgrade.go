@@ -63,17 +63,17 @@ type checkUpgradeOutput struct {
 }
 
 type checkUpgradeTargetOutput struct {
-	TargetID    string                       `json:"targetId"`
-	Directory   string                       `json:"directory"`
-	GenYamlPath string                       `json:"genYamlPath"`
-	Generation  *checkUpgradeSectionOutput   `json:"generation,omitempty"`
-	Languages   []checkUpgradeSectionOutput  `json:"languages,omitempty"`
+	TargetID    string                      `json:"targetId"`
+	Directory   string                      `json:"directory"`
+	GenYamlPath string                      `json:"genYamlPath"`
+	Generation  *checkUpgradeSectionOutput  `json:"generation,omitempty"`
+	Languages   []checkUpgradeSectionOutput `json:"languages,omitempty"`
 }
 
 type checkUpgradeSectionOutput struct {
-	Name        string                    `json:"name"`
-	Differences []checkUpgradeDiffOutput  `json:"differences"`
-	Matches     []checkUpgradeDiffOutput  `json:"matches,omitempty"`
+	Name        string                   `json:"name"`
+	Differences []checkUpgradeDiffOutput `json:"differences"`
+	Matches     []checkUpgradeDiffOutput `json:"matches,omitempty"`
 }
 
 type checkUpgradeDiffOutput struct {
