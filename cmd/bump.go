@@ -170,6 +170,9 @@ func bump(v *version.Version, bumpType bumpType) (string, error) {
 		patch = 0
 	case bumpPatch:
 		patch++
+	case bumpGraduate:
+		// For graduate, we just remove the prerelease, keeping major.minor.patch as-is
+		// The version is already parsed without prerelease components
 	}
 
 	return fmt.Sprintf("%d.%d.%d", major, minor, patch), nil

@@ -83,6 +83,7 @@ func expectedFilesByLanguage(language string) []string {
 }
 
 func checkForExpectedFiles(t *testing.T, outdir string, files []string) {
+	t.Helper()
 	for _, fileName := range files {
 		filePath := filepath.Join(outdir, fileName)
 		fileInfo, err := os.Stat(filePath)

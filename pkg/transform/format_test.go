@@ -36,7 +36,7 @@ func TestFormat(t *testing.T) {
 
 	// Read the expected spec into a buffer
 	reader := bufio.NewReader(file)
-	testOutput.ReadFrom(reader)
+	_, _ = testOutput.ReadFrom(reader)
 	require.NoError(t, err)
 
 	var actual yaml.Node

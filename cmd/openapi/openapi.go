@@ -142,7 +142,7 @@ func diffOpenapiInteractive(ctx context.Context, flags OpenAPIDiffFlags) error {
 
 	if hasRegistryBundle {
 		// CleanupPaths temp dir if we had used a registry bundle
-		defer os.RemoveAll(workflow.GetTempDir())
+		defer func() { _ = os.RemoveAll(workflow.GetTempDir()) }()
 	}
 
 	changes, err := changes.GetChanges(ctx, oldSchema, newSchema)

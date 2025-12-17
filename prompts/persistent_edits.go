@@ -25,7 +25,7 @@ const (
 // PromptForCustomCode prompts the user when changes are detected in generated files.
 // Returns the user's choice and any error.
 func PromptForCustomCode(changeSummary string) (CustomCodeChoice, error) {
-	var choice CustomCodeChoice = CustomCodeChoiceNo
+	choice := CustomCodeChoiceNo
 
 	description := "The following changes were detected in generated SDK files:\n" + changeSummary + "\n\nWould you like to enable custom code preservation?"
 
@@ -53,7 +53,7 @@ func PromptForCustomCode(changeSummary string) (CustomCodeChoice, error) {
 // PromptForCustomCodeWithStep prompts the user via a PromptRunner (e.g., WorkflowStep).
 // This allows the prompt to integrate with the workflow visualizer, pausing it while the prompt runs.
 func PromptForCustomCodeWithStep(changeSummary string, runner PromptRunner) (CustomCodeChoice, error) {
-	var choice CustomCodeChoice = CustomCodeChoiceNo
+	choice := CustomCodeChoiceNo
 
 	description := "The following changes were detected in generated SDK files:\n" + changeSummary + "\n\nWould you like to enable custom code preservation?"
 

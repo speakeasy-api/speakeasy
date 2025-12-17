@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJQSymbolicExecutionFromReader(t *testing.T) {
@@ -43,7 +44,7 @@ paths:
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotEmpty(t, output.String())
 			}
 		})
@@ -78,7 +79,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -148,7 +149,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -207,7 +208,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -254,7 +255,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -310,7 +311,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:

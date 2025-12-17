@@ -84,7 +84,7 @@ func GetFileChangeSummaryWithDiffs(
 		if !ok {
 			continue
 		}
-		fd, _ := ComputeFileDiff(outDir, path, tracked.PristineGitObject, gitRepo)
+		fd := ComputeFileDiff(outDir, path, tracked.PristineGitObject, gitRepo)
 		summary.Modified = append(summary.Modified, fd)
 	}
 
@@ -187,19 +187,20 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 		// Check if UUID is found at a different path
 		currentPath, uuidFoundOnDisk := scanResult.UUIDToPath[tracked.ID]
 
-		if !uuidFoundOnDisk && !fileExists {
+		switch {
+		case !uuidFoundOnDisk && !fileExists:
 			// File was deleted - UUID not found anywhere on disk
 			isDirty = true
 			tracked.Deleted = true
 			tracked.MovedTo = ""
 			lockFile.TrackedFiles.Set(path, tracked)
-		} else if uuidFoundOnDisk && currentPath != path {
+		case uuidFoundOnDisk && currentPath != path:
 			// File was moved - UUID found at different path
 			isDirty = true
 			tracked.Deleted = false
 			tracked.MovedTo = currentPath
 			lockFile.TrackedFiles.Set(path, tracked)
-		} else {
+		default:
 			// File is in its expected location, clear any stale move/delete markers
 			if tracked.Deleted || tracked.MovedTo != "" {
 				tracked.Deleted = false
@@ -234,7 +235,7 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, warnFunc func(format string, args ...any)) error {
 	cfg, err := config.Load(outDir)
 	if err != nil {
-		return nil
+		return nil //nolint:nilerr // Ignore error
 	}
 
 	if cfg.LockFile == nil || cfg.Config == nil {

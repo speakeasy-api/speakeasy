@@ -23,39 +23,39 @@ type DiffStats struct {
 }
 
 // ComputeFileDiff generates a unified diff between pristine and current content
-func ComputeFileDiff(outDir, path, pristineHash string, gitRepo GitRepository) (FileDiff, error) {
+func ComputeFileDiff(outDir, path, pristineHash string, gitRepo GitRepository) FileDiff {
 	fd := FileDiff{Path: path, PristineHash: pristineHash}
 
 	// Handle missing pristine (first generation or legacy lockfile)
 	if pristineHash == "" {
 		fd.DiffText = "(no pristine base available)"
-		return fd, nil
+		return fd
 	}
 
 	// Handle missing git repo
 	if gitRepo == nil || gitRepo.IsNil() {
 		fd.DiffText = "(git repository not available)"
-		return fd, nil
+		return fd
 	}
 
 	// Get pristine content from git
 	pristine, err := gitRepo.GetBlob(pristineHash)
 	if err != nil {
 		fd.DiffText = "(pristine object not found in git)"
-		return fd, nil
+		return fd
 	}
 
 	// Get current content from disk
 	current, err := os.ReadFile(filepath.Join(outDir, path))
 	if err != nil {
 		fd.DiffText = "(file not found on disk)"
-		return fd, nil
+		return fd
 	}
 
 	// Skip binary files
 	if isBinary(pristine) || isBinary(current) {
 		fd.DiffText = "(binary file)"
-		return fd, nil
+		return fd
 	}
 
 	// Normalize line endings
@@ -74,12 +74,12 @@ func ComputeFileDiff(outDir, path, pristineHash string, gitRepo GitRepository) (
 	diffText, err := difflib.GetUnifiedDiffString(diff)
 	if err != nil {
 		fd.DiffText = "(diff computation failed)"
-		return fd, nil
+		return fd
 	}
 
 	fd.DiffText = diffText
 	fd.Stats = countDiffStats(diffText)
-	return fd, nil
+	return fd
 }
 
 // isBinary returns true if the content appears to be binary (contains null bytes).

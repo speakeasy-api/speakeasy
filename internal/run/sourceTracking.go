@@ -32,7 +32,6 @@ import (
 type changesComputed struct {
 	report      *reports.ReportResult
 	oldSpecPath string
-	newSpecPath string
 }
 
 // embedSourceConfig implements bundler.EmbedSourceConfig interface
@@ -82,7 +81,7 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	changesStep := rootStep.NewSubstep("Computing Document Changes")
 	var err error = nil
 	var r *reports.ReportResult = nil
-	var computedChanges changesComputed = changesComputed{
+	computedChanges := changesComputed{
 		report: r,
 	}
 	if !registry.IsRegistryEnabled(ctx) {
@@ -126,7 +125,6 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	changesStep.NewSubstep("Computing changes")
 
 	c, err := changes.GetChanges(ctx, oldDocPath.LocalFilePath, newDocPath)
-
 	if err != nil {
 		return computedChanges, fmt.Errorf("error computing changes: %w", err)
 	}
@@ -281,10 +279,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	serverURL := auth.GetServerURL()
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
+	insecurePublish := strings.HasPrefix(serverURL, "http://")
 
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
@@ -309,7 +304,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 
 	var manifestDigest *string
 	var blobDigest *string
-	if pushResult.References != nil && len(pushResult.References) > 0 {
+	if len(pushResult.References) > 0 {
 		manifestDigestStr := pushResult.References[0].ManifestDescriptor.Digest.String()
 		manifestDigest = &manifestDigestStr
 		manifestLayers := pushResult.References[0].Manifest.Layers
@@ -393,19 +388,20 @@ func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryL
 	return
 }
 
-func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string, lintingErr error) ([]string, error) {
-	var tags []string = []string{"latest"}
+func (w *Workflow) getRegistryTags(_ context.Context, sourceID string, lintingErr error) ([]string, error) {
+	tags := []string{"latest"}
 	if lintingErr != nil {
-		return tags, nil
+		return tags, nil //nolint:nilerr // Ignore error
 	}
 	if env.IsGithubAction() {
 		// implicitly add branch tag
 		var branch string
-		if os.Getenv("SPEAKEASY_ACTIVE_BRANCH") != "" {
+		switch {
+		case os.Getenv("SPEAKEASY_ACTIVE_BRANCH") != "":
 			branch = os.Getenv("SPEAKEASY_ACTIVE_BRANCH")
-		} else if strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull/") {
+		case strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull/"):
 			branch = strings.TrimPrefix(os.Getenv("GITHUB_HEAD_REF"), "refs/heads/")
-		} else {
+		default:
 			branch = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
 		}
 

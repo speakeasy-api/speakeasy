@@ -140,6 +140,8 @@ func (m cliVisualizer) View() string {
 
 	statusStyle := styles.Info
 	switch m.rootStep.status {
+	case StatusRunning:
+		statusStyle = styles.Info
 	case StatusFailed:
 		statusStyle = styles.Error
 	case StatusSucceeded:

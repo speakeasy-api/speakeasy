@@ -64,13 +64,13 @@ func (m *tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *tabsModel) HandleKeypress(key string) tea.Cmd {
 	switch key {
 	case "right", "l", "n", "tab":
-		m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
+		m.activeTab = minInt(m.activeTab+1, len(m.Tabs)-1)
 	case "left", "h", "p", "shift+tab":
-		m.activeTab = max(m.activeTab-1, 0)
+		m.activeTab = maxInt(m.activeTab-1, 0)
 	case "down":
-		m.Tabs[m.activeTab].activeItem = min(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
+		m.Tabs[m.activeTab].activeItem = minInt(m.Tabs[m.activeTab].activeItem+1, len(m.Tabs[m.activeTab].Content)-1)
 	case "up":
-		m.Tabs[m.activeTab].activeItem = max(m.Tabs[m.activeTab].activeItem-1, 0)
+		m.Tabs[m.activeTab].activeItem = maxInt(m.Tabs[m.activeTab].activeItem-1, 0)
 	case "enter":
 		m.Tabs[m.activeTab].inspecting = !m.Tabs[m.activeTab].inspecting
 	}
@@ -204,17 +204,17 @@ func (m *tabsModel) OnUserExit() {}
 
 func RunTabs(tabs []Tab) {
 	m := tabsModel{Tabs: tabs}
-	charm_internal.RunModel(&m)
+	_, _ = charm_internal.RunModel(&m)
 }
 
-func max(a, b int) int {
+func maxInt(a, b int) int {
 	if a > b {
 		return a
 	}
 	return b
 }
 
-func min(a, b int) int {
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

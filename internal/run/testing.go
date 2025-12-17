@@ -36,9 +36,8 @@ func (w Workflow) prepareTestingGenerator(ctx context.Context) (*generate.Genera
 	}
 
 	generator, err := generate.New(generatorOpts...)
-
 	if err != nil {
-		return nil, fmt.Errorf("Unable to prepare testing instance: %w", err)
+		return nil, fmt.Errorf("unable to prepare testing instance: %w", err)
 	}
 
 	return generator, nil
@@ -56,7 +55,6 @@ func (w Workflow) runTesting(ctx context.Context, workflowTargetName string, tar
 	testingCtx := log.With(ctx, testingLogger)
 
 	generator, err := w.prepareTestingGenerator(testingCtx)
-
 	if err != nil {
 		return err
 	}

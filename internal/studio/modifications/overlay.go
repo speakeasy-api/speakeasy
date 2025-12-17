@@ -49,12 +49,13 @@ func UpsertOverlay(overlayPath string, source *workflow.Source, o overlay.Overla
 
 	_, err := os.Stat(overlayPath)
 	// If the file exists, load the current overlay
-	if err == nil {
+	switch {
+	case err == nil:
 		baseOverlay, err = loader.LoadOverlay(overlayPath)
 		if err != nil {
 			return overlayPath, err
 		}
-	} else if os.IsNotExist(err) {
+	case os.IsNotExist(err):
 		baseOverlay = &overlay.Overlay{
 			Version:         "1.0.0",
 			JSONPathVersion: "rfc9535",
@@ -68,7 +69,7 @@ func UpsertOverlay(overlayPath string, source *workflow.Source, o overlay.Overla
 				},
 			},
 		}
-	} else {
+	default:
 		return overlayPath, err
 	}
 
@@ -100,11 +101,6 @@ func UpsertOverlayIntoSource(source *workflow.Source, overlayPath string) {
 	}
 }
 
-type actionAndModification struct {
-	action overlay.Action
-	m      suggestions.ModificationExtension
-}
-
 func GetModifiedTargets(dir, modificationType string) ([]string, error) {
 	overlayLocation, err := GetOverlayPath(dir)
 	if err != nil {
@@ -129,7 +125,7 @@ func GetModifiedTargets(dir, modificationType string) ([]string, error) {
 
 // Return new suggestions that are not already in the list of suggestions
 func RemoveAlreadySuggested(alreadySuggested []overlay.Action, newSuggestions []overlay.Action) []overlay.Action {
-	getKey := func(x overlay.Action, index int) string {
+	getKey := func(x overlay.Action, _ int) string {
 		if mod := suggestions.GetModificationExtension(x); mod != nil {
 			return mod.Type + ":" + x.Target
 		}

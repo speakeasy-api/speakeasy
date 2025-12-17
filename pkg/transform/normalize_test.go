@@ -13,7 +13,6 @@ import (
 )
 
 func TestNormalize(t *testing.T) {
-
 	// Create a buffer to store the normalized spec
 	var testInput bytes.Buffer
 	var testOutput bytes.Buffer
@@ -37,7 +36,7 @@ func TestNormalize(t *testing.T) {
 
 	// Read the expected spec into a buffer
 	reader := bufio.NewReader(file)
-	testOutput.ReadFrom(reader)
+	_, _ = testOutput.ReadFrom(reader)
 	require.NoError(t, err)
 
 	var actual yaml.Node
@@ -54,7 +53,6 @@ func TestNormalize(t *testing.T) {
 }
 
 func TestNormalizeNoPrefixItems(t *testing.T) {
-
 	// Create a buffer to store the normalized spec
 	var testInput bytes.Buffer
 	var testOutput bytes.Buffer
@@ -78,7 +76,7 @@ func TestNormalizeNoPrefixItems(t *testing.T) {
 
 	// Read the expected spec into a buffer
 	reader := bufio.NewReader(file)
-	testOutput.ReadFrom(reader)
+	_, _ = testOutput.ReadFrom(reader)
 	require.NoError(t, err)
 
 	var actual yaml.Node

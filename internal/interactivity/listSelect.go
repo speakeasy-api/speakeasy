@@ -45,8 +45,7 @@ func (m *ListSelect[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *ListSelect[T]) HandleKeypress(key string) tea.Cmd {
-	switch key {
-	case "enter":
+	if key == "enter" {
 		selected, ok := m.list.SelectedItem().(Item[T])
 		if ok {
 			m.selected = selected.Value

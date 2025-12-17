@@ -25,7 +25,7 @@ const (
 	targetGroupTerraform = "terraform"
 )
 
-func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, targetType, outDir *string, newTarget bool) []*huh.Group {
+func getBaseTargetPrompts(currentWorkflow *workflow.Workflow, sourceName, targetName, outDir *string, newTarget bool) []*huh.Group {
 	groups := []*huh.Group{}
 	targetFields := []huh.Field{}
 
@@ -193,7 +193,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 		return "", nil, err
 	}
 
-	remainingPrompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, true)
+	remainingPrompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &outDir, true)
 
 	// If there are any additional prompts needed to configure the target, show these.
 	if len(remainingPrompts) > 0 {
@@ -223,7 +223,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 }
 
 func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName string) (string, *workflow.Target, error) {
-	target, _ := currentWorkflow.Targets[targetName]
+	target := currentWorkflow.Targets[targetName]
 	sourceName := target.Source
 	targetType := target.Target
 	outDir := ""
@@ -232,7 +232,7 @@ func PromptForExistingTarget(currentWorkflow *workflow.Workflow, targetName stri
 	}
 	originalDir := outDir
 
-	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &targetType, &outDir, false)
+	prompts := getBaseTargetPrompts(currentWorkflow, &sourceName, &targetName, &outDir, false)
 	if _, err := charm.NewForm(huh.NewForm(prompts...),
 		charm.WithTitle("Let's set up a new target for your workflow."),
 		charm.WithDescription("A target is a set of workflow instructions and a gen.yaml config that defines what you would like to generate.")).ExecuteForm(); err != nil {

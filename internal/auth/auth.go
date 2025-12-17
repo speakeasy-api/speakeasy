@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
@@ -39,7 +40,7 @@ func UseExistingAPIKeyIfAvailable(ctx context.Context) (context.Context, error) 
 	if err != nil {
 		return ctx, err
 	}
-	config.SetSpeakeasyAuthInfo(ctx, core.SpeakeasyAuthInfo{
+	_ = config.SetSpeakeasyAuthInfo(ctx, core.SpeakeasyAuthInfo{
 		APIKey:      existingApiKey,
 		WorkspaceID: workspaceID,
 	})
@@ -67,12 +68,12 @@ func ConfirmWorkspace(ctx context.Context) error {
 
 	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
 	if err != nil {
-		return nil
+		return nil //nolint:nilerr // Ignore error
 	}
 
 	client, err := sdk.InitSDK()
 	if err != nil {
-		return nil
+		return nil //nolint:nilerr // Ignore error
 	}
 
 	wsReq := operations.GetWorkspaceRequest{
@@ -81,10 +82,10 @@ func ConfirmWorkspace(ctx context.Context) error {
 
 	wsRes, err := client.Workspaces.GetByID(ctx, wsReq)
 	if err != nil {
-		return nil
+		return nil //nolint:nilerr // Ignore error
 	}
 
-	if wsRes.StatusCode != 200 || wsRes.Workspace == nil {
+	if wsRes.StatusCode != http.StatusOK || wsRes.Workspace == nil {
 		return nil
 	}
 
@@ -94,10 +95,10 @@ func ConfirmWorkspace(ctx context.Context) error {
 
 	orgRes, err := client.Organizations.Get(ctx, orgReq)
 	if err != nil {
-		return nil
+		return nil //nolint:nilerr // Ignore error
 	}
 
-	if orgRes.StatusCode != 200 || orgRes.Organization == nil {
+	if orgRes.StatusCode != http.StatusOK || orgRes.Organization == nil {
 		return nil
 	}
 

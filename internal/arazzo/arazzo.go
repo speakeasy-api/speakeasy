@@ -35,7 +35,7 @@ func Validate(ctx context.Context, file string) error {
 		return nil
 	}
 
-	lines := make([]string, len(validationErrors))
+	lines := make([]string, 0, len(validationErrors))
 
 	for _, err := range validationErrors {
 		lines = append(lines, fmt.Sprintf("- %s", err.Error()))
@@ -44,5 +44,5 @@ func Validate(ctx context.Context, file string) error {
 	msg := styles.RenderErrorMessage("Validation Errors", lipgloss.Center, lines...)
 	logger.Println(msg)
 
-	return fmt.Errorf(`Arazzo document invalid ✖`)
+	return fmt.Errorf(`Arazzo document invalid ✖`) //nolint:staticcheck // Arazzo is a name
 }

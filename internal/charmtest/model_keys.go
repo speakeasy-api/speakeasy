@@ -11,6 +11,6 @@ func (m Model) SendKeys(keys ...tea.KeyType) {
 			Type: key,
 		}
 
-		m.TestModel.Send(msg)
+		m.Send(msg)
 	}
 }

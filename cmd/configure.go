@@ -432,7 +432,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	}
 
 	successMsg := fmt.Sprintf("Successfully Configured the Target %s 🎉", targetName)
-	if workflowFile.Targets != nil && len(workflowFile.Targets) > 0 {
+	if len(workflowFile.Targets) > 0 {
 		successMsg += "\n\nExecute speakeasy run to regenerate your SDK!"
 	}
 
@@ -467,12 +467,13 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	}
 
 	var chosenTargets []string
-	if len(publishingOptions) == 0 {
+	switch {
+	case len(publishingOptions) == 0:
 		logger.Println(styles.Info.Render("No existing SDK targets require package manager publishing configuration."))
 		return nil
-	} else if len(publishingOptions) == 1 {
+	case len(publishingOptions) == 1:
 		chosenTargets = []string{publishingOptions[0].Value}
-	} else {
+	default:
 		chosenTargets, err = prompts.SelectPublishingTargets(publishingOptions, true)
 		if err != nil {
 			return err
@@ -633,7 +634,7 @@ type NPMTrustedPublishingConfig = struct {
 	remoteURL       string
 }
 
-func getNPMTrustedPublishingInstructions(ctx context.Context, npmConfigs map[string]NPMTrustedPublishingConfig) []string {
+func getNPMTrustedPublishingInstructions(_ context.Context, npmConfigs map[string]NPMTrustedPublishingConfig) []string {
 	var agenda []string
 
 	// Collect unique action paths
@@ -713,12 +714,13 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 	}
 
 	var chosenTargets []string
-	if len(testingOptions) == 0 {
+	switch {
+	case len(testingOptions) == 0:
 		logger.Println(styles.Info.Render("No existing SDK targets support sdk testing."))
 		return nil
-	} else if len(testingOptions) == 1 {
+	case len(testingOptions) == 1:
 		chosenTargets = []string{testingOptions[0].Value}
-	} else {
+	default:
 		chosenTargets, err = prompts.SelectTestingTargets(testingOptions, true)
 		if err != nil {
 			return err
@@ -753,7 +755,7 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 
 		// We clear out the existing generated tests gen.lock entry and arazzo file, so we can rebuild from scratch.
 		if flags.Rebuild != nil && cfg.LockFile != nil {
-			testcmd.RebuildTests(ctx, name, *flags.Rebuild, cfg)
+			_ = testcmd.RebuildTests(ctx, name, *flags.Rebuild, cfg)
 		}
 	}
 
@@ -824,7 +826,7 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 		if !hasAppAccess && !selectedAppInstall {
 			agenda = append(agenda, fmt.Sprintf("• Follow documentation to create your Github PAT and store it under repository secrets as %s.", styles.MakeBold("PR_CREATION_PAT")))
 		}
-		agenda = append(agenda, fmt.Sprintf("• Push your tests and file updates to github!"))
+		agenda = append(agenda, "• Push your tests and file updates to github!")
 		agenda = append(agenda, fmt.Sprintf("• For more information see %s", testingSetupDocs))
 	}
 
@@ -839,7 +841,6 @@ func configureTesting(ctx context.Context, flags ConfigureTestsFlags) error {
 		run.WithBoostrapTests(),
 		run.WithAllowPrompts(true),
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to parse workflow: %w", err)
 	}
@@ -906,7 +907,7 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 			}
 
 			if continueAfterInstall {
-				utils.OpenInBrowser(appInstallURL)
+				_ = utils.OpenInBrowser(appInstallURL)
 				logger.Println(styles.Info.Render("Install the Github App then continue with `speakeasy configure github`!\n"))
 				return nil
 			}
@@ -951,13 +952,6 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 		}
 	}
 
-	var publishingOptions []huh.Option[string]
-	for name, target := range workflowFile.Targets {
-		if slices.Contains(prompts.SupportedPublishingTargets, target.Target) {
-			publishingOptions = append(publishingOptions, huh.NewOption(fmt.Sprintf("%s [%s]", name, strings.ToUpper(target.Target)), name))
-		}
-	}
-
 	if err := workflow.Save(filepath.Join(rootDir, actionWorkingDir), workflowFile); err != nil {
 		return errors.Wrapf(err, "failed to save workflow file")
 	}
@@ -988,11 +982,11 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 	agenda := []string{}
 	// This attribute is nil when not in a git repository
 	if event.GitRelativeCwd == nil {
-		agenda = append(agenda, fmt.Sprintf("• Initialize your Git Repository - https://github.com/git-guides/git-init"))
+		agenda = append(agenda, "• Initialize your Git Repository - https://github.com/git-guides/git-init")
 	}
 	// this attribute is nil when the remote isn't github
 	if event.GitRemoteDefaultOwner == nil {
-		agenda = append(agenda, fmt.Sprintf("• Configure your GitHub remote - https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories"))
+		agenda = append(agenda, "• Configure your GitHub remote - https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories")
 	}
 
 	actionPath := actionsPath
@@ -1053,7 +1047,7 @@ func writeGenerationFile(workflowFile *workflow.Workflow, workingDir, workflowFi
 	}
 
 	generationWorkflow := &config.GenerateWorkflow{}
-	prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
+	_ = prompts.ReadGenerationFile(generationWorkflow, generationWorkflowFilePath)
 
 	generationWorkflow, err := prompts.ConfigureGithub(generationWorkflow, workflowFile, workflowFileDir, target)
 	if err != nil {

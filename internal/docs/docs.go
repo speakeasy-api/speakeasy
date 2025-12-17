@@ -39,10 +39,7 @@ func genDocs(cmd *cobra.Command, outDir string) error {
 
 	outFile := filepath.Join(outDir, getPath(cmd))
 
-	doc, err := genDoc(cmd)
-	if err != nil {
-		return err
-	}
+	doc := genDoc(cmd)
 
 	if err := utils.CreateDirectory(outFile); err != nil {
 		return err
@@ -55,7 +52,7 @@ func genDocs(cmd *cobra.Command, outDir string) error {
 	return nil
 }
 
-func genDoc(cmd *cobra.Command) (string, error) {
+func genDoc(cmd *cobra.Command) string {
 	cmd.InitDefaultHelpCmd()
 	cmd.InitDefaultHelpFlag()
 
@@ -68,9 +65,9 @@ func genDoc(cmd *cobra.Command) (string, error) {
 
 	name := cmd.Name()
 
-	builder.WriteString(fmt.Sprintf("# %s  \n", name))
-	builder.WriteString(fmt.Sprintf("`%s`  \n\n\n", cmd.CommandPath()))
-	builder.WriteString(fmt.Sprintf("%s  \n\n", stripAnsi(cmd.Short)))
+	fmt.Fprintf(builder, "# %s  \n", name)
+	fmt.Fprintf(builder, "`%s`  \n\n\n", cmd.CommandPath())
+	fmt.Fprintf(builder, "%s  \n\n", stripAnsi(cmd.Short))
 
 	if len(cmd.Long) > 0 {
 		builder.WriteString("## Details\n\n")
@@ -79,23 +76,21 @@ func genDoc(cmd *cobra.Command) (string, error) {
 
 	if cmd.Runnable() {
 		builder.WriteString("## Usage\n\n")
-		builder.WriteString(fmt.Sprintf("```\n%s\n```\n\n", cmd.UseLine()))
+		fmt.Fprintf(builder, "```\n%s\n```\n\n", cmd.UseLine())
 	}
 
 	if len(cmd.Example) > 0 {
 		builder.WriteString("### Examples\n\n")
-		builder.WriteString(fmt.Sprintf("```\n%s\n```\n\n", cmd.Example))
+		fmt.Fprintf(builder, "```\n%s\n```\n\n", cmd.Example)
 	}
 
-	if err := printOptions(builder, cmd); err != nil {
-		return "", err
-	}
+	printOptions(builder, cmd)
 
 	if cmd.HasParent() {
 		builder.WriteString("### Parent Command\n\n")
 		parent := cmd.Parent()
 		link := getDocSiteLink(parent)
-		builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", parent.CommandPath(), link, parent.Short))
+		fmt.Fprintf(builder, "* [%s](%s)\t - %s\n", parent.CommandPath(), link, parent.Short)
 	}
 
 	children := cmd.Commands()
@@ -111,14 +106,14 @@ func genDoc(cmd *cobra.Command) (string, error) {
 			}
 
 			link := getDocSiteLink(child)
-			builder.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", child.CommandPath(), link, child.Short))
+			fmt.Fprintf(builder, "* [%s](%s)\t - %s\n", child.CommandPath(), link, child.Short)
 		}
 	}
 
-	return builder.String(), nil
+	return builder.String()
 }
 
-func printOptions(builder *strings.Builder, cmd *cobra.Command) error {
+func printOptions(builder *strings.Builder, cmd *cobra.Command) {
 	flags := cmd.NonInheritedFlags()
 	flags.SetOutput(builder)
 	if flags.HasAvailableFlags() {
@@ -134,8 +129,6 @@ func printOptions(builder *strings.Builder, cmd *cobra.Command) error {
 		parentFlags.PrintDefaults()
 		builder.WriteString("```\n\n")
 	}
-
-	return nil
 }
 
 func getDocSiteLink(cmd *cobra.Command) string {

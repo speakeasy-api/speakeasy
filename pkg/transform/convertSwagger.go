@@ -38,7 +38,7 @@ func ConvertSwaggerFromReader(ctx context.Context, r io.Reader, schemaPath strin
 	// Log validation errors but continue (they're warnings)
 	if len(validationErrs) > 0 {
 		// Validation errors are non-fatal, just warnings
-		fmt.Fprintf(w, "# Swagger document has %d validation warnings\n", len(validationErrs))
+		_, _ = fmt.Fprintf(w, "# Swagger document has %d validation warnings\n", len(validationErrs))
 	}
 
 	// Upgrade to OpenAPI 3.0

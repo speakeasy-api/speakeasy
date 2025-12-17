@@ -45,7 +45,7 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 
 	err := filepath.WalkDir(s.rootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // Skip files we can't access
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 
 		// Skip directories
@@ -66,7 +66,7 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 		// Get relative path
 		relPath, err := filepath.Rel(s.rootDir, path)
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 
 		// Normalize to forward slashes (git/lockfile convention)
@@ -75,7 +75,7 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 		// Try to extract ID from file header (supports both UUID and short ID formats)
 		id, err := extractGeneratedIDFromFile(path)
 		if err != nil || id == "" {
-			return nil
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 
 		result.UUIDToPath[id] = relPath

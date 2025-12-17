@@ -67,7 +67,7 @@ func TestDiagnose(t *testing.T) {
 
 			diagnosis := errorCodes.Diagnose(model.Model)
 			if tt.expectedCount == 0 {
-				require.Len(t, diagnosis, 0)
+				require.Empty(t, diagnosis)
 				return
 			}
 			require.Len(t, diagnosis, 1)

@@ -186,8 +186,6 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string, cm
 	l := log.From(ctx)
 	l.PrintfStyled(mainStyle.Padding(1, 2), "%s\n%s", versionString, updateString)
 	l.Println("\n")
-
-	return
 }
 
 func setLogLevel(cmd *cobra.Command) error {

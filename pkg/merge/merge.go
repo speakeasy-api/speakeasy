@@ -56,7 +56,7 @@ func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, baseP
 		panic(fmt.Errorf("bundling failed: %w", e))
 	}
 
-	err = os.WriteFile(outFile, bytes, 0644)
+	err = os.WriteFile(outFile, bytes, 0o644)
 	if err != nil {
 		panic(fmt.Errorf("failed to write bundled file: %w", err))
 	}
@@ -583,13 +583,6 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 	}
 
 	return mergedComponents, errs
-}
-
-type yamlComparable interface {
-	MarshalYAMLInline() (interface{}, error)
-	GoLow() interface {
-		Hash() [32]byte
-	}
 }
 
 type YAMLComparable interface {

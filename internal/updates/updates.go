@@ -26,9 +26,11 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
+type contextKey string
+
 const (
-	ArtifactArchContextKey         = "cli-artifact-arch"
-	GitHubReleaseRateLimitingLimit = time.Second * 60
+	ArtifactArchContextKey         contextKey = "cli-artifact-arch"
+	GitHubReleaseRateLimitingLimit            = time.Second * 60
 )
 
 type ReleaseCache struct {
@@ -120,7 +122,7 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 		}
 		log.From(ctx).WithStyle(styles.DimmedItalic).Debug(fmt.Sprintf("InstallVersion: Failed to acquire lock (attempt %d). Retrying...", result.Attempt))
 	}
-	defer mutex.Unlock()
+	defer func() { _ = mutex.Unlock() }()
 
 	v, err := version.NewVersion(desiredVersion)
 	if err != nil {
@@ -187,7 +189,7 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 		return err
 	}
 
-	defer os.RemoveAll(dirName)
+	defer func() { _ = os.RemoveAll(dirName) }()
 
 	downloadedPath, err := downloadCLI(dirName, downloadURL, timeout)
 	if err != nil {
@@ -234,7 +236,6 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 		}
 
 		tmpBinaryFile, err := os.Open(tmpBinaryLocation)
-
 		if err != nil {
 			return fmt.Errorf("failed to replace binary: unable to open source file: %w", err)
 		}
@@ -249,7 +250,6 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 		installLocationNew := installLocation + ".new"
 
 		installFileNew, err := os.Create(installLocationNew)
-
 		if err != nil {
 			return fmt.Errorf("failed to replace binary: unable to create destination file: %w", err)
 		}
@@ -304,7 +304,7 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 
 	cached, err := releaseCache.Get()
 	if err == nil {
-		return cached.Repo, cached.Release, err
+		return cached.Repo, cached.Release, nil
 	}
 
 	releases, _, err := client.Repositories.ListReleases(context.Background(), "speakeasy-api", "speakeasy", nil)
@@ -410,7 +410,7 @@ func extractZip(archive, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer z.Close()
+	defer func() { _ = z.Close() }()
 
 	for _, file := range z.File {
 		filePath := filepath.Join(dest, file.Name)

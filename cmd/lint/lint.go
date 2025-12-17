@@ -615,6 +615,7 @@ func runDryRunGeneration(ctx context.Context, schemaPath, targetLanguage, workin
 		// Generation had errors, but we still want to collect warnings
 		// We'll ignore generation errors for lint purposes
 		// TODO: do we want to also show the errors?
+		_ = errs // explicitly ignore errors for now
 	}
 
 	// Collect warnings from the generator
