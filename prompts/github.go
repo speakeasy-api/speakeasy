@@ -443,20 +443,27 @@ func WriteTestingFiles(ctx context.Context, wf *workflow.Workflow, currentWorkin
 // If multiple targets are defined in the workflow, the filename will be suffixed with the target name.
 // Returns the paths to the files written.
 func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow, targetName, currentWorkingDir, workflowFileDir string, target workflow.Target) ([]string, error) {
-	genSecrets := genWorkflow.Jobs.Generate.Secrets
-	genSecrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
-	genSecrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
+	// Collect publishing-specific secrets (used by both generation and publish workflows)
+	publishingSecrets := make(map[string]string)
+	publishingSecrets[config.GithubAccessToken] = formatGithubSecretName(defaultGithubTokenSecretName)
+	publishingSecrets[config.SpeakeasyApiKey] = formatGithubSecretName(defaultSpeakeasyAPIKeySecretName)
 
 	var terraformOutDir *string
 
 	if target.Publishing != nil {
 		for _, secret := range getSecretsValuesFromPublishing(*target.Publishing) {
-			genSecrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
+			publishingSecrets[formatGithubSecret(secret)] = formatGithubSecretName(secret)
 		}
 
 		if target.Target == "terraform" {
 			terraformOutDir = target.Output
 		}
+	}
+
+	// Update generation workflow with publishing secrets
+	genSecrets := genWorkflow.Jobs.Generate.Secrets
+	for name, value := range publishingSecrets {
+		genSecrets[name] = value
 	}
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
@@ -515,10 +522,7 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 			publishingFile.Jobs.Publish.With["working_directory"] = workflowFileDir
 		}
 
-		pubSecrets := publishingFile.Jobs.Publish.Secrets
-		for name, value := range genSecrets {
-			pubSecrets[name] = value
-		}
+		publishingFile.Jobs.Publish.Secrets = publishingSecrets
 
 		// Write a github publishing file.
 		var publishingWorkflowBuf bytes.Buffer
