@@ -2,13 +2,14 @@ package errorCodes_test
 
 import (
 	"context"
+	"os"
+	"testing"
+
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
-	"os"
-	"testing"
 )
 
 func TestBuildErrorCodesOverlay(t *testing.T) {
@@ -27,7 +28,7 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			ctx := context.Background()
 
 			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, tt.in)
-
+			require.NoError(t, err)
 			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
 			require.NoError(t, err)
 			root := model.Index.GetRootNode()

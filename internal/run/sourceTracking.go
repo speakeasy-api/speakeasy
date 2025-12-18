@@ -29,6 +29,12 @@ import (
 	"github.com/speakeasy-api/speakeasy/registry"
 )
 
+type changesComputed struct {
+	report      *reports.ReportResult
+	oldSpecPath string
+	newSpecPath string
+}
+
 // embedSourceConfig implements bundler.EmbedSourceConfig interface
 type embedSourceConfig struct {
 	originalSource  *workflow.Source
@@ -72,11 +78,16 @@ func createLocalizedSource(originalSource workflow.Source, sourceResult *SourceR
 	return &localizedSource
 }
 
-func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (r *reports.ReportResult, err error) {
+func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTracking.WorkflowStep, targetLock workflow.TargetLock, newDocPath string) (changesComputed, error) {
 	changesStep := rootStep.NewSubstep("Computing Document Changes")
+	var err error = nil
+	var r *reports.ReportResult = nil
+	var computedChanges changesComputed = changesComputed{
+		report: r,
+	}
 	if !registry.IsRegistryEnabled(ctx) {
 		changesStep.Skip("API Registry not enabled")
-		return
+		return computedChanges, err
 	}
 
 	defer func() {
@@ -92,14 +103,14 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 
-	oldRegistryLocation := ""
+	var oldRegistryLocation string
 	if targetLock.SourceRevisionDigest != "" && targetLock.SourceNamespace != "" {
 		oldRegistryLocation = fmt.Sprintf("%s/%s/%s/%s@%s", "registry.speakeasyapi.dev", orgSlug, workspaceSlug,
 			targetLock.SourceNamespace, targetLock.SourceRevisionDigest)
 	} else {
 		changesStep.Skip("no previous revision found")
 
-		return
+		return computedChanges, err
 	}
 
 	changesStep.NewSubstep("Downloading prior revision")
@@ -107,43 +118,46 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 	d := workflow.Document{Location: workflow.LocationString(oldRegistryLocation)}
 	oldDocPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
 	if err != nil {
-		return
+		return computedChanges, err
 	}
+
+	computedChanges.oldSpecPath = oldDocPath.LocalFilePath
 
 	changesStep.NewSubstep("Computing changes")
 
 	c, err := changes.GetChanges(ctx, oldDocPath.LocalFilePath, newDocPath)
+
 	if err != nil {
-		return r, fmt.Errorf("error computing changes: %w", err)
+		return computedChanges, fmt.Errorf("error computing changes: %w", err)
 	}
 
 	changesStep.NewSubstep("Uploading changes report")
 	report, err := reports.UploadReport(ctx, c.GetHTMLReport(), shared.TypeChanges)
 	if err != nil {
-		return r, fmt.Errorf("failed to persist report: %w", err)
+		return computedChanges, fmt.Errorf("failed to persist report: %w", err)
 	}
-	r = &report
+	computedChanges.report = &report
 
-	log.From(ctx).Info(r.Message)
+	log.From(ctx).Info(computedChanges.report.Message)
 
 	summary, err := c.GetSummary()
 	if err != nil || summary == nil {
-		return r, fmt.Errorf("failed to get report summary: %w", err)
+		return computedChanges, fmt.Errorf("failed to get report summary: %w", err)
 	}
 
 	// Do not write github action changes if we have already processed this source
 	// If we don't do this check we will see duplicate openapi changes summaries in the PR
-	if _, ok := w.computedChanges[targetLock.Source]; !ok {
-		github.GenerateChangesSummary(ctx, r.URL, *summary)
+	if _, ok := w.computedChanges[targetLock.Source]; !ok && computedChanges.report != nil {
+		github.GenerateChangesSummary(ctx, computedChanges.report.URL, *summary)
 	}
 
 	w.computedChanges[targetLock.Source] = true
 
 	changesStep.SucceedWorkflow()
-	return
+	return computedChanges, err
 }
 
-func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult) (err error) {
+func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID string, source workflow.Source, sourceResult *SourceResult, lintingErr error) (err error) {
 	registryStep := parentStep.NewSubstep("Tracking OpenAPI Changes")
 
 	if !registry.IsRegistryEnabled(ctx) {
@@ -190,7 +204,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		apiKey = key
 	}
 
-	tags, err := w.getRegistryTags(ctx, sourceID)
+	tags, err := w.getRegistryTags(ctx, sourceID, lintingErr)
 	if err != nil {
 		return err
 	}
@@ -253,7 +267,9 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 
 	annotations.BundleRoot = strings.TrimPrefix(rootDocumentPath, string(os.PathSeparator))
 	// Always add the openapi document version as a tag
-	tags = append(tags, annotations.Version)
+	if ocicommon.IsValidTagName(annotations.Version) && annotations.Version != "" {
+		tags = append(tags, annotations.Version)
+	}
 
 	err = pl.BuildOCIImage(ctx, bundler.NewReadWriteFS(resolved, resolved), &bundler.OCIBuildOptions{
 		Tags:        tags,
@@ -377,8 +393,11 @@ func getAndValidateAPIKey(ctx context.Context, orgSlug, workspaceSlug, registryL
 	return
 }
 
-func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string) ([]string, error) {
-	tags := []string{"latest"}
+func (w *Workflow) getRegistryTags(ctx context.Context, sourceID string, lintingErr error) ([]string, error) {
+	var tags []string = []string{"latest"}
+	if lintingErr != nil {
+		return tags, nil
+	}
 	if env.IsGithubAction() {
 		// implicitly add branch tag
 		var branch string

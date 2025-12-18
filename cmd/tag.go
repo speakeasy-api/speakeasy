@@ -69,7 +69,7 @@ var tagApplyCmd = &model.ExecutableCommand[tagApplyFlagsArgs]{
 		flag.StringFlag{ // TODO: maybe it would be better to just take in a registry URL
 			Name:        "namespace-name",
 			Shorthand:   "n",
-			Description: "the revision to tag",
+			Description: "the namespace to tag",
 			Required:    true,
 		},
 		flag.StringFlag{
@@ -99,6 +99,10 @@ func runTagPromote(ctx context.Context, flags tagPromoteFlagsArgs) error {
 	}
 
 	lockfile, err := workflow.LoadLockfile(projectDir)
+
+	if err != nil || lockfile == nil {
+		return fmt.Errorf("failed to load workflow.lock: %w", err)
+	}
 
 	revisions, err := getRevisions(ctx, flags.Sources, flags.CodeSamples, wf, lockfile)
 	if err != nil {

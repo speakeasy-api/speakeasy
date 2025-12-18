@@ -15,7 +15,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/samber/lo"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
@@ -512,13 +512,11 @@ func updateSourceAndTarget(workflowRunner run.Workflow, sourceID, overlayPath st
 	}
 
 	for targetID, input := range runRequestBody.Targets {
-		sdkPath := ""
-
 		wfTarget, ok := workflowRunner.GetWorkflowFile().Targets[targetID]
 		if !ok {
 			return overlayPath, errors.ErrBadRequest.Wrap(fmt.Errorf("target %s not found", targetID))
 		}
-		sdkPath = workflowRunner.ProjectDir
+		sdkPath := workflowRunner.ProjectDir
 		if wfTarget.Output != nil {
 			sdkPath = filepath.Join(sdkPath, *wfTarget.Output)
 		}

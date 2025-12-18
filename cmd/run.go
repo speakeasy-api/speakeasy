@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"slices"
+	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -44,6 +47,9 @@ type RunFlags struct {
 	GitHub             bool              `json:"github"`
 	GitHubRepos        string            `json:"github-repos"`
 	Minimal            bool              `json:"minimal"`
+	Dependent          string            `json:"dependent"`
+	SourceLocation     string            `json:"source-location"`
+	AutoYes            bool              `json:"auto-yes"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -139,7 +145,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.EnumFlag{
 			Name:          "output",
 			Shorthand:     "o",
-			Description:   "What to output while running",
+			Description:   "What to output while running (summary: visual workflow summary, mermaid: Mermaid diagram of workflow, console: basic console output)",
 			AllowedValues: []string{"summary", "mermaid", "console"},
 			DefaultValue:  "summary",
 		},
@@ -179,6 +185,21 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Name:        "minimal",
 			Description: "only run the steps that are strictly necessary to generate the SDK",
 		},
+		flag.StringFlag{
+			Name:        "dependent",
+			Description: "execute speakeasy run for the specified dependent (or 'all' for all dependents). All other flags will be forwarded to the dependent run",
+			Hidden:      true,
+		},
+		flag.StringFlag{
+			Name:        "source-location",
+			Description: "override the location of the source, for example to a local copy of your OpenAPI document",
+			Hidden:      true,
+		},
+		flag.BooleanFlag{
+			Name:        "auto-yes",
+			Shorthand:   "y",
+			Description: "auto confirm all prompts",
+		},
 	},
 }
 
@@ -194,6 +215,14 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		return err
 	}
 
+	var dependents []string
+	if !env.IsCI() { // Dependents are never relevant in GitHub Actions. This check is essential to ensure the right source/target gets chosen when dependents are set.
+		for dependent := range wf.Dependents {
+			dependents = append(dependents, dependent)
+		}
+		slices.Sort(dependents) // Must sort or else order will be different on each run
+	}
+
 	if flags.GitHubRepos != "" {
 		flags.GitHub = true
 		if err := cmd.Flags().Set("github", "true"); err != nil {
@@ -201,13 +230,22 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		}
 	}
 
-	if flags.Target == "" && flags.Source == "" {
+	if flags.Target == "" && flags.Source == "" && flags.Dependent == "" {
+		sourcesOnly := len(wf.Targets) == 0 && len(dependents) == 0
+
 		if len(wf.Targets) == 1 {
 			flags.Target = targets[0]
-		} else if len(wf.Targets) == 0 && len(wf.Sources) == 1 {
+		} else if sourcesOnly && len(wf.Sources) == 1 {
 			flags.Source = sources[0]
-		} else if len(wf.Targets) == 0 && len(wf.Sources) > 1 {
-			flags.Source, err = askForSource(sources)
+		} else if sourcesOnly && len(wf.Sources) > 1 {
+			flags.Source, err = askForSource(sources, true)
+			if err != nil {
+				return err
+			}
+		} else if len(wf.Targets) == 0 && len(dependents) == 1 {
+			flags.Dependent = dependents[0]
+		} else if len(wf.Targets) == 0 && len(dependents) > 1 {
+			flags.Dependent, err = askForDependent(dependents)
 			if err != nil {
 				return err
 			}
@@ -223,14 +261,41 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		flags.Target = targets[0]
 	}
 
-	// Needed later
+	// Dependent only allows a single source for now
+	if flags.Dependent != "" {
+		if len(sources) == 1 {
+			flags.Source = sources[0]
+		} else {
+			flags.Source, err = askForSource(sources, false)
+			if err != nil {
+				return err
+			}
+		}
+
+		if flags.Dependent == "rebuild-source-only" {
+			flags.Dependent = ""
+		}
+	}
+
+	// We must set these after prompting for them or else the user will be prompted a second time
+	if flags.Source != "" {
+		if err := cmd.Flags().Set("source", flags.Source); err != nil {
+			return err
+		}
+	}
+	// Not checking target flag not empty for safety, don't want to change how it was working before
 	if err := cmd.Flags().Set("target", flags.Target); err != nil {
 		return err
+	}
+	if flags.Dependent != "" { // We don't want to set this flag unnecessarily, as it will break old (pinned) versions of the CLI
+		if err := cmd.Flags().Set("dependent", flags.Dependent); err != nil {
+			return err
+		}
 	}
 
 	// Gets a proper value for a mapFlag based on the singleFlag value and the mapFlag value
 	// Helps ensure that the mapFlag ends up with a value for all the targets being run
-	checkAndGetMapFlagValue := func(flagName, singleFlag string, mapFlag map[string]string) (map[string]string, error) {
+	checkAndGetMapFlagValue := func(flagName, singleFlag string, mapFlag map[string]string, validLangs []string) (map[string]string, error) {
 		// If the single flag value is set, ensure we aren't running all targets, then set the map flag to the single flag value
 		if singleFlag != "" && len(mapFlag) == 0 {
 			if flags.Target == "all" {
@@ -241,11 +306,16 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 		} else if len(mapFlag) > 0 {
 			// Ensure the map flag contains an entry for all targets we are running
 			if flags.Target != "all" {
-				if _, ok := mapFlag[flags.Target]; !ok {
+				_, ok := mapFlag[flags.Target]
+				if !ok && (validLangs == nil || slices.Contains(validLangs, flags.Target)) {
 					return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, flags.Target)
 				}
 			} else {
 				for _, target := range targets {
+					if validLangs != nil && !slices.Contains(validLangs, target) {
+						continue
+					}
+
 					if _, ok := mapFlag[target]; !ok {
 						return nil, fmt.Errorf("%ss flag must contain an entry for target %s", flagName, target)
 					}
@@ -259,14 +329,14 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	}
 
 	// Ensure installationURLs are properly set
-	installationURLs, err := checkAndGetMapFlagValue("installationURL", flags.InstallationURL, flags.InstallationURLs)
+	installationURLs, err := checkAndGetMapFlagValue("installationURL", flags.InstallationURL, flags.InstallationURLs, []string{"go", "typescript", "python", "php", "ruby"})
 	if err != nil {
 		return err
 	}
 	flags.InstallationURLs = installationURLs
 
 	// Ensure repoSubdirs are properly set
-	repoSubdirs, err := checkAndGetMapFlagValue("repoSubdir", flags.RepoSubdir, flags.RepoSubdirs)
+	repoSubdirs, err := checkAndGetMapFlagValue("repoSubdir", flags.RepoSubdir, flags.RepoSubdirs, nil)
 	if err != nil {
 		return err
 	}
@@ -297,14 +367,15 @@ func askForTarget(title, description, confirmation string, targets []string, all
 	return target, nil
 }
 
-func askForSource(sources []string) (string, error) {
+func askForSource(sources []string, allowAll bool) (string, error) {
 	var sourceOptions []huh.Option[string]
 
 	for _, sourceName := range sources {
 		sourceOptions = append(sourceOptions, huh.NewOption(sourceName, sourceName))
 	}
-
-	sourceOptions = append(sourceOptions, huh.NewOption("✱ All", "all"))
+	if allowAll {
+		sourceOptions = append(sourceOptions, huh.NewOption("✱ All", "all"))
+	}
 
 	source := ""
 
@@ -314,6 +385,30 @@ func askForSource(sources []string) (string, error) {
 	}
 
 	return source, nil
+}
+
+func askForDependent(dependents []string) (string, error) {
+	if !utils.IsInteractive() || env.IsCI() {
+		return "", nil
+	}
+
+	dependentOptions := []huh.Option[string]{}
+
+	for _, dependentName := range dependents {
+		dependentOptions = append(dependentOptions, huh.NewOption(dependentName, dependentName))
+	}
+
+	dependentOptions = append(dependentOptions, huh.NewOption("✱ All", "all"))
+	dependentOptions = append(dependentOptions, huh.NewOption("→ None (rebuild source only)", "rebuild-source-only"))
+
+	dependent := ""
+
+	prompt := charm.NewSelectPrompt("Which SDK would you like to regenerate?", "You may choose an individual SDK or 'all'.", dependentOptions, &dependent)
+	if _, err := charm.NewForm(huh.NewForm(prompt), charm.WithTitle("Let's rebuild your source and regenerate SDKs.")).ExecuteForm(); err != nil {
+		return "", err
+	}
+
+	return dependent, nil
 }
 
 var minimalOpts = []run.Opt{
@@ -347,6 +442,9 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+		run.WithSourceLocation(flags.SourceLocation),
+		run.WithAutoYes(flags.AutoYes),
+		run.WithAllowPrompts(false), // Non-interactive mode
 	}
 
 	if flags.Minimal {
@@ -357,7 +455,6 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		ctx,
 		opts...,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -391,6 +488,10 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
+	if flags.Dependent != "" {
+		return run.RunDependent(ctx, flags.Source, flags.Dependent, stringifyFlags(flags, []string{"dependent", "source"}))
+	}
+
 	opts := []run.Opt{
 		run.WithTarget(flags.Target),
 		run.WithSource(flags.Source),
@@ -406,23 +507,27 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSetVersion(flags.SetVersion),
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
+		run.WithSourceLocation(flags.SourceLocation),
+		run.WithAutoYes(flags.AutoYes),
 	}
 
 	if flags.Minimal {
 		opts = append(opts, minimalOpts...)
 	}
 
+	if flags.Verbose {
+		flags.Output = "console"
+	}
+
+	// Only allow prompts in summary mode (interactive visualization)
+	opts = append(opts, run.WithAllowPrompts(flags.Output == "summary"))
+
 	workflow, err := run.NewWorkflow(
 		ctx,
 		opts...,
 	)
-
 	if err != nil {
 		return err
-	}
-
-	if flags.Verbose {
-		flags.Output = "console"
 	}
 
 	switch flags.Output {
@@ -474,4 +579,75 @@ func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags, ru
 	}
 
 	return nil, false
+}
+
+// String returns the command line arguments representation of the RunFlags
+func (f RunFlags) String() string {
+	return stringifyFlags(f, nil)
+}
+
+// stringifyFlags converts a struct to command line arguments using JSON tags
+// A bit annoying to have to do it this way, temporary hack
+func stringifyFlags(flags RunFlags, flagsToDrop []string) string {
+	var args []string
+
+	v := reflect.ValueOf(flags)
+	t := reflect.TypeOf(flags)
+
+	for i := 0; i < v.NumField(); i++ {
+		field := t.Field(i)
+		value := v.Field(i)
+
+		// Get the JSON tag
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" || jsonTag == "-" {
+			continue
+		}
+
+		// Skip flags that are in the flagsToDrop slice
+		if flagsToDrop != nil && slices.Contains(flagsToDrop, jsonTag) {
+			continue
+		}
+
+		// Skip zero values for most types
+		if value.IsZero() {
+			continue
+		}
+
+		// Handle different field types
+		switch field.Type.Kind() {
+		case reflect.String:
+			if value.String() != "" {
+				args = append(args, fmt.Sprintf("--%s=%s", jsonTag, value.String()))
+			}
+		case reflect.Bool:
+			if value.Bool() {
+				args = append(args, fmt.Sprintf("--%s", jsonTag))
+			}
+		case reflect.Slice:
+			if value.Len() > 0 {
+				// Handle string slices
+				if field.Type.Elem().Kind() == reflect.String {
+					var sliceValues []string
+					for j := 0; j < value.Len(); j++ {
+						sliceValues = append(sliceValues, value.Index(j).String())
+					}
+					args = append(args, fmt.Sprintf("--%s=%s", jsonTag, strings.Join(sliceValues, ",")))
+				}
+			}
+		case reflect.Map:
+			if value.Len() > 0 {
+				// Handle map[string]string
+				if field.Type.Key().Kind() == reflect.String && field.Type.Elem().Kind() == reflect.String {
+					var mapPairs []string
+					for _, key := range value.MapKeys() {
+						mapPairs = append(mapPairs, fmt.Sprintf("%s:%s", key.String(), value.MapIndex(key).String()))
+					}
+					args = append(args, fmt.Sprintf("--%s=%s", jsonTag, strings.Join(mapPairs, ",")))
+				}
+			}
+		}
+	}
+
+	return strings.Join(args, " ")
 }

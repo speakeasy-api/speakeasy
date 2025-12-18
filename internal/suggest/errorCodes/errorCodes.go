@@ -7,7 +7,7 @@ import (
 
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"

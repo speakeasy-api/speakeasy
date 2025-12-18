@@ -1,6 +1,10 @@
 package env
 
-import "os"
+import (
+	"os"
+
+	"github.com/speakeasy-api/speakeasy-core/utils"
+)
 
 // Returns true if the CLI_RUNTIME environment variable is set to "docs".
 // This environment variable is used to determine when website documentation
@@ -27,6 +31,10 @@ func GoArch() string {
 
 func IsLocalDev() bool {
 	return os.Getenv("SPEAKEASY_ENVIRONMENT") == "local"
+}
+
+func IsCI() bool {
+	return os.Getenv("CI") == "true" || IsGithubAction() || utils.IsRunningInCI()
 }
 
 // Returns the SPEAKEASY_RUN_LOCATION environment variable value. For example,

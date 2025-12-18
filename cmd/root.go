@@ -42,6 +42,7 @@ Generate from OpenAPI Specs:
 - Client and Server SDKs in GO, Python, TypeScript, Java, PHP, C#, Ruby
 - Postman collections
 - Terraform providers
+- MCP Servers
 
 [Quickstart guide](https://www.speakeasy.com/docs/create-client-sdks)
 
@@ -87,13 +88,15 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, testCmd)
 	addCommand(rootCmd, defaultCodeSamplesCmd)
 	updateInit(version, artifactArch)
-	proxyInit()
 	languageServerInit(version)
 	bumpInit()
 	addCommand(rootCmd, tagCmd)
 	addCommand(rootCmd, cleanCmd)
 
 	addCommand(rootCmd, AskCmd)
+	addCommand(rootCmd, reproCmd)
+	addCommand(rootCmd, orphanedFilesCmd)
+	pullInit()
 }
 
 func addCommand(cmd *cobra.Command, command model.Command) {
@@ -155,6 +158,13 @@ func checkForUpdate(ctx context.Context, currentVersion, artifactArch string, cm
 
 	// When using the --pinned flag, don't display update notifications
 	if flag := cmd.Flag("pinned"); flag != nil && flag.Value.String() == "true" {
+		return
+	}
+
+	wf, _, _ := utils.GetWorkflow()
+
+	// If we are running the run command and a workflow file is present and specifies that the speakeasyVersion is "latest", don't display update notifications as it will be automatically updated when the command is run.
+	if cmd.Name() == "run" && wf != nil && wf.SpeakeasyVersion.String() == "latest" {
 		return
 	}
 

@@ -36,6 +36,7 @@ import (
 )
 
 const ErrInstallFailed = errors.Error("failed to install Speakeasy version")
+const ErrPinned = errors.Error("speakeasyVersion: pinned, skipping blue/green speakeasy CLI upgrade")
 
 type Command interface {
 	Init() (*cobra.Command, error) // TODO: make private when rootCmd is refactored?
@@ -150,14 +151,17 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			pinned, _ := cmd.Flags().GetBool("pinned")
 			if !pinned && !env.IsLocalDev() {
 				err := runWithVersionFromWorkflowFile(cmd)
+				logger := log.From(cmd.Context())
 				if err == nil {
 					return nil
-				} else if !errors.Is(err, ErrInstallFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+				} else if errors.Is(err, ErrPinned) {
+					logger.Debug("Using pinned version (skipping blue/green speakeasy CLI upgrade)")
+				} else if errors.Is(err, ErrInstallFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+					logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
+					logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
+				} else {
 					return err
 				}
-				logger := log.From(cmd.Context())
-				logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
-				logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
 			}
 		}
 
@@ -184,9 +188,6 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 	if err := c.checkFlags(); err != nil {
 		return nil, err
 	}
-
-	short := strings.Trim(c.Short, " .")
-	short = utils.CapitalizeFirst(short)
 
 	cmd := &cobra.Command{
 		Use:     c.Usage,
@@ -289,8 +290,15 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 	artifactArch := ctx.Value(updates.ArtifactArchContextKey).(string)
 
-	// Try to migrate existing workflows, but only if they aren't on a pinned version
-	if wf.SpeakeasyVersion.String() == "latest" {
+	localWfExists := false
+	if _, err := os.Stat(strings.TrimSuffix(wfPath, "workflow.yaml") + "workflow.local.yaml"); err == nil {
+		localWfExists = true
+	}
+
+	// Try to migrate existing workflows, but only if they aren't on a pinned version and a local workflow doesn't exist.
+	// If a local workflow exists, calling updateWorkflowFile will cause local overrides to be persisted to the real workflow.yaml file.
+	// There's probably a more robust solution here, perhaps applying the local override at a different point in the process, but this is good enough for now.
+	if wf.SpeakeasyVersion.String() == "latest" && !localWfExists {
 		run.Migrate(ctx, wf)
 		_ = updateWorkflowFile(wf, wfPath)
 	}
@@ -304,7 +312,13 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		}
 		desiredVersion = latest.String()
 
-		logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+		// Check if we're actually running the latest version
+		currentVersion := events.GetSpeakeasyVersionFromContext(ctx)
+		if newerVersion, err := updates.GetNewerVersion(ctx, artifactArch, currentVersion); err == nil && newerVersion == nil {
+			logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
+		}
+	} else if desiredVersion == "pinned" {
+		return ErrPinned
 	} else {
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
 	}

@@ -168,7 +168,7 @@ func MakeSection(title, content string, color lipgloss.AdaptiveColor) string {
 func MakeBreak(heading string, character rune, color lipgloss.AdaptiveColor, isStart bool) string {
 	termWidth := TerminalWidth()
 
-	line := ""
+	var line string
 	if heading == "" {
 		line = strings.Repeat(string(character), termWidth)
 	} else {

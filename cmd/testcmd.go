@@ -87,7 +87,7 @@ func testCmdRunnerOpts(flags testCmdFlags) ([]testcmd.RunnerOpt, error) {
 		return nil, err
 	}
 
-	target := ""
+	var target string
 
 	if flags.Target == "" {
 		if len(wf.Targets) == 1 {

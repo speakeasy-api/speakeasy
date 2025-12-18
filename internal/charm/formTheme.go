@@ -41,3 +41,8 @@ func init() {
 
 	formTheme = &t
 }
+
+// GetFormTheme returns the standard form theme used throughout the application.
+func GetFormTheme() *huh.Theme {
+	return formTheme
+}

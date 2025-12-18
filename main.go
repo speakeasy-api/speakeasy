@@ -6,7 +6,6 @@ import (
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/speakeasy/internal/env"
-	"go.uber.org/automaxprocs/maxprocs"
 )
 
 var (
@@ -16,7 +15,6 @@ var (
 
 func main() {
 	memlimit.SetGoMemLimitWithOpts()
-	maxprocs.Set()
 
 	if env.IsLocalDev() {
 		if env.GoArch() != "" {

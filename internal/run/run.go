@@ -17,6 +17,7 @@ import (
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -133,6 +134,26 @@ func (w *Workflow) Run(ctx context.Context) error {
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
 
+	// If there's an error and telemetry is not disabled, show repro message
+	if err != nil && !utils.IsZeroTelemetryOrganization(ctx) {
+		cliEvent := events.GetTelemetryEventFromContext(ctx)
+		if cliEvent != nil && cliEvent.ExecutionID != "" && cliEvent.SourceNamespaceName != nil && *cliEvent.SourceNamespaceName != "" {
+			logger := log.From(ctx)
+			logger.Errorf("\nTo get help, send the following reproduction command to the Speakeasy team:")
+
+			// Get org and workspace slugs from context
+			orgSlug := core.GetOrgSlugFromContext(ctx)
+			workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+
+			if orgSlug != "" && workspaceSlug != "" {
+				logger.Errorf("\n    speakeasy repro %s_%s_%s\n", orgSlug, workspaceSlug, cliEvent.ExecutionID)
+			} else {
+				// Fallback if we can't get org/workspace info
+				logger.Errorf("\n    speakeasy repro {org-slug}_{workspace-slug}_%s\n", cliEvent.ExecutionID)
+			}
+		}
+	}
+
 	return err
 }
 
@@ -152,6 +173,10 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 
 	if w.SetVersion != "" && len(targetIDs) > 1 {
 		return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
+	}
+
+	if w.SourceLocation != "" && len(sourceIDs) > 1 {
+		return fmt.Errorf("cannot specify a source location when more than one source is required")
 	}
 
 	for _, sourceID := range sourceIDs {
@@ -224,8 +249,12 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 		additionalLines = append(additionalLines, "Review all targets with `speakeasy status`.")
 	}
 
-	if t.CodeSamples != nil {
+	// Covers the case where code samples are configured to be written to a local file
+	if t.CodeSamples != nil && t.CodeSamples.Output != "" {
 		additionalLines = append(additionalLines, fmt.Sprintf("Code samples overlay file written to %s", t.CodeSamples.Output))
+		// Covers the case where code samples are configured to be published to a registry URI
+	} else if t.CodeSamples != nil && t.CodeSamples.Registry != nil {
+		additionalLines = append(additionalLines, fmt.Sprintf("Code samples uploaded to: %s", string(t.CodeSamples.Registry.Location)))
 	}
 
 	if len(w.criticalWarns) > 0 {
@@ -296,6 +325,15 @@ func enrichTelemetryWithCompletedWorkflow(ctx context.Context, w *Workflow) {
 			lockFileOldBytes, _ := yaml.Marshal(w.lockfileOld)
 			lockFileOldString := string(lockFileOldBytes)
 			cliEvent.WorkflowLockPreRaw = &lockFileOldString
+		}
+		// Capture the workflow YAML content
+		workflowBytes, _ := yaml.Marshal(w.workflow)
+		workflowString := string(workflowBytes)
+		cliEvent.WorkflowPostRaw = &workflowString
+
+		// Set the original workflow content if available
+		if w.workflowRaw != "" {
+			cliEvent.WorkflowPreRaw = &w.workflowRaw
 		}
 	}
 }

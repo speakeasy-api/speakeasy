@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/speakeasy-api/speakeasy/registry"
+	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -35,6 +36,7 @@ type Workflow struct {
 	SkipCleanup            bool
 	FromQuickstart         bool
 	SkipGenerateLintReport bool
+	SourceLocation         string
 	RepoSubDirs            map[string]string
 	InstallationURLs       map[string]string
 	RegistryTags           []string
@@ -43,12 +45,15 @@ type Workflow struct {
 	// workflow configuration enabling testing.
 	SkipTesting   bool
 	BoostrapTests bool
+	AutoYes       bool
+	AllowPrompts  bool
 
 	// Internal
 	workflowName       string
 	SDKOverviewURLs    map[string]string
 	RootStep           *workflowTracking.WorkflowStep
 	workflow           workflow.Workflow
+	workflowRaw        string // the raw workflow YAML content
 	ProjectDir         string
 	validatedDocuments []string
 	generationAccess   *sdkgen.GenerationAccess
@@ -80,6 +85,13 @@ func NewWorkflow(
 		return nil, fmt.Errorf("failed to load workflow.yaml: %w", err)
 	}
 
+	// Marshal the workflow to get the YAML content
+	workflowRawBytes, err := yaml.Marshal(wf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal workflow: %w", err)
+	}
+	workflowRaw := string(workflowRawBytes)
+
 	// Load the current lockfile so that we don't overwrite all targets
 	lockfile, err := workflow.LoadLockfile(projectDir)
 	lockfileOld := lockfile
@@ -102,6 +114,7 @@ func NewWorkflow(
 		Debug:            false,
 		ShouldCompile:    true,
 		workflow:         *wf,
+		workflowRaw:      workflowRaw,
 		ProjectDir:       projectDir,
 		ForceGeneration:  false,
 		SourceResults:    make(map[string]*SourceResult),
@@ -130,6 +143,18 @@ func WithWorkflowName(name string) Opt {
 func WithSource(source string) Opt {
 	return func(w *Workflow) {
 		w.Source = source
+	}
+}
+
+func WithSourceLocation(sourceLocation string) Opt {
+	return func(w *Workflow) {
+		w.SourceLocation = sourceLocation
+		if sourceLocation != "" {
+			// Implies no snapshot
+			w.SkipSnapshot = true
+			// Implies no change report
+			w.SkipChangeReport = true
+		}
 	}
 }
 
@@ -241,6 +266,18 @@ func WithSkipCleanup() Opt {
 func WithSkipTesting(skipTesting bool) Opt {
 	return func(w *Workflow) {
 		w.SkipTesting = skipTesting
+	}
+}
+
+func WithAutoYes(autoYes bool) Opt {
+	return func(w *Workflow) {
+		w.AutoYes = autoYes
+	}
+}
+
+func WithAllowPrompts(allowPrompts bool) Opt {
+	return func(w *Workflow) {
+		w.AllowPrompts = allowPrompts
 	}
 }
 

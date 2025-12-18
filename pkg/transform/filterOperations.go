@@ -10,7 +10,7 @@ import (
 
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"gopkg.in/yaml.v3"

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/speakeasy-api/speakeasy/internal/log"
-
+	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
 type Status string
@@ -115,7 +115,7 @@ func (w *WorkflowStep) FailWorkflowWithoutNotifying() {
 }
 
 func (w *WorkflowStep) Finalize(succeeded bool) {
-	var msg UpdateMsg
+	var msg StatusMsg
 	if succeeded {
 		w.SucceedWorkflow()
 		msg = MsgSucceeded
@@ -137,20 +137,105 @@ func (w *WorkflowStep) notify() {
 	}
 }
 
+// RunPrompt sends a prompt form to the visualizer and blocks until completion.
+// The form's bound values will be populated when this returns.
+// Returns nil on success, huh.ErrUserAborted if user cancelled, or other error.
+// If the updates channel is nil (no visualizer), runs the form directly.
+func (w *WorkflowStep) RunPrompt(form *huh.Form) error {
+	if w == nil || w.updates == nil {
+		// No visualizer - run form directly
+		return form.Run()
+	}
+
+	respCh := make(chan error, 1)
+	w.updates <- PromptRequestMsg{
+		Form:   form,
+		RespCh: respCh,
+	}
+
+	// Block until the visualizer completes the form
+	return <-respCh
+}
+
 func (w *WorkflowStep) PrettyString() string {
 	return w.toString(0, 0)
 }
 
+// ListenForSubsteps listens for progress messages and creates/updates workflow steps.
+// It handles both legacy MsgGithub/MsgStudio messages and new MsgStep messages with path-based hierarchy.
 func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
-	msg := <-c
-	if msg.Type == log.MsgGithub && strings.HasPrefix(msg.Msg, "::group::") {
-		stepName := strings.TrimPrefix(msg.Msg, "::group::")
-		stepName = strings.TrimSpace(stepName)
-		w.NewSubstep(stepName)
-	} else if msg.Type == log.MsgStudio {
-		w.NewSubstep(msg.Msg)
+	// Track steps by ID for status updates
+	stepsByID := make(map[string]*WorkflowStep)
+
+	for msg := range c {
+		switch msg.Type {
+		case log.MsgGithub:
+			// Legacy: handle ::group:: messages
+			if strings.HasPrefix(msg.Msg, "::group::") {
+				stepName := strings.TrimSpace(strings.TrimPrefix(msg.Msg, "::group::"))
+				w.NewSubstep(stepName)
+			}
+
+		case log.MsgStudio:
+			// Legacy: handle studio messages
+			w.NewSubstep(msg.Msg)
+
+		case log.MsgStepSkipped:
+			// Legacy: handle skipped step messages
+			stepName := strings.TrimSpace(strings.TrimPrefix(msg.Msg, "::group::"))
+			skippedStep := w.findOrCreateSubstep(stepName)
+			skippedStep.Skip("skipped")
+
+		case log.MsgStep:
+			// New: handle path-based step messages with status updates
+			if msg.Step == nil || len(msg.Step.Path) == 0 {
+				continue
+			}
+
+			// Check if this is an update to an existing step
+			if existing, ok := stepsByID[msg.Step.ID]; ok {
+				existing.setStatus(msg.Step.Status)
+				continue
+			}
+
+			// Create/find the hierarchy and register the leaf step
+			parent := w
+			for i, name := range msg.Step.Path {
+				substep := parent.findOrCreateSubstep(name)
+				if i == len(msg.Step.Path)-1 {
+					// This is the leaf node - register it and set status
+					stepsByID[msg.Step.ID] = substep
+					substep.setStatus(msg.Step.Status)
+				}
+				parent = substep
+			}
+		}
 	}
-	w.ListenForSubsteps(c)
+}
+
+// findOrCreateSubstep finds an existing substep by name or creates a new one.
+func (w *WorkflowStep) findOrCreateSubstep(name string) *WorkflowStep {
+	for _, s := range w.substeps {
+		if s.name == name {
+			return s
+		}
+	}
+	return w.NewSubstep(name)
+}
+
+// setStatus updates the step's status based on a StepStatus value.
+func (w *WorkflowStep) setStatus(status log.StepStatus) {
+	switch status {
+	case log.StepStatusPending:
+		w.status = StatusRunning
+	case log.StepStatusSuccess:
+		w.status = StatusSucceeded
+	case log.StepStatusFailed:
+		w.status = StatusFailed
+	case log.StepStatusSkipped:
+		w.status = StatusSkipped
+	}
+	w.notify()
 }
 
 // Example output:
@@ -158,7 +243,7 @@ func (w *WorkflowStep) ListenForSubsteps(c chan log.Msg) {
 //   - failure: A -> B -> C
 func (w *WorkflowStep) LastStepToString() string {
 	step := w
-	var status Status = StatusSucceeded
+	var status Status
 	var stepNames = []string{}
 
 	for {

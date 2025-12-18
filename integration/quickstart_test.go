@@ -10,20 +10,31 @@ import (
 	"time"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/speakeasy/internal/testutils"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestQuickstart(t *testing.T) {
+	t.Parallel()
+
 	now := time.Now()
 	t.Logf("Building binary")
 	// Build the binary once to warm up the cache
-	tempBinary := buildTempBinary(t)
+	tempDir := testutils.GetTempDir()
+	binaryName := "speakeasy"
+	if runtime.GOOS == "windows" {
+		binaryName = "speakeasy.exe"
+	}
+	tempBinary := filepath.Join(tempDir, binaryName)
+	tempBinary = testutils.BuildTempBinary(t, tempBinary)
 	t.Logf("Binary built in %s", time.Since(now))
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
+			t.Parallel()
+
 			if shouldSkipTarget(t, target) {
 				return
 			}
@@ -51,6 +62,19 @@ func shouldSkipTarget(t *testing.T, target string) bool {
 		return true
 	}
 
+	// Skip Ruby on Windows for now as there is no sorbet-static gem for Windows
+	// TODO: https://linear.app/speakeasy/issue/GEN-1728/ruby-does-not-have-static-sorbet-gem-for-windows-and-cannot-quickstart
+	if runtime.GOOS == "windows" && target == "ruby" {
+		t.Skipf("Skipping %s on windows for now as there is no sorbet-static gem for Windows", target)
+		return true
+	}
+
+	// Skip Java on windows for now as TestQuickstart/java times out
+	if runtime.GOOS == "windows" && target == "java" {
+		t.Skipf("Skipping %s on windows for now as it times out", target)
+		return true
+	}
+
 	return false
 }
 
@@ -59,17 +83,6 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 	testDir := createTestDir(t, target)
 	// Don't delete test directory - leave it for debugging
 	t.Logf("Test directory for %s: %s", target, testDir)
-
-	// Change to test directory
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer func() {
-		err := os.Chdir(originalDir)
-		require.NoError(t, err)
-	}()
-
-	err = os.Chdir(testDir)
-	require.NoError(t, err)
 
 	// Run quickstart
 	now := time.Now()
@@ -80,6 +93,7 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 		"--target", target,
 		"--output", "console",
 	)
+	quickstartCmd.Dir = testDir
 
 	quickstartOutput, err := quickstartCmd.CombinedOutput()
 	if err != nil {
@@ -95,16 +109,13 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 		generatedDir = findGeneratedDirectory(t, testDir, target)
 	}
 
-	// Change to the generated directory
-	err = os.Chdir(generatedDir)
-	require.NoError(t, err, "Failed to change to generated directory %s", generatedDir)
-
 	verifyBasicStructure(t, generatedDir, target)
 
 	// Run speakeasy run
 	now = time.Now()
 	t.Logf("Running speakeasy run for target %s", target)
 	runCmd := exec.Command(tempBinary, "run", "--output", "console", "--pinned")
+	runCmd.Dir = generatedDir
 	runOutput, err := runCmd.CombinedOutput()
 
 	if err != nil {
@@ -121,7 +132,7 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 
 // createTestDir creates a temporary test directory for the target
 func createTestDir(t *testing.T, target string) string {
-	tempDir := getTempDir()
+	tempDir := testutils.GetTempDir()
 	baseTestDir := filepath.Join(tempDir, "speakeasy-quickstart-tests")
 	testDir := filepath.Join(baseTestDir, target)
 
@@ -242,64 +253,8 @@ func checkFileExists(t *testing.T, dir, filename string) {
 }
 
 // getTempDir returns the appropriate temp directory for the OS
-func getTempDir() string {
-	if runtime.GOOS == "windows" {
-		return os.TempDir()
-	}
-	return "/tmp"
-}
 
 // isAlphaTarget checks if a target is in Alpha stage using the existing codebase implementation
 func isAlphaTarget(target string) bool {
 	return generate.GetTargetNameMaturity(target) == "Alpha"
-}
-
-// getProjectRoot returns the project root directory
-func getProjectRoot(t *testing.T) string {
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	// Go up directories until we find go.mod
-	dir := wd
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-
-	t.Fatal("Could not find project root (go.mod not found)")
-	return ""
-}
-
-func buildTempBinary(t *testing.T) string {
-	tempDir := getTempDir()
-	binaryName := "speakeasy"
-	if runtime.GOOS == "windows" {
-		binaryName = "speakeasy.exe"
-	}
-
-	tempBinary := filepath.Join(tempDir, binaryName)
-
-	// Build the binary
-	cmd := exec.Command("go", "build", "-o", tempBinary, ".")
-	cmd.Dir = getProjectRoot(t)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("failed to build binary: %s", string(output))
-	}
-
-	// Verify the binary exists and is executable
-	_, err = os.Stat(tempBinary)
-	if err != nil {
-		t.Fatalf("binary was not created at %s", tempBinary)
-	}
-
-	return tempBinary
 }

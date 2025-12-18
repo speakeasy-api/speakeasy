@@ -1,20 +1,17 @@
 package integration_tests
 
 import (
-	"github.com/google/go-cmp/cmp"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMultiFileStability(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on Windows")
-	}
 	// If windows, skip
 	temp := setupTestDir(t)
 
@@ -46,6 +43,22 @@ func TestMultiFileStability(t *testing.T) {
 	require.NoError(t, err)
 	err = workflow.Save(temp, workflowFile)
 	require.NoError(t, err)
+
+	// Create gen.yaml with persistentEdits enabled for stability
+	genYamlContent := `configVersion: 2.0.0
+generation:
+  sdkClassName: SDK
+  persistentEdits:
+    enabled: "true"
+typescript:
+  version: 0.0.1
+  packageName: openapi
+`
+	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "gen.yaml"), []byte(genYamlContent), 0644)
+	require.NoError(t, err)
+
+	// Initialize git repo (required for persistentEdits)
+	gitInit(t, temp)
 
 	// Run the initial generation
 	var initialChecksums map[string]string

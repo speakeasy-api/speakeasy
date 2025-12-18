@@ -2,10 +2,13 @@
 
 package sdk
 
+// Generated from OpenAPI doc version 1.0.0 and generator version 2.662.0
+
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/internal/hooks"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
@@ -22,7 +25,7 @@ var ServerList = []string{
 	"http://localhost:{port}",
 }
 
-// HTTPClient provides an interface for suplying the SDK with a custom HTTP client
+// HTTPClient provides an interface for supplying the SDK with a custom HTTP client
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
@@ -48,36 +51,14 @@ func Float64(f float64) *float64 { return &f }
 // Pointer provides a helper function to return a pointer to a type
 func Pointer[T any](v T) *T { return &v }
 
-type sdkConfiguration struct {
-	Client            HTTPClient
-	Security          func(context.Context) (interface{}, error)
-	ServerURL         string
-	ServerIndex       int
-	ServerDefaults    []map[string]string
-	Language          string
-	OpenAPIDocVersion string
-	SDKVersion        string
-	GenVersion        string
-	UserAgent         string
-	RetryConfig       *retry.Config
-	Hooks             *hooks.Hooks
-	Timeout           *time.Duration
-}
-
-func (c *sdkConfiguration) GetServerDetails() (string, map[string]string) {
-	if c.ServerURL != "" {
-		return c.ServerURL, nil
-	}
-
-	return ServerList[c.ServerIndex], c.ServerDefaults[c.ServerIndex]
-}
-
 type SDK struct {
-	Health  *Health
-	Run     *Run
-	Suggest *Suggest
+	SDKVersion string
+	Health     *Health
+	Run        *Run
+	Suggest    *Suggest
 
-	sdkConfiguration sdkConfiguration
+	sdkConfiguration config.SDKConfiguration
+	hooks            *hooks.Hooks
 }
 
 type SDKOption func(*SDK)
@@ -114,12 +95,12 @@ func WithServerIndex(serverIndex int) SDKOption {
 // WithPort allows setting the port variable for url substitution
 func WithPort(port string) SDKOption {
 	return func(sdk *SDK) {
-		for idx := range sdk.sdkConfiguration.ServerDefaults {
-			if _, ok := sdk.sdkConfiguration.ServerDefaults[idx]["port"]; !ok {
+		for idx := range sdk.sdkConfiguration.ServerVariables {
+			if _, ok := sdk.sdkConfiguration.ServerVariables[idx]["port"]; !ok {
 				continue
 			}
 
-			sdk.sdkConfiguration.ServerDefaults[idx]["port"] = fmt.Sprintf("%v", port)
+			sdk.sdkConfiguration.ServerVariables[idx]["port"] = fmt.Sprintf("%v", port)
 		}
 	}
 }
@@ -164,19 +145,17 @@ func WithTimeout(timeout time.Duration) SDKOption {
 // New creates a new instance of the SDK with the provided options
 func New(opts ...SDKOption) *SDK {
 	sdk := &SDK{
-		sdkConfiguration: sdkConfiguration{
-			Language:          "go",
-			OpenAPIDocVersion: "1.0.0",
-			SDKVersion:        "0.10.8",
-			GenVersion:        "2.605.6",
-			UserAgent:         "speakeasy-sdk/go 0.10.8 2.605.6 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
-			ServerDefaults: []map[string]string{
+		SDKVersion: "0.11.0",
+		sdkConfiguration: config.SDKConfiguration{
+			UserAgent:  "speakeasy-sdk/go 0.11.0 2.662.0 1.0.0 github.com/speakeasy-api/speakeasy/internal/studio/sdk",
+			ServerList: ServerList,
+			ServerVariables: []map[string]string{
 				{
 					"port": "8080",
 				},
 			},
-			Hooks: hooks.New(),
 		},
+		hooks: hooks.New(),
 	}
 	for _, opt := range opts {
 		opt(sdk)
@@ -189,16 +168,14 @@ func New(opts ...SDKOption) *SDK {
 
 	currentServerURL, _ := sdk.sdkConfiguration.GetServerDetails()
 	serverURL := currentServerURL
-	serverURL, sdk.sdkConfiguration.Client = sdk.sdkConfiguration.Hooks.SDKInit(currentServerURL, sdk.sdkConfiguration.Client)
-	if serverURL != currentServerURL {
+	serverURL, sdk.sdkConfiguration.Client = sdk.hooks.SDKInit(currentServerURL, sdk.sdkConfiguration.Client)
+	if currentServerURL != serverURL {
 		sdk.sdkConfiguration.ServerURL = serverURL
 	}
 
-	sdk.Health = newHealth(sdk.sdkConfiguration)
-
-	sdk.Run = newRun(sdk.sdkConfiguration)
-
-	sdk.Suggest = newSuggest(sdk.sdkConfiguration)
+	sdk.Health = newHealth(sdk, sdk.sdkConfiguration, sdk.hooks)
+	sdk.Run = newRun(sdk, sdk.sdkConfiguration, sdk.hooks)
+	sdk.Suggest = newSuggest(sdk, sdk.sdkConfiguration, sdk.hooks)
 
 	return sdk
 }
@@ -230,11 +207,13 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCom
 	}
 
 	hookCtx := hooks.HookContext{
-		BaseURL:        baseURL,
-		Context:        ctx,
-		OperationID:    "generateOverlay",
-		OAuth2Scopes:   []string{},
-		SecuritySource: s.sdkConfiguration.Security,
+		SDK:              s,
+		SDKConfiguration: s.sdkConfiguration,
+		BaseURL:          baseURL,
+		Context:          ctx,
+		OperationID:      "generateOverlay",
+		OAuth2Scopes:     []string{},
+		SecuritySource:   s.sdkConfiguration.Security,
 	}
 	bodyReader, reqContentType, err := utils.SerializeRequestBody(ctx, request, false, false, "Request", "json", `request:"mediaType=application/json"`)
 	if err != nil {
@@ -290,15 +269,17 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCom
 				"504",
 			},
 		}, func() (*http.Response, error) {
-			if req.Body != nil {
+			if req.Body != nil && req.Body != http.NoBody && req.GetBody != nil {
 				copyBody, err := req.GetBody()
+
 				if err != nil {
 					return nil, err
 				}
+
 				req.Body = copyBody
 			}
 
-			req, err = s.sdkConfiguration.Hooks.BeforeRequest(hooks.BeforeRequestContext{HookContext: hookCtx}, req)
+			req, err = s.hooks.BeforeRequest(hooks.BeforeRequestContext{HookContext: hookCtx}, req)
 			if err != nil {
 				if retry.IsPermanentError(err) || retry.IsTemporaryError(err) {
 					return nil, err
@@ -315,7 +296,7 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCom
 					err = fmt.Errorf("error sending request: no response")
 				}
 
-				_, err = s.sdkConfiguration.Hooks.AfterError(hooks.AfterErrorContext{HookContext: hookCtx}, nil, err)
+				_, err = s.hooks.AfterError(hooks.AfterErrorContext{HookContext: hookCtx}, nil, err)
 			}
 			return httpRes, err
 		})
@@ -323,13 +304,13 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCom
 		if err != nil {
 			return nil, err
 		} else {
-			httpRes, err = s.sdkConfiguration.Hooks.AfterSuccess(hooks.AfterSuccessContext{HookContext: hookCtx}, httpRes)
+			httpRes, err = s.hooks.AfterSuccess(hooks.AfterSuccessContext{HookContext: hookCtx}, httpRes)
 			if err != nil {
 				return nil, err
 			}
 		}
 	} else {
-		req, err = s.sdkConfiguration.Hooks.BeforeRequest(hooks.BeforeRequestContext{HookContext: hookCtx}, req)
+		req, err = s.hooks.BeforeRequest(hooks.BeforeRequestContext{HookContext: hookCtx}, req)
 		if err != nil {
 			return nil, err
 		}
@@ -342,17 +323,17 @@ func (s *SDK) GenerateOverlay(ctx context.Context, request components.OverlayCom
 				err = fmt.Errorf("error sending request: no response")
 			}
 
-			_, err = s.sdkConfiguration.Hooks.AfterError(hooks.AfterErrorContext{HookContext: hookCtx}, nil, err)
+			_, err = s.hooks.AfterError(hooks.AfterErrorContext{HookContext: hookCtx}, nil, err)
 			return nil, err
 		} else if utils.MatchStatusCodes([]string{"4XX", "5XX"}, httpRes.StatusCode) {
-			_httpRes, err := s.sdkConfiguration.Hooks.AfterError(hooks.AfterErrorContext{HookContext: hookCtx}, httpRes, nil)
+			_httpRes, err := s.hooks.AfterError(hooks.AfterErrorContext{HookContext: hookCtx}, httpRes, nil)
 			if err != nil {
 				return nil, err
 			} else if _httpRes != nil {
 				httpRes = _httpRes
 			}
 		} else {
-			httpRes, err = s.sdkConfiguration.Hooks.AfterSuccess(hooks.AfterSuccessContext{HookContext: hookCtx}, httpRes)
+			httpRes, err = s.hooks.AfterSuccess(hooks.AfterSuccessContext{HookContext: hookCtx}, httpRes)
 			if err != nil {
 				return nil, err
 			}

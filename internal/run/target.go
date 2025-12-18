@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/links"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"github.com/speakeasy-api/speakeasy/internal/sdkchangelog"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -171,6 +173,30 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		}()
 	}
 
+	changelogContent := ""
+	if os.Getenv("INPUT_ENABLE_SDK_CHANGELOG") == "true" {
+		// Old & new spec and other details are updated in RunSource method
+		log.From(ctx).Infof("Calculating changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target))
+		changelogContent, err = sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
+			OldSpecPath: w.SourceResults[t.Source].oldSpecPath,
+			NewSpecPath: w.SourceResults[t.Source].newSpecPath,
+			OutDir:      outDir,
+			Lang:        t.Target,
+			Verbose:     w.Verbose,
+			Target:      target,
+		})
+		if changelogContent == "" {
+			log.From(ctx).Warnf("New Changelog Content was empty for %s SDK. As a result it will not appear in the PR description", utils.CapitalizeFirst(t.Target))
+		}
+		if err != nil {
+			// Dont error out so that we don't block generation
+			log.From(ctx).Warnf("Error computing SDK changelog: %s", err.Error())
+		}
+		log.From(ctx).Infof("Calculating changelog for SDK %s SDK succeeded", utils.CapitalizeFirst(t.Target))
+	} else {
+		log.From(ctx).Infof("New SDK changelog is disabled for SDK %s SDK", utils.CapitalizeFirst(t.Target))
+	}
+
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
@@ -187,7 +213,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			CLIVersion:            events.GetSpeakeasyVersionFromContext(ctx),
 			InstallationURL:       w.InstallationURLs[target],
 			Debug:                 w.Debug,
-			AutoYes:               true,
+			AutoYes:               w.AutoYes,
 			Published:             published,
 			OutputTests:           false,
 			Repo:                  w.Repo,
@@ -196,8 +222,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			Compile:               w.ShouldCompile,
 			TargetName:            target,
 			SkipVersioning:        w.SkipVersioning,
+			AllowPrompts:          w.AllowPrompts,
 			CancellableGeneration: w.CancellableGeneration,
 			StreamableGeneration:  w.StreamableGeneration,
+			ReleaseNotes:          changelogContent,
+			WorkflowStep:          genStep,
 		},
 	)
 	if err != nil {
@@ -209,7 +238,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		log.From(ctx).Warnf("Compilation was skipped. The generated SDK may not be ready for use without manual compilation. To enable compilation DO NOT pass the --skip-compile flag.")
 	}
 
-	if t.CodeSamples != nil {
+	if t.CodeSamplesEnabled() {
 		codeSamplesStep := rootStep.NewSubstep("Generating Code Samples")
 		namespaceName, digest, err := w.runCodeSamples(ctx, codeSamplesStep, *t.CodeSamples, t.Target, sourcePath, t.Output)
 		if err != nil {
@@ -289,7 +318,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 		return
 	}
 
-	tags, err := w.getRegistryTags(ctx, "")
+	tags, err := w.getRegistryTags(ctx, "", nil)
 	if err != nil {
 		return
 	}

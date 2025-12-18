@@ -1,51 +1,55 @@
 package transform
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	"fmt"
 	"io"
 	"os"
-	"strings"
 
-	"github.com/getkin/kin-openapi/openapi2"
-	"github.com/getkin/kin-openapi/openapi2conv"
-	"github.com/invopop/yaml"
+	"github.com/speakeasy-api/openapi/openapi"
+	"github.com/speakeasy-api/openapi/swagger"
 )
 
+// ConvertSwagger upgrades a Swagger 2.0 document to OpenAPI 3.0 using the speakeasy-api/openapi library
 func ConvertSwagger(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
-	schemaBytes, err := os.ReadFile(schemaPath)
+	data, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read swagger document: %w", err)
 	}
 
-	var swaggerDoc openapi2.T
-	if strings.Contains(schemaPath, ".json") {
-		err = json.Unmarshal(schemaBytes, &swaggerDoc)
-	} else {
-		err = yaml.Unmarshal(schemaBytes, &swaggerDoc)
-	}
+	return ConvertSwaggerFromReader(ctx, bytes.NewReader(data), schemaPath, w, yamlOut)
+}
+
+// ConvertSwaggerFromReader upgrades a Swagger 2.0 document to OpenAPI 3.0 from an io.Reader
+func ConvertSwaggerFromReader(ctx context.Context, r io.Reader, schemaPath string, w io.Writer, yamlOut bool) error {
+	// Read all data from the reader
+	data, err := io.ReadAll(r)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read swagger document: %w", err)
 	}
 
-	openAPIV3Spec, err := openapi2conv.ToV3(&swaggerDoc)
+	// Unmarshal using swagger.Unmarshal (returns swagger doc, validation errors, and error)
+	swaggerDoc, validationErrs, err := swagger.Unmarshal(ctx, bytes.NewReader(data))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal swagger document: %w", err)
 	}
 
-	var outBytes []byte
-	if yamlOut {
-		outBytes, err = yaml.Marshal(openAPIV3Spec)
-	} else {
-		outBytes, err = json.Marshal(openAPIV3Spec)
-	}
-	if err != nil {
-		return err
+	// Log validation errors but continue (they're warnings)
+	if len(validationErrs) > 0 {
+		// Validation errors are non-fatal, just warnings
+		fmt.Fprintf(w, "# Swagger document has %d validation warnings\n", len(validationErrs))
 	}
 
-	_, err = w.Write(outBytes)
+	// Upgrade to OpenAPI 3.0
+	openapi3Doc, err := swagger.Upgrade(ctx, swaggerDoc)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to upgrade swagger to openapi 3.0: %w", err)
+	}
+
+	// Marshal the OpenAPI 3.0 document
+	if err := openapi.Marshal(ctx, openapi3Doc, w); err != nil {
+		return fmt.Errorf("failed to marshal openapi document: %w", err)
 	}
 
 	return nil

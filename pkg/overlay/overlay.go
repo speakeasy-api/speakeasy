@@ -3,13 +3,14 @@ package overlay
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"io"
+
+	"github.com/speakeasy-api/openapi/overlay"
+	"github.com/speakeasy-api/openapi/overlay/loader"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
-	"io"
 )
 
 type ChangeType int
@@ -106,12 +107,12 @@ func apply(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlI
 	}
 
 	if strict {
-		err, warnings := o.ApplyToStrict(document)
-		for _, warning := range warnings {
-			log.From(context.Background()).Warnf("WARN: %s", warning)
-		}
+		warnings, err := o.ApplyToStrict(document)
 		if err != nil {
 			return fmt.Errorf("failed to apply overlay to spec file (strict): %w", err)
+		}
+		for _, warning := range warnings {
+			log.From(context.Background()).Warnf("WARN: %s", warning)
 		}
 	} else {
 		if err := o.ApplyTo(document); err != nil {

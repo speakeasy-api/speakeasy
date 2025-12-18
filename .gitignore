@@ -6,7 +6,7 @@ bin/
 summary.md
 /.speakeasy/
 temp/
-integration/temp
+integrationTests/
 .DS_Store
 .vscode/launch.json
 __debug_bin*

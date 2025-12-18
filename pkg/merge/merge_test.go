@@ -33,7 +33,9 @@ func Test_merge_determinism(t *testing.T) {
 
 	// Run merge twice and ensure the output is the same.
 	got1, err := merge(absSchemas, true)
+	require.NoError(t, err)
 	got2, err := merge(absSchemas, true)
+	require.NoError(t, err)
 	doc1, err := libopenapi.NewDocumentWithConfiguration(got1, &datamodel.DocumentConfiguration{
 		AllowFileReferences:                 true,
 		IgnorePolymorphicCircularReferences: true,

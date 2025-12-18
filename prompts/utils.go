@@ -31,9 +31,7 @@ func getSourcesFromWorkflow(inputWorkflow *workflow.Workflow) []string {
 }
 
 func getMCPTargetOptions() []huh.Option[string] {
-	options := []huh.Option[string]{
-		huh.NewOption("TypeScript SDK with Server", "typescript"),
-	}
+	options := []huh.Option[string]{}
 	targets := generate.GetSupportedMCPTargets()
 
 	for _, target := range targets {
