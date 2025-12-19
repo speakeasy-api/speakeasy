@@ -32,6 +32,8 @@ type ListSelect[T interface{}] struct {
 	list     list.Model
 	selected T
 	done     bool
+	width    int
+	height   int
 }
 
 func (m *ListSelect[T]) Init() tea.Cmd {
@@ -58,8 +60,20 @@ func (m *ListSelect[T]) HandleKeypress(key string) tea.Cmd {
 }
 
 func (m *ListSelect[T]) SetWidth(width int) {
-	w, _ := docStyle.GetFrameSize()
+	m.width = width
+	w, h := docStyle.GetFrameSize()
 	m.list.SetWidth(width - w)
+
+	// If height is already set, update list height too
+	if m.height > 0 {
+		m.list.SetHeight(m.height - h)
+	}
+}
+
+func (m *ListSelect[T]) SetHeight(height int) {
+	m.height = height
+	_, h := docStyle.GetFrameSize()
+	m.list.SetHeight(height - h)
 }
 
 func (m *ListSelect[T]) View() string {

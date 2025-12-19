@@ -92,6 +92,9 @@ func (m FormModel) HandleKeypress(key string) tea.Cmd {
 // SetWidth Not yet implemented.
 func (m FormModel) SetWidth(width int) {}
 
+// SetHeight Not yet implemented.
+func (m FormModel) SetHeight(height int) {}
+
 func (m FormModel) View() string {
 	if m.form.State == huh.StateCompleted {
 		return ""

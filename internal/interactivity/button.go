@@ -70,6 +70,8 @@ func (b *Button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return b, nil
 }
 
+func (b *Button) SetHeight(height int) {}
+
 func (b *Button) HandleKeypress(key string) tea.Cmd {
 	if key == "enter" {
 		b.Clicked = true

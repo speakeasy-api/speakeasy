@@ -85,6 +85,9 @@ func (m *SimpleInput) HandleKeypress(key string) tea.Cmd {
 // SetWidth Not yet implemented.
 func (m *SimpleInput) SetWidth(width int) {}
 
+// SetHeight Not yet implemented.
+func (m *SimpleInput) SetHeight(height int) {}
+
 func (m *SimpleInput) Validate() error {
 	if m.inputModel.Value() == "" {
 		return fmt.Errorf("please supply a Value")
