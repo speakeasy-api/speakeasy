@@ -83,6 +83,8 @@ func (m *tabsModel) SetWidth(width int) {
 	m.width = width - w - 4
 }
 
+func (m *tabsModel) SetHeight(height int) {}
+
 func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
 	border := lipgloss.RoundedBorder()
 	border.BottomLeft = left

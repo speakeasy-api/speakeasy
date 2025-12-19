@@ -1,11 +1,12 @@
 package interactivity
 
 import (
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
-	"os"
 )
 
 var (
@@ -68,6 +69,8 @@ func (b *Button) Init() tea.Cmd {
 func (b *Button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return b, nil
 }
+
+func (b *Button) SetHeight(height int) {}
 
 func (b *Button) HandleKeypress(key string) tea.Cmd {
 	switch key {
