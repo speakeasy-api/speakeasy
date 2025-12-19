@@ -15,16 +15,15 @@ import (
 
 // Helper to create a test file with @generated-id header
 // id should be a 12-char hex string (e.g., "a1b2c3d4e5f6")
-func createTestFileWithID(t *testing.T, dir, relativePath, id, content string) string {
+func createTestFileWithID(t *testing.T, dir, relativePath, id, content string) {
+	t.Helper()
 	fullPath := filepath.Join(dir, relativePath)
-	err := os.MkdirAll(filepath.Dir(fullPath), 0755)
+	err := os.MkdirAll(filepath.Dir(fullPath), 0o755)
 	require.NoError(t, err)
 
 	fileContent := fmt.Sprintf("// @generated-id: %s\n%s", id, content)
-	err = os.WriteFile(fullPath, []byte(fileContent), 0644)
+	err = os.WriteFile(fullPath, []byte(fileContent), 0o644)
 	require.NoError(t, err)
-
-	return fullPath
 }
 
 // Helper to compute SHA-1 checksum of content in lockfile format (sha1:<hex>)
@@ -36,7 +35,7 @@ func computeChecksum(content string) string {
 
 func TestDetectFileChanges_NilLockFile(t *testing.T) {
 	isDirty, modifiedPaths, err := DetectFileChanges("/tmp/test", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, isDirty)
 	assert.Empty(t, modifiedPaths)
 }
@@ -47,16 +46,14 @@ func TestDetectFileChanges_NilTrackedFiles(t *testing.T) {
 		TrackedFiles: nil,
 	}
 	isDirty, modifiedPaths, err := DetectFileChanges("/tmp/test", lockFile)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.False(t, isDirty)
 	assert.Empty(t, modifiedPaths)
 }
 
 func TestDetectFileChanges_DeletedFile(t *testing.T) {
 	// Create a temp directory
-	tempDir, err := os.MkdirTemp("", "patches-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Set up lockfile with a tracked file that doesn't exist on disk
 	lf := lockfile.New()
@@ -79,9 +76,7 @@ func TestDetectFileChanges_DeletedFile(t *testing.T) {
 
 func TestDetectFileChanges_MovedFile(t *testing.T) {
 	// Create a temp directory
-	tempDir, err := os.MkdirTemp("", "patches-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	id := "112233445566" // 12 hex chars
 
@@ -109,9 +104,7 @@ func TestDetectFileChanges_MovedFile(t *testing.T) {
 
 func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 	// Create a temp directory
-	tempDir, err := os.MkdirTemp("", "patches-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	id := "223344556677" // 12 hex chars
 	originalContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Original() {}\n"
@@ -119,9 +112,9 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 
 	// Create file on disk with MODIFIED content
 	fullPath := filepath.Join(tempDir, "src/modified.go")
-	err = os.MkdirAll(filepath.Dir(fullPath), 0755)
+	err := os.MkdirAll(filepath.Dir(fullPath), 0o755)
 	require.NoError(t, err)
-	err = os.WriteFile(fullPath, []byte(modifiedContent), 0644)
+	err = os.WriteFile(fullPath, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 
 	// Set up lockfile with checksum of ORIGINAL content
@@ -146,18 +139,16 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 
 func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
 	// Create a temp directory
-	tempDir, err := os.MkdirTemp("", "patches-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	id := "334455667788" // 12 hex chars
 	content := "// @generated-id: " + id + "\npackage foo\n"
 
 	// Create file on disk
 	fullPath := filepath.Join(tempDir, "src/unchanged.go")
-	err = os.MkdirAll(filepath.Dir(fullPath), 0755)
+	err := os.MkdirAll(filepath.Dir(fullPath), 0o755)
 	require.NoError(t, err)
-	err = os.WriteFile(fullPath, []byte(content), 0644)
+	err = os.WriteFile(fullPath, []byte(content), 0o644)
 	require.NoError(t, err)
 
 	// Set up lockfile with matching checksum
@@ -176,9 +167,7 @@ func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
 
 func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 	// Create a temp directory
-	tempDir, err := os.MkdirTemp("", "patches-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	id := "445566778899" // 12 hex chars
 
@@ -209,9 +198,7 @@ func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 
 func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 	// Create a temp directory
-	tempDir, err := os.MkdirTemp("", "patches-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	id1 := "556677889900" // 12 hex chars
 	id2 := "667788990011" // 12 hex chars

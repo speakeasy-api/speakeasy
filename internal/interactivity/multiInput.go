@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -35,7 +34,6 @@ type MultiInput struct {
 	inputModels    []textinput.Model
 	inputsRequired bool
 
-	cursorMode cursor.Mode
 	focusIndex int
 	done       bool
 }
@@ -203,7 +201,7 @@ func (m *MultiInput) View() string {
 	var inputsView strings.Builder
 
 	for _, inputModel := range m.inputModels {
-		inputModel.Prompt = inputModel.Prompt + ": " // Add this here so its only rendered, not actually set as the prompt
+		inputModel.Prompt += ": " // Add this here so its only rendered, not actually set as the prompt
 		inputsView.WriteString(inputModel.View())
 		inputsView.WriteString("\n\n")
 	}

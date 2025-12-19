@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -175,11 +176,11 @@ func fetchCLIEvents(ctx context.Context, executionID string) ([]shared.CliEvent,
 		return nil, fmt.Errorf("failed to fetch CLI events: %w", err)
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API returned status code %d when searching for events", res.StatusCode)
 	}
 
-	if res.CliEventBatch == nil || len(res.CliEventBatch) == 0 {
+	if len(res.CliEventBatch) == 0 {
 		return nil, fmt.Errorf("no CLI events found for execution ID: %s", executionID)
 	}
 
@@ -302,17 +303,17 @@ func setupDirectoryStructure(outputDir string, events []shared.CliEvent, logger 
 	}
 
 	logger.Infof("Creating reproduction directory: %s", outputDir)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	speakeasyDir := filepath.Join(outputDir, ".speakeasy")
-	if err := os.MkdirAll(speakeasyDir, 0755); err != nil {
+	if err := os.MkdirAll(speakeasyDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .speakeasy directory: %w", err)
 	}
 
 	logsDir := filepath.Join(speakeasyDir, "logs")
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
+	if err := os.MkdirAll(logsDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create logs directory: %w", err)
 	}
 
@@ -321,7 +322,7 @@ func setupDirectoryStructure(outputDir string, events []shared.CliEvent, logger 
 	if err != nil {
 		return fmt.Errorf("failed to marshal CLI events to JSON: %w", err)
 	}
-	if err := os.WriteFile(eventsFile, eventsJSON, 0644); err != nil {
+	if err := os.WriteFile(eventsFile, eventsJSON, 0o644); err != nil {
 		return fmt.Errorf("failed to write CLI events to file: %w", err)
 	}
 	logger.Infof("Saved CLI events to %s", eventsFile)
@@ -369,7 +370,7 @@ func writeGenConfig(genEvent *shared.CliEvent, speakeasyDir, executionID string)
 	}
 
 	genPath := filepath.Join(speakeasyDir, "gen.yaml")
-	return os.WriteFile(genPath, []byte(*genConfig), 0644)
+	return os.WriteFile(genPath, []byte(*genConfig), 0o644)
 }
 
 func writeWorkflowFiles(workflowRaw string, speakeasyDir string, skipSpecDownload, useRawWorkflow bool, executionID string, logger log.Logger) error {
@@ -378,13 +379,13 @@ func writeWorkflowFiles(workflowRaw string, speakeasyDir string, skipSpecDownloa
 	}
 
 	workflowPath := filepath.Join(speakeasyDir, "workflow.original.yaml")
-	if err := os.WriteFile(workflowPath, []byte(workflowRaw), 0644); err != nil {
+	if err := os.WriteFile(workflowPath, []byte(workflowRaw), 0o644); err != nil {
 		return fmt.Errorf("failed to write workflow.original.yaml: %w", err)
 	}
 
 	if skipSpecDownload || useRawWorkflow {
 		workflowModPath := filepath.Join(speakeasyDir, "workflow.yaml")
-		if err := os.WriteFile(workflowModPath, []byte(workflowRaw), 0644); err != nil {
+		if err := os.WriteFile(workflowModPath, []byte(workflowRaw), 0o644); err != nil {
 			return fmt.Errorf("failed to write workflow.yaml: %w", err)
 		}
 		logger.Infof("Using original workflow (--use-raw-workflow enabled)")
@@ -412,7 +413,7 @@ func writeWorkflowFiles(workflowRaw string, speakeasyDir string, skipSpecDownloa
 	}
 
 	workflowModPath := filepath.Join(speakeasyDir, "workflow.yaml")
-	if err := os.WriteFile(workflowModPath, modifiedWorkflow, 0644); err != nil {
+	if err := os.WriteFile(workflowModPath, modifiedWorkflow, 0o644); err != nil {
 		return fmt.Errorf("failed to write workflow.yaml: %w", err)
 	}
 	logger.Infof("Modified workflow to use local merged/overlayed spec")

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -39,13 +40,11 @@ var statusCmd = &model.ExecutableCommand[statusFlagsArgs]{
 
 func runStatus(ctx context.Context, flags statusFlagsArgs) error {
 	client, err := sdk.InitSDK()
-
 	if err != nil {
 		return fmt.Errorf("error initializing Speakeasy client: %w", err)
 	}
 
 	model, err := newStatusModel(ctx, client)
-
 	if err != nil {
 		return err
 	}
@@ -55,13 +54,11 @@ func runStatus(ctx context.Context, flags statusFlagsArgs) error {
 	return nil
 }
 
-var (
-	skipMeaninglessTargetNames = []string{
-		"",
-		"first-target",
-		"my-first-target",
-	}
-)
+var skipMeaninglessTargetNames = []string{
+	"",
+	"first-target",
+	"my-first-target",
+}
 
 type statusModel struct {
 	organization statusOrganizationModel
@@ -72,7 +69,6 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 	var result statusModel
 
 	workspaceID, err := core.GetWorkspaceIDFromContext(ctx)
-
 	if err != nil {
 		return result, err
 	}
@@ -88,12 +84,11 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 	}
 
 	wsRes, err := client.Workspaces.GetByID(ctx, wsReq)
-
 	if err != nil {
 		return result, fmt.Errorf("error getting Speakeasy workspace: %w", err)
 	}
 
-	if wsRes.StatusCode != 200 {
+	if wsRes.StatusCode != http.StatusOK {
 		return result, fmt.Errorf("unexpected status code getting Speakeasy workspace: %d", wsRes.StatusCode)
 	}
 
@@ -108,12 +103,11 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 	}
 
 	orgRes, err := client.Organizations.Get(ctx, orgReq)
-
 	if err != nil {
 		return result, fmt.Errorf("error getting Speakeasy organization: %w", err)
 	}
 
-	if orgRes.StatusCode != 200 {
+	if orgRes.StatusCode != http.StatusOK {
 		return result, fmt.Errorf("unexpected status code getting Speakeasy organization: %d", orgRes.StatusCode)
 	}
 
@@ -121,16 +115,9 @@ func newStatusModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy)
 		return result, fmt.Errorf("unexpected missing organization response")
 	}
 
-	organization, err := newStatusOrganizationModel(ctx, client, *orgRes.Organization)
-
-	if err != nil {
-		return result, err
-	}
-
-	result.organization = organization
+	result.organization = newStatusOrganizationModel(ctx, client, *orgRes.Organization)
 
 	workspace, err := newStatusWorkspaceModel(ctx, client, result.organization, *wsRes.Workspace)
-
 	if err != nil {
 		return result, err
 	}
@@ -185,7 +172,7 @@ type statusOrganizationModel struct {
 	slug            string
 }
 
-func newStatusOrganizationModel(ctx context.Context, _ *speakeasyclientsdkgo.Speakeasy, organization shared.Organization) (statusOrganizationModel, error) {
+func newStatusOrganizationModel(_ context.Context, _ *speakeasyclientsdkgo.Speakeasy, organization shared.Organization) statusOrganizationModel {
 	result := statusOrganizationModel{
 		accountType:     string(organization.AccountType),
 		freeTrialExpiry: organization.FreeTrialExpiry,
@@ -193,7 +180,7 @@ func newStatusOrganizationModel(ctx context.Context, _ *speakeasyclientsdkgo.Spe
 		slug:            organization.Slug,
 	}
 
-	return result, nil
+	return result
 }
 
 func (m statusOrganizationModel) Name() string {
@@ -225,18 +212,17 @@ func newStatusWorkspaceModel(ctx context.Context, client *speakeasyclientsdkgo.S
 	wsTargetsreq := operations.GetWorkspaceTargetsRequest{}
 
 	wsTargetsRes, err := client.Events.GetTargets(ctx, wsTargetsreq)
-
 	if err != nil {
 		stopSpinner()
 		return result, fmt.Errorf("error getting Speakeasy workspace targets: %w", err)
 	}
 
-	if wsTargetsRes.StatusCode != 200 {
+	if wsTargetsRes.StatusCode != http.StatusOK {
 		stopSpinner()
 		return result, fmt.Errorf("unexpected status code getting Speakeasy workspace targets: %d", wsTargetsRes.StatusCode)
 	}
 
-	targets, err := newStatusWorkspaceTargetsModel(ctx, client, org, result, wsTargetsRes.TargetSDKList)
+	targets, err := newStatusWorkspaceTargetsModel(ctx, org, result, wsTargetsRes.TargetSDKList)
 
 	stopSpinner()
 
@@ -263,7 +249,7 @@ type statusWorkspaceTargetsModel struct {
 	unconfigured []statusWorkspaceTargetModel
 }
 
-func newStatusWorkspaceTargetsModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, org statusOrganizationModel, workspace statusWorkspaceModel, targets []shared.TargetSDK) (statusWorkspaceTargetsModel, error) {
+func newStatusWorkspaceTargetsModel(ctx context.Context, org statusOrganizationModel, workspace statusWorkspaceModel, targets []shared.TargetSDK) (statusWorkspaceTargetsModel, error) {
 	var result statusWorkspaceTargetsModel
 
 	targetModels := make([]*statusWorkspaceTargetModel, len(targets))
@@ -276,13 +262,7 @@ func newStatusWorkspaceTargetsModel(ctx context.Context, client *speakeasyclient
 		}
 
 		eg.Go(func() error {
-			targetModel, err := newStatusWorkspaceTargetModel(ctx, client, org, workspace, target)
-
-			if err != nil {
-				return err
-			}
-
-			targetModels[index] = targetModel
+			targetModels[index] = newStatusWorkspaceTargetModel(ctx, org, workspace, target)
 
 			return nil
 		})
@@ -432,17 +412,18 @@ func (m statusWorkspaceEventModel) GenerateInfo() string {
 	result.WriteString(m.createdAt.Format(time.RFC3339))
 	result.WriteString(" by ")
 
-	if m.ghActionRunLink != nil {
+	switch {
+	case m.ghActionRunLink != nil:
 		result.WriteString("GitHub Actions")
-	} else if m.continuousIntegrationEnvironment != nil {
+	case m.continuousIntegrationEnvironment != nil:
 		result.WriteString("CI")
-	} else if m.gitUserName != nil {
+	case m.gitUserName != nil:
 		result.WriteString(*m.gitUserName)
-	} else if m.gitUserEmail != nil {
+	case m.gitUserEmail != nil:
 		result.WriteString(*m.gitUserEmail)
-	} else if m.hostname != nil {
+	case m.hostname != nil:
 		result.WriteString(*m.hostname)
-	} else {
+	default:
 		result.WriteString("Unknown")
 	}
 
@@ -464,17 +445,18 @@ func (m statusWorkspaceEventModel) PublishInfo() string {
 	result.WriteString(m.lastPublishCreatedAt.Format(time.RFC3339))
 	result.WriteString(" by ")
 
-	if m.ghActionRunLink != nil {
+	switch {
+	case m.ghActionRunLink != nil:
 		result.WriteString("GitHub Actions")
-	} else if m.continuousIntegrationEnvironment != nil {
+	case m.continuousIntegrationEnvironment != nil:
 		result.WriteString("CI")
-	} else if m.gitUserName != nil {
+	case m.gitUserName != nil:
 		result.WriteString(*m.gitUserName)
-	} else if m.gitUserEmail != nil {
+	case m.gitUserEmail != nil:
 		result.WriteString(*m.gitUserEmail)
-	} else if m.hostname != nil {
+	case m.hostname != nil:
 		result.WriteString(*m.hostname)
-	} else {
+	default:
 		result.WriteString("Unknown")
 	}
 
@@ -512,7 +494,7 @@ type statusWorkspaceTargetModel struct {
 	upgradeDocumentationURL *string
 }
 
-func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, org statusOrganizationModel, workspace statusWorkspaceModel, target shared.TargetSDK) (*statusWorkspaceTargetModel, error) {
+func newStatusWorkspaceTargetModel(ctx context.Context, org statusOrganizationModel, workspace statusWorkspaceModel, target shared.TargetSDK) *statusWorkspaceTargetModel {
 	result := &statusWorkspaceTargetModel{
 		continuousIntegrationEnvironment:  target.ContinuousIntegrationEnvironment,
 		generateConfigPostVersion:         target.GenerateConfigPostVersion,
@@ -541,7 +523,7 @@ func newStatusWorkspaceTargetModel(ctx context.Context, client *speakeasyclients
 	}
 
 	result.workspaceEventCompilation = newStatusWorkspaceEventModel(target)
-	return result, nil
+	return result
 }
 
 func (m statusWorkspaceTargetModel) GenerateInfo() string {
@@ -554,17 +536,18 @@ func (m statusWorkspaceTargetModel) GenerateInfo() string {
 	result.WriteString(m.lastEventCreatedAt.Format(time.RFC3339))
 	result.WriteString(" by ")
 
-	if m.ghActionRunLink != nil {
+	switch {
+	case m.ghActionRunLink != nil:
 		result.WriteString("GitHub Actions")
-	} else if m.continuousIntegrationEnvironment != nil {
+	case m.continuousIntegrationEnvironment != nil:
 		result.WriteString("CI")
-	} else if m.gitUserName != nil {
+	case m.gitUserName != nil:
 		result.WriteString(*m.gitUserName)
-	} else if m.gitUserEmail != nil {
+	case m.gitUserEmail != nil:
 		result.WriteString(*m.gitUserEmail)
-	} else if m.hostname != nil {
+	case m.hostname != nil:
 		result.WriteString(*m.hostname)
-	} else {
+	default:
 		result.WriteString("Unknown")
 	}
 
@@ -594,11 +577,12 @@ func (m statusWorkspaceTargetModel) TargetHeading() string {
 	result.WriteString(m.TargetName())
 	result.WriteString(" [")
 
-	if m.generatePublished != nil && *m.generatePublished {
+	switch {
+	case m.generatePublished != nil && *m.generatePublished:
 		result.WriteString("Published")
-	} else if m.ghActionOrganization != nil && m.ghActionRepository != nil {
+	case m.ghActionOrganization != nil && m.ghActionRepository != nil:
 		result.WriteString("Unpublished")
-	} else {
+	default:
 		result.WriteString("Unconfigured")
 	}
 
@@ -757,38 +741,4 @@ func renderTargetBox(width int, color lipgloss.AdaptiveColor, heading string, ad
 		AlignHorizontal(lipgloss.Left).
 		Width(width).
 		Render(s)
-}
-
-func searchWorkspaceTargetLastEvent(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, workspaceID string, targetID string, interactionType shared.InteractionType, successOnly bool) (*shared.CliEvent, error) {
-	limit := int64(1)
-	req := operations.SearchWorkspaceEventsRequest{
-		GenerateGenLockID: &targetID,
-		InteractionType:   &interactionType,
-		Limit:             &limit,
-		WorkspaceID:       &workspaceID,
-	}
-
-	if successOnly {
-		req.Success = &successOnly
-	}
-
-	res, err := client.Events.Search(ctx, req)
-
-	if err != nil {
-		return nil, fmt.Errorf("error calling Speakeasy API: %w", err)
-	}
-
-	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("expected status code 200, got: %d", res.StatusCode)
-	}
-
-	if len(res.CliEventBatch) == 0 {
-		return nil, nil
-	}
-
-	if len(res.CliEventBatch) > 1 {
-		return nil, fmt.Errorf("expected at most one event, got: %d", len(res.CliEventBatch))
-	}
-
-	return &res.CliEventBatch[0], nil
 }

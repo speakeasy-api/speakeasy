@@ -224,15 +224,16 @@ func getChangelogs(ctx context.Context, flags GenerateSDKChangelogFlags) error {
 			return fmt.Errorf("failed to get changelog for language %s: %w", lang, err)
 		}
 	} else {
-		if flags.TargetVersion != "" {
+		switch {
+		case flags.TargetVersion != "":
 			opts = append(opts, changelog.WithTargetVersion(flags.TargetVersion))
 
 			if flags.PreviousVersion != "" {
 				opts = append(opts, changelog.WithPreviousVersion(flags.PreviousVersion))
 			}
-		} else if flags.SpecificVersion != "" {
+		case flags.SpecificVersion != "":
 			opts = append(opts, changelog.WithSpecificVersion(flags.SpecificVersion))
-		} else {
+		default:
 			opts = append(opts, changelog.WithSpecificVersion(changelog.GetLatestVersion()))
 		}
 

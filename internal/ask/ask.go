@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"regexp"
@@ -14,7 +14,6 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 
-	"github.com/inkeep/ai-api-go/models/sdkerrors"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
@@ -39,13 +38,13 @@ const ApiURL = "https://api.prod.speakeasy.com"
 
 var baseURL = ApiURL
 
-func makeHTTPRequest(ctx context.Context, url string, payload RequestPayload) (ChatResponse, error) {
+func makeHTTPRequest(_ context.Context, url string, payload RequestPayload) (ChatResponse, error) {
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return ChatResponse{}, err
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return ChatResponse{}, err
 	}
@@ -58,7 +57,7 @@ func makeHTTPRequest(ctx context.Context, url string, payload RequestPayload) (C
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ChatResponse{}, err
 	}
@@ -122,17 +121,6 @@ func printWithFootnotes(ctx context.Context, text string) {
 	logger.PrintfStyled(styles.Focused, "\nReferences:")
 	for _, ref := range orderedRefs {
 		logger.PrintfStyled(styles.Dimmed, "[%s]: %s\n", ref, footnotes[ref])
-	}
-}
-
-func handleError(logger log.Logger, err error) {
-	switch e := err.(type) {
-	case *sdkerrors.HTTPValidationError:
-		logger.Errorf("HTTP Validation Error: %v", e)
-	case *sdkerrors.SDKError:
-		logger.Errorf("SDK Error: %v", e)
-	default:
-		logger.Errorf("Error: %v", err)
 	}
 }
 

@@ -125,15 +125,13 @@ func TestCountDiffStats(t *testing.T) {
 }
 
 func TestComputeFileDiff_NoPristine(t *testing.T) {
-	fd, err := ComputeFileDiff("/tmp", "test.go", "", nil)
-	require.NoError(t, err)
+	fd := ComputeFileDiff("/tmp", "test.go", "", nil)
 	assert.Equal(t, "test.go", fd.Path)
 	assert.Equal(t, "(no pristine base available)", fd.DiffText)
 }
 
 func TestComputeFileDiff_NoGitRepo(t *testing.T) {
-	fd, err := ComputeFileDiff("/tmp", "test.go", "abc123", nil)
-	require.NoError(t, err)
+	fd := ComputeFileDiff("/tmp", "test.go", "abc123", nil)
 	assert.Equal(t, "(git repository not available)", fd.DiffText)
 }
 
@@ -164,13 +162,11 @@ func (m *mockGitRepo) SetConflictState(path string, base, ours, theirs []byte, i
 
 func TestComputeFileDiff_WithDiff(t *testing.T) {
 	// Create temp directory with test file
-	tempDir, err := os.MkdirTemp("", "diff-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Write current file
 	currentContent := "package foo\n\nfunc Modified() {}\n"
-	err = os.WriteFile(filepath.Join(tempDir, "test.go"), []byte(currentContent), 0644)
+	err := os.WriteFile(filepath.Join(tempDir, "test.go"), []byte(currentContent), 0o644)
 	require.NoError(t, err)
 
 	// Create mock git repo with pristine content
@@ -181,7 +177,7 @@ func TestComputeFileDiff_WithDiff(t *testing.T) {
 		},
 	}
 
-	fd, err := ComputeFileDiff(tempDir, "test.go", "abc123", repo)
+	fd := ComputeFileDiff(tempDir, "test.go", "abc123", repo)
 	require.NoError(t, err)
 
 	assert.Equal(t, "test.go", fd.Path)

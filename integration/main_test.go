@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // prebuiltBinary holds the path to the pre-built speakeasy binary.
@@ -17,7 +17,7 @@ import (
 var (
 	prebuiltBinary string
 	buildOnce      sync.Once
-	buildErr       error
+	errBuild       error
 )
 
 // ensureBinary builds the speakeasy binary once on first call.
@@ -40,13 +40,13 @@ func ensureBinary() (string, error) {
 		buildCmd.Stdout = os.Stdout
 		buildCmd.Stderr = os.Stderr
 		if err := buildCmd.Run(); err != nil {
-			buildErr = fmt.Errorf("failed to pre-build speakeasy binary: %w", err)
+			errBuild = fmt.Errorf("failed to pre-build speakeasy binary: %w", err)
 			return
 		}
 		prebuiltBinary = binaryPath
 		fmt.Println("Pre-built speakeasy binary:", prebuiltBinary)
 	})
-	return prebuiltBinary, buildErr
+	return prebuiltBinary, errBuild
 }
 
 // Entrypoint for CLI integration tests
@@ -71,7 +71,7 @@ func TestMain(m *testing.M) {
 func setupTestDir(t *testing.T) string {
 	t.Helper()
 	temp, err := createTempDir("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	registerCleanup(t, temp)
 
 	return temp
@@ -80,6 +80,6 @@ func setupTestDir(t *testing.T) string {
 func registerCleanup(t *testing.T, temp string) {
 	t.Helper()
 	t.Cleanup(func() {
-		os.RemoveAll(temp)
+		_ = os.RemoveAll(temp)
 	})
 }

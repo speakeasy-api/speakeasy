@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
@@ -16,9 +15,7 @@ type SimpleInput struct {
 	inputModel textinput.Model
 	validate   func(s string) error
 
-	cursorMode cursor.Mode
-	focusIndex int
-	done       bool
+	done bool
 }
 
 func NewSimpleInput(input InputField, validate func(s string) error) SimpleInput {

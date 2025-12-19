@@ -129,7 +129,7 @@ func parseOperationIdentifiers(operations []string) ([]openapi.OperationIdentifi
 
 // invertOperationList converts a "keep" list into a "remove" list by collecting
 // all operations in the document and removing the ones in the keep list.
-func invertOperationList(ctx context.Context, doc *openapi.OpenAPI, keepList []openapi.OperationIdentifier) ([]openapi.OperationIdentifier, error) {
+func invertOperationList(_ context.Context, doc *openapi.OpenAPI, keepList []openapi.OperationIdentifier) ([]openapi.OperationIdentifier, error) {
 	if doc.Paths == nil || doc.Paths.Len() == 0 {
 		return nil, fmt.Errorf("no operations found in document")
 	}

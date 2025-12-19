@@ -71,7 +71,7 @@ func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		}
 	}
 
-	fmt.Fprint(w, fn(str))
+	_, _ = fmt.Fprint(w, fn(str))
 }
 
 // TODO: move this to an internal model package
@@ -189,7 +189,7 @@ func pullExec(cmd *cobra.Command, args []string) error {
 
 	filledValues := model.Run()
 
-	runPull(cmd.Context(), pullFlags{
+	_ = runPull(cmd.Context(), pullFlags{
 		Spec:      filledValues["spec"],
 		Revision:  filledValues["revision"],
 		OutputDir: filledValues["output-dir"],
@@ -372,10 +372,7 @@ func runPull(ctx context.Context, flags pullFlags) error {
 
 	// Get server URL and determine if insecure
 	serverURL := auth.GetServerURL()
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
+	insecurePublish := strings.HasPrefix(serverURL, "http://")
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
 
@@ -553,10 +550,7 @@ func getTagsCmd(namespace string) tea.Cmd {
 func getTags(namespace string) ([]string, error) {
 	// Get server URL and determine if insecure
 	serverURL := auth.GetServerURL()
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
+	insecurePublish := strings.HasPrefix(serverURL, "http://")
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
 

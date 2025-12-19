@@ -35,7 +35,7 @@ func Validate(overlayFile string) error {
 
 func Compare(schemas []string, w io.Writer) (*Summary, error) {
 	if len(schemas) != 2 {
-		return nil, fmt.Errorf("Exactly two --schemas must be passed to perform a comparison.")
+		return nil, fmt.Errorf("exactly two --schemas must be passed to perform a comparison")
 	}
 
 	y1, err := loader.LoadSpecification(schemas[0])

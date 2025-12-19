@@ -9,10 +9,10 @@ import (
 
 func main() {
 	// Remove existing completions directory
-	os.RemoveAll("completions")
+	_ = os.RemoveAll("completions")
 
 	// Create new completions directory
-	err := os.Mkdir("completions", 0755)
+	err := os.Mkdir("completions", 0o755)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating completions directory: %v\n", err)
 		os.Exit(1)
@@ -29,7 +29,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = os.WriteFile(outputFile, output, 0644)
+		err = os.WriteFile(outputFile, output, 0o644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing to %s: %v\n", outputFile, err)
 			os.Exit(1)

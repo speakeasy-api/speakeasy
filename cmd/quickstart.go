@@ -213,9 +213,10 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		promptedDir = outDir
 	}
 	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
-	if targetType == "terraform" {
+	switch targetType {
+	case "terraform":
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
-	} else if targetType == "mcp-typescript" {
+	case "mcp-typescript":
 		description = "We recommend a git repo for each MCP Server. To use the current directory, leave empty."
 	}
 
@@ -380,11 +381,12 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	// for the persistent edits / custom code feature
 	if initialiseRepo {
 		_, err = git.InitLocalRepository(outDir)
-		if err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists) {
+		switch {
+		case err != nil && !errors.Is(err, gitc.ErrRepositoryAlreadyExists):
 			log.From(ctx).Warnf("Encountered issue initializing git repository: %s", err.Error())
-		} else if err == nil {
+		case err == nil:
 			log.From(ctx).Infof("Initialized new git repository at %s", outDir)
-		} else { // If the error is ErrRepositoryAlreadyExists, ignore it
+		default: // If the error is ErrRepositoryAlreadyExists, ignore it
 			err = nil
 		}
 	}
@@ -435,15 +437,15 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 
 	// Flush event before launching studio so that we don't wait until the studio is closed to send telemetry
 	// Doing it before shouldLaunchStudio because that blocks asking the user for input
-	events.FlushActiveEvent(ctx, err)
+	_ = events.FlushActiveEvent(ctx, err)
 
-	shouldLaunch := shouldLaunchStudio(ctx, wf, true, &quickstartObj)
+	shouldLaunch := shouldLaunchStudio(ctx, wf, &quickstartObj)
 
 	if shouldLaunch {
 		err = studio.LaunchStudio(ctx, wf)
 	} else if len(wf.SDKOverviewURLs) == 1 && !quickstartObj.SkipInteractive { // There should only be one target after quickstart
 		overviewURL := wf.SDKOverviewURLs[initialTarget]
-		utils.OpenInBrowser(overviewURL)
+		_ = utils.OpenInBrowser(overviewURL)
 	}
 
 	return err
@@ -488,7 +490,6 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 		run.WithShouldCompile(!skipCompile),
 		run.WithAllowPrompts(output == "summary" || output == ""),
 	)
-
 	if err != nil {
 		return false, fmt.Errorf("failed to parse workflow: %w", err)
 	}
@@ -517,7 +518,7 @@ func retryWithSampleSpec(ctx context.Context, workflowFile *workflow.Workflow, i
 	return true, err
 }
 
-func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, fromQuickstart bool, quickstart *prompts.Quickstart) bool {
+func shouldLaunchStudio(ctx context.Context, wf *run.Workflow, quickstart *prompts.Quickstart) bool {
 	if quickstart != nil && quickstart.SkipInteractive {
 		return false
 	}
@@ -619,5 +620,5 @@ func currentDirectoryEmpty() bool {
 	defer dir.Close()
 
 	_, err = dir.Readdirnames(1)
-	return err == io.EOF
+	return errors.Is(err, io.EOF)
 }

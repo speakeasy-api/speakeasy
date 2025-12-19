@@ -37,14 +37,12 @@ func init() {
 }
 
 func RenderMarkdown(md string) string {
-
 	if env.IsDocsRuntime() {
 		return md
 	}
 
 	text, err := renderer.Render(md)
 	if err != nil {
-
 		panic(err)
 	}
 	return text
@@ -211,8 +209,7 @@ func GetCommandParts(cmd *cobra.Command) []string {
 	parts := strings.Split(cmd.CommandPath(), " ")
 	for _, f := range getSetFlags(cmd.Flags()) {
 		fval := f.Value.String()
-		switch f.Value.Type() {
-		case "stringSlice":
+		if f.Value.Type() == "stringSlice" {
 			fval = fval[1 : len(fval)-1] // Remove brackets
 		}
 		parts = append(parts, fmt.Sprintf("--%s=%s", f.Name, fval))

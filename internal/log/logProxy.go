@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/events"
-	"github.com/speakeasy-api/speakeasy/internal/config"
-	"github.com/speakeasy-api/speakeasy/internal/env"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/speakeasy-api/speakeasy-core/events"
+	"github.com/speakeasy-api/speakeasy/internal/config"
+	"github.com/speakeasy-api/speakeasy/internal/env"
 )
 
 const defaultAPIURL = "https://api.prod.speakeasy.com"
@@ -79,7 +80,7 @@ func SendToLogProxy(ctx context.Context, logLevel logProxyLevel, logMessage stri
 		baseURL = defaultAPIURL
 	}
 
-	req, err := http.NewRequest("POST", baseURL+"/v1/log/proxy", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, baseURL+"/v1/log/proxy", bytes.NewBuffer(body))
 	if err != nil {
 		fmt.Print("failure sending log to speakeasy.")
 		return nil

@@ -19,7 +19,6 @@ type FormModel struct {
 	title          string
 	description    string
 	form           *huh.Form // huh.Form is just a tea.Model
-	signalExit     bool
 	keys           []Key
 	disallowedKeys []string
 }
@@ -61,8 +60,7 @@ func (m FormModel) Init() tea.Cmd {
 
 func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if len(m.disallowedKeys) > 0 {
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		if msg, ok := msg.(tea.KeyMsg); ok {
 			if slices.Contains(m.disallowedKeys, msg.String()) {
 				return m, nil
 			}

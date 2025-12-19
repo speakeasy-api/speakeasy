@@ -3,13 +3,14 @@ package transform
 import (
 	"context"
 	"fmt"
+	"io"
+	"strings"
+
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"io"
-	"strings"
 )
 
 func RemoveUnused(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
@@ -223,8 +224,5 @@ func RemoveOrphans(ctx context.Context, doc libopenapi.Document, _ *libopenapi.D
 
 func isReferenced(key string, within string, notUsed map[string]*index.Reference) bool {
 	ref := fmt.Sprintf("#/components/%s/%s", within, key)
-	if notUsed[ref] != nil {
-		return false
-	}
-	return true
+	return notUsed[ref] == nil
 }

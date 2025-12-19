@@ -8,29 +8,65 @@ formatters:
 linters:
   default: none
   enable:
-    # - copyloopvar
-    # - durationcheck
-    # - errcheck
-    # - forcetypeassert
-    # - gocheckcompilerdirectives
+    - bodyclose
+    - containedctx
+    - copyloopvar
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - exptostd
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    - gocritic
+    # - gosec
     - govet
-    # - ineffassign
-    # - intrange
-    # - loggercheck
-    # - makezero
-    # - mirror
+    - iface
+    - importas
+    - ineffassign
+    - makezero
+    - mirror
     - misspell
-    # - nilerr
-    # - nolintlint
-    # - perfsprint
-    # - prealloc
-    # - predeclared
-    # - spancheck
-    # - staticcheck
-    # - testifylint
-    # - unconvert
-    # - unparam
-    # - unused
-    # - usestdlibvars
-    # - usetesting
+    - musttag
+    - nilerr
+    - nilnesserr
+    - nolintlint
+    # - paralleltest too many issues currently
+    # - perfsprint too many issues currently
+    - predeclared
+    - reassign
+    - staticcheck
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
     - wastedassign
+  exclusions:
+    rules:
+      - path: (.+)_test.go
+        linters:
+          - gosec
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (io.ReadCloser).Close
+        - (*os.File).Close
+        - os.Remove
+        - (io/fs.File).Close
+        - (*github.com/fsnotify/fsnotify.Watcher).Close
+    exhaustive:
+      ignore-enum-types: "yaml.+|reflect.+"
+      default-signifies-exhaustive: true
+    iface:
+      enable:
+        - opaque
+        - unexported
+    testifylint:
+      disable:
+        - encoded-compare
