@@ -65,7 +65,15 @@ var configureCmd = &model.CommandGroup{
 	Short:          "Configure your Speakeasy SDK Setup.",
 	Long:           utils.RenderMarkdown(configureLong),
 	InteractiveMsg: "What do you want to configure?",
-	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd, configureLocalWorkflowCmd},
+	Commands:       []model.Command{configureSourcesCmd, configureTargetCmd, configureGithubCmd, configurePublishingCmd, configureTestingCmd, configureLocalWorkflowCmd, configureGenerationCmd},
+}
+
+var configureGenerationCmd = &model.CommandGroup{
+	Usage:          "generation",
+	Short:          "Configure and inspect generation settings.",
+	Long:           "Commands for inspecting and managing SDK generation configuration.",
+	InteractiveMsg: "What would you like to do?",
+	Commands:       []model.Command{configureGenerationCheckCmd},
 }
 
 type ConfigureSourcesFlags struct {
