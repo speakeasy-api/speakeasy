@@ -28,7 +28,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/go-version v1.7.0
 	github.com/iancoleman/strcase v0.3.0
-	github.com/inkeep/ai-api-go v0.3.1
 	github.com/pb33f/libopenapi v0.21.8
 	github.com/pb33f/openapi-changes v0.0.61
 	github.com/pkg/errors v0.9.1
@@ -38,7 +37,7 @@ require (
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.12.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.788.5
+	github.com/speakeasy-api/openapi-generation/v2 v2.788.7
 	github.com/speakeasy-api/sdk-gen-config v1.43.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.21.0
