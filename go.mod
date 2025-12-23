@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/pb33f/libopenapi v0.21.8
-	github.com/pb33f/openapi-changes v0.0.61
+	github.com/pb33f/openapi-changes v0.0.63
 	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/samber/lo v1.47.0
@@ -40,7 +40,7 @@ require (
 	github.com/speakeasy-api/openapi-generation/v2 v2.788.7
 	github.com/speakeasy-api/sdk-gen-config v1.43.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.21.0
+	github.com/speakeasy-api/speakeasy-core v0.21.1
 	github.com/speakeasy-api/versioning-reports v0.6.1
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.9
@@ -189,7 +189,7 @@ require (
 	github.com/posthog/posthog-go v1.2.24 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/pterm/pterm v0.12.80 // indirect
-	github.com/rivo/tview v0.0.0-20240307173318-e804876934a1 // indirect
+	github.com/rivo/tview v0.0.0-20240424133105-0d02bb78244d // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
@@ -218,7 +218,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/tliron/glsp v0.2.2 // indirect
-	github.com/twinj/uuid v1.0.0 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240815153524-6ea36470d1bd // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
