@@ -1,7 +1,6 @@
 package prompts_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
@@ -12,6 +11,8 @@ import (
 )
 
 func TestParseGithubRemoteURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		remoteURL   string
@@ -19,13 +20,13 @@ func TestParseGithubRemoteURL(t *testing.T) {
 	}{
 		{
 			name:        "SSH URL with .git suffix",
-			remoteURL:   "git@github.com:quiverai/quiverai-node.git",
-			expectedURL: "https://github.com/quiverai/quiverai-node",
+			remoteURL:   "git@github.com:speakeasy-api/test-repo.git",
+			expectedURL: "https://github.com/speakeasy-api/test-repo",
 		},
 		{
 			name:        "SSH URL without .git suffix",
-			remoteURL:   "git@github.com:quiverai/quiverai-node",
-			expectedURL: "https://github.com/quiverai/quiverai-node",
+			remoteURL:   "git@github.com:speakeasy-api/test-repo",
+			expectedURL: "https://github.com/speakeasy-api/test-repo",
 		},
 		{
 			name:        "HTTPS URL with .git suffix",
@@ -39,8 +40,8 @@ func TestParseGithubRemoteURL(t *testing.T) {
 		},
 		{
 			name:        "SSH URL with mixed case org",
-			remoteURL:   "git@github.com:QuiverAI/quiverai-node.git",
-			expectedURL: "https://github.com/QuiverAI/quiverai-node",
+			remoteURL:   "git@github.com:Speakeasy-API/test-repo.git",
+			expectedURL: "https://github.com/Speakeasy-API/test-repo",
 		},
 	}
 
@@ -49,9 +50,7 @@ func TestParseGithubRemoteURL(t *testing.T) {
 			t.Parallel()
 
 			// Create a temporary directory for the git repo
-			tmpDir, err := os.MkdirTemp("", "github-test-*")
-			require.NoError(t, err)
-			defer os.RemoveAll(tmpDir)
+			tmpDir := t.TempDir()
 
 			// Initialize a git repository
 			repo, err := git.PlainInit(tmpDir, false)
