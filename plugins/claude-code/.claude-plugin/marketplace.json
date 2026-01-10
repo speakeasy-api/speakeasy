@@ -1,0 +1,34 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "speakeasy-plugins",
+  "description": "Official Speakeasy plugins for Claude Code - SDK generation, OpenAPI tooling, and API development",
+  "owner": {
+    "name": "Speakeasy",
+    "email": "support@speakeasy.com",
+    "url": "https://speakeasy.com"
+  },
+  "plugins": [
+    {
+      "name": "speakeasy",
+      "description": "Generate production-ready SDKs from OpenAPI specs. Lint, validate, and improve your API specifications with AI-powered suggestions.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Speakeasy",
+        "email": "support@speakeasy.com"
+      },
+      "source": ".",
+      "category": "development",
+      "tags": [
+        "openapi",
+        "sdk-generation",
+        "api",
+        "codegen",
+        "typescript",
+        "python",
+        "go"
+      ],
+      "homepage": "https://speakeasy.com",
+      "repository": "https://github.com/speakeasy-api/speakeasy"
+    }
+  ]
+}
