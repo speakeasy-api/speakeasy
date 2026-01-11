@@ -61,11 +61,10 @@ claude mcp add speakeasy -- speakeasy mcp serve
 
 | Command | Description |
 |---------|-------------|
-| `/speakeasy-generate` | Generate an SDK from an OpenAPI spec |
+| `/speakeasy-quickstart` | Initialize a new Speakeasy project |
+| `/speakeasy-run` | Execute a Speakeasy workflow |
 | `/speakeasy-lint` | Validate an OpenAPI specification |
 | `/speakeasy-suggest` | Get AI-powered improvement suggestions |
-| `/speakeasy-run` | Execute a Speakeasy workflow |
-| `/speakeasy-quickstart` | Initialize a new Speakeasy project |
 
 ## Quick Start
 
@@ -74,14 +73,18 @@ claude mcp add speakeasy -- speakeasy mcp serve
    claude /install speakeasy
    ```
 
-2. **Generate your first SDK**:
+2. **Initialize your project**:
    ```
-   /speakeasy-generate ./openapi.yaml typescript ./sdk
+   /speakeasy-quickstart ./openapi.yaml typescript
    ```
 
-3. **Or set up a workflow**:
+3. **Generate your SDK**:
    ```
-   /speakeasy-quickstart ./openapi.yaml python
+   /speakeasy-run
+   ```
+
+4. **Regenerate after spec changes**:
+   ```
    /speakeasy-run
    ```
 
@@ -91,11 +94,10 @@ The plugin exposes these tools via the native MCP server (`speakeasy mcp serve`)
 
 | Tool | Description |
 |------|-------------|
-| `speakeasy_generate` | Generate SDK from OpenAPI spec |
+| `speakeasy_quickstart` | Initialize a new project with workflow.yaml |
+| `speakeasy_run` | Execute workflow to generate SDKs |
 | `speakeasy_lint` | Validate OpenAPI specification |
 | `speakeasy_suggest` | Get improvement suggestions |
-| `speakeasy_run` | Execute workflow |
-| `speakeasy_quickstart` | Initialize project |
 | `speakeasy_overlay_create` | Create an overlay template |
 | `speakeasy_overlay_apply` | Apply an overlay |
 | `speakeasy_status` | Check workspace status |
@@ -123,20 +125,29 @@ Configure the plugin in your Claude Code settings:
 
 ## Examples
 
-### Generate a TypeScript SDK
+### Set Up a New SDK Project
 
 ```
-User: Generate a TypeScript SDK from my API spec
+User: I want to create a TypeScript SDK from my API spec
 
-Claude: I'll generate a TypeScript SDK from your OpenAPI spec at ./api/openapi.yaml...
+Claude: I'll set up a Speakeasy project for TypeScript SDK generation...
+
+[Uses speakeasy_quickstart]
+
+✅ Created .speakeasy/workflow.yaml with:
+- Source: ./api/openapi.yaml
+- Target: typescript
+- Output: ./sdk/typescript
+
+Now let me generate the SDK...
+
+[Uses speakeasy_run]
 
 ✅ SDK generated at ./sdk/typescript/
 - 45 API operations
 - 23 model types
-- Full TypeScript types included
 
-To use:
-npm install ./sdk/typescript
+To regenerate after spec changes, just run `/speakeasy-run`
 ```
 
 ### Improve Your OpenAPI Spec

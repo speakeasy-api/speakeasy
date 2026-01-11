@@ -16,12 +16,12 @@ Invoke this agent when the user needs to:
 
 ## Tools Available
 
-- `speakeasy_generate` - Generate SDKs
+- `speakeasy_quickstart` - Initialize projects with workflow.yaml
+- `speakeasy_run` - Execute workflows to generate SDKs
 - `speakeasy_lint` - Validate OpenAPI specs
 - `speakeasy_suggest` - Get improvement suggestions
-- `speakeasy_run` - Execute workflows
-- `speakeasy_quickstart` - Initialize projects
-- `speakeasy_overlay` - Create/apply overlays
+- `speakeasy_overlay_create` - Create overlays
+- `speakeasy_overlay_apply` - Apply overlays
 - `speakeasy_status` - Check workspace status
 - Standard file read/write tools
 
@@ -37,13 +37,13 @@ Invoke this agent when the user needs to:
 - Identify and report any blocking issues
 - Suggest fixes for warnings using `speakeasy_suggest`
 
-### Step 3: Configure Generation
-- Check for existing `.speakeasy/workflow.yaml`
-- Create or update workflow configuration as needed
-- Set up any required overlays for customization
+### Step 3: Initialize or Update Project
+- Check for existing `.speakeasy/workflow.yaml` using `speakeasy_status`
+- If new project: use `speakeasy_quickstart` to create workflow.yaml
+- If existing: update workflow.yaml to add/modify targets
 
 ### Step 4: Generate the SDK
-- Execute `speakeasy_run` or `speakeasy_generate`
+- Execute `speakeasy_run` to generate all configured SDKs
 - Monitor for errors and provide actionable guidance
 - Verify the output was created successfully
 
@@ -101,7 +101,7 @@ Common issues and solutions:
 ```
 User: I need to generate a Python SDK from my API spec
 
-Agent: I'll help you generate a Python SDK. Let me first check your workspace...
+Agent: I'll help you set up a Python SDK. Let me first check your workspace...
 
 [Uses speakeasy_status to check for existing config]
 
@@ -110,13 +110,21 @@ I see you have an OpenAPI spec at ./api/openapi.yaml. Let me validate it first.
 [Uses speakeasy_lint]
 
 The spec looks good with just 2 minor warnings. Would you like me to:
-1. Generate the SDK as-is
+1. Set up the project and generate the SDK
 2. Apply suggestions to improve operation names first
 3. Show me the warnings in detail
 
-User: Generate as-is
+User: Set up and generate
 
-Agent: [Uses speakeasy_generate with python target]
+Agent: I'll initialize a Speakeasy project for Python SDK generation.
+
+[Uses speakeasy_quickstart with schema=./api/openapi.yaml, target=python]
+
+✅ Created .speakeasy/workflow.yaml
+
+Now let me generate your SDK...
+
+[Uses speakeasy_run]
 
 ✅ Python SDK generated successfully at ./sdk/python/
 
@@ -134,6 +142,8 @@ from my_api import MyAPI
 client = MyAPI(api_key="your-key")
 users = client.users.list()
 \`\`\`
+
+To regenerate after spec changes, just run `speakeasy run` or use `/speakeasy-run`.
 
 Would you like me to help with anything else?
 ```

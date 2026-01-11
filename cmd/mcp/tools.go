@@ -13,33 +13,6 @@ import (
 func getTools() []tool {
 	return []tool{
 		{
-			Name:        "speakeasy_generate",
-			Description: "Generate an SDK from an OpenAPI specification. Supports TypeScript, Python, Go, Java, C#, PHP, Ruby, Swift, Terraform, and more.",
-			InputSchema: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"schema": {
-						"type": "string",
-						"description": "Path to the OpenAPI specification file (YAML or JSON), or a URL"
-					},
-					"target": {
-						"type": "string",
-						"description": "Target language for SDK generation",
-						"enum": ["typescript", "python", "go", "java", "csharp", "php", "ruby", "swift", "kotlin", "terraform", "mcp-typescript"]
-					},
-					"out": {
-						"type": "string",
-						"description": "Output directory for the generated SDK"
-					},
-					"packageName": {
-						"type": "string",
-						"description": "Name for the generated package (optional)"
-					}
-				},
-				"required": ["schema", "target", "out"]
-			}`),
-		},
-		{
 			Name:        "speakeasy_lint",
 			Description: "Validate and lint an OpenAPI specification. Returns diagnostics including errors, warnings, and hints for improvement.",
 			InputSchema: json.RawMessage(`{
@@ -188,8 +161,6 @@ func getTools() []tool {
 
 func executeTool(ctx context.Context, name string, args map[string]any) (string, bool) {
 	switch name {
-	case "speakeasy_generate":
-		return executeGenerate(ctx, args)
 	case "speakeasy_lint":
 		return executeLint(ctx, args)
 	case "speakeasy_suggest":
@@ -266,24 +237,6 @@ func getStringSlice(args map[string]any, key string) []string {
 		}
 	}
 	return nil
-}
-
-func executeGenerate(ctx context.Context, args map[string]any) (string, bool) {
-	schema := getString(args, "schema")
-	target := getString(args, "target")
-	out := getString(args, "out")
-	packageName := getString(args, "packageName")
-
-	if schema == "" || target == "" || out == "" {
-		return "Missing required parameters: schema, target, and out are required", true
-	}
-
-	cmdArgs := []string{"generate", "sdk", "-s", schema, "-t", target, "-o", out}
-	if packageName != "" {
-		cmdArgs = append(cmdArgs, "-p", packageName)
-	}
-
-	return runSpeakeasyCommand(ctx, cmdArgs...)
 }
 
 func executeLint(ctx context.Context, args map[string]any) (string, bool) {
