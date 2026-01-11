@@ -34,10 +34,9 @@ Add this to your Claude Code MCP configuration:
 `
 
 var MCPCmd = &model.CommandGroup{
-	Usage:   "mcp",
-	Short:   "Model Context Protocol (MCP) server for AI assistant integration",
-	Long:    utils.RenderMarkdown(mcpLong),
-	Hidden:  false,
+	Usage:    "mcp",
+	Short:    "Model Context Protocol (MCP) server for AI assistant integration",
+	Long:     utils.RenderMarkdown(mcpLong),
 	Commands: []model.Command{serveCmd},
 }
 
@@ -81,10 +80,12 @@ type jsonRPCError struct {
 	Data    any    `json:"data,omitempty"`
 }
 
-// MCP types
-type serverInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+// MCP protocol types
+
+type initializeResult struct {
+	ProtocolVersion string             `json:"protocolVersion"`
+	Capabilities    serverCapabilities `json:"capabilities"`
+	ServerInfo      serverInfo         `json:"serverInfo"`
 }
 
 type serverCapabilities struct {
@@ -95,10 +96,9 @@ type toolsCapability struct {
 	ListChanged bool `json:"listChanged,omitempty"`
 }
 
-type initializeResult struct {
-	ProtocolVersion string             `json:"protocolVersion"`
-	Capabilities    serverCapabilities `json:"capabilities"`
-	ServerInfo      serverInfo         `json:"serverInfo"`
+type serverInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
 }
 
 type tool struct {
@@ -116,14 +116,14 @@ type callToolParams struct {
 	Arguments map[string]any `json:"arguments"`
 }
 
-type textContent struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
 type callToolResult struct {
 	Content []textContent `json:"content"`
 	IsError bool          `json:"isError,omitempty"`
+}
+
+type textContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
 }
 
 func runServe(ctx context.Context, flags serveFlags) error {

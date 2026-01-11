@@ -383,14 +383,3 @@ func executeMerge(ctx context.Context, args map[string]any) (string, bool) {
 
 	return runSpeakeasyCommand(ctx, cmdArgs...)
 }
-
-// Helper for non-exported use
-func init() {
-	// Validate all tool schemas are valid JSON
-	for _, t := range getTools() {
-		var schema map[string]any
-		if err := json.Unmarshal(t.InputSchema, &schema); err != nil {
-			panic(fmt.Sprintf("Invalid schema for tool %s: %s", t.Name, err))
-		}
-	}
-}
