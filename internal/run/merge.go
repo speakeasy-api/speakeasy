@@ -68,11 +68,6 @@ func mergeDocuments(ctx context.Context, inSchemas []string, modelNamespaces []s
 		return err
 	}
 
-	// Validate input lengths match
-	if len(modelNamespaces) > 0 && len(modelNamespaces) != len(inSchemas) {
-		return fmt.Errorf("modelNamespaces count (%d) must match inSchemas count (%d)", len(modelNamespaces), len(inSchemas))
-	}
-
 	// Check if any model namespaces are specified
 	hasModelNamespaces := false
 	for _, ns := range modelNamespaces {
