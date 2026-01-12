@@ -1,205 +1,478 @@
 # Speakeasy Skills for Claude Code
 
-This file provides troubleshooting guidance for common Speakeasy CLI issues. Each skill is triggered by specific error patterns you may encounter.
+This file provides guidance for Speakeasy CLI commands and troubleshooting. Each skill is triggered by specific patterns or user requests.
 
 ## Skills
 
-- diagnose-openapi-spec-issues-related-to-generation: speakeasy quickstart / run failed with and output includes Step Failed: Workflow
+### Core Commands
+- start-new-sdk-project: user wants to generate an SDK from an OpenAPI spec for the first time, no .speakeasy directory exists
+- regenerate-sdk: user wants to regenerate SDK after spec changes, .speakeasy/workflow.yaml already exists
+- validate-openapi-spec: user wants to check if their OpenAPI spec is valid before generation
+- get-ai-suggestions: user wants AI-powered suggestions to improve their OpenAPI spec
+- check-workspace-status: user wants to see what sources and targets are configured
+
+### Overlay & Merge
+- create-openapi-overlay: user wants to modify an OpenAPI spec without changing the original file
+- apply-openapi-overlay: user wants to apply an existing overlay to a spec
+- merge-openapi-specs: user has multiple OpenAPI specs and wants to combine them
+
+### Troubleshooting
+- diagnose-generation-failure: speakeasy quickstart / run failed with output includes "Step Failed: Workflow"
 - fix-validation-errors-with-overlays: speakeasy lint output shows validation errors that can be fixed without changing the source spec
-- understand-speakeasy-workflow: need to understand how .speakeasy/workflow.yaml works or troubleshoot workflow configuration
-- improve-operation-ids: speakeasy suggest operation-ids or SDK methods have auto-generated names like GetApiV1Users
+- improve-operation-ids: SDK methods have auto-generated names like GetApiV1Users
 
 ---
 
-## diagnose-openapi-spec-issues-related-to-generation
+## start-new-sdk-project
 
-**Triggered by:** `Step Failed: Workflow` in speakeasy output
+**Triggered by:** User wants to generate an SDK and no `.speakeasy/` directory exists
 
-When SDK generation fails, you need to determine the root cause and appropriate fix strategy.
+Use `speakeasy quickstart` to initialize a new project with a workflow configuration.
 
-### Diagnosis Steps
+### Command
 
-1. **Run `speakeasy lint openapi -s <spec-path>`** to get detailed validation errors
-2. **Categorize the issues:**
-   - **Fixable with overlays:** Missing descriptions, poor operation IDs, missing tags
-   - **Requires spec changes:** Invalid schema structure, missing required fields, circular references
-   - **Requires author input:** Ambiguous API design, unclear response types, authentication questions
+```bash
+speakeasy quickstart -s <path-to-openapi-spec> -t <target-language>
+```
 
-### Decision Framework
+### Supported Targets
 
-| Issue Type | Fix Strategy | Example |
-|------------|--------------|---------|
-| Missing operationId | Overlay with x-speakeasy-name-override | `get /users` → `listUsers` |
-| Missing description | Overlay to add descriptions | Add summary to endpoints |
-| Invalid $ref | **Ask user** - spec is broken | `$ref: '#/components/schemas/Missing'` |
-| Circular reference | **Ask user** - design decision needed | A references B references A |
-| Missing security scheme | **Ask user** - auth design needed | No auth defined but endpoints need it |
-| Unsupported OpenAPI feature | Overlay to work around | allOf with discriminator edge cases |
+| Language | Target Flag |
+|----------|-------------|
+| TypeScript | `typescript` |
+| Python | `python` |
+| Go | `go` |
+| Java | `java` |
+| C# | `csharp` |
+| PHP | `php` |
+| Ruby | `ruby` |
+| Swift | `swift` |
+| Kotlin | `kotlin` |
+| Terraform | `terraform` |
 
-### What NOT to Do
+### Example
 
-- **Do NOT** disable lint rules to make errors go away
-- **Do NOT** try to fix every issue one-by-one with overlays
-- **Do NOT** modify the source OpenAPI spec directly unless explicitly asked
-- **Do NOT** assume you can fix structural spec problems
+```bash
+# Initialize TypeScript SDK project
+speakeasy quickstart -s ./api/openapi.yaml -t typescript
 
-### Output Strategy Document
+# With custom output directory
+speakeasy quickstart -s ./api/openapi.yaml -t python -o ./sdks/python
+```
 
-When issues are complex, produce a strategy document for the user:
+### What It Creates
 
-```markdown
-## OpenAPI Spec Analysis
+```
+.speakeasy/
+└── workflow.yaml    # Workflow configuration
+```
 
-### Blocking Issues (require author input)
-- Issue 1: [description]
-- Issue 2: [description]
+### Next Steps After Quickstart
 
-### Fixable Issues (can use overlays)
-- Issue 1: [description] → [proposed fix]
-- Issue 2: [description] → [proposed fix]
+1. Run `speakeasy run` to generate the SDK
+2. Review the generated SDK in the output directory
+3. Add more targets to workflow.yaml for multi-language support
 
-### Recommended Approach
-[Your recommendation on how to proceed]
+---
+
+## regenerate-sdk
+
+**Triggered by:** User wants to regenerate SDK, `.speakeasy/workflow.yaml` exists
+
+Use `speakeasy run` to execute the workflow and regenerate SDKs.
+
+### Command
+
+```bash
+# Run all configured targets
+speakeasy run
+
+# Run specific target only
+speakeasy run -t <target-name>
+
+# Run with specific source
+speakeasy run -s <source-name>
+```
+
+### When to Use
+
+- After updating the OpenAPI spec
+- After modifying workflow.yaml
+- After changing overlays
+- To regenerate with latest Speakeasy version
+
+### Example Workflow
+
+```yaml
+# .speakeasy/workflow.yaml
+workflowVersion: 1.0.0
+speakeasyVersion: latest
+sources:
+  my-api:
+    inputs:
+      - location: ./openapi.yaml
+targets:
+  typescript-sdk:
+    target: typescript
+    source: my-api
+    output: ./sdk/typescript
+```
+
+### Troubleshooting
+
+If `speakeasy run` fails, check:
+1. Is the OpenAPI spec valid? Run `speakeasy lint openapi -s <spec>`
+2. Does the source path exist? Check `inputs.location` in workflow.yaml
+3. Are there blocking validation errors? See `diagnose-generation-failure` skill
+
+---
+
+## validate-openapi-spec
+
+**Triggered by:** User wants to validate their OpenAPI spec
+
+Use `speakeasy lint` to check for errors and warnings.
+
+### Command
+
+```bash
+speakeasy lint openapi -s <path-to-spec>
+```
+
+### Output Categories
+
+| Severity | Meaning | Action |
+|----------|---------|--------|
+| Error | Blocks SDK generation | Must fix |
+| Warning | May cause issues | Should fix |
+| Hint | Best practice suggestion | Consider fixing |
+
+### Common Validation Issues
+
+| Issue | Solution |
+|-------|----------|
+| Missing operationId | Add operationId or use `speakeasy suggest operation-ids` |
+| Invalid $ref | Fix the reference path |
+| Missing response schema | Add response schema definitions |
+| Duplicate operationId | Make operation IDs unique |
+
+### Before Running Generation
+
+Always lint first:
+```bash
+speakeasy lint openapi -s ./openapi.yaml && speakeasy run
 ```
 
 ---
 
-## fix-validation-errors-with-overlays
+## get-ai-suggestions
 
-**Triggered by:** Validation errors from `speakeasy lint` that are cosmetic or naming-related
+**Triggered by:** User wants to improve their OpenAPI spec with AI suggestions
 
-Overlays let you modify an OpenAPI spec without changing the original file. Use them for non-structural improvements.
+Use `speakeasy suggest` for AI-powered improvements.
+
+### Commands
+
+```bash
+# Suggest better operation IDs (method names)
+speakeasy suggest operation-ids -s <spec-path>
+
+# Suggest error type definitions
+speakeasy suggest error-types -s <spec-path>
+
+# Output suggestions as overlay file
+speakeasy suggest operation-ids -s <spec-path> -o suggested-overlay.yaml
+```
+
+### Operation ID Suggestions
+
+Transforms auto-generated names into intuitive SDK method names:
+- `get_api_v1_users_list` → `listUsers`
+- `post_api_v1_users_create` → `createUser`
+
+### Error Type Suggestions
+
+Analyzes your API and suggests structured error responses:
+- Common HTTP error codes (400, 401, 404, 500)
+- Custom error schemas
+
+### Applying Suggestions
+
+```bash
+# Generate overlay with suggestions
+speakeasy suggest operation-ids -s openapi.yaml -o operation-ids-overlay.yaml
+
+# Add to workflow.yaml
+sources:
+  my-api:
+    inputs:
+      - location: ./openapi.yaml
+    overlays:
+      - location: ./operation-ids-overlay.yaml
+
+# Regenerate
+speakeasy run
+```
+
+---
+
+## check-workspace-status
+
+**Triggered by:** User wants to see current Speakeasy configuration
+
+Use `speakeasy status` to view workspace state.
+
+### Command
+
+```bash
+speakeasy status
+```
+
+### What It Shows
+
+- Configured sources and their locations
+- Configured targets and output directories
+- Current Speakeasy version
+- Any configuration issues
+
+### Use Cases
+
+- Verify setup before running generation
+- Debug workflow configuration issues
+- Check what targets are configured
+
+---
+
+## create-openapi-overlay
+
+**Triggered by:** User wants to modify spec without changing the original file
+
+Overlays let you customize an OpenAPI spec for SDK generation without modifying the source.
+
+### Create Overlay Template
+
+```bash
+speakeasy overlay create -s <spec-path> -o <output-path>
+```
 
 ### When to Use Overlays
 
-**Good candidates for overlays:**
+**Good for:**
 - Renaming operations (x-speakeasy-name-override)
-- Adding missing descriptions/summaries
-- Adding x-speakeasy-group for SDK organization
-- Marking deprecated endpoints
-- Adding x-speakeasy-retries configuration
+- Adding descriptions/summaries
+- Grouping operations (x-speakeasy-group)
+- Adding retry configuration
+- Marking endpoints as deprecated
+- Adding SDK-specific extensions
 
-**NOT candidates for overlays:**
-- Fixing invalid JSON/YAML syntax
-- Adding missing required schema properties
-- Fixing broken $ref references
-- Restructuring the API design
+**Not for:**
+- Fixing broken specs (fix the source)
+- Adding new endpoints (modify source)
+- Changing API behavior (modify source)
 
-### Creating an Overlay
-
-```bash
-# Generate overlay template
-speakeasy overlay create -s openapi.yaml -o overlay.yaml
-```
-
-### Example Overlay for Operation Naming
+### Example Overlay
 
 ```yaml
 overlay: 1.0.0
 info:
-  title: Improve SDK method names
+  title: SDK Customizations
   version: 1.0.0
 actions:
   - target: "$.paths['/users'].get"
     update:
       x-speakeasy-name-override: listUsers
+      x-speakeasy-group: users
   - target: "$.paths['/users'].post"
     update:
       x-speakeasy-name-override: createUser
+      x-speakeasy-group: users
   - target: "$.paths['/users/{id}'].get"
     update:
       x-speakeasy-name-override: getUser
+  - target: "$.paths['/users/{id}'].delete"
+    update:
+      x-speakeasy-name-override: deleteUser
+      deprecated: true
 ```
 
-### Applying Overlays
+### JSONPath Targeting
 
-Add to workflow.yaml:
+| Target | Selects |
+|--------|---------|
+| `$.paths['/users'].get` | GET /users operation |
+| `$.paths['/users/{id}'].*` | All operations on /users/{id} |
+| `$.components.schemas.User` | User schema |
+| `$.info` | API info object |
+
+---
+
+## apply-openapi-overlay
+
+**Triggered by:** User wants to apply an overlay to a spec
+
+### Command
+
+```bash
+speakeasy overlay apply -s <spec-path> -o <overlay-path> --out <output-path>
+```
+
+### Example
+
+```bash
+# Apply overlay and output merged spec
+speakeasy overlay apply -s openapi.yaml -o my-overlay.yaml --out openapi-modified.yaml
+```
+
+### Using in Workflow
+
+Better approach - add overlay to workflow.yaml:
+
 ```yaml
 sources:
   my-api:
     inputs:
       - location: ./openapi.yaml
     overlays:
-      - location: ./overlay.yaml
+      - location: ./naming-overlay.yaml
+      - location: ./grouping-overlay.yaml
 ```
 
-Then run: `speakeasy run`
+Overlays are applied in order, so later overlays can override earlier ones.
 
 ---
 
-## understand-speakeasy-workflow
+## merge-openapi-specs
 
-**Triggered by:** Questions about workflow.yaml or `speakeasy run` behavior
+**Triggered by:** User has multiple OpenAPI specs to combine
 
-The `.speakeasy/workflow.yaml` file defines your SDK generation pipeline.
+Use `speakeasy merge` to combine multiple specs into one.
 
-### Workflow Structure
-
-```yaml
-workflowVersion: 1.0.0
-speakeasyVersion: latest
-sources:
-  my-api:                          # Source name (referenced by targets)
-    inputs:
-      - location: ./openapi.yaml   # Path or URL to OpenAPI spec
-    overlays:
-      - location: ./overlay.yaml   # Optional overlays to apply
-targets:
-  typescript-sdk:                  # Target name
-    target: typescript             # Language: typescript, python, go, java, etc.
-    source: my-api                 # Which source to use
-    output: ./sdks/typescript      # Output directory
-```
-
-### Common Commands
+### Command
 
 ```bash
-# Check workspace status
-speakeasy status
+speakeasy merge -o <output-path> <spec1> <spec2> [spec3...]
+```
 
-# Run all targets
+### Example
+
+```bash
+# Merge two specs
+speakeasy merge -o combined.yaml ./api/users.yaml ./api/orders.yaml
+
+# Merge multiple specs
+speakeasy merge -o combined.yaml ./specs/*.yaml
+```
+
+### Use Cases
+
+- Microservices with separate specs per service
+- API versioning with multiple spec files
+- Combining public and internal API specs
+
+### Conflict Resolution
+
+When specs have conflicts:
+- Later specs override earlier ones for duplicate paths
+- Schema conflicts may require manual resolution
+- Review merged output for correctness
+
+---
+
+## diagnose-generation-failure
+
+**Triggered by:** `Step Failed: Workflow` in speakeasy output
+
+When SDK generation fails, determine the root cause and fix strategy.
+
+### Diagnosis Steps
+
+1. **Run lint to get detailed errors:**
+   ```bash
+   speakeasy lint openapi -s <spec-path>
+   ```
+
+2. **Categorize issues:**
+   - **Fixable with overlays:** Missing descriptions, poor operation IDs
+   - **Requires spec fix:** Invalid schema, missing required fields
+   - **Requires user input:** Design decisions, authentication setup
+
+### Decision Framework
+
+| Issue Type | Fix Strategy | Example |
+|------------|--------------|---------|
+| Missing operationId | Overlay | Use `speakeasy suggest operation-ids` |
+| Missing description | Overlay | Add via overlay |
+| Invalid $ref | **Ask user** | Broken reference needs spec fix |
+| Circular reference | **Ask user** | Design decision needed |
+| Missing security | **Ask user** | Auth design needed |
+
+### What NOT to Do
+
+- **Do NOT** disable lint rules to hide errors
+- **Do NOT** try to fix every issue one-by-one
+- **Do NOT** modify source spec without asking
+- **Do NOT** assume you can fix structural problems
+
+### Strategy Document
+
+For complex issues, produce a document:
+
+```markdown
+## OpenAPI Spec Analysis
+
+### Blocking Issues (require user input)
+- [List issues that need human decision]
+
+### Fixable Issues (can use overlays)
+- [List issues with proposed overlay fixes]
+
+### Recommended Approach
+[Your recommendation]
+```
+
+---
+
+## fix-validation-errors-with-overlays
+
+**Triggered by:** Lint errors that are cosmetic or naming-related
+
+### Overlay-Appropriate Fixes
+
+| Issue | Overlay Solution |
+|-------|------------------|
+| Poor operation names | `x-speakeasy-name-override` |
+| Missing descriptions | Add `summary` or `description` |
+| Missing tags | Add `tags` array |
+| Need operation grouping | `x-speakeasy-group` |
+| Need retry config | `x-speakeasy-retries` |
+
+### NOT Overlay-Appropriate
+
+| Issue | Why |
+|-------|-----|
+| Invalid JSON/YAML | Syntax error in source |
+| Missing required fields | Schema incomplete |
+| Broken $ref | Source needs fixing |
+| Wrong data types | API design issue |
+
+### Quick Fix Workflow
+
+```bash
+# 1. Generate suggestions
+speakeasy suggest operation-ids -s openapi.yaml -o fixes.yaml
+
+# 2. Add to workflow
+# Edit .speakeasy/workflow.yaml to include overlay
+
+# 3. Regenerate
 speakeasy run
-
-# Run specific target
-speakeasy run -t typescript-sdk
-
-# Initialize new project
-speakeasy quickstart -s openapi.yaml -t typescript
 ```
-
-### Multi-Target Setup
-
-```yaml
-targets:
-  typescript-sdk:
-    target: typescript
-    source: my-api
-    output: ./sdks/typescript
-  python-sdk:
-    target: python
-    source: my-api
-    output: ./sdks/python
-  go-sdk:
-    target: go
-    source: my-api
-    output: ./sdks/go
-```
-
-### Troubleshooting Workflow Issues
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| "Source not found" | Typo in source name | Check source name matches between sources and targets |
-| "File not found" | Wrong path to spec | Use absolute path or path relative to workflow.yaml location |
-| "Invalid spec" | Spec has errors | Run `speakeasy lint openapi -s <spec>` first |
 
 ---
 
 ## improve-operation-ids
 
-**Triggered by:** SDK methods have auto-generated names or user asks about operation naming
-
-Good operation IDs create intuitive SDK method names.
+**Triggered by:** SDK methods have auto-generated names
 
 ### Check Current State
 
@@ -207,30 +480,28 @@ Good operation IDs create intuitive SDK method names.
 speakeasy suggest operation-ids -s openapi.yaml
 ```
 
-This shows what operation IDs would be suggested.
-
 ### Naming Conventions
 
-| HTTP Method | Good Name | Bad Name |
-|-------------|-----------|----------|
-| GET /users | listUsers | getApiV1UsersList |
-| GET /users/{id} | getUser | getApiV1UsersById |
-| POST /users | createUser | postApiV1Users |
-| PUT /users/{id} | updateUser | putApiV1UsersById |
-| DELETE /users/{id} | deleteUser | deleteApiV1UsersById |
+| HTTP Method | Pattern | Example |
+|-------------|---------|---------|
+| GET (list) | list{Resource}s | `listUsers` |
+| GET (single) | get{Resource} | `getUser` |
+| POST | create{Resource} | `createUser` |
+| PUT | update{Resource} | `updateUser` |
+| PATCH | patch{Resource} | `patchUser` |
+| DELETE | delete{Resource} | `deleteUser` |
 
 ### Apply Suggestions
 
 ```bash
-# Generate overlay with suggested operation IDs
-speakeasy suggest operation-ids -s openapi.yaml -o operation-ids-overlay.yaml
+# Generate overlay
+speakeasy suggest operation-ids -s openapi.yaml -o operation-ids.yaml
+
+# Add to workflow and regenerate
+speakeasy run
 ```
 
-Then add to workflow.yaml and run `speakeasy run`.
-
-### Manual Override with Overlay
-
-If you want custom names different from suggestions:
+### Manual Override
 
 ```yaml
 overlay: 1.0.0
