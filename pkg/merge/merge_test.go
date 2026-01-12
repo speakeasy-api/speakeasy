@@ -32,9 +32,9 @@ func Test_merge_determinism(t *testing.T) {
 	}
 
 	// Run merge twice and ensure the output is the same.
-	got1, err := merge(absSchemas, true)
+	got1, err := merge(t.Context(), absSchemas, nil, true)
 	require.NoError(t, err)
-	got2, err := merge(absSchemas, true)
+	got2, err := merge(t.Context(), absSchemas, nil, true)
 	require.NoError(t, err)
 	doc1, err := libopenapi.NewDocumentWithConfiguration(got1, &datamodel.DocumentConfiguration{
 		AllowFileReferences:                 true,
@@ -73,7 +73,11 @@ func Test_merge_Success(t *testing.T) {
 					[]byte(`openapi: 3.0.0`),
 				},
 			},
-			want: "openapi: 3.0.1\n",
+			want: `openapi: 3.0.1
+info:
+  title: ""
+  version: ""
+`,
 		},
 		{
 			name: "info is overwritten",
@@ -89,7 +93,8 @@ info:
 			},
 			want: `openapi: "3.1"
 info:
-    title: test2
+  title: test2
+  version: ""
 `,
 		},
 		{
@@ -101,8 +106,11 @@ info:
 x-foo: bar`),
 				},
 			},
-			want: `x-foo: bar
-openapi: "3.1"
+			want: `openapi: "3.1"
+info:
+  title: ""
+  version: ""
+x-foo: bar
 `,
 		},
 		{
@@ -120,6 +128,9 @@ x-qux: quux`),
 			want: `openapi: "3.1"
 x-foo: bar2
 x-bar: baz
+info:
+  title: ""
+  version: ""
 x-qux: quux
 `,
 		},
@@ -135,9 +146,12 @@ servers:
 				},
 			},
 			want: `openapi: "3.1"
+info:
+  title: ""
+  version: ""
 servers:
-    - url: http://localhost:8080
-      description: local server
+  - url: http://localhost:8080
+    description: local server
 `,
 		},
 		{
@@ -161,13 +175,16 @@ servers:
 			},
 			want: `openapi: "3.1"
 servers:
-    - url: http://localhost:8080
-      description: local server
-      x-test: test
-    - url: https://api.example.com
-      description: production api server
-    - url: http://localhost:8081
-      description: local server 2
+  - url: http://localhost:8080
+    description: local server
+    x-test: test
+  - url: https://api.example.com
+    description: production api server
+  - url: http://localhost:8081
+    description: local server 2
+info:
+  title: ""
+  version: ""
 `,
 		},
 		{
@@ -206,32 +223,35 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
-    /test:
-        get:
-            responses:
-                "200":
-                    description: OK
-            servers:
-                - url: http://localhost:8080
-                  description: local server
-                  x-test: test
-    /test2:
-        get:
-            responses:
-                "200":
-                    description: OK
-            servers:
-                - url: https://api.example.com
-                  description: production api server
-    /test3:
-        get:
-            servers:
-                - url: https://api2.example.com
-                - url: https://api.example.com
-                  description: production api server
-            responses:
-                "200":
-                    description: OK
+  /test:
+    get:
+      responses:
+        200:
+          description: OK
+      servers:
+        - url: http://localhost:8080
+          description: local server
+          x-test: test
+  /test2:
+    get:
+      servers:
+        - url: https://api.example.com
+          description: production api server
+      responses:
+        "200":
+          description: OK
+  /test3:
+    get:
+      servers:
+        - url: https://api2.example.com
+        - url: https://api.example.com
+          description: production api server
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
 `,
 		},
 		{
@@ -248,7 +268,11 @@ security:
 			},
 			want: `openapi: "3.1"
 security:
-    - bearerAuth: []
+  - apiKey: []
+    bearerAuth: []
+info:
+  title: ""
+  version: ""
 `,
 		},
 		{
@@ -264,10 +288,13 @@ tags:
 				},
 			},
 			want: `openapi: "3.1"
+info:
+  title: ""
+  version: ""
 tags:
-    - name: test
-      description: test tag
-      x-test: test
+  - name: test
+    description: test tag
+    x-test: test
 `,
 		},
 		{
@@ -285,6 +312,10 @@ tags:
 			},
 			want: `{
   "openapi": "3.1",
+  "info": {
+    "title": "",
+    "version": ""
+  },
   "tags": [
     {
       "name": "test",
@@ -314,12 +345,15 @@ tags:
 			},
 			want: `openapi: "3.1"
 tags:
-    - name: test
-      description: test tag
-    - name: test 2
-      description: test tag 2 modified
-    - name: test 3
-      description: test tag 3
+  - name: test
+    description: test tag
+  - name: test 2
+    description: test tag 2 modified
+  - name: test 3
+    description: test tag 3
+info:
+  title: ""
+  version: ""
 `,
 		},
 		{
@@ -342,17 +376,20 @@ paths:
 				},
 			},
 			want: `openapi: "3.1"
+info:
+  title: ""
+  version: ""
 paths:
-    x-test: test
-    /test:
+  /test:
+    get:
+      responses:
+        "200":
+          description: OK
+          x-test: test
         x-test: test
-        get:
-            x-test: test
-            responses:
-                x-test: test
-                "200":
-                    x-test: test
-                    description: OK
+      x-test: test
+    x-test: test
+  x-test: test
 `,
 		},
 		{
@@ -430,53 +467,56 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
+  x-test: test
+  /test:
     x-test: test
-    /test:
+    get:
+      x-test: test
+      responses:
         x-test: test
-        get:
-            x-test: test
-            responses:
-                x-test: test
-                "200":
-                    x-test: test
-                    description: OK
-    /test3:
-        parameters:
-            - name: test
-              in: query
-              schema:
-                type: string
-            - name: test2
-              in: query
-              schema:
-                type: object
-            - name: test3
-              in: query
-              schema:
-                type: string
-        get:
-            responses:
-                "200":
-                    description: OK
-        post:
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            type: object
-            responses:
-                "200":
-                    description: OK
-    /test4:
-        get:
-            responses:
-                "201":
-                    description: Created
-    /test1:
-        get:
-            responses:
-                "200":
-                    description: OK
+        200:
+          x-test: test
+          description: OK
+  /test3:
+    parameters:
+      - name: test
+        in: query
+        schema:
+          type: string
+      - name: test2
+        in: query
+        schema:
+          type: object
+      - name: test3
+        in: query
+        schema:
+          type: string
+    get:
+      responses:
+        200:
+          description: OK
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+  /test4:
+    get:
+      responses:
+        "201":
+          description: Created
+  /test1:
+    get:
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
 `,
 		},
 		{
@@ -494,12 +534,15 @@ components:
 				},
 			},
 			want: `openapi: "3.1"
+info:
+  title: ""
+  version: ""
 components:
-    x-test: test
-    schemas:
-        test:
-            x-test: test
-            type: object
+  schemas:
+    test:
+      type: object
+      x-test: test
+  x-test: test
 `,
 		},
 		{
@@ -601,82 +644,86 @@ components:
 			},
 			want: `openapi: "3.1"
 components:
-    x-test: test
-    schemas:
-        test:
+  schemas:
+    test:
+      type: object
+    test2:
+      type: object
+    test3:
+      type: object
+      x-test: test
+  responses:
+    test:
+      description: test
+    test2:
+      description: test
+      x-test: test
+  parameters:
+    test:
+      name: test
+      in: query
+      type: string
+    test2:
+      name: test
+      in: query
+      x-test: test
+  requestBodies:
+    test:
+      content:
+        application/json:
+          schema:
             type: object
-        test2:
+    test2:
+      content:
+        application/json:
+          schema:
             type: object
-        test3:
-            x-test: test
-            type: object
-    responses:
-        test:
-            description: test
-        test2:
-            description: test
-            x-test: test
-    parameters:
-        test:
-            name: test
-            in: query
-        test2:
-            name: test
-            in: query
-            x-test: test
-    requestBodies:
-        test:
-            content:
-                application/json:
-                    schema:
-                        type: object
-        test2:
-            x-test: test
-            content:
-                application/json:
-                    schema:
-                        type: object
-    headers:
-        test:
-            description: test
-            schema:
-                type: string
-        test2:
-            x-test: test
-            description: test
-            schema:
-                type: string
-    securitySchemes:
-        test:
-            type: http
-            scheme: bearer
-        test2:
-            x-test: test
-            type: http
-            scheme: bearer
-    callbacks:
-        test:
-            test:
-                get:
-                    responses:
-                        "200":
-                            description: OK
-        test2:
-            x-test: test
-            test:
-                get:
-                    x-test: test
-                    responses:
-                        "200":
-                            description: OK
-    examples:
-        test2:
-            x-test: test
-            summary: test
-    links:
-        test2:
-            x-test: test
-            description: test
+      x-test: test
+  headers:
+    test:
+      description: test
+      schema:
+        type: string
+    test2:
+      description: test
+      schema:
+        type: string
+      x-test: test
+  securitySchemes:
+    test:
+      type: http
+      scheme: bearer
+    test2:
+      type: http
+      scheme: bearer
+      x-test: test
+  callbacks:
+    test:
+      test:
+        get:
+          responses:
+            200:
+              description: OK
+    test2:
+      test:
+        get:
+          responses:
+            "200":
+              description: OK
+          x-test: test
+      x-test: test
+  examples:
+    test2:
+      summary: test
+      x-test: test
+  links:
+    test2:
+      description: test
+      x-test: test
+  x-test: test
+info:
+  title: ""
+  version: ""
 `,
 		},
 		{
@@ -698,16 +745,19 @@ webhooks:
 				},
 			},
 			want: `openapi: "3.1"
+info:
+  title: ""
+  version: ""
 webhooks:
-    test:
+  test:
+    get:
+      responses:
+        "200":
+          description: OK
+          x-test: test
         x-test: test
-        get:
-            x-test: test
-            responses:
-                x-test: test
-                "200":
-                    x-test: test
-                    description: OK
+      x-test: test
+    x-test: test
 `,
 		},
 		{
@@ -746,25 +796,28 @@ webhooks:
 			},
 			want: `openapi: "3.1"
 webhooks:
-    test:
-        get:
-            responses:
-                "200":
-                    description: OK
-    test2:
+  test:
+    get:
+      responses:
+        200:
+          description: OK
+  test2:
+    get:
+      responses:
+        200:
+          description: OK
+          x-test: test
         x-test: test
-        get:
-            x-test: test
-            responses:
-                x-test: test
-                "200":
-                    x-test: test
-                    description: OK
-    test3:
-        get:
-            responses:
-                "200":
-                    description: OK
+      x-test: test
+    x-test: test
+  test3:
+    get:
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
 `,
 		},
 		{
@@ -784,14 +837,18 @@ externalDocs:
 			},
 			want: `openapi: "3.1"
 externalDocs:
-    description: test2
-    url: https://example.com
+  description: test2
+  url: https://example.com
+  x-test: test
+info:
+  title: ""
+  version: ""
 `,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := merge(tt.args.inSchemas, !tt.jsonOut)
+			got, _ := merge(t.Context(), tt.args.inSchemas, nil, !tt.jsonOut)
 
 			assert.Equal(t, tt.want, string(got))
 		})
@@ -872,4 +929,198 @@ paths:
                                         type: string
 `
 	assert.Equal(t, expectedOutput, string(outputData))
+}
+
+func Test_merge_WithNamespaces(t *testing.T) {
+	type args struct {
+		inSchemas  [][]byte
+		namespaces []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "schemas are namespaced with extensions",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Pet:
+      type: object
+      properties:
+        name:
+          type: string`),
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Pet:
+      type: object
+      properties:
+        id:
+          type: integer`),
+				},
+				namespaces: []string{"foo", "bar"},
+			},
+			want: `openapi: "3.1"
+components:
+  schemas:
+    foo_Pet:
+      type: object
+      properties:
+        name:
+          type: string
+      x-speakeasy-name-override: Pet
+      x-speakeasy-model-namespace: foo
+    bar_Pet:
+      type: object
+      properties:
+        id:
+          type: integer
+      x-speakeasy-name-override: Pet
+      x-speakeasy-model-namespace: bar
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "references are updated to namespaced schemas",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+components:
+  schemas:
+    Pet:
+      type: object`),
+				},
+				namespaces: []string{"api"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api_Pet'
+components:
+  schemas:
+    api_Pet:
+      type: object
+      x-speakeasy-name-override: Pet
+      x-speakeasy-model-namespace: api
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "no namespace leaves schemas unchanged",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Pet:
+      type: object`),
+				},
+				namespaces: nil,
+			},
+			want: `openapi: "3.1"
+components:
+  schemas:
+    Pet:
+      type: object
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "mixed namespace and no namespace returns error",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1`),
+					[]byte(`openapi: 3.1`),
+				},
+				namespaces: []string{"foo", ""},
+			},
+			wantErr: true,
+		},
+		{
+			name: "namespace count mismatch returns error",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1`),
+					[]byte(`openapi: 3.1`),
+				},
+				namespaces: []string{"foo"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "multiple schemas per namespace are all prefixed",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Pet:
+      type: object
+    Owner:
+      type: object
+      properties:
+        pet:
+          $ref: '#/components/schemas/Pet'`),
+				},
+				namespaces: []string{"v1"},
+			},
+			want: `openapi: "3.1"
+components:
+  schemas:
+    v1_Pet:
+      type: object
+      x-speakeasy-name-override: Pet
+      x-speakeasy-model-namespace: v1
+    v1_Owner:
+      type: object
+      properties:
+        pet:
+          $ref: '#/components/schemas/v1_Pet'
+      x-speakeasy-name-override: Owner
+      x-speakeasy-model-namespace: v1
+info:
+  title: ""
+  version: ""
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := merge(t.Context(), tt.args.inSchemas, tt.args.namespaces, true)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
 }
