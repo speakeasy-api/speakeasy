@@ -46,7 +46,6 @@ speakeasy quickstart -s <path-to-openapi-spec> -t <target-language>
 | C# | `csharp` |
 | PHP | `php` |
 | Ruby | `ruby` |
-| Swift | `swift` |
 | Kotlin | `kotlin` |
 | Terraform | `terraform` |
 
@@ -156,11 +155,17 @@ speakeasy lint openapi -s <path-to-spec>
 | Missing response schema | Add response schema definitions |
 | Duplicate operationId | Make operation IDs unique |
 
-### Before Running Generation
+### AI-Friendly Output
 
-Always lint first:
+For AI agents, use console output mode which provides structured, parseable output:
 ```bash
-speakeasy lint openapi -s ./openapi.yaml && speakeasy run
+speakeasy run --output console
+```
+
+For commands with large outputs, pipe to `grep` or `tail` to reduce context:
+```bash
+speakeasy lint openapi -s ./openapi.yaml 2>&1 | grep -E "(error|warning)"
+speakeasy run --output console 2>&1 | tail -50
 ```
 
 ---
@@ -257,18 +262,19 @@ speakeasy overlay create -s <spec-path> -o <output-path>
 
 ### When to Use Overlays
 
-**Good for:**
+**Overlays are great for:**
 - Renaming operations (x-speakeasy-name-override)
 - Adding descriptions/summaries
 - Grouping operations (x-speakeasy-group)
 - Adding retry configuration
 - Marking endpoints as deprecated
 - Adding SDK-specific extensions
+- Fixing spec issues without modifying the source
+- Adding new endpoints or schemas
+- Making portable patches that work across spec versions
 
-**Not for:**
-- Fixing broken specs (fix the source)
-- Adding new endpoints (modify source)
-- Changing API behavior (modify source)
+**Overlays cannot easily handle:**
+- Deduplication of schemas (requires structural analysis)
 
 ### Example Overlay
 
@@ -280,20 +286,24 @@ info:
 actions:
   - target: "$.paths['/users'].get"
     update:
-      x-speakeasy-name-override: listUsers
       x-speakeasy-group: users
+      x-speakeasy-name-override: list
   - target: "$.paths['/users'].post"
     update:
-      x-speakeasy-name-override: createUser
       x-speakeasy-group: users
+      x-speakeasy-name-override: create
   - target: "$.paths['/users/{id}'].get"
     update:
-      x-speakeasy-name-override: getUser
+      x-speakeasy-group: users
+      x-speakeasy-name-override: get
   - target: "$.paths['/users/{id}'].delete"
     update:
-      x-speakeasy-name-override: deleteUser
+      x-speakeasy-group: users
+      x-speakeasy-name-override: delete
       deprecated: true
 ```
+
+This produces: `sdk.users.list()`, `sdk.users.create()`, `sdk.users.get()`, `sdk.users.delete()`
 
 ### JSONPath Targeting
 
@@ -480,16 +490,20 @@ speakeasy run
 speakeasy suggest operation-ids -s openapi.yaml
 ```
 
-### Naming Conventions
+### SDK Method Naming
 
-| HTTP Method | Pattern | Example |
-|-------------|---------|---------|
-| GET (list) | list{Resource}s | `listUsers` |
-| GET (single) | get{Resource} | `getUser` |
-| POST | create{Resource} | `createUser` |
-| PUT | update{Resource} | `updateUser` |
-| PATCH | patch{Resource} | `patchUser` |
-| DELETE | delete{Resource} | `deleteUser` |
+Speakeasy generates grouped SDK methods using `x-speakeasy-group`:
+
+| HTTP Method | SDK Usage | Operation ID |
+|-------------|-----------|--------------|
+| GET (list) | `sdk.users.list()` | `users_list` |
+| GET (single) | `sdk.users.get()` | `users_get` |
+| POST | `sdk.users.create()` | `users_create` |
+| PUT | `sdk.users.update()` | `users_update` |
+| PATCH | `sdk.users.patch()` | `users_patch` |
+| DELETE | `sdk.users.delete()` | `users_delete` |
+
+Use `x-speakeasy-group: users` and `x-speakeasy-name-override: list` to achieve this grouping.
 
 ### Apply Suggestions
 
@@ -511,6 +525,8 @@ info:
 actions:
   - target: "$.paths['/api/v1/users'].get"
     update:
-      operationId: listAllUsers
-      x-speakeasy-name-override: listAllUsers
+      x-speakeasy-group: users
+      x-speakeasy-name-override: listAll
 ```
+
+This produces: `sdk.users.listAll()`
