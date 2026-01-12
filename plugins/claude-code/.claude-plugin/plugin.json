@@ -1,0 +1,6 @@
+{
+  "name": "speakeasy",
+  "version": "1.0.0",
+  "description": "Troubleshooting guidance for Speakeasy SDK generation",
+  "skills": ["../SKILLS.md"]
+}
