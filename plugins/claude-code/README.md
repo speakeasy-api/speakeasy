@@ -1,32 +1,59 @@
 # Speakeasy Plugin for Claude Code
 
-Generate production-ready SDKs from OpenAPI specifications directly within Claude Code.
-
-## Features
-
-- **SDK Generation**: Generate type-safe SDKs in 10+ languages (TypeScript, Python, Go, Java, C#, PHP, Ruby, Swift, Kotlin, Terraform)
-- **OpenAPI Validation**: Lint and validate your API specifications
-- **AI-Powered Suggestions**: Get intelligent recommendations to improve your API design
-- **Workflow Automation**: Run complete SDK generation pipelines
-- **Best Practices**: Built-in guidance for OpenAPI and SDK design patterns
+Troubleshooting guidance and best practices for SDK generation with Speakeasy.
 
 ## Installation
 
-### From Official Marketplace
+Copy `SKILLS.md` to your project or Claude Code configuration to provide context when working with Speakeasy.
+
+## What This Provides
+
+This plugin provides **skills** - troubleshooting guidance triggered by common error patterns:
+
+| Skill | Triggered By |
+|-------|--------------|
+| diagnose-openapi-spec-issues-related-to-generation | `Step Failed: Workflow` in output |
+| fix-validation-errors-with-overlays | Validation errors from `speakeasy lint` |
+| understand-speakeasy-workflow | Questions about workflow.yaml |
+| improve-operation-ids | Auto-generated SDK method names |
+
+## Philosophy
+
+Claude Code already calls CLIs reliably. This plugin doesn't wrap CLI commands - instead it provides:
+
+1. **Decision frameworks** - When to use overlays vs ask the user
+2. **Error pattern recognition** - What different errors mean
+3. **Strategy guidance** - How to approach complex spec issues
+
+## Key Principles
+
+### Don't Auto-Fix Everything
+
+When encountering spec issues:
+- **Small issues** (naming, descriptions) → Fix with overlays
+- **Structural issues** (invalid refs, missing schemas) → Ask the user
+- **Design issues** (auth, API structure) → Produce strategy document
+
+### Use the Workflow
 
 ```bash
-claude /install speakeasy
+# Initialize project
+speakeasy quickstart -s openapi.yaml -t typescript
+
+# Regenerate after changes
+speakeasy run
 ```
 
-### From GitHub
+### Overlay Over Modify
 
-```bash
-claude /install github:speakeasy-api/speakeasy/plugins/claude-code
-```
+Never modify the source OpenAPI spec directly. Use overlays to:
+- Rename operations
+- Add descriptions
+- Configure SDK behavior
 
-### Prerequisites
+## Prerequisites
 
-The Speakeasy CLI must be installed on your system:
+Install Speakeasy CLI:
 
 ```bash
 # macOS
@@ -36,179 +63,11 @@ brew install speakeasy-api/homebrew-tap/speakeasy
 curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
 ```
 
-## Manual MCP Server Setup
-
-If you want to use the MCP server directly without the full plugin, add this to your Claude Code MCP configuration:
-
-```json
-{
-  "mcpServers": {
-    "speakeasy": {
-      "command": "speakeasy",
-      "args": ["mcp", "serve"]
-    }
-  }
-}
-```
-
-Or use the Claude CLI:
-
-```bash
-claude mcp add speakeasy -- speakeasy mcp serve
-```
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `/speakeasy-quickstart` | Initialize a new Speakeasy project |
-| `/speakeasy-run` | Execute a Speakeasy workflow |
-| `/speakeasy-lint` | Validate an OpenAPI specification |
-| `/speakeasy-suggest` | Get AI-powered improvement suggestions |
-
-## Quick Start
-
-1. **Install the plugin**:
-   ```bash
-   claude /install speakeasy
-   ```
-
-2. **Initialize your project**:
-   ```
-   /speakeasy-quickstart ./openapi.yaml typescript
-   ```
-
-3. **Generate your SDK**:
-   ```
-   /speakeasy-run
-   ```
-
-4. **Regenerate after spec changes**:
-   ```
-   /speakeasy-run
-   ```
-
-## MCP Tools
-
-The plugin exposes these tools via the native MCP server (`speakeasy mcp serve`):
-
-| Tool | Description |
-|------|-------------|
-| `speakeasy_quickstart` | Initialize a new project with workflow.yaml |
-| `speakeasy_run` | Execute workflow to generate SDKs |
-| `speakeasy_lint` | Validate OpenAPI specification |
-| `speakeasy_suggest` | Get improvement suggestions |
-| `speakeasy_overlay_create` | Create an overlay template |
-| `speakeasy_overlay_apply` | Apply an overlay |
-| `speakeasy_status` | Check workspace status |
-| `speakeasy_merge` | Merge multiple specs |
-
-## Agents
-
-### SDK Generator Agent
-Handles end-to-end SDK generation workflows, from validation to generation to documentation.
-
-### OpenAPI Improver Agent
-Analyzes your OpenAPI spec and suggests improvements for better SDK quality.
-
-## Configuration
-
-Configure the plugin in your Claude Code settings:
-
-```json
-{
-  "speakeasy.defaultTarget": "typescript",
-  "speakeasy.autoLint": true,
-  "speakeasy.workflowPath": ".speakeasy/workflow.yaml"
-}
-```
-
-## Examples
-
-### Set Up a New SDK Project
-
-```
-User: I want to create a TypeScript SDK from my API spec
-
-Claude: I'll set up a Speakeasy project for TypeScript SDK generation...
-
-[Uses speakeasy_quickstart]
-
-✅ Created .speakeasy/workflow.yaml with:
-- Source: ./api/openapi.yaml
-- Target: typescript
-- Output: ./sdk/typescript
-
-Now let me generate the SDK...
-
-[Uses speakeasy_run]
-
-✅ SDK generated at ./sdk/typescript/
-- 45 API operations
-- 23 model types
-
-To regenerate after spec changes, just run `/speakeasy-run`
-```
-
-### Improve Your OpenAPI Spec
-
-```
-User: My SDK methods have ugly names, can you help?
-
-Claude: I'll analyze your spec and suggest improvements...
-
-Found 12 operations that could have better names:
-- get_api_v1_users_list → listUsers
-- post_api_v1_users_create → createUser
-...
-
-Would you like me to create an overlay with these improvements?
-```
-
-### Multi-Language Generation
-
-```
-User: I need SDKs for TypeScript, Python, and Go
-
-Claude: I'll set up a multi-target workflow...
-
-Created .speakeasy/workflow.yaml with 3 targets.
-Running generation for all targets...
-
-✅ Generated:
-- TypeScript SDK → ./sdks/typescript
-- Python SDK → ./sdks/python
-- Go SDK → ./sdks/go
-```
-
-## Supported Languages
-
-| Language | Target Name |
-|----------|-------------|
-| TypeScript | `typescript` |
-| Python | `python` |
-| Go | `go` |
-| Java | `java` |
-| C# | `csharp` |
-| PHP | `php` |
-| Ruby | `ruby` |
-| Swift | `swift` |
-| Kotlin | `kotlin` |
-| Terraform | `terraform` |
-| MCP Server | `mcp-typescript` |
-
 ## Resources
 
 - [Speakeasy Documentation](https://speakeasy.com/docs)
 - [OpenAPI Best Practices](https://speakeasy.com/docs/openapi)
 - [SDK Customization](https://speakeasy.com/docs/customize-sdks)
-- [GitHub](https://github.com/speakeasy-api/speakeasy)
-
-## Support
-
-- [GitHub Issues](https://github.com/speakeasy-api/speakeasy/issues)
-- [Discord Community](https://discord.gg/speakeasy)
-- [Email Support](mailto:support@speakeasy.com)
 
 ## License
 

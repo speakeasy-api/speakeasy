@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "speakeasy": {
-      "command": "speakeasy",
-      "args": ["mcp", "serve"],
-      "description": "Speakeasy SDK generation and OpenAPI tooling"
-    }
-  }
-}
