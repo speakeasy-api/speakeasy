@@ -49,7 +49,7 @@ func Test_merge_determinism(t *testing.T) {
 	})
 	require.NoError(t, err)
 	documentChanges, errs := libopenapi.CompareDocuments(doc1, doc2)
-	require.Len(t, errs, 0)
+	require.Empty(t, errs)
 	// When no changes, CompareDocuments returns nil
 	require.Nil(t, documentChanges)
 	require.Equal(t, string(got1), string(got2))
@@ -801,9 +801,7 @@ externalDocs:
 func Test_MergeByResolvingLocalReferences_WithFileRefs(t *testing.T) {
 	ctx := context.Background()
 
-	tempDir, err := os.MkdirTemp("", "merge-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir) // Clean up after the test
+	tempDir := t.TempDir()
 
 	mainSchemaPath := filepath.Join(tempDir, "main-schema.yaml")
 	referencedSchemaPath := filepath.Join(tempDir, "referenced-schema.yaml")
@@ -820,7 +818,7 @@ components:
         name:
           type: string
 `
-	err = os.WriteFile(referencedSchemaPath, []byte(referencedSchema), 0644)
+	err := os.WriteFile(referencedSchemaPath, []byte(referencedSchema), 0o644)
 	require.NoError(t, err)
 
 	// Create and write the main schema file
@@ -840,12 +838,11 @@ paths:
               schema:
                 $ref: './referenced-schema.yaml#/components/schemas/ReferencedObject'
 `
-	err = os.WriteFile(mainSchemaPath, []byte(mainSchema), 0644)
+	err = os.WriteFile(mainSchemaPath, []byte(mainSchema), 0o644)
 	require.NoError(t, err)
 
-	outFile, err := os.CreateTemp("", "out-schema-*.yaml")
+	outFile, err := os.CreateTemp(t.TempDir(), "out-schema-*.yaml")
 	require.NoError(t, err)
-	defer os.Remove(outFile.Name())
 
 	// Call the function under test
 	err = MergeByResolvingLocalReferences(ctx, mainSchemaPath, outFile.Name(), tempDir, "", "", false)

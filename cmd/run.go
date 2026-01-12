@@ -49,6 +49,7 @@ type RunFlags struct {
 	Minimal            bool              `json:"minimal"`
 	Dependent          string            `json:"dependent"`
 	SourceLocation     string            `json:"source-location"`
+	AutoYes            bool              `json:"auto-yes"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -194,6 +195,11 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Description: "override the location of the source, for example to a local copy of your OpenAPI document",
 			Hidden:      true,
 		},
+		flag.BooleanFlag{
+			Name:        "auto-yes",
+			Shorthand:   "y",
+			Description: "auto confirm all prompts",
+		},
 	},
 }
 
@@ -227,23 +233,24 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 	if flags.Target == "" && flags.Source == "" && flags.Dependent == "" {
 		sourcesOnly := len(wf.Targets) == 0 && len(dependents) == 0
 
-		if len(wf.Targets) == 1 {
+		switch {
+		case len(wf.Targets) == 1:
 			flags.Target = targets[0]
-		} else if sourcesOnly && len(wf.Sources) == 1 {
+		case sourcesOnly && len(wf.Sources) == 1:
 			flags.Source = sources[0]
-		} else if sourcesOnly && len(wf.Sources) > 1 {
+		case sourcesOnly && len(wf.Sources) > 1:
 			flags.Source, err = askForSource(sources, true)
 			if err != nil {
 				return err
 			}
-		} else if len(wf.Targets) == 0 && len(dependents) == 1 {
+		case len(wf.Targets) == 0 && len(dependents) == 1:
 			flags.Dependent = dependents[0]
-		} else if len(wf.Targets) == 0 && len(dependents) > 1 {
+		case len(wf.Targets) == 0 && len(dependents) > 1:
 			flags.Dependent, err = askForDependent(dependents)
 			if err != nil {
 				return err
 			}
-		} else {
+		default:
 			flags.Target, err = askForTarget("What target would you like to run?", "You may choose an individual target or 'all'.", "Let's choose a target to run the generation workflow.", targets, true)
 			if err != nil {
 				return err
@@ -341,10 +348,8 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 
 func askForTarget(title, description, confirmation string, targets []string, allowAll bool) (string, error) {
 	var targetOptions []huh.Option[string]
-	var existingTargets []string
 
 	for _, targetName := range targets {
-		existingTargets = append(existingTargets, targetName)
 		targetOptions = append(targetOptions, huh.NewOption(targetName, targetName))
 	}
 	if allowAll {
@@ -437,6 +442,8 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
+		run.WithAutoYes(flags.AutoYes),
+		run.WithAllowPrompts(false), // Non-interactive mode
 	}
 
 	if flags.Minimal {
@@ -500,11 +507,19 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithFrozenWorkflowLock(flags.FrozenWorkflowLock),
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
+		run.WithAutoYes(flags.AutoYes),
 	}
 
 	if flags.Minimal {
 		opts = append(opts, minimalOpts...)
 	}
+
+	if flags.Verbose {
+		flags.Output = "console"
+	}
+
+	// Only allow prompts in summary mode (interactive visualization)
+	opts = append(opts, run.WithAllowPrompts(flags.Output == "summary"))
 
 	workflow, err := run.NewWorkflow(
 		ctx,
@@ -512,10 +527,6 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 	)
 	if err != nil {
 		return err
-	}
-
-	if flags.Verbose {
-		flags.Output = "console"
 	}
 
 	switch flags.Output {
@@ -555,14 +566,15 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 // We'll only print the runErr if we actually launch the studio. Otherwise, it will get printed when we return all the way out
 func maybeLaunchStudio(ctx context.Context, wf *run.Workflow, flags RunFlags, runErr error) (error, bool) {
-	if studio.CanLaunch(ctx, wf) && flags.Watch {
+	switch {
+	case studio.CanLaunch(ctx, wf) && flags.Watch:
 		if runErr != nil {
 			log.From(ctx).Error(runErr.Error())
 		}
 		return studio.LaunchStudio(ctx, wf), true
-	} else if wf.CountDiagnostics() > 1 {
+	case wf.CountDiagnostics() > 1:
 		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `%d` potential improvements for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`", wf.CountDiagnostics())
-	} else if wf.CountDiagnostics() == 1 {
+	case wf.CountDiagnostics() == 1:
 		log.From(ctx).PrintfStyled(styles.Info, "\nWe've detected `1` potential improvement for your SDK.\nGet automatic fixes in the Studio with `speakeasy run --watch`")
 	}
 

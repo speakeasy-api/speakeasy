@@ -25,6 +25,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
+	"github.com/speakeasy-api/speakeasy/pkg/transform"
 )
 
 type SourceResultCallback func(sourceRes *SourceResult, sourceStep SourceStepID) error
@@ -86,9 +87,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 	defer func() {
 		w.SourceResults[sourceID] = sourceRes
-		w.OnSourceResult(sourceRes, SourceStepComplete)
+		_ = w.OnSourceResult(sourceRes, SourceStepComplete)
 	}()
-	w.OnSourceResult(sourceRes, SourceStepFetch)
+	_ = w.OnSourceResult(sourceRes, SourceStepFetch)
 
 	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
@@ -106,17 +107,18 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	frozenSource := false
 
 	var currentDocument string
-	if w.SourceLocation != "" {
+	switch {
+	case w.SourceLocation != "":
 		rootStep.NewSubstep("Using Source Location Override")
 		currentDocument = w.SourceLocation
 		frozenSource = true
-	} else if w.FrozenWorkflowLock && hasRemoteInputs {
+	case w.FrozenWorkflowLock && hasRemoteInputs:
 		frozenSource = true
 		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused")
 		if err != nil {
 			return "", nil, err
 		}
-	} else if len(source.Inputs) == 1 {
+	case len(source.Inputs) == 1:
 		var singleLocation *string
 		// The output location should be the resolved location
 		if source.IsSingleInput() {
@@ -139,7 +141,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 		}
 		sourceRes.MergeResult.InputSchemaLocation = []string{currentDocument}
-	} else {
+	default:
 		sourceRes.MergeResult, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -153,7 +155,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Overlays) > 0 && !frozenSource {
-		w.OnSourceResult(sourceRes, SourceStepOverlay)
+		_ = w.OnSourceResult(sourceRes, SourceStepOverlay)
 		sourceRes.OverlayResult, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -161,8 +163,18 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		currentDocument = sourceRes.OverlayResult.Location
 	}
 
+	// Automatically convert Swagger 2.0 documents to OpenAPI 3.0
+	// Note: This is handled here rather than as a transformation type in source.Transformations
+	// as we don't want to expose this as a controllable transformation in a workflow file
+	if !frozenSource {
+		currentDocument, err = maybeConvertSwagger(ctx, rootStep, currentDocument, logger)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
 	if len(source.Transformations) > 0 && !frozenSource {
-		w.OnSourceResult(sourceRes, SourceStepTransform)
+		_ = w.OnSourceResult(sourceRes, SourceStepTransform)
 		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -179,7 +191,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	var lintingErr error
 	if !w.SkipLinting {
-		w.OnSourceResult(sourceRes, SourceStepLint)
+		_ = w.OnSourceResult(sourceRes, SourceStepLint)
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir, targetLanguage)
 		if err != nil {
 			lintingErr = &LintingError{Err: err, Document: currentDocument}
@@ -195,7 +207,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		step.Succeed()
 	}
 
-	w.OnSourceResult(sourceRes, SourceStepUpload)
+	_ = w.OnSourceResult(sourceRes, SourceStepUpload)
 
 	// Upload if validation passed OR if the spec looks like an OpenAPI spec (even if invalid)
 	if !w.SkipSnapshot && (lintingErr == nil || validation.LooksLikeAnOpenAPISpec(currentDocument)) {
@@ -292,7 +304,7 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context) {
 		}
 
 		// TODO: reintroduce with studio
-		//if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(sourceRes.Diagnosis) {
+		// if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(sourceRes.Diagnosis) {
 		//	baseURL := auth.GetWorkspaceBaseURL(ctx)
 		//	link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
 		//	link = links.Shorten(ctx, link)
@@ -322,6 +334,10 @@ var randStringBytes = func(n int) string {
 
 func getTempApplyPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("applied_%s%s", randStringBytes(10), filepath.Ext(path)))
+}
+
+func getTempConvertedPath(path string) string {
+	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("converted_%s%s", randStringBytes(10), filepath.Ext(path)))
 }
 
 // Returns true if any of the source inputs are remote.
@@ -408,4 +424,42 @@ func maybeReformatDocument(ctx context.Context, documentPath string, rootStep *w
 	}
 
 	return documentPath, false, nil
+}
+
+// maybeConvertSwagger checks if a document is Swagger 2.0 and automatically converts it to OpenAPI 3.0
+func maybeConvertSwagger(ctx context.Context, rootStep *workflowTracking.WorkflowStep, documentPath string, logger log.Logger) (string, error) {
+	isSwagger, err := schemas.IsSwaggerDocument(ctx, documentPath)
+	if err != nil {
+		logger.Warnf("failed to check if document is Swagger: %s", err.Error())
+		return documentPath, nil
+	}
+
+	if !isSwagger {
+		return documentPath, nil
+	}
+
+	convertStep := rootStep.NewSubstep("Converting Swagger 2.0 to OpenAPI 3.0")
+	logger.Infof("Detected Swagger 2.0 document, automatically converting to OpenAPI 3.0...")
+
+	convertedPath := getTempConvertedPath(documentPath)
+	if err := os.MkdirAll(filepath.Dir(convertedPath), os.ModePerm); err != nil {
+		convertStep.Fail()
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
+	}
+
+	convertedFile, err := os.Create(convertedPath)
+	if err != nil {
+		convertStep.Fail()
+		return "", fmt.Errorf("failed to create converted file: %w", err)
+	}
+	defer convertedFile.Close()
+
+	yamlOut := utils.HasYAMLExt(documentPath)
+	if err := transform.ConvertSwagger(ctx, documentPath, yamlOut, convertedFile); err != nil {
+		convertStep.Fail()
+		return "", fmt.Errorf("failed to convert Swagger to OpenAPI: %w", err)
+	}
+
+	convertStep.Succeed()
+	return convertedPath, nil
 }

@@ -118,65 +118,65 @@ type normalizeFlags struct {
 
 func runNormalize(ctx context.Context, flags normalizeFlags) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
-	defer out.Close()
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	return transform.NormalizeDocument(ctx, flags.Schema, flags.PrefixItems, yamlOut, out)
 }
 
 func runRemoveUnused(ctx context.Context, flags basicFlagsI) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
-	defer out.Close()
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	return transform.RemoveUnused(ctx, flags.Schema, yamlOut, out)
 }
 
 func runConvertSwagger(ctx context.Context, flags convertSwaggerFlags) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
-	defer out.Close()
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	return transform.ConvertSwagger(ctx, flags.Schema, yamlOut, out)
 }
 
 func runFilterOperations(ctx context.Context, flags filterOperationsFlags) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
-	defer out.Close()
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	return transform.FilterOperations(ctx, flags.Schema, flags.OperationIDs, !flags.Exclude, yamlOut, out)
 }
 
 func runCleanup(ctx context.Context, flags basicFlagsI) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
-	defer out.Close()
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	return transform.CleanupDocument(ctx, flags.Schema, yamlOut, out)
 }
 
 func runFormat(ctx context.Context, flags basicFlagsI) error {
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
-	defer out.Close()
 	if err != nil {
 		return err
 	}
+	defer out.Close()
 
 	return transform.FormatDocument(ctx, flags.Schema, yamlOut, out)
 }
 
-func setupOutput(ctx context.Context, out string) (*os.File, bool, error) {
+func setupOutput(_ context.Context, out string) (*os.File, bool, error) {
 	yamlOut := utils.HasYAMLExt(out)
 
 	if out != "" {

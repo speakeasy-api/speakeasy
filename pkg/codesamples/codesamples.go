@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/AlekSi/pointer"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -192,11 +192,8 @@ func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath
 }
 
 func getStyle(opts workflow.CodeSamples) CodeSamplesStyle {
-	if opts.Style != nil {
-		switch *opts.Style {
-		case "readme":
-			return ReadMe
-		}
+	if opts.Style != nil && *opts.Style == "readme" {
+		return ReadMe
 	}
 	return Default
 }
@@ -252,12 +249,4 @@ func singleCodeSampleNode(snippet usagegen.UsageSnippet, opts workflow.CodeSampl
 	}
 
 	return builder.NewMultinode(kvs...)
-}
-
-func styleForNode(isJSON bool) yaml.Style {
-	if isJSON {
-		return yaml.DoubleQuotedStyle
-	}
-
-	return 0
 }

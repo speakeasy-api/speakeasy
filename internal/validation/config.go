@@ -16,7 +16,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 )
 
-var NoConfigFound error = fmt.Errorf("no configuration found")
+var ErrNoConfigFound error = fmt.Errorf("no configuration found")
 
 // GetAndValidateConfigs validates the generation config for a target and prints any errors
 // Returns an error if the config is invalid, nil otherwise
@@ -64,8 +64,8 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 		event.GenerateTargetName = &targetName
 		errs := ValidateConfig(target, cfg, publishingEnabled)
 		if len(errs) > 0 {
-			if errors.Is(errs[0], NoConfigFound) {
-				return NoConfigFound
+			if errors.Is(errs[0], ErrNoConfigFound) {
+				return ErrNoConfigFound
 			}
 
 			for _, err := range errs {
@@ -84,7 +84,7 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 // ValidateConfig validates the generation config for a target and returns a list of errors
 func ValidateConfig(target string, cfg *sdkGenConfig.Config, publishingEnabled bool) []error {
 	if cfg == nil || cfg.Config == nil || len(cfg.Config.Languages) == 0 {
-		return []error{NoConfigFound}
+		return []error{ErrNoConfigFound}
 	} else if _, ok := cfg.Config.Languages[target]; !ok {
 		return []error{fmt.Errorf("target %s not found in configuration", target)}
 	}
@@ -148,7 +148,7 @@ func ValidateTarget(target string, config map[string]any, publishingEnabled bool
 
 		// Check validation regex
 		if field.ValidationRegex != nil {
-			validationRegex := strings.Replace(*field.ValidationRegex, `\u002f`, `/`, -1)
+			validationRegex := strings.ReplaceAll(*field.ValidationRegex, `\u002f`, `/`)
 			regex := regexp.MustCompile(validationRegex)
 
 			sVal := fmt.Sprintf("%v", config[field.Name])

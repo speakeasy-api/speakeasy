@@ -2,12 +2,13 @@ package studio
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/studio/sdk/models/components"
-	"net/http"
 )
 
 func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, flusher http.Flusher, genSteps, fileStatus bool) {
@@ -48,7 +49,7 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 			readme := components.FileData{
 				Name:    "README.md",
 				Path:    progressUpdate.File.Path,
-				Content: string(progressUpdate.File.Content.Bytes()),
+				Content: progressUpdate.File.Content.String(),
 			}
 
 			targetDirectory := h.WorkflowRunner.ProjectDir
@@ -75,8 +76,7 @@ func (h *StudioHandlers) enableGenerationProgressUpdates(w http.ResponseWriter, 
 			IsPartial:        true,
 			Took:             h.WorkflowRunner.Duration.Milliseconds(),
 		}
-		sendRunResponseDataToStream(w, flusher, runResponseData)
-
+		_ = sendRunResponseDataToStream(w, flusher, runResponseData)
 	}
 
 	h.WorkflowRunner.StreamableGeneration = &sdkgen.StreamableGeneration{
@@ -107,7 +107,7 @@ func (h *StudioHandlers) logGenerationProgress(progressUpdate generate.ProgressU
 		)
 
 		if progressUpdate.File.IsMainReadme {
-			msg += fmt.Sprintf(" - MAIN README")
+			msg += " - MAIN README"
 		}
 
 		if progressUpdate.File.Content != nil {

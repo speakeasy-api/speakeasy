@@ -2,7 +2,7 @@ package sdkgen
 
 import (
 	"context"
-	"errors"
+	stderrors "errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,23 +11,31 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
-	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
-	gen_config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
+	"github.com/speakeasy-api/speakeasy/internal/fs"
+	"github.com/speakeasy-api/speakeasy/internal/git"
+	"github.com/speakeasy-api/speakeasy/internal/patches"
+	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/merge"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/prompts"
 	"go.uber.org/zap"
 )
+
+// PromptForCustomCode is a function variable that can be replaced in tests.
+// It defaults to the real prompt implementation.
+var PromptForCustomCode = prompts.PromptForCustomCode
 
 type GenerationAccess struct {
 	AccessAllowed bool
@@ -37,7 +45,7 @@ type GenerationAccess struct {
 
 type CancellableGeneration struct {
 	CancellationMutex  sync.Mutex         // protects both CancellableContext and CancelGeneration (exposed by w.CancelGeneration())
-	CancellableContext context.Context    // the context that can be cancelled to stop generation
+	CancellableContext context.Context    //nolint:containedctx // Intentional: enables cancellation of long-running generation
 	CancelGeneration   context.CancelFunc // the function to call to cancel generation
 }
 
@@ -68,10 +76,15 @@ type GenerateOptions struct {
 	Compile         bool
 	TargetName      string
 	SkipVersioning  bool
+	AllowPrompts    bool
 
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
 	ReleaseNotes          string
+
+	// WorkflowStep enables running prompts through the workflow visualizer.
+	// If nil, prompts will run directly without visualizer integration.
+	WorkflowStep *workflowTracking.WorkflowStep
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
@@ -99,7 +112,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			AccessAllowed: generationAccess,
 			Message:       message,
 			Level:         level,
-		}, errors.New("generation access blocked")
+		}, stderrors.New("generation access blocked")
 	}
 
 	logger.Infof("Generating SDK for %s...\n", opts.Language)
@@ -195,6 +208,39 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		),
 	)
 
+	// Try to open a git repository for the Round-Trip Engineering (3-way merge) feature.
+	// If a git repository exists, inject Git and FileSystem adapters for the persistentEdits feature.
+	repo, repoErr := git.NewLocalRepository(opts.OutDir)
+	if repoErr == nil && !repo.IsNil() {
+		wrappedRepo := patches.WrapGitRepository(repo)
+
+		// Use opts.OutDir as baseDir for GitAdapter. This allows translation between
+		// generation-relative paths (e.g., "sdk.go") and git-root-relative paths (e.g., "go-sdk/sdk.go").
+		// opts.OutDir is relative to cwd which should be at or inside the git root.
+		gitAdapter := patches.NewGitAdapter(wrappedRepo, opts.OutDir)
+
+		generatorOpts = append(generatorOpts,
+			generate.WithGit(gitAdapter),
+			generate.WithFileSystem(fs.NewFileSystem(opts.OutDir)),
+		)
+
+		// Pre-generation: detect file moves/deletions, prompt if needed, and update lockfile
+		// Use WorkflowStep for prompts if available (to pause visualizer), otherwise use direct prompts
+		// Pass nil promptFunc if prompts are not allowed (e.g., console output mode, CI)
+		var promptFunc patches.PromptFunc
+		if opts.AllowPrompts {
+			promptFunc = PromptForCustomCode
+			if opts.WorkflowStep != nil {
+				promptFunc = func(summary string) (prompts.CustomCodeChoice, error) {
+					return prompts.PromptForCustomCodeWithStep(summary, opts.WorkflowStep)
+				}
+			}
+		}
+		if err := patches.PrepareForGeneration(opts.OutDir, opts.AutoYes, promptFunc, logger.Warnf); err != nil {
+			logger.Warnf("Error preparing for generation: %v", err)
+		}
+	}
+
 	g, err := generate.New(generatorOpts...)
 	if err != nil {
 		return &GenerationAccess{
@@ -222,6 +268,13 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		if len(errs) > 0 {
 			for _, err := range errs {
+				// Check if it's a ConflictsError - render pretty conflict message
+				var conflictErr *merge.ConflictsError
+				if stderrors.As(err, &conflictErr) {
+					renderConflictsError(logger, conflictErr)
+					// Don't log the generic error for conflicts - we rendered a nice message
+					continue
+				}
 				logger.Error("", zap.Error(err))
 			}
 
@@ -247,8 +300,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
 	if cliEvent != nil && cliEvent.ExecutionID != "" {
 		// Get org and workspace slugs from context
-		orgSlug := core.GetOrgSlugFromContext(ctx)
-		workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+		orgSlug := auth.GetOrgSlugFromContext(ctx)
+		workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 
 		if orgSlug != "" && workspaceSlug != "" {
 			logger.Successf("speakeasy repro %s_%s_%s", orgSlug, workspaceSlug, cliEvent.ExecutionID)
@@ -302,10 +355,35 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 
 func GetGenLockID(outDir string) *string {
 	if utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".speakeasy/gen.lock")) || utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".gen/gen.lock")) {
-		if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
+		if cfg, err := config.Load(outDir); err == nil && cfg.LockFile != nil {
 			return &cfg.LockFile.ID
 		}
 	}
 
 	return nil
+}
+
+// renderConflictsError renders a git-status style error message for merge conflicts.
+func renderConflictsError(logger log.Logger, conflictErr *merge.ConflictsError) {
+	// Build file list with "both modified:" prefix like git status
+	var fileLines strings.Builder
+	for _, file := range conflictErr.Files {
+		fileLines.WriteString(fmt.Sprintf("    both modified:   %s\n", file))
+	}
+
+	// Render instructional error box
+	msg := styles.RenderInstructionalError(
+		"Merge Conflicts Detected",
+		fmt.Sprintf("%d file(s) have conflicts that must be resolved manually:\n%s", len(conflictErr.Files), fileLines.String()),
+		"To resolve:\n"+
+			"1. Open each file and resolve the conflict markers (<<<<<<, ======, >>>>>>)\n"+
+			"2. Remove the conflict markers after choosing the correct code\n"+
+			"3. Run: speakeasy run --skip-versioning",
+	)
+	logger.Println("\n" + msg)
+
+	// Emit GitHub Actions annotations for each conflicting file
+	for _, file := range conflictErr.Files {
+		logger.Printf("::error file=%s::Merge conflict detected - manual resolution required", file)
+	}
 }

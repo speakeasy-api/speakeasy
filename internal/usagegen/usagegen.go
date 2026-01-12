@@ -63,13 +63,14 @@ func Generate(
 		generate.WithForceGeneration(),
 	}
 
-	if all {
+	switch {
+	case all:
 		opts = append(opts, generate.WithUsageSnippetArgsGenerateAll())
-	} else if operation == "" && namespace == "" {
+	case operation == "" && namespace == "":
 		opts = append(opts, generate.WithUsageSnippetArgsByRootExample())
-	} else if operation != "" {
+	case operation != "":
 		opts = append(opts, generate.WithUsageSnippetArgsByOperationID(operation))
-	} else {
+	default:
 		opts = append(opts, generate.WithUsageSnippetArgsByNamespace(namespace))
 	}
 
@@ -99,14 +100,15 @@ func Generate(
 		return fmt.Errorf("failed to generate usage snippets for %s ✖", lang)
 	}
 
-	if out == "" {
+	switch {
+	case out == "":
 		if outputBuffer == nil {
 			// By default, write to stdout
 			fmt.Println(tmpOutput.String())
 		}
-	} else if isDirectory(out) {
+	case isDirectory(out):
 		return writeFormattedDirectory(lang, out, outputBuffer.String())
-	} else {
+	default:
 		file, err := os.OpenFile(out, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 		if err != nil {
 			return errors.Wrap(err, "cannot write to provided file")
@@ -132,10 +134,10 @@ func writeFormattedDirectory(lang, path, content string) error {
 
 	for _, snippet := range snippets {
 		// TODO: do we still need to do this?
-		//remove the trailing line if it includes an empty comment string
-		//if strings.TrimSpace(lines[len(lines)-1]) == "//" || strings.TrimSpace(lines[len(lines)-1]) == "#" {
-		//	lines = lines[0 : len(lines)-1]
-		//}
+		// remove the trailing line if it includes an empty comment string
+		// if strings.TrimSpace(lines[len(lines)-1]) == "//" || strings.TrimSpace(lines[len(lines)-1]) == "#" {
+		// 	lines = lines[0 : len(lines)-1]
+		// }
 
 		// write out directory structure
 		directoryPath := path + "/" + strings.ToLower(snippet.OperationId)
@@ -308,4 +310,8 @@ func (fs *fileSystem) Stat(name string) (fs.FileInfo, error) {
 
 func (fs *fileSystem) OpenFile(name string, flag int, perm fs.FileMode) (filesystem.File, error) {
 	return os.OpenFile(name, flag, perm)
+}
+
+func (fs *fileSystem) ScanForGeneratedIDs() (map[string]string, error) {
+	return nil, nil
 }

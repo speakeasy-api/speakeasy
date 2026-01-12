@@ -5,14 +5,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 
 	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/speakeasy/internal/docs"
 )
-
-var linkRegex = regexp.MustCompile(`\((.*?\.md)\)`)
 
 func main() {
 	outDir := flag.String("out-dir", "./docs", "The directory to output the docs to")
@@ -28,6 +25,7 @@ func main() {
 		filepath.Join(*outDir, "getting-started.mdx"),
 		filepath.Join(*outDir, "_meta.tsx"),
 		filepath.Join(*outDir, "mise-toolkit.mdx"),
+		filepath.Join(*outDir, "docker.mdx"),
 	}
 
 	if _, err := removeDocs(*outDir, exclusionList); err != nil {

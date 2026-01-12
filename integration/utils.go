@@ -11,14 +11,20 @@ import (
 )
 
 const (
-	tempDir      = "temp"
 	letterBytes  = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	version      = "0.0.1"
 	artifactArch = "linux_amd64"
 )
 
-func createTempDir(wd string) (string, error) {
-	target := filepath.Join(wd, tempDir, randStringBytes(7))
+// integrationTestsDir returns the path to the integrationTests directory at repo root.
+// This is outside the integration/ package directory to avoid interference with `go test ./integration/...`.
+func integrationTestsDir() string {
+	_, filename, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(filename), "..", "integrationTests")
+}
+
+func createTempDir(_ string) (string, error) {
+	target := filepath.Join(integrationTestsDir(), randStringBytes(7))
 	if err := os.Mkdir(target, 0o755); err != nil {
 		return "", err
 	}
@@ -77,6 +83,7 @@ func expectedFilesByLanguage(language string) []string {
 }
 
 func checkForExpectedFiles(t *testing.T, outdir string, files []string) {
+	t.Helper()
 	for _, fileName := range files {
 		filePath := filepath.Join(outdir, fileName)
 		fileInfo, err := os.Stat(filePath)

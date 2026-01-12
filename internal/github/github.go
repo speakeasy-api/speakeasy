@@ -30,9 +30,11 @@ type WorkflowSummary interface {
 	ToMermaidDiagram() (string, error)
 }
 
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+var re = regexp.MustCompile(ansi)
+
 func StripANSICodes(str string) string {
-	const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
-	var re = regexp.MustCompile(ansi)
 	return re.ReplaceAllString(str, "")
 }
 
@@ -110,7 +112,7 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 
 	if len(os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")) > 0 {
 		filepath := os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")
-		f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 		if err != nil {
 			log.From(ctx).Warnf("failed to open file %s: %s", filepath, err)
 			return
@@ -122,7 +124,7 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 			}
 		}()
 
-		if _, err := f.Write([]byte(summary.Text)); err != nil {
+		if _, err := f.WriteString(summary.Text); err != nil {
 			log.From(ctx).Warnf("failed to write file %s: %s", filepath, err)
 			return
 		}
@@ -175,40 +177,47 @@ func SortErrors(errs []error) {
 		iVErr := errors.GetValidationErr(i)
 		jVErr := errors.GetValidationErr(j)
 
-		if iVErr != nil && jVErr != nil {
-			if iVErr.Severity == errors.SeverityError && jVErr.Severity != errors.SeverityError {
+		switch {
+		case iVErr != nil && jVErr != nil:
+			switch {
+			case iVErr.Severity == errors.SeverityError && jVErr.Severity != errors.SeverityError:
 				return -1
-			} else if iVErr.Severity == errors.SeverityWarn && jVErr.Severity == errors.SeverityError {
+			case iVErr.Severity == errors.SeverityWarn && jVErr.Severity == errors.SeverityError:
 				return 1
-			} else if iVErr.Severity == errors.SeverityHint && jVErr.Severity != errors.SeverityHint {
+			case iVErr.Severity == errors.SeverityHint && jVErr.Severity != errors.SeverityHint:
 				return 1
 			}
 
-			if iVErr.LineNumber < jVErr.LineNumber {
+			switch {
+			case iVErr.LineNumber < jVErr.LineNumber:
 				return -1
-			} else if iVErr.LineNumber > jVErr.LineNumber {
+			case iVErr.LineNumber > jVErr.LineNumber:
 				return 1
+			default:
+				return 0
 			}
-			return 0
-		} else if iVErr != nil {
+		case iVErr != nil:
 			return -1
-		} else if jVErr != nil {
+		case jVErr != nil:
 			return 1
 		}
 
 		iUErr := errors.GetUnsupportedErr(i)
 		jUErr := errors.GetUnsupportedErr(j)
 
-		if iUErr != nil && jUErr != nil {
-			if iUErr.LineNumber < jUErr.LineNumber {
+		switch {
+		case iUErr != nil && jUErr != nil:
+			switch {
+			case iUErr.LineNumber < jUErr.LineNumber:
 				return -1
-			} else if iUErr.LineNumber > jUErr.LineNumber {
+			case iUErr.LineNumber > jUErr.LineNumber:
 				return 1
+			default:
+				return 0
 			}
-			return 0
-		} else if iUErr != nil {
+		case iUErr != nil:
 			return -1
-		} else if jUErr != nil {
+		case jUErr != nil:
 			return 1
 		}
 

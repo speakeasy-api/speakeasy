@@ -53,29 +53,30 @@ func TestApply_inJSON_outYAML_v2(t *testing.T) {
 }
 
 func TestApply_StrictFailure(t *testing.T) {
-	tmpFile, err := os.CreateTemp("", "output.yaml")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "output.yaml")
 	require.NoError(t, err)
 	_, err = Apply(schemaFile, overlayStrictFailure, true, tmpFile, true, true)
 	assert.Errorf(t, err, "unknown-element")
 }
 
 func test(t *testing.T, schemaFile string, overlayFile string, expectedFile string, yamlOut bool) {
+	t.Helper()
 	ext := "json"
 	if yamlOut {
 		ext = "yaml"
 	}
-	tmpFile, err := os.CreateTemp("", "output."+ext)
+	tmpFile, err := os.CreateTemp(t.TempDir(), "output."+ext)
 	require.NoError(t, err)
 	defer tmpFile.Close()
 
 	_, err = Apply(schemaFile, overlayFile, yamlOut, tmpFile, true, false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expectedContent, err := os.ReadFile(expectedFile)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	actualContent, err := os.ReadFile(tmpFile.Name())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	println(string(actualContent))
 

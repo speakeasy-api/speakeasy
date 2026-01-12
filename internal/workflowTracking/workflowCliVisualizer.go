@@ -2,21 +2,40 @@ package workflowTracking
 
 import (
 	"fmt"
-	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
-	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/speakeasy-api/huh"
+	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 )
 
-type UpdateMsg string
+// UpdateMsg is the interface for all messages sent through the updates channel.
+// This allows both status updates and interactive prompt requests.
+type UpdateMsg interface {
+	isUpdateMsg()
+}
 
-var (
-	MsgUpdated   UpdateMsg = "updated"
-	MsgSucceeded UpdateMsg = "succeeded"
-	MsgFailed    UpdateMsg = "failed"
+// StatusMsg represents workflow status updates (updated, succeeded, failed).
+type StatusMsg string
+
+func (StatusMsg) isUpdateMsg() {}
+
+const (
+	MsgUpdated   StatusMsg = "updated"
+	MsgSucceeded StatusMsg = "succeeded"
+	MsgFailed    StatusMsg = "failed"
 )
+
+// PromptRequestMsg requests the visualizer to pause and run an interactive prompt.
+// The worker goroutine blocks on RespCh until the prompt completes.
+type PromptRequestMsg struct {
+	Form   *huh.Form
+	RespCh chan error // nil error means form completed successfully
+}
+
+func (PromptRequestMsg) isUpdateMsg() {}
 
 // A command that waits for the activity on a channel.
 func listenForUpdates(sub <-chan UpdateMsg) tea.Cmd {
@@ -31,6 +50,10 @@ type cliVisualizer struct {
 	runFn    func() error
 	spinner  *spinner.Model
 	err      error
+
+	// Prompt state - when non-nil, visualizer is showing a form
+	promptForm   *huh.Form
+	promptRespCh chan error
 }
 
 func (m cliVisualizer) Init() tea.Cmd {
@@ -52,14 +75,46 @@ func (m cliVisualizer) OnUserExit() {
 }
 
 func (m cliVisualizer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// If we're showing a prompt form, delegate all messages to it
+	if m.promptForm != nil {
+		form, cmd := m.promptForm.Update(msg)
+		if f, ok := form.(*huh.Form); ok {
+			m.promptForm = f
+
+			// Check if form is completed
+			if m.promptForm.State == huh.StateCompleted || m.promptForm.State == huh.StateAborted {
+				var err error
+				if m.promptForm.State == huh.StateAborted {
+					err = huh.ErrUserAborted
+				}
+				// Send response to the waiting goroutine
+				if m.promptRespCh != nil {
+					m.promptRespCh <- err
+				}
+				// Clear prompt state and resume normal operation
+				m.promptForm = nil
+				m.promptRespCh = nil
+				// Restart both the update listener AND the spinner tick
+				return m, tea.Batch(listenForUpdates(m.updates), m.spinner.Tick)
+			}
+		}
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
-	case UpdateMsg:
+	case StatusMsg:
 		switch msg {
 		case MsgUpdated:
 			return m, listenForUpdates(m.updates) // wait for next event
 		case MsgSucceeded, MsgFailed:
 			return m, tea.Quit
 		}
+	case PromptRequestMsg:
+		// Switch to prompt mode - show the form instead of the workflow
+		m.promptForm = msg.Form
+		m.promptRespCh = msg.RespCh
+		// Initialize the form
+		return m, m.promptForm.Init()
 	}
 
 	var cmd tea.Cmd
@@ -67,12 +122,27 @@ func (m cliVisualizer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m cliVisualizer) HandleKeypress(key string) tea.Cmd { return nil }
-func (m cliVisualizer) SetWidth(width int)                {}
+func (m cliVisualizer) HandleKeypress(key string) tea.Cmd {
+	// When showing a form, signal that we want to handle esc for form cancellation
+	// The actual handling happens in Update -> form.Update
+	if m.promptForm != nil && key == "esc" {
+		return func() tea.Msg { return nil } // Non-nil cmd signals we handle it
+	}
+	return nil
+}
+func (m cliVisualizer) SetWidth(width int)   {}
+func (m cliVisualizer) SetHeight(height int) {}
 
 func (m cliVisualizer) View() string {
+	// If showing a prompt form, render that instead
+	if m.promptForm != nil {
+		return m.promptForm.View()
+	}
+
 	statusStyle := styles.Info
 	switch m.rootStep.status {
+	case StatusRunning:
+		statusStyle = styles.Info
 	case StatusFailed:
 		statusStyle = styles.Error
 	case StatusSucceeded:

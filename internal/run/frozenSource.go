@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/registry"
@@ -45,7 +46,8 @@ func (f FrozenSource) Do(ctx context.Context, _ string) (string, error) {
 	var orgSlug, workspaceSlug, registryNamespace string
 	var err error
 
-	if isSingleRegistrySource(f.workflow.workflow.Sources[f.sourceID]) && f.workflow.workflow.Sources[f.sourceID].Registry == nil {
+	switch {
+	case isSingleRegistrySource(f.workflow.workflow.Sources[f.sourceID]) && f.workflow.workflow.Sources[f.sourceID].Registry == nil:
 		d := f.workflow.workflow.Sources[f.sourceID].Inputs[0]
 		registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location.Resolve())
 		if registryBreakdown == nil {
@@ -56,9 +58,9 @@ func (f FrozenSource) Do(ctx context.Context, _ string) (string, error) {
 		// odd edge case: we are not migrating the registry location when we're a single registry source.
 		// Unfortunately can't just fix here as it needs a migration
 		registryNamespace = lockSource.SourceNamespace
-	} else if !isSingleRegistrySource(f.workflow.workflow.Sources[f.sourceID]) && f.workflow.workflow.Sources[f.sourceID].Registry == nil {
+	case !isSingleRegistrySource(f.workflow.workflow.Sources[f.sourceID]) && f.workflow.workflow.Sources[f.sourceID].Registry == nil:
 		return "", fmt.Errorf("invalid workflow lockfile: no registry location found for source %s", f.sourceID)
-	} else if f.workflow.workflow.Sources[f.sourceID].Registry != nil {
+	case f.workflow.workflow.Sources[f.sourceID].Registry != nil:
 		orgSlug, workspaceSlug, registryNamespace, _, err = f.workflow.workflow.Sources[f.sourceID].Registry.ParseRegistryLocation()
 		if err != nil {
 			return "", fmt.Errorf("error parsing registry location %s: %w", string(f.workflow.workflow.Sources[f.sourceID].Registry.Location), err)
@@ -80,7 +82,6 @@ func (f FrozenSource) Do(ctx context.Context, _ string) (string, error) {
 
 	d := workflow.Document{Location: workflow.LocationString(registryLocation)}
 	docPath, err := registry.ResolveSpeakeasyRegistryBundle(ctx, d, workflow.GetTempDir())
-
 	if err != nil {
 		return "", fmt.Errorf("error resolving registry bundle from %s: %w", registryLocation, err)
 	}

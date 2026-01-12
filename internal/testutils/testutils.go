@@ -20,6 +20,7 @@ func GetTempDir() string {
 
 // GetProjectRoot returns the project root directory by finding go.mod
 func GetProjectRoot(t *testing.T) string {
+	t.Helper()
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -43,6 +44,7 @@ func GetProjectRoot(t *testing.T) string {
 
 // BuildTempBinary builds the speakeasy CLI to a temporary location and returns the path
 func BuildTempBinary(t *testing.T, binaryPath string) string {
+	t.Helper()
 	// Delete the binary if it exists
 	os.Remove(binaryPath)
 
@@ -65,7 +67,7 @@ func BuildTempBinary(t *testing.T, binaryPath string) string {
 
 	// Make the binary executable (only on Unix-like systems)
 	if runtime.GOOS != "windows" {
-		err = os.Chmod(binaryPath, 0755)
+		err = os.Chmod(binaryPath, 0o755)
 		require.NoError(t, err, "Failed to make binary executable")
 	}
 

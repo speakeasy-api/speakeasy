@@ -80,8 +80,7 @@ func NewTargetFormField(
 	if isQuickstart {
 		switch targetFormField.Name {
 		case "modulePath":
-			switch targetName {
-			case "go":
+			if targetName == "go" {
 				description = "Root module path. To install your SDK, users will execute " + styles.Emphasized.Render("go get %s") + "\nFor additional information: https://go.dev/ref/mod#module-path"
 				targetFormField.SetValue("github.com/my-company/company-go-sdk")
 			}
@@ -112,8 +111,7 @@ func NewTargetFormField(
 				sdkPackageName = quickstart.Defaults.TemplateData.PackageName
 			}
 
-			switch targetName {
-			case "go":
+			if targetName == "go" {
 				description = "Root module package name. To instantiate your SDK, users will call " + styles.Emphasized.Render("%s.New()") + "\nFor additional information: https://go.dev/ref/spec#Packages"
 				if sdkPackageName != "" {
 					targetFormField.SetValue(sdkPackageName)
@@ -215,7 +213,7 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 
 		return confirm.Value(value)
-	case interface{}, *interface{}:
+	case *interface{}, interface{}:
 		// unwrap f.Value
 		unwrap := func(x interface{}) interface{} {
 			rv := reflect.ValueOf(x)
@@ -229,8 +227,7 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		}
 
 		value = unwrap(f.Value)
-		switch value.(type) {
-		case int64:
+		if _, ok := value.(int64); ok {
 			var intValue string
 
 			input := charm.NewInlineInput(&intValue).Key(f.Name)
@@ -284,8 +281,7 @@ func (f *TargetFormField) SetDescriptionFunc(description string) {
 
 	if strings.Contains(description, "%s") {
 		f.DescriptionFunc = func(v any) string {
-			switch v := v.(type) {
-			case *string:
+			if v, ok := v.(*string); ok {
 				if *v == "" {
 					return fmt.Sprintf(description, "UNSET")
 				}
@@ -336,7 +332,7 @@ func (f *TargetFormField) SetValidationRegex(regex *string) error {
 		return nil
 	}
 
-	validationRegexStr := strings.Replace(*regex, `\u002f`, `/`, -1)
+	validationRegexStr := strings.ReplaceAll(*regex, `\u002f`, `/`)
 	validationRegex, err := regexp.Compile(validationRegexStr)
 	if err != nil {
 		return fmt.Errorf("error compiling validation regex %s: %w", validationRegexStr, err)

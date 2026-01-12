@@ -18,7 +18,7 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"go.uber.org/zap"
@@ -56,7 +56,7 @@ func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, baseP
 		panic(fmt.Errorf("bundling failed: %w", e))
 	}
 
-	err = os.WriteFile(outFile, bytes, 0644)
+	err = os.WriteFile(outFile, bytes, 0o644)
 	if err != nil {
 		panic(fmt.Errorf("failed to write bundled file: %w", err))
 	}
@@ -583,13 +583,6 @@ func mergeComponents(mergedComponents, components *v3.Components) (*v3.Component
 	}
 
 	return mergedComponents, errs
-}
-
-type yamlComparable interface {
-	MarshalYAMLInline() (interface{}, error)
-	GoLow() interface {
-		Hash() [32]byte
-	}
 }
 
 type YAMLComparable interface {

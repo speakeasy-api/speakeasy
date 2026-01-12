@@ -18,7 +18,7 @@ func TestCLIUpdateMutex_TryLock(t *testing.T) {
 
 	// Create a mutex with the test lock name
 	opts := Opts{Name: testLockName}
-	mutex := new(opts)
+	mutex := newInterProcessMutex(opts)
 
 	// Clean up after test
 	defer func() {
@@ -34,7 +34,7 @@ func TestCLIUpdateMutex_TryLock(t *testing.T) {
 	result := <-resultCh
 
 	assert.True(t, result.Success, "Should successfully acquire the lock")
-	assert.Nil(t, result.Error, "Should not return an error")
+	require.NoError(t, result.Error, "Should not return an error")
 	assert.Equal(t, 0, result.Attempt, "Should succeed on the first attempt")
 }
 
@@ -44,8 +44,8 @@ func TestCLIUpdateMutex_Contention(t *testing.T) {
 
 	// Create a mutex with the test lock name
 	opts := Opts{Name: testLockName}
-	mutex1 := new(opts)
-	mutex2 := new(opts)
+	mutex1 := newInterProcessMutex(opts)
+	mutex2 := newInterProcessMutex(opts)
 
 	// Clean up after test
 	defer func() {
@@ -62,7 +62,7 @@ func TestCLIUpdateMutex_Contention(t *testing.T) {
 	result := <-resultCh
 
 	require.True(t, result.Success, "First mutex should successfully acquire the lock")
-	require.Nil(t, result.Error, "First mutex should not return an error")
+	require.NoError(t, result.Error, "First mutex should not return an error")
 
 	// Try to acquire the same lock with the second mutex
 	// This should fail initially but keep retrying
@@ -74,12 +74,12 @@ func TestCLIUpdateMutex_Contention(t *testing.T) {
 	// Get the first result, which should be a failure
 	result2 := <-resultCh2
 	assert.False(t, result2.Success, "Second mutex should fail to acquire the lock")
-	assert.Nil(t, result2.Error, "Second mutex should not return an error yet")
+	require.NoError(t, result2.Error, "Second mutex should not return an error yet")
 	assert.Equal(t, 0, result2.Attempt, "Should be the first attempt")
 
 	// Now release the first lock
 	err := mutex1.Unlock()
-	assert.NoError(t, err, "Should successfully release the first lock")
+	require.NoError(t, err, "Should successfully release the first lock")
 
 	// The second mutex should now be able to acquire the lock
 	// Wait for the next result, with a timeout to prevent test hanging
@@ -94,7 +94,7 @@ func TestCLIUpdateMutex_Contention(t *testing.T) {
 		}
 	}
 
-	assert.Nil(t, result2.Error, "Second mutex should not return an error")
+	assert.NoError(t, result2.Error, "Second mutex should not return an error")
 }
 
 func TestCLIUpdateMutex_Unlock(t *testing.T) {
@@ -103,7 +103,7 @@ func TestCLIUpdateMutex_Unlock(t *testing.T) {
 
 	// Create a mutex with the test lock name
 	opts := Opts{Name: testLockName}
-	mutex := new(opts)
+	mutex := newInterProcessMutex(opts)
 
 	// Clean up after test
 	defer func() {
@@ -121,14 +121,14 @@ func TestCLIUpdateMutex_Unlock(t *testing.T) {
 
 	// Release the lock
 	err := mutex.Unlock()
-	assert.NoError(t, err, "Should successfully release the lock")
+	require.NoError(t, err, "Should successfully release the lock")
 
 	// Verify we can acquire it again
 	resultCh = mutex.TryLock(ctx, 50*time.Millisecond)
 	result = <-resultCh
 
 	assert.True(t, result.Success, "Should successfully acquire the lock again")
-	assert.Nil(t, result.Error, "Should not return an error")
+	assert.NoError(t, result.Error, "Should not return an error")
 }
 
 func TestCLIUpdateMutex_Singleton(t *testing.T) {
@@ -154,7 +154,7 @@ func TestCLIUpdateMutex_ConcurrentUsers(t *testing.T) {
 
 	// Create a mutex with the test lock name
 	opts := Opts{Name: testLockName}
-	mutex1 := new(opts)
+	mutex1 := newInterProcessMutex(opts)
 
 	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -166,7 +166,7 @@ func TestCLIUpdateMutex_ConcurrentUsers(t *testing.T) {
 	require.True(t, result.Success, "First process should successfully acquire the lock")
 
 	// Simulate a second process trying to acquire the same lock
-	mutex2 := new(opts)
+	mutex2 := newInterProcessMutex(opts)
 
 	// Create a channel to track when the second process gets the lock
 	lockAcquired := make(chan bool)
@@ -206,7 +206,7 @@ func TestCLIUpdateMutex_ConcurrentUsers(t *testing.T) {
 
 	// First process releases the lock
 	err := mutex1.Unlock()
-	assert.NoError(t, err, "Should successfully release the lock")
+	require.NoError(t, err, "Should successfully release the lock")
 
 	// Wait for the second process to acquire the lock
 	select {

@@ -1,7 +1,6 @@
 package run
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	stdErrors "errors"
@@ -217,7 +216,7 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 }
 
 func (w *Workflow) Cleanup() {
-	os.RemoveAll(workflow.GetTempDir())
+	_ = os.RemoveAll(workflow.GetTempDir())
 }
 
 func (w *Workflow) printGenerationOverview(ctx context.Context) error {
@@ -262,7 +261,7 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 	}
 
 	msg := styles.RenderSuccessMessage(
-		fmt.Sprintf("%s", "Generation Summary"),
+		"Generation Summary",
 		additionalLines...,
 	)
 	logger.Println(msg)
@@ -290,23 +289,6 @@ func (w *Workflow) printGenerationOverview(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func filterLogs(ctx context.Context, logBuffer *bytes.Buffer) string {
-	logger := log.From(ctx)
-	var filteredLogs strings.Builder
-	scanner := bufio.NewScanner(logBuffer)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, "ERROR") || strings.Contains(line, "WARN") {
-			filteredLogs.WriteString(line + "\n")
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		logger.Errorf("Failed to format question: %s", err)
-	}
-
-	return filteredLogs.String()
 }
 
 func enrichTelemetryWithCompletedWorkflow(ctx context.Context, w *Workflow) {

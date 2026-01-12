@@ -5,14 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 
 	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/versioning-reports/versioning"
@@ -278,12 +278,14 @@ func (r *subprocessRunner) Run() error {
 	return nil
 }
 
-func execute(t *testing.T, wd string, args ...string) Runnable {
+func execute(t *testing.T, wd string, args ...string) Runnable { //nolint:iface // Interface intentional for test flexibility
 	t.Helper()
-	_, filename, _, _ := runtime.Caller(0)
-	baseFolder := filepath.Join(filepath.Dir(filename), "..")
-	mainGo := filepath.Join(baseFolder, "main.go")
-	execCmd := exec.Command("go", append([]string{"run", mainGo}, args...)...)
+
+	// Build the binary lazily on first execute() call
+	binaryPath, err := ensureBinary()
+	require.NoError(t, err, "failed to build speakeasy binary")
+
+	execCmd := exec.Command(binaryPath, args...)
 	execCmd.Env = os.Environ()
 	execCmd.Dir = wd
 
@@ -301,37 +303,40 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 // executeI is a helper function to execute the main.go file inline. It can help when debugging integration tests
 // We should not use it on multiple tests at once as they will share memory: this can create issues.
 // so we leave it around as a little helper method: swap out execute for executeI and debug breakpoints work
-var mutex sync.Mutex
-var rootCmd = cmd.CmdForTest(version, artifactArch)
+var (
+	mutex   sync.Mutex                              //nolint:unused // Reserved for executeI debugging helper
+	rootCmd = cmd.CmdForTest(version, artifactArch) //nolint:unused // Reserved for executeI debugging helper
+)
 
-func executeI(t *testing.T, wd string, args ...string) Runnable {
+func executeI(t *testing.T, wd string, args ...string) *cmdRunner { //nolint:unused // Helper function for debugging integration tests
+	t.Helper()
 	mutex.Lock()
 	t.Helper()
 	rootCmd.SetArgs(args)
 	oldWD, err := os.Getwd()
 	require.NoError(t, err)
-	require.NoError(t, os.Chdir(wd))
+	t.Chdir(wd)
 
 	return &cmdRunner{
 		rootCmd: rootCmd,
 		cleanup: func() {
-			require.NoError(t, os.Chdir(oldWD))
+			t.Chdir(oldWD)
 			mutex.Unlock()
 		},
 	}
 }
 
-type cmdRunner struct {
+type cmdRunner struct { //nolint:unused // Reserved for executeI debugging helper
 	rootCmd *cobra.Command
 	cleanup func()
 }
 
-func (c *cmdRunner) Run() error {
+func (c *cmdRunner) Run() error { //nolint:unused // Reserved for executeI debugging helper
 	defer c.cleanup()
 	return c.rootCmd.Execute()
 }
 
-func TestSpecWorkflows(t *testing.T) {
+func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests must run serially due to working directory changes
 	tests := []struct {
 		name            string
 		inputDocs       []string
@@ -470,6 +475,18 @@ func TestSpecWorkflows(t *testing.T) {
 			out:       "output.json",
 			expectedPaths: []string{
 				"/pet/findByTags",
+			},
+		},
+		{
+			name: "test automatic swagger 2.0 conversion",
+			inputDocs: []string{
+				"swagger.yaml",
+			},
+			out: "output.yaml",
+			expectedPaths: []string{
+				"/pet",
+				"/store/inventory",
+				"/user/login",
 			},
 		},
 	}
@@ -651,7 +668,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	})
 	require.NoError(t, cmdErr)
 	require.NotNil(t, reports)
-	require.True(t, len(reports.Reports) > 0, "must have version reports")
+	require.NotEmpty(t, reports.Reports, "must have version reports")
 	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
 
 	require.NoError(t, cmdErr)

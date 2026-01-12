@@ -3,6 +3,9 @@ package git
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
 	gitc "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -52,6 +55,81 @@ func InitLocalRepository(dir string) (*Repository, error) {
 
 func (r *Repository) IsNil() bool {
 	return r.repo == nil
+}
+
+// Root returns the root directory of the repository (where .git is located).
+// Returns empty string if the repository is not initialized.
+func (r *Repository) Root() string {
+	if r.repo == nil {
+		return ""
+	}
+
+	// Get the worktree to find the filesystem root
+	wt, err := r.repo.Worktree()
+	if err != nil {
+		return ""
+	}
+
+	return wt.Filesystem.Root()
+}
+
+// HasObject checks if a blob or commit exists in the local object database.
+// Uses native git commands to ensure we see objects fetched by native git fetch.
+func (r *Repository) HasObject(hash string) bool {
+	if r.repo == nil {
+		return false
+	}
+
+	// Strip "sha1:" prefix if present
+	hash = strings.TrimPrefix(hash, "sha1:")
+
+	// Use native git to check object existence.
+	// This is necessary because go-git's storer may not see objects
+	// that were fetched via native git fetch commands.
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return false
+	}
+
+	cmd := exec.Command("git", "cat-file", "-e", hash)
+	cmd.Dir = repoRoot
+	return cmd.Run() == nil
+}
+
+// FetchRef fetches a specific ref from origin.
+// refSpec format: "+refs/speakeasy/gen/uuid:refs/speakeasy/gen/uuid"
+func (r *Repository) FetchRef(refSpec string) error {
+	if r.repo == nil {
+		return nil
+	}
+
+	if _, err := r.repo.Remote("origin"); err != nil {
+		return fmt.Errorf("remote 'origin' not found: %w", err)
+	}
+
+	cmd := exec.Command("git", "fetch", "--force", "origin", refSpec)
+	cmd.Dir = r.Root()
+	cmd.Env = os.Environ()
+
+	return cmd.Run()
+}
+
+// PushRef pushes a ref to origin.
+// refSpec format: "refs/speakeasy/gen/uuid:refs/speakeasy/gen/uuid"
+func (r *Repository) PushRef(refSpec string) error {
+	if r.repo == nil {
+		return nil
+	}
+
+	if _, err := r.repo.Remote("origin"); err != nil {
+		return fmt.Errorf("remote 'origin' not found: %w", err)
+	}
+
+	cmd := exec.Command("git", "push", "origin", refSpec)
+	cmd.Dir = r.Root()
+	cmd.Env = os.Environ()
+
+	return cmd.Run()
 }
 
 func (r *Repository) HeadHash() (string, error) {

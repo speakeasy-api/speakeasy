@@ -6,9 +6,11 @@ import (
 	"strings"
 )
 
-type FieldValidation = func(v any, template string) error
-type CustomTargetValidations = map[string]FieldValidation
-type CustomValidations = map[string]CustomTargetValidations
+type (
+	FieldValidation         = func(v any, template string) error
+	CustomTargetValidations = map[string]FieldValidation
+	CustomValidations       = map[string]CustomTargetValidations
+)
 
 var customValidations = CustomValidations{
 	"python": {
@@ -27,8 +29,8 @@ func getValidation(target, fieldName string) FieldValidation {
 }
 
 type pythonAdditionalDependencies struct {
-	Dependencies      map[string]string
-	ExtraDependencies map[string]map[string]string
+	Dependencies      map[string]string            `json:"dependencies"`
+	ExtraDependencies map[string]map[string]string `json:"extraDependencies"`
 }
 
 var validPrefixes = []string{"==", ">=", ">", "~=", "<", "<=", "!=", "==="}

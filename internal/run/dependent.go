@@ -140,7 +140,7 @@ func cloneRepository(ctx context.Context, cloneCommand, location string) error {
 
 	// Ensure the parent directory exists
 	parentDir := filepath.Dir(location)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := os.MkdirAll(parentDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create parent directory %s: %w", parentDir, err)
 	}
 
@@ -166,7 +166,7 @@ func cloneRepository(ctx context.Context, cloneCommand, location string) error {
 	return nil
 }
 
-func runSpeakeasyFromLocation(ctx context.Context, location, command, flagsString string) error {
+func runSpeakeasyFromLocation(_ context.Context, location, command, flagsString string) error {
 	// Get the current executable path to run speakeasy from the same binary
 	execPath, err := os.Executable()
 	if err != nil {
@@ -225,7 +225,7 @@ func CreateWorkflowLocalFile(workflowDir string) error {
 
 	finalContent := instructions + commentedContent
 
-	if err := os.WriteFile(localWorkflowPath, []byte(finalContent), 0644); err != nil {
+	if err := os.WriteFile(localWorkflowPath, []byte(finalContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write workflow.local.yaml: %w", err)
 	}
 

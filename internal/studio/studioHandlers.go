@@ -10,8 +10,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/speakeasy-api/openapi-overlay/pkg/loader"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
+	"github.com/speakeasy-api/openapi/overlay/loader"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -32,7 +32,7 @@ type StudioHandlers struct {
 	WorkflowRunner run.Workflow
 	SourceID       string
 	OverlayPath    string
-	Ctx            context.Context
+	Ctx            context.Context //nolint:containedctx // Intentional: maintains request context for handler lifecycle
 	StudioURL      string
 	Server         *http.Server
 
@@ -108,7 +108,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	h.runQueued.mu.Unlock()
 
 	// cancel previous run (if any) and wait for it to finish
-	h.WorkflowRunner.CancelGeneration()
+	_ = h.WorkflowRunner.CancelGeneration()
 	h.runMutex.Lock()
 	// previous run released the lock, meaning it has finished
 	defer h.runMutex.Unlock()
@@ -200,7 +200,7 @@ func (h *StudioHandlers) health(ctx context.Context, w http.ResponseWriter, r *h
 		return fmt.Errorf("error marshaling health response: %w", err)
 	}
 
-	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+	_, _ = fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
 	flusher.Flush()
 
 	// This keeps the connection open while the client is still connected

@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -22,13 +24,15 @@ import (
 
 type Level string
 
+type LoggerContextKey string
+
 const (
-	LevelDebug       Level = "debug"
-	LevelInfo        Level = "info"
-	LevelWarn        Level = "warn"
-	LevelErr         Level = "error"
-	LevelSuccess     Level = "success"
-	loggerContextKey       = "cli-logger-context"
+	LevelDebug       Level            = "debug"
+	LevelInfo        Level            = "info"
+	LevelWarn        Level            = "warn"
+	LevelErr         Level            = "error"
+	LevelSuccess     Level            = "success"
+	loggerContextKey LoggerContextKey = "cli-logger-context"
 )
 
 var Levels = []string{string(LevelInfo), string(LevelWarn), string(LevelErr)}
@@ -43,6 +47,7 @@ type Logger struct {
 	writer          io.Writer
 	warnCapture     *[]string
 	listener        chan Msg
+	pathPrefix      []string // For Scope() support - prefix for StartStep paths
 }
 
 var _ logging.Logger = (*Logger)(nil)
@@ -115,7 +120,7 @@ func (l Logger) WithStyle(style lipgloss.Style) Logger {
 
 func (l Logger) With(fields ...zapcore.Field) logging.Logger {
 	l2 := l.Copy()
-	l2.fields = append(l.fields, fields...)
+	l2.fields = append(l2.fields, fields...)
 	return l2
 }
 
@@ -154,6 +159,7 @@ func (l Logger) Copy() Logger {
 		writer:          l.writer,
 		warnCapture:     l.warnCapture,
 		listener:        l.listener,
+		pathPrefix:      l.pathPrefix,
 	}
 }
 
@@ -168,7 +174,7 @@ func (l Logger) Debug(msg string, fields ...zapcore.Field) {
 
 	fields = append(l.fields, fields...)
 
-	msg, err, fields := getMessage(msg, fields)
+	msg, fields, err := getMessage(msg, fields)
 
 	msg = l.format(LevelDebug, msg, err) + fieldsToJSON(fields)
 	l.Println(msg)
@@ -181,7 +187,7 @@ func (l Logger) Info(msg string, fields ...zapcore.Field) {
 
 	fields = append(l.fields, fields...)
 
-	msg, err, fields := getMessage(msg, fields)
+	msg, fields, err := getMessage(msg, fields)
 
 	msg = l.format(LevelInfo, msg, err) + fieldsToJSON(fields)
 	l.Println(msg)
@@ -198,7 +204,7 @@ func (l Logger) Warn(msg string, fields ...zapcore.Field) {
 
 	fields = append(l.fields, fields...)
 
-	msg, err, fields := getMessage(msg, fields)
+	msg, fields, err := getMessage(msg, fields)
 
 	msg = l.format(LevelWarn, msg, err) + fieldsToJSON(fields)
 
@@ -216,7 +222,7 @@ func (l Logger) Warnf(format string, a ...any) {
 func (l Logger) Error(msg string, fields ...zapcore.Field) {
 	fields = append(l.fields, fields...)
 
-	msg, err, fields := getMessage(msg, fields)
+	msg, fields, err := getMessage(msg, fields)
 
 	msg = l.format(LevelErr, msg, err) + fieldsToJSON(fields)
 	l.Println(msg)
@@ -229,7 +235,7 @@ func (l Logger) Errorf(format string, a ...any) {
 func (l Logger) Success(msg string, fields ...zapcore.Field) {
 	fields = append(l.fields, fields...)
 
-	msg, err, fields := getMessage(msg, fields)
+	msg, fields, err := getMessage(msg, fields)
 
 	msg = l.format(LevelSuccess, msg, err) + fieldsToJSON(fields)
 	l.Println(msg)
@@ -276,14 +282,14 @@ func (l Logger) Fprint(w io.Writer, s string) {
 
 	s = styles.InjectMarkdownStyles(s)
 
-	fmt.Fprint(w, s)
+	_, _ = fmt.Fprint(w, s)
 }
 
 func (l Logger) PrintlnUnstyled(a any) {
 	if l.interactiveOnly && !utils.IsInteractive() {
 		return
 	}
-	fmt.Fprintln(l.writer, a)
+	_, _ = fmt.Fprintln(l.writer, a)
 }
 
 func (l Logger) format(level Level, msg string, err error) string {
@@ -292,7 +298,21 @@ func (l Logger) format(level Level, msg string, err error) string {
 
 func (l Logger) Github(msg string) {
 	if l.listener != nil {
-		l.listener <- Msg{Type: MsgGithub, Msg: msg}
+		msgType := MsgGithub
+		cleanMsg := msg
+
+		// Normalize message to handle trailing whitespace/newlines from external libraries
+		trimmedMsg := strings.TrimSpace(msg)
+
+		// Detect "(skipped)" suffix on group messages and promote to richer type
+		if strings.HasPrefix(trimmedMsg, "::group::") && strings.HasSuffix(trimmedMsg, "(skipped)") {
+			msgType = MsgStepSkipped
+			// Remove suffix and any space before it
+			cleanMsg = strings.TrimSuffix(trimmedMsg, "(skipped)")
+			cleanMsg = strings.TrimSpace(cleanMsg)
+		}
+
+		l.listener <- Msg{Type: msgType, Msg: cleanMsg}
 	}
 
 	if env.IsGithubAction() {
@@ -300,12 +320,81 @@ func (l Logger) Github(msg string) {
 	}
 }
 
+// Scope returns a Logger with the given name added to the path prefix.
+// All StartStep calls on the returned logger will have this prefix in their path.
+// Scopes can be nested: logger.Scope("A").Scope("B").StartStep("C") produces path ["A", "B", "C"].
+func (l Logger) Scope(name string) logging.Logger {
+	l2 := l.Copy()
+	// Deep copy to prevent shared state issues between scopes
+	l2.pathPrefix = make([]string, len(l.pathPrefix)+1)
+	copy(l2.pathPrefix, l.pathPrefix)
+	l2.pathPrefix[len(l.pathPrefix)] = name
+	return l2
+}
+
+// StartStep starts a trackable progress step that appears in the workflow UI.
+// The step is initially "pending" and can be updated via Succeed/Fail/Skip.
+// Path is formed by: [scope prefix...] + msg
+func (l Logger) StartStep(msg string) logging.Step {
+	if l.listener == nil {
+		return &noopStep{}
+	}
+
+	// Build full path from scope prefix + message
+	path := make([]string, len(l.pathPrefix)+1)
+	copy(path, l.pathPrefix)
+	path[len(l.pathPrefix)] = msg
+
+	id := uuid.NewString()
+	l.listener <- Msg{
+		Type: MsgStep,
+		Step: &StepMsg{ID: id, Path: path, Status: StepStatusPending},
+	}
+
+	return &loggerStep{id: id, path: path, listener: l.listener}
+}
+
+// loggerStep implements logging.Step for real step tracking.
+type loggerStep struct {
+	id       string
+	path     []string
+	listener chan Msg
+	once     sync.Once
+}
+
+func (s *loggerStep) Succeed() {
+	s.once.Do(func() {
+		s.listener <- Msg{Type: MsgStep, Step: &StepMsg{ID: s.id, Path: s.path, Status: StepStatusSuccess}}
+	})
+}
+
+func (s *loggerStep) Fail() {
+	s.once.Do(func() {
+		s.listener <- Msg{Type: MsgStep, Step: &StepMsg{ID: s.id, Path: s.path, Status: StepStatusFailed}}
+	})
+}
+
+func (s *loggerStep) Skip() {
+	s.once.Do(func() {
+		s.listener <- Msg{Type: MsgStep, Step: &StepMsg{ID: s.id, Path: s.path, Status: StepStatusSkipped}}
+	})
+}
+
+// noopStep is a no-op implementation of logging.Step.
+type noopStep struct{}
+
+func (s *noopStep) Succeed() {}
+func (s *noopStep) Fail()    {}
+func (s *noopStep) Skip()    {}
+
 /**
  * Formatters
  */
 
 func BasicFormatter(l Logger, level Level, msg string, err error) string {
 	switch level {
+	case LevelDebug:
+		return styles.Dimmed.Render(msg)
 	case LevelInfo:
 		return styles.Info.Render(msg)
 	case LevelWarn:
@@ -323,6 +412,8 @@ func PrefixedFormatter(l Logger, level Level, msg string, err error) string {
 	prefix := ""
 
 	switch level {
+	case LevelDebug:
+		prefix = styles.Dimmed.Bold(true).Render("DEBUG\t")
 	case LevelInfo, LevelSuccess:
 		prefix = styles.Info.Bold(true).Render("INFO\t")
 	case LevelWarn:
@@ -338,8 +429,12 @@ func GithubFormatter(l Logger, level Level, msg string, err error) string {
 	prefix := ""
 
 	switch level {
+	case LevelDebug:
+		prefix = styles.Dimmed.Render("DEBUG\t")
 	case LevelInfo:
 		prefix = styles.Info.Render("INFO\t")
+	case LevelSuccess:
+		prefix = styles.Success.Render("SUCCESS\t")
 	case LevelWarn:
 		attributes := getGithubAnnotationAttributes(l.associatedFile, err)
 		prefix = fmt.Sprintf("::warning%s::", attributes)
@@ -367,6 +462,10 @@ func getGithubAnnotationAttributes(associatedFile string, err error) string {
 		switch vErr.Severity {
 		case errors.SeverityWarn:
 			severity = "Warning"
+		case errors.SeverityError:
+			severity = "Error"
+		case errors.SeverityHint:
+			severity = "Hint"
 		}
 
 		return fmt.Sprintf(" file=%s,line=%d,title=Validation %s", filepath.Clean(associatedFile), vErr.LineNumber, severity)
@@ -380,7 +479,7 @@ func getGithubAnnotationAttributes(associatedFile string, err error) string {
 	return ""
 }
 
-func getMessage(msg string, fields []zapcore.Field) (string, error, []zapcore.Field) {
+func getMessage(msg string, fields []zapcore.Field) (string, []zapcore.Field, error) {
 	fields, err := findError(fields)
 	if err != nil {
 		if msg == "" {
@@ -390,7 +489,7 @@ func getMessage(msg string, fields []zapcore.Field) (string, error, []zapcore.Fi
 		}
 	}
 
-	return msg, err, fields
+	return msg, fields, err
 }
 
 func findError(fields []zapcore.Field) ([]zapcore.Field, error) {

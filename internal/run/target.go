@@ -142,7 +142,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published, target)
 	if err != nil {
-		if errors.Is(err, validation.NoConfigFound) {
+		if errors.Is(err, validation.ErrNoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
 		} else {
 			return sourceRes, nil, err
@@ -213,7 +213,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			CLIVersion:            events.GetSpeakeasyVersionFromContext(ctx),
 			InstallationURL:       w.InstallationURLs[target],
 			Debug:                 w.Debug,
-			AutoYes:               true,
+			AutoYes:               w.AutoYes,
 			Published:             published,
 			OutputTests:           false,
 			Repo:                  w.Repo,
@@ -222,9 +222,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			Compile:               w.ShouldCompile,
 			TargetName:            target,
 			SkipVersioning:        w.SkipVersioning,
+			AllowPrompts:          w.AllowPrompts,
 			CancellableGeneration: w.CancellableGeneration,
 			StreamableGeneration:  w.StreamableGeneration,
 			ReleaseNotes:          changelogContent,
+			WorkflowStep:          genStep,
 		},
 	)
 	if err != nil {
@@ -389,10 +391,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 
 	serverURL := auth.GetServerURL()
 
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
+	insecurePublish := strings.HasPrefix(serverURL, "http://")
 
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
@@ -449,5 +448,5 @@ func (w *Workflow) CancelGeneration() error {
 		}
 	}
 
-	return fmt.Errorf("Generation is not cancellable")
+	return fmt.Errorf("generation is not cancellable")
 }

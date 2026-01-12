@@ -1,10 +1,11 @@
 package integration_tests
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
@@ -36,6 +37,22 @@ func TestStability(t *testing.T) {
 	err = workflow.Save(temp, workflowFile)
 	require.NoError(t, err)
 
+	// Create gen.yaml with persistentEdits enabled for stability
+	genYamlContent := `configVersion: 2.0.0
+generation:
+  sdkClassName: SDK
+  persistentEdits:
+    enabled: "true"
+typescript:
+  version: 0.0.1
+  packageName: openapi
+`
+	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "gen.yaml"), []byte(genYamlContent), 0o644)
+	require.NoError(t, err)
+
+	// Initialize git repo (required for persistentEdits)
+	gitInit(t, temp)
+
 	// Run the initial generation
 	var initialChecksums map[string]string
 	initialArgs := []string{"run", "-t", "all", "--force", "--pinned", "--skip-versioning", "--skip-compile"}
@@ -51,6 +68,32 @@ func TestStability(t *testing.T) {
 	require.NoError(t, cmdErr)
 	rerunChecksums, err := filesToString(temp)
 	require.NoError(t, err)
+
+	// Find differences to help debug test failures
+	tempDir := os.TempDir()
+	for key, val := range initialChecksums {
+		if rerunVal, ok := rerunChecksums[key]; ok {
+			if val != rerunVal {
+				t.Logf("File differs: %s", key)
+				// Save files for comparison
+				initialPath := filepath.Join(tempDir, "initial_"+filepath.Base(key))
+				rerunPath := filepath.Join(tempDir, "rerun_"+filepath.Base(key))
+				_ = os.WriteFile(initialPath, []byte(val), 0o644)
+				_ = os.WriteFile(rerunPath, []byte(rerunVal), 0o644)
+				t.Logf("Saved to %s and %s", initialPath, rerunPath)
+				t.Logf("Initial (first 200): %s", truncate(val, 200))
+				t.Logf("Rerun (first 200): %s", truncate(rerunVal, 200))
+			}
+		} else {
+			t.Logf("File missing in rerun: %s", key)
+		}
+	}
+	for key := range rerunChecksums {
+		if _, ok := initialChecksums[key]; !ok {
+			t.Logf("New file in rerun: %s", key)
+		}
+	}
+
 	require.Equal(t, initialChecksums, rerunChecksums, "Generated files should be identical")
 	// Modify the workflow file to simulate a change
 	// Shouldn't do anything; we'll validate that later.
@@ -68,9 +111,7 @@ func TestStability(t *testing.T) {
 
 	// exclude gen.lock -- we could (we do) reformat the document inside the frozen one
 	delete(frozenChecksums, ".speakeasy/gen.lock")
-	delete(frozenChecksums, ".speakeasy\\gen.lock") // windows
 	delete(initialChecksums, ".speakeasy/gen.lock")
-	delete(initialChecksums, ".speakeasy\\gen.lock") // windows
 	// Compare checksums
 	require.Equal(t, initialChecksums, frozenChecksums, "Generated files should be identical when using --frozen-workflow-lock")
 }
@@ -110,7 +151,7 @@ func TestRegistryFlow(t *testing.T) {
 	workflowFile, _, err = workflow.Load(temp)
 	require.NoError(t, err)
 	registryLocation := workflowFile.Sources["test-source"].Registry.Location.String()
-	require.True(t, len(registryLocation) > 0, "registry location should be set")
+	require.NotEmpty(t, registryLocation, "registry location should be set")
 
 	workflowFile.Sources["test-source"].Inputs[0].Location = workflow.LocationString(registryLocation)
 	require.NoError(t, workflow.Save(temp, workflowFile))
@@ -157,7 +198,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 	workflowFile, _, err = workflow.Load(temp)
 	require.NoError(t, err)
 	registryLocation := workflowFile.Sources["test-source"].Registry.Location.String()
-	require.True(t, len(registryLocation) > 0, "registry location should be set")
+	require.NotEmpty(t, registryLocation, "registry location should be set")
 
 	print(registryLocation)
 
@@ -169,11 +210,22 @@ func TestRegistryFlow_JSON(t *testing.T) {
 	require.NoError(t, cmdErr)
 }
 
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 func filesToString(dir string) (map[string]string, error) {
 	checksums := make(map[string]string)
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		// Skip .git directory - git objects change on each run due to timestamps
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
 		}
 		if !info.IsDir() {
 			data, err := os.ReadFile(path)
@@ -181,6 +233,8 @@ func filesToString(dir string) (map[string]string, error) {
 				return err
 			}
 			relPath, _ := filepath.Rel(dir, path)
+			// Normalize path separators to forward slashes for cross-platform consistency
+			relPath = filepath.ToSlash(relPath)
 			checksums[relPath] = string(data)
 		}
 		return nil

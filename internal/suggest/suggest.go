@@ -3,24 +3,24 @@ package suggest
 import (
 	"context"
 	"fmt"
-	"github.com/speakeasy-api/speakeasy-core/auth"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
-	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
-	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
+	"github.com/speakeasy-api/speakeasy/internal/suggest/errorCodes"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
+
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"gopkg.in/yaml.v3"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/speakeasy-api/openapi-overlay/pkg/overlay"
+	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
@@ -141,7 +141,7 @@ func SuggestOperationIDs(ctx context.Context, schema []byte, schemaPath string) 
 		return nil, err
 	}
 
-	bytes, err := ioutil.ReadAll(res.Schema)
+	bytes, err := io.ReadAll(res.Schema)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
