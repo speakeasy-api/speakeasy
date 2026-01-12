@@ -170,7 +170,7 @@ func updateSchemaReference(schema *oas3.JSONSchema[oas3.Referenceable], schemaMa
 			componentName := strings.TrimPrefix(refStr, "#/components/schemas/")
 			if newName, exists := schemaMappings[componentName]; exists {
 				newRef := "#/components/schemas/" + newName
-				// Use the pattern from join.go to update the reference
+				// Update the reference by modifying the underlying schema object's Ref field
 				schemaObj := schema.GetSchema()
 				if schemaObj != nil && schemaObj.Ref != nil {
 					*schemaObj.Ref = references.Reference(newRef)
