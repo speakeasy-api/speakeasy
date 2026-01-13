@@ -26,6 +26,7 @@ func TestMergeDocuments(t *testing.T) {
 			modelNamespaces: []string{"", ""},
 			wantErr:         false,
 			checkOutput: func(t *testing.T, output string) {
+				t.Helper()
 				// Should contain both paths
 				if !strings.Contains(output, "/pets") {
 					t.Error("output should contain /pets path")
@@ -55,6 +56,7 @@ func TestMergeDocuments(t *testing.T) {
 			modelNamespaces: []string{"serviceA", "serviceB"},
 			wantErr:         false,
 			checkOutput: func(t *testing.T, output string) {
+				t.Helper()
 				// Should contain namespaced schemas
 				if !strings.Contains(output, "serviceA_Pet:") {
 					t.Error("output should contain serviceA_Pet schema")
@@ -102,6 +104,7 @@ func TestMergeDocuments(t *testing.T) {
 			modelNamespaces: []string{""},
 			wantErr:         false,
 			checkOutput: func(t *testing.T, output string) {
+				t.Helper()
 				if !strings.Contains(output, "/pets") {
 					t.Error("output should contain /pets path")
 				}
@@ -118,6 +121,7 @@ func TestMergeDocuments(t *testing.T) {
 			modelNamespaces: []string{"serviceA"},
 			wantErr:         false,
 			checkOutput: func(t *testing.T, output string) {
+				t.Helper()
 				if !strings.Contains(output, "serviceA_Pet:") {
 					t.Error("output should contain serviceA_Pet schema")
 				}
@@ -135,6 +139,7 @@ func TestMergeDocuments(t *testing.T) {
 			modelNamespaces: []string{"", ""},
 			wantErr:         false,
 			checkOutput: func(t *testing.T, output string) {
+				t.Helper()
 				// JSON output should have proper structure
 				if !strings.Contains(output, `"openapi"`) {
 					t.Error("JSON output should contain openapi field")

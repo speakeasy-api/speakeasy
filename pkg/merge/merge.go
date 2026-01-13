@@ -134,7 +134,7 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 		}
 
 		if namespace != "" {
-			schemaMappings, err := applyNamespaceToSchemas(ctx, doc, namespace)
+			schemaMappings, err := applyNamespaceToSchemas(doc, namespace)
 			if err != nil {
 				return nil, fmt.Errorf("failed to apply namespace %s: %w", namespace, err)
 			}

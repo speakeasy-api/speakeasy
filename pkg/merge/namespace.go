@@ -84,7 +84,7 @@ func validateNamespaceSlice(namespaces []string, schemaCount int) error {
 // For each namespaced schema, it adds:
 //   - x-speakeasy-name-override: original schema name
 //   - x-speakeasy-model-namespace: namespace value
-func applyNamespaceToSchemas(ctx context.Context, doc *openapi.OpenAPI, namespace string) (map[string]string, error) {
+func applyNamespaceToSchemas(doc *openapi.OpenAPI, namespace string) (map[string]string, error) {
 	schemaMappings := make(map[string]string)
 
 	if namespace == "" {
