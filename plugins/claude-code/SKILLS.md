@@ -1,25 +1,20 @@
 # Speakeasy Skills for Claude Code
 
-This file provides guidance for Speakeasy CLI commands and troubleshooting. Each skill is triggered by specific patterns or user requests.
-
 ## Skills
 
-### Core Commands
-- start-new-sdk-project: user wants to generate an SDK from an OpenAPI spec for the first time, no .speakeasy directory exists
-- regenerate-sdk: user wants to regenerate SDK after spec changes, .speakeasy/workflow.yaml already exists
-- validate-openapi-spec: user wants to check if their OpenAPI spec is valid before generation
-- get-ai-suggestions: user wants AI-powered suggestions to improve their OpenAPI spec
-- check-workspace-status: user wants to see what sources and targets are configured
-
-### Overlay & Merge
-- create-openapi-overlay: user wants to modify an OpenAPI spec without changing the original file
-- apply-openapi-overlay: user wants to apply an existing overlay to a spec
-- merge-openapi-specs: user has multiple OpenAPI specs and wants to combine them
-
-### Troubleshooting
-- diagnose-generation-failure: speakeasy quickstart / run failed with output includes "Step Failed: Workflow"
-- fix-validation-errors-with-overlays: speakeasy lint output shows validation errors that can be fixed without changing the source spec
-- improve-operation-ids: SDK methods have auto-generated names like GetApiV1Users
+| name | description |
+| --- | --- |
+| start-new-sdk-project | Use when you have an OpenAPI spec and want to generate an SDK, or asking "how do I get started with Speakeasy" |
+| regenerate-sdk | Use when your spec changed and you need to regenerate the SDK, or running `speakeasy run` |
+| validate-openapi-spec | Use when checking if an OpenAPI spec is valid, looking for errors, or running `speakeasy lint` |
+| get-ai-suggestions | Use when SDK method names are ugly, wanting to improve operation IDs, or asking "how can I improve my spec" |
+| check-workspace-status | Use when asking what targets/sources are configured, or wanting to see current Speakeasy setup |
+| create-openapi-overlay | Use when you need to customize SDK generation without editing the source spec, or can't modify the original OpenAPI file |
+| apply-openapi-overlay | Use when applying an overlay file to a spec |
+| merge-openapi-specs | Use when combining multiple OpenAPI specs, or have microservices with separate spec files |
+| diagnose-generation-failure | Use when SDK generation failed, seeing "Step Failed: Workflow", or `speakeasy run` errors |
+| fix-validation-errors-with-overlays | Use when you have lint errors but can't modify the source spec, or need to add missing descriptions/tags via overlay |
+| improve-operation-ids | Use when SDK methods have auto-generated names like GetApiV1Users, or wanting `sdk.users.list()` style naming |
 
 ---
 
