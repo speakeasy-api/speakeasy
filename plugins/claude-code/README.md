@@ -12,28 +12,19 @@ claude /install github:speakeasy-api/speakeasy/plugins/claude-code
 
 This plugin provides **skills** - usage guidance and decision frameworks for Speakeasy CLI operations:
 
-### Core Commands
-| Skill | Triggered By |
-|-------|--------------|
-| `start-new-sdk-project` | User wants to generate SDK, no .speakeasy/ exists |
-| `regenerate-sdk` | User wants to regenerate, workflow.yaml exists |
-| `validate-openapi-spec` | User wants to validate their spec |
-| `get-ai-suggestions` | User wants AI improvements for their spec |
-| `check-workspace-status` | User wants to see current configuration |
-
-### Overlay & Merge
-| Skill | Triggered By |
-|-------|--------------|
-| `create-openapi-overlay` | User wants to modify spec without changing original |
-| `apply-openapi-overlay` | User wants to apply an overlay |
-| `merge-openapi-specs` | User has multiple specs to combine |
-
-### Troubleshooting
-| Skill | Triggered By |
-|-------|--------------|
-| `diagnose-generation-failure` | "Step Failed: Workflow" in output |
-| `fix-validation-errors-with-overlays` | Lint errors that are cosmetic |
-| `improve-operation-ids` | SDK methods have auto-generated names |
+| Skill | Use When... |
+|-------|-------------|
+| `start-new-sdk-project` | You have an OpenAPI spec and want to generate an SDK |
+| `regenerate-sdk` | Your spec changed and you need to regenerate |
+| `validate-openapi-spec` | Checking if spec is valid, running `speakeasy lint` |
+| `get-ai-suggestions` | SDK method names are ugly, wanting to improve operation IDs |
+| `check-workspace-status` | Asking what targets/sources are configured |
+| `create-openapi-overlay` | Need to customize SDK without editing source spec |
+| `apply-openapi-overlay` | Applying an overlay file to a spec |
+| `merge-openapi-specs` | Combining multiple OpenAPI specs |
+| `diagnose-generation-failure` | SDK generation failed, seeing "Step Failed: Workflow" |
+| `fix-validation-errors-with-overlays` | Have lint errors but can't modify source spec |
+| `improve-operation-ids` | SDK methods have names like GetApiV1Users |
 
 ## Philosophy
 
@@ -51,8 +42,8 @@ Claude Code already calls CLIs reliably. This plugin doesn't wrap CLI commands -
 # Initialize project
 speakeasy quickstart -s openapi.yaml -t typescript
 
-# Regenerate after changes
-speakeasy run
+# Regenerate after changes (use --output console for AI-friendly output)
+speakeasy run --output console
 ```
 
 ### Overlay Over Modify
@@ -61,6 +52,7 @@ Never modify the source OpenAPI spec directly. Use overlays to:
 - Rename operations
 - Add descriptions
 - Configure SDK behavior
+- Make portable patches across spec versions
 
 ### Don't Auto-Fix Everything
 
@@ -68,6 +60,21 @@ When encountering spec issues:
 - **Small issues** (naming, descriptions) → Fix with overlays
 - **Structural issues** (invalid refs, missing schemas) → Ask the user
 - **Design issues** (auth, API structure) → Produce strategy document
+
+## Plugin Structure
+
+```
+plugins/claude-code/
+├── .claude-plugin/
+│   └── plugin.json       # Plugin metadata
+├── skills/               # Individual skill files
+│   ├── start-new-sdk-project.md
+│   ├── regenerate-sdk.md
+│   ├── validate-openapi-spec.md
+│   └── ...
+├── marketplace.json      # Marketplace metadata
+└── README.md
+```
 
 ## Prerequisites
 
