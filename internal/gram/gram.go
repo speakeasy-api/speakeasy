@@ -3,14 +3,51 @@ package gram
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
+
+// PackageInfo contains relevant fields from package.json
+type PackageInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// ReadPackageJSON reads and parses package.json from the given directory
+func ReadPackageJSON(dir string) (*PackageInfo, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "package.json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read package.json: %w", err)
+	}
+
+	var pkg PackageInfo
+	if err := json.Unmarshal(data, &pkg); err != nil {
+		return nil, fmt.Errorf("failed to parse package.json: %w", err)
+	}
+
+	if pkg.Name == "" {
+		return nil, fmt.Errorf("package.json missing 'name' field")
+	}
+	if pkg.Version == "" {
+		return nil, fmt.Errorf("package.json missing 'version' field")
+	}
+
+	return &pkg, nil
+}
+
+// DeriveSlug extracts the package slug from a potentially scoped package name
+// e.g., "@my-org/my-mcp-server" -> "my-mcp-server"
+func DeriveSlug(packageName string) string {
+	parts := strings.Split(packageName, "/")
+	return parts[len(parts)-1]
+}
 
 func IsInstalled() bool {
 	_, err := exec.LookPath("gram")
@@ -58,21 +95,34 @@ func Auth(ctx context.Context) error {
 }
 
 type PushResult struct {
-	URL string
+	URL            string
+	Version        string
+	Slug           string
+	IdempotencyKey string
+	AlreadyExists  bool
 }
 
 func Push(ctx context.Context, dir, project string) (*PushResult, error) {
 	l := log.From(ctx)
 
-	args := []string{"gf", "push"}
-	if project != "" {
-		args = append(args, "--project", project)
-		l.Infof("Deploying to Gram project: %s", project)
-	} else {
-		l.Info("Deploying to Gram (using default project from Gram auth)")
+	// Read package.json for version and slug
+	pkg, err := ReadPackageJSON(dir)
+	if err != nil {
+		return nil, err
 	}
 
-	cmd := exec.CommandContext(ctx, "npx", args...)
+	slug := DeriveSlug(pkg.Name)
+	idempotencyKey := fmt.Sprintf("%s@%s", slug, pkg.Version)
+
+	l.Infof("Deploying %s@%s to Gram...", slug, pkg.Version)
+
+	// Use gram push directly with idempotency key
+	args := []string{"push", "--config", "gram.deploy.json", "--idempotency-key", idempotencyKey}
+	if project != "" {
+		args = append(args, "--project", project)
+	}
+
+	cmd := exec.CommandContext(ctx, "gram", args...)
 	cmd.Dir = dir
 	cmd.Stdin = os.Stdin
 
@@ -84,12 +134,21 @@ func Push(ctx context.Context, dir, project string) (*PushResult, error) {
 		return nil, fmt.Errorf("deployment failed: %w\n%s", err, stderr.String())
 	}
 
-	url := parseDeploymentURL(stdout.String())
-	if url == "" {
-		url = parseDeploymentURL(stderr.String())
-	}
+	combinedOutput := stdout.String() + stderr.String()
+	url := parseDeploymentURL(combinedOutput)
 
-	return &PushResult{URL: url}, nil
+	// Check if this was an existing deployment (idempotency hit)
+	// Gram returns successfully but doesn't create a new deployment
+	alreadyExists := strings.Contains(combinedOutput, "already exists") ||
+		strings.Contains(combinedOutput, "existing deployment")
+
+	return &PushResult{
+		URL:            url,
+		Version:        pkg.Version,
+		Slug:           slug,
+		IdempotencyKey: idempotencyKey,
+		AlreadyExists:  alreadyExists,
+	}, nil
 }
 
 func parseDeploymentURL(output string) string {

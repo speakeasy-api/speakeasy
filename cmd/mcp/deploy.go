@@ -104,6 +104,14 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 		}
 	}
 
+	// Read package.json to show version info early
+	pkg, err := gram.ReadPackageJSON(outputDir)
+	if err != nil {
+		return fmt.Errorf("failed to read package.json: %w", err)
+	}
+	slug := gram.DeriveSlug(pkg.Name)
+	l.Infof("Version: %s@%s", slug, pkg.Version)
+
 	if err := gram.Build(ctx, outputDir); err != nil {
 		return fmt.Errorf("build failed: %w", err)
 	}
@@ -114,7 +122,11 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 	}
 
 	l.Println("")
-	l.PrintfStyled(styles.Success, "Deployment successful!")
+	if result.AlreadyExists {
+		l.PrintfStyled(styles.Info, "Version %s already deployed", result.Version)
+	} else {
+		l.PrintfStyled(styles.Success, "Deployment successful!")
+	}
 	if result.URL != "" {
 		l.Infof("URL: %s", result.URL)
 	}
