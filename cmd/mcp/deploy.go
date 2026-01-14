@@ -53,7 +53,7 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 	if !gram.IsInstalled() {
 		l.Info("Gram CLI not found.")
 		if !interactivity.SimpleConfirm("Install Gram CLI now? (required for deployment)", true) {
-			return fmt.Errorf("Gram CLI is required for deployment. Install from https://www.getgram.ai")
+			return fmt.Errorf("gram CLI is required for deployment, install from https://www.getgram.ai")
 		}
 		if err := gram.InstallCLI(ctx); err != nil {
 			return fmt.Errorf("failed to install Gram CLI: %w", err)
