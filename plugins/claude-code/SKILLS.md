@@ -1,3 +1,7 @@
+---
+description: Use when working with Speakeasy CLI, generating SDKs from OpenAPI specs, troubleshooting SDK generation failures, or asking about speakeasy commands
+---
+
 # Speakeasy Skills for Claude Code
 
 ## Skills
