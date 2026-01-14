@@ -27,6 +27,7 @@ var deployCmd = &model.ExecutableCommand[DeployFlags]{
 	Long:         "Deploy a generated MCP server to Gram for hosting. Requires the Gram CLI to be installed.",
 	Run:          deployExec,
 	RequiresAuth: false,
+	Experimental: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "target",

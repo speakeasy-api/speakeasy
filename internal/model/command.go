@@ -40,6 +40,8 @@ const (
 	ErrPinned        = errors.Error("speakeasyVersion: pinned, skipping blue/green speakeasy CLI upgrade")
 )
 
+const ExperimentalPrefix = "[EXPERIMENTAL] "
+
 type Command interface {
 	Init() (*cobra.Command, error) // TODO: make private when rootCmd is refactored?
 }
@@ -99,6 +101,10 @@ type ExecutableCommand[F interface{}] struct {
 	// local, run using the CLI version specified in the workflow file.
 	UsesWorkflowFile bool
 
+	// When enabled, the command is marked as experimental. A warning will be
+	// printed when the command is run, and [EXPERIMENTAL] will be shown in help.
+	Experimental bool
+
 	// Deprecated: try to avoid using this. It is only present for backwards compatibility with the old CLI
 	NonInteractiveSubcommands []Command
 }
@@ -113,6 +119,10 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		flags, err := c.GetFlagValues(cmd)
 		if err != nil {
 			return err
+		}
+
+		if c.Experimental {
+			log.From(cmd.Context()).Warnf("This command is experimental and may change or be removed in future releases.")
 		}
 
 		if c.PreRun != nil {
@@ -192,14 +202,24 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		return nil, err
 	}
 
+	short := c.Short
+	long := c.Long
+	var annotations map[string]string
+	if c.Experimental {
+		short = ExperimentalPrefix + c.Short
+		long = ExperimentalPrefix + c.Long
+		annotations = map[string]string{"experimental": "true"}
+	}
+
 	cmd := &cobra.Command{
-		Use:     c.Usage,
-		Short:   c.Short,
-		Long:    c.Long,
-		Aliases: c.Aliases,
-		PreRunE: interactivity.GetMissingFlagsPreRun,
-		RunE:    run,
-		Hidden:  c.Hidden,
+		Use:         c.Usage,
+		Short:       short,
+		Long:        long,
+		Aliases:     c.Aliases,
+		Annotations: annotations,
+		PreRunE:     interactivity.GetMissingFlagsPreRun,
+		RunE:        run,
+		Hidden:      c.Hidden,
 	}
 
 	for _, subcommand := range c.NonInteractiveSubcommands {
