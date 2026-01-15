@@ -189,7 +189,7 @@ func buildGenerationWorkflowFiles(genWorkflow string) (*workflow.Workflow, *conf
 		var items []string
 		err := yaml.Unmarshal([]byte(docs.(string)), &items)
 		if err != nil {
-			return nil, nil, fmt.Errorf("openapi_docs must be an array: %d", err)
+			return nil, nil, fmt.Errorf("openapi_docs must be an array: %w", err)
 		}
 
 		docLocations = append(docLocations, items...)

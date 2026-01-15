@@ -185,7 +185,7 @@ func configBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		quickstart.LanguageConfigs[key] = output
 	}
 
-	var nextState QuickstartState = Complete
+	nextState := Complete
 	return &nextState, nil
 }
 
@@ -311,17 +311,6 @@ func saveLanguageConfigValues(
 			}
 		}
 	}
-}
-
-// Returns the configuration field for a given name, or nil if not found.
-func getSDKGenConfigField(fields []config.SDKGenConfigField, fieldName string) *config.SDKGenConfigField {
-	for i := range fields {
-		if fields[i].Name == fieldName {
-			return &fields[i]
-		}
-	}
-
-	return nil
 }
 
 var targetTypeMapping = map[string]string{

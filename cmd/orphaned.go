@@ -290,7 +290,7 @@ func findGenLockFiles(baseDir string) ([]string, error) {
 	var genLockPaths []string
 	err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // Skip files we can't access
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 
 		// Skip common build artifacts and cache directories
@@ -317,7 +317,7 @@ func walkGeneratedDirs(baseDir string, skipMdFiles bool) ([]string, error) {
 
 	err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // Skip files we can't access
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 
 		if info.IsDir() {

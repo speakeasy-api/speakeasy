@@ -208,7 +208,6 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	selectedRegistryUri := ""
 	if useRemoteSource {
 		selectedRecentGeneration, err := selectRecentGeneration(ctx, recentGenerations)
-
 		if err != nil {
 			useRemoteSource = false
 		}
@@ -247,18 +246,19 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	if hasTemplate && fileLocation != "" {
+	switch {
+	case hasTemplate && fileLocation != "":
 		quickstart.Defaults.TemplateData = templateFile
-	} else if quickstart.Defaults.SchemaPath != nil {
+	case quickstart.Defaults.SchemaPath != nil:
 		fileLocation = *quickstart.Defaults.SchemaPath
-	} else if useRemoteSource && selectedRegistryUri != "" {
+	case useRemoteSource && selectedRegistryUri != "":
 		// The workflow file will be updated with a registry based input like:
 		// inputs:
 		// - location: registry.speakeasyapi.dev/speakeasy-self/speakeasy-self/petstore-oas@latest
 		fileLocation = selectedRegistryUri
-	} else if quickstart.SkipInteractive {
+	case quickstart.SkipInteractive:
 		fileLocation = ""
-	} else {
+	default:
 		if err := getOASLocation(&fileLocation, &authHeader, true); err != nil {
 			return nil, err
 		}
@@ -274,11 +274,12 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
-	if isUsingSampleSpec {
+	switch {
+	case isUsingSampleSpec:
 		configureSampleSpec(quickstart, &fileLocation, &sourceName)
-	} else if selectedRemoteNamespace != "" {
+	case selectedRemoteNamespace != "":
 		sourceName = selectedRemoteNamespace
-	} else {
+	default:
 		if err := getSDKName(quickstart, strcase.ToCamel(orgSlug)); err != nil {
 			return nil, err
 		}
@@ -638,7 +639,7 @@ var (
 
 // selectRecentGeneration handles the user interaction for selecting a namespace/recent generation
 // which will be used as the template for the new target.
-func selectRecentGeneration(ctx context.Context, generations []remote.RecentGeneration) (*remote.RecentGeneration, error) {
+func selectRecentGeneration(_ context.Context, generations []remote.RecentGeneration) (*remote.RecentGeneration, error) {
 	opts := make([]huh.Option[string], len(generations))
 
 	for i, generation := range generations {
@@ -665,7 +666,6 @@ func selectRecentGeneration(ctx context.Context, generations []remote.RecentGene
 		&evtId,
 	)
 	_, err := charm_internal.NewForm(huh.NewForm(selectPrompt)).ExecuteForm()
-
 	if err != nil {
 		return nil, err
 	}
@@ -724,10 +724,9 @@ func fetchTemplate(ctx context.Context, templateID string) (*shared.SchemaStoreI
 	return schemaStoreItem.SchemaStoreItem, nil
 }
 
-func saveTemplateToDisk(ctx context.Context, schemaStoreItem *shared.SchemaStoreItem) (string, error) {
+func saveTemplateToDisk(_ context.Context, schemaStoreItem *shared.SchemaStoreItem) (string, error) {
 	tempDir := os.TempDir()
 	tempFile, err := os.Create(filepath.Join(tempDir, fmt.Sprintf("sandbox-%s.%s", schemaStoreItem.ID, schemaStoreItem.Format)))
-
 	if err != nil {
 		return "", ErrMsgFailedToSaveTemplate
 	}

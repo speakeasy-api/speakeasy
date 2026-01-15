@@ -3,6 +3,7 @@ package run
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -53,7 +54,7 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 		return fmt.Errorf("failed to check access: %w", err)
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("GitHub app access check failed. Is the Speakeasy GitHub app installed in the repo? Install at: https://github.com/apps/speakeasy-github")
 	}
 
@@ -119,7 +120,7 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 
 		case <-timeoutCh:
 			stopSpinner()
-			return fmt.Errorf("Tried to trigger GitHub action but it never started running")
+			return fmt.Errorf("tried to trigger GitHub action but it never started running")
 		}
 	}
 
@@ -335,7 +336,7 @@ func runGitHubRepoWithOrgAndRepo(ctx context.Context, org, repo, target, version
 		return fmt.Errorf("failed to check access to %s/%s: %w", org, repo, err)
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("GitHub app access check failed for %s/%s. Is the Speakeasy GitHub app installed in the repo? Install at: https://github.com/apps/speakeasy-github", org, repo)
 	}
 
@@ -403,7 +404,7 @@ func runGitHubRepoWithOrgAndRepo(ctx context.Context, org, repo, target, version
 
 		case <-timeoutCh:
 			stopSpinner()
-			return fmt.Errorf("Tried to trigger GitHub action for %s/%s but it never started running", org, repo)
+			return fmt.Errorf("tried to trigger GitHub action for %s/%s but it never started running", org, repo)
 		}
 	}
 
@@ -421,17 +422,16 @@ func parseGitHubRepoURL(url string) (string, string, error) {
 
 	var orgRepo string
 
-	if strings.HasPrefix(url, "https://github.com/") {
+	switch {
+	case strings.HasPrefix(url, "https://github.com/"):
 		orgRepo = strings.TrimPrefix(url, "https://github.com/")
-	} else if strings.HasPrefix(url, "git@github.com:") {
+	case strings.HasPrefix(url, "git@github.com:"):
 		orgRepo = strings.TrimPrefix(url, "git@github.com:")
-		if strings.HasSuffix(orgRepo, ".git") {
-			orgRepo = strings.TrimSuffix(orgRepo, ".git")
-		}
-	} else if strings.Count(url, "/") == 1 {
+		orgRepo = strings.TrimSuffix(orgRepo, ".git")
+	case strings.Count(url, "/") == 1:
 		// Assume it's already in the format "organization/repository"
 		orgRepo = url
-	} else {
+	default:
 		return "", "", fmt.Errorf("invalid GitHub repository URL format: %s", url)
 	}
 

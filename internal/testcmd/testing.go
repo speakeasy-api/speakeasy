@@ -49,7 +49,7 @@ func CheckTestingEnabled(ctx context.Context) error {
 	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 	if accountType == nil {
-		return fmt.Errorf("Account type not found. Ensure you are logged in via the `speakeasy auth login` command or SPEAKEASY_API_KEY environment variable.")
+		return fmt.Errorf("account type not found. Ensure you are logged in via the `speakeasy auth login` command or SPEAKEASY_API_KEY environment variable")
 	}
 
 	if !slices.Contains([]shared.AccountType{shared.AccountTypeEnterprise, shared.AccountTypeBusiness}, *accountType) {
@@ -57,7 +57,7 @@ func CheckTestingEnabled(ctx context.Context) error {
 	}
 
 	if ok, _ := auth.HasBillingAddOn(ctx, shared.BillingAddOnSDKTesting); !ok {
-		return fmt.Errorf("The SDK testing add-on must be enabled to use testing. Please visit %s", fmt.Sprintf("https://app.speakeasy.com/org/%s/%s/settings/billing", orgSlug, workspaceSlug))
+		return fmt.Errorf("the SDK testing add-on must be enabled to use testing. Please visit %s", fmt.Sprintf("https://app.speakeasy.com/org/%s/%s/settings/billing", orgSlug, workspaceSlug))
 	}
 
 	return nil

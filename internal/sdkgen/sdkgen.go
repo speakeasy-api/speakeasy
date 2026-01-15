@@ -11,11 +11,9 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/speakeasy-api/speakeasy-core/auth"
-	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
-	gen_config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -47,7 +45,7 @@ type GenerationAccess struct {
 
 type CancellableGeneration struct {
 	CancellationMutex  sync.Mutex         // protects both CancellableContext and CancelGeneration (exposed by w.CancelGeneration())
-	CancellableContext context.Context    // the context that can be cancelled to stop generation
+	CancellableContext context.Context    //nolint:containedctx // Intentional: enables cancellation of long-running generation
 	CancelGeneration   context.CancelFunc // the function to call to cancel generation
 }
 
@@ -302,8 +300,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
 	if cliEvent != nil && cliEvent.ExecutionID != "" {
 		// Get org and workspace slugs from context
-		orgSlug := core.GetOrgSlugFromContext(ctx)
-		workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+		orgSlug := auth.GetOrgSlugFromContext(ctx)
+		workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
 
 		if orgSlug != "" && workspaceSlug != "" {
 			logger.Successf("speakeasy repro %s_%s_%s", orgSlug, workspaceSlug, cliEvent.ExecutionID)
@@ -357,7 +355,7 @@ func ValidateConfig(ctx context.Context, outDir string) error {
 
 func GetGenLockID(outDir string) *string {
 	if utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".speakeasy/gen.lock")) || utils.FileExists(filepath.Join(utils.SanitizeFilePath(outDir), ".gen/gen.lock")) {
-		if cfg, err := gen_config.Load(outDir); err == nil && cfg.LockFile != nil {
+		if cfg, err := config.Load(outDir); err == nil && cfg.LockFile != nil {
 			return &cfg.LockFile.ID
 		}
 	}

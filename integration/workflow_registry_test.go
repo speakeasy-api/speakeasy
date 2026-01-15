@@ -47,7 +47,7 @@ typescript:
   version: 0.0.1
   packageName: openapi
 `
-	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "gen.yaml"), []byte(genYamlContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "gen.yaml"), []byte(genYamlContent), 0o644)
 	require.NoError(t, err)
 
 	// Initialize git repo (required for persistentEdits)
@@ -78,8 +78,8 @@ typescript:
 				// Save files for comparison
 				initialPath := filepath.Join(tempDir, "initial_"+filepath.Base(key))
 				rerunPath := filepath.Join(tempDir, "rerun_"+filepath.Base(key))
-				_ = os.WriteFile(initialPath, []byte(val), 0644)
-				_ = os.WriteFile(rerunPath, []byte(rerunVal), 0644)
+				_ = os.WriteFile(initialPath, []byte(val), 0o644)
+				_ = os.WriteFile(rerunPath, []byte(rerunVal), 0o644)
 				t.Logf("Saved to %s and %s", initialPath, rerunPath)
 				t.Logf("Initial (first 200): %s", truncate(val, 200))
 				t.Logf("Rerun (first 200): %s", truncate(rerunVal, 200))
@@ -151,7 +151,7 @@ func TestRegistryFlow(t *testing.T) {
 	workflowFile, _, err = workflow.Load(temp)
 	require.NoError(t, err)
 	registryLocation := workflowFile.Sources["test-source"].Registry.Location.String()
-	require.True(t, len(registryLocation) > 0, "registry location should be set")
+	require.NotEmpty(t, registryLocation, "registry location should be set")
 
 	workflowFile.Sources["test-source"].Inputs[0].Location = workflow.LocationString(registryLocation)
 	require.NoError(t, workflow.Save(temp, workflowFile))
@@ -198,7 +198,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 	workflowFile, _, err = workflow.Load(temp)
 	require.NoError(t, err)
 	registryLocation := workflowFile.Sources["test-source"].Registry.Location.String()
-	require.True(t, len(registryLocation) > 0, "registry location should be set")
+	require.NotEmpty(t, registryLocation, "registry location should be set")
 
 	print(registryLocation)
 

@@ -120,13 +120,13 @@ func (v *GitHistoryVerifier) ValidateGCSafety(t *testing.T, blobHashes, commitHa
 	// Verify all blob objects still exist
 	for _, hash := range blobHashes {
 		_, err := v.gitCommand("cat-file", "-e", hash)
-		assert.NoError(t, err, "Blob %s was pruned by gc (not reachable from refs)", hash)
+		require.NoError(t, err, "Blob %s was pruned by gc (not reachable from refs)", hash)
 	}
 
 	// Verify all commit objects still exist
 	for _, hash := range commitHashes {
 		_, err := v.gitCommand("cat-file", "-e", hash)
-		assert.NoError(t, err, "Commit %s was pruned by gc (not reachable from refs)", hash)
+		require.NoError(t, err, "Commit %s was pruned by gc (not reachable from refs)", hash)
 	}
 
 	// Verify repository integrity
@@ -187,17 +187,17 @@ func (v *GitHistoryVerifier) ValidateRepositorySize(t *testing.T) *RepositorySiz
 
 		switch key {
 		case "count":
-			fmt.Sscanf(value, "%d", &metrics.LooseObjects)
+			_, _ = fmt.Sscanf(value, "%d", &metrics.LooseObjects)
 		case "size":
-			fmt.Sscanf(value, "%d", &metrics.LooseObjectsKB)
+			_, _ = fmt.Sscanf(value, "%d", &metrics.LooseObjectsKB)
 		case "in-pack":
-			fmt.Sscanf(value, "%d", &metrics.PackedObjects)
+			_, _ = fmt.Sscanf(value, "%d", &metrics.PackedObjects)
 		case "packs":
-			fmt.Sscanf(value, "%d", &metrics.PackCount)
+			_, _ = fmt.Sscanf(value, "%d", &metrics.PackCount)
 		case "size-pack":
-			fmt.Sscanf(value, "%d", &metrics.PackSizeKB)
+			_, _ = fmt.Sscanf(value, "%d", &metrics.PackSizeKB)
 		case "prune-packable":
-			fmt.Sscanf(value, "%d", &metrics.PrunePackable)
+			_, _ = fmt.Sscanf(value, "%d", &metrics.PrunePackable)
 		}
 	}
 
@@ -277,7 +277,7 @@ func extractGeneratedIDsFromDir(t *testing.T, dir string) map[string]string {
 
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // Skip files we can't read
 		}
 
 		match := idPattern.FindSubmatch(content)
@@ -340,11 +340,11 @@ components:
         name:
           type: string
 `
-	err := os.WriteFile(filepath.Join(dir, "spec.yaml"), []byte(specContent), 0644)
+	err := os.WriteFile(filepath.Join(dir, "spec.yaml"), []byte(specContent), 0o644)
 	require.NoError(t, err)
 
 	// Create .speakeasy directory
-	err = os.MkdirAll(filepath.Join(dir, ".speakeasy"), 0755)
+	err = os.MkdirAll(filepath.Join(dir, ".speakeasy"), 0o755)
 	require.NoError(t, err)
 
 	// Create workflow.yaml
@@ -358,7 +358,7 @@ targets:
     target: go
     source: test-source
 `
-	err = os.WriteFile(filepath.Join(dir, ".speakeasy", "workflow.yaml"), []byte(workflowContent), 0644)
+	err = os.WriteFile(filepath.Join(dir, ".speakeasy", "workflow.yaml"), []byte(workflowContent), 0o644)
 	require.NoError(t, err)
 
 	// Create gen.yaml with persistent edits enabled
@@ -374,14 +374,14 @@ go:
   version: 1.0.0
   packageName: testsdk
 `
-	err = os.WriteFile(filepath.Join(dir, "gen.yaml"), []byte(genYamlContent), 0644)
+	err = os.WriteFile(filepath.Join(dir, "gen.yaml"), []byte(genYamlContent), 0o644)
 	require.NoError(t, err)
 
 	// Create .genignore
 	genignoreContent := `go.mod
 go.sum
 `
-	err = os.WriteFile(filepath.Join(dir, ".genignore"), []byte(genignoreContent), 0644)
+	err = os.WriteFile(filepath.Join(dir, ".genignore"), []byte(genignoreContent), 0o644)
 	require.NoError(t, err)
 }
 
@@ -497,7 +497,7 @@ components:
           type: string
           description: The breed of the pet
 `
-	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "update spec: add breed")
 
@@ -570,7 +570,7 @@ components:
         breed:
           type: string
 `
-	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "update spec: add getPet")
 
@@ -602,7 +602,7 @@ components:
 	t.Logf("Total objects after 3 generations: %d", totalObjects)
 
 	// Sanity check: should have some objects but not crazy amounts
-	assert.Greater(t, totalObjects, 0, "Should have git objects")
+	assert.Positive(t, totalObjects, "Should have git objects")
 }
 
 // TestGitArchitecture_BinaryFileDeduplication verifies that identical binary files
@@ -660,7 +660,7 @@ func TestGitArchitecture_DeltaCompressionEfficiency(t *testing.T) {
 
 	// Add a small user modification
 	modifiedContent := strings.Replace(string(content), "package testsdk", "package testsdk\n\n// Small user edit", 1)
-	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "user edit")
 
@@ -699,15 +699,15 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	envBDir := filepath.Join(integrationTestsDir(), "envB-"+randStringBytes(7))
 
 	// Create directories
-	require.NoError(t, os.MkdirAll(remoteDir, 0755))
-	require.NoError(t, os.MkdirAll(envADir, 0755))
-	require.NoError(t, os.MkdirAll(envBDir, 0755))
+	require.NoError(t, os.MkdirAll(remoteDir, 0o755))
+	require.NoError(t, os.MkdirAll(envADir, 0o755))
+	require.NoError(t, os.MkdirAll(envBDir, 0o755))
 
 	// Cleanup on test completion
 	t.Cleanup(func() {
-		os.RemoveAll(remoteDir)
-		os.RemoveAll(envADir)
-		os.RemoveAll(envBDir)
+		_ = os.RemoveAll(remoteDir)
+		_ = os.RemoveAll(envADir)
+		_ = os.RemoveAll(envBDir)
 	})
 
 	// Step 1: Create bare "remote" repository
@@ -723,7 +723,7 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	} {
 		cmd = exec.Command("git", args...)
 		cmd.Dir = remoteDir
-		cmd.CombinedOutput()
+		_, _ = cmd.CombinedOutput()
 	}
 
 	// Step 2: Clone to Environment A and set up for generation
@@ -741,7 +741,7 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	} {
 		cmd = exec.Command("git", args...)
 		cmd.Dir = envADir
-		cmd.CombinedOutput()
+		_, _ = cmd.CombinedOutput()
 	}
 
 	// Set up generation config in envA
@@ -791,7 +791,7 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	} {
 		cmd = exec.Command("git", args...)
 		cmd.Dir = envBDir
-		cmd.CombinedOutput()
+		_, _ = cmd.CombinedOutput()
 	}
 
 	// Verify: speakeasy refs should NOT exist locally in envB yet
@@ -818,7 +818,7 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 	// Add a custom method at the end of the file
 	// We append to the very end of the file to avoid conflict with generated getters
 	modifiedContent := string(content) + "\n// ENVB_USER_EDIT: Developer B's customization\nfunc (p *Pet) CustomMethod() string {\n\treturn \"custom\"\n}\n"
-	err = os.WriteFile(petFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(petFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAllInDir(t, envBDir, "developer B user edit")
 
@@ -870,7 +870,7 @@ func TestGitArchitecture_HealerOfflineFallback(t *testing.T) {
 	// First add a fake remote, then rename it to break connectivity
 	cmd := exec.Command("git", "remote", "add", "origin", "https://nonexistent.example.com/repo.git")
 	cmd.Dir = temp
-	cmd.CombinedOutput() // Ignore error if origin already exists
+	_, _ = cmd.CombinedOutput() // Ignore error if origin already exists
 
 	cmd = exec.Command("git", "remote", "rename", "origin", "broken_origin")
 	cmd.Dir = temp
@@ -891,7 +891,7 @@ func TestGitArchitecture_HealerOfflineFallback(t *testing.T) {
 	modifiedContent := strings.Replace(string(content),
 		"package testsdk",
 		"package testsdk\n\n// OFFLINE_USER_EDIT: Made while offline", 1)
-	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "user edit while offline")
 
@@ -1037,7 +1037,7 @@ components:
         name:
           type: string
 `, i)
-			err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0644)
+			err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0o644)
 			require.NoError(t, err)
 			gitCommitAll(t, temp, fmt.Sprintf("update spec v1.0.%d", i))
 		}
@@ -1056,11 +1056,11 @@ components:
 
 		// Verify each ref points to a valid commit
 		_, err := verifier.gitCommand("cat-file", "-t", hash)
-		assert.NoError(t, err, "Ref %s should point to a valid object", refName)
+		require.NoError(t, err, "Ref %s should point to a valid object", refName)
 
 		// Get the commit's tree
 		output, err := verifier.gitCommand("rev-parse", hash+"^{tree}")
-		assert.NoError(t, err, "Should be able to get tree from commit")
+		require.NoError(t, err, "Should be able to get tree from commit")
 		assert.NotEmpty(t, strings.TrimSpace(output), "Commit should have a tree")
 	}
 }
@@ -1167,14 +1167,14 @@ func TestGitArchitecture_MultipleTypeScriptTargetsSameRepo(t *testing.T) {
 	rootModified := strings.Replace(string(rootContent),
 		"export class SDK extends ClientSDK",
 		"// ROOT_USER_EDIT: Custom code for root SDK\nexport class SDK extends ClientSDK", 1)
-	err = os.WriteFile(rootSdkFile, []byte(rootModified), 0644)
+	err = os.WriteFile(rootSdkFile, []byte(rootModified), 0o644)
 	require.NoError(t, err)
 
 	// Modify subpackage SDK
 	subpkgModified := strings.Replace(string(subpackageContent),
 		"export class SDK extends ClientSDK",
 		"// SUBPKG_USER_EDIT: Custom code for subpackage SDK\nexport class SDK extends ClientSDK", 1)
-	err = os.WriteFile(subpackageSdkFile, []byte(subpkgModified), 0644)
+	err = os.WriteFile(subpackageSdkFile, []byte(subpkgModified), 0o644)
 	require.NoError(t, err)
 
 	gitCommitAll(t, temp, "user modifications to both SDKs")
@@ -1212,9 +1212,9 @@ func setupDualTypeScriptTargetsTestDir(t *testing.T) string {
 
 	temp := filepath.Join(integrationTestsDir(), "dual-ts-"+randStringBytes(7))
 
-	require.NoError(t, os.MkdirAll(temp, 0755))
+	require.NoError(t, os.MkdirAll(temp, 0o755))
 	t.Cleanup(func() {
-		os.RemoveAll(temp)
+		_ = os.RemoveAll(temp)
 	})
 
 	// Create a minimal OpenAPI spec
@@ -1248,15 +1248,15 @@ components:
         name:
           type: string
 `
-	err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0644)
+	err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0o644)
 	require.NoError(t, err)
 
 	// Create .speakeasy directory
-	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0755)
+	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
 	require.NoError(t, err)
 
 	// Create output directory for subpackage
-	err = os.MkdirAll(filepath.Join(temp, "packages", "subpackage"), 0755)
+	err = os.MkdirAll(filepath.Join(temp, "packages", "subpackage"), 0o755)
 	require.NoError(t, err)
 
 	// Create workflow.yaml with two TypeScript targets
@@ -1274,7 +1274,7 @@ targets:
     source: test-source
     output: packages/subpackage
 `
-	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "workflow.yaml"), []byte(workflowContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, ".speakeasy", "workflow.yaml"), []byte(workflowContent), 0o644)
 	require.NoError(t, err)
 
 	// Create gen.yaml for root target
@@ -1290,7 +1290,7 @@ typescript:
   version: 1.0.0
   packageName: "@test/root-sdk"
 `
-	err = os.WriteFile(filepath.Join(temp, "gen.yaml"), []byte(rootGenYaml), 0644)
+	err = os.WriteFile(filepath.Join(temp, "gen.yaml"), []byte(rootGenYaml), 0o644)
 	require.NoError(t, err)
 
 	// Create gen.yaml for subpackage target
@@ -1306,7 +1306,7 @@ typescript:
   version: 1.0.0
   packageName: "@test/subpackage-sdk"
 `
-	err = os.WriteFile(filepath.Join(temp, "packages", "subpackage", "gen.yaml"), []byte(subpkgGenYaml), 0644)
+	err = os.WriteFile(filepath.Join(temp, "packages", "subpackage", "gen.yaml"), []byte(subpkgGenYaml), 0o644)
 	require.NoError(t, err)
 
 	// Create .genignore in both directories
@@ -1314,9 +1314,9 @@ typescript:
 package-lock.json
 node_modules
 `
-	err = os.WriteFile(filepath.Join(temp, ".genignore"), []byte(genignoreContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, ".genignore"), []byte(genignoreContent), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(temp, "packages", "subpackage", ".genignore"), []byte(genignoreContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "packages", "subpackage", ".genignore"), []byte(genignoreContent), 0o644)
 	require.NoError(t, err)
 
 	// Initialize git repo

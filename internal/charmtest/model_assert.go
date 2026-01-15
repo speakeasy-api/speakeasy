@@ -22,7 +22,7 @@ func (m Model) AssertContains(t *testing.T, expectations ...string) {
 		return true
 	}
 
-	teatest.WaitFor(t, m.TestModel.Output(), condition)
+	teatest.WaitFor(t, m.Output(), condition)
 }
 
 // Asserts that a submitted form string field in the form exactly matches the

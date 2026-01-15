@@ -297,7 +297,6 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 		Target:     target,
 	}
 	res, err := g.ValidateWithOpts(ctx, validateOpts)
-
 	if err != nil {
 		return nil, err
 	}
@@ -310,11 +309,12 @@ func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schem
 
 		switch {
 		case vErr != nil:
-			if vErr.Severity == errors.SeverityError {
+			switch vErr.Severity {
+			case errors.SeverityError:
 				vErrs = append(vErrs, vErr)
-			} else if vErr.Severity == errors.SeverityWarn {
+			case errors.SeverityWarn:
 				vWarns = append(vWarns, vErr)
-			} else {
+			default:
 				vInfo = append(vInfo, vErr)
 			}
 		case uErr != nil:

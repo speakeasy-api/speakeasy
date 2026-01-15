@@ -278,7 +278,7 @@ func (r *subprocessRunner) Run() error {
 	return nil
 }
 
-func execute(t *testing.T, wd string, args ...string) Runnable {
+func execute(t *testing.T, wd string, args ...string) Runnable { //nolint:iface // Interface intentional for test flexibility
 	t.Helper()
 
 	// Build the binary lazily on first execute() call
@@ -304,38 +304,39 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 // We should not use it on multiple tests at once as they will share memory: this can create issues.
 // so we leave it around as a little helper method: swap out execute for executeI and debug breakpoints work
 var (
-	mutex   sync.Mutex
-	rootCmd = cmd.CmdForTest(version, artifactArch)
+	mutex   sync.Mutex                              //nolint:unused // Reserved for executeI debugging helper
+	rootCmd = cmd.CmdForTest(version, artifactArch) //nolint:unused // Reserved for executeI debugging helper
 )
 
-func executeI(t *testing.T, wd string, args ...string) Runnable {
+func executeI(t *testing.T, wd string, args ...string) *cmdRunner { //nolint:unused // Helper function for debugging integration tests
+	t.Helper()
 	mutex.Lock()
 	t.Helper()
 	rootCmd.SetArgs(args)
 	oldWD, err := os.Getwd()
 	require.NoError(t, err)
-	require.NoError(t, os.Chdir(wd))
+	t.Chdir(wd)
 
 	return &cmdRunner{
 		rootCmd: rootCmd,
 		cleanup: func() {
-			require.NoError(t, os.Chdir(oldWD))
+			t.Chdir(oldWD)
 			mutex.Unlock()
 		},
 	}
 }
 
-type cmdRunner struct {
+type cmdRunner struct { //nolint:unused // Reserved for executeI debugging helper
 	rootCmd *cobra.Command
 	cleanup func()
 }
 
-func (c *cmdRunner) Run() error {
+func (c *cmdRunner) Run() error { //nolint:unused // Reserved for executeI debugging helper
 	defer c.cleanup()
 	return c.rootCmd.Execute()
 }
 
-func TestSpecWorkflows(t *testing.T) {
+func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests must run serially due to working directory changes
 	tests := []struct {
 		name            string
 		inputDocs       []string
@@ -667,7 +668,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	})
 	require.NoError(t, cmdErr)
 	require.NotNil(t, reports)
-	require.True(t, len(reports.Reports) > 0, "must have version reports")
+	require.NotEmpty(t, reports.Reports, "must have version reports")
 	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
 
 	require.NoError(t, cmdErr)

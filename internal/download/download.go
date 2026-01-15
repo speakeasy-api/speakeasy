@@ -35,8 +35,10 @@ const (
 	bundleCacheTime = time.Hour * 24 * 7
 )
 
-var allowedDocumentExtensions = []string{".yaml", ".yml", ".json"}
-var ErrUnknownDocumentType = fmt.Errorf("unrecognized document extension")
+var (
+	allowedDocumentExtensions = []string{".yaml", ".yml", ".json"}
+	ErrUnknownDocumentType    = fmt.Errorf("unrecognized document extension")
+)
 
 type DownloadedRegistryOpenAPIBundle struct {
 	LocalFilePath     string
@@ -168,7 +170,7 @@ func DownloadRegistryOpenAPIBundle(ctx context.Context, document workflow.Speake
 	outPath = filepath.Join(outPath, shortDigest)
 
 	var outputFileName string
-	if fileName, _ := bundleCache.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
+	if fileName := bundleCache.BundleAnnotations[ocicommon.AnnotationBundleRoot]; fileName != "" {
 		cleanName := filepath.Clean(fileName)
 		outputFileName = filepath.Join(outPath, cleanName)
 		err = os.MkdirAll(filepath.Dir(outputFileName), os.ModePerm)

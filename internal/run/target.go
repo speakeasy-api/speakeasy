@@ -142,7 +142,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	err = validation.ValidateConfigAndPrintErrors(ctx, t.Target, genConfig, published, target)
 	if err != nil {
-		if errors.Is(err, validation.NoConfigFound) {
+		if errors.Is(err, validation.ErrNoConfigFound) {
 			genYamlStep.Skip("gen.yaml not found, assuming new SDK")
 		} else {
 			return sourceRes, nil, err
@@ -391,10 +391,7 @@ func (w *Workflow) snapshotCodeSamples(ctx context.Context, parentStep *workflow
 
 	serverURL := auth.GetServerURL()
 
-	insecurePublish := false
-	if strings.HasPrefix(serverURL, "http://") {
-		insecurePublish = true
-	}
+	insecurePublish := strings.HasPrefix(serverURL, "http://")
 
 	reg := strings.TrimPrefix(serverURL, "http://")
 	reg = strings.TrimPrefix(reg, "https://")
@@ -451,5 +448,5 @@ func (w *Workflow) CancelGeneration() error {
 		}
 	}
 
-	return fmt.Errorf("Generation is not cancellable")
+	return fmt.Errorf("generation is not cancellable")
 }

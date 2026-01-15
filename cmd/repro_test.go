@@ -81,7 +81,7 @@ func TestParseReproTarget(t *testing.T) {
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tt.expectedOrg, orgSlug)
 				assert.Equal(t, tt.expectedWs, workspaceSlug)
 				assert.Equal(t, tt.expectedID, executionID)
@@ -103,11 +103,11 @@ func TestReproEndToEnd(t *testing.T) {
 	speakeasyDir := filepath.Join(originalDir, ".speakeasy")
 
 	// Clean up any existing test directories
-	os.RemoveAll(getReproDir())
+	_ = os.RemoveAll(getReproDir())
 	_ = reproDir // Will be used in a full implementation
 
 	// Create the directory structure
-	err := os.MkdirAll(speakeasyDir, 0755)
+	err := os.MkdirAll(speakeasyDir, 0o755)
 	require.NoError(t, err, "Failed to create .speakeasy directory")
 
 	// Write gen.yaml
@@ -127,7 +127,7 @@ typescript:
   packageName: 'petstore'
   templateVersion: v2
 `
-	err = os.WriteFile(filepath.Join(speakeasyDir, "gen.yaml"), []byte(genYAML), 0644)
+	err = os.WriteFile(filepath.Join(speakeasyDir, "gen.yaml"), []byte(genYAML), 0o644)
 	require.NoError(t, err, "Failed to write gen.yaml")
 
 	// Write workflow.yaml
@@ -144,7 +144,7 @@ targets:
         target: typescript
         source: petstore-example-source
 `
-	err = os.WriteFile(filepath.Join(speakeasyDir, "workflow.yaml"), []byte(workflowYAML), 0644)
+	err = os.WriteFile(filepath.Join(speakeasyDir, "workflow.yaml"), []byte(workflowYAML), 0o644)
 	require.NoError(t, err, "Failed to write workflow.yaml")
 
 	// Create a minimal petstore OpenAPI spec for testing
@@ -201,7 +201,7 @@ paths:
                     tag:
                       type: string
 `)
-	err = os.WriteFile(filepath.Join(speakeasyDir, "openapi.yaml"), openapiContent, 0644)
+	err = os.WriteFile(filepath.Join(speakeasyDir, "openapi.yaml"), openapiContent, 0o644)
 	require.NoError(t, err, "Failed to write openapi.yaml")
 
 	// Build the speakeasy CLI binary

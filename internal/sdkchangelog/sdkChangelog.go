@@ -97,9 +97,10 @@ func storeKeyValueForPullRequestDescription(ctx context.Context, key string, rep
 		BumpType:     versioning.BumpNone,
 		NewVersion:   "",
 	}
-	if reportType == "pr_report" {
+	switch reportType {
+	case "pr_report":
 		versionReport.PRReport += report
-	} else if reportType == "commit_report" {
+	case "commit_report":
 		versionReport.CommitReport += report
 	}
 	err := versioning.AddVersionReport(ctx, versionReport)
