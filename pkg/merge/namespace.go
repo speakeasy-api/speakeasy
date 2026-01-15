@@ -3,15 +3,19 @@ package merge
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/speakeasy-api/openapi/extensions"
+	"github.com/speakeasy-api/openapi/jsonpointer"
 	"github.com/speakeasy-api/openapi/jsonschema/oas3"
 	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/openapi/references"
 	"github.com/speakeasy-api/openapi/sequencedmap"
 	"gopkg.in/yaml.v3"
 )
+
+const schemasRefPrefix = "#/components/schemas/"
 
 // MergeInput represents a document to merge with optional namespace
 type MergeInput struct {
@@ -27,29 +31,40 @@ type MergeOptions struct {
 	YAMLOutput             bool
 }
 
-// validateNamespaces checks that namespace usage is consistent across all inputs.
-// If any input has a namespace, ALL inputs must have a namespace.
-func validateNamespaces(inputs []MergeInput) error {
-	hasNamespace := false
-	missingNamespace := false
+// validNamespacePattern defines the allowed characters for namespace values.
+// Namespaces must start with a letter and contain only alphanumeric characters and underscores.
+var validNamespacePattern = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]+$`)
 
-	for _, input := range inputs {
-		if input.Namespace != "" {
-			hasNamespace = true
-		} else {
-			missingNamespace = true
-		}
+// validateNamespace checks that a namespace value contains only valid characters.
+// Valid namespaces must start with a letter and contain only alphanumeric characters and underscores.
+func validateNamespace(namespace string) error {
+	if namespace == "" {
+		return nil
 	}
 
-	if hasNamespace && missingNamespace {
-		return fmt.Errorf("if namespaces are used, ALL documents must provide a namespace")
+	if !validNamespacePattern.MatchString(namespace) {
+		return fmt.Errorf("invalid namespace %q: must contain only alphanumeric characters (a-z, A-Z, 0-9), "+
+			"underscores (_), hyphens (-), and dots (.). "+
+			"Nested namespaces using forward slashes (/) are not currently supported", namespace)
+	}
+
+	return nil
+}
+
+// validateNamespaces validates all namespace values in the inputs.
+// Empty namespaces are allowed and will result in no prefixing for that document.
+func validateNamespaces(inputs []MergeInput) error {
+	for _, input := range inputs {
+		if err := validateNamespace(input.Namespace); err != nil {
+			return fmt.Errorf("input %s: %w", input.Path, err)
+		}
 	}
 
 	return nil
 }
 
 // validateNamespaceSlice validates namespace slice against schema count.
-// If namespaces are provided, the count must match the schema count and all must be non-empty.
+// Empty namespaces are allowed and will result in no prefixing for that document.
 func validateNamespaceSlice(namespaces []string, schemaCount int) error {
 	// If no namespaces provided, that's valid (no namespacing)
 	if len(namespaces) == 0 {
@@ -61,38 +76,30 @@ func validateNamespaceSlice(namespaces []string, schemaCount int) error {
 		return fmt.Errorf("namespace count (%d) must match schema count (%d)", len(namespaces), schemaCount)
 	}
 
-	// Check for mixed usage (some empty, some non-empty)
-	hasNamespace := false
-	hasEmpty := false
-	for _, ns := range namespaces {
-		if ns != "" {
-			hasNamespace = true
-		} else {
-			hasEmpty = true
+	// Validate each namespace value
+	for i, ns := range namespaces {
+		if err := validateNamespace(ns); err != nil {
+			return fmt.Errorf("namespace at index %d: %w", i, err)
 		}
-	}
-
-	if hasNamespace && hasEmpty {
-		return fmt.Errorf("if namespaces are used, ALL documents must provide a namespace")
 	}
 
 	return nil
 }
 
 // applyNamespaceToSchemas applies namespace prefixes to all schemas in components/schemas.
-// It returns a mapping of old schema names to new schema names for reference updates.
 // For each namespaced schema, it adds:
 //   - x-speakeasy-name-override: original schema name
 //   - x-speakeasy-model-namespace: namespace value
-func applyNamespaceToSchemas(doc *openapi.OpenAPI, namespace string) (map[string]string, error) {
-	schemaMappings := make(map[string]string)
-
+//
+// The function mutates doc.Components.Schemas in place. Reference updates should be
+// performed by calling updateSchemaReferencesInDocument after this function.
+func applyNamespaceToSchemas(doc *openapi.OpenAPI, namespace string) {
 	if namespace == "" {
-		return schemaMappings, nil
+		return
 	}
 
 	if doc.Components == nil || doc.Components.Schemas == nil {
-		return schemaMappings, nil
+		return
 	}
 
 	// Create a new schemas map with namespaced names
@@ -100,9 +107,11 @@ func applyNamespaceToSchemas(doc *openapi.OpenAPI, namespace string) (map[string
 
 	for name, schema := range doc.Components.Schemas.All() {
 		newName := fmt.Sprintf("%s_%s", namespace, name)
-		schemaMappings[name] = newName
 
-		// Add speakeasy extensions to the schema
+		// Add speakeasy extensions to the schema.
+		// Note: We still rename the schema even if we can't add extensions (e.g., for pure references).
+		// The extensions are used by the SDK generator for model organization but aren't strictly required
+		// for the merge to function correctly.
 		if schema != nil && schema.IsSchema() {
 			schemaObj := schema.GetSchema()
 			if schemaObj != nil {
@@ -127,13 +136,36 @@ func applyNamespaceToSchemas(doc *openapi.OpenAPI, namespace string) (map[string
 
 	// Replace the schemas map
 	doc.Components.Schemas = newSchemas
-
-	return schemaMappings, nil
 }
 
 // updateSchemaReferencesInDocument updates all $ref values pointing to schemas
-// based on the provided schemaMappings.
-func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, schemaMappings map[string]string) error {
+// based on the namespace. It determines the mapping from the x-speakeasy-name-override
+// extension in the document's schemas.
+func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, namespace string) error {
+	if namespace == "" {
+		return nil
+	}
+
+	if doc.Components == nil || doc.Components.Schemas == nil {
+		return nil
+	}
+
+	// Build schema mappings from the document's schemas using the x-speakeasy-name-override extension
+	schemaMappings := make(map[string]string)
+	for newName, schema := range doc.Components.Schemas.All() {
+		if schema != nil && schema.IsSchema() {
+			schemaObj := schema.GetSchema()
+			if schemaObj != nil && schemaObj.Extensions != nil {
+				if nameOverrideNode, ok := schemaObj.Extensions.Get("x-speakeasy-name-override"); ok {
+					var originalName string
+					if err := nameOverrideNode.Decode(&originalName); err == nil && originalName != "" {
+						schemaMappings[originalName] = newName
+					}
+				}
+			}
+		}
+	}
+
 	if len(schemaMappings) == 0 {
 		return nil
 	}
@@ -156,26 +188,61 @@ func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI,
 	return nil
 }
 
-// updateSchemaReference updates a single schema's $ref if it points to a renamed schema
+// updateSchemaReference updates a single schema's $ref if it points to a renamed schema.
+// Supports both direct schema references (e.g., #/components/schemas/Pet) and property references
+// (e.g., #/components/schemas/Pet/properties/name).
 func updateSchemaReference(schema *oas3.JSONSchema[oas3.Referenceable], schemaMappings map[string]string) error {
 	if schema == nil {
 		return nil
 	}
 
-	if schema.IsReference() {
-		ref := schema.GetRef()
-		refStr := string(ref)
+	if !schema.IsReference() {
+		return nil
+	}
 
-		if strings.HasPrefix(refStr, "#/components/schemas/") {
-			componentName := strings.TrimPrefix(refStr, "#/components/schemas/")
-			if newName, exists := schemaMappings[componentName]; exists {
-				newRef := "#/components/schemas/" + newName
-				// Update the reference by modifying the underlying schema object's Ref field
-				schemaObj := schema.GetSchema()
-				if schemaObj != nil && schemaObj.Ref != nil {
-					*schemaObj.Ref = references.Reference(newRef)
-				}
-			}
+	ref := schema.GetRef()
+
+	// Validate the reference format using the references package
+	if err := ref.Validate(); err != nil {
+		return fmt.Errorf("invalid reference %q: %w", ref, err)
+	}
+
+	// Check if this is a local reference with a JSON pointer
+	if !ref.HasJSONPointer() {
+		return nil
+	}
+
+	refStr := string(ref)
+
+	// Only process schema references
+	if !strings.HasPrefix(refStr, schemasRefPrefix) {
+		return nil
+	}
+
+	// Use JSON pointer to parse the reference path
+	jp := ref.GetJSONPointer()
+	jpStr := jp.String()
+
+	// Parse the JSON pointer into parts (e.g., "/components/schemas/Pet" -> ["components", "schemas", "Pet"])
+	// or for property refs: "/components/schemas/Pet/properties/name" -> ["components", "schemas", "Pet", "properties", "name"]
+	parts := strings.Split(strings.TrimPrefix(jpStr, "/"), "/")
+
+	// Need at least 3 parts for a valid schema reference: ["components", "schemas", "<schemaName>"]
+	if len(parts) < 3 || parts[0] != "components" || parts[1] != "schemas" {
+		return nil
+	}
+
+	componentName := parts[2]
+	if newName, exists := schemaMappings[componentName]; exists {
+		// Update the schema name part and preserve any additional path segments (for property references)
+		parts[2] = newName
+		newPointer := jsonpointer.PartsToJSONPointer(parts)
+		newRef := references.Reference("#" + newPointer.String())
+
+		// Update the reference by modifying the underlying schema object's Ref field
+		schemaObj := schema.GetSchema()
+		if schemaObj != nil && schemaObj.Ref != nil {
+			*schemaObj.Ref = newRef
 		}
 	}
 

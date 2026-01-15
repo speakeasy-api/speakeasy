@@ -87,14 +87,28 @@ func TestMergeDocuments(t *testing.T) {
 			},
 		},
 		{
-			name: "merge with partial namespaces should fail",
+			name: "merge with partial namespaces succeeds",
 			inSchemas: []string{
 				"testdata/merge_spec1.yaml",
 				"testdata/merge_spec2.yaml",
 			},
 			modelNamespaces: []string{"serviceA", ""},
-			wantErr:         true,
-			wantErrContains: "ALL documents must provide a namespace",
+			wantErr:         false,
+			checkOutput: func(t *testing.T, output string) {
+				t.Helper()
+				// First document should have namespaced schema
+				if !strings.Contains(output, "serviceA_Pet:") {
+					t.Error("output should contain serviceA_Pet schema from first document")
+				}
+				// Second document should keep original schema name (no namespace)
+				if !strings.Contains(output, "Order:") {
+					t.Error("output should contain Order schema from second document")
+				}
+				// Should have x-speakeasy extensions only for namespaced schemas
+				if !strings.Contains(output, "x-speakeasy-model-namespace: serviceA") {
+					t.Error("output should contain x-speakeasy-model-namespace extension for serviceA")
+				}
+			},
 		},
 		{
 			name: "merge single file without namespace",
@@ -214,13 +228,6 @@ func TestMergeDocumentsWithInvalidInput(t *testing.T) {
 			inSchemas:       []string{},
 			modelNamespaces: []string{},
 			wantErr:         true,
-		},
-		{
-			name:            "mismatched arrays lengths",
-			inSchemas:       []string{"testdata/merge_spec1.yaml", "testdata/merge_spec2.yaml"},
-			modelNamespaces: []string{"serviceA"},
-			wantErr:         true,
-			wantErrContains: "modelNamespaces count",
 		},
 	}
 

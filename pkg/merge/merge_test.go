@@ -1054,15 +1054,35 @@ info:
 `,
 		},
 		{
-			name: "mixed namespace and no namespace returns error",
+			name: "mixed namespace and no namespace works",
 			args: args{
 				inSchemas: [][]byte{
-					[]byte(`openapi: 3.1`),
-					[]byte(`openapi: 3.1`),
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Pet:
+      type: object`),
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Owner:
+      type: object`),
 				},
 				namespaces: []string{"foo", ""},
 			},
-			wantErr: true,
+			want: `openapi: "3.1"
+components:
+  schemas:
+    foo_Pet:
+      type: object
+      x-speakeasy-name-override: Pet
+      x-speakeasy-model-namespace: foo
+    Owner:
+      type: object
+info:
+  title: ""
+  version: ""
+`,
 		},
 		{
 			name: "namespace count mismatch returns error",

@@ -134,12 +134,9 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 		}
 
 		if namespace != "" {
-			schemaMappings, err := applyNamespaceToSchemas(doc, namespace)
-			if err != nil {
-				return nil, fmt.Errorf("failed to apply namespace %s: %w", namespace, err)
-			}
+			applyNamespaceToSchemas(doc, namespace)
 
-			if err := updateSchemaReferencesInDocument(ctx, doc, schemaMappings); err != nil {
+			if err := updateSchemaReferencesInDocument(ctx, doc, namespace); err != nil {
 				return nil, fmt.Errorf("failed to update references for namespace %s: %w", namespace, err)
 			}
 		}
