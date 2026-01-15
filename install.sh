@@ -15,12 +15,81 @@ BINARY_NAME=${BINARY_NAME:-"speakeasy"}
 REPO_NAME="speakeasy-api/speakeasy"
 ISSUE_URL="https://github.com/speakeasy-api/speakeasy/issues/new"
 
+# curl_with_retry - curl wrapper that retries on 5XX errors and shows full errors
+# Usage: curl_with_retry [curl_args...]
+curl_with_retry() {
+  local max_retries=5
+  local retry=0
+  local delay=1
+  local http_code
+  local output
+  local tmp_file
+  local curl_exit_code
+
+  tmp_file=$(mktemp)
+
+  while [ $retry -lt $max_retries ]; do
+    # Use -w to get HTTP status code, -o to capture body, -S to show errors
+    http_code=$(curl -S -w "%{http_code}" -o "$tmp_file" "$@" 2>&1)
+    curl_exit_code=$?
+
+    # If curl itself failed (not HTTP error), show the error and retry
+    if [ $curl_exit_code -ne 0 ]; then
+      # http_code contains the error message when curl fails
+      fmt_error "curl failed: $http_code"
+      if [ $retry -lt $((max_retries - 1)) ]; then
+        echo "Retrying in ${delay}s... (attempt $((retry + 2))/$max_retries)" >&2
+        sleep $delay
+        delay=$((delay * 2))
+        retry=$((retry + 1))
+        continue
+      else
+        rm -f "$tmp_file"
+        return $curl_exit_code
+      fi
+    fi
+
+    # Check for 5XX status codes
+    case "$http_code" in
+      5*)
+        fmt_error "Server error (HTTP $http_code)"
+        if [ $retry -lt $((max_retries - 1)) ]; then
+          echo "Retrying in ${delay}s... (attempt $((retry + 2))/$max_retries)" >&2
+          sleep $delay
+          delay=$((delay * 2))
+          retry=$((retry + 1))
+          continue
+        else
+          rm -f "$tmp_file"
+          return 1
+        fi
+        ;;
+      4*)
+        # Client error - don't retry, but show the error
+        fmt_error "HTTP error $http_code"
+        cat "$tmp_file" >&2
+        rm -f "$tmp_file"
+        return 1
+        ;;
+      *)
+        # Success (2XX, 3XX) - output the content
+        cat "$tmp_file"
+        rm -f "$tmp_file"
+        return 0
+        ;;
+    esac
+  done
+
+  rm -f "$tmp_file"
+  return 1
+}
+
 # github_api_curl - make authenticated GitHub API calls
 github_api_curl() {
   if [ -n "$GITHUB_TOKEN" ]; then
-    curl -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
+    curl_with_retry -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
   else
-    curl "$@"
+    curl_with_retry "$@"
   fi
 }
 
@@ -32,7 +101,7 @@ get_latest_release() {
   local delay=1
 
   while [ $retry -lt $max_retries ]; do
-    release_info=$(github_api_curl --retry 5 --silent "https://api.github.com/repos/$1/releases/latest")
+    release_info=$(github_api_curl --silent "https://api.github.com/repos/$1/releases/latest")
     tag_name=$(echo "$release_info" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
     if echo "$tag_name" | grep -q '^v'; then
@@ -128,10 +197,17 @@ get_tmp_dir() {
 
 do_checksum() {
   checksum_url=$(get_checksum_url $version)
-  expected_checksum=$(curl -sfL $checksum_url | grep $asset_name | awk '{print $1}')
+  checksum_content=$(curl_with_retry -fL "$checksum_url")
+
+  if [ -z "$checksum_content" ]; then
+    fmt_error "Failed to retrieve checksums from $checksum_url"
+    exit 1
+  fi
+
+  expected_checksum=$(echo "$checksum_content" | grep "$asset_name" | awk '{print $1}')
 
   if [ -z "$expected_checksum" ]; then
-    fmt_error "Failed to retrieve expected checksum for $asset_name from $checksum_url"
+    fmt_error "Failed to find checksum for $asset_name in $checksum_url"
     exit 1
   fi
 
@@ -169,11 +245,11 @@ do_install_binary() {
   # Download zip to tmp directory
   echo "Downloading $download_url"
   set +e
-  (cd $tmp_dir && curl -sfL -O "$download_url")
+  (cd $tmp_dir && curl_with_retry -fL -o "$asset_name" "$download_url")
   exit_code=$?
   set -e
   if [ $exit_code -ne 0 ]; then
-    fmt_error "Failed to download $download_url (curl exit code: $exit_code)"
+    fmt_error "Failed to download $download_url"
     rm -rf $tmp_dir
     exit 1
   fi
