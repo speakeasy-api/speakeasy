@@ -1,6 +1,6 @@
 {
   "name": "speakeasy",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha",
   "description": "SDK generation and OpenAPI tooling with Speakeasy CLI",
   "author": "Speakeasy",
   "repository": "https://github.com/speakeasy-api/speakeasy",

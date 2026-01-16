@@ -1,6 +1,6 @@
 {
   "name": "speakeasy",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha",
   "description": "SDK generation and OpenAPI tooling with Speakeasy CLI",
   "skills": [
     "../skills/start-new-sdk-project.md",
