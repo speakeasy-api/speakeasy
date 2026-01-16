@@ -1,4 +1,5 @@
 ---
+name: diagnose-generation-failure
 description: Use when SDK generation failed, seeing "Step Failed: Workflow", or `speakeasy run` errors
 ---
 

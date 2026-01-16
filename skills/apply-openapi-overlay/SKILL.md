@@ -1,4 +1,5 @@
 ---
+name: apply-openapi-overlay
 description: Use when applying an overlay file to a spec
 ---
 

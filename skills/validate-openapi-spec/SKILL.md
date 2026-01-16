@@ -1,4 +1,5 @@
 ---
+name: validate-openapi-spec
 description: Use when checking if an OpenAPI spec is valid, looking for errors, or running `speakeasy lint`
 ---
 

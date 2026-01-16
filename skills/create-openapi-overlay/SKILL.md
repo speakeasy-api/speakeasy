@@ -1,4 +1,5 @@
 ---
+name: create-openapi-overlay
 description: Use when you need to customize SDK generation without editing the source spec, or can't modify the original OpenAPI file
 ---
 

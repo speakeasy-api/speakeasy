@@ -1,4 +1,5 @@
 ---
+name: fix-validation-errors-with-overlays
 description: Use when you have lint errors but can't modify the source spec, or need to add missing descriptions/tags via overlay
 ---
 

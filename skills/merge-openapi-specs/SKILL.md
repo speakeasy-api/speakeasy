@@ -1,4 +1,5 @@
 ---
+name: merge-openapi-specs
 description: Use when combining multiple OpenAPI specs, or have microservices with separate spec files
 ---
 

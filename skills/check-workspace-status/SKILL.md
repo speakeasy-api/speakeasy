@@ -1,4 +1,5 @@
 ---
+name: check-workspace-status
 description: Use when asking what targets/sources are configured, or wanting to see current Speakeasy setup
 ---
 

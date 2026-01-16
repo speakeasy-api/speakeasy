@@ -1,4 +1,5 @@
 ---
+name: start-new-sdk-project
 description: Use when you have an OpenAPI spec and want to generate an SDK, or asking "how do I get started with Speakeasy"
 ---
 

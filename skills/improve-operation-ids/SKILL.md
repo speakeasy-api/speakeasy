@@ -1,4 +1,5 @@
 ---
+name: improve-operation-ids
 description: Use when SDK methods have auto-generated names like GetApiV1Users, or wanting `sdk.users.list()` style naming
 ---
 

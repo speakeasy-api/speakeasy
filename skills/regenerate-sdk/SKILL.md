@@ -1,4 +1,5 @@
 ---
+name: regenerate-sdk
 description: Use when your spec changed and you need to regenerate the SDK, or running `speakeasy run`
 ---
 

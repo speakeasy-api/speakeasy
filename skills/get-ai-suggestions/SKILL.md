@@ -1,4 +1,5 @@
 ---
+name: get-ai-suggestions
 description: Use when SDK method names are ugly, wanting to improve operation IDs, or asking "how can I improve my spec"
 ---
 
