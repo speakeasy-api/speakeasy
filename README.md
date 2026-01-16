@@ -197,3 +197,43 @@ Refer to the [Speakeasy CLI installation documentation](https://www.speakeasy.co
 ### Usage
 
 Refer to the [Speakeasy CLI Reference](https://www.speakeasy.com/docs/speakeasy-reference/cli) for usage documentation. Additionally, every CLI command and subcommand supports a `--help` flag for usage information.
+
+## Claude Code Plugin
+
+Use Speakeasy directly within [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with our official plugin.
+
+### Installation
+
+```bash
+# Add the Speakeasy marketplace
+/plugin marketplace add speakeasy-api/speakeasy
+
+# Install the plugin
+/plugin install speakeasy
+```
+
+### Usage
+
+Once installed, you can use Speakeasy skills directly in Claude Code:
+
+```bash
+/speakeasy:check-workspace-status    # View current Speakeasy setup
+/speakeasy:validate-openapi-spec     # Validate an OpenAPI spec
+/speakeasy:start-new-sdk-project     # Initialize a new SDK project
+```
+
+### Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| `start-new-sdk-project` | Generate an SDK from an OpenAPI spec |
+| `regenerate-sdk` | Re-run SDK generation after spec changes |
+| `validate-openapi-spec` | Check if an OpenAPI spec is valid |
+| `get-ai-suggestions` | Get AI suggestions to improve your spec |
+| `check-workspace-status` | View current Speakeasy setup and targets |
+| `create-openapi-overlay` | Create overlays to customize SDK generation |
+| `apply-openapi-overlay` | Apply an overlay file to a spec |
+| `merge-openapi-specs` | Combine multiple OpenAPI specs |
+| `diagnose-generation-failure` | Debug SDK generation failures |
+| `fix-validation-errors-with-overlays` | Fix lint errors via overlays |
+| `improve-operation-ids` | Improve SDK method names |
