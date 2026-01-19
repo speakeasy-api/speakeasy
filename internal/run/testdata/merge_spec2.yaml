@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: Service B API
+  version: 2.0.0
+paths:
+  /orders:
+    get:
+      summary: List orders
+      operationId: listOrders
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - species
+      properties:
+        id:
+          type: integer
+        species:
+          type: string
+    Order:
+      type: object
+      required:
+        - id
+        - petId
+      properties:
+        id:
+          type: integer
+        petId:
+          type: integer
