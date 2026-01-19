@@ -64,7 +64,11 @@ func TestParseVersionPairs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := parseVersionPairs(tt.input)
+			var buf bytes.Buffer
+			logger := log.New().WithWriter(&buf)
+			ctx := log.With(context.Background(), logger)
+
+			result := parseVersionPairs(ctx, tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
