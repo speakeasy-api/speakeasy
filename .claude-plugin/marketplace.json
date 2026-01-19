@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "speakeasy",
+  "version": "0.1.0-alpha",
+  "description": "SDK generation and OpenAPI tooling with Speakeasy CLI",
+  "owner": {
+    "name": "Speakeasy",
+    "email": "support@speakeasy.com"
+  },
+  "plugins": [
+    {
+      "name": "speakeasy",
+      "description": "SDK generation and OpenAPI tooling with Speakeasy CLI",
+      "version": "0.1.0-alpha",
+      "author": {
+        "name": "Speakeasy",
+        "email": "support@speakeasy.com"
+      },
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
