@@ -10,6 +10,7 @@ import (
 )
 
 func TestSortErrors(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		errs []error
 	}

@@ -9,6 +9,7 @@ import (
 )
 
 func TestCreateMarkdownTable(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		contents [][]string
 	}

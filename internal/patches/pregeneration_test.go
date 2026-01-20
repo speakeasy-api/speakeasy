@@ -34,6 +34,7 @@ func computeChecksum(content string) string {
 }
 
 func TestDetectFileChanges_NilLockFile(t *testing.T) {
+	t.Parallel()
 	isDirty, modifiedPaths, err := DetectFileChanges("/tmp/test", nil)
 	require.NoError(t, err)
 	assert.False(t, isDirty)
@@ -41,6 +42,7 @@ func TestDetectFileChanges_NilLockFile(t *testing.T) {
 }
 
 func TestDetectFileChanges_NilTrackedFiles(t *testing.T) {
+	t.Parallel()
 	lockFile := &config.LockFile{
 		LockVersion:  lockfile.LockV2,
 		TrackedFiles: nil,
@@ -52,6 +54,7 @@ func TestDetectFileChanges_NilTrackedFiles(t *testing.T) {
 }
 
 func TestDetectFileChanges_DeletedFile(t *testing.T) {
+	t.Parallel()
 	// Create a temp directory
 	tempDir := t.TempDir()
 
@@ -75,6 +78,7 @@ func TestDetectFileChanges_DeletedFile(t *testing.T) {
 }
 
 func TestDetectFileChanges_MovedFile(t *testing.T) {
+	t.Parallel()
 	// Create a temp directory
 	tempDir := t.TempDir()
 
@@ -103,6 +107,7 @@ func TestDetectFileChanges_MovedFile(t *testing.T) {
 }
 
 func TestDetectFileChanges_ModifiedFile(t *testing.T) {
+	t.Parallel()
 	// Create a temp directory
 	tempDir := t.TempDir()
 
@@ -138,6 +143,7 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 }
 
 func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
+	t.Parallel()
 	// Create a temp directory
 	tempDir := t.TempDir()
 
@@ -166,6 +172,7 @@ func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
 }
 
 func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
+	t.Parallel()
 	// Create a temp directory
 	tempDir := t.TempDir()
 
@@ -197,6 +204,7 @@ func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 }
 
 func TestDetectFileChanges_MultipleFiles(t *testing.T) {
+	t.Parallel()
 	// Create a temp directory
 	tempDir := t.TempDir()
 
@@ -240,6 +248,7 @@ func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 }
 
 func TestGetFileChangeSummary_Empty(t *testing.T) {
+	t.Parallel()
 	summary := GetFileChangeSummary(nil)
 	assert.Empty(t, summary.Deleted)
 	assert.Empty(t, summary.Moved)
@@ -248,6 +257,7 @@ func TestGetFileChangeSummary_Empty(t *testing.T) {
 }
 
 func TestGetFileChangeSummary_WithChanges(t *testing.T) {
+	t.Parallel()
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("deleted1.go", lockfile.TrackedFile{Deleted: true})
 	lf.TrackedFiles.Set("deleted2.go", lockfile.TrackedFile{Deleted: true})
@@ -267,6 +277,7 @@ func TestGetFileChangeSummary_WithChanges(t *testing.T) {
 }
 
 func TestFormatSummary_Empty(t *testing.T) {
+	t.Parallel()
 	summary := FileChangeSummary{
 		Moved: make(map[string]string),
 	}
@@ -275,6 +286,7 @@ func TestFormatSummary_Empty(t *testing.T) {
 }
 
 func TestFormatSummary_WithChanges(t *testing.T) {
+	t.Parallel()
 	summary := FileChangeSummary{
 		Deleted:  []string{"file1.go", "file2.go"},
 		Moved:    map[string]string{"old.go": "new.go"},
@@ -290,6 +302,7 @@ func TestFormatSummary_WithChanges(t *testing.T) {
 }
 
 func TestFormatSummary_Truncation(t *testing.T) {
+	t.Parallel()
 	summary := FileChangeSummary{
 		Deleted: []string{"f1.go", "f2.go", "f3.go", "f4.go", "f5.go"},
 		Moved:   make(map[string]string),

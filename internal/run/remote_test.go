@@ -5,6 +5,7 @@ import (
 )
 
 func TestParseGitHubRepoURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		url      string

@@ -9,6 +9,7 @@ import (
 )
 
 func TestMergeDocuments(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		inSchemas       []string
@@ -210,6 +211,7 @@ func TestMergeDocuments(t *testing.T) {
 }
 
 func TestMergeDocumentsWithInvalidInput(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		inSchemas       []string
@@ -257,6 +259,7 @@ func TestMergeDocumentsWithInvalidInput(t *testing.T) {
 }
 
 func TestHasModelNamespaces(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name            string
 		modelNamespaces []string

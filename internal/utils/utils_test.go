@@ -10,6 +10,7 @@ import (
 )
 
 func TestSingleSlotQueue(t *testing.T) {
+	t.Parallel()
 	log := []int{}
 	var logMu sync.Mutex
 
