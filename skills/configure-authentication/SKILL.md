@@ -57,10 +57,10 @@ speakeasy run
 
 ## Verifying Authentication
 
-```bash
-# Check if authenticated (returns workspace info)
-speakeasy auth login --check 2>/dev/null && echo "Authenticated" || echo "Not authenticated"
-```
+Authentication is verified automatically when running authenticated commands.
+If `SPEAKEASY_API_KEY` is invalid or missing, commands will fail with an `unauthorized` error.
+
+Note: `speakeasy status` requires TTY and cannot be used in non-interactive environments.
 
 ## Common Auth Errors
 
