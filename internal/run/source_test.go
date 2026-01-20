@@ -8,6 +8,7 @@ import (
 )
 
 func TestWorkflowSourceHasRemoteInputs(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		source   workflow.Source
@@ -65,6 +66,7 @@ func TestWorkflowSourceHasRemoteInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := workflowSourceHasRemoteInputs(tt.source)
 			require.Equal(t, tt.expected, result)
 		})

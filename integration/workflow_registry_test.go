@@ -212,6 +212,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 
 // TestFrozenWorkflowLockWithRegistryInput verifies --frozen-workflow-lockfile works with registry URLs.
 func TestFrozenWorkflowLockWithRegistryInput(t *testing.T) {
+	t.Parallel()
 	temp := setupTestDir(t)
 
 	workflowFile := &workflow.Workflow{
