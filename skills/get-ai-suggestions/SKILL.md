@@ -7,6 +7,14 @@ description: Use when SDK method names are ugly, wanting to improve operation ID
 
 Use `speakeasy suggest` for AI-powered improvements.
 
+## Prerequisites
+
+For non-interactive environments (CI/CD, AI agents), set:
+```bash
+export SPEAKEASY_API_KEY="<your-api-key>"
+```
+See `configure-authentication` skill for details.
+
 ## Commands
 
 ```bash

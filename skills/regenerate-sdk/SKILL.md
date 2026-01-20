@@ -7,6 +7,14 @@ description: Use when your spec changed and you need to regenerate the SDK, or r
 
 Use `speakeasy run` to execute the workflow and regenerate SDKs.
 
+## Prerequisites
+
+For non-interactive environments (CI/CD, AI agents), set:
+```bash
+export SPEAKEASY_API_KEY="<your-api-key>"
+```
+See `configure-authentication` skill for details.
+
 ## Command
 
 ```bash
