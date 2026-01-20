@@ -192,17 +192,17 @@ type statusJSONTargets struct {
 }
 
 type statusJSONTarget struct {
-	Name          string                   `json:"name"`
-	Language      string                   `json:"language"`
-	SDKVersion    string                   `json:"sdkVersion"`
-	Status        string                   `json:"status"`
-	Version       string                   `json:"version,omitempty"`
-	PublishURL    string                   `json:"publishURL,omitempty"`
-	RepositoryURL string                   `json:"repositoryURL,omitempty"`
-	SpeakeasyURL  string                   `json:"speakeasyURL"`
-	LastPublish   *statusJSONTimestamp     `json:"lastPublish,omitempty"`
-	LastGenerate  *statusJSONTimestamp     `json:"lastGenerate,omitempty"`
-	UpgradeURL    string                   `json:"upgradeURL,omitempty"`
+	Name           string                  `json:"name"`
+	Language       string                  `json:"language"`
+	SDKVersion     string                  `json:"sdkVersion"`
+	Status         string                  `json:"status"`
+	Version        string                  `json:"version,omitempty"`
+	PublishURL     string                  `json:"publishURL,omitempty"`
+	RepositoryURL  string                  `json:"repositoryURL,omitempty"`
+	SpeakeasyURL   string                  `json:"speakeasyURL"`
+	LastPublish    *statusJSONTimestamp    `json:"lastPublish,omitempty"`
+	LastGenerate   *statusJSONTimestamp    `json:"lastGenerate,omitempty"`
+	UpgradeURL     string                  `json:"upgradeURL,omitempty"`
 	GenerateFailed *statusJSONGenerateFail `json:"generateFailed,omitempty"`
 }
 
