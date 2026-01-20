@@ -72,7 +72,7 @@ func TestWorkflowWithEnvVar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 
 			for key, value := range tt.env {
 				t.Setenv(key, value)
@@ -168,7 +168,7 @@ func TestGenerationWorkflows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
@@ -231,7 +231,7 @@ func TestGenerationWorkflows(t *testing.T) {
 
 func TestInputOnlyWorkflow(t *testing.T) {
 	t.Parallel()
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create workflow file and associated resources
 	workflowFile := &workflow.Workflow{
@@ -495,7 +495,7 @@ func TestSpecWorkflows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
 				Version: workflow.WorkflowVersion,
@@ -628,7 +628,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 		}
 	}`
 	// Write the spec to a temp file
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 	specPath := filepath.Join(temp, "spec.yaml")
 	err := os.WriteFile(specPath, []byte(spec), 0o644)
 	require.NoError(t, err)

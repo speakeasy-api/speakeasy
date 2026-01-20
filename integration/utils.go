@@ -23,15 +23,6 @@ func integrationTestsDir() string {
 	return filepath.Join(filepath.Dir(filename), "..", "integrationTests")
 }
 
-func createTempDir(_ string) (string, error) {
-	target := filepath.Join(integrationTestsDir(), randStringBytes(7))
-	if err := os.Mkdir(target, 0o755); err != nil {
-		return "", err
-	}
-
-	return target, nil
-}
-
 func isLocalFileReference(filePath string) bool {
 	u, err := url.Parse(filePath)
 	if err != nil {

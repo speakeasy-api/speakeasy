@@ -14,7 +14,7 @@ import (
 func TestStability(t *testing.T) {
 	t.Parallel()
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create a basic workflow file
 	workflowFile := &workflow.Workflow{
@@ -120,7 +120,7 @@ typescript:
 
 func TestRegistryFlow(t *testing.T) {
 	t.Parallel()
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create a basic workflow file
 	workflowFile := &workflow.Workflow{
@@ -165,7 +165,7 @@ func TestRegistryFlow(t *testing.T) {
 
 func TestRegistryFlow_JSON(t *testing.T) {
 	t.Parallel()
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create a basic workflow file
 	workflowFile := &workflow.Workflow{
@@ -216,7 +216,7 @@ func TestRegistryFlow_JSON(t *testing.T) {
 func TestFrozenWorkflowLockWithRegistryInput(t *testing.T) {
 	t.Parallel()
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	workflowFile := &workflow.Workflow{
 		Version: workflow.WorkflowVersion,

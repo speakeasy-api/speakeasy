@@ -117,7 +117,7 @@ func TestPersistentEdits_UserModificationPreserved(t *testing.T) {
 func setupPersistentEditsTestDir(t *testing.T) string {
 	t.Helper()
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create a minimal OpenAPI spec
 	specContent := `openapi: 3.0.3
@@ -465,7 +465,7 @@ func TestPersistentEdits_MultipleFilesModified(t *testing.T) {
 func setupMultiTargetPersistentEditsTestDir(t *testing.T) string {
 	t.Helper()
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create a minimal OpenAPI spec
 	specContent := `openapi: 3.0.3

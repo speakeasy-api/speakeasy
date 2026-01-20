@@ -18,7 +18,7 @@ func TestMultiFileStability(t *testing.T) {
 		t.Skip("Skipping test on Windows")
 	}
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Copy the multi-file OpenAPI spec files
 	err := copyFile("resources/multi_root.yaml", filepath.Join(temp, "multi_root.yaml"))
