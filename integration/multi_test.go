@@ -12,7 +12,7 @@ import (
 )
 
 func TestMultiFileStability(t *testing.T) {
-	// If windows, skip
+	t.Parallel()
 	temp := setupTestDir(t)
 
 	// Copy the multi-file OpenAPI spec files

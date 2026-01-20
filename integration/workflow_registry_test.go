@@ -12,6 +12,7 @@ import (
 )
 
 func TestStability(t *testing.T) {
+	t.Parallel()
 	temp := setupTestDir(t)
 
 	// Create a basic workflow file

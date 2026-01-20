@@ -579,6 +579,7 @@ func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests m
 }
 
 func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	t.Parallel()
 	spec := `{
 		"openapi": "3.0.0",
 		"info": {
