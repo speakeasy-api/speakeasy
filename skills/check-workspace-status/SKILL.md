@@ -10,18 +10,36 @@ Use `speakeasy status` to view workspace state.
 ## Command
 
 ```bash
+# Default visual output (requires TTY)
 speakeasy status
+
+# Plain text for non-TTY environments (CI/CD, AI agents)
+speakeasy status --output console
+
+# Structured JSON for automation and parsing
+speakeasy status --output json
 ```
+
+## Output Modes
+
+| Mode | Flag | Use Case |
+|------|------|----------|
+| summary | `--output summary` (default) | Interactive terminals with TTY |
+| console | `--output console` | CI/CD, AI agents, non-interactive |
+| json | `--output json` | Automation, scripting, programmatic access |
 
 ## What It Shows
 
-- Configured sources and their locations
-- Configured targets and output directories
-- Current Speakeasy version
-- Any configuration issues
+- Workspace name and account type
+- Published targets (with version, URLs, last publish/generate info)
+- Configured targets (unpublished, with repository URLs)
+- Unconfigured targets
+- Any generation failures or upgrade recommendations
 
 ## Use Cases
 
 - Verify setup before running generation
 - Debug workflow configuration issues
 - Check what targets are configured
+- Automate status checks in CI/CD pipelines
+- Parse workspace state programmatically with `--output json`
