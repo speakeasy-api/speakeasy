@@ -340,10 +340,10 @@ func getTempConvertedPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("converted_%s%s", randStringBytes(10), filepath.Ext(path)))
 }
 
-// Returns true if any of the source inputs are remote.
+// Returns true if any of the source inputs are remote (including registry inputs).
 func workflowSourceHasRemoteInputs(source workflow.Source) bool {
 	for _, input := range source.Inputs {
-		if input.IsRemote() {
+		if input.IsRemote() || input.IsSpeakeasyRegistry() {
 			return true
 		}
 	}
