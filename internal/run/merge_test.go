@@ -9,6 +9,8 @@ import (
 )
 
 func TestMergeDocuments(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		inSchemas       []string
@@ -167,6 +169,7 @@ func TestMergeDocuments(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 
 			// Create temp output file
@@ -210,6 +213,8 @@ func TestMergeDocuments(t *testing.T) {
 }
 
 func TestMergeDocumentsWithInvalidInput(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		inSchemas       []string
@@ -233,6 +238,8 @@ func TestMergeDocumentsWithInvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 			tmpDir := t.TempDir()
 			outFile := filepath.Join(tmpDir, "merged.yaml")
@@ -257,6 +264,8 @@ func TestMergeDocumentsWithInvalidInput(t *testing.T) {
 }
 
 func TestHasModelNamespaces(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		modelNamespaces []string
@@ -291,6 +300,8 @@ func TestHasModelNamespaces(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			hasModelNamespaces := false
 			for _, ns := range tt.modelNamespaces {
 				if ns != "" {

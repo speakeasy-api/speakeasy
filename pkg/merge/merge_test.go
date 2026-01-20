@@ -940,6 +940,8 @@ paths:
 }
 
 func Test_merge_WithNamespaces(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		inSchemas  [][]byte
 		namespaces []string
@@ -1142,6 +1144,8 @@ info:
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := merge(t.Context(), tt.args.inSchemas, tt.args.namespaces, true)
 			if tt.wantErr {
 				assert.Error(t, err)

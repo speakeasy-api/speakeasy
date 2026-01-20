@@ -33,6 +33,8 @@ func getSpeakeasyBinary() string {
 }
 
 func TestParseReproTarget(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		target      string
@@ -76,6 +78,8 @@ func TestParseReproTarget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			orgSlug, workspaceSlug, executionID, err := parseReproTarget(tt.target)
 
 			if tt.expectError {

@@ -25,8 +25,7 @@ import (
 // These integration tests MUST be run in serial because we deal with changing working directories during the test.
 // If running locally make sure you are running test functions individually TestGenerationWorkflows, TestSpecWorkflows, etc.
 // If all test groups are run at the same time you will see test failures.
-//
-//lint:ignore tparallel Integration tests must run serially due to working directory changes
+
 func TestWorkflowWithEnvVar(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -72,7 +71,6 @@ func TestWorkflowWithEnvVar(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		//lint:ignore tparallel Integration tests must run serially due to working directory changes
 		t.Run(tt.name, func(t *testing.T) {
 			temp := setupTestDir(t)
 
