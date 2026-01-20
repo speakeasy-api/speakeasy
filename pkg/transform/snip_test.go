@@ -11,6 +11,7 @@ import (
 )
 
 func TestSnip_RemoveByOperationID(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	// Create a buffer to store the snipped spec
@@ -43,6 +44,7 @@ func TestSnip_RemoveByOperationID(t *testing.T) {
 }
 
 func TestSnip_RemoveByPathMethod(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	var buf bytes.Buffer
@@ -65,6 +67,7 @@ func TestSnip_RemoveByPathMethod(t *testing.T) {
 }
 
 func TestSnip_KeepMode(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	var buf bytes.Buffer
@@ -91,6 +94,7 @@ func TestSnip_KeepMode(t *testing.T) {
 }
 
 func TestSnip_MixedOperationFormats(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	var buf bytes.Buffer
@@ -113,6 +117,7 @@ func TestSnip_MixedOperationFormats(t *testing.T) {
 }
 
 func TestSnip_NoOperationsSpecified(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	var buf bytes.Buffer
@@ -124,6 +129,7 @@ func TestSnip_NoOperationsSpecified(t *testing.T) {
 }
 
 func TestSnip_InvalidOperationFormat(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	var buf bytes.Buffer
@@ -145,6 +151,7 @@ func TestSnip_InvalidOperationFormat(t *testing.T) {
 }
 
 func TestSnip_NonExistentOperation(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	var buf bytes.Buffer

@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"sync"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 // prebuiltBinary holds the path to the pre-built speakeasy binary.
@@ -66,20 +64,4 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(code)
-}
-
-func setupTestDir(t *testing.T) string {
-	t.Helper()
-	temp, err := createTempDir("")
-	require.NoError(t, err)
-	registerCleanup(t, temp)
-
-	return temp
-}
-
-func registerCleanup(t *testing.T, temp string) {
-	t.Helper()
-	t.Cleanup(func() {
-		_ = os.RemoveAll(temp)
-	})
 }
