@@ -7,6 +7,14 @@ description: Use when you have an OpenAPI spec and want to generate an SDK, or a
 
 Use `speakeasy quickstart` to initialize a new project with a workflow configuration.
 
+## Prerequisites
+
+For non-interactive environments (CI/CD, AI agents), set:
+```bash
+export SPEAKEASY_API_KEY="<your-api-key>"
+```
+See `configure-authentication` skill for details.
+
 ## Command
 
 ```bash

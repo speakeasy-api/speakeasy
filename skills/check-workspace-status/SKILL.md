@@ -5,41 +5,21 @@ description: Use when asking what targets/sources are configured, or wanting to 
 
 # check-workspace-status
 
-Use `speakeasy status` to view workspace state.
-
 ## Command
 
 ```bash
-# Default visual output (requires TTY)
-speakeasy status
-
-# Plain text for non-TTY environments (CI/CD, AI agents)
-speakeasy status --output console
-
-# Structured JSON for automation and parsing
+# For LLMs/automation (recommended)
 speakeasy status --output json
+
+# For human-readable output
+speakeasy status --output console
 ```
 
-## Output Modes
+Requires `SPEAKEASY_API_KEY` env var (see `configure-authentication` skill).
 
-| Mode | Flag | Use Case |
-|------|------|----------|
-| summary | `--output summary` (default) | Interactive terminals with TTY |
-| console | `--output console` | CI/CD, AI agents, non-interactive |
-| json | `--output json` | Automation, scripting, programmatic access |
-
-## What It Shows
+## Output Includes
 
 - Workspace name and account type
-- Published targets (with version, URLs, last publish/generate info)
-- Configured targets (unpublished, with repository URLs)
-- Unconfigured targets
-- Any generation failures or upgrade recommendations
-
-## Use Cases
-
-- Verify setup before running generation
-- Debug workflow configuration issues
-- Check what targets are configured
-- Automate status checks in CI/CD pipelines
-- Parse workspace state programmatically with `--output json`
+- Published targets (version, URLs, last publish/generate)
+- Configured targets (unpublished, with repo URLs)
+- Unconfigured targets and generation failures

@@ -5,6 +5,14 @@ description: Use when SDK methods have auto-generated names like GetApiV1Users, 
 
 # improve-operation-ids
 
+## Prerequisites
+
+For non-interactive environments (CI/CD, AI agents), set:
+```bash
+export SPEAKEASY_API_KEY="<your-api-key>"
+```
+See `configure-authentication` skill for details.
+
 ## Check Current State
 
 ```bash
