@@ -5,77 +5,39 @@ description: Use when setting up Speakeasy authentication, configuring API keys,
 
 # configure-authentication
 
-Configure Speakeasy CLI authentication for non-interactive environments like CI/CD pipelines and AI agents.
+## Quick Setup
 
-## Environment Variable (Recommended)
-
-Set `SPEAKEASY_API_KEY` for non-interactive authentication:
+Set `SPEAKEASY_API_KEY` environment variable (takes precedence over config files):
 
 ```bash
 export SPEAKEASY_API_KEY="<your-api-key>"
 ```
 
-This takes precedence over config file settings.
-
-## Config File
-
-Alternatively, create `~/.speakeasy/config.yaml`:
-
-```yaml
-speakeasy_api_key: "<your-api-key>"
-speakeasy_workspace_id: "<workspace-id>"
-```
-
-## Getting Your API Key
-
-1. Go to [Speakeasy Dashboard](https://app.speakeasy.com)
-2. Navigate to **Settings** > **API Keys**
-3. Create or copy your API key
-
-## CI/CD Examples
-
-### GitHub Actions
-
-```yaml
-env:
-  SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
-```
-
-### Docker
-
-```bash
-docker run -e SPEAKEASY_API_KEY="$SPEAKEASY_API_KEY" ...
-```
-
-### Shell Script
-
-```bash
-#!/bin/bash
-export SPEAKEASY_API_KEY="${SPEAKEASY_API_KEY:?SPEAKEASY_API_KEY must be set}"
-speakeasy run
-```
+Get your API key: [Speakeasy Dashboard](https://app.speakeasy.com) → Settings → API Keys
 
 ## Verifying Authentication
 
-Authentication is verified automatically when running authenticated commands.
-If `SPEAKEASY_API_KEY` is invalid or missing, commands will fail with an `unauthorized` error.
+```bash
+speakeasy status --output json
+```
 
-Note: `speakeasy status` requires TTY and cannot be used in non-interactive environments.
+Returns workspace info if authenticated; `unauthorized` error if not.
 
-## Common Auth Errors
+## Common Errors
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `unauthorized` | Missing or invalid API key | Set `SPEAKEASY_API_KEY` env var |
-| `workspace not found` | Wrong workspace ID | Check `speakeasy_workspace_id` in config |
-| `TTY required` | Interactive login attempted | Use env var instead of `speakeasy auth login` |
+| Error | Solution |
+|-------|----------|
+| `unauthorized` | Set valid `SPEAKEASY_API_KEY` env var |
+| `workspace not found` | Check workspace ID in `~/.speakeasy/config.yaml` |
 
-## Multiple Workspaces
+## Alternative: Config File
 
-For multiple workspaces, use workspace-specific keys in config:
+Create `~/.speakeasy/config.yaml`:
 
 ```yaml
+speakeasy_api_key: "<your-api-key>"
+speakeasy_workspace_id: "<workspace-id>"  # optional
+# For multiple workspaces:
 workspace_api_keys:
-  org-slug@workspace-slug: "<api-key-1>"
-  other-org@other-workspace: "<api-key-2>"
+  org@workspace: "<api-key>"
 ```
