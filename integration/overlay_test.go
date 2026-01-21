@@ -1,12 +1,13 @@
 package integration_tests
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestOverlayMatchesSnapshot(t *testing.T) {
@@ -20,7 +21,7 @@ func TestOverlayMatchesSnapshot(t *testing.T) {
 	expectedBytes, err := os.ReadFile(filepath.Join(overlayFolder, "openapi-overlayed-expected.yaml"))
 	require.NoError(t, err)
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 	outputPath, err := filepath.Abs(filepath.Join(temp, "output.yaml"))
 	require.NoError(t, err)
 

@@ -13,6 +13,8 @@ import (
 )
 
 func TestFormat(t *testing.T) {
+	t.Parallel()
+
 	// Create a buffer to store the formatted spec
 	var testInput bytes.Buffer
 	var testOutput bytes.Buffer

@@ -72,7 +72,7 @@ func TestWorkflowWithEnvVar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 
 			for key, value := range tt.env {
 				t.Setenv(key, value)
@@ -168,7 +168,7 @@ func TestGenerationWorkflows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
@@ -231,7 +231,7 @@ func TestGenerationWorkflows(t *testing.T) {
 
 func TestInputOnlyWorkflow(t *testing.T) {
 	t.Parallel()
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create workflow file and associated resources
 	workflowFile := &workflow.Workflow{
@@ -336,7 +336,9 @@ func (c *cmdRunner) Run() error { //nolint:unused // Reserved for executeI debug
 	return c.rootCmd.Execute()
 }
 
-func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests must run serially due to working directory changes
+func TestSpecWorkflows(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		inputDocs       []string
@@ -493,7 +495,7 @@ func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests m
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
 				Version: workflow.WorkflowVersion,
@@ -579,6 +581,8 @@ func TestSpecWorkflows(t *testing.T) { //nolint:tparallel // Integration tests m
 }
 
 func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	t.Parallel()
+
 	spec := `{
 		"openapi": "3.0.0",
 		"info": {
@@ -624,7 +628,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 		}
 	}`
 	// Write the spec to a temp file
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 	specPath := filepath.Join(temp, "spec.yaml")
 	err := os.WriteFile(specPath, []byte(spec), 0o644)
 	require.NoError(t, err)

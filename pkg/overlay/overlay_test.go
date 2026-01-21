@@ -21,38 +21,56 @@ const (
 )
 
 func TestApply_inYAML_outYAML(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaFile, overlayFileV1, expectedFile, true)
 }
 
 func TestApply_inJSON_outJSON(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaJSON, overlayFileV1, expectedFileJSON, false)
 }
 
 func TestApply_inYAML_outJSON(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaFile, overlayFileV1, expectedFileJSON, false)
 }
 
 func TestApply_inJSON_outYAML(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaJSON, overlayFileV1, expectedFileYAMLFromJSON, true)
 }
 
 func TestApply_inYAML_outYAML_v2(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaFile, overlayFileV2, expectedFile, true)
 }
 
 func TestApply_inJSON_outJSON_v2(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaJSON, overlayFileV2, expectedFileJSON, false)
 }
 
 func TestApply_inYAML_outJSON_v2(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaFile, overlayFileV2, expectedFileJSON, false)
 }
 
 func TestApply_inJSON_outYAML_v2(t *testing.T) {
+	t.Parallel()
+
 	test(t, schemaJSON, overlayFileV2, expectedFileYAMLFromJSON, true)
 }
 
 func TestApply_StrictFailure(t *testing.T) {
+	t.Parallel()
+
 	tmpFile, err := os.CreateTemp(t.TempDir(), "output.yaml")
 	require.NoError(t, err)
 	_, err = Apply(schemaFile, overlayStrictFailure, true, tmpFile, true, true)

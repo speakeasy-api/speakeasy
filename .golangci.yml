@@ -32,7 +32,7 @@ linters:
     - nilerr
     - nilnesserr
     - nolintlint
-    # - paralleltest too many issues currently
+    - paralleltest
     # - perfsprint too many issues currently
     - predeclared
     - reassign

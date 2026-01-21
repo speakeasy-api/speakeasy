@@ -13,3 +13,4 @@ __debug_bin*
 /completions/
 
 **/.claude/settings.local.json
+.beads
