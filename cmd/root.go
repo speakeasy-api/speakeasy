@@ -10,6 +10,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/cmd/lint"
 
 	"github.com/speakeasy-api/speakeasy/cmd/generate"
+	"github.com/speakeasy-api/speakeasy/cmd/mcp"
 	"github.com/speakeasy-api/speakeasy/cmd/openapi"
 
 	"github.com/speakeasy-api/speakeasy-core/events"
@@ -78,6 +79,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, configureCmd)
 	addCommand(rootCmd, generate.GenerateCmd)
 	addCommand(rootCmd, lint.LintCmd)
+	addCommand(rootCmd, mcp.MCPCmd)
 	addCommand(rootCmd, openapi.OpenAPICmd)
 	addCommand(rootCmd, migrateCmd)
 
