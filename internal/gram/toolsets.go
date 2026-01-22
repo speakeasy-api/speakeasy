@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/speakeasy-api/gram/server/gen/toolsets"
 	toolsetshttp "github.com/speakeasy-api/gram/server/gen/http/toolsets/client"
+	"github.com/speakeasy-api/gram/server/gen/toolsets"
 	"github.com/speakeasy-api/gram/server/gen/types"
 	goahttp "goa.design/goa/v3/http"
 )
