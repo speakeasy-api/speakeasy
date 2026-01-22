@@ -16,6 +16,7 @@ jobs:
     run_install_sh:
         runs-on: ${{ matrix.runner }}
         strategy:
+            fail-fast: false
             matrix:
                 runner: [ubuntu-latest, macos-latest]
         steps:
@@ -23,7 +24,7 @@ jobs:
             - run: ./install.sh
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            - run: speakeasy version
+            - run: speakeasy --version
     shellcheck:
         runs-on: ubuntu-latest
         steps:
