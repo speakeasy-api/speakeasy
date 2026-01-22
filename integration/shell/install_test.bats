@@ -254,23 +254,26 @@ teardown() {
 
 @test "curl_with_retry succeeds on 200 response" {
     mock_curl 0 "200" "response body"
-    run curl_with_retry -fsSL "https://example.com"
+    local output_file="$MOCK_DIR/output.txt"
+    run curl_with_retry "$output_file" -fsSL "https://example.com"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"response body"* ]]
+    [[ "$(cat "$output_file")" == *"response body"* ]]
 }
 
 @test "curl_with_retry succeeds on 201 response" {
     mock_curl 0 "201" "created response"
-    run curl_with_retry -fsSL "https://example.com"
+    local output_file="$MOCK_DIR/output.txt"
+    run curl_with_retry "$output_file" -fsSL "https://example.com"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"created response"* ]]
+    [[ "$(cat "$output_file")" == *"created response"* ]]
 }
 
 @test "curl_with_retry fails on 404 response" {
     RED=""
     RESET=""
     mock_curl 0 "404" "not found"
-    run curl_with_retry -fsSL "https://example.com"
+    local output_file="$MOCK_DIR/output.txt"
+    run curl_with_retry "$output_file" -fsSL "https://example.com"
     [ "$status" -ne 0 ]
 }
 
@@ -299,7 +302,8 @@ EOF
     # Override sleep to speed up test
     create_mock sleep 0
 
-    run curl_with_retry -fsSL "https://example.com"
+    local output_file="$MOCK_DIR/output.txt"
+    run curl_with_retry "$output_file" -fsSL "https://example.com"
     [ "$status" -ne 0 ]
 }
 
@@ -317,7 +321,8 @@ EOF
     # Override sleep to speed up test
     create_mock sleep 0
 
-    run curl_with_retry -fsSL "https://example.com"
+    local output_file="$MOCK_DIR/output.txt"
+    run curl_with_retry "$output_file" -fsSL "https://example.com"
     [ "$status" -ne 0 ]
 }
 
@@ -349,7 +354,8 @@ EOF
     chmod +x "$MOCK_DIR/curl"
 
     export GITHUB_TOKEN="test_token_123"
-    run github_api_curl --silent "https://api.github.com/test"
+    local output_file="$MOCK_DIR/output.txt"
+    run github_api_curl "$output_file" --silent "https://api.github.com/test"
 
     # The output includes stderr which should show the auth header
     [[ "$output" == *"Authorization"* ]] || [[ "$output" == *"Bearer"* ]] || [ "$status" -eq 0 ]
@@ -359,7 +365,8 @@ EOF
 @test "github_api_curl works without GITHUB_TOKEN" {
     mock_curl 0 "200" "api response"
     unset GITHUB_TOKEN
-    run github_api_curl --silent "https://api.github.com/test"
+    local output_file="$MOCK_DIR/output.txt"
+    run github_api_curl "$output_file" --silent "https://api.github.com/test"
     [ "$status" -eq 0 ]
 }
 
