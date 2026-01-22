@@ -17,17 +17,14 @@ const (
 	defaultGramScheme = "https"
 )
 
-// ToolsetsClient wraps the Gram toolsets API
 type ToolsetsClient struct {
 	client *toolsets.Client
 }
 
-// NewToolsetsClient creates a new Gram toolsets API client
 func NewToolsetsClient() *ToolsetsClient {
 	return NewToolsetsClientWithHost(defaultGramScheme, defaultGramHost)
 }
 
-// NewToolsetsClientWithHost creates a new Gram toolsets API client with a custom host
 func NewToolsetsClientWithHost(scheme, host string) *ToolsetsClient {
 	httpClient := &http.Client{
 		Timeout: 10 * time.Minute,
@@ -59,7 +56,6 @@ func NewToolsetsClientWithHost(scheme, host string) *ToolsetsClient {
 	return &ToolsetsClient{client: client}
 }
 
-// CreateToolsetParams contains the parameters for creating a toolset
 type CreateToolsetParams struct {
 	Name         string
 	Description  string
@@ -67,7 +63,6 @@ type CreateToolsetParams struct {
 	ResourceUrns []string
 }
 
-// CreateToolset creates a new toolset
 func (c *ToolsetsClient) CreateToolset(ctx context.Context, apiKey, projectSlug string, params CreateToolsetParams) (*types.Toolset, error) {
 	var desc *string
 	if params.Description != "" {
@@ -91,7 +86,6 @@ func (c *ToolsetsClient) CreateToolset(ctx context.Context, apiKey, projectSlug 
 	return result, nil
 }
 
-// EnableToolset enables MCP for a toolset with a slug
 func (c *ToolsetsClient) EnableToolset(ctx context.Context, apiKey, projectSlug, toolsetSlug, mcpSlug string) (*types.Toolset, error) {
 	slug := types.Slug(toolsetSlug)
 	mcp := types.Slug(mcpSlug)
@@ -113,7 +107,6 @@ func (c *ToolsetsClient) EnableToolset(ctx context.Context, apiKey, projectSlug,
 	return result, nil
 }
 
-// MakeToolsetPublic makes a toolset public
 func (c *ToolsetsClient) MakeToolsetPublic(ctx context.Context, apiKey, projectSlug, toolsetSlug string) (*types.Toolset, error) {
 	slug := types.Slug(toolsetSlug)
 	public := true
@@ -133,7 +126,6 @@ func (c *ToolsetsClient) MakeToolsetPublic(ctx context.Context, apiKey, projectS
 	return result, nil
 }
 
-// GetToolset retrieves a toolset by slug
 func (c *ToolsetsClient) GetToolset(ctx context.Context, apiKey, projectSlug, toolsetSlug string) (*types.Toolset, error) {
 	slug := types.Slug(toolsetSlug)
 
@@ -151,7 +143,6 @@ func (c *ToolsetsClient) GetToolset(ctx context.Context, apiKey, projectSlug, to
 	return result, nil
 }
 
-// ListToolsets lists all toolsets for a project
 func (c *ToolsetsClient) ListToolsets(ctx context.Context, apiKey, projectSlug string) ([]*types.ToolsetEntry, error) {
 	payload := &toolsets.ListToolsetsPayload{
 		ApikeyToken:      &apiKey,
@@ -166,7 +157,6 @@ func (c *ToolsetsClient) ListToolsets(ctx context.Context, apiKey, projectSlug s
 	return result.Toolsets, nil
 }
 
-// CheckMCPSlugAvailability checks if an MCP slug is available
 func (c *ToolsetsClient) CheckMCPSlugAvailability(ctx context.Context, apiKey, projectSlug, mcpSlug string) (bool, error) {
 	slug := types.Slug(mcpSlug)
 
@@ -184,7 +174,6 @@ func (c *ToolsetsClient) CheckMCPSlugAvailability(ctx context.Context, apiKey, p
 	return available, nil
 }
 
-// DeleteToolset deletes a toolset by slug
 func (c *ToolsetsClient) DeleteToolset(ctx context.Context, apiKey, projectSlug, toolsetSlug string) error {
 	slug := types.Slug(toolsetSlug)
 

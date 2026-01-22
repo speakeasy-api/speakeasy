@@ -57,7 +57,6 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 		return fmt.Errorf("deployment not configured for target '%s'. Add the following to workflow.yaml:\n\ntargets:\n  %s:\n    deployment: {}", targetName, targetName)
 	}
 
-	// Use current working directory - user must run from MCP server root
 	outputDir, err := filepath.Abs(".")
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -105,7 +104,6 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 		l.PrintfStyled(styles.Success, "Deployment successful!")
 	}
 
-	// Create toolset, enable MCP, and make public
 	mcpURL, err := setupToolset(ctx, slug, project)
 	if err != nil {
 		l.Warnf("Failed to setup public MCP server: %v", err)
@@ -144,13 +142,11 @@ func setupToolset(ctx context.Context, slug, projectOverride string) (string, er
 	apiURL := gram.GetAPIURL()
 	client := gram.NewToolsetsClient()
 
-	// Check if toolset already exists
 	l.Infof("Setting up MCP server '%s'...", slug)
 	existingToolset, err := client.GetToolset(ctx, apiKey, projectSlug, slug)
 
 	var toolsetSlug string
 	if err != nil {
-		// Toolset doesn't exist, create it
 		l.Info("Creating new toolset...")
 		toolset, createErr := client.CreateToolset(ctx, apiKey, projectSlug, gram.CreateToolsetParams{
 			Name:        slug,
@@ -166,24 +162,20 @@ func setupToolset(ctx context.Context, slug, projectOverride string) (string, er
 		l.Infof("Using existing toolset: %s", toolsetSlug)
 	}
 
-	// MCP slug needs org prefix for free accounts (e.g., "speakeasy-team-myserver")
 	mcpSlug := fmt.Sprintf("%s-%s", orgSlug, slug)
 
-	// Enable MCP with the slug
 	l.Info("Enabling MCP...")
 	_, err = client.EnableToolset(ctx, apiKey, projectSlug, toolsetSlug, mcpSlug)
 	if err != nil {
 		return "", fmt.Errorf("failed to enable toolset: %w", err)
 	}
 
-	// Make it public
 	l.Info("Making MCP server public...")
 	_, err = client.MakeToolsetPublic(ctx, apiKey, projectSlug, toolsetSlug)
 	if err != nil {
 		return "", fmt.Errorf("failed to make toolset public: %w", err)
 	}
 
-	// Construct MCP URL
 	mcpURL := fmt.Sprintf("%s/mcp/%s", apiURL, mcpSlug)
 	return mcpURL, nil
 }
