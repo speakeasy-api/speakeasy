@@ -172,7 +172,7 @@ function compare_fields {
 
     while true
     do
-        [ $order -ne 0 ] && { echo $order ; return ; }
+        [ "$order" -ne 0 ] && { echo "$order" ; return ; }
 
         : $(( i++ ))
         left="${leftfield[$i]}"
@@ -392,7 +392,6 @@ function command_get {
 
     if [[ "$#" -ne "2" ]] || [[ -z "$1" ]] || [[ -z "$2" ]]; then
         usage_help
-        exit 0
     fi
 
     part="$1"
