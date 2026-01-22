@@ -8,7 +8,6 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/gram"
-	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -49,16 +48,6 @@ var deployCmd = &model.ExecutableCommand[DeployFlags]{
 
 func deployExec(ctx context.Context, flags DeployFlags) error {
 	l := log.From(ctx)
-
-	if !gram.IsInstalled() {
-		l.Info("Gram CLI not found.")
-		if !interactivity.SimpleConfirm("Install Gram CLI now? (required for deployment)", true) {
-			return fmt.Errorf("gram CLI is required for deployment, install from https://www.getgram.ai")
-		}
-		if err := gram.InstallCLI(ctx); err != nil {
-			return fmt.Errorf("failed to install Gram CLI: %w", err)
-		}
-	}
 
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 	if err != nil {

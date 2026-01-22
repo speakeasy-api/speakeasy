@@ -1,26 +1,36 @@
 package gram
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	gramcmd "github.com/speakeasy-api/gram/cli/pkg/cmd"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 )
 
-// PackageInfo contains relevant fields from package.json
+func withGramLogger(ctx context.Context) context.Context {
+	return gramcmd.PushLogger(ctx, slog.Default())
+}
+
+func loadProfile() (*gramcmd.Profile, error) {
+	profilePath, err := gramcmd.DefaultProfilePath()
+	if err != nil {
+		return nil, err
+	}
+	return gramcmd.LoadProfile(profilePath)
+}
+
 type PackageInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-// ReadPackageJSON reads and parses package.json from the given directory
 func ReadPackageJSON(dir string) (*PackageInfo, error) {
 	data, err := os.ReadFile(filepath.Join(dir, "package.json"))
 	if err != nil {
@@ -42,39 +52,29 @@ func ReadPackageJSON(dir string) (*PackageInfo, error) {
 	return &pkg, nil
 }
 
-// DeriveSlug extracts the package slug from a potentially scoped package name
-// e.g., "@my-org/my-mcp-server" -> "my-mcp-server"
 func DeriveSlug(packageName string) string {
 	parts := strings.Split(packageName, "/")
 	return parts[len(parts)-1]
 }
 
 func IsInstalled() bool {
-	_, err := exec.LookPath("gram")
-	return err == nil
+	return true
 }
 
 func InstallCLI(ctx context.Context) error {
-	l := log.From(ctx)
-	l.Info("Installing Gram CLI...")
-
-	cmd := exec.CommandContext(ctx, "bash", "-c", "curl -fsSL https://go.getgram.ai/cli.sh | bash")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("installation failed: %w", err)
-	}
-
-	l.Info("Gram CLI installed successfully!")
 	return Auth(ctx)
 }
 
 func CheckAuth(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "gram", "whoami")
-	output, err := cmd.CombinedOutput()
+	prof, err := loadProfile()
 	if err != nil {
-		return fmt.Errorf("not authenticated with Gram: %w\n%s", err, string(output))
+		return fmt.Errorf("not authenticated with Gram: %w", err)
+	}
+	_, err = gramcmd.Whoami(withGramLogger(ctx), gramcmd.WhoamiOptions{
+		Profile: prof,
+	})
+	if err != nil {
+		return fmt.Errorf("not authenticated with Gram: %w", err)
 	}
 	return nil
 }
@@ -83,12 +83,11 @@ func Auth(ctx context.Context) error {
 	l := log.From(ctx)
 	l.Info("Opening browser for Gram authentication...")
 
-	cmd := exec.CommandContext(ctx, "gram", "auth")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	prof, _ := loadProfile()
+	_, err := gramcmd.Auth(withGramLogger(ctx), gramcmd.AuthOptions{
+		Profile: prof,
+	})
+	if err != nil {
 		return fmt.Errorf("failed to authenticate with Gram: %w", err)
 	}
 	return nil
@@ -105,7 +104,6 @@ type PushResult struct {
 func Push(ctx context.Context, dir, project string) (*PushResult, error) {
 	l := log.From(ctx)
 
-	// Read package.json for version and slug
 	pkg, err := ReadPackageJSON(dir)
 	if err != nil {
 		return nil, err
@@ -116,57 +114,33 @@ func Push(ctx context.Context, dir, project string) (*PushResult, error) {
 
 	l.Infof("Deploying %s@%s to Gram...", slug, pkg.Version)
 
-	// Use gram push directly with idempotency key
-	args := []string{"push", "--config", "gram.deploy.json", "--idempotency-key", idempotencyKey}
-	if project != "" {
-		args = append(args, "--project", project)
+	configPath := filepath.Join(dir, "gram.deploy.json")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("gram.deploy.json not found in %s", dir)
 	}
 
-	cmd := exec.CommandContext(ctx, "gram", args...)
-	cmd.Dir = dir
-	cmd.Stdin = os.Stdin
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
-	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("deployment failed: %w\n%s", err, stderr.String())
+	prof, err := loadProfile()
+	if err != nil {
+		return nil, fmt.Errorf("not authenticated with Gram: %w", err)
 	}
 
-	combinedOutput := stdout.String() + stderr.String()
-	url := parseDeploymentURL(combinedOutput)
-
-	// Check if this was an existing deployment (idempotency hit)
-	// Gram returns successfully but doesn't create a new deployment
-	alreadyExists := strings.Contains(combinedOutput, "already exists") ||
-		strings.Contains(combinedOutput, "existing deployment")
+	result, err := gramcmd.Push(withGramLogger(ctx), gramcmd.PushOptions{
+		Profile:        prof,
+		ConfigFile:     configPath,
+		ProjectSlug:    project,
+		IdempotencyKey: idempotencyKey,
+		Method:         "merge",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("deployment failed: %w", err)
+	}
 
 	return &PushResult{
-		URL:            url,
+		URL:            result.LogsURL,
 		Version:        pkg.Version,
 		Slug:           slug,
 		IdempotencyKey: idempotencyKey,
-		AlreadyExists:  alreadyExists,
 	}, nil
-}
-
-func parseDeploymentURL(output string) string {
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.Contains(line, "https://") {
-			start := strings.Index(line, "https://")
-			if start >= 0 {
-				url := line[start:]
-				if idx := strings.IndexAny(url, " \t\n\r"); idx > 0 {
-					url = url[:idx]
-				}
-				return url
-			}
-		}
-	}
-	return ""
 }
 
 func Build(ctx context.Context, dir string) error {
@@ -190,6 +164,61 @@ func Build(ctx context.Context, dir string) error {
 
 	if err := gramCmd.Run(); err != nil {
 		return fmt.Errorf("gram build failed: %w", err)
+	}
+
+	// Stage the function to create gram.deploy.json
+	zipPath := filepath.Join(dir, "dist", "gram.zip")
+	if err := StageFunction(ctx, dir, zipPath); err != nil {
+		return fmt.Errorf("failed to stage function: %w", err)
+	}
+
+	return nil
+}
+
+// StageFunction stages a Gram Functions zip file for deployment.
+// It creates or updates the gram.deploy.json config file.
+func StageFunction(ctx context.Context, dir string, zipLocation string) error {
+	l := log.From(ctx)
+
+	pkg, err := ReadPackageJSON(dir)
+	if err != nil {
+		return err
+	}
+
+	slug := DeriveSlug(pkg.Name)
+	configPath := filepath.Join(dir, "gram.deploy.json")
+
+	l.Infof("Staging function %s from %s...", slug, zipLocation)
+
+	if err := gramcmd.StageFunction(gramcmd.StageFunctionOptions{
+		ConfigFile: configPath,
+		Slug:       slug,
+		Name:       pkg.Name,
+		Location:   zipLocation,
+		Runtime:    "nodejs:22",
+	}); err != nil {
+		return fmt.Errorf("failed to stage function: %w", err)
+	}
+
+	return nil
+}
+
+// StageOpenAPI stages an OpenAPI document for deployment.
+// It creates or updates the gram.deploy.json config file.
+func StageOpenAPI(ctx context.Context, dir string, specLocation string, slug string, name string) error {
+	l := log.From(ctx)
+
+	configPath := filepath.Join(dir, "gram.deploy.json")
+
+	l.Infof("Staging OpenAPI spec %s from %s...", slug, specLocation)
+
+	if err := gramcmd.StageOpenAPI(gramcmd.StageOpenAPIOptions{
+		ConfigFile: configPath,
+		Slug:       slug,
+		Name:       name,
+		Location:   specLocation,
+	}); err != nil {
+		return fmt.Errorf("failed to stage OpenAPI spec: %w", err)
 	}
 
 	return nil
