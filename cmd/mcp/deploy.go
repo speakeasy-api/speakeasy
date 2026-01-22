@@ -104,7 +104,7 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 		l.PrintfStyled(styles.Success, "Deployment successful!")
 	}
 
-	mcpURL, err := setupToolset(ctx, slug, project)
+	mcpURL, err := setupToolset(ctx, slug, project, outputDir)
 	if err != nil {
 		l.Warnf("Failed to setup public MCP server: %v", err)
 		if result.URL != "" {
@@ -118,7 +118,7 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 	return nil
 }
 
-func setupToolset(ctx context.Context, slug, projectOverride string) (string, error) {
+func setupToolset(ctx context.Context, slug, projectOverride, outputDir string) (string, error) {
 	l := log.From(ctx)
 
 	apiKey, err := gram.GetAPIKey()
@@ -138,6 +138,15 @@ func setupToolset(ctx context.Context, slug, projectOverride string) (string, er
 	if err != nil {
 		return "", fmt.Errorf("failed to get org slug: %w", err)
 	}
+
+	zipPath := filepath.Join(outputDir, "dist", "gram.zip")
+	manifest, err := gram.ReadManifestFromZip(zipPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read manifest: %w", err)
+	}
+
+	toolUrns := gram.BuildToolURNs(slug, manifest)
+	resourceUrns := gram.BuildResourceURNs(slug, manifest)
 
 	apiURL := gram.GetAPIURL()
 	client := gram.NewToolsetsClient()
@@ -160,6 +169,14 @@ func setupToolset(ctx context.Context, slug, projectOverride string) (string, er
 	} else {
 		toolsetSlug = string(existingToolset.Slug)
 		l.Infof("Using existing toolset: %s", toolsetSlug)
+	}
+
+	if len(toolUrns) > 0 || len(resourceUrns) > 0 {
+		l.Infof("Adding %d tools and %d resources to toolset...", len(toolUrns), len(resourceUrns))
+		_, err = client.UpdateToolsetTools(ctx, apiKey, projectSlug, toolsetSlug, toolUrns, resourceUrns)
+		if err != nil {
+			return "", fmt.Errorf("failed to add tools to toolset: %w", err)
+		}
 	}
 
 	mcpSlug := fmt.Sprintf("%s-%s", orgSlug, slug)

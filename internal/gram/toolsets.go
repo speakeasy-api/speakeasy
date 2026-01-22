@@ -190,3 +190,22 @@ func (c *ToolsetsClient) DeleteToolset(ctx context.Context, apiKey, projectSlug,
 
 	return nil
 }
+
+func (c *ToolsetsClient) UpdateToolsetTools(ctx context.Context, apiKey, projectSlug, toolsetSlug string, toolUrns, resourceUrns []string) (*types.Toolset, error) {
+	slug := types.Slug(toolsetSlug)
+
+	payload := &toolsets.UpdateToolsetPayload{
+		ApikeyToken:      &apiKey,
+		ProjectSlugInput: &projectSlug,
+		Slug:             slug,
+		ToolUrns:         toolUrns,
+		ResourceUrns:     resourceUrns,
+	}
+
+	result, err := c.client.UpdateToolset(ctx, payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update toolset tools: %w", err)
+	}
+
+	return result, nil
+}
