@@ -11,6 +11,8 @@ import (
 )
 
 func TestJQSymbolicExecutionFromReader(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   string
@@ -36,6 +38,8 @@ paths:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			reader := strings.NewReader(tt.input)
 			var output bytes.Buffer
 
@@ -52,6 +56,8 @@ paths:
 }
 
 func TestJQSymbolicExecution_ExtractNestedID(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -112,6 +118,8 @@ components:
 }
 
 func TestJQSymbolicExecution_FlattenPagination(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -185,6 +193,8 @@ components:
 }
 
 func TestJQSymbolicExecution_ComputedField(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -234,6 +244,8 @@ components:
 }
 
 func TestJQSymbolicExecution_ArrayTransform(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -288,6 +300,8 @@ components:
 }
 
 func TestJQSymbolicExecution_ConditionalField(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API

@@ -12,7 +12,7 @@ import (
 
 func TestAutomaticSwaggerConversion(t *testing.T) {
 	t.Parallel()
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create workflow file that uses the Swagger 2.0 document
 	workflowFile := &workflow.Workflow{

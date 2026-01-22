@@ -6,6 +6,8 @@ import (
 )
 
 func TestIsSwaggerDocument(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		path     string
@@ -35,6 +37,8 @@ func TestIsSwaggerDocument(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := IsSwaggerDocument(ctx, tt.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IsSwaggerDocument() error = %v, wantErr %v", err, tt.wantErr)

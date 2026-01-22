@@ -13,6 +13,8 @@ import (
 )
 
 func TestCLIUpdateMutex_TryLock(t *testing.T) {
+	t.Parallel()
+
 	// Create a custom lock file name to avoid conflicts with real CLI operations
 	testLockName := fmt.Sprintf("speakeasy-test-%d.lock", time.Now().UnixNano())
 
@@ -39,6 +41,8 @@ func TestCLIUpdateMutex_TryLock(t *testing.T) {
 }
 
 func TestCLIUpdateMutex_Contention(t *testing.T) {
+	t.Parallel()
+
 	// Create a custom lock file name to avoid conflicts with real CLI operations
 	testLockName := fmt.Sprintf("speakeasy-test-contention-%d.lock", time.Now().UnixNano())
 
@@ -98,6 +102,8 @@ func TestCLIUpdateMutex_Contention(t *testing.T) {
 }
 
 func TestCLIUpdateMutex_Unlock(t *testing.T) {
+	t.Parallel()
+
 	// Create a custom lock file name to avoid conflicts with real CLI operations
 	testLockName := fmt.Sprintf("speakeasy-test-%d.lock", time.Now().UnixNano())
 
@@ -132,6 +138,8 @@ func TestCLIUpdateMutex_Unlock(t *testing.T) {
 }
 
 func TestCLIUpdateMutex_Singleton(t *testing.T) {
+	t.Parallel()
+
 	// Test that the singleton functions return the same instance
 	mutex1 := CLIUpdateLock()
 	mutex2 := CLIUpdateLock()
@@ -141,6 +149,8 @@ func TestCLIUpdateMutex_Singleton(t *testing.T) {
 }
 
 func TestCLIUpdateMutex_ConcurrentUsers(t *testing.T) {
+	t.Parallel()
+
 	testLockName := "concurrent-test.lock"
 	lockPath := filepath.Join(os.TempDir(), testLockName)
 

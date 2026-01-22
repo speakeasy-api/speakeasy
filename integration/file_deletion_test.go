@@ -106,7 +106,7 @@ components:
 func setupFileDeletionTestDir(t *testing.T) string {
 	t.Helper()
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create an OpenAPI spec with TWO models: Pet and Owner
 	// Both are used by the /pets endpoint

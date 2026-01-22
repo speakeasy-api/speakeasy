@@ -13,6 +13,8 @@ import (
 )
 
 func TestNormalize(t *testing.T) {
+	t.Parallel()
+
 	// Create a buffer to store the normalized spec
 	var testInput bytes.Buffer
 	var testOutput bytes.Buffer
@@ -53,6 +55,8 @@ func TestNormalize(t *testing.T) {
 }
 
 func TestNormalizeNoPrefixItems(t *testing.T) {
+	t.Parallel()
+
 	// Create a buffer to store the normalized spec
 	var testInput bytes.Buffer
 	var testOutput bytes.Buffer

@@ -10,6 +10,8 @@ import (
 )
 
 func TestIsBinary(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		content  []byte
@@ -39,6 +41,8 @@ func TestIsBinary(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := isBinary(tc.content)
 			assert.Equal(t, tc.expected, result)
 		})
@@ -46,6 +50,8 @@ func TestIsBinary(t *testing.T) {
 }
 
 func TestNormalizeLineEndings(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -75,6 +81,8 @@ func TestNormalizeLineEndings(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := normalizeLineEndings(tc.input)
 			assert.Equal(t, tc.expected, result)
 		})
@@ -82,6 +90,8 @@ func TestNormalizeLineEndings(t *testing.T) {
 }
 
 func TestCountDiffStats(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		diffText string
@@ -118,6 +128,8 @@ func TestCountDiffStats(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := countDiffStats(tc.diffText)
 			assert.Equal(t, tc.expected, result)
 		})
@@ -125,12 +137,16 @@ func TestCountDiffStats(t *testing.T) {
 }
 
 func TestComputeFileDiff_NoPristine(t *testing.T) {
+	t.Parallel()
+
 	fd := ComputeFileDiff("/tmp", "test.go", "", nil)
 	assert.Equal(t, "test.go", fd.Path)
 	assert.Equal(t, "(no pristine base available)", fd.DiffText)
 }
 
 func TestComputeFileDiff_NoGitRepo(t *testing.T) {
+	t.Parallel()
+
 	fd := ComputeFileDiff("/tmp", "test.go", "abc123", nil)
 	assert.Equal(t, "(git repository not available)", fd.DiffText)
 }
@@ -161,6 +177,8 @@ func (m *mockGitRepo) SetConflictState(path string, base, ours, theirs []byte, i
 }
 
 func TestComputeFileDiff_WithDiff(t *testing.T) {
+	t.Parallel()
+
 	// Create temp directory with test file
 	tempDir := t.TempDir()
 
@@ -189,6 +207,8 @@ func TestComputeFileDiff_WithDiff(t *testing.T) {
 }
 
 func TestFormatSummary_WithDiffs(t *testing.T) {
+	t.Parallel()
+
 	summary := FileChangeSummary{
 		Modified: []FileDiff{
 			{
