@@ -26,6 +26,59 @@ func loadProfile() (*gramcmd.Profile, error) {
 	return gramcmd.LoadProfile(profilePath)
 }
 
+// LoadProfile loads the Gram profile for external use
+func LoadProfile() (*gramcmd.Profile, error) {
+	return loadProfile()
+}
+
+// GetAPIKey returns the API key from the profile
+func GetAPIKey() (string, error) {
+	prof, err := loadProfile()
+	if err != nil {
+		return "", err
+	}
+	if prof == nil {
+		return "", fmt.Errorf("no profile found")
+	}
+	return prof.Secret, nil
+}
+
+// GetProjectSlug returns the default project slug from the profile
+func GetProjectSlug() (string, error) {
+	prof, err := loadProfile()
+	if err != nil {
+		return "", err
+	}
+	if prof == nil {
+		return "", fmt.Errorf("no profile found")
+	}
+	return prof.DefaultProjectSlug, nil
+}
+
+// GetAPIURL returns the API URL from the profile or default
+func GetAPIURL() string {
+	prof, _ := loadProfile()
+	if prof != nil && prof.APIUrl != "" {
+		return prof.APIUrl
+	}
+	return "https://app.getgram.ai"
+}
+
+// GetOrgSlug returns the organization slug from the profile
+func GetOrgSlug() (string, error) {
+	prof, err := loadProfile()
+	if err != nil {
+		return "", err
+	}
+	if prof == nil {
+		return "", fmt.Errorf("no profile found")
+	}
+	if prof.Org == nil {
+		return "", fmt.Errorf("no organization in profile")
+	}
+	return prof.Org.Slug, nil
+}
+
 type PackageInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
