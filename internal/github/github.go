@@ -30,7 +30,18 @@ type WorkflowSummary interface {
 	ToMermaidDiagram() (string, error)
 }
 
-const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+const (
+	ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+	// 512 KiB. GitHub step summaries have a max size of 1MiB. Both linting and
+	// changes reports are written to the same summary. Each report should be
+	// truncated below half of the overall limit.
+	// Reference: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#step-isolation-and-limits
+	GitHubStepSummaryReportLimit = 512 * 1024
+
+	// Lint report unknown severity
+	LintSeverityUnknown = "UNKNOWN"
+)
 
 var re = regexp.MustCompile(ansi)
 
@@ -51,6 +62,25 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 		return
 	}
 
+	var summaryMarkdown strings.Builder
+
+	summaryMarkdown.Grow(GitHubStepSummaryReportLimit)
+	summaryMarkdown.WriteString("# ")
+
+	if summary.Source != "" {
+		summaryMarkdown.WriteString(summary.Source + " ")
+	}
+
+	summaryMarkdown.WriteString("Linting Summary\n\n")
+
+	if summary.ReportURL != "" {
+		summaryMarkdown.WriteString("Linting report available at <")
+		summaryMarkdown.WriteString(summary.ReportURL)
+		summaryMarkdown.WriteString(">\n\n")
+	}
+
+	summaryMarkdown.WriteString(summary.Status + "\n\n")
+
 	contents := [][]string{}
 
 	contents = append(contents, []string{"Severity", "Type", "Error", "Line"})
@@ -66,26 +96,41 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 
 		uErr := errors.GetUnsupportedErr(err)
 		if uErr != nil {
-			contents = append(contents, []string{"WARN", uErr.Error(), "unsupported", strconv.Itoa(uErr.LineNumber)})
+			contents = append(contents, []string{string(errors.SeverityWarn), uErr.Error(), "unsupported", strconv.Itoa(uErr.LineNumber)})
 			continue
 		}
 
-		contents = append(contents, []string{"UNKNOWN", "unknown", err.Error(), ""})
+		contents = append(contents, []string{LintSeverityUnknown, "unknown", err.Error(), ""})
 	}
 
-	var source string
-	if summary.Source != "" {
-		source = summary.Source + " "
+	contentsMarkdown := markdown.CreateMarkdownTable(contents)
+
+	if summaryMarkdown.Len()+len(contentsMarkdown) > GitHubStepSummaryReportLimit {
+		summaryMarkdown.WriteString("*The full linting report has been truncated from this summary due to size limits.*\n\n")
+
+		// Truncate hints first to try fitting within size limit.
+		contents = slices.DeleteFunc(contents, func(row []string) bool {
+			return row[0] == string(errors.SeverityHint)
+		})
+
+		contentsMarkdown = markdown.CreateMarkdownTable(contents)
 	}
 
-	md := fmt.Sprintf("# %sLinting Summary", source)
-	if summary.ReportURL != "" {
-		md += fmt.Sprintf("\n\nLinting report available at <%s>", summary.ReportURL)
+	if summaryMarkdown.Len()+len(contentsMarkdown) > GitHubStepSummaryReportLimit {
+		// Truncate warnings next to try fitting within size limit.
+		contents = slices.DeleteFunc(contents, func(row []string) bool {
+			return row[0] == string(errors.SeverityWarn)
+		})
+
+		contentsMarkdown = markdown.CreateMarkdownTable(contents)
 	}
 
-	md += fmt.Sprintf("\n\n%s\n\n%s", summary.Status, markdown.CreateMarkdownTable(contents))
+	// Only include the errors table if it fits within the size limit.
+	if summaryMarkdown.Len()+len(contentsMarkdown) <= GitHubStepSummaryReportLimit {
+		summaryMarkdown.WriteString(contentsMarkdown)
+	}
 
-	githubactions.AddStepSummary(md)
+	githubactions.AddStepSummary(summaryMarkdown.String())
 }
 
 func GenerateChangesSummary(ctx context.Context, url string, summary changes.Summary) {
@@ -101,14 +146,24 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		return
 	}
 
-	reportLink := ""
+	var summaryMarkdown strings.Builder
+
+	summaryMarkdown.Grow(GitHubStepSummaryReportLimit)
+	summaryMarkdown.WriteString("# API Changes Summary\n\n")
+
 	if url != "" {
-		reportLink = fmt.Sprintf("Changes report available at <%s>\n\n", url)
+		summaryMarkdown.WriteString("Changes report available at <")
+		summaryMarkdown.WriteString(url)
+		summaryMarkdown.WriteString(">\n\n")
 	}
 
-	md := fmt.Sprintf("# API Changes Summary\n%s\n%s", reportLink, summary.Text)
+	if summaryMarkdown.Len()+len(summary.Text) > GitHubStepSummaryReportLimit {
+		summaryMarkdown.WriteString("*The full changes report has been truncated from this summary due to size limits.*\n\n")
+	} else {
+		summaryMarkdown.WriteString(summary.Text + "\n\n")
+	}
 
-	githubactions.AddStepSummary(StripANSICodes(md))
+	githubactions.AddStepSummary(StripANSICodes(summaryMarkdown.String()))
 
 	if len(os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")) > 0 {
 		filepath := os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")
