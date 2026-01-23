@@ -240,18 +240,12 @@ func TargetSpecificForms(
 	// intentionally reference previously answered fields.
 	for _, name := range targetQuickstartFieldNames {
 		if field, ok := targetFormFields[name]; ok {
-			// Always call HuhField to trigger ValueFunc (computes derived values like sdkPackageName)
 			f := field.HuhField(targetFormFields)
-			if f == nil {
-				return groups, targetFormFields, fmt.Errorf("field %s is not valid", name)
-			}
-
-			// Skip adding to form groups if value was provided via CLI flags
-			if isQuickstart && shouldSkipField(name, quickstart) {
+			if f != nil {
+				groups = append(groups, huh.NewGroup(f))
 				continue
 			}
-
-			groups = append(groups, huh.NewGroup(f))
+			return groups, targetFormFields, fmt.Errorf("field %s is not valid", name)
 		}
 	}
 
@@ -340,25 +334,4 @@ func getFormSubtitle(targetType string) string {
 	base := "This will configure a config file that defines parameters for how your %s is generated. \n" +
 		"Default config values have been provided. You only need to edit values that you want to modify."
 	return fmt.Sprintf(base, getTargetDisplayName(targetType))
-}
-
-// shouldSkipField returns true if a config field should be skipped because
-// its value was already provided via CLI flags or can be auto-derived.
-func shouldSkipField(fieldName string, quickstart *Quickstart) bool {
-	if quickstart == nil || quickstart.Defaults.PackageName == nil {
-		return false
-	}
-
-	packageNameProvided := *quickstart.Defaults.PackageName != ""
-
-	switch fieldName {
-	case "packageName": // TS, Python, PHP, Ruby, C#, Unity, Terraform, MCP-TS
-		return packageNameProvided
-	case "modulePath": // Go module path (e.g., github.com/company/sdk)
-		return packageNameProvided
-	case "sdkPackageName": // Go - auto-derived from modulePath via ValueFunc
-		return packageNameProvided
-	}
-
-	return false
 }

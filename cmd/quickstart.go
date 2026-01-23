@@ -47,15 +47,6 @@ type QuickstartFlags struct {
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
 
-	// SDK name (e.g., "MyCompanySDK") - sets the SDK class name
-	Name string `json:"name"`
-
-	// Package name for the generated SDK (e.g., "my-company-sdk" for npm, module path for Go)
-	PackageName string `json:"package-name"`
-
-	// Registry path to an existing spec (e.g., "my-namespace" or "org/workspace/namespace")
-	RegistryPath string `json:"registry-path"`
-
 	// Hidden flag for bypassing interactive prompts
 	SkipInteractive bool `json:"skip-interactive"`
 
@@ -105,21 +96,6 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			DefaultValue:  "summary",
 			AllowedValues: []string{"summary", "console", "mermaid"},
 		},
-		flag.StringFlag{
-			Name:        "name",
-			Shorthand:   "n",
-			Description: "SDK name in PascalCase (e.g., \"MyCompanySDK\"). Users access SDK methods with myCompanySDK.DoThing()",
-		},
-		flag.StringFlag{
-			Name:        "package-name",
-			Shorthand:   "p",
-			Description: "package name for the generated SDK (e.g., \"my-company-sdk\" for npm, Go module path for Go)",
-		},
-		flag.StringFlag{
-			Name:        "registry-path",
-			Shorthand:   "r",
-			Description: "registry path to an existing spec (namespace or org/workspace/namespace)",
-		},
 		// Hidden flags for bypassing interactive prompts
 		flag.BooleanFlag{
 			Name:        "skip-interactive",
@@ -146,7 +122,7 @@ func quickstartNonInteractive(ctx context.Context, flags QuickstartFlags) error 
 }
 
 func quickstartInteractive(ctx context.Context, flags QuickstartFlags) error {
-	// Don't override SkipInteractive if the user explicitly set it via --skip-interactive flag
+	flags.SkipInteractive = false
 	return quickstartCore(ctx, flags)
 }
 
@@ -191,18 +167,6 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	if flags.From != "" {
 		quickstartObj.Defaults.Template = &flags.From
 		quickstartObj.IsUsingTemplate = true
-	}
-
-	if flags.Name != "" {
-		quickstartObj.Defaults.SDKName = &flags.Name
-	}
-
-	if flags.PackageName != "" {
-		quickstartObj.Defaults.PackageName = &flags.PackageName
-	}
-
-	if flags.RegistryPath != "" {
-		quickstartObj.Defaults.RegistryPath = &flags.RegistryPath
 	}
 
 	nextState := prompts.SourceBase
@@ -256,12 +220,7 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		description = "We recommend a git repo for each MCP Server. To use the current directory, leave empty."
 	}
 
-	// Skip the output directory prompt if:
-	// - The current directory is empty, OR
-	// - Running in non-interactive mode (SkipInteractive), OR
-	// - The --out-dir flag was explicitly provided
-	outDirProvided := flags.OutDir != ""
-	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive && !outDirProvided {
+	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive {
 		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput(&promptedDir).
 			Title("What directory should the "+targetType+" files be written to?").
 			Description(description+"\n").
@@ -277,7 +236,7 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 			}))),
 			charm.WithTitle("Pick an output directory for your newly created files.")).
 			ExecuteForm()
-	} else if !outDirProvided {
+	} else {
 		promptedDir = "."
 	}
 

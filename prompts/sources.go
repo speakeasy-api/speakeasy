@@ -136,12 +136,6 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 }
 
 func getSDKName(quickstart *Quickstart, placeholder string) error {
-	// If SDK name was provided via --name flag, use it directly
-	if quickstart.Defaults.SDKName != nil && *quickstart.Defaults.SDKName != "" {
-		quickstart.SDKName = *quickstart.Defaults.SDKName
-		return nil
-	}
-
 	if quickstart.SkipInteractive {
 		quickstart.SDKName = placeholder
 		return nil
@@ -192,12 +186,9 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	recentGenerations, err := remote.GetRecentWorkspaceGenerations(timeout)
 
 	hasTemplate := quickstart.Defaults.Template != nil && *quickstart.Defaults.Template != ""
-	hasSchemaPath := quickstart.Defaults.SchemaPath != nil && *quickstart.Defaults.SchemaPath != ""
-	hasRegistryPath := quickstart.Defaults.RegistryPath != nil && *quickstart.Defaults.RegistryPath != ""
 
-	// Retrieve recent namespaces and check if there are any available.
-	// If --from, --schema, or --registry-path is provided, we will not check for recent generations.
-	hasRecentGenerations := !hasTemplate && !hasSchemaPath && !hasRegistryPath && err == nil && len(recentGenerations) > 0
+	// Retrieve recent namespaces and check if there are any available. If --from is provided, we will not check for recent generations.
+	hasRecentGenerations := !hasTemplate && err == nil && len(recentGenerations) > 0
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
@@ -255,16 +246,9 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	// Get org/workspace from auth context for registry shorthand expansion
-	orgSlug := auth.GetOrgSlugFromContext(ctx)
-	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
-
 	switch {
 	case hasTemplate && fileLocation != "":
 		quickstart.Defaults.TemplateData = templateFile
-	case quickstart.Defaults.RegistryPath != nil:
-		// Expand registry shorthand (e.g., "namespace" or "org/workspace/namespace") to full registry URI
-		fileLocation = expandRegistryShorthand(*quickstart.Defaults.RegistryPath, orgSlug, workspaceSlug)
 	case quickstart.Defaults.SchemaPath != nil:
 		fileLocation = *quickstart.Defaults.SchemaPath
 	case useRemoteSource && selectedRegistryUri != "":
@@ -288,6 +272,7 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
+	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
 	switch {
 	case isUsingSampleSpec:
@@ -715,74 +700,6 @@ func configureRegistry(source *workflow.Source, orgSlug, workspaceSlug, sourceNa
 	}
 	source.Registry = registryEntry
 	return nil
-}
-
-const registryHost = "registry.speakeasyapi.dev"
-
-// expandRegistryShorthand expands a registry namespace shorthand to a full registry URI.
-// Accepts formats:
-//   - "namespace" → "registry.speakeasyapi.dev/{org}/{workspace}/namespace@latest" (org/workspace from auth context)
-//   - "org/workspace/namespace" → "registry.speakeasyapi.dev/org/workspace/namespace@latest"
-//   - "org/workspace/namespace@tag" → "registry.speakeasyapi.dev/org/workspace/namespace@tag"
-//   - "org/workspace/namespace:tag" → "registry.speakeasyapi.dev/org/workspace/namespace:tag"
-//
-// Returns the original path unchanged if it doesn't match the shorthand format.
-// For single-part namespace format, orgSlug and workspaceSlug must be provided (from auth context).
-func expandRegistryShorthand(schemaPath, orgSlug, workspaceSlug string) string {
-	// Already a full registry URI
-	if strings.HasPrefix(schemaPath, registryHost) {
-		return schemaPath
-	}
-
-	// Skip URLs
-	if strings.HasPrefix(schemaPath, "http://") || strings.HasPrefix(schemaPath, "https://") {
-		return schemaPath
-	}
-
-	// Skip obvious file paths (contains file extension or starts with . or /)
-	if strings.HasPrefix(schemaPath, ".") || strings.HasPrefix(schemaPath, "/") {
-		return schemaPath
-	}
-	if strings.HasSuffix(schemaPath, ".yaml") || strings.HasSuffix(schemaPath, ".yml") || strings.HasSuffix(schemaPath, ".json") {
-		return schemaPath
-	}
-
-	// Extract tag if present (@ or : separator)
-	pathPart := schemaPath
-	tagPart := "@latest"
-
-	if atIdx := strings.Index(schemaPath, "@"); atIdx != -1 {
-		pathPart = schemaPath[:atIdx]
-		tagPart = schemaPath[atIdx:]
-	} else if colonIdx := strings.LastIndex(schemaPath, ":"); colonIdx != -1 {
-		// Use LastIndex for : to avoid matching drive letters on Windows (C:)
-		pathPart = schemaPath[:colonIdx]
-		tagPart = schemaPath[colonIdx:]
-	}
-
-	parts := strings.Split(pathPart, "/")
-
-	// Validate parts are non-empty and don't contain invalid characters
-	for _, part := range parts {
-		if part == "" || strings.ContainsAny(part, " \t\n") {
-			return schemaPath
-		}
-	}
-
-	switch len(parts) {
-	case 1:
-		// Single part: namespace only - infer org/workspace from auth context
-		if orgSlug == "" || workspaceSlug == "" {
-			return schemaPath
-		}
-		return fmt.Sprintf("%s/%s/%s/%s%s", registryHost, orgSlug, workspaceSlug, pathPart, tagPart)
-	case 3:
-		// Full format: org/workspace/namespace
-		return fmt.Sprintf("%s/%s%s", registryHost, pathPart, tagPart)
-	default:
-		// Invalid format (2 parts or 4+ parts)
-		return schemaPath
-	}
 }
 
 var (
