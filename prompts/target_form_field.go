@@ -82,9 +82,20 @@ func NewTargetFormField(
 		case "modulePath":
 			if targetName == "go" {
 				description = "Root module path. To install your SDK, users will execute " + styles.Emphasized.Render("go get %s") + "\nFor additional information: https://go.dev/ref/mod#module-path"
-				targetFormField.SetValue("github.com/my-company/company-go-sdk")
+				// If --package-name flag was provided for Go, use it as the module path
+				if quickstart.Defaults.PackageName != nil && *quickstart.Defaults.PackageName != "" {
+					targetFormField.SetValue(*quickstart.Defaults.PackageName)
+				} else {
+					targetFormField.SetValue("github.com/my-company/company-go-sdk")
+				}
 			}
 		case "packageName":
+			// If --package-name flag was provided, use it directly
+			if quickstart.Defaults.PackageName != nil && *quickstart.Defaults.PackageName != "" {
+				targetFormField.SetValue(*quickstart.Defaults.PackageName)
+				break
+			}
+
 			packageName := sdkClassName
 
 			if quickstart.IsUsingTemplate && quickstart.Defaults.TemplateData != nil {
