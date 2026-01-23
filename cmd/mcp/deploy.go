@@ -15,9 +15,8 @@ import (
 )
 
 type DeployFlags struct {
-	Target    string `json:"target"`
-	Project   string `json:"project"`
-	Directory string `json:"directory"`
+	Target  string `json:"target"`
+	Project string `json:"project"`
 }
 
 var deployCmd = &model.ExecutableCommand[DeployFlags]{
@@ -38,18 +37,13 @@ var deployCmd = &model.ExecutableCommand[DeployFlags]{
 			Shorthand:   "p",
 			Description: "Gram project name (overrides Gram default)",
 		},
-		flag.StringFlag{
-			Name:        "directory",
-			Shorthand:   "d",
-			Description: "MCP server directory (overrides workflow.yaml output)",
-		},
 	},
 }
 
 func deployExec(ctx context.Context, flags DeployFlags) error {
 	l := log.From(ctx)
 
-	wf, projectDir, err := utils.GetWorkflowAndDir()
+	wf, _, err := utils.GetWorkflowAndDir()
 	if err != nil {
 		return fmt.Errorf("no workflow.yaml found. Run from a Speakeasy project directory")
 	}
@@ -63,16 +57,9 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 		return fmt.Errorf("deployment not configured for target '%s'. Add the following to workflow.yaml:\n\ntargets:\n  %s:\n    deployment: {}", targetName, targetName)
 	}
 
-	outputDir := flags.Directory
-	if outputDir == "" {
-		if target.Output != nil {
-			outputDir = *target.Output
-		} else {
-			outputDir = targetName
-		}
-	}
-	if !filepath.IsAbs(outputDir) {
-		outputDir = filepath.Join(projectDir, outputDir)
+	outputDir, err := filepath.Abs(".")
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
 	project := flags.Project
@@ -116,11 +103,98 @@ func deployExec(ctx context.Context, flags DeployFlags) error {
 	} else {
 		l.PrintfStyled(styles.Success, "Deployment successful!")
 	}
-	if result.URL != "" {
-		l.Infof("URL: %s", result.URL)
+
+	mcpURL, err := setupToolset(ctx, slug, project, outputDir)
+	if err != nil {
+		l.Warnf("Failed to setup public MCP server: %v", err)
+		if result.URL != "" {
+			l.Infof("Deployment URL: %s", result.URL)
+		}
+	} else {
+		l.PrintfStyled(styles.Success, "MCP server is live!")
+		l.Infof("MCP URL: %s", mcpURL)
 	}
 
 	return nil
+}
+
+func setupToolset(ctx context.Context, slug, projectOverride, outputDir string) (string, error) {
+	l := log.From(ctx)
+
+	apiKey, err := gram.GetAPIKey()
+	if err != nil {
+		return "", fmt.Errorf("failed to get API key: %w", err)
+	}
+
+	projectSlug := projectOverride
+	if projectSlug == "" {
+		projectSlug, err = gram.GetProjectSlug()
+		if err != nil {
+			return "", fmt.Errorf("failed to get project slug: %w", err)
+		}
+	}
+
+	orgSlug, err := gram.GetOrgSlug()
+	if err != nil {
+		return "", fmt.Errorf("failed to get org slug: %w", err)
+	}
+
+	zipPath := filepath.Join(outputDir, "dist", "gram.zip")
+	manifest, err := gram.ReadManifestFromZip(zipPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read manifest: %w", err)
+	}
+
+	toolUrns := gram.BuildToolURNs(slug, manifest)
+	resourceUrns := gram.BuildResourceURNs(slug, manifest)
+
+	apiURL := gram.GetAPIURL()
+	client := gram.NewToolsetsClient()
+
+	l.Infof("Setting up MCP server '%s'...", slug)
+	existingToolset, err := client.GetToolset(ctx, apiKey, projectSlug, slug)
+
+	var toolsetSlug string
+	if err != nil {
+		l.Info("Creating new toolset...")
+		toolset, createErr := client.CreateToolset(ctx, apiKey, projectSlug, gram.CreateToolsetParams{
+			Name:        slug,
+			Description: fmt.Sprintf("MCP server for %s", slug),
+		})
+		if createErr != nil {
+			return "", fmt.Errorf("failed to create toolset: %w", createErr)
+		}
+		toolsetSlug = string(toolset.Slug)
+		l.Infof("Created toolset: %s", toolsetSlug)
+	} else {
+		toolsetSlug = string(existingToolset.Slug)
+		l.Infof("Using existing toolset: %s", toolsetSlug)
+	}
+
+	if len(toolUrns) > 0 || len(resourceUrns) > 0 {
+		l.Infof("Adding %d tools and %d resources to toolset...", len(toolUrns), len(resourceUrns))
+		_, err = client.UpdateToolsetTools(ctx, apiKey, projectSlug, toolsetSlug, toolUrns, resourceUrns)
+		if err != nil {
+			return "", fmt.Errorf("failed to add tools to toolset: %w", err)
+		}
+	}
+
+	mcpSlug := fmt.Sprintf("%s-%s", orgSlug, slug)
+
+	l.Info("Enabling MCP...")
+	_, err = client.EnableToolset(ctx, apiKey, projectSlug, toolsetSlug, mcpSlug)
+	if err != nil {
+		return "", fmt.Errorf("failed to enable toolset: %w", err)
+	}
+
+	l.Info("Making MCP server public...")
+	_, err = client.MakeToolsetPublic(ctx, apiKey, projectSlug, toolsetSlug)
+	if err != nil {
+		return "", fmt.Errorf("failed to make toolset public: %w", err)
+	}
+
+	mcpURL := fmt.Sprintf("%s/mcp/%s", apiURL, mcpSlug)
+	return mcpURL, nil
 }
 
 func findMCPTarget(wf *workflow.Workflow, targetName string) (string, *workflow.Target, error) {

@@ -60,6 +60,7 @@ linters:
         - os.Remove
         - (io/fs.File).Close
         - (*github.com/fsnotify/fsnotify.Watcher).Close
+        - (*archive/zip.ReadCloser).Close
     exhaustive:
       ignore-enum-types: "yaml.+|reflect.+"
       default-signifies-exhaustive: true

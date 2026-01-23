@@ -1,9 +1,11 @@
 package gram
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -24,6 +26,54 @@ func loadProfile() (*gramcmd.Profile, error) {
 		return nil, err
 	}
 	return gramcmd.LoadProfile(profilePath)
+}
+
+func LoadProfile() (*gramcmd.Profile, error) {
+	return loadProfile()
+}
+
+func GetAPIKey() (string, error) {
+	prof, err := loadProfile()
+	if err != nil {
+		return "", err
+	}
+	if prof == nil {
+		return "", fmt.Errorf("no profile found")
+	}
+	return prof.Secret, nil
+}
+
+func GetProjectSlug() (string, error) {
+	prof, err := loadProfile()
+	if err != nil {
+		return "", err
+	}
+	if prof == nil {
+		return "", fmt.Errorf("no profile found")
+	}
+	return prof.DefaultProjectSlug, nil
+}
+
+func GetAPIURL() string {
+	prof, _ := loadProfile()
+	if prof != nil && prof.APIUrl != "" {
+		return prof.APIUrl
+	}
+	return "https://app.getgram.ai"
+}
+
+func GetOrgSlug() (string, error) {
+	prof, err := loadProfile()
+	if err != nil {
+		return "", err
+	}
+	if prof == nil {
+		return "", fmt.Errorf("no profile found")
+	}
+	if prof.Org == nil {
+		return "", fmt.Errorf("no organization in profile")
+	}
+	return prof.Org.Slug, nil
 }
 
 type PackageInfo struct {
@@ -55,6 +105,72 @@ func ReadPackageJSON(dir string) (*PackageInfo, error) {
 func DeriveSlug(packageName string) string {
 	parts := strings.Split(packageName, "/")
 	return parts[len(parts)-1]
+}
+
+type Manifest struct {
+	Version   string             `json:"version"`
+	Tools     []ManifestTool     `json:"tools"`
+	Resources []ManifestResource `json:"resources"`
+}
+
+type ManifestTool struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type ManifestResource struct {
+	Name string `json:"name"`
+	URI  string `json:"uri"`
+}
+
+func ReadManifestFromZip(zipPath string) (*Manifest, error) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open zip: %w", err)
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		if f.Name == "manifest.json" {
+			rc, err := f.Open()
+			if err != nil {
+				return nil, fmt.Errorf("failed to open manifest.json: %w", err)
+			}
+			defer rc.Close()
+
+			data, err := io.ReadAll(rc)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read manifest.json: %w", err)
+			}
+
+			var manifest Manifest
+			if err := json.Unmarshal(data, &manifest); err != nil {
+				return nil, fmt.Errorf("failed to parse manifest.json: %w", err)
+			}
+
+			return &manifest, nil
+		}
+	}
+
+	return nil, fmt.Errorf("manifest.json not found in zip")
+}
+
+func BuildToolURNs(functionSlug string, manifest *Manifest) []string {
+	urns := make([]string, 0, len(manifest.Tools))
+	for _, tool := range manifest.Tools {
+		urn := fmt.Sprintf("tools:function:%s:%s", functionSlug, tool.Name)
+		urns = append(urns, urn)
+	}
+	return urns
+}
+
+func BuildResourceURNs(functionSlug string, manifest *Manifest) []string {
+	urns := make([]string, 0, len(manifest.Resources))
+	for _, resource := range manifest.Resources {
+		urn := fmt.Sprintf("resources:function:%s:%s", functionSlug, resource.URI)
+		urns = append(urns, urn)
+	}
+	return urns
 }
 
 func IsInstalled() bool {
