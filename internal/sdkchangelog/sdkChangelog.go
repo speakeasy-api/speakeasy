@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
-	"sync"
 
 	changes "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -80,42 +79,29 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 	// Compact markdown for inline PR description
 	compactMarkdown := changes.ToMarkdown(diff, changes.DetailLevelCompact)
 
-	// Upload full HTML report to registry in parallel
+	// Upload full HTML report to registry
 	var reportURL string
-	var uploadWg sync.WaitGroup
-	var uploadMu sync.Mutex
-
 	if registry.IsRegistryEnabled(ctx) {
-		uploadWg.Add(1)
-		go func() {
-			defer uploadWg.Done()
+		var uploadStep *workflowTracking.WorkflowStep
+		if changelogStep != nil {
+			uploadStep = changelogStep.NewSubstep("Uploading SDK Changelog Report")
+		}
 
-			var uploadStep *workflowTracking.WorkflowStep
-			if changelogStep != nil {
-				uploadStep = changelogStep.NewSubstep("Uploading SDK Changelog Report")
+		htmlReport := changes.ToHTML(diff)
+		report, uploadErr := reports.UploadReport(ctx, htmlReport, shared.TypeChanges)
+		if uploadErr == nil {
+			reportURL = report.URL
+			log.From(ctx).Info(report.Message)
+			if uploadStep != nil {
+				uploadStep.Succeed()
 			}
-
-			htmlReport := changes.ToHTML(diff)
-			report, uploadErr := reports.UploadReport(ctx, htmlReport, shared.TypeChanges)
-			if uploadErr == nil {
-				uploadMu.Lock()
-				reportURL = report.URL
-				uploadMu.Unlock()
-				log.From(ctx).Info(report.Message)
-				if uploadStep != nil {
-					uploadStep.Succeed()
-				}
-			} else {
-				log.From(ctx).Warnf("Failed to upload SDK changelog report: %s", uploadErr.Error())
-				if uploadStep != nil {
-					uploadStep.Skip("Upload failed")
-				}
+		} else {
+			log.From(ctx).Warnf("Failed to upload SDK changelog report: %s", uploadErr.Error())
+			if uploadStep != nil {
+				uploadStep.Skip("Upload failed")
 			}
-		}()
+		}
 	}
-
-	// Wait for upload to complete before storing PR description
-	uploadWg.Wait()
 
 	// Store PR description with link to full report
 	if changelogStep != nil {
