@@ -40,11 +40,9 @@ This command will:
 Example usage:
 ` + "```bash" + `
 speakeasy diff \
-  --org polar \
-  --workspace polar \
-  --namespace polar-oas \
-  --old sha256:7d9b1eda0bcfc83033de9a1a97bb68c9a72a0c92f1e675a0616c485d70754194 \
-  --new sha256:4e15c43b0a16c8b392fe56db70c1107ff8a5ecc89d70aae1bd14c613e2590b0c
+  --namespace my-api \
+  --old sha256:abc123... \
+  --new sha256:def456...
 
 # Just download specs without showing SDK diff
 speakeasy diff --org myorg --workspace myws --namespace myns --old sha256:abc... --new sha256:def... --no-diff
