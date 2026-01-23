@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -103,32 +105,77 @@ type pullFlags struct {
 	Spec      string `json:"spec"`
 	Revision  string `json:"revision"`
 	OutputDir string `json:"output-dir"`
+	List      bool   `json:"list"`
+	ListTags  bool   `json:"list-tags"`
+	Format    string `json:"format"`
 }
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "pull a spec from the registry",
-	Long:  "pull a spec from the registry",
-	RunE:  pullExec,
+	Short: "Pull a spec from the registry or list available specs/tags",
+	Long: `Pull a spec from the registry or list available specs/tags.
+
+Examples:
+  # List all available specs in your workspace
+  speakeasy pull --list
+  speakeasy pull --list --format=json
+
+  # List available tags for a specific spec
+  speakeasy pull --spec=my-api --list-tags
+  speakeasy pull --spec=my-api --list-tags --format=json
+
+  # Pull a spec to the current directory
+  speakeasy pull --spec=my-api --revision=latest
+
+  # Pull a specific revision to a custom directory
+  speakeasy pull --spec=my-api --revision=v1.0.0 --output-dir=./specs`,
+	RunE: pullExec,
 }
 
 func pullInit() {
-	pullCmd.Flags().String("spec", "", "The name of the spec to want to pull")
-	pullCmd.Flags().String("revision", "latest", "The revision to pull")
-	pullCmd.Flags().String("output-dir", getCurrentWorkingDirectory(), "The directory to output the image to")
+	pullCmd.Flags().String("spec", "", "The name of the spec to pull or list tags for")
+	pullCmd.Flags().String("revision", "latest", "The revision/tag to pull")
+	pullCmd.Flags().String("output-dir", getCurrentWorkingDirectory(), "The directory to output the spec bundle to")
+	pullCmd.Flags().Bool("list", false, "List all available specs in your workspace (non-interactive)")
+	pullCmd.Flags().Bool("list-tags", false, "List available tags for a spec (requires --spec)")
+	pullCmd.Flags().String("format", "table", "Output format for --list and --list-tags (table, json)")
 
 	rootCmd.AddCommand(pullCmd)
 }
 
 func pullExec(cmd *cobra.Command, args []string) error {
+	flags := cmd.Flags()
+
+	// Get flag values
+	listFlag, _ := flags.GetBool("list")
+	listTagsFlag, _ := flags.GetBool("list-tags")
+	formatFlag, _ := flags.GetString("format")
+	specFlag := flags.Lookup("spec").Value.String()
+
+	// Validate format flag
+	if formatFlag != "table" && formatFlag != "json" {
+		return fmt.Errorf("invalid format %q: must be 'table' or 'json'", formatFlag)
+	}
+
+	// Handle --list flag: list all available specs
+	if listFlag {
+		return runListSpecs(cmd.Context(), formatFlag)
+	}
+
+	// Handle --list-tags flag: list tags for a specific spec
+	if listTagsFlag {
+		if specFlag == "" {
+			return fmt.Errorf("--list-tags requires --spec to be specified")
+		}
+		return runListTags(cmd.Context(), specFlag, formatFlag)
+	}
+
 	// find all flags that are not set, and run them interactively.
 	// then pass them down to the actual runner.
 	missingFlags := []string{}
 
-	flags := cmd.Flags()
-
 	retrieveRequiredFlags := func(f *pflag.Flag) {
-		if slices.Contains([]string{"help", "version", "logLevel"}, f.Name) {
+		if slices.Contains([]string{"help", "version", "logLevel", "list", "list-tags", "format"}, f.Name) {
 			return
 		}
 
@@ -479,6 +526,84 @@ func getCurrentWorkingDirectory() string {
 	}
 
 	return cwd
+}
+
+// runListSpecs lists all available specs/namespaces in the workspace
+func runListSpecs(ctx context.Context, format string) error {
+	namespaces, err := getNamespaces()
+	if err != nil {
+		return err
+	}
+
+	if len(namespaces) == 0 {
+		if format == "json" {
+			fmt.Println("[]")
+		} else {
+			fmt.Println("No specs found in your workspace.")
+		}
+		return nil
+	}
+
+	switch format {
+	case "json":
+		output := make([]map[string]string, len(namespaces))
+		for i, ns := range namespaces {
+			output[i] = map[string]string{"name": ns}
+		}
+		jsonBytes, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON: %w", err)
+		}
+		fmt.Println(string(jsonBytes))
+	default: // table format
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "NAME")
+		for _, ns := range namespaces {
+			fmt.Fprintln(w, ns)
+		}
+		w.Flush()
+	}
+
+	return nil
+}
+
+// runListTags lists all available tags for a specific spec/namespace
+func runListTags(ctx context.Context, spec, format string) error {
+	tags, err := getTags(spec)
+	if err != nil {
+		return err
+	}
+
+	if len(tags) == 0 {
+		if format == "json" {
+			fmt.Println("[]")
+		} else {
+			fmt.Printf("No tags found for spec %q.\n", spec)
+		}
+		return nil
+	}
+
+	switch format {
+	case "json":
+		output := make([]map[string]string, len(tags))
+		for i, tag := range tags {
+			output[i] = map[string]string{"tag": tag}
+		}
+		jsonBytes, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON: %w", err)
+		}
+		fmt.Println(string(jsonBytes))
+	default: // table format
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "TAG")
+		for _, tag := range tags {
+			fmt.Fprintln(w, tag)
+		}
+		w.Flush()
+	}
+
+	return nil
 }
 
 type getNamespacesMsg struct{ items []Item }
