@@ -14,7 +14,7 @@ var (
 )
 
 func main() {
-	memlimit.SetGoMemLimitWithOpts()
+	_, _ = memlimit.SetGoMemLimitWithOpts()
 
 	if env.IsLocalDev() {
 		if env.GoArch() != "" {

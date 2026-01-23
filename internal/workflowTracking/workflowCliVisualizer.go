@@ -130,7 +130,8 @@ func (m cliVisualizer) HandleKeypress(key string) tea.Cmd {
 	}
 	return nil
 }
-func (m cliVisualizer) SetWidth(width int) {}
+func (m cliVisualizer) SetWidth(width int)   {}
+func (m cliVisualizer) SetHeight(height int) {}
 
 func (m cliVisualizer) View() string {
 	// If showing a prompt form, render that instead
@@ -140,6 +141,8 @@ func (m cliVisualizer) View() string {
 
 	statusStyle := styles.Info
 	switch m.rootStep.status {
+	case StatusRunning:
+		statusStyle = styles.Info
 	case StatusFailed:
 		statusStyle = styles.Error
 	case StatusSucceeded:

@@ -32,7 +32,7 @@ type Opts struct {
 	Name string
 }
 
-func new(o Opts) *InterProcessMutex {
+func newInterProcessMutex(o Opts) *InterProcessMutex {
 	mu := flock.New(filepath.Join(os.TempDir(), o.Name))
 
 	return &InterProcessMutex{Opts: o, mu: mu}
@@ -40,7 +40,7 @@ func new(o Opts) *InterProcessMutex {
 
 // CLIUpdateLock creates a new inter-process mutex with default options.
 var CLIUpdateLock = singleton.New(func() *InterProcessMutex {
-	return new(Opts{Name: "speakeasy-cli-update-mutex.lock"})
+	return newInterProcessMutex(Opts{Name: "speakeasy-cli-update-mutex.lock"})
 })
 
 type TryLockResult struct {

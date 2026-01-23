@@ -140,7 +140,7 @@ func (r *Runner) loadWorkflow() error {
 	wf, projectDir, err := utils.GetWorkflowAndDir()
 
 	if err != nil || wf == nil {
-		return fmt.Errorf("Unable to load workflow configuration (workflow.yaml): %w", err)
+		return fmt.Errorf("unable to load workflow configuration (workflow.yaml): %w", err)
 	}
 
 	r.projectDir = projectDir
@@ -177,7 +177,7 @@ func (r *Runner) prepareGenerator(ctx context.Context) (*generate.Generator, err
 
 	generator, err := generate.New(generatorOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to prepare testing instance: %w", err)
+		return nil, fmt.Errorf("unable to prepare testing instance: %w", err)
 	}
 
 	return generator, nil
@@ -192,7 +192,7 @@ func (r *Runner) runWorkflowTargetTesting(ctx context.Context) error {
 	workflowTarget, ok := r.workflow.Targets[r.workflowTarget]
 
 	if !ok {
-		return fmt.Errorf("Workflow target %s not found in configuration.", r.workflowTarget)
+		return fmt.Errorf("workflow target %s not found in configuration", r.workflowTarget)
 	}
 
 	return r.runSingleWorkflowTargetTesting(ctx, r.workflowTarget, workflowTarget)

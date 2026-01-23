@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -142,7 +141,7 @@ func SuggestOperationIDs(ctx context.Context, schema []byte, schemaPath string) 
 		return nil, err
 	}
 
-	bytes, err := ioutil.ReadAll(res.Schema)
+	bytes, err := io.ReadAll(res.Schema)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}

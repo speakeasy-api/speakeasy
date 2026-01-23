@@ -87,9 +87,9 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 	defer func() {
 		w.SourceResults[sourceID] = sourceRes
-		w.OnSourceResult(sourceRes, SourceStepComplete)
+		_ = w.OnSourceResult(sourceRes, SourceStepComplete)
 	}()
-	w.OnSourceResult(sourceRes, SourceStepFetch)
+	_ = w.OnSourceResult(sourceRes, SourceStepFetch)
 
 	rulesetToUse := "speakeasy-generation"
 	if source.Ruleset != nil {
@@ -107,17 +107,18 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	frozenSource := false
 
 	var currentDocument string
-	if w.SourceLocation != "" {
+	switch {
+	case w.SourceLocation != "":
 		rootStep.NewSubstep("Using Source Location Override")
 		currentDocument = w.SourceLocation
 		frozenSource = true
-	} else if w.FrozenWorkflowLock && hasRemoteInputs {
+	case w.FrozenWorkflowLock && hasRemoteInputs:
 		frozenSource = true
 		currentDocument, err = NewFrozenSource(w, rootStep, sourceID).Do(ctx, "unused")
 		if err != nil {
 			return "", nil, err
 		}
-	} else if len(source.Inputs) == 1 {
+	case len(source.Inputs) == 1:
 		var singleLocation *string
 		// The output location should be the resolved location
 		if source.IsSingleInput() {
@@ -140,7 +141,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 			}
 		}
 		sourceRes.MergeResult.InputSchemaLocation = []string{currentDocument}
-	} else {
+	default:
 		sourceRes.MergeResult, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -154,7 +155,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Overlays) > 0 && !frozenSource {
-		w.OnSourceResult(sourceRes, SourceStepOverlay)
+		_ = w.OnSourceResult(sourceRes, SourceStepOverlay)
 		sourceRes.OverlayResult, err = NewOverlay(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -173,7 +174,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 	}
 
 	if len(source.Transformations) > 0 && !frozenSource {
-		w.OnSourceResult(sourceRes, SourceStepTransform)
+		_ = w.OnSourceResult(sourceRes, SourceStepTransform)
 		currentDocument, err = NewTransform(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
@@ -190,7 +191,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 
 	var lintingErr error
 	if !w.SkipLinting {
-		w.OnSourceResult(sourceRes, SourceStepLint)
+		_ = w.OnSourceResult(sourceRes, SourceStepLint)
 		sourceRes.LintResult, err = w.validateDocument(ctx, rootStep, sourceID, currentDocument, rulesetToUse, w.ProjectDir, targetLanguage)
 		if err != nil {
 			lintingErr = &LintingError{Err: err, Document: currentDocument}
@@ -206,7 +207,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		step.Succeed()
 	}
 
-	w.OnSourceResult(sourceRes, SourceStepUpload)
+	_ = w.OnSourceResult(sourceRes, SourceStepUpload)
 
 	// Upload if validation passed OR if the spec looks like an OpenAPI spec (even if invalid)
 	if !w.SkipSnapshot && (lintingErr == nil || validation.LooksLikeAnOpenAPISpec(currentDocument)) {
@@ -303,7 +304,7 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context) {
 		}
 
 		// TODO: reintroduce with studio
-		//if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(sourceRes.Diagnosis) {
+		// if sourceRes.Diagnosis != nil && suggest.ShouldSuggest(sourceRes.Diagnosis) {
 		//	baseURL := auth.GetWorkspaceBaseURL(ctx)
 		//	link := fmt.Sprintf(`%s/apis/%s/suggest`, baseURL, w.lockfile.Sources[sourceID].SourceNamespace)
 		//	link = links.Shorten(ctx, link)
@@ -339,10 +340,10 @@ func getTempConvertedPath(path string) string {
 	return filepath.Join(workflow.GetTempDir(), fmt.Sprintf("converted_%s%s", randStringBytes(10), filepath.Ext(path)))
 }
 
-// Returns true if any of the source inputs are remote.
+// Returns true if any of the source inputs are remote (including registry inputs).
 func workflowSourceHasRemoteInputs(source workflow.Source) bool {
 	for _, input := range source.Inputs {
-		if input.IsRemote() {
+		if input.IsRemote() || input.IsSpeakeasyRegistry() {
 			return true
 		}
 	}

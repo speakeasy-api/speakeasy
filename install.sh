@@ -15,89 +15,152 @@ BINARY_NAME=${BINARY_NAME:-"speakeasy"}
 REPO_NAME="speakeasy-api/speakeasy"
 ISSUE_URL="https://github.com/speakeasy-api/speakeasy/issues/new"
 
+# curl_with_retry - curl wrapper that retries on 5XX errors and shows full errors
+# Usage: curl_with_retry output_file [curl_args...]
+curl_with_retry() {
+  _curl_output_file="$1"
+  shift
+
+  _curl_delay=1
+  _curl_exit_code=0
+  _curl_http_code=""
+  _curl_max_retries=5
+  _curl_retry=0
+
+  while [ $_curl_retry -lt $_curl_max_retries ]; do
+    # Use -w to get HTTP status code, -o to capture body, -S to show errors
+    _curl_http_code=$(curl -S -w "%{http_code}" -o "$_curl_output_file" "$@" 2>&1)
+    _curl_exit_code=$?
+
+    # If curl itself failed (not HTTP error), show the error and retry
+    if [ $_curl_exit_code -ne 0 ]; then
+      # http_code contains the error message when curl fails
+      fmt_error "curl failed: $_curl_http_code"
+      if [ $_curl_retry -lt $((_curl_max_retries - 1)) ]; then
+        echo "Retrying in ${_curl_delay}s... (attempt $((_curl_retry + 2))/${_curl_max_retries})" >&2
+        sleep $_curl_delay
+        _curl_delay=$((_curl_delay * 2))
+        _curl_retry=$((_curl_retry + 1))
+        continue
+      else
+        return $_curl_exit_code
+      fi
+    fi
+
+    # Check for 5XX status codes
+    case "$_curl_http_code" in
+      5*)
+        fmt_error "Server error (HTTP $_curl_http_code)"
+        if [ $_curl_retry -lt $((_curl_max_retries - 1)) ]; then
+          echo "Retrying in ${_curl_delay}s... (attempt $((_curl_retry + 2))/${_curl_max_retries})" >&2
+          sleep $_curl_delay
+          _curl_delay=$((_curl_delay * 2))
+          _curl_retry=$((_curl_retry + 1))
+          continue
+        else
+          return 1
+        fi
+        ;;
+      4*)
+        # Client error - don't retry, but show the error
+        fmt_error "HTTP error $_curl_http_code"
+        cat "$_curl_output_file" >&2
+        return 1
+        ;;
+      *)
+        # Success (2XX, 3XX)
+        return 0
+        ;;
+    esac
+  done
+
+  return 1
+}
+
 # github_api_curl - make authenticated GitHub API calls
+# Usage: github_api_curl output_file [curl_args...]
 github_api_curl() {
+  _github_api_curl_output_file="$1"
+  shift
+
   if [ -n "$GITHUB_TOKEN" ]; then
-    curl -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
+    curl_with_retry "$_github_api_curl_output_file" -H "Authorization: Bearer $GITHUB_TOKEN" "$@"
   else
-    curl "$@"
+    curl_with_retry "$_github_api_curl_output_file" "$@"
   fi
 }
 
 # get_latest_release "speakeasy-api/speakeasy"
 get_latest_release() {
-  local retry=0
-  local max_retries=5
-  local release_info
-  local delay=1
+  _get_latest_release_repo=$1
+  _get_latest_release_output="$tmp_dir/latest_release.json"
 
-  while [ $retry -lt $max_retries ]; do
-    release_info=$(github_api_curl --retry 5 --silent "https://api.github.com/repos/$1/releases/latest")
-    tag_name=$(echo "$release_info" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+  if ! github_api_curl "$_get_latest_release_output" --silent "https://api.github.com/repos/${_get_latest_release_repo}/releases/latest"; then
+    fmt_error "Could not fetch latest release from GitHub API"
+    exit 1
+  fi
 
-    if echo "$tag_name" | grep -q '^v'; then
-      echo "$tag_name"
-      return
-    else
-      sleep $delay
-      delay=$((delay * 2))  # Double the delay for each retry
-      retry=$((retry + 1))
-    fi
-  done
-  echo "Error: Unable to retrieve a valid release tag after $max_retries attempts." >&2
+  _get_latest_release_tag_name=$(grep '"tag_name":' "$_get_latest_release_output" | sed -E 's/.*"([^"]+)".*/\1/')
+
+  if echo "$_get_latest_release_tag_name" | grep -q '^v'; then
+    echo "$_get_latest_release_tag_name"
+    return
+  fi
+
+  fmt_error "Could not fetch latest release tag from GitHub API"
   exit 1
 }
 
 get_asset_name() {
-  echo "speakeasy_$1_$2.zip"
+  _get_asset_name_version="$1"
+  _get_asset_name_platform="$2"
+  echo "speakeasy_${_get_asset_name_version}_${_get_asset_name_platform}.zip"
 }
 
 get_download_url() {
-  local asset_name=$(get_asset_name $2 $3)
-  echo "https://github.com/speakeasy-api/speakeasy/releases/download/v$1/${asset_name}"
+  _get_download_url_version="$1"
+  _get_download_url_asset_name=$(get_asset_name "$2" "$3")
+  echo "https://github.com/speakeasy-api/speakeasy/releases/download/v${_get_download_url_version}/${_get_download_url_asset_name}"
 }
 
 get_checksum_url() {
-  echo "https://github.com/speakeasy-api/speakeasy/releases/download/v$1/checksums.txt"
+  _get_checksum_url_version="$1"
+  echo "https://github.com/speakeasy-api/speakeasy/releases/download/v${_get_checksum_url_version}/checksums.txt"
 }
 
 command_exists() {
   command -v "$@" >/dev/null 2>&1
 }
 
+check_dependencies() {
+  command_exists curl || {
+    fmt_error "curl is not installed"
+    exit 1
+  }
+
+  command_exists unzip || {
+    fmt_error "unzip is not installed"
+    exit 1
+  }
+}
+
 fmt_error() {
-  echo ${RED}"Error: $@"${RESET} >&2
+  printf "%sError: %s%s\n" "${RED}" "$@" "${RESET}" >&2
 }
 
 fmt_warning() {
-  echo ${YELLOW}"Warning: $@"${RESET} >&2
-}
-
-fmt_underline() {
-  echo "$(printf '\033[4m')$@$(printf '\033[24m')"
-}
-
-fmt_code() {
-  echo "\`$(printf '\033[38;5;247m')$@${RESET}\`"
+  printf "%sWarning: %s%s\n" "${YELLOW}" "$@" "${RESET}" >&2
 }
 
 setup_color() {
   # Only use colors if connected to a terminal
   if [ -t 1 ]; then
     RED=$(printf '\033[31m')
-    GREEN=$(printf '\033[32m')
     YELLOW=$(printf '\033[33m')
-    BLUE=$(printf '\033[34m')
-    MAGENTA=$(printf '\033[35m')
-    BOLD=$(printf '\033[1m')
     RESET=$(printf '\033[m')
   else
     RED=""
-    GREEN=""
     YELLOW=""
-    BLUE=""
-    MAGENTA=""
-    BOLD=""
     RESET=""
   fi
 }
@@ -122,23 +185,26 @@ get_machine() {
   esac
 }
 
-get_tmp_dir() {
-  echo $(mktemp -d)
-}
-
 do_checksum() {
-  checksum_url=$(get_checksum_url $version)
-  expected_checksum=$(curl -sfL $checksum_url | grep $asset_name | awk '{print $1}')
+  checksum_url=$(get_checksum_url "$version")
+  checksum_output="$tmp_dir/checksums.txt"
+
+  if ! curl_with_retry "$checksum_output" -fL "$checksum_url"; then
+    fmt_error "Failed to retrieve checksums from $checksum_url"
+    exit 1
+  fi
+
+  expected_checksum=$(grep "$asset_name" "$checksum_output" | awk '{print $1}')
 
   if [ -z "$expected_checksum" ]; then
-    fmt_error "Failed to retrieve expected checksum for $asset_name from $checksum_url"
+    fmt_error "Failed to find checksum for $asset_name in $checksum_url"
     exit 1
   fi
 
   if command_exists sha256sum; then
-    checksum=$(sha256sum $asset_name | awk '{print $1}')
+    checksum=$(sha256sum "$asset_name" | awk '{print $1}')
   elif command_exists shasum; then
-    checksum=$(shasum -a 256 $asset_name | awk '{print $1}')
+    checksum=$(shasum -a 256 "$asset_name" | awk '{print $1}')
   else
     fmt_warning "Could not find a checksum program. Install shasum or sha256sum to validate checksum."
     return 0
@@ -151,52 +217,36 @@ do_checksum() {
 }
 
 do_install_binary() {
-  asset_name=$(get_asset_name $os $machine)
-  download_url=$(get_download_url $version $os $machine)
-
-  command_exists curl || {
-    fmt_error "curl is not installed"
-    exit 1
-  }
-
-  command_exists unzip || {
-    fmt_error "unzip is not installed"
-    exit 1
-  }
-
-  local tmp_dir=$(get_tmp_dir)
+  asset_name=$(get_asset_name "$os" "$machine")
+  download_url=$(get_download_url "$version" "$os" "$machine")
 
   # Download zip to tmp directory
   echo "Downloading $download_url"
-  set +e
-  (cd $tmp_dir && curl -sfL -O "$download_url")
-  exit_code=$?
-  set -e
-  if [ $exit_code -ne 0 ]; then
-    fmt_error "Failed to download $download_url (curl exit code: $exit_code)"
-    rm -rf $tmp_dir
+  if ! curl_with_retry "$tmp_dir/$asset_name" -fL "$download_url"; then
+    fmt_error "Failed to download $download_url"
     exit 1
   fi
 
-  (cd $tmp_dir && do_checksum)
+  (cd "$tmp_dir" && do_checksum)
 
   # Extract download
-  (cd $tmp_dir && unzip -q "$asset_name")
+  (cd "$tmp_dir" && unzip -q "$asset_name")
 
   # Install binary
   sudo_cmd='mv '"$tmp_dir/$BINARY_NAME"' '"$INSTALL_DIR"' && chmod a+x '"$INSTALL_DIR/$BINARY_NAME"
   sudo -p "sudo password required for installing to $INSTALL_DIR: " -- sh -c "$sudo_cmd"
   echo "Installed speakeasy to $INSTALL_DIR"
-
-  # Cleanup
-  rm -rf $tmp_dir
 }
 
 main() {
   setup_color
+  check_dependencies
 
-  latest_tag=$(get_latest_release $REPO_NAME)
-  latest_version=$(echo $latest_tag | sed 's/v//')
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "$tmp_dir"' EXIT
+
+  latest_tag=$(get_latest_release "$REPO_NAME")
+  latest_version=$(echo "$latest_tag" | sed 's/v//')
   version=${VERSION:-$latest_version}
 
   os=$(get_os)
@@ -214,7 +264,7 @@ main() {
   fi
   do_install_binary
 
-  printf "$YELLOW"
+  printf "%s" "${YELLOW}"
   cat <<'EOF'
       .-.         .--''-.
     .'   '.     /'       `.
@@ -228,7 +278,7 @@ main() {
         \  \ \
         '  ' 'MJP
 EOF
-  printf "$RESET"
+  printf "%s" "${RESET}"
 
 }
 

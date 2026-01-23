@@ -72,7 +72,7 @@ func TestWorkflowWithEnvVar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 
 			for key, value := range tt.env {
 				t.Setenv(key, value)
@@ -168,7 +168,7 @@ func TestGenerationWorkflows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
@@ -231,7 +231,7 @@ func TestGenerationWorkflows(t *testing.T) {
 
 func TestInputOnlyWorkflow(t *testing.T) {
 	t.Parallel()
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create workflow file and associated resources
 	workflowFile := &workflow.Workflow{
@@ -278,7 +278,7 @@ func (r *subprocessRunner) Run() error {
 	return nil
 }
 
-func execute(t *testing.T, wd string, args ...string) Runnable {
+func execute(t *testing.T, wd string, args ...string) Runnable { //nolint:iface // Interface intentional for test flexibility
 	t.Helper()
 
 	// Build the binary lazily on first execute() call
@@ -304,38 +304,41 @@ func execute(t *testing.T, wd string, args ...string) Runnable {
 // We should not use it on multiple tests at once as they will share memory: this can create issues.
 // so we leave it around as a little helper method: swap out execute for executeI and debug breakpoints work
 var (
-	mutex   sync.Mutex
-	rootCmd = cmd.CmdForTest(version, artifactArch)
+	mutex   sync.Mutex                              //nolint:unused // Reserved for executeI debugging helper
+	rootCmd = cmd.CmdForTest(version, artifactArch) //nolint:unused // Reserved for executeI debugging helper
 )
 
-func executeI(t *testing.T, wd string, args ...string) Runnable {
+func executeI(t *testing.T, wd string, args ...string) *cmdRunner { //nolint:unused // Helper function for debugging integration tests
+	t.Helper()
 	mutex.Lock()
 	t.Helper()
 	rootCmd.SetArgs(args)
 	oldWD, err := os.Getwd()
 	require.NoError(t, err)
-	require.NoError(t, os.Chdir(wd))
+	t.Chdir(wd)
 
 	return &cmdRunner{
 		rootCmd: rootCmd,
 		cleanup: func() {
-			require.NoError(t, os.Chdir(oldWD))
+			t.Chdir(oldWD)
 			mutex.Unlock()
 		},
 	}
 }
 
-type cmdRunner struct {
+type cmdRunner struct { //nolint:unused // Reserved for executeI debugging helper
 	rootCmd *cobra.Command
 	cleanup func()
 }
 
-func (c *cmdRunner) Run() error {
+func (c *cmdRunner) Run() error { //nolint:unused // Reserved for executeI debugging helper
 	defer c.cleanup()
 	return c.rootCmd.Execute()
 }
 
 func TestSpecWorkflows(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		inputDocs       []string
@@ -492,7 +495,7 @@ func TestSpecWorkflows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			temp := setupTestDir(t)
+			temp := t.TempDir()
 			// Create workflow file and associated resources
 			workflowFile := &workflow.Workflow{
 				Version: workflow.WorkflowVersion,
@@ -578,6 +581,8 @@ func TestSpecWorkflows(t *testing.T) {
 }
 
 func TestFallbackCodeSamplesWorkflow(t *testing.T) {
+	t.Parallel()
+
 	spec := `{
 		"openapi": "3.0.0",
 		"info": {
@@ -623,7 +628,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 		}
 	}`
 	// Write the spec to a temp file
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 	specPath := filepath.Join(temp, "spec.yaml")
 	err := os.WriteFile(specPath, []byte(spec), 0o644)
 	require.NoError(t, err)
@@ -667,7 +672,7 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	})
 	require.NoError(t, cmdErr)
 	require.NotNil(t, reports)
-	require.True(t, len(reports.Reports) > 0, "must have version reports")
+	require.NotEmpty(t, reports.Reports, "must have version reports")
 	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
 
 	require.NoError(t, cmdErr)

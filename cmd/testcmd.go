@@ -90,11 +90,12 @@ func testCmdRunnerOpts(flags testCmdFlags) ([]testcmd.RunnerOpt, error) {
 	var target string
 
 	if flags.Target == "" {
-		if len(wf.Targets) == 1 {
+		switch {
+		case len(wf.Targets) == 1:
 			target = targets[0]
-		} else if len(wf.Targets) == 0 {
-			return nil, fmt.Errorf("No targets found in workflow configuration.")
-		} else {
+		case len(wf.Targets) == 0:
+			return nil, fmt.Errorf("no targets found in workflow configuration")
+		default:
 			target, err = askForTarget("What target would you like to test?", "You may choose an individual target or 'all'.", "Let's choose a target to run tests againsts.", targets, true)
 			if err != nil {
 				return nil, err

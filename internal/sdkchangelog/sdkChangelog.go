@@ -3,6 +3,7 @@ package sdkchangelog
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 
 	changes "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -21,7 +22,8 @@ type Requirements struct {
 func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requirements) (changelogContent string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.From(ctx).Errorf("Panic recovered in ComputeAndStoreSDKChangelog: %v", r)
+			stackTrace := string(debug.Stack())
+			log.From(ctx).Errorf("Panic recovered in ComputeAndStoreSDKChangelog: %v\nStack trace:\n%s", r, stackTrace)
 			changelogContent = ""
 			err = fmt.Errorf("panic occurred during SDK changelog generation: %v", r)
 		}
@@ -97,9 +99,10 @@ func storeKeyValueForPullRequestDescription(ctx context.Context, key string, rep
 		BumpType:     versioning.BumpNone,
 		NewVersion:   "",
 	}
-	if reportType == "pr_report" {
+	switch reportType {
+	case "pr_report":
 		versionReport.PRReport += report
-	} else if reportType == "commit_report" {
+	case "commit_report":
 		versionReport.CommitReport += report
 	}
 	err := versioning.AddVersionReport(ctx, versionReport)

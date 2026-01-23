@@ -35,8 +35,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ErrInstallFailed = errors.Error("failed to install Speakeasy version")
-const ErrPinned = errors.Error("speakeasyVersion: pinned, skipping blue/green speakeasy CLI upgrade")
+const (
+	ErrInstallFailed = errors.Error("failed to install Speakeasy version")
+	ErrPinned        = errors.Error("speakeasyVersion: pinned, skipping blue/green speakeasy CLI upgrade")
+)
+
+const ExperimentalPrefix = "[EXPERIMENTAL] "
 
 type Command interface {
 	Init() (*cobra.Command, error) // TODO: make private when rootCmd is refactored?
@@ -97,6 +101,10 @@ type ExecutableCommand[F interface{}] struct {
 	// local, run using the CLI version specified in the workflow file.
 	UsesWorkflowFile bool
 
+	// When enabled, the command is marked as experimental. A warning will be
+	// printed when the command is run, and [EXPERIMENTAL] will be shown in help.
+	Experimental bool
+
 	// Deprecated: try to avoid using this. It is only present for backwards compatibility with the old CLI
 	NonInteractiveSubcommands []Command
 }
@@ -111,6 +119,10 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		flags, err := c.GetFlagValues(cmd)
 		if err != nil {
 			return err
+		}
+
+		if c.Experimental {
+			log.From(cmd.Context()).Warnf("This command is experimental and may change or be removed in future releases.")
 		}
 
 		if c.PreRun != nil {
@@ -152,14 +164,15 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 			if !pinned && !env.IsLocalDev() {
 				err := runWithVersionFromWorkflowFile(cmd)
 				logger := log.From(cmd.Context())
-				if err == nil {
+				switch {
+				case err == nil:
 					return nil
-				} else if errors.Is(err, ErrPinned) {
+				case errors.Is(err, ErrPinned):
 					logger.Debug("Using pinned version (skipping blue/green speakeasy CLI upgrade)")
-				} else if errors.Is(err, ErrInstallFailed) { // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+				case errors.Is(err, ErrInstallFailed): // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
 					logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
 					logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
-				} else {
+				default:
 					return err
 				}
 			}
@@ -189,14 +202,24 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		return nil, err
 	}
 
+	short := c.Short
+	long := c.Long
+	var annotations map[string]string
+	if c.Experimental {
+		short = ExperimentalPrefix + c.Short
+		long = ExperimentalPrefix + c.Long
+		annotations = map[string]string{"experimental": "true"}
+	}
+
 	cmd := &cobra.Command{
-		Use:     c.Usage,
-		Short:   c.Short,
-		Long:    c.Long,
-		Aliases: c.Aliases,
-		PreRunE: interactivity.GetMissingFlagsPreRun,
-		RunE:    run,
-		Hidden:  c.Hidden,
+		Use:         c.Usage,
+		Short:       short,
+		Long:        long,
+		Aliases:     c.Aliases,
+		Annotations: annotations,
+		PreRunE:     interactivity.GetMissingFlagsPreRun,
+		RunE:        run,
+		Hidden:      c.Hidden,
 	}
 
 	for _, subcommand := range c.NonInteractiveSubcommands {
@@ -305,7 +328,8 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 
 	// Get the latest version, or use the pinned version
 	desiredVersion := wf.SpeakeasyVersion.String()
-	if desiredVersion == "latest" {
+	switch desiredVersion {
+	case "latest":
 		latest, err := updates.GetLatestVersion(ctx, artifactArch)
 		if err != nil {
 			return ErrInstallFailed
@@ -317,9 +341,9 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 		if newerVersion, err := updates.GetNewerVersion(ctx, artifactArch, currentVersion); err == nil && newerVersion == nil {
 			logger.PrintfStyled(styles.DimmedItalic, "Running with latest Speakeasy version\n")
 		}
-	} else if desiredVersion == "pinned" {
+	case "pinned":
 		return ErrPinned
-	} else {
+	default:
 		logger.PrintfStyled(styles.DimmedItalic, "Running with speakeasyVersion defined in workflow.yaml\n")
 	}
 
@@ -406,7 +430,7 @@ func promoteVersion(ctx context.Context, vLocation string) error {
 		}
 		log.From(ctx).WithStyle(styles.DimmedItalic).Debug(fmt.Sprintf("promoteVersion: Failed to acquire lock (attempt %d). Retrying...", result.Attempt))
 	}
-	defer mutex.Unlock()
+	defer func() { _ = mutex.Unlock() }()
 
 	currentExecPath, err := os.Executable()
 	if err != nil {

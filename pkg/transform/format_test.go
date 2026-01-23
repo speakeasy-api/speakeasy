@@ -13,6 +13,8 @@ import (
 )
 
 func TestFormat(t *testing.T) {
+	t.Parallel()
+
 	// Create a buffer to store the formatted spec
 	var testInput bytes.Buffer
 	var testOutput bytes.Buffer
@@ -36,7 +38,7 @@ func TestFormat(t *testing.T) {
 
 	// Read the expected spec into a buffer
 	reader := bufio.NewReader(file)
-	testOutput.ReadFrom(reader)
+	_, _ = testOutput.ReadFrom(reader)
 	require.NoError(t, err)
 
 	var actual yaml.Node

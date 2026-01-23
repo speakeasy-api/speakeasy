@@ -5,14 +5,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 
 	"github.com/speakeasy-api/speakeasy/cmd"
 	"github.com/speakeasy-api/speakeasy/internal/docs"
 )
-
-var linkRegex = regexp.MustCompile(`\((.*?\.md)\)`)
 
 func main() {
 	outDir := flag.String("out-dir", "./docs", "The directory to output the docs to")

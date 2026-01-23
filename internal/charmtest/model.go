@@ -38,8 +38,7 @@ func ModelFromHuhGroup(t *testing.T, groups ...*huh.Group) *Model {
 func (m Model) LogOutput(t *testing.T) {
 	t.Helper()
 
-	output, err := io.ReadAll(m.TestModel.Output())
-
+	output, err := io.ReadAll(m.Output())
 	if err != nil {
 		t.Fatalf("error reading output: %s", err)
 	}
@@ -55,5 +54,5 @@ func (m Model) Quit(t *testing.T) {
 		t.Fatalf("error quitting: %s", err)
 	}
 
-	m.TestModel.WaitFinished(t)
+	m.WaitFinished(t)
 }

@@ -2,18 +2,17 @@ package styles
 
 import (
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
 	"regexp"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	patternToStyle = map[string]lipgloss.Style{
-		"\\*": lipgloss.NewStyle().Bold(true),
-		"\\^": lipgloss.NewStyle().Italic(true), //Can't be underscore because values like SPEAKEASY_API_KEY get messed up
-		"`":   HeavilyEmphasized,
-	}
-)
+var patternToStyle = map[string]lipgloss.Style{
+	"\\*": lipgloss.NewStyle().Bold(true),
+	"\\^": lipgloss.NewStyle().Italic(true), // Can't be underscore because values like SPEAKEASY_API_KEY get messed up
+	"`":   HeavilyEmphasized,
+}
 
 // InjectMarkdownStyles parses the string for markdown patterns and applies the appropriate styles
 // For example, the string "*bold text*" will be rendered in bold with the asterisks stripped out

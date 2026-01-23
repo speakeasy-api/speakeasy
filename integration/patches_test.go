@@ -84,9 +84,9 @@ func TestPersistentEdits_UserModificationPreserved(t *testing.T) {
 
 	// Add a user comment
 	modifiedContent := strings.Replace(string(originalContent), "package testsdk", "package testsdk\n\n// USER_CUSTOM_COMMENT: This is my custom code", 1)
-	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
-	t.Logf("Modified sdk.go (first 500 chars):\n%s", string(modifiedContent[:min(500, len(modifiedContent))]))
+	t.Logf("Modified sdk.go (first 500 chars):\n%s", modifiedContent[:min(500, len(modifiedContent))])
 
 	// Commit changes
 	gitCommitAll(t, temp, "user modifications")
@@ -117,7 +117,7 @@ func TestPersistentEdits_UserModificationPreserved(t *testing.T) {
 func setupPersistentEditsTestDir(t *testing.T) string {
 	t.Helper()
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create a minimal OpenAPI spec
 	specContent := `openapi: 3.0.3
@@ -161,11 +161,11 @@ components:
         name:
           type: string
 `
-	err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0644)
+	err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0o644)
 	require.NoError(t, err)
 
 	// Create .speakeasy directory
-	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0755)
+	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
 	require.NoError(t, err)
 
 	// Create workflow.yaml with persistent edits enabled
@@ -201,14 +201,14 @@ go:
   version: 1.0.0
   packageName: testsdk
 `
-	err = os.WriteFile(filepath.Join(temp, "gen.yaml"), []byte(genYamlContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "gen.yaml"), []byte(genYamlContent), 0o644)
 	require.NoError(t, err)
 
 	// Create .genignore to exclude go.mod/go.sum from generation (avoids dependency conflicts in tests)
 	genignoreContent := `go.mod
 go.sum
 `
-	err = os.WriteFile(filepath.Join(temp, ".genignore"), []byte(genignoreContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, ".genignore"), []byte(genignoreContent), 0o644)
 	require.NoError(t, err)
 
 	// Initialize git repo
@@ -216,27 +216,6 @@ go.sum
 	gitCommitAll(t, temp, "initial commit")
 
 	return temp
-}
-
-// findGeneratedGoFiles finds all .go files in the temp directory (excluding vendor, .git, etc.)
-func findGeneratedGoFiles(t *testing.T, dir string) []string {
-	t.Helper()
-	var files []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		// Skip hidden directories and vendor
-		if info.IsDir() && (strings.HasPrefix(info.Name(), ".") || info.Name() == "vendor") {
-			return filepath.SkipDir
-		}
-		if !info.IsDir() && strings.HasSuffix(path, ".go") {
-			files = append(files, path)
-		}
-		return nil
-	})
-	require.NoError(t, err)
-	return files
 }
 
 // extractGeneratedIDFromContent extracts the @generated-id from file content
@@ -312,11 +291,11 @@ func TestPersistentEdits_MultiTarget(t *testing.T) {
 
 	// Modify both SDKs with user comments
 	goModified := strings.Replace(string(goContent), "package gosdk", "package gosdk\n\n// GO_USER_COMMENT: Custom Go code", 1)
-	err = os.WriteFile(goSdkFile, []byte(goModified), 0644)
+	err = os.WriteFile(goSdkFile, []byte(goModified), 0o644)
 	require.NoError(t, err)
 
 	tsModified := strings.Replace(string(tsContent), "export class SDK extends ClientSDK", "// TS_USER_COMMENT: Custom TypeScript code\nexport class SDK extends ClientSDK", 1)
-	err = os.WriteFile(tsSdkFile, []byte(tsModified), 0644)
+	err = os.WriteFile(tsSdkFile, []byte(tsModified), 0o644)
 	require.NoError(t, err)
 
 	// Commit user modifications
@@ -364,7 +343,7 @@ func TestPersistentEdits_SpecChangeWithUserEdits(t *testing.T) {
 
 	// Add user comment to Pet model
 	petModified := strings.Replace(string(petContent), "type Pet struct", "// PET_USER_COMMENT: Custom validation logic here\ntype Pet struct", 1)
-	err = os.WriteFile(petFile, []byte(petModified), 0644)
+	err = os.WriteFile(petFile, []byte(petModified), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "user modifications to Pet")
 
@@ -413,7 +392,7 @@ components:
           type: string
           description: The breed of the pet
 `
-	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "spec update: add breed field")
 
@@ -462,7 +441,7 @@ func TestPersistentEdits_MultipleFilesModified(t *testing.T) {
 
 		// Add comment after package declaration
 		modified := strings.Replace(string(content), "package ", comment+"\npackage ", 1)
-		err = os.WriteFile(file, []byte(modified), 0644)
+		err = os.WriteFile(file, []byte(modified), 0o644)
 		require.NoError(t, err)
 	}
 	gitCommitAll(t, temp, "user modifications to multiple files")
@@ -486,7 +465,7 @@ func TestPersistentEdits_MultipleFilesModified(t *testing.T) {
 func setupMultiTargetPersistentEditsTestDir(t *testing.T) string {
 	t.Helper()
 
-	temp := setupTestDir(t)
+	temp := t.TempDir()
 
 	// Create a minimal OpenAPI spec
 	specContent := `openapi: 3.0.3
@@ -519,17 +498,17 @@ components:
         name:
           type: string
 `
-	err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0644)
+	err := os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(specContent), 0o644)
 	require.NoError(t, err)
 
 	// Create .speakeasy directory
-	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0755)
+	err = os.MkdirAll(filepath.Join(temp, ".speakeasy"), 0o755)
 	require.NoError(t, err)
 
 	// Create output directories
-	err = os.MkdirAll(filepath.Join(temp, "go-sdk"), 0755)
+	err = os.MkdirAll(filepath.Join(temp, "go-sdk"), 0o755)
 	require.NoError(t, err)
-	err = os.MkdirAll(filepath.Join(temp, "ts-sdk"), 0755)
+	err = os.MkdirAll(filepath.Join(temp, "ts-sdk"), 0o755)
 	require.NoError(t, err)
 
 	// Create workflow.yaml with multiple targets
@@ -571,7 +550,7 @@ go:
   version: 1.0.0
   packageName: gosdk
 `
-	err = os.WriteFile(filepath.Join(temp, "go-sdk", "gen.yaml"), []byte(goGenYaml), 0644)
+	err = os.WriteFile(filepath.Join(temp, "go-sdk", "gen.yaml"), []byte(goGenYaml), 0o644)
 	require.NoError(t, err)
 
 	// Create gen.yaml for typescript target in ts-sdk/
@@ -587,7 +566,7 @@ typescript:
   version: 1.0.0
   packageName: tssdk
 `
-	err = os.WriteFile(filepath.Join(temp, "ts-sdk", "gen.yaml"), []byte(tsGenYaml), 0644)
+	err = os.WriteFile(filepath.Join(temp, "ts-sdk", "gen.yaml"), []byte(tsGenYaml), 0o644)
 	require.NoError(t, err)
 
 	// Create .genignore in each target directory
@@ -597,9 +576,9 @@ package.json
 package-lock.json
 node_modules
 `
-	err = os.WriteFile(filepath.Join(temp, "go-sdk", ".genignore"), []byte(genignoreContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "go-sdk", ".genignore"), []byte(genignoreContent), 0o644)
 	require.NoError(t, err)
-	err = os.WriteFile(filepath.Join(temp, "ts-sdk", ".genignore"), []byte(genignoreContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "ts-sdk", ".genignore"), []byte(genignoreContent), 0o644)
 	require.NoError(t, err)
 
 	// Initialize git repo
@@ -639,11 +618,11 @@ func TestPersistentEdits_FileMove(t *testing.T) {
 
 	// Create a new directory and move the file there
 	newDir := filepath.Join(temp, "mymodels")
-	err = os.MkdirAll(newDir, 0755)
+	err = os.MkdirAll(newDir, 0o755)
 	require.NoError(t, err)
 
 	newPath := filepath.Join(newDir, "pet.go")
-	err = os.WriteFile(newPath, []byte(modifiedContent), 0644)
+	err = os.WriteFile(newPath, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 
 	// Remove the original file
@@ -701,7 +680,7 @@ func TestPersistentEdits_FileRemove(t *testing.T) {
 
 	// Add user modification to sdk.go (to verify it's preserved)
 	sdkModified := strings.Replace(string(sdkContent), "package testsdk", "package testsdk\n\n// SDK_PRESERVED: This should survive", 1)
-	err = os.WriteFile(sdkFile, []byte(sdkModified), 0644)
+	err = os.WriteFile(sdkFile, []byte(sdkModified), 0o644)
 	require.NoError(t, err)
 
 	// User intentionally removes pet.go (maybe they don't want this model)
@@ -756,7 +735,7 @@ func TestPersistentEdits_FileRename(t *testing.T) {
 
 	// Rename the file (same directory, different name)
 	newPath := filepath.Join(temp, "models", "operations", "list_all_pets.go")
-	err = os.WriteFile(newPath, []byte(modifiedContent), 0644)
+	err = os.WriteFile(newPath, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 
 	// Remove the original
@@ -812,7 +791,7 @@ func TestPersistentEdits_ConflictMarkers(t *testing.T) {
 		1,
 	)
 
-	err = os.WriteFile(petFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(petFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "user modified GetID with validation")
 
@@ -864,7 +843,7 @@ components:
           type: string
           description: The species of the pet
 `
-	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "spec update: add species field")
 
@@ -918,7 +897,7 @@ func (p *Pet) Validate() error {
 }
 `
 	modifiedContent := string(originalContent) + userAddition
-	err = os.WriteFile(petFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(petFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "user added Validate method")
 
@@ -963,7 +942,7 @@ func TestPersistentEdits_ConflictSameLineEdit(t *testing.T) {
 		"`json:\"pet_id,omitempty\" validate:\"required\"`", // User's custom tag
 		1,
 	)
-	err = os.WriteFile(petFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(petFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "user modified field tag")
 
@@ -1012,7 +991,7 @@ components:
         name:
           type: string
 `
-	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "spec update: make fields required")
 
@@ -1055,7 +1034,7 @@ components:
 		"`json:\"id\" validate:\"required\"`", // Resolved: use generated json tag but keep user's validate
 		1,
 	)
-	err = os.WriteFile(petFile, []byte(resolvedContent), 0644)
+	err = os.WriteFile(petFile, []byte(resolvedContent), 0o644)
 	require.NoError(t, err)
 
 	// Abort the in-progress merge since we manually resolved
@@ -1116,7 +1095,7 @@ func TestPersistentEdits_NoConflictAdjacentEdits(t *testing.T) {
 		"package testsdk\n\n// USER_HEADER_COMMENT: This is a user-added header comment\n// It should not conflict with spec changes elsewhere in the file",
 		1,
 	)
-	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0644)
+	err = os.WriteFile(sdkFile, []byte(modifiedContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "user added header comment")
 
@@ -1179,7 +1158,7 @@ components:
         name:
           type: string
 `
-	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0644)
+	err = os.WriteFile(filepath.Join(temp, "spec.yaml"), []byte(newSpecContent), 0o644)
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "spec update: add getPet endpoint")
 

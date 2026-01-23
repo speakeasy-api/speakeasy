@@ -56,21 +56,21 @@ func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flu
 		if sourceResult.Source == sourceID {
 			sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, sourceID, overlayPath)
 			if err != nil {
-				return fmt.Errorf("error converting source result to source response: %s", err)
+				return fmt.Errorf("error converting source result to source response: %w", err)
 			}
 
 			response, err := convertLastRunResult(ctx, workflowRunner, sourceID, overlayPath, sourceStep)
 			if err != nil {
-				return fmt.Errorf("error getting last completed run result: %s", err)
+				return fmt.Errorf("error getting last completed run result: %w", err)
 			}
 			response.SourceResult = sourceResponseData
 
 			responseJSON, err := json.Marshal(response)
 			if err != nil {
-				return fmt.Errorf("error marshaling run response: %s", err)
+				return fmt.Errorf("error marshaling run response: %w", err)
 			}
 
-			fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+			_, _ = fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
 			flusher.Flush()
 		}
 
@@ -93,7 +93,7 @@ func sendRunResponseDataToStream(w http.ResponseWriter, flusher http.Flusher, ru
 		return fmt.Errorf("error marshaling run response: %w", err)
 	}
 
-	fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
+	_, _ = fmt.Fprintf(w, "event: message\ndata: %s\n\n", responseJSON)
 	flusher.Flush()
 
 	return nil
@@ -117,7 +117,7 @@ func readFileData(name string, path string) (components.FileData, error) {
 	}, nil
 }
 
-func convertLastRunResult(ctx context.Context, workflowRunner run.Workflow, sourceID, overlayPath string, step run.SourceStepID) (components.RunResponseData, error) {
+func convertLastRunResult(_ context.Context, workflowRunner run.Workflow, sourceID, overlayPath string, step run.SourceStepID) (components.RunResponseData, error) {
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	workflow, err := convertWorkflowToComponentsWorkflow(*workflowConfig, workflowRunner.ProjectDir)
 	if err != nil {
@@ -262,7 +262,8 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 }
 
 func convertWarningToDiagnostic(w error) components.Diagnostic {
-	if vErr, ok := w.(*vErrs.ValidationError); ok {
+	var vErr *vErrs.ValidationError
+	if errors.As(w, &vErr) {
 		return components.Diagnostic{
 			Message:  vErr.Message,
 			Severity: string(vErr.Severity),
@@ -272,7 +273,8 @@ func convertWarningToDiagnostic(w error) components.Diagnostic {
 		}
 	}
 
-	if skippedErr, ok := w.(*vErrs.SkippedError); ok {
+	var skippedErr *vErrs.SkippedError
+	if errors.As(w, &skippedErr) {
 		skippedStr := fmt.Sprintf("Skipping %s %q", skippedErr.SkippedEntity.Type, skippedErr.SkippedEntity.Name)
 		return components.Diagnostic{
 			Message:     skippedErr.Message,
@@ -283,7 +285,8 @@ func convertWarningToDiagnostic(w error) components.Diagnostic {
 		}
 	}
 
-	if uErr, ok := w.(*vErrs.UnsupportedError); ok {
+	var uErr *vErrs.UnsupportedError
+	if errors.As(w, &uErr) {
 		return components.Diagnostic{
 			Message:  uErr.Message,
 			Line:     pointer.ToInt64(int64(uErr.LineNumber)),
@@ -346,7 +349,6 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow, workingDir string)
 
 			// Produce the lexically shortest path based on the base path and the location
 			shortestPath, err := filepath.Rel(workingDir, input.Location)
-
 			if err != nil {
 				shortestPath = input.Location
 			}
@@ -428,7 +430,6 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 	}
 
 	asString, err := utils.ReadFileToString(overlay.Document.Location.Resolve())
-
 	if err != nil {
 		return "", err
 	}
@@ -465,11 +466,6 @@ func upsertOverlay(overlay overlay.Overlay, workflowRunner run.Workflow, sourceI
 
 func updateSourceAndTarget(workflowRunner run.Workflow, sourceID, overlayPath string, runRequestBody components.RunRequestBody) (string, error) {
 	var err error
-
-	type target struct {
-		ID     string `json:"id"`
-		Config string `json:"config"`
-	}
 
 	if runRequestBody.Input != nil && *runRequestBody.Input != "" {
 		// Assert that the workflow source input is a single local file

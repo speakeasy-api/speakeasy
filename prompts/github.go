@@ -246,7 +246,7 @@ func executePromptsForPublishing(prompts map[publishingPrompt]*string, target *w
 	var groups []*huh.Group
 	// group two secrets together on a screen
 	for i := 0; i < len(fields); i += 2 {
-		var groupedFields []huh.Field = []huh.Field{
+		groupedFields := []huh.Field{
 			fields[i],
 		}
 
@@ -337,23 +337,15 @@ func ParseGithubRemoteURL(repo *git.Repository) string {
 	}
 
 	remoteCfg, ok := cfg.Remotes[defaultRemote]
-	if !ok {
+	if !ok || len(remoteCfg.URLs) == 0 {
 		return ""
 	}
 
-	for _, url := range remoteCfg.URLs {
-		if strings.Contains(url, "git@github.com") {
-			url = strings.Replace(url, "git@github.com:", "https://github.com/", 1)
-		}
+	url := remoteCfg.URLs[0]
 
-		if strings.HasSuffix(url, ".git") {
-			url = url[:len(url)-4]
-		}
+	url = strings.Replace(strings.TrimSuffix(url, ".git"), "git@github.com:", "https://github.com/", 1)
 
-		return url
-	}
-
-	return ""
+	return url
 }
 
 func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {

@@ -71,7 +71,7 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 
 	err := filepath.WalkDir(f.outDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil // Skip files we can't access
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 
 		// Skip directories
@@ -92,7 +92,7 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 		// Get relative path
 		relPath, err := filepath.Rel(f.outDir, path)
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 		// Normalize to forward slashes for cross-platform consistency
 		relPath = filepath.ToSlash(relPath)
@@ -100,7 +100,7 @@ func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 		// Try to extract ID from file header
 		id, err := extractGeneratedIDFromFile(path)
 		if err != nil || id == "" {
-			return nil
+			return nil //nolint:nilerr // Skip files we can't access
 		}
 
 		result[id] = relPath

@@ -37,8 +37,7 @@ func (m *model) Init() tea.Cmd {
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
-	case tea.QuitMsg:
+	if _, ok := msg.(tea.QuitMsg); ok {
 		m.quit = true
 		return m, tea.Quit
 	}
@@ -68,6 +67,6 @@ func StartSpinner(message string) func() {
 	return func() {
 		p.Quit()
 		// Very important, otherwise the TUI will be borked and future logs will be messed up
-		p.ReleaseTerminal()
+		_ = p.ReleaseTerminal()
 	}
 }

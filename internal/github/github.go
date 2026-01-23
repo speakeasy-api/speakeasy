@@ -30,9 +30,22 @@ type WorkflowSummary interface {
 	ToMermaidDiagram() (string, error)
 }
 
+const (
+	ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+	// 512 KiB. GitHub step summaries have a max size of 1MiB. Both linting and
+	// changes reports are written to the same summary. Each report should be
+	// truncated below half of the overall limit.
+	// Reference: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#step-isolation-and-limits
+	GitHubStepSummaryReportLimit = 512 * 1024
+
+	// Lint report unknown severity
+	LintSeverityUnknown = "UNKNOWN"
+)
+
+var re = regexp.MustCompile(ansi)
+
 func StripANSICodes(str string) string {
-	const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
-	var re = regexp.MustCompile(ansi)
 	return re.ReplaceAllString(str, "")
 }
 
@@ -49,6 +62,25 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 		return
 	}
 
+	var summaryMarkdown strings.Builder
+
+	summaryMarkdown.Grow(GitHubStepSummaryReportLimit)
+	summaryMarkdown.WriteString("# ")
+
+	if summary.Source != "" {
+		summaryMarkdown.WriteString(summary.Source + " ")
+	}
+
+	summaryMarkdown.WriteString("Linting Summary\n\n")
+
+	if summary.ReportURL != "" {
+		summaryMarkdown.WriteString("Linting report available at <")
+		summaryMarkdown.WriteString(summary.ReportURL)
+		summaryMarkdown.WriteString(">\n\n")
+	}
+
+	summaryMarkdown.WriteString(summary.Status + "\n\n")
+
 	contents := [][]string{}
 
 	contents = append(contents, []string{"Severity", "Type", "Error", "Line"})
@@ -64,26 +96,41 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 
 		uErr := errors.GetUnsupportedErr(err)
 		if uErr != nil {
-			contents = append(contents, []string{"WARN", uErr.Error(), "unsupported", strconv.Itoa(uErr.LineNumber)})
+			contents = append(contents, []string{string(errors.SeverityWarn), uErr.Error(), "unsupported", strconv.Itoa(uErr.LineNumber)})
 			continue
 		}
 
-		contents = append(contents, []string{"UNKNOWN", "unknown", err.Error(), ""})
+		contents = append(contents, []string{LintSeverityUnknown, "unknown", err.Error(), ""})
 	}
 
-	var source string
-	if summary.Source != "" {
-		source = summary.Source + " "
+	contentsMarkdown := markdown.CreateMarkdownTable(contents)
+
+	if summaryMarkdown.Len()+len(contentsMarkdown) > GitHubStepSummaryReportLimit {
+		summaryMarkdown.WriteString("*The full linting report has been truncated from this summary due to size limits.*\n\n")
+
+		// Truncate hints first to try fitting within size limit.
+		contents = slices.DeleteFunc(contents, func(row []string) bool {
+			return row[0] == string(errors.SeverityHint)
+		})
+
+		contentsMarkdown = markdown.CreateMarkdownTable(contents)
 	}
 
-	md := fmt.Sprintf("# %sLinting Summary", source)
-	if summary.ReportURL != "" {
-		md += fmt.Sprintf("\n\nLinting report available at <%s>", summary.ReportURL)
+	if summaryMarkdown.Len()+len(contentsMarkdown) > GitHubStepSummaryReportLimit {
+		// Truncate warnings next to try fitting within size limit.
+		contents = slices.DeleteFunc(contents, func(row []string) bool {
+			return row[0] == string(errors.SeverityWarn)
+		})
+
+		contentsMarkdown = markdown.CreateMarkdownTable(contents)
 	}
 
-	md += fmt.Sprintf("\n\n%s\n\n%s", summary.Status, markdown.CreateMarkdownTable(contents))
+	// Only include the errors table if it fits within the size limit.
+	if summaryMarkdown.Len()+len(contentsMarkdown) <= GitHubStepSummaryReportLimit {
+		summaryMarkdown.WriteString(contentsMarkdown)
+	}
 
-	githubactions.AddStepSummary(md)
+	githubactions.AddStepSummary(summaryMarkdown.String())
 }
 
 func GenerateChangesSummary(ctx context.Context, url string, summary changes.Summary) {
@@ -99,18 +146,28 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		return
 	}
 
-	reportLink := ""
+	var summaryMarkdown strings.Builder
+
+	summaryMarkdown.Grow(GitHubStepSummaryReportLimit)
+	summaryMarkdown.WriteString("# API Changes Summary\n\n")
+
 	if url != "" {
-		reportLink = fmt.Sprintf("Changes report available at <%s>\n\n", url)
+		summaryMarkdown.WriteString("Changes report available at <")
+		summaryMarkdown.WriteString(url)
+		summaryMarkdown.WriteString(">\n\n")
 	}
 
-	md := fmt.Sprintf("# API Changes Summary\n%s\n%s", reportLink, summary.Text)
+	if summaryMarkdown.Len()+len(summary.Text) > GitHubStepSummaryReportLimit {
+		summaryMarkdown.WriteString("*The full changes report has been truncated from this summary due to size limits.*\n\n")
+	} else {
+		summaryMarkdown.WriteString(summary.Text + "\n\n")
+	}
 
-	githubactions.AddStepSummary(StripANSICodes(md))
+	githubactions.AddStepSummary(StripANSICodes(summaryMarkdown.String()))
 
 	if len(os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")) > 0 {
 		filepath := os.Getenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY")
-		f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 		if err != nil {
 			log.From(ctx).Warnf("failed to open file %s: %s", filepath, err)
 			return
@@ -122,7 +179,7 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 			}
 		}()
 
-		if _, err := f.Write([]byte(summary.Text)); err != nil {
+		if _, err := f.WriteString(summary.Text); err != nil {
 			log.From(ctx).Warnf("failed to write file %s: %s", filepath, err)
 			return
 		}
@@ -175,40 +232,47 @@ func SortErrors(errs []error) {
 		iVErr := errors.GetValidationErr(i)
 		jVErr := errors.GetValidationErr(j)
 
-		if iVErr != nil && jVErr != nil {
-			if iVErr.Severity == errors.SeverityError && jVErr.Severity != errors.SeverityError {
+		switch {
+		case iVErr != nil && jVErr != nil:
+			switch {
+			case iVErr.Severity == errors.SeverityError && jVErr.Severity != errors.SeverityError:
 				return -1
-			} else if iVErr.Severity == errors.SeverityWarn && jVErr.Severity == errors.SeverityError {
+			case iVErr.Severity == errors.SeverityWarn && jVErr.Severity == errors.SeverityError:
 				return 1
-			} else if iVErr.Severity == errors.SeverityHint && jVErr.Severity != errors.SeverityHint {
+			case iVErr.Severity == errors.SeverityHint && jVErr.Severity != errors.SeverityHint:
 				return 1
 			}
 
-			if iVErr.LineNumber < jVErr.LineNumber {
+			switch {
+			case iVErr.LineNumber < jVErr.LineNumber:
 				return -1
-			} else if iVErr.LineNumber > jVErr.LineNumber {
+			case iVErr.LineNumber > jVErr.LineNumber:
 				return 1
+			default:
+				return 0
 			}
-			return 0
-		} else if iVErr != nil {
+		case iVErr != nil:
 			return -1
-		} else if jVErr != nil {
+		case jVErr != nil:
 			return 1
 		}
 
 		iUErr := errors.GetUnsupportedErr(i)
 		jUErr := errors.GetUnsupportedErr(j)
 
-		if iUErr != nil && jUErr != nil {
-			if iUErr.LineNumber < jUErr.LineNumber {
+		switch {
+		case iUErr != nil && jUErr != nil:
+			switch {
+			case iUErr.LineNumber < jUErr.LineNumber:
 				return -1
-			} else if iUErr.LineNumber > jUErr.LineNumber {
+			case iUErr.LineNumber > jUErr.LineNumber:
 				return 1
+			default:
+				return 0
 			}
-			return 0
-		} else if iUErr != nil {
+		case iUErr != nil:
 			return -1
-		} else if jUErr != nil {
+		case jUErr != nil:
 			return 1
 		}
 

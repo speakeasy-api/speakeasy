@@ -7,9 +7,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJQSymbolicExecutionFromReader(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   string
@@ -35,6 +38,8 @@ paths:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			reader := strings.NewReader(tt.input)
 			var output bytes.Buffer
 
@@ -43,7 +48,7 @@ paths:
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotEmpty(t, output.String())
 			}
 		})
@@ -51,6 +56,8 @@ paths:
 }
 
 func TestJQSymbolicExecution_ExtractNestedID(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -78,7 +85,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -111,6 +118,8 @@ components:
 }
 
 func TestJQSymbolicExecution_FlattenPagination(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -148,7 +157,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -184,6 +193,8 @@ components:
 }
 
 func TestJQSymbolicExecution_ComputedField(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -207,7 +218,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -233,6 +244,8 @@ components:
 }
 
 func TestJQSymbolicExecution_ArrayTransform(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -254,7 +267,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:
@@ -287,6 +300,8 @@ components:
 }
 
 func TestJQSymbolicExecution_ConditionalField(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.1.0
 info:
   title: Test API
@@ -310,7 +325,7 @@ components:
 	var output bytes.Buffer
 
 	err := JQSymbolicExecutionFromReader(context.Background(), reader, "test.yaml", true, &output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := `openapi: 3.1.0
 info:

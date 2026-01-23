@@ -9,6 +9,7 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
+	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 	"github.com/speakeasy-api/speakeasy/pkg/merge"
 )
@@ -41,6 +42,8 @@ func (m Merge) Do(ctx context.Context, _ string) (result MergeResult, err error)
 
 	log.From(ctx).Infof("Merging %d schemas into %s...", len(m.source.Inputs), result.Location)
 
+	// Collect resolved paths and model namespaces
+	var modelNamespaces []string
 	for _, input := range m.source.Inputs {
 		var resolvedPath string
 		resolvedPath, err = schemas.ResolveDocument(ctx, input, nil, mergeStep)
@@ -48,24 +51,59 @@ func (m Merge) Do(ctx context.Context, _ string) (result MergeResult, err error)
 			return
 		}
 		result.InputSchemaLocation = append(result.InputSchemaLocation, resolvedPath)
+		modelNamespaces = append(modelNamespaces, input.ModelNamespace)
 	}
 
 	mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(m.source.Inputs)))
 
-	if err = mergeDocuments(ctx, result.InputSchemaLocation, result.Location, m.ruleset, m.workflow.ProjectDir, m.workflow.SkipGenerateLintReport); err != nil {
+	if err = mergeDocuments(ctx, result.InputSchemaLocation, modelNamespaces, result.Location, m.ruleset, m.workflow.ProjectDir, m.workflow.SkipGenerateLintReport); err != nil {
 		return
 	}
 
 	return result, nil
 }
 
-func mergeDocuments(ctx context.Context, inSchemas []string, outFile, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
+func mergeDocuments(ctx context.Context, inSchemas []string, modelNamespaces []string, outFile, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir, skipGenerateLintReport); err != nil {
-		return err
+	// Check if any model namespaces are specified
+	hasModelNamespaces := false
+	for _, ns := range modelNamespaces {
+		if ns != "" {
+			hasModelNamespaces = true
+			break
+		}
+	}
+
+	if hasModelNamespaces {
+		// Use namespace-aware merge
+		inputs := make([]merge.MergeInput, len(inSchemas))
+		for i, schema := range inSchemas {
+			namespace := ""
+			if i < len(modelNamespaces) {
+				namespace = modelNamespaces[i]
+			}
+			inputs[i] = merge.MergeInput{
+				Path:      schema,
+				Namespace: namespace,
+			}
+		}
+
+		if err := merge.MergeOpenAPIDocumentsWithNamespaces(ctx, inputs, outFile, merge.MergeOptions{
+			DefaultRuleset:         defaultRuleset,
+			WorkingDir:             workingDir,
+			SkipGenerateLintReport: skipGenerateLintReport,
+			YAMLOutput:             utils.HasYAMLExt(outFile),
+		}); err != nil {
+			return err
+		}
+	} else {
+		// Use standard merge without namespaces
+		if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir, skipGenerateLintReport); err != nil {
+			return err
+		}
 	}
 
 	log.From(ctx).Printf("Successfully merged %d schemas into %s", len(inSchemas), outFile)
