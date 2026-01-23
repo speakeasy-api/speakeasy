@@ -42,6 +42,10 @@ type Defaults struct {
 	// Package name for the generated SDK (e.g., "my-company-sdk" for npm, Go module path for Go)
 	// The corresponding CLI flag is --package-name
 	PackageName *string
+
+	// Registry path to an existing spec (e.g., "my-namespace" or "org/workspace/namespace")
+	// The corresponding CLI flag is --registry-path
+	RegistryPath *string
 }
 
 // Define constants using iota

@@ -53,6 +53,9 @@ type QuickstartFlags struct {
 	// Package name for the generated SDK (e.g., "my-company-sdk" for npm, module path for Go)
 	PackageName string `json:"package-name"`
 
+	// Registry path to an existing spec (e.g., "my-namespace" or "org/workspace/namespace")
+	RegistryPath string `json:"registry-path"`
+
 	// Hidden flag for bypassing interactive prompts
 	SkipInteractive bool `json:"skip-interactive"`
 
@@ -78,7 +81,7 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 		flag.StringFlag{
 			Name:                       "schema",
 			Shorthand:                  "s",
-			Description:                "local filepath, URL, or registry reference (namespace or org/workspace/namespace) for the OpenAPI schema",
+			Description:                "local filepath or URL for the OpenAPI schema",
 			AutocompleteFileExtensions: charm.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
@@ -111,6 +114,11 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:        "package-name",
 			Shorthand:   "p",
 			Description: "package name for the generated SDK (e.g., \"my-company-sdk\" for npm, Go module path for Go)",
+		},
+		flag.StringFlag{
+			Name:        "registry-path",
+			Shorthand:   "r",
+			Description: "registry path to an existing spec (namespace or org/workspace/namespace)",
 		},
 		// Hidden flags for bypassing interactive prompts
 		flag.BooleanFlag{
@@ -191,6 +199,10 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 
 	if flags.PackageName != "" {
 		quickstartObj.Defaults.PackageName = &flags.PackageName
+	}
+
+	if flags.RegistryPath != "" {
+		quickstartObj.Defaults.RegistryPath = &flags.RegistryPath
 	}
 
 	nextState := prompts.SourceBase

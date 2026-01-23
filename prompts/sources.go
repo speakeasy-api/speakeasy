@@ -193,10 +193,11 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 
 	hasTemplate := quickstart.Defaults.Template != nil && *quickstart.Defaults.Template != ""
 	hasSchemaPath := quickstart.Defaults.SchemaPath != nil && *quickstart.Defaults.SchemaPath != ""
+	hasRegistryPath := quickstart.Defaults.RegistryPath != nil && *quickstart.Defaults.RegistryPath != ""
 
 	// Retrieve recent namespaces and check if there are any available.
-	// If --from or --schema is provided, we will not check for recent generations.
-	hasRecentGenerations := !hasTemplate && !hasSchemaPath && err == nil && len(recentGenerations) > 0
+	// If --from, --schema, or --registry-path is provided, we will not check for recent generations.
+	hasRecentGenerations := !hasTemplate && !hasSchemaPath && !hasRegistryPath && err == nil && len(recentGenerations) > 0
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
@@ -261,9 +262,11 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	switch {
 	case hasTemplate && fileLocation != "":
 		quickstart.Defaults.TemplateData = templateFile
-	case quickstart.Defaults.SchemaPath != nil:
+	case quickstart.Defaults.RegistryPath != nil:
 		// Expand registry shorthand (e.g., "namespace" or "org/workspace/namespace") to full registry URI
-		fileLocation = expandRegistryShorthand(*quickstart.Defaults.SchemaPath, orgSlug, workspaceSlug)
+		fileLocation = expandRegistryShorthand(*quickstart.Defaults.RegistryPath, orgSlug, workspaceSlug)
+	case quickstart.Defaults.SchemaPath != nil:
+		fileLocation = *quickstart.Defaults.SchemaPath
 	case useRemoteSource && selectedRegistryUri != "":
 		// The workflow file will be updated with a registry based input like:
 		// inputs:
