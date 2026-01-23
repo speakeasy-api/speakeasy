@@ -254,12 +254,16 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
+	// Get org/workspace from auth context for registry shorthand expansion
+	orgSlug := auth.GetOrgSlugFromContext(ctx)
+	workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+
 	switch {
 	case hasTemplate && fileLocation != "":
 		quickstart.Defaults.TemplateData = templateFile
 	case quickstart.Defaults.SchemaPath != nil:
-		// Expand registry shorthand (e.g., "org/workspace/namespace") to full registry URI
-		fileLocation = expandRegistryShorthand(*quickstart.Defaults.SchemaPath)
+		// Expand registry shorthand (e.g., "namespace" or "org/workspace/namespace") to full registry URI
+		fileLocation = expandRegistryShorthand(*quickstart.Defaults.SchemaPath, orgSlug, workspaceSlug)
 	case useRemoteSource && selectedRegistryUri != "":
 		// The workflow file will be updated with a registry based input like:
 		// inputs:
@@ -281,7 +285,6 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		}
 	}
 
-	orgSlug := auth.GetOrgSlugFromContext(ctx)
 	isUsingSampleSpec := strings.TrimSpace(fileLocation) == ""
 	switch {
 	case isUsingSampleSpec:
@@ -715,12 +718,14 @@ const registryHost = "registry.speakeasyapi.dev"
 
 // expandRegistryShorthand expands a registry namespace shorthand to a full registry URI.
 // Accepts formats:
+//   - "namespace" → "registry.speakeasyapi.dev/{org}/{workspace}/namespace@latest" (org/workspace from auth context)
 //   - "org/workspace/namespace" → "registry.speakeasyapi.dev/org/workspace/namespace@latest"
 //   - "org/workspace/namespace@tag" → "registry.speakeasyapi.dev/org/workspace/namespace@tag"
 //   - "org/workspace/namespace:tag" → "registry.speakeasyapi.dev/org/workspace/namespace:tag"
 //
 // Returns the original path unchanged if it doesn't match the shorthand format.
-func expandRegistryShorthand(schemaPath string) string {
+// For single-part namespace format, orgSlug and workspaceSlug must be provided (from auth context).
+func expandRegistryShorthand(schemaPath, orgSlug, workspaceSlug string) string {
 	// Already a full registry URI
 	if strings.HasPrefix(schemaPath, registryHost) {
 		return schemaPath
@@ -739,12 +744,10 @@ func expandRegistryShorthand(schemaPath string) string {
 		return schemaPath
 	}
 
-	// Check for registry shorthand format: org/workspace/namespace[@tag or :tag]
-	// Must have exactly 2 slashes (3 parts) before any @ or : tag separator
+	// Extract tag if present (@ or : separator)
 	pathPart := schemaPath
 	tagPart := "@latest"
 
-	// Check for @ or : tag separator
 	if atIdx := strings.Index(schemaPath, "@"); atIdx != -1 {
 		pathPart = schemaPath[:atIdx]
 		tagPart = schemaPath[atIdx:]
@@ -755,18 +758,28 @@ func expandRegistryShorthand(schemaPath string) string {
 	}
 
 	parts := strings.Split(pathPart, "/")
-	if len(parts) != 3 {
-		return schemaPath
-	}
 
-	// Validate each part is non-empty and doesn't contain invalid characters
+	// Validate parts are non-empty and don't contain invalid characters
 	for _, part := range parts {
 		if part == "" || strings.ContainsAny(part, " \t\n") {
 			return schemaPath
 		}
 	}
 
-	return fmt.Sprintf("%s/%s%s", registryHost, pathPart, tagPart)
+	switch len(parts) {
+	case 1:
+		// Single part: namespace only - infer org/workspace from auth context
+		if orgSlug == "" || workspaceSlug == "" {
+			return schemaPath
+		}
+		return fmt.Sprintf("%s/%s/%s/%s%s", registryHost, orgSlug, workspaceSlug, pathPart, tagPart)
+	case 3:
+		// Full format: org/workspace/namespace
+		return fmt.Sprintf("%s/%s%s", registryHost, pathPart, tagPart)
+	default:
+		// Invalid format (2 parts or 4+ parts)
+		return schemaPath
+	}
 }
 
 var (

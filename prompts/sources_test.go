@@ -6,9 +6,11 @@ import (
 
 func TestExpandRegistryShorthand(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected string
+		name          string
+		input         string
+		orgSlug       string
+		workspaceSlug string
+		expected      string
 	}{
 		{
 			name:     "full registry URI unchanged",
@@ -75,13 +77,50 @@ func TestExpandRegistryShorthand(t *testing.T) {
 			input:    "path/to/schema.yml",
 			expected: "path/to/schema.yml",
 		},
+		// Single-part namespace tests (with auth context)
+		{
+			name:          "single part namespace with auth context expands",
+			input:         "my-api",
+			orgSlug:       "my-org",
+			workspaceSlug: "my-workspace",
+			expected:      "registry.speakeasyapi.dev/my-org/my-workspace/my-api@latest",
+		},
+		{
+			name:          "single part namespace with tag and auth context",
+			input:         "my-api@v1.0.0",
+			orgSlug:       "my-org",
+			workspaceSlug: "my-workspace",
+			expected:      "registry.speakeasyapi.dev/my-org/my-workspace/my-api@v1.0.0",
+		},
+		{
+			name:          "single part namespace with :main tag and auth context",
+			input:         "my-api:main",
+			orgSlug:       "my-org",
+			workspaceSlug: "my-workspace",
+			expected:      "registry.speakeasyapi.dev/my-org/my-workspace/my-api:main",
+		},
+		{
+			name:          "single part namespace without auth context unchanged",
+			input:         "my-api",
+			orgSlug:       "",
+			workspaceSlug: "",
+			expected:      "my-api",
+		},
+		{
+			name:          "single part namespace with only org unchanged",
+			input:         "my-api",
+			orgSlug:       "my-org",
+			workspaceSlug: "",
+			expected:      "my-api",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := expandRegistryShorthand(tt.input)
+			result := expandRegistryShorthand(tt.input, tt.orgSlug, tt.workspaceSlug)
 			if result != tt.expected {
-				t.Errorf("expandRegistryShorthand(%q) = %q, want %q", tt.input, result, tt.expected)
+				t.Errorf("expandRegistryShorthand(%q, %q, %q) = %q, want %q",
+					tt.input, tt.orgSlug, tt.workspaceSlug, result, tt.expected)
 			}
 		})
 	}
