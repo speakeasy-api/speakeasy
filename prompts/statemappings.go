@@ -43,9 +43,9 @@ type Defaults struct {
 	// The corresponding CLI flag is --package-name
 	PackageName *string
 
-	// Registry path to an existing spec (e.g., "my-namespace" or "org/workspace/namespace")
-	// The corresponding CLI flag is --registry-path
-	RegistryPath *string
+	// Whether to initialize a git repository in the output directory
+	// The corresponding CLI flag is --init-git
+	InitGit *bool
 }
 
 // Define constants using iota

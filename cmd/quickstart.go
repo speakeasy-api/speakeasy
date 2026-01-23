@@ -53,8 +53,8 @@ type QuickstartFlags struct {
 	// Package name for the generated SDK (e.g., "my-company-sdk" for npm, module path for Go)
 	PackageName string `json:"package-name"`
 
-	// Registry path to an existing spec (e.g., "my-namespace" or "org/workspace/namespace")
-	RegistryPath string `json:"registry-path"`
+	// Whether to initialize a git repository in the output directory
+	InitGit bool `json:"init-git"`
 
 	// Hidden flag for bypassing interactive prompts
 	SkipInteractive bool `json:"skip-interactive"`
@@ -81,7 +81,7 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 		flag.StringFlag{
 			Name:                       "schema",
 			Shorthand:                  "s",
-			Description:                "local filepath or URL for the OpenAPI schema",
+			Description:                "local filepath, URL, or registry reference for the OpenAPI schema (e.g., ./spec.yaml, https://..., namespace, org/workspace/namespace@tag)",
 			AutocompleteFileExtensions: charm.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
@@ -115,10 +115,9 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Shorthand:   "p",
 			Description: "package name for the generated SDK (e.g., \"my-company-sdk\" for npm, Go module path for Go)",
 		},
-		flag.StringFlag{
-			Name:        "registry-path",
-			Shorthand:   "r",
-			Description: "registry path to an existing spec (namespace or org/workspace/namespace)",
+		flag.BooleanFlag{
+			Name:        "init-git",
+			Description: "initialize a git repository in the output directory",
 		},
 		// Hidden flags for bypassing interactive prompts
 		flag.BooleanFlag{
@@ -201,9 +200,8 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.Defaults.PackageName = &flags.PackageName
 	}
 
-	if flags.RegistryPath != "" {
-		quickstartObj.Defaults.RegistryPath = &flags.RegistryPath
-	}
+	// Always set InitGit since it has a default value
+	quickstartObj.Defaults.InitGit = &flags.InitGit
 
 	nextState := prompts.SourceBase
 	for nextState != prompts.Complete {
@@ -636,11 +634,21 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 }
 
 func shouldInitGit(quickstart *prompts.Quickstart) bool {
-	initRepo := true
-	if quickstart.SkipInteractive {
-		return initRepo
+	// Check if --init-git flag was explicitly set
+	initGitExplicit := quickstart.Defaults.InitGit != nil && *quickstart.Defaults.InitGit
+
+	// If --init-git flag is present, init git without prompting
+	if initGitExplicit {
+		return true
 	}
 
+	// In non-interactive mode without --init-git flag, don't init git
+	if quickstart.SkipInteractive {
+		return false
+	}
+
+	// In interactive mode without --init-git flag, prompt the user
+	initRepo := true
 	prompt := charm.NewBranchPrompt(
 		"Do you want to initialize a new git repository?",
 		"Selecting 'Yes' will initialize a new git repository in the output directory",
