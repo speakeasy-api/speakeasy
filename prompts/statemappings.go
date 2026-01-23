@@ -34,6 +34,14 @@ type Defaults struct {
 	Template *string
 
 	TemplateData *shared.SchemaStoreItem
+
+	// SDK name in PascalCase (e.g., "MyCompanySDK")
+	// The corresponding CLI flag is --name
+	SDKName *string
+
+	// Package name for the generated SDK (e.g., "my-company-sdk" for npm, Go module path for Go)
+	// The corresponding CLI flag is --package-name
+	PackageName *string
 }
 
 // Define constants using iota

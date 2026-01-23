@@ -136,6 +136,12 @@ func getRemoteAuthenticationPrompts(fileLocation, authHeader *string) []*huh.Gro
 }
 
 func getSDKName(quickstart *Quickstart, placeholder string) error {
+	// If SDK name was provided via --name flag, use it directly
+	if quickstart.Defaults.SDKName != nil && *quickstart.Defaults.SDKName != "" {
+		quickstart.SDKName = *quickstart.Defaults.SDKName
+		return nil
+	}
+
 	if quickstart.SkipInteractive {
 		quickstart.SDKName = placeholder
 		return nil
@@ -186,9 +192,11 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	recentGenerations, err := remote.GetRecentWorkspaceGenerations(timeout)
 
 	hasTemplate := quickstart.Defaults.Template != nil && *quickstart.Defaults.Template != ""
+	hasSchemaPath := quickstart.Defaults.SchemaPath != nil && *quickstart.Defaults.SchemaPath != ""
 
-	// Retrieve recent namespaces and check if there are any available. If --from is provided, we will not check for recent generations.
-	hasRecentGenerations := !hasTemplate && err == nil && len(recentGenerations) > 0
+	// Retrieve recent namespaces and check if there are any available.
+	// If --from or --schema is provided, we will not check for recent generations.
+	hasRecentGenerations := !hasTemplate && !hasSchemaPath && err == nil && len(recentGenerations) > 0
 
 	// Determine if we should use a remote source. Defaults to true before the user
 	// has interacted with the form.
