@@ -177,20 +177,22 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	if os.Getenv("INPUT_ENABLE_SDK_CHANGELOG") == "true" {
 		// Old & new spec and other details are updated in RunSource method
 		log.From(ctx).Infof("Calculating changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target))
-		changelogContent, err = sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
-			OldSpecPath: w.SourceResults[t.Source].oldSpecPath,
-			NewSpecPath: w.SourceResults[t.Source].newSpecPath,
-			OutDir:      outDir,
-			Lang:        t.Target,
-			Verbose:     w.Verbose,
-			Target:      target,
+		result, changelogErr := sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
+			OldSpecPath:  w.SourceResults[t.Source].oldSpecPath,
+			NewSpecPath:  w.SourceResults[t.Source].newSpecPath,
+			OutDir:       outDir,
+			Lang:         t.Target,
+			Verbose:      w.Verbose,
+			Target:       target,
+			WorkflowStep: rootStep,
 		})
+		changelogContent = result.MarkdownContent
 		if changelogContent == "" {
 			log.From(ctx).Warnf("New Changelog Content was empty for %s SDK. As a result it will not appear in the PR description", utils.CapitalizeFirst(t.Target))
 		}
-		if err != nil {
+		if changelogErr != nil {
 			// Dont error out so that we don't block generation
-			log.From(ctx).Warnf("Error computing SDK changelog: %s", err.Error())
+			log.From(ctx).Warnf("Error computing SDK changelog: %s", changelogErr.Error())
 		}
 		log.From(ctx).Infof("Calculating changelog for SDK %s SDK succeeded", utils.CapitalizeFirst(t.Target))
 	} else {

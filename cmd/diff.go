@@ -184,7 +184,7 @@ func runDiff(ctx context.Context, flags DiffFlags) error {
 	if len(diff.Changes) == 0 {
 		logger.Infof("No SDK-level changes detected")
 	} else {
-		markdown := changes.ToMarkdown(diff)
+		markdown := changes.ToMarkdown(diff, changes.DetailLevelFull)
 		fmt.Println(markdown)
 	}
 
