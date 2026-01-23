@@ -1,9 +1,0 @@
-{
-  "name": "speakeasy",
-  "version": "0.1.0-alpha",
-  "description": "SDK generation and OpenAPI tooling with Speakeasy CLI",
-  "author": "Speakeasy",
-  "repository": "https://github.com/speakeasy-api/speakeasy",
-  "homepage": "https://speakeasy.com",
-  "keywords": ["sdk", "openapi", "api", "codegen", "typescript", "python", "go"]
-}
