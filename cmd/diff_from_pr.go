@@ -153,18 +153,29 @@ type prIdentifiers struct {
 	changesReportDigest string
 }
 
+// checkGHCLIAvailable checks if the GitHub CLI is installed
+func checkGHCLIAvailable() error {
+	_, err := exec.LookPath("gh")
+	if err != nil {
+		return fmt.Errorf("GitHub CLI (gh) is required for this command but was not found.\n\n" +
+			"Install it from: https://cli.github.com/\n\n" +
+			"Alternatively, use 'speakeasy diff registry' with explicit namespace and digests")
+	}
+	return nil
+}
+
 // extractIdentifiersFromPR extracts lint report and changes report digests from the PR body
 func extractIdentifiersFromPR(ctx context.Context, pr *parsedPRUrl) (*prIdentifiers, error) {
 	repoArg := fmt.Sprintf("%s/%s", pr.ghOrg, pr.ghRepo)
 
-	// Get the PR body
+	// Get the PR body using gh CLI
 	cmd := exec.CommandContext(ctx, "gh", "pr", "view", strconv.Itoa(pr.prNumber),
 		"--repo", repoArg,
 		"--json", "body",
 		"--jq", ".body")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get PR body: %w", err)
+		return nil, fmt.Errorf("failed to get PR body (ensure you are authenticated with 'gh auth login'): %w", err)
 	}
 
 	body := string(output)
@@ -417,6 +428,11 @@ func findPreviousRevisionDigest(ctx context.Context, currentEvent *shared.CliEve
 
 func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	logger := log.From(ctx)
+
+	// Check for gh CLI early
+	if err := checkGHCLIAvailable(); err != nil {
+		return err
+	}
 
 	// Parse PR URL
 	pr, err := parsePRUrl(flags.PRUrl)
