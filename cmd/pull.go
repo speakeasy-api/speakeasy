@@ -529,7 +529,7 @@ func getCurrentWorkingDirectory() string {
 }
 
 // runListSpecs lists all available specs/namespaces in the workspace
-func runListSpecs(ctx context.Context, format string) error {
+func runListSpecs(_ context.Context, format string) error {
 	namespaces, err := getNamespaces()
 	if err != nil {
 		return err
@@ -557,18 +557,18 @@ func runListSpecs(ctx context.Context, format string) error {
 		fmt.Println(string(jsonBytes))
 	default: // table format
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "NAME")
+		_, _ = fmt.Fprintln(w, "NAME")
 		for _, ns := range namespaces {
-			fmt.Fprintln(w, ns)
+			_, _ = fmt.Fprintln(w, ns)
 		}
-		w.Flush()
+		_ = w.Flush()
 	}
 
 	return nil
 }
 
 // runListTags lists all available tags for a specific spec/namespace
-func runListTags(ctx context.Context, spec, format string) error {
+func runListTags(_ context.Context, spec, format string) error {
 	tags, err := getTags(spec)
 	if err != nil {
 		return err
@@ -596,11 +596,11 @@ func runListTags(ctx context.Context, spec, format string) error {
 		fmt.Println(string(jsonBytes))
 	default: // table format
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "TAG")
+		_, _ = fmt.Fprintln(w, "TAG")
 		for _, tag := range tags {
-			fmt.Fprintln(w, tag)
+			_, _ = fmt.Fprintln(w, tag)
 		}
-		w.Flush()
+		_ = w.Flush()
 	}
 
 	return nil
