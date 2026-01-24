@@ -17,7 +17,12 @@ import (
 
 const diffLong = `# Diff
 
-Compare OpenAPI spec revisions and show SDK-level changes.
+Compare OpenAPI spec revisions and show **SDK-level changes** - how the generated
+SDK methods, models, and types would differ between two spec versions.
+
+This is different from ` + "`speakeasy openapi diff`" + ` which shows raw OpenAPI schema
+changes (paths, operations, properties). Use this command when you want to understand
+the impact on your generated SDK code.
 
 This command supports three modes:
 
