@@ -25,7 +25,6 @@ type FromPRFlags struct {
 	PRUrl     string `json:"pr-url"`
 	Target    string `json:"target"`
 	OutputDir string `json:"output-dir"`
-	Lang      string `json:"lang"`
 	NoDiff    bool   `json:"no-diff"`
 }
 
@@ -62,12 +61,6 @@ var diffFromPRCmd = &model.ExecutableCommand[FromPRFlags]{
 			Shorthand:    "o",
 			Description:  "Directory to download specs to",
 			DefaultValue: ".speakeasy/diff",
-		},
-		flag.StringFlag{
-			Name:         "lang",
-			Shorthand:    "l",
-			Description:  "Target language for SDK diff context",
-			DefaultValue: "go",
 		},
 		flag.BooleanFlag{
 			Name:        "no-diff",
@@ -478,17 +471,17 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 		return fmt.Errorf("could not determine organization or workspace from authenticated context")
 	}
 
+	// Use the target language from the event
+	lang := match.targetLang
+	if lang == "" {
+		lang = "go" // fallback if not available
+	}
+
 	logger.Infof("Namespace: %s", *event.SourceNamespaceName)
 	logger.Infof("Old spec: %s", truncateDigest(oldDigest))
 	logger.Infof("New spec: %s", truncateDigest(*event.SourceRevisionDigest))
+	logger.Infof("Language: %s", lang)
 	logger.Infof("")
-
-	// Use the target language from the event if no override specified
-	lang := flags.Lang
-	if lang == "go" && match.targetLang != "" && match.targetLang != "go" {
-		// Default to the target's actual language if user didn't explicitly set one
-		lang = match.targetLang
-	}
 
 	return executeDiff(ctx, DiffParams{
 		Org:       org,
