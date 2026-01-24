@@ -47,6 +47,15 @@ type QuickstartFlags struct {
 	// If the quickstart should be based on a pre-existing template (hosted in the Speakeasy Registry)
 	From string `json:"from"`
 
+	// SDK name (e.g., "MyCompanySDK") - sets the SDK class name
+	Name string `json:"name"`
+
+	// Package name for the generated SDK (e.g., "my-company-sdk" for npm, module path for Go)
+	PackageName string `json:"package-name"`
+
+	// Whether to initialize a git repository in the output directory
+	InitGit bool `json:"init-git"`
+
 	// Hidden flag for bypassing interactive prompts
 	SkipInteractive bool `json:"skip-interactive"`
 
@@ -72,7 +81,7 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 		flag.StringFlag{
 			Name:                       "schema",
 			Shorthand:                  "s",
-			Description:                "local filepath or URL for the OpenAPI schema",
+			Description:                "local filepath, URL, or registry reference for the OpenAPI schema (e.g., ./spec.yaml, https://..., namespace, org/workspace/namespace@tag)",
 			AutocompleteFileExtensions: charm.OpenAPIFileExtensions,
 		},
 		flag.StringFlag{
@@ -95,6 +104,20 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Description:   "how to display output (available options: [summary, console, mermaid])",
 			DefaultValue:  "summary",
 			AllowedValues: []string{"summary", "console", "mermaid"},
+		},
+		flag.StringFlag{
+			Name:        "name",
+			Shorthand:   "n",
+			Description: "SDK name in PascalCase (e.g., \"MyCompanySDK\"). Users access SDK methods with myCompanySDK.DoThing()",
+		},
+		flag.StringFlag{
+			Name:        "package-name",
+			Shorthand:   "p",
+			Description: "package name for the generated SDK (e.g., \"my-company-sdk\" for npm, Go module path for Go)",
+		},
+		flag.BooleanFlag{
+			Name:        "init-git",
+			Description: "initialize a git repository in the output directory",
 		},
 		// Hidden flags for bypassing interactive prompts
 		flag.BooleanFlag{
@@ -122,7 +145,7 @@ func quickstartNonInteractive(ctx context.Context, flags QuickstartFlags) error 
 }
 
 func quickstartInteractive(ctx context.Context, flags QuickstartFlags) error {
-	flags.SkipInteractive = false
+	// Don't override SkipInteractive if the user explicitly set it via --skip-interactive flag
 	return quickstartCore(ctx, flags)
 }
 
@@ -168,6 +191,17 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		quickstartObj.Defaults.Template = &flags.From
 		quickstartObj.IsUsingTemplate = true
 	}
+
+	if flags.Name != "" {
+		quickstartObj.Defaults.SDKName = &flags.Name
+	}
+
+	if flags.PackageName != "" {
+		quickstartObj.Defaults.PackageName = &flags.PackageName
+	}
+
+	// Always set InitGit since it has a default value
+	quickstartObj.Defaults.InitGit = &flags.InitGit
 
 	nextState := prompts.SourceBase
 	for nextState != prompts.Complete {
@@ -220,7 +254,12 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		description = "We recommend a git repo for each MCP Server. To use the current directory, leave empty."
 	}
 
-	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive {
+	// Skip the output directory prompt if:
+	// - The current directory is empty, OR
+	// - Running in non-interactive mode (SkipInteractive), OR
+	// - The --out-dir flag was explicitly provided
+	outDirProvided := flags.OutDir != ""
+	if !currentDirectoryEmpty() && !quickstartObj.SkipInteractive && !outDirProvided {
 		_, err = charm.NewForm(huh.NewForm(huh.NewGroup(charm.NewInput(&promptedDir).
 			Title("What directory should the "+targetType+" files be written to?").
 			Description(description+"\n").
@@ -236,7 +275,7 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 			}))),
 			charm.WithTitle("Pick an output directory for your newly created files.")).
 			ExecuteForm()
-	} else {
+	} else if !outDirProvided {
 		promptedDir = "."
 	}
 
@@ -595,11 +634,21 @@ func setDefaultOutDir(workingDir string, sdkClassName string, targetType string)
 }
 
 func shouldInitGit(quickstart *prompts.Quickstart) bool {
-	initRepo := true
-	if quickstart.SkipInteractive {
-		return initRepo
+	// Check if --init-git flag was explicitly set
+	initGitExplicit := quickstart.Defaults.InitGit != nil && *quickstart.Defaults.InitGit
+
+	// If --init-git flag is present, init git without prompting
+	if initGitExplicit {
+		return true
 	}
 
+	// In non-interactive mode without --init-git flag, don't init git
+	if quickstart.SkipInteractive {
+		return false
+	}
+
+	// In interactive mode without --init-git flag, prompt the user
+	initRepo := true
 	prompt := charm.NewBranchPrompt(
 		"Do you want to initialize a new git repository?",
 		"Selecting 'Yes' will initialize a new git repository in the output directory",
