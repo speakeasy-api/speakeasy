@@ -3,6 +3,8 @@ package sdkchangelog
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime/debug"
 
 	changes "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
@@ -79,6 +81,22 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 	// Compact markdown for inline PR description
 	compactMarkdown := changes.ToMarkdown(diff, changes.DetailLevelCompact)
 
+	// Generate HTML report
+	htmlReport := changes.ToHTML(diff)
+
+	// Write HTML report to .speakeasy/logs/changes.html for local debugging
+	logsDir := filepath.Join(changelogRequirements.OutDir, ".speakeasy", "logs")
+	if err := os.MkdirAll(logsDir, 0o755); err != nil {
+		log.From(ctx).Warnf("Failed to create logs directory: %s", err.Error())
+	} else {
+		changesHTMLPath := filepath.Join(logsDir, "changes.html")
+		if err := os.WriteFile(changesHTMLPath, htmlReport, 0o644); err != nil {
+			log.From(ctx).Warnf("Failed to write SDK changelog HTML: %s", err.Error())
+		} else {
+			log.From(ctx).Infof("SDK changelog written to %s", changesHTMLPath)
+		}
+	}
+
 	// Upload full HTML report to registry
 	var reportURL string
 	if registry.IsRegistryEnabled(ctx) {
@@ -87,7 +105,6 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 			uploadStep = changelogStep.NewSubstep("Uploading SDK Changelog Report")
 		}
 
-		htmlReport := changes.ToHTML(diff)
 		report, uploadErr := reports.UploadReport(ctx, htmlReport, shared.TypeChanges)
 		if uploadErr == nil {
 			reportURL = report.URL
