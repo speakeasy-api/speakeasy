@@ -138,14 +138,18 @@ type matchingEventInfo struct {
 	event                shared.CliEvent
 	targetName           string
 	targetLang           string
-	previousSourceDigest string // from PR's workflow.lock diff (most reliable)
+	previousSourceDigest string // from PR's workflow.lock diff (OLD digest)
+	newSourceDigest      string // from PR's workflow.lock diff (NEW digest)
+	sourceNamespace      string // from PR's workflow.lock diff
 }
 
 // prIdentifiers contains identifiers extracted from a PR that can be used to find events
 type prIdentifiers struct {
-	lintReportDigest       string
-	changesReportDigest    string
-	previousSourceDigest   string // extracted from workflow.lock diff
+	lintReportDigest     string
+	changesReportDigest  string
+	previousSourceDigest string // extracted from workflow.lock diff (OLD digest)
+	newSourceDigest      string // extracted from workflow.lock diff (NEW digest)
+	sourceNamespace      string // extracted from workflow.lock diff
 }
 
 // checkGHCLIAvailable checks if the GitHub CLI is installed
@@ -194,33 +198,82 @@ func extractIdentifiersFromPR(ctx context.Context, pr *parsedPRUrl) (*prIdentifi
 		return nil, fmt.Errorf("could not find Speakeasy report URLs in PR body")
 	}
 
-	// Try to extract the previous sourceRevisionDigest from the PR's workflow.lock diff
-	// This is the most reliable source of truth for what the PR is changing FROM
+	// Extract source revision digests from the PR's workflow.lock diff
+	// This is the most reliable source of truth for what the PR is changing
 	// (reflects actual repo state, not intermediate CI runs)
-	ids.previousSourceDigest = extractPreviousDigestFromPRDiff(ctx, pr)
+	digests := extractDigestsFromPRDiff(ctx, pr)
+	ids.previousSourceDigest = digests.previousDigest
+	ids.newSourceDigest = digests.newDigest
+	ids.sourceNamespace = digests.namespace
 
 	return ids, nil
 }
 
-// extractPreviousDigestFromPRDiff gets the previous sourceRevisionDigest from the PR's workflow.lock diff
-func extractPreviousDigestFromPRDiff(ctx context.Context, pr *parsedPRUrl) string {
+// workflowLockDigests contains source revision digests extracted from workflow.lock diff
+type workflowLockDigests struct {
+	previousDigest string // The old sourceRevisionDigest (removed line)
+	newDigest      string // The new sourceRevisionDigest (added line)
+	namespace      string // The sourceNamespace from the targets section
+}
+
+// extractDigestsFromPRDiff gets source revision digests from the PR's workflow.lock diff
+func extractDigestsFromPRDiff(ctx context.Context, pr *parsedPRUrl) workflowLockDigests {
+	result := workflowLockDigests{}
 	repoArg := fmt.Sprintf("%s/%s", pr.ghOrg, pr.ghRepo)
 
-	// Get the PR diff
+	// Try gh pr diff first
+	var patch string
 	cmd := exec.CommandContext(ctx, "gh", "pr", "diff", strconv.Itoa(pr.prNumber), "--repo", repoArg)
+	output, err := cmd.Output()
+	if err == nil {
+		patch = string(output)
+	} else {
+		// Fallback to API for large PRs (gh pr diff fails with 300+ files)
+		patch = getWorkflowLockPatchFromAPI(ctx, pr)
+	}
+
+	if patch == "" {
+		return result
+	}
+
+	// Look for removed lines containing sourceRevisionDigest (the OLD digest)
+	// Format: -        sourceRevisionDigest: sha256:abc123...
+	prevPattern := regexp.MustCompile(`(?m)^-\s+sourceRevisionDigest:\s+(sha256:[a-f0-9]+)`)
+	if matches := prevPattern.FindStringSubmatch(patch); len(matches) > 1 {
+		result.previousDigest = matches[1]
+	}
+
+	// Look for added lines containing sourceRevisionDigest (the NEW digest)
+	// Format: +        sourceRevisionDigest: sha256:abc123...
+	newPattern := regexp.MustCompile(`(?m)^\+\s+sourceRevisionDigest:\s+(sha256:[a-f0-9]+)`)
+	if matches := newPattern.FindStringSubmatch(patch); len(matches) > 1 {
+		result.newDigest = matches[1]
+	}
+
+	// Look for sourceNamespace in the targets section (can be on added or context lines)
+	// Format:         sourceNamespace: my-namespace
+	nsPattern := regexp.MustCompile(`(?m)^[\s+]\s*sourceNamespace:\s+(\S+)`)
+	if matches := nsPattern.FindStringSubmatch(patch); len(matches) > 1 {
+		result.namespace = matches[1]
+	}
+
+	return result
+}
+
+// getWorkflowLockPatchFromAPI retrieves the workflow.lock patch using the GitHub API
+func getWorkflowLockPatchFromAPI(ctx context.Context, pr *parsedPRUrl) string {
+	repoArg := fmt.Sprintf("%s/%s", pr.ghOrg, pr.ghRepo)
+	endpoint := fmt.Sprintf("repos/%s/pulls/%d/files", repoArg, pr.prNumber)
+
+	// Use gh api with jq to extract just the workflow.lock patch
+	cmd := exec.CommandContext(ctx, "gh", "api", endpoint,
+		"--jq", `.[] | select(.filename == ".speakeasy/workflow.lock") | .patch`)
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
 	}
 
-	// Look for removed lines containing sourceRevisionDigest
-	// Format: -        sourceRevisionDigest: sha256:abc123...
-	pattern := regexp.MustCompile(`(?m)^-\s+sourceRevisionDigest:\s+(sha256:[a-f0-9]+)`)
-	if matches := pattern.FindStringSubmatch(string(output)); len(matches) > 1 {
-		return matches[1]
-	}
-
-	return ""
+	return string(output)
 }
 
 // findGenerationEventByPR searches for generation events matching a PR URL
@@ -297,6 +350,8 @@ func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl, verbose bool)
 		targetName:           targetLang,
 		targetLang:           targetLang,
 		previousSourceDigest: prIds.previousSourceDigest,
+		newSourceDigest:      prIds.newSourceDigest,
+		sourceNamespace:      prIds.sourceNamespace,
 	}, nil
 }
 
@@ -516,9 +571,31 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 
 	logger.Infof("Found generation event for target: %s", match.targetName)
 
-	// Validate required fields
-	if event.SourceNamespaceName == nil || event.SourceRevisionDigest == nil {
-		return fmt.Errorf("generation event missing source spec information. The generation may have failed before uploading specs")
+	// Determine namespace - prefer event, fallback to PR diff
+	namespace := ""
+	if event.SourceNamespaceName != nil {
+		namespace = *event.SourceNamespaceName
+	} else if match.sourceNamespace != "" {
+		namespace = match.sourceNamespace
+		if flags.Verbose {
+			logger.Infof("Using namespace from PR's workflow.lock diff: %s", namespace)
+		}
+	}
+
+	// Determine new digest - prefer event, fallback to PR diff
+	newDigest := ""
+	if event.SourceRevisionDigest != nil {
+		newDigest = *event.SourceRevisionDigest
+	} else if match.newSourceDigest != "" {
+		newDigest = match.newSourceDigest
+		if flags.Verbose {
+			logger.Infof("Using new digest from PR's workflow.lock diff")
+		}
+	}
+
+	// Validate we have required info
+	if namespace == "" || newDigest == "" {
+		return fmt.Errorf("could not determine source namespace or new digest from event or PR diff. The generation may have failed before uploading specs")
 	}
 
 	// Get the old digest:
@@ -559,18 +636,18 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 		lang = "go" // fallback if not available
 	}
 
-	logger.Infof("Namespace: %s", *event.SourceNamespaceName)
+	logger.Infof("Namespace: %s", namespace)
 	logger.Infof("Old spec: %s", truncateDigest(oldDigest))
-	logger.Infof("New spec: %s", truncateDigest(*event.SourceRevisionDigest))
+	logger.Infof("New spec: %s", truncateDigest(newDigest))
 	logger.Infof("Language: %s", lang)
 	logger.Infof("")
 
 	return executeDiff(ctx, DiffParams{
 		Org:                   org,
 		Workspace:             workspace,
-		Namespace:             *event.SourceNamespaceName,
+		Namespace:             namespace,
 		OldDigest:             oldDigest,
-		NewDigest:             *event.SourceRevisionDigest,
+		NewDigest:             newDigest,
 		OutputDir:             flags.OutputDir,
 		Lang:                  lang,
 		FormatToYAML:          flags.FormatToYAML,
