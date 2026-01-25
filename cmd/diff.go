@@ -193,17 +193,17 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	printDiffSeparator(logger, "")
 
 	logger.Infof("")
+	logger.Infof("Registry:")
+	logger.Infof("  Old: https://%s", oldLocation)
+	logger.Infof("  New: https://%s", newLocation)
+
+	logger.Infof("")
 	logger.Infof("Output files:")
 	logger.Infof("  %s", oldSpecPath)
 	logger.Infof("  %s", newSpecPath)
 	logger.Infof("  %s", changesMarkdownPath)
 	logger.Infof("  %s", changesCompactPath)
 	logger.Infof("  %s", changesHTMLPath)
-
-	logger.Infof("")
-	logger.Infof("Registry:")
-	logger.Infof("  Old: %s", oldLocation)
-	logger.Infof("  New: %s", newLocation)
 
 	return nil
 }
