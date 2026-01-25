@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	speakeasyclientsdkgo "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
@@ -23,7 +24,6 @@ import (
 // FromPRFlags for the from-pr subcommand
 type FromPRFlags struct {
 	PRUrl        string `json:"pr-url"`
-	Target       string `json:"target"`
 	OutputDir    string `json:"output-dir"`
 	NoDiff       bool   `json:"no-diff"`
 	FormatToYAML bool   `json:"format-to-yaml"`
@@ -39,9 +39,6 @@ and shows the SDK-level changes between the previous and new specs.
 Example usage:
 ` + "```bash" + `
 speakeasy diff from-pr https://github.com/org/sdk-repo/pull/123
-
-# For monorepos with multiple targets, specify which target
-speakeasy diff from-pr https://github.com/org/mono-sdk/pull/456 --target typescript
 ` + "```"
 
 var diffFromPRCmd = &model.ExecutableCommand[FromPRFlags]{
@@ -52,11 +49,6 @@ var diffFromPRCmd = &model.ExecutableCommand[FromPRFlags]{
 	RequiresAuth: true,
 	PreRun:       fromPRPreRun,
 	Flags: []flag.Flag{
-		flag.StringFlag{
-			Name:        "target",
-			Shorthand:   "t",
-			Description: "Filter by target name when multiple targets exist in the PR (for monorepos)",
-		},
 		flag.StringFlag{
 			Name:         "output-dir",
 			Shorthand:    "o",
@@ -202,172 +194,188 @@ func extractIdentifiersFromPR(ctx context.Context, pr *parsedPRUrl) (*prIdentifi
 }
 
 // findGenerationEventByPR searches for generation events matching a PR URL
-func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl, targetFilter string) (*matchingEventInfo, error) {
+func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl) (*matchingEventInfo, error) {
 	logger := log.From(ctx)
 
+	// Extract lint report digest from PR body
+	prIds, err := extractIdentifiersFromPR(ctx, pr)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract Speakeasy identifiers from PR: %w", err)
+	}
+
+	if prIds.lintReportDigest == "" {
+		return nil, fmt.Errorf("no lint report digest found in PR body - this PR may not have been created by Speakeasy")
+	}
+
+	logger.Infof("Found lint report digest: %s", prIds.lintReportDigest)
+
+	// Search directly by lint report digest
 	client, err := core.GetSDKFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get SDK from context: %w", err)
 	}
 
-	// Get all targets in the workspace
-	logger.Infof("Searching for targets in repository %s/%s...", pr.ghOrg, pr.ghRepo)
+	logger.Infof("Searching for generation event...")
 
-	targetsRes, err := client.Events.GetTargets(ctx, operations.GetWorkspaceTargetsRequest{})
+	eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
+		LintReportDigest: &prIds.lintReportDigest,
+		InteractionType:  shared.InteractionTypeTargetGenerate.ToPointer(),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get workspace targets: %w", err)
+		return nil, fmt.Errorf("failed to search events: %w", err)
 	}
 
-	if targetsRes.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code %d when fetching workspace targets", targetsRes.StatusCode)
+	if eventsRes.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code %d when searching events", eventsRes.StatusCode)
 	}
 
-	// Filter for targets matching the GitHub org/repo
-	var matchingTargets []shared.TargetSDK
-	for _, target := range targetsRes.TargetSDKList {
-		if target.GhActionOrganization != nil && target.GhActionRepository != nil &&
-			strings.EqualFold(*target.GhActionOrganization, pr.ghOrg) &&
-			strings.EqualFold(*target.GhActionRepository, pr.ghRepo) {
-			matchingTargets = append(matchingTargets, target)
+	if len(eventsRes.CliEventBatch) == 0 {
+		return nil, fmt.Errorf("no generation event found for lint report digest %s", prIds.lintReportDigest)
+	}
+
+	event := eventsRes.CliEventBatch[0]
+
+	// Print the main event details
+	logger.Infof("")
+	logger.Infof("=== TARGET_GENERATE Event ===")
+	printEventDetails(logger, &event)
+
+	// Search for other events with the same ExecutionID
+	if event.ExecutionID != "" {
+		logger.Infof("")
+		logger.Infof("=== Connected Events (ExecutionID: %s) ===", event.ExecutionID)
+		findAndPrintConnectedEvents(ctx, client, &event, logger)
+	}
+
+	// If source spec info is missing, try to find it from connected events
+	if (event.SourceNamespaceName == nil || event.SourceRevisionDigest == nil) && event.ExecutionID != "" {
+		enrichedEvent := enrichEventFromConnectedEvents(ctx, client, &event)
+		if enrichedEvent != nil {
+			event = *enrichedEvent
 		}
 	}
 
-	if len(matchingTargets) == 0 {
-		return nil, fmt.Errorf("no SDK targets found for repository %s/%s in current workspace", pr.ghOrg, pr.ghRepo)
+	// Get target info from the event itself
+	targetLang := ""
+	if event.GenerateTarget != nil {
+		targetLang = *event.GenerateTarget
 	}
 
-	logger.Infof("Found %d target(s) for this repository", len(matchingTargets))
+	return &matchingEventInfo{
+		event:      event,
+		targetName: targetLang,
+		targetLang: targetLang,
+	}, nil
+}
 
-	// Try to extract identifiers from PR body
-	var prIds *prIdentifiers
-	prIds, err = extractIdentifiersFromPR(ctx, pr)
-	if err != nil {
-		logger.Warnf("Could not extract identifiers from PR: %v", err)
-	} else if prIds.lintReportDigest != "" {
-		logger.Infof("Found lint report digest: %s", prIds.lintReportDigest)
+// printEventDetails prints relevant fields from a CLI event
+func printEventDetails(logger log.Logger, event *shared.CliEvent) {
+	logger.Infof("  ID: %s", event.ID)
+	logger.Infof("  InteractionType: %s", event.InteractionType)
+	logger.Infof("  ExecutionID: %s", event.ExecutionID)
+	if event.GenerateTarget != nil {
+		logger.Infof("  GenerateTarget: %s", *event.GenerateTarget)
+	}
+	if event.GenerateGenLockID != nil {
+		logger.Infof("  GenerateGenLockID: %s", *event.GenerateGenLockID)
+	}
+	if event.SourceNamespaceName != nil {
+		logger.Infof("  SourceNamespaceName: %s", *event.SourceNamespaceName)
+	} else {
+		logger.Infof("  SourceNamespaceName: <nil>")
+	}
+	if event.SourceRevisionDigest != nil {
+		logger.Infof("  SourceRevisionDigest: %s", *event.SourceRevisionDigest)
+	} else {
+		logger.Infof("  SourceRevisionDigest: <nil>")
+	}
+	if event.GenerateGenLockPreRevisionDigest != nil {
+		logger.Infof("  GenerateGenLockPreRevisionDigest: %s", *event.GenerateGenLockPreRevisionDigest)
+	} else {
+		logger.Infof("  GenerateGenLockPreRevisionDigest: <nil>")
+	}
+	if event.LintReportDigest != nil {
+		logger.Infof("  LintReportDigest: %s", *event.LintReportDigest)
+	}
+	if event.GhPullRequest != nil {
+		logger.Infof("  GhPullRequest: %s", *event.GhPullRequest)
+	}
+}
+
+// findAndPrintConnectedEvents searches for and prints events with the same ExecutionID
+func findAndPrintConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent, logger log.Logger) {
+	if event.ExecutionID == "" {
+		return
 	}
 
-	// PR URL matching pattern - the stored URL may or may not have trailing content
-	prUrlPattern := regexp.MustCompile(fmt.Sprintf(`^%s(/.*)?$`, regexp.QuoteMeta(pr.fullUrl)))
+	execID := event.ExecutionID
 
-	// If we have a lint report digest, try to search directly by it
-	if prIds != nil && prIds.lintReportDigest != "" {
-		logger.Infof("Searching for event by lint report digest...")
+	// Search for all interaction types
+	interactionTypes := []shared.InteractionType{
+		shared.InteractionTypeCiExec,
+		shared.InteractionTypeCliExec,
+		shared.InteractionTypeTargetGenerate,
+	}
 
+	for _, interactionType := range interactionTypes {
 		eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
-			LintReportDigest: &prIds.lintReportDigest,
-			InteractionType:  shared.InteractionTypeTargetGenerate.ToPointer(),
+			ExecutionID:     &execID,
+			InteractionType: interactionType.ToPointer(),
 		})
-		if err == nil && eventsRes.StatusCode == http.StatusOK && len(eventsRes.CliEventBatch) > 0 {
-			event := eventsRes.CliEventBatch[0]
-			// Find the matching target
-			for _, target := range matchingTargets {
-				if event.GenerateGenLockID != nil && *event.GenerateGenLockID == target.GenerateGenLockID {
-					targetName := target.GenerateTarget
-					if target.GenerateTargetName != nil && *target.GenerateTargetName != "" {
-						targetName = *target.GenerateTargetName
-					}
-					return &matchingEventInfo{
-						event:      event,
-						targetName: targetName,
-						targetLang: target.GenerateTarget,
-					}, nil
-				}
-			}
-			// If we found an event but couldn't match to a target, still return it
-			targetLang := ""
-			if event.GenerateTarget != nil {
-				targetLang = *event.GenerateTarget
-			}
-			return &matchingEventInfo{
-				event:      event,
-				targetName: targetLang,
-				targetLang: targetLang,
-			}, nil
-		}
-	}
-
-	// Fall back to searching events per target
-	var matchingEvents []matchingEventInfo
-	limit := int64(100) // Check more events
-
-	for _, target := range matchingTargets {
-		// Apply target filter if specified (for monorepos)
-		if targetFilter != "" {
-			targetName := target.GenerateTarget
-			if target.GenerateTargetName != nil && *target.GenerateTargetName != "" {
-				targetName = *target.GenerateTargetName
-			}
-			if !strings.EqualFold(targetName, targetFilter) && !strings.EqualFold(target.GenerateTarget, targetFilter) {
-				continue
-			}
-		}
-
-		genLockID := target.GenerateGenLockID
-
-		eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
-			GenerateGenLockID: &genLockID,
-			InteractionType:   shared.InteractionTypeTargetGenerate.ToPointer(),
-			Limit:             &limit,
-		})
-		if err != nil {
-			logger.Warnf("Failed to search events for target %s: %v", target.GenerateTarget, err)
+		if err != nil || eventsRes.StatusCode != http.StatusOK {
 			continue
 		}
 
-		if eventsRes.StatusCode != http.StatusOK {
-			logger.Warnf("Unexpected status %d when searching events for target %s", eventsRes.StatusCode, target.GenerateTarget)
+		for _, connectedEvent := range eventsRes.CliEventBatch {
+			if connectedEvent.ID == event.ID {
+				continue // Skip the original event
+			}
+			logger.Infof("")
+			logger.Infof("--- %s Event ---", interactionType)
+			printEventDetails(logger, &connectedEvent)
+		}
+	}
+}
+
+// enrichEventFromConnectedEvents searches for CI_EXEC or CLI_EXEC events with the same execution ID
+// and copies source spec info if found
+func enrichEventFromConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent) *shared.CliEvent {
+	if event.ExecutionID == "" {
+		return nil
+	}
+
+	execID := event.ExecutionID
+
+	// Search for CI_EXEC events with same execution ID
+	for _, interactionType := range []shared.InteractionType{shared.InteractionTypeCiExec, shared.InteractionTypeCliExec, shared.InteractionTypeTargetGenerate} {
+		eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
+			ExecutionID:     &execID,
+			InteractionType: interactionType.ToPointer(),
+		})
+		if err != nil || eventsRes.StatusCode != http.StatusOK {
 			continue
 		}
 
-		// Look for events matching the PR URL or lint report digest
-		for _, event := range eventsRes.CliEventBatch {
-			matched := false
-
-			// Match by PR URL
-			if event.GhPullRequest != nil && prUrlPattern.MatchString(*event.GhPullRequest) {
-				matched = true
+		for _, connectedEvent := range eventsRes.CliEventBatch {
+			// Copy source spec info if available
+			if connectedEvent.SourceNamespaceName != nil && event.SourceNamespaceName == nil {
+				event.SourceNamespaceName = connectedEvent.SourceNamespaceName
+			}
+			if connectedEvent.SourceRevisionDigest != nil && event.SourceRevisionDigest == nil {
+				event.SourceRevisionDigest = connectedEvent.SourceRevisionDigest
+			}
+			if connectedEvent.GenerateGenLockPreRevisionDigest != nil && event.GenerateGenLockPreRevisionDigest == nil {
+				event.GenerateGenLockPreRevisionDigest = connectedEvent.GenerateGenLockPreRevisionDigest
 			}
 
-			// Match by lint report digest
-			if !matched && prIds != nil && prIds.lintReportDigest != "" &&
-				event.LintReportDigest != nil && *event.LintReportDigest == prIds.lintReportDigest {
-				matched = true
-			}
-
-			if matched {
-				targetName := target.GenerateTarget
-				if target.GenerateTargetName != nil && *target.GenerateTargetName != "" {
-					targetName = *target.GenerateTargetName
-				}
-				matchingEvents = append(matchingEvents, matchingEventInfo{
-					event:      event,
-					targetName: targetName,
-					targetLang: target.GenerateTarget,
-				})
-				break // Found match for this target, move to next
+			// If we found what we need, return early
+			if event.SourceNamespaceName != nil && event.SourceRevisionDigest != nil {
+				return event
 			}
 		}
 	}
 
-	if len(matchingEvents) == 0 {
-		if targetFilter != "" {
-			return nil, fmt.Errorf("no generation event found for PR %s with target '%s'. The PR may not have been created by Speakeasy, or the target name may be incorrect", pr.fullUrl, targetFilter)
-		}
-		return nil, fmt.Errorf("no generation event found for PR %s. The PR may not have been created by Speakeasy", pr.fullUrl)
-	}
-
-	// If multiple events found (monorepo scenario), need to disambiguate
-	if len(matchingEvents) > 1 {
-		// List the targets found
-		var targetNames []string
-		for _, m := range matchingEvents {
-			targetNames = append(targetNames, fmt.Sprintf("%s (%s)", m.targetName, m.targetLang))
-		}
-		return nil, fmt.Errorf("multiple targets found for this PR (monorepo detected). Please specify which target using --target flag.\nAvailable targets: %s", strings.Join(targetNames, ", "))
-	}
-
-	return &matchingEvents[0], nil
+	return event
 }
 
 // findPreviousRevisionDigest looks up the previous generation event for this target
@@ -442,7 +450,7 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	logger.Infof("Looking up PR: %s", pr.fullUrl)
 
 	// Find matching event
-	match, err := findGenerationEventByPR(ctx, pr, flags.Target)
+	match, err := findGenerationEventByPR(ctx, pr)
 	if err != nil {
 		return err
 	}
