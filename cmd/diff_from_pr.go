@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	speakeasyclientsdkgo "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
@@ -20,6 +21,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 // FromPRFlags for the from-pr subcommand
@@ -28,6 +30,7 @@ type FromPRFlags struct {
 	OutputDir    string `json:"output-dir"`
 	NoDiff       bool   `json:"no-diff"`
 	FormatToYAML bool   `json:"format-to-yaml"`
+	Verbose      bool   `json:"verbose"`
 }
 
 const diffFromPRLong = `# Diff From PR
@@ -64,6 +67,11 @@ var diffFromPRCmd = &model.ExecutableCommand[FromPRFlags]{
 			Name:         "format-to-yaml",
 			Description:  "Pre-format specs to YAML before diffing (helps with consistent output)",
 			DefaultValue: true,
+		},
+		flag.BooleanFlag{
+			Name:        "verbose",
+			Shorthand:   "v",
+			Description: "Show detailed event information during lookup",
 		},
 	},
 }
@@ -195,7 +203,7 @@ func extractIdentifiersFromPR(ctx context.Context, pr *parsedPRUrl) (*prIdentifi
 }
 
 // findGenerationEventByPR searches for generation events matching a PR URL
-func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl) (*matchingEventInfo, error) {
+func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl, verbose bool) (*matchingEventInfo, error) {
 	logger := log.From(ctx)
 
 	// Extract lint report digest from PR body
@@ -236,25 +244,31 @@ func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl) (*matchingEve
 
 	event := eventsRes.CliEventBatch[0]
 
-	// Print the main event details
-	logger.Infof("")
-	logger.Infof("=== TARGET_GENERATE Event ===")
-	printEventDetails(logger, &event)
-
-	// If source spec info is missing, search connected events to find it
-	if (event.SourceNamespaceName == nil || event.SourceRevisionDigest == nil) && event.ExecutionID != "" {
-		logger.Infof("")
-		logger.Infof("=== Connected Events (ExecutionID: %s) ===", event.ExecutionID)
-		enrichedEvent := findAndEnrichFromConnectedEvents(ctx, client, &event, logger)
-		if enrichedEvent != nil {
-			event = *enrichedEvent
-		}
-	}
-
-	// Get target info from the event itself
+	// Get target info from the original event BEFORE enrichment
 	targetLang := ""
 	if event.GenerateTarget != nil {
 		targetLang = *event.GenerateTarget
+	}
+
+	// Print the main event details in verbose mode
+	if verbose {
+		logger.Infof("")
+		logger.Infof("=== TARGET_GENERATE Event ===")
+		printEventDetails(logger, &event)
+	}
+
+	// If source spec info or prev digest is missing, search connected events to find it
+	missingSourceInfo := event.SourceNamespaceName == nil || event.SourceRevisionDigest == nil
+	missingPrevDigest := event.OpenapiDiffBaseSourceRevisionDigest == nil && event.GenerateGenLockPreRevisionDigest == nil
+	if (missingSourceInfo || missingPrevDigest) && event.ExecutionID != "" {
+		if verbose {
+			logger.Infof("")
+			logger.Infof("=== Connected Events (ExecutionID: %s) ===", event.ExecutionID)
+		}
+		enrichedEvent := findAndEnrichFromConnectedEvents(ctx, client, &event, logger, verbose)
+		if enrichedEvent != nil {
+			event = *enrichedEvent
+		}
 	}
 
 	return &matchingEventInfo{
@@ -290,11 +304,67 @@ func printEventDetails(logger log.Logger, event *shared.CliEvent) {
 	} else {
 		logger.Infof("  GenerateGenLockPreRevisionDigest: <nil>")
 	}
+	if event.OpenapiDiffBaseSourceRevisionDigest != nil {
+		logger.Infof("  OpenapiDiffBaseSourceRevisionDigest: %s", *event.OpenapiDiffBaseSourceRevisionDigest)
+	} else {
+		logger.Infof("  OpenapiDiffBaseSourceRevisionDigest: <nil>")
+	}
+
+	// Check if WorkflowLockPreRaw and WorkflowLockPostRaw are the same (indicates bug)
+	if event.WorkflowLockPreRaw != nil && event.WorkflowLockPostRaw != nil {
+		if *event.WorkflowLockPreRaw == *event.WorkflowLockPostRaw {
+			logger.Infof("  WorkflowLockPreRaw: <SAME AS POST - BUG!>")
+		} else {
+			logger.Infof("  WorkflowLockPreRaw: (differs from post) %s", *event.WorkflowLockPreRaw)
+		}
+	} else if event.WorkflowLockPreRaw != nil {
+		logger.Infof("  WorkflowLockPreRaw: %s", *event.WorkflowLockPreRaw)
+	} else {
+		logger.Infof("  WorkflowLockPreRaw: <nil>")
+	}
+
 	if event.LintReportDigest != nil {
 		logger.Infof("  LintReportDigest: %s", *event.LintReportDigest)
 	}
+
+	// GitHub action fields
+	if event.GhActionOrganization != nil {
+		logger.Infof("  GhActionOrganization: %s", *event.GhActionOrganization)
+	}
+	if event.GhActionRepository != nil {
+		logger.Infof("  GhActionRepository: %s", *event.GhActionRepository)
+	}
+	if event.GhActionRunLink != nil {
+		logger.Infof("  GhActionRunLink: %s", *event.GhActionRunLink)
+	}
+	if event.GhActionRef != nil {
+		logger.Infof("  GhActionRef: %s", *event.GhActionRef)
+	}
+	if event.GhActionVersion != nil {
+		logger.Infof("  GhActionVersion: %s", *event.GhActionVersion)
+	}
+	if event.GhChangesCommitted != nil {
+		logger.Infof("  GhChangesCommitted: %v", *event.GhChangesCommitted)
+	}
 	if event.GhPullRequest != nil {
 		logger.Infof("  GhPullRequest: %s", *event.GhPullRequest)
+	}
+
+	// Git fields
+	if event.GitRemoteDefaultOwner != nil {
+		logger.Infof("  GitRemoteDefaultOwner: %s", *event.GitRemoteDefaultOwner)
+	}
+	if event.GitRemoteDefaultRepo != nil {
+		logger.Infof("  GitRemoteDefaultRepo: %s", *event.GitRemoteDefaultRepo)
+	}
+	if event.GitRelativeCwd != nil {
+		logger.Infof("  GitRelativeCwd: %s", *event.GitRelativeCwd)
+	}
+	if event.GitUserName != nil {
+		logger.Infof("  GitUserName: %s", *event.GitUserName)
+	}
+	if event.GitUserEmail != nil {
+		logger.Infof("  GitUserEmail: %s", *event.GitUserEmail)
 	}
 }
 
@@ -305,8 +375,8 @@ type connectedEventsResult struct {
 }
 
 // findAndEnrichFromConnectedEvents searches for connected events with the same ExecutionID,
-// prints their details, and enriches the original event with any missing source spec info
-func findAndEnrichFromConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent, logger log.Logger) *shared.CliEvent {
+// prints their details (if verbose), and enriches the original event with any missing source spec info
+func findAndEnrichFromConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent, logger log.Logger, verbose bool) *shared.CliEvent {
 	if event.ExecutionID == "" {
 		return nil
 	}
@@ -344,17 +414,19 @@ func findAndEnrichFromConnectedEvents(ctx context.Context, client *speakeasyclie
 		close(results)
 	}()
 
-	// Collect results, print details, and enrich event
+	// Collect results, print details (if verbose), and enrich event
 	for result := range results {
 		for _, connectedEvent := range result.events {
 			if connectedEvent.ID == event.ID {
 				continue // Skip the original event
 			}
 
-			// Print event details
-			logger.Infof("")
-			logger.Infof("--- %s Event ---", result.interactionType)
-			printEventDetails(logger, &connectedEvent)
+			// Print event details in verbose mode
+			if verbose {
+				logger.Infof("")
+				logger.Infof("--- %s Event ---", result.interactionType)
+				printEventDetails(logger, &connectedEvent)
+			}
 
 			// Enrich original event with missing source spec info
 			if connectedEvent.SourceNamespaceName != nil && event.SourceNamespaceName == nil {
@@ -363,8 +435,15 @@ func findAndEnrichFromConnectedEvents(ctx context.Context, client *speakeasyclie
 			if connectedEvent.SourceRevisionDigest != nil && event.SourceRevisionDigest == nil {
 				event.SourceRevisionDigest = connectedEvent.SourceRevisionDigest
 			}
+			if connectedEvent.OpenapiDiffBaseSourceRevisionDigest != nil && event.OpenapiDiffBaseSourceRevisionDigest == nil {
+				event.OpenapiDiffBaseSourceRevisionDigest = connectedEvent.OpenapiDiffBaseSourceRevisionDigest
+			}
 			if connectedEvent.GenerateGenLockPreRevisionDigest != nil && event.GenerateGenLockPreRevisionDigest == nil {
 				event.GenerateGenLockPreRevisionDigest = connectedEvent.GenerateGenLockPreRevisionDigest
+			}
+			// If connected event has WorkflowLockPreRaw and we still need prev digest, try to extract it
+			if connectedEvent.WorkflowLockPreRaw != nil && event.WorkflowLockPreRaw == nil {
+				event.WorkflowLockPreRaw = connectedEvent.WorkflowLockPreRaw
 			}
 		}
 	}
@@ -372,59 +451,33 @@ func findAndEnrichFromConnectedEvents(ctx context.Context, client *speakeasyclie
 	return event
 }
 
-// findPreviousRevisionDigest looks up the previous generation event for this target
-// and returns its SourceRevisionDigest (which would have been the "new" spec at that time)
-func findPreviousRevisionDigest(ctx context.Context, currentEvent *shared.CliEvent) (string, error) {
-	if currentEvent.GenerateGenLockID == nil {
-		return "", fmt.Errorf("current event has no GenerateGenLockID")
+// extractOldDigestFromWorkflowLockPre parses the WorkflowLockPreRaw YAML to extract
+// the previous source revision digest for a given target language
+func extractOldDigestFromWorkflowLockPre(workflowLockPreRaw string, targetLang string) string {
+	if workflowLockPreRaw == "" {
+		return ""
 	}
 
-	client, err := core.GetSDKFromContext(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to get SDK from context: %w", err)
+	var lockFile workflow.LockFile
+	if err := yaml.Unmarshal([]byte(workflowLockPreRaw), &lockFile); err != nil {
+		return ""
 	}
 
-	limit := int64(50)
-	eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
-		GenerateGenLockID: currentEvent.GenerateGenLockID,
-		InteractionType:   shared.InteractionTypeTargetGenerate.ToPointer(),
-		Limit:             &limit,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to search for previous events: %w", err)
-	}
-
-	if eventsRes.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status %d when searching for previous events", eventsRes.StatusCode)
-	}
-
-	// Events are typically sorted by creation time (newest first)
-	// We want the event that occurred just before the current one
-	var foundCurrent bool
-	for _, event := range eventsRes.CliEventBatch {
-		// Skip until we find the current event
-		if event.ID == currentEvent.ID {
-			foundCurrent = true
-			continue
-		}
-
-		// The next event after finding current is the previous one chronologically
-		if foundCurrent && event.SourceRevisionDigest != nil {
-			return *event.SourceRevisionDigest, nil
+	// Try to find the target that matches the language
+	for _, targetLock := range lockFile.Targets {
+		if targetLock.SourceRevisionDigest != "" {
+			return targetLock.SourceRevisionDigest
 		}
 	}
 
-	// If we didn't find the current event in the list, just take the second event
-	// (assuming the current event is the most recent but wasn't in the batch)
-	if !foundCurrent && len(eventsRes.CliEventBatch) > 0 {
-		for _, event := range eventsRes.CliEventBatch {
-			if event.ID != currentEvent.ID && event.SourceRevisionDigest != nil {
-				return *event.SourceRevisionDigest, nil
-			}
+	// Fallback: check sources if no target found
+	for _, sourceLock := range lockFile.Sources {
+		if sourceLock.SourceRevisionDigest != "" {
+			return sourceLock.SourceRevisionDigest
 		}
 	}
 
-	return "", fmt.Errorf("no previous generation event found for this target - this may be the first generation")
+	return ""
 }
 
 func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
@@ -444,7 +497,7 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	logger.Infof("Looking up PR: %s", pr.fullUrl)
 
 	// Find matching event
-	match, err := findGenerationEventByPR(ctx, pr)
+	match, err := findGenerationEventByPR(ctx, pr, flags.Verbose)
 	if err != nil {
 		return err
 	}
@@ -458,18 +511,22 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 		return fmt.Errorf("generation event missing source spec information. The generation may have failed before uploading specs")
 	}
 
-	// Get the old digest - either from the event or by looking up the previous event
+	// Get the old digest - check multiple sources in priority order:
+	// 1. OpenapiDiffBaseSourceRevisionDigest (set by `speakeasy openapi diff`)
+	// 2. GenerateGenLockPreRevisionDigest (set server-side for some events)
+	// 3. WorkflowLockPreRaw (the previous lockfile, parsed to extract the digest)
 	oldDigest := ""
-	if event.GenerateGenLockPreRevisionDigest != nil {
+	if event.OpenapiDiffBaseSourceRevisionDigest != nil {
+		oldDigest = *event.OpenapiDiffBaseSourceRevisionDigest
+	} else if event.GenerateGenLockPreRevisionDigest != nil {
 		oldDigest = *event.GenerateGenLockPreRevisionDigest
-	} else {
-		// Try to find the previous event for this target
-		logger.Infof("Looking up previous generation event...")
-		prevDigest, err := findPreviousRevisionDigest(ctx, &event)
-		if err != nil {
-			return fmt.Errorf("no previous spec revision found: %w", err)
-		}
-		oldDigest = prevDigest
+	} else if event.WorkflowLockPreRaw != nil {
+		// Parse the previous lockfile to extract the old digest
+		oldDigest = extractOldDigestFromWorkflowLockPre(*event.WorkflowLockPreRaw, match.targetLang)
+	}
+
+	if oldDigest == "" {
+		return fmt.Errorf("no previous spec revision found in generation event - this may be the first generation for this target")
 	}
 
 	// Get workspace context

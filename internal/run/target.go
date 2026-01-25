@@ -53,6 +53,16 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	targetLanguage := t.Target
 	targetLock := workflow.TargetLock{Source: t.Source}
 
+	// Set the previous revision digest from the old lockfile for SDK changelog diffing
+	if w.lockfileOld != nil {
+		if oldTargetLock, ok := w.lockfileOld.Targets[target]; ok && oldTargetLock.SourceRevisionDigest != "" {
+			cliEvent := events.GetTelemetryEventFromContext(ctx)
+			if cliEvent != nil {
+				cliEvent.GenerateGenLockPreRevisionDigest = &oldTargetLock.SourceRevisionDigest
+			}
+		}
+	}
+
 	log.From(ctx).Infof("Running target %s (%s)...\n", target, t.Target)
 
 	source, sourcePath, err := w.workflow.GetTargetSource(target)
