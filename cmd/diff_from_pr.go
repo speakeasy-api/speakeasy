@@ -26,7 +26,6 @@ import (
 type FromPRFlags struct {
 	PRUrl        string `json:"pr-url"`
 	OutputDir    string `json:"output-dir"`
-	NoDiff       bool   `json:"no-diff"`
 	FormatToYAML bool   `json:"format-to-yaml"`
 	Verbose      bool   `json:"verbose"`
 }
@@ -56,10 +55,6 @@ var diffFromPRCmd = &model.ExecutableCommand[FromPRFlags]{
 			Shorthand:    "o",
 			Description:  "Directory to download specs to",
 			DefaultValue: "/tmp/speakeasy-diff",
-		},
-		flag.BooleanFlag{
-			Name:        "no-diff",
-			Description: "Just download specs, don't compute SDK diff",
 		},
 		flag.BooleanFlag{
 			Name:         "format-to-yaml",
@@ -578,7 +573,6 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 		NewDigest:    *event.SourceRevisionDigest,
 		OutputDir:    flags.OutputDir,
 		Lang:         lang,
-		NoDiff:       flags.NoDiff,
 		FormatToYAML: flags.FormatToYAML,
 	})
 }

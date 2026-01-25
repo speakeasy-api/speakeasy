@@ -19,7 +19,6 @@ type DiffFlags struct {
 	NewDigest    string `json:"new"`
 	OutputDir    string `json:"output-dir"`
 	Lang         string `json:"lang"`
-	NoDiff       bool   `json:"no-diff"`
 	FormatToYAML bool   `json:"format-to-yaml"`
 }
 
@@ -41,9 +40,6 @@ speakeasy diff registry \
 
 # Use a specific language for SDK diff context
 speakeasy diff registry --namespace myns --old sha256:abc... --new sha256:def... --lang typescript
-
-# Just download specs without showing SDK diff
-speakeasy diff registry --namespace myns --old sha256:abc... --new sha256:def... --no-diff
 ` + "```"
 
 var diffRegistryCmd = &model.ExecutableCommand[DiffFlags]{
@@ -89,10 +85,6 @@ var diffRegistryCmd = &model.ExecutableCommand[DiffFlags]{
 			DefaultValue: "go",
 		},
 		flag.BooleanFlag{
-			Name:        "no-diff",
-			Description: "Just download specs, don't compute SDK diff",
-		},
-		flag.BooleanFlag{
 			Name:         "format-to-yaml",
 			Description:  "Pre-format specs to YAML before diffing (helps with consistent output)",
 			DefaultValue: true,
@@ -122,7 +114,6 @@ func runDiffRegistry(ctx context.Context, flags DiffFlags) error {
 		NewDigest:    flags.NewDigest,
 		OutputDir:    flags.OutputDir,
 		Lang:         flags.Lang,
-		NoDiff:       flags.NoDiff,
 		FormatToYAML: flags.FormatToYAML,
 	})
 }

@@ -63,7 +63,6 @@ type DiffParams struct {
 	NewDigest    string
 	OutputDir    string
 	Lang         string
-	NoDiff       bool
 	FormatToYAML bool // Pre-format specs to YAML before diffing (helps with consistent output)
 }
 
@@ -130,12 +129,6 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	}
 	if err := formatAndCopySpec(ctx, newResult.LocalFilePath, newSpecPath); err != nil {
 		return fmt.Errorf("failed to process new spec: %w", err)
-	}
-
-	if params.NoDiff {
-		logger.Infof("Old spec: %s", oldSpecPath)
-		logger.Infof("New spec: %s", newSpecPath)
-		return nil
 	}
 
 	// Compute SDK diff
