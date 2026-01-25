@@ -203,6 +203,7 @@ func extractIdentifiersFromPR(ctx context.Context, pr *parsedPRUrl) (*prIdentifi
 
 	// Try to extract the previous sourceRevisionDigest from the PR's workflow.lock diff
 	// This is the most reliable source of truth for what the PR is changing FROM
+	// (reflects actual repo state, not intermediate CI runs)
 	ids.previousSourceDigest = extractPreviousDigestFromPRDiff(ctx, pr)
 
 	return ids, nil
@@ -343,12 +344,25 @@ func printEventDetails(logger log.Logger, event *shared.CliEvent) {
 		if *event.WorkflowLockPreRaw == *event.WorkflowLockPostRaw {
 			logger.Infof("  WorkflowLockPreRaw: <SAME AS POST - BUG!>")
 		} else {
-			logger.Infof("  WorkflowLockPreRaw: (differs from post) %s", *event.WorkflowLockPreRaw)
+			logger.Infof("  WorkflowLockPreRaw: (differs from post)")
 		}
 	} else if event.WorkflowLockPreRaw != nil {
-		logger.Infof("  WorkflowLockPreRaw: %s", *event.WorkflowLockPreRaw)
+		logger.Infof("  WorkflowLockPreRaw: <set>")
 	} else {
 		logger.Infof("  WorkflowLockPreRaw: <nil>")
+	}
+
+	// Check if GenerateConfigPreRaw and GenerateConfigPostRaw are the same (indicates bug)
+	if event.GenerateConfigPreRaw != nil && event.GenerateConfigPostRaw != nil {
+		if *event.GenerateConfigPreRaw == *event.GenerateConfigPostRaw {
+			logger.Infof("  GenerateConfigPreRaw: <SAME AS POST - BUG!>")
+		} else {
+			logger.Infof("  GenerateConfigPreRaw: (differs from post)")
+		}
+	} else if event.GenerateConfigPreRaw != nil {
+		logger.Infof("  GenerateConfigPreRaw: <set>")
+	} else {
+		logger.Infof("  GenerateConfigPreRaw: <nil>")
 	}
 
 	if event.LintReportDigest != nil {
@@ -554,10 +568,50 @@ func findPreviousGenerationDigest(ctx context.Context, currentEvent *shared.CliE
 			logger.Infof("Current event: ID=%s, CreatedAt=%s", currentEvent.ID, currentEvent.CreatedAt)
 		}
 
-		// Find the most recent event that was created BEFORE the current event.
+		// Strategy 1: Find event where prev.PostRaw == current.PreRaw (chain matching)
+		// This confirms we found the actual previous event in the generation chain
+		var chainMatchEvent *shared.CliEvent
+		for i := range eventsRes.CliEventBatch {
+			event := &eventsRes.CliEventBatch[i]
+			if event.ID == currentEvent.ID {
+				continue
+			}
+
+			// Check if this event's PostRaw matches current event's PreRaw
+			chainMatch := false
+			if event.WorkflowLockPostRaw != nil && currentEvent.WorkflowLockPreRaw != nil {
+				if *event.WorkflowLockPostRaw == *currentEvent.WorkflowLockPreRaw {
+					chainMatch = true
+					if verbose {
+						logger.Infof("  Chain match (WorkflowLock): Event %s", event.ID)
+					}
+				}
+			}
+			if !chainMatch && event.GenerateConfigPostRaw != nil && currentEvent.GenerateConfigPreRaw != nil {
+				if *event.GenerateConfigPostRaw == *currentEvent.GenerateConfigPreRaw {
+					chainMatch = true
+					if verbose {
+						logger.Infof("  Chain match (GenerateConfig): Event %s", event.ID)
+					}
+				}
+			}
+
+			if chainMatch && event.SourceRevisionDigest != nil {
+				chainMatchEvent = event
+				break
+			}
+		}
+
+		if chainMatchEvent != nil {
+			if verbose {
+				logger.Infof("Found previous event via chain matching: ID=%s, Digest=%s", chainMatchEvent.ID, *chainMatchEvent.SourceRevisionDigest)
+			}
+			return *chainMatchEvent.SourceRevisionDigest, nil
+		}
+
+		// Strategy 2: Fall back to timestamp-based matching (most recent before current)
 		// Note: The API returns events in descending order by CreatedAt (newest first),
-		// but we don't rely on this - we scan all events and use timestamp comparison
-		// to find the most recent event that occurred before the current one.
+		// but we don't rely on this - we scan all events and use timestamp comparison.
 		var previousEvent *shared.CliEvent
 		for i := range eventsRes.CliEventBatch {
 			event := &eventsRes.CliEventBatch[i]
