@@ -75,6 +75,86 @@ type LocalDiffParams struct {
 	FormatToYAML bool // Pre-format specs to YAML before diffing (helps with consistent output)
 }
 
+// DiffComputeParams contains the common parameters for computing a diff
+type DiffComputeParams struct {
+	OldSpecPath string
+	NewSpecPath string
+	OutputDir   string
+	Lang        string
+	Title       string // Title for the diff output (e.g., namespace or filename)
+}
+
+// DiffComputeResult contains the output paths from a diff computation
+type DiffComputeResult struct {
+	ChangesMarkdownPath string
+	ChangesCompactPath  string
+	ChangesHTMLPath     string
+}
+
+// computeAndOutputDiff is the shared logic for computing SDK diff and writing output files
+func computeAndOutputDiff(ctx context.Context, params DiffComputeParams) (*DiffComputeResult, error) {
+	logger := log.From(ctx)
+
+	logger.Infof("")
+	logger.Infof("Computing SDK changes (%s)...", params.Lang)
+
+	oldConfig, newConfig := changes.CreateConfigsFromSpecPaths(changes.SpecComparison{
+		OldSpecPath: params.OldSpecPath,
+		NewSpecPath: params.NewSpecPath,
+		OutputDir:   params.OutputDir,
+		Lang:        params.Lang,
+		Verbose:     false,
+		Logger:      logger,
+	})
+
+	diff, err := changes.Changes(ctx, oldConfig, newConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute SDK changes: %w", err)
+	}
+
+	// Generate output in multiple formats
+	markdownFull := ""
+	markdownCompact := ""
+	if len(diff.Changes) == 0 {
+		markdownFull = "No SDK-level changes detected"
+		markdownCompact = "No SDK-level changes detected"
+	} else {
+		markdownFull = changes.ToMarkdown(diff, changes.DetailLevelFull)
+		markdownCompact = changes.ToMarkdown(diff, changes.DetailLevelCompact)
+	}
+
+	// Write changes.md (full detail)
+	changesMarkdownPath := filepath.Join(params.OutputDir, "changes.md")
+	if err := os.WriteFile(changesMarkdownPath, []byte(markdownFull), 0o644); err != nil {
+		return nil, fmt.Errorf("failed to write changes.md: %w", err)
+	}
+
+	// Write changes-compact.md
+	changesCompactPath := filepath.Join(params.OutputDir, "changes-compact.md")
+	if err := os.WriteFile(changesCompactPath, []byte(markdownCompact), 0o644); err != nil {
+		return nil, fmt.Errorf("failed to write changes-compact.md: %w", err)
+	}
+
+	// Write changes.html
+	html := changes.ToHTML(diff)
+	changesHTMLPath := filepath.Join(params.OutputDir, "changes.html")
+	if err := os.WriteFile(changesHTMLPath, []byte(html), 0o644); err != nil {
+		return nil, fmt.Errorf("failed to write changes.html: %w", err)
+	}
+
+	// Output results to console
+	logger.Infof("")
+	printDiffSeparator(logger, params.Title)
+	fmt.Println(markdownFull)
+	printDiffSeparator(logger, "")
+
+	return &DiffComputeResult{
+		ChangesMarkdownPath: changesMarkdownPath,
+		ChangesCompactPath:  changesCompactPath,
+		ChangesHTMLPath:     changesHTMLPath,
+	}, nil
+}
+
 // executeDiff performs the actual diff operation using registry specs
 func executeDiff(ctx context.Context, params DiffParams) error {
 	logger := log.From(ctx)
@@ -131,59 +211,17 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 		return fmt.Errorf("failed to process new spec: %w", err)
 	}
 
-	// Compute SDK diff
-	logger.Infof("")
-	logger.Infof("Computing SDK changes (%s)...", params.Lang)
-
-	oldConfig, newConfig := changes.CreateConfigsFromSpecPaths(changes.SpecComparison{
+	// Compute and output SDK diff
+	result, err := computeAndOutputDiff(ctx, DiffComputeParams{
 		OldSpecPath: oldSpecPath,
 		NewSpecPath: newSpecPath,
 		OutputDir:   params.OutputDir,
 		Lang:        params.Lang,
-		Verbose:     false,
-		Logger:      logger,
+		Title:       params.Namespace,
 	})
-
-	diff, err := changes.Changes(ctx, oldConfig, newConfig)
 	if err != nil {
-		return fmt.Errorf("failed to compute SDK changes: %w", err)
+		return err
 	}
-
-	// Generate output in multiple formats
-	markdownFull := ""
-	markdownCompact := ""
-	if len(diff.Changes) == 0 {
-		markdownFull = "No SDK-level changes detected"
-		markdownCompact = "No SDK-level changes detected"
-	} else {
-		markdownFull = changes.ToMarkdown(diff, changes.DetailLevelFull)
-		markdownCompact = changes.ToMarkdown(diff, changes.DetailLevelCompact)
-	}
-
-	// Write changes.md (full detail)
-	changesMarkdownPath := filepath.Join(params.OutputDir, "changes.md")
-	if err := os.WriteFile(changesMarkdownPath, []byte(markdownFull), 0o644); err != nil {
-		return fmt.Errorf("failed to write changes.md: %w", err)
-	}
-
-	// Write changes-compact.md
-	changesCompactPath := filepath.Join(params.OutputDir, "changes-compact.md")
-	if err := os.WriteFile(changesCompactPath, []byte(markdownCompact), 0o644); err != nil {
-		return fmt.Errorf("failed to write changes-compact.md: %w", err)
-	}
-
-	// Write changes.html
-	html := changes.ToHTML(diff)
-	changesHTMLPath := filepath.Join(params.OutputDir, "changes.html")
-	if err := os.WriteFile(changesHTMLPath, []byte(html), 0o644); err != nil {
-		return fmt.Errorf("failed to write changes.html: %w", err)
-	}
-
-	// Output results to console
-	logger.Infof("")
-	printDiffSeparator(logger, params.Namespace)
-	fmt.Println(markdownFull)
-	printDiffSeparator(logger, "")
 
 	logger.Infof("")
 	logger.Infof("Registry:")
@@ -194,9 +232,9 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	logger.Infof("Output files:")
 	logger.Infof("  %s", oldSpecPath)
 	logger.Infof("  %s", newSpecPath)
-	logger.Infof("  %s", changesMarkdownPath)
-	logger.Infof("  %s", changesCompactPath)
-	logger.Infof("  %s", changesHTMLPath)
+	logger.Infof("  %s", result.ChangesMarkdownPath)
+	logger.Infof("  %s", result.ChangesCompactPath)
+	logger.Infof("  %s", result.ChangesHTMLPath)
 
 	return nil
 }
@@ -230,54 +268,47 @@ func executeLocalDiff(ctx context.Context, params LocalDiffParams) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// Format specs to YAML if requested
-	oldSpecPath := params.OldSpecPath
-	newSpecPath := params.NewSpecPath
+	// Copy specs to output directory (formatting to YAML if requested)
+	oldSpecPath := filepath.Join(params.OutputDir, "old.openapi.yaml")
+	newSpecPath := filepath.Join(params.OutputDir, "new.openapi.yaml")
+
 	if params.FormatToYAML {
 		logger.Infof("Formatting specs to YAML...")
-		var err error
-		oldSpecPath, err = formatSpecToYAML(ctx, params.OldSpecPath)
-		if err != nil {
-			return fmt.Errorf("failed to format old spec to YAML: %w", err)
+		if err := formatAndCopySpec(ctx, params.OldSpecPath, oldSpecPath); err != nil {
+			return fmt.Errorf("failed to format old spec: %w", err)
 		}
-		newSpecPath, err = formatSpecToYAML(ctx, params.NewSpecPath)
-		if err != nil {
-			return fmt.Errorf("failed to format new spec to YAML: %w", err)
+		if err := formatAndCopySpec(ctx, params.NewSpecPath, newSpecPath); err != nil {
+			return fmt.Errorf("failed to format new spec: %w", err)
+		}
+	} else {
+		// Copy specs without formatting
+		if err := copyFile(params.OldSpecPath, oldSpecPath); err != nil {
+			return fmt.Errorf("failed to copy old spec: %w", err)
+		}
+		if err := copyFile(params.NewSpecPath, newSpecPath); err != nil {
+			return fmt.Errorf("failed to copy new spec: %w", err)
 		}
 	}
 
-	// Compute SDK diff
-	logger.Infof("Computing SDK changes (%s)...", params.Lang)
-
-	oldConfig, newConfig := changes.CreateConfigsFromSpecPaths(changes.SpecComparison{
+	// Compute and output SDK diff
+	result, err := computeAndOutputDiff(ctx, DiffComputeParams{
 		OldSpecPath: oldSpecPath,
 		NewSpecPath: newSpecPath,
 		OutputDir:   params.OutputDir,
 		Lang:        params.Lang,
-		Verbose:     false,
-		Logger:      logger,
+		Title:       filepath.Base(params.NewSpecPath),
 	})
-
-	diff, err := changes.Changes(ctx, oldConfig, newConfig)
 	if err != nil {
-		return fmt.Errorf("failed to compute SDK changes: %w", err)
+		return err
 	}
 
-	// Output results
 	logger.Infof("")
-
-	// Use the base name of the new spec as title
-	title := filepath.Base(newSpecPath)
-	printDiffSeparator(logger, title)
-
-	if len(diff.Changes) == 0 {
-		logger.Infof("No SDK-level changes detected")
-	} else {
-		markdown := changes.ToMarkdown(diff, changes.DetailLevelFull)
-		fmt.Println(markdown)
-	}
-
-	printDiffSeparator(logger, "")
+	logger.Infof("Output files:")
+	logger.Infof("  %s", oldSpecPath)
+	logger.Infof("  %s", newSpecPath)
+	logger.Infof("  %s", result.ChangesMarkdownPath)
+	logger.Infof("  %s", result.ChangesCompactPath)
+	logger.Infof("  %s", result.ChangesHTMLPath)
 
 	return nil
 }
@@ -324,4 +355,16 @@ func formatSpecToYAML(ctx context.Context, specPath string) (string, error) {
 	}
 
 	return outputPath, nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	content, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+	if err := os.WriteFile(dst, content, 0o644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
 }
