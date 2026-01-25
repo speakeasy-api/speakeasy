@@ -142,15 +142,17 @@ func parsePRUrl(rawUrl string) (*parsedPRUrl, error) {
 
 // matchingEventInfo contains the matched event and its target info
 type matchingEventInfo struct {
-	event      shared.CliEvent
-	targetName string
-	targetLang string
+	event                shared.CliEvent
+	targetName           string
+	targetLang           string
+	previousSourceDigest string // from PR's workflow.lock diff (most reliable)
 }
 
 // prIdentifiers contains identifiers extracted from a PR that can be used to find events
 type prIdentifiers struct {
-	lintReportDigest    string
-	changesReportDigest string
+	lintReportDigest       string
+	changesReportDigest    string
+	previousSourceDigest   string // extracted from workflow.lock diff
 }
 
 // checkGHCLIAvailable checks if the GitHub CLI is installed
@@ -199,7 +201,32 @@ func extractIdentifiersFromPR(ctx context.Context, pr *parsedPRUrl) (*prIdentifi
 		return nil, fmt.Errorf("could not find Speakeasy report URLs in PR body")
 	}
 
+	// Try to extract the previous sourceRevisionDigest from the PR's workflow.lock diff
+	// This is the most reliable source of truth for what the PR is changing FROM
+	ids.previousSourceDigest = extractPreviousDigestFromPRDiff(ctx, pr)
+
 	return ids, nil
+}
+
+// extractPreviousDigestFromPRDiff gets the previous sourceRevisionDigest from the PR's workflow.lock diff
+func extractPreviousDigestFromPRDiff(ctx context.Context, pr *parsedPRUrl) string {
+	repoArg := fmt.Sprintf("%s/%s", pr.ghOrg, pr.ghRepo)
+
+	// Get the PR diff
+	cmd := exec.CommandContext(ctx, "gh", "pr", "diff", strconv.Itoa(pr.prNumber), "--repo", repoArg)
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+
+	// Look for removed lines containing sourceRevisionDigest
+	// Format: -        sourceRevisionDigest: sha256:abc123...
+	pattern := regexp.MustCompile(`(?m)^-\s+sourceRevisionDigest:\s+(sha256:[a-f0-9]+)`)
+	if matches := pattern.FindStringSubmatch(string(output)); len(matches) > 1 {
+		return matches[1]
+	}
+
+	return ""
 }
 
 // findGenerationEventByPR searches for generation events matching a PR URL
@@ -272,9 +299,10 @@ func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl, verbose bool)
 	}
 
 	return &matchingEventInfo{
-		event:      event,
-		targetName: targetLang,
-		targetLang: targetLang,
+		event:                event,
+		targetName:           targetLang,
+		targetLang:           targetLang,
+		previousSourceDigest: prIds.previousSourceDigest,
 	}, nil
 }
 
@@ -610,12 +638,18 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	}
 
 	// Get the old digest - check multiple sources in priority order:
-	// 1. OpenapiDiffBaseSourceRevisionDigest (set by `speakeasy openapi diff`)
-	// 2. GenerateGenLockPreRevisionDigest (set during target generation)
-	// 3. WorkflowLockPreRaw (the previous lockfile, parsed to extract the digest)
-	// 4. Look up the previous generation event for this target
+	// 1. PR's workflow.lock diff (most reliable - shows actual change)
+	// 2. OpenapiDiffBaseSourceRevisionDigest (set by `speakeasy openapi diff`)
+	// 3. GenerateGenLockPreRevisionDigest (set during target generation)
+	// 4. WorkflowLockPreRaw (the previous lockfile, parsed to extract the digest)
+	// 5. Look up the previous generation event for this target
 	oldDigest := ""
-	if event.OpenapiDiffBaseSourceRevisionDigest != nil {
+	if match.previousSourceDigest != "" {
+		oldDigest = match.previousSourceDigest
+		if flags.Verbose {
+			logger.Infof("Using previous digest from PR's workflow.lock diff")
+		}
+	} else if event.OpenapiDiffBaseSourceRevisionDigest != nil {
 		oldDigest = *event.OpenapiDiffBaseSourceRevisionDigest
 	} else if event.GenerateGenLockPreRevisionDigest != nil {
 		oldDigest = *event.GenerateGenLockPreRevisionDigest
