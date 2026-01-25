@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	speakeasyclientsdkgo "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
@@ -302,6 +303,12 @@ func printEventDetails(logger log.Logger, event *shared.CliEvent) {
 	}
 }
 
+// connectedEventsResult holds the result of searching for connected events
+type connectedEventsResult struct {
+	interactionType shared.InteractionType
+	events          []shared.CliEvent
+}
+
 // findAndPrintConnectedEvents searches for and prints events with the same ExecutionID
 func findAndPrintConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent, logger log.Logger) {
 	if event.ExecutionID == "" {
@@ -310,28 +317,45 @@ func findAndPrintConnectedEvents(ctx context.Context, client *speakeasyclientsdk
 
 	execID := event.ExecutionID
 
-	// Search for all interaction types
+	// Search for all interaction types in parallel
 	interactionTypes := []shared.InteractionType{
 		shared.InteractionTypeCiExec,
 		shared.InteractionTypeCliExec,
 		shared.InteractionTypeTargetGenerate,
 	}
 
-	for _, interactionType := range interactionTypes {
-		eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
-			ExecutionID:     &execID,
-			InteractionType: interactionType.ToPointer(),
-		})
-		if err != nil || eventsRes.StatusCode != http.StatusOK {
-			continue
-		}
+	results := make(chan connectedEventsResult, len(interactionTypes))
+	var wg sync.WaitGroup
 
-		for _, connectedEvent := range eventsRes.CliEventBatch {
+	for _, interactionType := range interactionTypes {
+		wg.Add(1)
+		go func(it shared.InteractionType) {
+			defer wg.Done()
+			eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
+				ExecutionID:     &execID,
+				InteractionType: it.ToPointer(),
+			})
+			if err != nil || eventsRes.StatusCode != http.StatusOK {
+				return
+			}
+			results <- connectedEventsResult{interactionType: it, events: eventsRes.CliEventBatch}
+		}(interactionType)
+	}
+
+	// Close results channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect and print results
+	for result := range results {
+		for _, connectedEvent := range result.events {
 			if connectedEvent.ID == event.ID {
 				continue // Skip the original event
 			}
 			logger.Infof("")
-			logger.Infof("--- %s Event ---", interactionType)
+			logger.Infof("--- %s Event ---", result.interactionType)
 			printEventDetails(logger, &connectedEvent)
 		}
 	}
@@ -346,17 +370,40 @@ func enrichEventFromConnectedEvents(ctx context.Context, client *speakeasyclient
 
 	execID := event.ExecutionID
 
-	// Search for CI_EXEC events with same execution ID
-	for _, interactionType := range []shared.InteractionType{shared.InteractionTypeCiExec, shared.InteractionTypeCliExec, shared.InteractionTypeTargetGenerate} {
-		eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
-			ExecutionID:     &execID,
-			InteractionType: interactionType.ToPointer(),
-		})
-		if err != nil || eventsRes.StatusCode != http.StatusOK {
-			continue
-		}
+	// Search for all interaction types in parallel
+	interactionTypes := []shared.InteractionType{
+		shared.InteractionTypeCiExec,
+		shared.InteractionTypeCliExec,
+		shared.InteractionTypeTargetGenerate,
+	}
 
-		for _, connectedEvent := range eventsRes.CliEventBatch {
+	results := make(chan []shared.CliEvent, len(interactionTypes))
+	var wg sync.WaitGroup
+
+	for _, interactionType := range interactionTypes {
+		wg.Add(1)
+		go func(it shared.InteractionType) {
+			defer wg.Done()
+			eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
+				ExecutionID:     &execID,
+				InteractionType: it.ToPointer(),
+			})
+			if err != nil || eventsRes.StatusCode != http.StatusOK {
+				return
+			}
+			results <- eventsRes.CliEventBatch
+		}(interactionType)
+	}
+
+	// Close results channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect results and enrich event
+	for events := range results {
+		for _, connectedEvent := range events {
 			// Copy source spec info if available
 			if connectedEvent.SourceNamespaceName != nil && event.SourceNamespaceName == nil {
 				event.SourceNamespaceName = connectedEvent.SourceNamespaceName
@@ -366,11 +413,6 @@ func enrichEventFromConnectedEvents(ctx context.Context, client *speakeasyclient
 			}
 			if connectedEvent.GenerateGenLockPreRevisionDigest != nil && event.GenerateGenLockPreRevisionDigest == nil {
 				event.GenerateGenLockPreRevisionDigest = connectedEvent.GenerateGenLockPreRevisionDigest
-			}
-
-			// If we found what we need, return early
-			if event.SourceNamespaceName != nil && event.SourceRevisionDigest != nil {
-				return event
 			}
 		}
 	}
