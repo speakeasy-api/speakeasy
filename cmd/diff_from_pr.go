@@ -241,16 +241,11 @@ func findGenerationEventByPR(ctx context.Context, pr *parsedPRUrl) (*matchingEve
 	logger.Infof("=== TARGET_GENERATE Event ===")
 	printEventDetails(logger, &event)
 
-	// Search for other events with the same ExecutionID
-	if event.ExecutionID != "" {
+	// If source spec info is missing, search connected events to find it
+	if (event.SourceNamespaceName == nil || event.SourceRevisionDigest == nil) && event.ExecutionID != "" {
 		logger.Infof("")
 		logger.Infof("=== Connected Events (ExecutionID: %s) ===", event.ExecutionID)
-		findAndPrintConnectedEvents(ctx, client, &event, logger)
-	}
-
-	// If source spec info is missing, try to find it from connected events
-	if (event.SourceNamespaceName == nil || event.SourceRevisionDigest == nil) && event.ExecutionID != "" {
-		enrichedEvent := enrichEventFromConnectedEvents(ctx, client, &event)
+		enrichedEvent := findAndEnrichFromConnectedEvents(ctx, client, &event, logger)
 		if enrichedEvent != nil {
 			event = *enrichedEvent
 		}
@@ -309,10 +304,11 @@ type connectedEventsResult struct {
 	events          []shared.CliEvent
 }
 
-// findAndPrintConnectedEvents searches for and prints events with the same ExecutionID
-func findAndPrintConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent, logger log.Logger) {
+// findAndEnrichFromConnectedEvents searches for connected events with the same ExecutionID,
+// prints their details, and enriches the original event with any missing source spec info
+func findAndEnrichFromConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent, logger log.Logger) *shared.CliEvent {
 	if event.ExecutionID == "" {
-		return
+		return nil
 	}
 
 	execID := event.ExecutionID
@@ -348,63 +344,19 @@ func findAndPrintConnectedEvents(ctx context.Context, client *speakeasyclientsdk
 		close(results)
 	}()
 
-	// Collect and print results
+	// Collect results, print details, and enrich event
 	for result := range results {
 		for _, connectedEvent := range result.events {
 			if connectedEvent.ID == event.ID {
 				continue // Skip the original event
 			}
+
+			// Print event details
 			logger.Infof("")
 			logger.Infof("--- %s Event ---", result.interactionType)
 			printEventDetails(logger, &connectedEvent)
-		}
-	}
-}
 
-// enrichEventFromConnectedEvents searches for CI_EXEC or CLI_EXEC events with the same execution ID
-// and copies source spec info if found
-func enrichEventFromConnectedEvents(ctx context.Context, client *speakeasyclientsdkgo.Speakeasy, event *shared.CliEvent) *shared.CliEvent {
-	if event.ExecutionID == "" {
-		return nil
-	}
-
-	execID := event.ExecutionID
-
-	// Search for all interaction types in parallel
-	interactionTypes := []shared.InteractionType{
-		shared.InteractionTypeCiExec,
-		shared.InteractionTypeCliExec,
-		shared.InteractionTypeTargetGenerate,
-	}
-
-	results := make(chan []shared.CliEvent, len(interactionTypes))
-	var wg sync.WaitGroup
-
-	for _, interactionType := range interactionTypes {
-		wg.Add(1)
-		go func(it shared.InteractionType) {
-			defer wg.Done()
-			eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
-				ExecutionID:     &execID,
-				InteractionType: it.ToPointer(),
-			})
-			if err != nil || eventsRes.StatusCode != http.StatusOK {
-				return
-			}
-			results <- eventsRes.CliEventBatch
-		}(interactionType)
-	}
-
-	// Close results channel when all goroutines complete
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	// Collect results and enrich event
-	for events := range results {
-		for _, connectedEvent := range events {
-			// Copy source spec info if available
+			// Enrich original event with missing source spec info
 			if connectedEvent.SourceNamespaceName != nil && event.SourceNamespaceName == nil {
 				event.SourceNamespaceName = connectedEvent.SourceNamespaceName
 			}
