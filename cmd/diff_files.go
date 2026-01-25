@@ -14,10 +14,11 @@ import (
 
 // FilesFlags for the files subcommand
 type FilesFlags struct {
-	OldSpec   string `json:"old"`
-	NewSpec   string `json:"new"`
-	OutputDir string `json:"output-dir"`
-	Lang      string `json:"lang"`
+	OldSpec      string `json:"old"`
+	NewSpec      string `json:"new"`
+	OutputDir    string `json:"output-dir"`
+	Lang         string `json:"lang"`
+	FormatToYAML bool   `json:"format-to-yaml"`
 }
 
 const diffFilesLong = `# Diff Files
@@ -57,13 +58,18 @@ var diffFilesCmd = &model.ExecutableCommand[FilesFlags]{
 			Name:         "output-dir",
 			Shorthand:    "o",
 			Description:  "Directory for intermediate files",
-			DefaultValue: ".speakeasy/diff",
+			DefaultValue: "/tmp/speakeasy-diff",
 		},
 		flag.StringFlag{
 			Name:         "lang",
 			Shorthand:    "l",
 			Description:  "Target language for SDK diff context",
 			DefaultValue: "go",
+		},
+		flag.BooleanFlag{
+			Name:         "format-to-yaml",
+			Description:  "Pre-format specs to YAML before diffing (helps with consistent output)",
+			DefaultValue: true,
 		},
 	},
 }
@@ -94,9 +100,10 @@ func runDiffFiles(ctx context.Context, flags FilesFlags) error {
 	logger.Infof("")
 
 	return executeLocalDiff(ctx, LocalDiffParams{
-		OldSpecPath: oldSpecPath,
-		NewSpecPath: newSpecPath,
-		OutputDir:   flags.OutputDir,
-		Lang:        flags.Lang,
+		OldSpecPath:  oldSpecPath,
+		NewSpecPath:  newSpecPath,
+		OutputDir:    flags.OutputDir,
+		Lang:         flags.Lang,
+		FormatToYAML: flags.FormatToYAML,
 	})
 }

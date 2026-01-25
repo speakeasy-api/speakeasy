@@ -22,10 +22,11 @@ import (
 
 // FromPRFlags for the from-pr subcommand
 type FromPRFlags struct {
-	PRUrl     string `json:"pr-url"`
-	Target    string `json:"target"`
-	OutputDir string `json:"output-dir"`
-	NoDiff    bool   `json:"no-diff"`
+	PRUrl        string `json:"pr-url"`
+	Target       string `json:"target"`
+	OutputDir    string `json:"output-dir"`
+	NoDiff       bool   `json:"no-diff"`
+	FormatToYAML bool   `json:"format-to-yaml"`
 }
 
 const diffFromPRLong = `# Diff From PR
@@ -60,11 +61,16 @@ var diffFromPRCmd = &model.ExecutableCommand[FromPRFlags]{
 			Name:         "output-dir",
 			Shorthand:    "o",
 			Description:  "Directory to download specs to",
-			DefaultValue: ".speakeasy/diff",
+			DefaultValue: "/tmp/speakeasy-diff",
 		},
 		flag.BooleanFlag{
 			Name:        "no-diff",
 			Description: "Just download specs, don't compute SDK diff",
+		},
+		flag.BooleanFlag{
+			Name:         "format-to-yaml",
+			Description:  "Pre-format specs to YAML before diffing (helps with consistent output)",
+			DefaultValue: true,
 		},
 	},
 }
@@ -484,13 +490,14 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	logger.Infof("")
 
 	return executeDiff(ctx, DiffParams{
-		Org:       org,
-		Workspace: workspace,
-		Namespace: *event.SourceNamespaceName,
-		OldDigest: oldDigest,
-		NewDigest: *event.SourceRevisionDigest,
-		OutputDir: flags.OutputDir,
-		Lang:      lang,
-		NoDiff:    flags.NoDiff,
+		Org:          org,
+		Workspace:    workspace,
+		Namespace:    *event.SourceNamespaceName,
+		OldDigest:    oldDigest,
+		NewDigest:    *event.SourceRevisionDigest,
+		OutputDir:    flags.OutputDir,
+		Lang:         lang,
+		NoDiff:       flags.NoDiff,
+		FormatToYAML: flags.FormatToYAML,
 	})
 }

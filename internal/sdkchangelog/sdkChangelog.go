@@ -19,7 +19,8 @@ import (
 type Requirements struct {
 	OldSpecPath  string
 	NewSpecPath  string
-	OutDir       string
+	OutDir       string // SDK output directory for generated code
+	ProjectDir   string // Directory containing .speakeasy/workflow.yaml (may differ from OutDir for nested SDKs)
 	Lang         string
 	Verbose      bool
 	Target       string
@@ -81,20 +82,40 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 	// Compact markdown for inline PR description
 	compactMarkdown := changes.ToMarkdown(diff, changes.DetailLevelCompact)
 
-	// Generate HTML report
+	// Generate full reports for local debugging
+	fullMarkdown := changes.ToMarkdown(diff, changes.DetailLevelFull)
 	htmlReport := changes.ToHTML(diff)
 
-	// Write HTML report to .speakeasy/logs/changes.html for local debugging
-	logsDir := filepath.Join(changelogRequirements.OutDir, ".speakeasy", "logs")
-	if err := os.MkdirAll(logsDir, 0o755); err != nil {
-		log.From(ctx).Warnf("Failed to create logs directory: %s", err.Error())
+	// Write reports and specs to .speakeasy/logs/changes/ for local debugging
+	changesDir := filepath.Join(changelogRequirements.ProjectDir, ".speakeasy", "logs", "changes")
+	if err := os.MkdirAll(changesDir, 0o755); err != nil {
+		log.From(ctx).Warnf("Failed to create changes directory: %s", err.Error())
 	} else {
-		changesHTMLPath := filepath.Join(logsDir, "changes.html")
-		if err := os.WriteFile(changesHTMLPath, htmlReport, 0o644); err != nil {
-			log.From(ctx).Warnf("Failed to write SDK changelog HTML: %s", err.Error())
-		} else {
-			log.From(ctx).Infof("SDK changelog written to %s", changesHTMLPath)
+		// Copy old spec
+		if oldSpec, err := os.ReadFile(changelogRequirements.OldSpecPath); err != nil {
+			log.From(ctx).Warnf("Failed to read old spec: %s", err.Error())
+		} else if err := os.WriteFile(filepath.Join(changesDir, "old.openapi.yaml"), oldSpec, 0o644); err != nil {
+			log.From(ctx).Warnf("Failed to write old spec: %s", err.Error())
 		}
+
+		// Copy new spec
+		if newSpec, err := os.ReadFile(changelogRequirements.NewSpecPath); err != nil {
+			log.From(ctx).Warnf("Failed to read new spec: %s", err.Error())
+		} else if err := os.WriteFile(filepath.Join(changesDir, "new.openapi.yaml"), newSpec, 0o644); err != nil {
+			log.From(ctx).Warnf("Failed to write new spec: %s", err.Error())
+		}
+
+		// Write markdown
+		if err := os.WriteFile(filepath.Join(changesDir, "changes.md"), []byte(fullMarkdown), 0o644); err != nil {
+			log.From(ctx).Warnf("Failed to write SDK changelog markdown: %s", err.Error())
+		}
+
+		// Write HTML
+		if err := os.WriteFile(filepath.Join(changesDir, "changes.html"), htmlReport, 0o644); err != nil {
+			log.From(ctx).Warnf("Failed to write SDK changelog HTML: %s", err.Error())
+		}
+
+		log.From(ctx).Infof("SDK changelog written to %s", changesDir)
 	}
 
 	// Upload full HTML report to registry

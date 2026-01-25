@@ -12,14 +12,15 @@ import (
 
 // DiffFlags for the registry subcommand
 type DiffFlags struct {
-	Org       string `json:"org"`
-	Workspace string `json:"workspace"`
-	Namespace string `json:"namespace"`
-	OldDigest string `json:"old"`
-	NewDigest string `json:"new"`
-	OutputDir string `json:"output-dir"`
-	Lang      string `json:"lang"`
-	NoDiff    bool   `json:"no-diff"`
+	Org          string `json:"org"`
+	Workspace    string `json:"workspace"`
+	Namespace    string `json:"namespace"`
+	OldDigest    string `json:"old"`
+	NewDigest    string `json:"new"`
+	OutputDir    string `json:"output-dir"`
+	Lang         string `json:"lang"`
+	NoDiff       bool   `json:"no-diff"`
+	FormatToYAML bool   `json:"format-to-yaml"`
 }
 
 const diffRegistryLong = `# Diff Registry
@@ -79,7 +80,7 @@ var diffRegistryCmd = &model.ExecutableCommand[DiffFlags]{
 			Name:         "output-dir",
 			Shorthand:    "o",
 			Description:  "Directory to download specs to",
-			DefaultValue: ".speakeasy/diff",
+			DefaultValue: "/tmp/speakeasy-diff",
 		},
 		flag.StringFlag{
 			Name:         "lang",
@@ -90,6 +91,11 @@ var diffRegistryCmd = &model.ExecutableCommand[DiffFlags]{
 		flag.BooleanFlag{
 			Name:        "no-diff",
 			Description: "Just download specs, don't compute SDK diff",
+		},
+		flag.BooleanFlag{
+			Name:         "format-to-yaml",
+			Description:  "Pre-format specs to YAML before diffing (helps with consistent output)",
+			DefaultValue: true,
 		},
 	},
 }
@@ -109,13 +115,14 @@ func runDiffRegistry(ctx context.Context, flags DiffFlags) error {
 	}
 
 	return executeDiff(ctx, DiffParams{
-		Org:       org,
-		Workspace: workspace,
-		Namespace: flags.Namespace,
-		OldDigest: flags.OldDigest,
-		NewDigest: flags.NewDigest,
-		OutputDir: flags.OutputDir,
-		Lang:      flags.Lang,
-		NoDiff:    flags.NoDiff,
+		Org:          org,
+		Workspace:    workspace,
+		Namespace:    flags.Namespace,
+		OldDigest:    flags.OldDigest,
+		NewDigest:    flags.NewDigest,
+		OutputDir:    flags.OutputDir,
+		Lang:         flags.Lang,
+		NoDiff:       flags.NoDiff,
+		FormatToYAML: flags.FormatToYAML,
 	})
 }

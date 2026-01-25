@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
+	"github.com/speakeasy-api/speakeasy/pkg/transform"
 	"github.com/speakeasy-api/speakeasy/registry"
 )
 
@@ -54,22 +56,24 @@ var diffCmd = &model.CommandGroup{
 
 // DiffParams contains the parameters needed to execute a diff from registry
 type DiffParams struct {
-	Org       string
-	Workspace string
-	Namespace string
-	OldDigest string
-	NewDigest string
-	OutputDir string
-	Lang      string
-	NoDiff    bool
+	Org          string
+	Workspace    string
+	Namespace    string
+	OldDigest    string
+	NewDigest    string
+	OutputDir    string
+	Lang         string
+	NoDiff       bool
+	FormatToYAML bool // Pre-format specs to YAML before diffing (helps with consistent output)
 }
 
 // LocalDiffParams contains the parameters needed to execute a diff from local files
 type LocalDiffParams struct {
-	OldSpecPath string
-	NewSpecPath string
-	OutputDir   string
-	Lang        string
+	OldSpecPath  string
+	NewSpecPath  string
+	OutputDir    string
+	Lang         string
+	FormatToYAML bool // Pre-format specs to YAML before diffing (helps with consistent output)
 }
 
 // executeDiff performs the actual diff operation using registry specs
@@ -111,9 +115,25 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 
 	logger.Infof("Specs downloaded to: %s", params.OutputDir)
 
+	// Format specs to YAML if requested
+	oldSpecPath := oldResult.LocalFilePath
+	newSpecPath := newResult.LocalFilePath
+	if params.FormatToYAML {
+		logger.Infof("Formatting specs to YAML...")
+		var err error
+		oldSpecPath, err = formatSpecToYAML(ctx, oldResult.LocalFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to format old spec to YAML: %w", err)
+		}
+		newSpecPath, err = formatSpecToYAML(ctx, newResult.LocalFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to format new spec to YAML: %w", err)
+		}
+	}
+
 	if params.NoDiff {
-		logger.Infof("Old spec: %s", oldResult.LocalFilePath)
-		logger.Infof("New spec: %s", newResult.LocalFilePath)
+		logger.Infof("Old spec: %s", oldSpecPath)
+		logger.Infof("New spec: %s", newSpecPath)
 		return nil
 	}
 
@@ -122,8 +142,8 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	logger.Infof("Computing SDK changes (%s)...", params.Lang)
 
 	oldConfig, newConfig := changes.CreateConfigsFromSpecPaths(changes.SpecComparison{
-		OldSpecPath: oldResult.LocalFilePath,
-		NewSpecPath: newResult.LocalFilePath,
+		OldSpecPath: oldSpecPath,
+		NewSpecPath: newSpecPath,
 		OutputDir:   params.OutputDir,
 		Lang:        params.Lang,
 		Verbose:     false,
@@ -149,8 +169,8 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	printDiffSeparator(logger, "")
 
 	logger.Infof("")
-	logger.Infof("Old spec: %s", oldResult.LocalFilePath)
-	logger.Infof("New spec: %s", newResult.LocalFilePath)
+	logger.Infof("Old spec: %s", oldSpecPath)
+	logger.Infof("New spec: %s", newSpecPath)
 
 	return nil
 }
@@ -164,12 +184,28 @@ func executeLocalDiff(ctx context.Context, params LocalDiffParams) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
+	// Format specs to YAML if requested
+	oldSpecPath := params.OldSpecPath
+	newSpecPath := params.NewSpecPath
+	if params.FormatToYAML {
+		logger.Infof("Formatting specs to YAML...")
+		var err error
+		oldSpecPath, err = formatSpecToYAML(ctx, params.OldSpecPath)
+		if err != nil {
+			return fmt.Errorf("failed to format old spec to YAML: %w", err)
+		}
+		newSpecPath, err = formatSpecToYAML(ctx, params.NewSpecPath)
+		if err != nil {
+			return fmt.Errorf("failed to format new spec to YAML: %w", err)
+		}
+	}
+
 	// Compute SDK diff
 	logger.Infof("Computing SDK changes (%s)...", params.Lang)
 
 	oldConfig, newConfig := changes.CreateConfigsFromSpecPaths(changes.SpecComparison{
-		OldSpecPath: params.OldSpecPath,
-		NewSpecPath: params.NewSpecPath,
+		OldSpecPath: oldSpecPath,
+		NewSpecPath: newSpecPath,
 		OutputDir:   params.OutputDir,
 		Lang:        params.Lang,
 		Verbose:     false,
@@ -185,7 +221,7 @@ func executeLocalDiff(ctx context.Context, params LocalDiffParams) error {
 	logger.Infof("")
 
 	// Use the base name of the new spec as title
-	title := filepath.Base(params.NewSpecPath)
+	title := filepath.Base(newSpecPath)
 	printDiffSeparator(logger, title)
 
 	if len(diff.Changes) == 0 {
@@ -218,4 +254,28 @@ func printDiffSeparator(logger log.Logger, title string) {
 		logger.Infof("SDK Changes (%s):", title)
 	}
 	logger.Infof("────────────────────────────────────────")
+}
+
+// formatSpecToYAML formats an OpenAPI spec to YAML and writes it to a new file
+// Returns the path to the formatted file (same directory, .yaml extension)
+func formatSpecToYAML(ctx context.Context, specPath string) (string, error) {
+	// Determine output path - replace extension with .yaml
+	dir := filepath.Dir(specPath)
+	base := filepath.Base(specPath)
+	ext := filepath.Ext(base)
+	name := strings.TrimSuffix(base, ext)
+	outputPath := filepath.Join(dir, name+".formatted.yaml")
+
+	// Format the spec
+	var buf bytes.Buffer
+	if err := transform.FormatDocument(ctx, specPath, true, &buf); err != nil {
+		return "", fmt.Errorf("failed to format spec: %w", err)
+	}
+
+	// Write the formatted spec
+	if err := os.WriteFile(outputPath, buf.Bytes(), 0o644); err != nil {
+		return "", fmt.Errorf("failed to write formatted spec: %w", err)
+	}
+
+	return outputPath, nil
 }
