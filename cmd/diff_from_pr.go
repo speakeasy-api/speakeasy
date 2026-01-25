@@ -500,7 +500,8 @@ func findPreviousGenerationDigest(ctx context.Context, currentEvent *shared.CliE
 	}
 
 	// Try with increasing limits until we find a previous event
-	limits := []int64{50, 200, 500, 1000}
+	limits := []int64{50, 200, 500, 1000, 5000}
+	var prevCount int
 
 	for _, limit := range limits {
 		if verbose {
@@ -562,10 +563,13 @@ func findPreviousGenerationDigest(ctx context.Context, currentEvent *shared.CliE
 			return *previousEvent.SourceRevisionDigest, nil
 		}
 
-		// If we got fewer results than the limit, there are no more events to fetch
-		if int64(len(eventsRes.CliEventBatch)) < limit {
+		// If we got fewer results than the limit, or the same count as the previous limit,
+		// there are no more events to fetch
+		currentCount := len(eventsRes.CliEventBatch)
+		if int64(currentCount) < limit || currentCount == prevCount {
 			break
 		}
+		prevCount = currentCount
 	}
 
 	return "", fmt.Errorf("no previous generation found - this may be the first generation for this target")
