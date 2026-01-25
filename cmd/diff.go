@@ -80,16 +80,18 @@ type LocalDiffParams struct {
 func executeDiff(ctx context.Context, params DiffParams) error {
 	logger := log.From(ctx)
 
-	// Clean up and prepare output directory
-	oldDir := filepath.Join(params.OutputDir, "old")
-	newDir := filepath.Join(params.OutputDir, "new")
+	// Create temp directories for bundle extraction
+	oldTempDir, err := os.MkdirTemp("", "speakeasy-diff-old-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for old spec: %w", err)
+	}
+	defer os.RemoveAll(oldTempDir)
 
-	if err := os.MkdirAll(oldDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create old spec directory: %w", err)
+	newTempDir, err := os.MkdirTemp("", "speakeasy-diff-new-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for new spec: %w", err)
 	}
-	if err := os.MkdirAll(newDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create new spec directory: %w", err)
-	}
+	defer os.RemoveAll(newTempDir)
 
 	// Build registry URLs
 	oldLocation := fmt.Sprintf("registry.speakeasyapi.dev/%s/%s/%s@%s",
@@ -100,7 +102,7 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	// Download old spec
 	logger.Infof("Downloading old spec: %s", truncateDigest(params.OldDigest))
 	oldDoc := workflow.Document{Location: workflow.LocationString(oldLocation)}
-	oldResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, oldDoc, oldDir)
+	oldResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, oldDoc, oldTempDir)
 	if err != nil {
 		return fmt.Errorf("failed to download old spec: %w", err)
 	}
@@ -108,27 +110,26 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	// Download new spec
 	logger.Infof("Downloading new spec: %s", truncateDigest(params.NewDigest))
 	newDoc := workflow.Document{Location: workflow.LocationString(newLocation)}
-	newResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, newDoc, newDir)
+	newResult, err := registry.ResolveSpeakeasyRegistryBundle(ctx, newDoc, newTempDir)
 	if err != nil {
 		return fmt.Errorf("failed to download new spec: %w", err)
 	}
 
-	logger.Infof("Specs downloaded to: %s", params.OutputDir)
+	// Prepare output directory
+	if err := os.MkdirAll(params.OutputDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
 
-	// Format specs to YAML if requested
-	oldSpecPath := oldResult.LocalFilePath
-	newSpecPath := newResult.LocalFilePath
-	if params.FormatToYAML {
-		logger.Infof("Formatting specs to YAML...")
-		var err error
-		oldSpecPath, err = formatSpecToYAML(ctx, oldResult.LocalFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to format old spec to YAML: %w", err)
-		}
-		newSpecPath, err = formatSpecToYAML(ctx, newResult.LocalFilePath)
-		if err != nil {
-			return fmt.Errorf("failed to format new spec to YAML: %w", err)
-		}
+	// Format specs to YAML and copy to output directory
+	oldSpecPath := filepath.Join(params.OutputDir, "old.openapi.yaml")
+	newSpecPath := filepath.Join(params.OutputDir, "new.openapi.yaml")
+
+	logger.Infof("Formatting and copying specs...")
+	if err := formatAndCopySpec(ctx, oldResult.LocalFilePath, oldSpecPath); err != nil {
+		return fmt.Errorf("failed to process old spec: %w", err)
+	}
+	if err := formatAndCopySpec(ctx, newResult.LocalFilePath, newSpecPath); err != nil {
+		return fmt.Errorf("failed to process new spec: %w", err)
 	}
 
 	if params.NoDiff {
@@ -155,22 +156,69 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 		return fmt.Errorf("failed to compute SDK changes: %w", err)
 	}
 
-	// Output results
-	logger.Infof("")
-	printDiffSeparator(logger, params.Namespace)
-
+	// Generate output in multiple formats
+	markdownFull := ""
+	markdownCompact := ""
 	if len(diff.Changes) == 0 {
-		logger.Infof("No SDK-level changes detected")
+		markdownFull = "No SDK-level changes detected"
+		markdownCompact = "No SDK-level changes detected"
 	} else {
-		markdown := changes.ToMarkdown(diff, changes.DetailLevelFull)
-		fmt.Println(markdown)
+		markdownFull = changes.ToMarkdown(diff, changes.DetailLevelFull)
+		markdownCompact = changes.ToMarkdown(diff, changes.DetailLevelCompact)
 	}
 
+	// Write changes.md (full detail)
+	changesMarkdownPath := filepath.Join(params.OutputDir, "changes.md")
+	if err := os.WriteFile(changesMarkdownPath, []byte(markdownFull), 0o644); err != nil {
+		return fmt.Errorf("failed to write changes.md: %w", err)
+	}
+
+	// Write changes-compact.md
+	changesCompactPath := filepath.Join(params.OutputDir, "changes-compact.md")
+	if err := os.WriteFile(changesCompactPath, []byte(markdownCompact), 0o644); err != nil {
+		return fmt.Errorf("failed to write changes-compact.md: %w", err)
+	}
+
+	// Write changes.html
+	html := changes.ToHTML(diff)
+	changesHTMLPath := filepath.Join(params.OutputDir, "changes.html")
+	if err := os.WriteFile(changesHTMLPath, []byte(html), 0o644); err != nil {
+		return fmt.Errorf("failed to write changes.html: %w", err)
+	}
+
+	// Output results to console
+	logger.Infof("")
+	printDiffSeparator(logger, params.Namespace)
+	fmt.Println(markdownFull)
 	printDiffSeparator(logger, "")
 
 	logger.Infof("")
-	logger.Infof("Old spec: %s", oldSpecPath)
-	logger.Infof("New spec: %s", newSpecPath)
+	logger.Infof("Output files:")
+	logger.Infof("  %s", oldSpecPath)
+	logger.Infof("  %s", newSpecPath)
+	logger.Infof("  %s", changesMarkdownPath)
+	logger.Infof("  %s", changesCompactPath)
+	logger.Infof("  %s", changesHTMLPath)
+
+	return nil
+}
+
+// formatAndCopySpec formats a spec to YAML and copies it to the destination path
+func formatAndCopySpec(ctx context.Context, srcPath, dstPath string) error {
+	formattedPath, err := formatSpecToYAML(ctx, srcPath)
+	if err != nil {
+		return err
+	}
+
+	// Read formatted content and write to destination
+	content, err := os.ReadFile(formattedPath)
+	if err != nil {
+		return fmt.Errorf("failed to read formatted spec: %w", err)
+	}
+
+	if err := os.WriteFile(dstPath, content, 0o644); err != nil {
+		return fmt.Errorf("failed to write spec: %w", err)
+	}
 
 	return nil
 }
