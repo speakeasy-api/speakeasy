@@ -200,6 +200,11 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	logger.Infof("  %s", changesCompactPath)
 	logger.Infof("  %s", changesHTMLPath)
 
+	logger.Infof("")
+	logger.Infof("Registry:")
+	logger.Infof("  Old: %s", oldLocation)
+	logger.Infof("  New: %s", newLocation)
+
 	return nil
 }
 
