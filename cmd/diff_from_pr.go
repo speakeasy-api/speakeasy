@@ -526,7 +526,10 @@ func findPreviousGenerationDigest(ctx context.Context, currentEvent *shared.CliE
 			logger.Infof("Current event: ID=%s, CreatedAt=%s", currentEvent.ID, currentEvent.CreatedAt)
 		}
 
-		// Find the most recent event that was created BEFORE the current event
+		// Find the most recent event that was created BEFORE the current event.
+		// Note: The API returns events in descending order by CreatedAt (newest first),
+		// but we don't rely on this - we scan all events and use timestamp comparison
+		// to find the most recent event that occurred before the current one.
 		var previousEvent *shared.CliEvent
 		for i := range eventsRes.CliEventBatch {
 			event := &eventsRes.CliEventBatch[i]
