@@ -56,14 +56,16 @@ var diffCmd = &model.CommandGroup{
 
 // DiffParams contains the parameters needed to execute a diff from registry
 type DiffParams struct {
-	Org          string
-	Workspace    string
-	Namespace    string
-	OldDigest    string
-	NewDigest    string
-	OutputDir    string
-	Lang         string
-	FormatToYAML bool // Pre-format specs to YAML before diffing (helps with consistent output)
+	Org                  string
+	Workspace            string
+	Namespace            string
+	OldDigest            string
+	NewDigest            string
+	OutputDir            string
+	Lang                 string
+	FormatToYAML         bool    // Pre-format specs to YAML before diffing (helps with consistent output)
+	GenerateConfigPreRaw *string // Raw gen.yaml content from before the change (optional)
+	GenerateConfigPostRaw *string // Raw gen.yaml content from after the change (optional)
 }
 
 // LocalDiffParams contains the parameters needed to execute a diff from local files
@@ -77,11 +79,13 @@ type LocalDiffParams struct {
 
 // DiffComputeParams contains the common parameters for computing a diff
 type DiffComputeParams struct {
-	OldSpecPath string
-	NewSpecPath string
-	OutputDir   string
-	Lang        string
-	Title       string // Title for the diff output (e.g., namespace or filename)
+	OldSpecPath           string
+	NewSpecPath           string
+	OutputDir             string
+	Lang                  string
+	Title                 string  // Title for the diff output (e.g., namespace or filename)
+	GenerateConfigOldRaw  *string // Raw gen.yaml content for old config (optional)
+	GenerateConfigNewRaw  *string // Raw gen.yaml content for new config (optional)
 }
 
 // DiffComputeResult contains the output paths from a diff computation
@@ -94,6 +98,28 @@ type DiffComputeResult struct {
 // computeAndOutputDiff is the shared logic for computing SDK diff and writing output files
 func computeAndOutputDiff(ctx context.Context, params DiffComputeParams) (*DiffComputeResult, error) {
 	logger := log.From(ctx)
+
+	// Write generate config files if provided (used by the changes library)
+	speakeasyDir := filepath.Join(params.OutputDir, ".speakeasy")
+	if params.GenerateConfigOldRaw != nil || params.GenerateConfigNewRaw != nil {
+		if err := os.MkdirAll(speakeasyDir, 0o755); err != nil {
+			return nil, fmt.Errorf("failed to create .speakeasy directory: %w", err)
+		}
+	}
+	if params.GenerateConfigOldRaw != nil {
+		genOldPath := filepath.Join(speakeasyDir, "gen.old.yaml")
+		if err := os.WriteFile(genOldPath, []byte(*params.GenerateConfigOldRaw), 0o644); err != nil {
+			return nil, fmt.Errorf("failed to write gen.old.yaml: %w", err)
+		}
+		logger.Infof("Wrote old generate config to %s", genOldPath)
+	}
+	if params.GenerateConfigNewRaw != nil {
+		genPath := filepath.Join(speakeasyDir, "gen.yaml")
+		if err := os.WriteFile(genPath, []byte(*params.GenerateConfigNewRaw), 0o644); err != nil {
+			return nil, fmt.Errorf("failed to write gen.yaml: %w", err)
+		}
+		logger.Infof("Wrote new generate config to %s", genPath)
+	}
 
 	logger.Infof("")
 	logger.Infof("Computing SDK changes (%s)...", params.Lang)
@@ -213,11 +239,13 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 
 	// Compute and output SDK diff
 	result, err := computeAndOutputDiff(ctx, DiffComputeParams{
-		OldSpecPath: oldSpecPath,
-		NewSpecPath: newSpecPath,
-		OutputDir:   params.OutputDir,
-		Lang:        params.Lang,
-		Title:       params.Namespace,
+		OldSpecPath:          oldSpecPath,
+		NewSpecPath:          newSpecPath,
+		OutputDir:            params.OutputDir,
+		Lang:                 params.Lang,
+		Title:                params.Namespace,
+		GenerateConfigOldRaw: params.GenerateConfigPreRaw,
+		GenerateConfigNewRaw: params.GenerateConfigPostRaw,
 	})
 	if err != nil {
 		return err

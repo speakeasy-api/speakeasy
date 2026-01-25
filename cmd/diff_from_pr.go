@@ -566,13 +566,15 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	logger.Infof("")
 
 	return executeDiff(ctx, DiffParams{
-		Org:          org,
-		Workspace:    workspace,
-		Namespace:    *event.SourceNamespaceName,
-		OldDigest:    oldDigest,
-		NewDigest:    *event.SourceRevisionDigest,
-		OutputDir:    flags.OutputDir,
-		Lang:         lang,
-		FormatToYAML: flags.FormatToYAML,
+		Org:                   org,
+		Workspace:             workspace,
+		Namespace:             *event.SourceNamespaceName,
+		OldDigest:             oldDigest,
+		NewDigest:             *event.SourceRevisionDigest,
+		OutputDir:             flags.OutputDir,
+		Lang:                  lang,
+		FormatToYAML:          flags.FormatToYAML,
+		GenerateConfigPreRaw:  event.GenerateConfigPreRaw,
+		GenerateConfigPostRaw: event.GenerateConfigPostRaw,
 	})
 }
