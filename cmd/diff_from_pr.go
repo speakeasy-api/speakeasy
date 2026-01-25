@@ -445,6 +445,10 @@ func findAndEnrichFromConnectedEvents(ctx context.Context, client *speakeasyclie
 			if connectedEvent.WorkflowLockPreRaw != nil && event.WorkflowLockPreRaw == nil {
 				event.WorkflowLockPreRaw = connectedEvent.WorkflowLockPreRaw
 			}
+			// Also enrich WorkflowLockPostRaw so we can detect the Pre==Post bug
+			if connectedEvent.WorkflowLockPostRaw != nil && event.WorkflowLockPostRaw == nil {
+				event.WorkflowLockPostRaw = connectedEvent.WorkflowLockPostRaw
+			}
 		}
 	}
 
@@ -480,6 +484,93 @@ func extractOldDigestFromWorkflowLockPre(workflowLockPreRaw string, targetLang s
 	return ""
 }
 
+// findPreviousGenerationDigest finds the previous TARGET_GENERATE event for the same GenerateGenLockID
+// and returns its SourceRevisionDigest. We use CreatedAt to find events that occurred before the current one.
+// If the initial batch doesn't contain a previous event, we expand the limit and retry.
+func findPreviousGenerationDigest(ctx context.Context, currentEvent *shared.CliEvent, verbose bool) (string, error) {
+	logger := log.From(ctx)
+
+	if currentEvent.GenerateGenLockID == nil {
+		return "", fmt.Errorf("current event has no GenerateGenLockID")
+	}
+
+	client, err := core.GetSDKFromContext(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get SDK client: %w", err)
+	}
+
+	// Try with increasing limits until we find a previous event
+	limits := []int64{50, 200, 500, 1000}
+
+	for _, limit := range limits {
+		if verbose {
+			logger.Infof("Searching with limit=%d...", limit)
+		}
+
+		eventsRes, err := client.Events.Search(ctx, operations.SearchWorkspaceEventsRequest{
+			GenerateGenLockID: currentEvent.GenerateGenLockID,
+			InteractionType:   shared.InteractionTypeTargetGenerate.ToPointer(),
+			Limit:             &limit,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to search for previous events: %w", err)
+		}
+
+		if eventsRes.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("unexpected status %d when searching for previous events", eventsRes.StatusCode)
+		}
+
+		if verbose {
+			logger.Infof("Found %d events for GenerateGenLockID %s", len(eventsRes.CliEventBatch), *currentEvent.GenerateGenLockID)
+			logger.Infof("Current event: ID=%s, CreatedAt=%s", currentEvent.ID, currentEvent.CreatedAt)
+		}
+
+		// Find the most recent event that was created BEFORE the current event
+		var previousEvent *shared.CliEvent
+		for i := range eventsRes.CliEventBatch {
+			event := &eventsRes.CliEventBatch[i]
+
+			if verbose {
+				digest := "<nil>"
+				if event.SourceRevisionDigest != nil {
+					digest = truncateDigest(*event.SourceRevisionDigest)
+				}
+				logger.Infof("  Event %d: ID=%s, CreatedAt=%s, Digest=%s", i, event.ID, event.CreatedAt, digest)
+			}
+
+			// Skip the current event and any events created at the same time or after
+			if event.ID == currentEvent.ID {
+				continue
+			}
+			if event.CreatedAt.Before(currentEvent.CreatedAt) {
+				// This event is older - keep track of the most recent one before current
+				if previousEvent == nil || event.CreatedAt.After(previousEvent.CreatedAt) {
+					previousEvent = event
+				}
+			}
+		}
+
+		if previousEvent != nil {
+			if previousEvent.SourceRevisionDigest == nil {
+				return "", fmt.Errorf("previous generation event has no SourceRevisionDigest")
+			}
+
+			if verbose {
+				logger.Infof("Selected previous event: ID=%s, Digest=%s", previousEvent.ID, *previousEvent.SourceRevisionDigest)
+			}
+
+			return *previousEvent.SourceRevisionDigest, nil
+		}
+
+		// If we got fewer results than the limit, there are no more events to fetch
+		if int64(len(eventsRes.CliEventBatch)) < limit {
+			break
+		}
+	}
+
+	return "", fmt.Errorf("no previous generation found - this may be the first generation for this target")
+}
+
 func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	logger := log.From(ctx)
 
@@ -513,8 +604,9 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 
 	// Get the old digest - check multiple sources in priority order:
 	// 1. OpenapiDiffBaseSourceRevisionDigest (set by `speakeasy openapi diff`)
-	// 2. GenerateGenLockPreRevisionDigest (set server-side for some events)
+	// 2. GenerateGenLockPreRevisionDigest (set during target generation)
 	// 3. WorkflowLockPreRaw (the previous lockfile, parsed to extract the digest)
+	// 4. Look up the previous generation event for this target
 	oldDigest := ""
 	if event.OpenapiDiffBaseSourceRevisionDigest != nil {
 		oldDigest = *event.OpenapiDiffBaseSourceRevisionDigest
@@ -522,11 +614,20 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 		oldDigest = *event.GenerateGenLockPreRevisionDigest
 	} else if event.WorkflowLockPreRaw != nil {
 		// Parse the previous lockfile to extract the old digest
-		oldDigest = extractOldDigestFromWorkflowLockPre(*event.WorkflowLockPreRaw, match.targetLang)
+		// But only if it differs from WorkflowLockPostRaw (otherwise it's the bug)
+		if event.WorkflowLockPostRaw == nil || *event.WorkflowLockPreRaw != *event.WorkflowLockPostRaw {
+			oldDigest = extractOldDigestFromWorkflowLockPre(*event.WorkflowLockPreRaw, match.targetLang)
+		}
 	}
 
+	// Fallback: look up the previous generation event for this GenerateGenLockID
 	if oldDigest == "" {
-		return fmt.Errorf("no previous spec revision found in generation event - this may be the first generation for this target")
+		logger.Infof("Looking up previous generation event...")
+		prevDigest, err := findPreviousGenerationDigest(ctx, &event, flags.Verbose)
+		if err != nil {
+			return fmt.Errorf("no previous spec revision found: %w", err)
+		}
+		oldDigest = prevDigest
 	}
 
 	// Get workspace context
