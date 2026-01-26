@@ -50,10 +50,17 @@ type OpenAPIDiffFlags struct {
 	Output    string `json:"output"`
 }
 
+const openapiDiffLong = `Visualize the **raw OpenAPI schema changes** between two documents - paths added/removed,
+operations changed, properties modified, etc.
+
+This is different from ` + "`speakeasy diff`" + ` which shows SDK-level changes (how generated
+SDK methods and types would differ). Use this command when you want to see the raw
+specification differences.`
+
 var openapiDiffCmd = model.ExecutableCommand[OpenAPIDiffFlags]{
 	Usage:          "diff",
 	Short:          "Visualize the changes between two OpenAPI documents",
-	Long:           `Visualize the changes between two OpenAPI documents`,
+	Long:           openapiDiffLong,
 	Run:            diffOpenapi,
 	RunInteractive: diffOpenapiInteractive,
 	Flags: []flag.Flag{

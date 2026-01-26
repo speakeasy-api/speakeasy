@@ -94,7 +94,12 @@ func NewWorkflow(
 
 	// Load the current lockfile so that we don't overwrite all targets
 	lockfile, err := workflow.LoadLockfile(projectDir)
-	lockfileOld := lockfile
+
+	// Deep copy the lockfile to preserve the original state before modifications
+	var lockfileOld *workflow.LockFile
+	if lockfile != nil {
+		lockfileOld = deepCopyLockfile(lockfile)
+	}
 
 	if err != nil || lockfile == nil {
 		lockfile = &workflow.LockFile{
@@ -383,4 +388,25 @@ func Migrate(ctx context.Context, wf *workflow.Workflow) {
 	} else {
 		*wf = wf.MigrateNoTelemetry()
 	}
+}
+
+// deepCopyLockfile creates a deep copy of a LockFile by marshaling and unmarshaling
+func deepCopyLockfile(lf *workflow.LockFile) *workflow.LockFile {
+	if lf == nil {
+		return nil
+	}
+
+	// Marshal to YAML
+	data, err := yaml.Marshal(lf)
+	if err != nil {
+		return nil
+	}
+
+	// Unmarshal into new struct
+	var lfCopy workflow.LockFile
+	if err := yaml.Unmarshal(data, &lfCopy); err != nil {
+		return nil
+	}
+
+	return &lfCopy
 }
