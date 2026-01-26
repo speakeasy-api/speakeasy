@@ -18,10 +18,10 @@ type Input struct {
 	ChangesReportURL string `json:"changes_report_url,omitempty"`
 
 	// Workflow context
-	WorkflowName   string `json:"workflow_name,omitempty"`
-	SourceBranch   string `json:"source_branch,omitempty"`
-	FeatureBranch  string `json:"feature_branch,omitempty"`
-	Target         string `json:"target,omitempty"` // e.g., "typescript", "python"
+	WorkflowName    string `json:"workflow_name,omitempty"`
+	SourceBranch    string `json:"source_branch,omitempty"`
+	FeatureBranch   string `json:"feature_branch,omitempty"`
+	Target          string `json:"target,omitempty"`           // e.g., "typescript", "python"
 	SpecifiedTarget string `json:"specified_target,omitempty"` // Target specified via INPUT_TARGET
 
 	// Generation type flags
