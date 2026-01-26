@@ -131,6 +131,22 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	}
 
 	githubactions.AddStepSummary(summaryMarkdown.String())
+
+	GenerateLintingPRReport(ctx, summary.ReportURL)
+}
+
+// GenerateLintingPRReport creates a version report for the linting report link
+// to be included in PR descriptions.
+func GenerateLintingPRReport(ctx context.Context, reportURL string) {
+	if reportURL == "" || !env.IsGithubAction() {
+		return
+	}
+	prMD := fmt.Sprintf("> [!IMPORTANT]\n> Linting report available at: <%s>\n", reportURL)
+	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+		Key:      "linting_report",
+		PRReport: prMD,
+		Priority: 10, // Higher priority = appears first
+	})
 }
 
 func GenerateChangesSummary(ctx context.Context, url string, summary changes.Summary) {
@@ -185,6 +201,16 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		}
 		log.From(ctx).Infof("wrote changes summary to \"%s\"", filepath)
 	}
+	// Add changes report link as separate version report entry
+	if url != "" {
+		linkMD := fmt.Sprintf("> [!IMPORTANT]\n> OpenAPI Change report available at: <%s>\n", url)
+		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+			Key:      "changes_report",
+			PRReport: linkMD,
+			Priority: 9, // Just below linting_report (10)
+		})
+	}
+
 	var prMD string
 	if len(summary.Text) > 0 {
 		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\n" + summary.Text + "\n" + "</details>\n"
