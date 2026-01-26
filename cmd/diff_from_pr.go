@@ -388,28 +388,30 @@ func printEventDetails(logger log.Logger, event *shared.CliEvent) {
 	}
 
 	// Check if WorkflowLockPreRaw and WorkflowLockPostRaw are the same (indicates bug)
-	if event.WorkflowLockPreRaw != nil && event.WorkflowLockPostRaw != nil {
+	switch {
+	case event.WorkflowLockPreRaw != nil && event.WorkflowLockPostRaw != nil:
 		if *event.WorkflowLockPreRaw == *event.WorkflowLockPostRaw {
 			logger.Infof("  WorkflowLockPreRaw: <SAME AS POST - BUG!>")
 		} else {
 			logger.Infof("  WorkflowLockPreRaw: (differs from post)")
 		}
-	} else if event.WorkflowLockPreRaw != nil {
+	case event.WorkflowLockPreRaw != nil:
 		logger.Infof("  WorkflowLockPreRaw: <set>")
-	} else {
+	default:
 		logger.Infof("  WorkflowLockPreRaw: <nil>")
 	}
 
 	// Check if GenerateConfigPreRaw and GenerateConfigPostRaw are the same (indicates bug)
-	if event.GenerateConfigPreRaw != nil && event.GenerateConfigPostRaw != nil {
+	switch {
+	case event.GenerateConfigPreRaw != nil && event.GenerateConfigPostRaw != nil:
 		if *event.GenerateConfigPreRaw == *event.GenerateConfigPostRaw {
 			logger.Infof("  GenerateConfigPreRaw: <SAME AS POST - BUG!>")
 		} else {
 			logger.Infof("  GenerateConfigPreRaw: (differs from post)")
 		}
-	} else if event.GenerateConfigPreRaw != nil {
+	case event.GenerateConfigPreRaw != nil:
 		logger.Infof("  GenerateConfigPreRaw: <set>")
-	} else {
+	default:
 		logger.Infof("  GenerateConfigPreRaw: <nil>")
 	}
 
@@ -601,18 +603,19 @@ func runDiffFromPR(ctx context.Context, flags FromPRFlags) error {
 	// Get the old digest:
 	// 1. Check event for previous registry digest
 	// 2. Fallback to PR's workflow.lock diff
-	oldDigest := ""
-	if event.OpenapiDiffBaseSourceRevisionDigest != nil {
+	var oldDigest string
+	switch {
+	case event.OpenapiDiffBaseSourceRevisionDigest != nil:
 		oldDigest = *event.OpenapiDiffBaseSourceRevisionDigest
 		if flags.Verbose {
 			logger.Infof("Using OpenapiDiffBaseSourceRevisionDigest from event")
 		}
-	} else if event.GenerateGenLockPreRevisionDigest != nil {
+	case event.GenerateGenLockPreRevisionDigest != nil:
 		oldDigest = *event.GenerateGenLockPreRevisionDigest
 		if flags.Verbose {
 			logger.Infof("Using GenerateGenLockPreRevisionDigest from event")
 		}
-	} else if match.previousSourceDigest != "" {
+	case match.previousSourceDigest != "":
 		oldDigest = match.previousSourceDigest
 		if flags.Verbose {
 			logger.Infof("Using previous digest from PR's workflow.lock diff")

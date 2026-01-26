@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	changes "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -56,15 +56,15 @@ var diffCmd = &model.CommandGroup{
 
 // DiffParams contains the parameters needed to execute a diff from registry
 type DiffParams struct {
-	Org                  string
-	Workspace            string
-	Namespace            string
-	OldDigest            string
-	NewDigest            string
-	OutputDir            string
-	Lang                 string
-	FormatToYAML         bool    // Pre-format specs to YAML before diffing (helps with consistent output)
-	GenerateConfigPreRaw *string // Raw gen.yaml content from before the change (optional)
+	Org                   string
+	Workspace             string
+	Namespace             string
+	OldDigest             string
+	NewDigest             string
+	OutputDir             string
+	Lang                  string
+	FormatToYAML          bool    // Pre-format specs to YAML before diffing (helps with consistent output)
+	GenerateConfigPreRaw  *string // Raw gen.yaml content from before the change (optional)
 	GenerateConfigPostRaw *string // Raw gen.yaml content from after the change (optional)
 }
 
@@ -79,13 +79,13 @@ type LocalDiffParams struct {
 
 // DiffComputeParams contains the common parameters for computing a diff
 type DiffComputeParams struct {
-	OldSpecPath           string
-	NewSpecPath           string
-	OutputDir             string
-	Lang                  string
-	Title                 string  // Title for the diff output (e.g., namespace or filename)
-	GenerateConfigOldRaw  *string // Raw gen.yaml content for old config (optional)
-	GenerateConfigNewRaw  *string // Raw gen.yaml content for new config (optional)
+	OldSpecPath          string
+	NewSpecPath          string
+	OutputDir            string
+	Lang                 string
+	Title                string  // Title for the diff output (e.g., namespace or filename)
+	GenerateConfigOldRaw *string // Raw gen.yaml content for old config (optional)
+	GenerateConfigNewRaw *string // Raw gen.yaml content for new config (optional)
 }
 
 // DiffComputeResult contains the output paths from a diff computation
@@ -139,8 +139,7 @@ func computeAndOutputDiff(ctx context.Context, params DiffComputeParams) (*DiffC
 	}
 
 	// Generate output in multiple formats
-	markdownFull := ""
-	markdownCompact := ""
+	var markdownFull, markdownCompact string
 	if len(diff.Changes) == 0 {
 		markdownFull = "No SDK-level changes detected"
 		markdownCompact = "No SDK-level changes detected"
@@ -164,7 +163,7 @@ func computeAndOutputDiff(ctx context.Context, params DiffComputeParams) (*DiffC
 	// Write changes.html
 	html := changes.ToHTML(diff)
 	changesHTMLPath := filepath.Join(params.OutputDir, "changes.html")
-	if err := os.WriteFile(changesHTMLPath, []byte(html), 0o644); err != nil {
+	if err := os.WriteFile(changesHTMLPath, html, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write changes.html: %w", err)
 	}
 
@@ -190,13 +189,13 @@ func executeDiff(ctx context.Context, params DiffParams) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory for old spec: %w", err)
 	}
-	defer os.RemoveAll(oldTempDir)
+	defer func() { _ = os.RemoveAll(oldTempDir) }()
 
 	newTempDir, err := os.MkdirTemp("", "speakeasy-diff-new-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory for new spec: %w", err)
 	}
-	defer os.RemoveAll(newTempDir)
+	defer func() { _ = os.RemoveAll(newTempDir) }()
 
 	// Build registry URLs
 	oldLocation := fmt.Sprintf("registry.speakeasyapi.dev/%s/%s/%s@%s",

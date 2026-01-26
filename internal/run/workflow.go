@@ -403,10 +403,10 @@ func deepCopyLockfile(lf *workflow.LockFile) *workflow.LockFile {
 	}
 
 	// Unmarshal into new struct
-	var copy workflow.LockFile
-	if err := yaml.Unmarshal(data, &copy); err != nil {
+	var lfCopy workflow.LockFile
+	if err := yaml.Unmarshal(data, &lfCopy); err != nil {
 		return nil
 	}
 
-	return &copy
+	return &lfCopy
 }
