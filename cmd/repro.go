@@ -102,12 +102,13 @@ func runRepro(ctx context.Context, flags ReproFlags) error {
 	}
 
 	// Switch to the correct workspace if needed
-	ctx, err = ensureCorrectWorkspace(ctx, orgSlug, workspaceSlug, logger)
+	// resolvedWorkspaceID will be non-empty if admin credentials resolved the target workspace
+	ctx, resolvedWorkspaceID, err := ensureCorrectWorkspace(ctx, orgSlug, workspaceSlug, logger)
 	if err != nil {
 		return fmt.Errorf("failed to switch to workspace %s/%s: %w", orgSlug, workspaceSlug, err)
 	}
 
-	eventsForExecution, err := fetchCLIEvents(ctx, executionID)
+	eventsForExecution, err := fetchCLIEvents(ctx, executionID, resolvedWorkspaceID)
 	if err != nil {
 		return err
 	}
@@ -156,7 +157,7 @@ func runRepro(ctx context.Context, flags ReproFlags) error {
 	return finishAndRegenerate(outputDir, logger)
 }
 
-func fetchCLIEvents(ctx context.Context, executionID string) ([]shared.CliEvent, error) {
+func fetchCLIEvents(ctx context.Context, executionID string, workspaceID string) ([]shared.CliEvent, error) {
 	s, err := core.GetSDKFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get SDK client: %w", err)
@@ -169,6 +170,12 @@ func fetchCLIEvents(ctx context.Context, executionID string) ([]shared.CliEvent,
 	req := operations.SearchWorkspaceEventsRequest{
 		ExecutionID: &executionID,
 		Limit:       &limit,
+	}
+
+	// If a specific workspace ID was resolved (e.g., via admin endpoint), use it
+	if workspaceID != "" {
+		req.WorkspaceID = &workspaceID
+		logger.Infof("Using resolved workspace ID: %s", workspaceID)
 	}
 
 	res, err := s.Events.Search(ctx, req)
@@ -574,8 +581,52 @@ func parseReproTarget(target string) (orgSlug, workspaceSlug, executionID string
 	return orgSlug, workspaceSlug, executionID, nil
 }
 
+// resolveWorkspaceIDFromSlugs resolves org/workspace slugs to workspace_id
+// Uses the admin endpoint which accepts slugs and returns workspace info
+func resolveWorkspaceIDFromSlugs(ctx context.Context, orgSlug, workspaceSlug string, logger log.Logger) (string, error) {
+	apiKey := config.GetSpeakeasyAPIKey()
+	if apiKey == "" {
+		return "", fmt.Errorf("no API key available")
+	}
+
+	serverURL := os.Getenv("SPEAKEASY_SERVER_URL")
+	if serverURL == "" {
+		serverURL = "https://api.prod.speakeasyapi.dev"
+	}
+
+	url := fmt.Sprintf("%s/v1/admin/workspace?organization_slug=%s&workspace_slug=%s",
+		serverURL, orgSlug, workspaceSlug)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("x-api-key", apiKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to call admin workspace endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("admin workspace endpoint returned %d", resp.StatusCode)
+	}
+
+	var workspace struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&workspace); err != nil {
+		return "", fmt.Errorf("failed to decode workspace response: %w", err)
+	}
+
+	logger.Infof("Resolved workspace %s/%s to ID: %s", orgSlug, workspaceSlug, workspace.ID)
+	return workspace.ID, nil
+}
+
 // ensureCorrectWorkspace switches to the correct workspace if needed
-func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, logger log.Logger) (context.Context, error) {
+// Returns the context and optionally a resolved workspace ID (for admin users)
+func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, logger log.Logger) (context.Context, string, error) {
 	// Check if we're already in the correct workspace
 	currentOrgSlug := core.GetOrgSlugFromContext(ctx)
 	currentWorkspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
@@ -583,18 +634,23 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 	// Allow admin users (speakeasy-self workspace) to access any workspace for repro purposes
 	if currentWorkspaceSlug == "speakeasy-self" {
 		logger.Infof("Using admin workspace credentials to access %s/%s", orgSlug, workspaceSlug)
-		return ctx, nil
+		// Resolve the actual workspace ID via admin endpoint
+		workspaceID, err := resolveWorkspaceIDFromSlugs(ctx, orgSlug, workspaceSlug, logger)
+		if err != nil {
+			return ctx, "", fmt.Errorf("failed to resolve workspace ID: %w", err)
+		}
+		return ctx, workspaceID, nil
 	}
 
 	if currentOrgSlug == orgSlug && currentWorkspaceSlug == workspaceSlug {
 		logger.Infof("Already authenticated to workspace %s/%s", orgSlug, workspaceSlug)
-		return ctx, nil
+		return ctx, "", nil
 	}
 
 	// Special case for test scenarios - if we're using a test workspace, just continue
 	if orgSlug == "test" && workspaceSlug == "org-test-workspace" {
 		logger.Warnf("Using test workspace credentials, continuing with current authentication")
-		return ctx, nil
+		return ctx, "", nil
 	}
 
 	// Check if we have the workspace API key saved
@@ -604,19 +660,19 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 
 		// Clear current auth and set the workspace API key
 		if err := config.ClearSpeakeasyAuthInfo(); err != nil {
-			return ctx, err
+			return ctx, "", err
 		}
 		if err := config.SetSpeakeasyAPIKey(apiKey); err != nil {
-			return ctx, err
+			return ctx, "", err
 		}
 
 		// Re-authenticate with the new key
 		authCtx, err := auth.Authenticate(ctx, false)
 		if err != nil {
-			return ctx, fmt.Errorf("failed to authenticate with saved workspace key: %w", err)
+			return ctx, "", fmt.Errorf("failed to authenticate with saved workspace key: %w", err)
 		}
 
-		return authCtx, nil
+		return authCtx, "", nil
 	}
 
 	// We don't have the workspace key, prompt for login
@@ -627,21 +683,26 @@ func ensureCorrectWorkspace(ctx context.Context, orgSlug, workspaceSlug string, 
 	// Attempt to authenticate
 	authCtx, err := auth.Authenticate(ctx, true)
 	if err != nil {
-		return ctx, fmt.Errorf("authentication failed: %w", err)
+		return ctx, "", fmt.Errorf("authentication failed: %w", err)
 	}
 
 	// Check if we authenticated as speakeasy-self
 	newWorkspaceSlug := core.GetWorkspaceSlugFromContext(authCtx)
 	if newWorkspaceSlug == "speakeasy-self" {
 		logger.Infof("Using admin workspace credentials to access %s/%s", orgSlug, workspaceSlug)
-		return authCtx, nil
+		// Resolve the actual workspace ID via admin endpoint
+		workspaceID, err := resolveWorkspaceIDFromSlugs(authCtx, orgSlug, workspaceSlug, logger)
+		if err != nil {
+			return authCtx, "", fmt.Errorf("failed to resolve workspace ID: %w", err)
+		}
+		return authCtx, workspaceID, nil
 	}
 
 	// Verify we're now in the correct workspace
 	newOrgSlug := core.GetOrgSlugFromContext(authCtx)
 	if newOrgSlug != orgSlug || newWorkspaceSlug != workspaceSlug {
-		return authCtx, fmt.Errorf("authenticated to %s/%s but expected %s/%s. Please run 'speakeasy auth switch' and select the correct workspace", newOrgSlug, newWorkspaceSlug, orgSlug, workspaceSlug)
+		return authCtx, "", fmt.Errorf("authenticated to %s/%s but expected %s/%s. Please run 'speakeasy auth switch' and select the correct workspace", newOrgSlug, newWorkspaceSlug, orgSlug, workspaceSlug)
 	}
 
-	return authCtx, nil
+	return authCtx, "", nil
 }

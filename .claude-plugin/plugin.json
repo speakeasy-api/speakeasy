@@ -1,6 +1,0 @@
-{
-  "name": "speakeasy",
-  "version": "0.2.0-alpha",
-  "description": "SDK generation and OpenAPI tooling with Speakeasy CLI",
-  "skills": "./skills/"
-}
