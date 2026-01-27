@@ -101,22 +101,6 @@ func buildBody(input Input) string {
 		body.WriteString("# SDK update\n")
 	}
 
-	// Linting report section
-	if input.LintingReportURL != "" {
-		body.WriteString("\n<details>\n")
-		body.WriteString("<summary>Linting Report</summary>\n\n")
-		body.WriteString(fmt.Sprintf("Linting report available at: <%s>\n", input.LintingReportURL))
-		body.WriteString("</details>\n")
-	}
-
-	// OpenAPI changes section
-	if input.ChangesReportURL != "" {
-		body.WriteString("\n<details>\n")
-		body.WriteString("<summary>OpenAPI Changes</summary>\n\n")
-		body.WriteString(fmt.Sprintf("OpenAPI Change report available at: <%s>\n", input.ChangesReportURL))
-		body.WriteString("</details>\n")
-	}
-
 	// Versioning section
 	if input.VersionReport != nil {
 		bumpType, _ := getPRBumpType(input.VersionReport)
