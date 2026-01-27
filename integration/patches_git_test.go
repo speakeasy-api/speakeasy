@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -692,6 +693,9 @@ func TestGitArchitecture_DeltaCompressionEfficiency(t *testing.T) {
 // 3. Developer B modifies a generated file
 // 4. Developer B runs generation - must implicitly fetch the pristine ref to merge
 func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping on Windows due to git process handling differences")
+	}
 	t.Parallel()
 
 	remoteDir := filepath.Join(integrationTestsDir(), "remote-"+randStringBytes(7)+".git")
