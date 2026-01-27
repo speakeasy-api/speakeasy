@@ -94,22 +94,27 @@ func buildTitle(input Input) string {
 func buildBody(input Input) string {
 	var body strings.Builder
 
-	// IMPORTANT block with report URLs
-	if input.LintingReportURL != "" || input.ChangesReportURL != "" {
-		body.WriteString("> [!IMPORTANT]\n")
-		if input.LintingReportURL != "" {
-			body.WriteString(fmt.Sprintf("> Linting report available at: <%s>\n", input.LintingReportURL))
-		}
-		if input.ChangesReportURL != "" {
-			body.WriteString(fmt.Sprintf("> OpenAPI Change report available at: <%s>\n", input.ChangesReportURL))
-		}
-	}
-
 	// Main heading
 	if input.SourceGeneration {
 		body.WriteString("Update of compiled sources")
 	} else {
 		body.WriteString("# SDK update\n")
+	}
+
+	// Linting report section
+	if input.LintingReportURL != "" {
+		body.WriteString("\n<details>\n")
+		body.WriteString("<summary>Linting Report</summary>\n\n")
+		body.WriteString(fmt.Sprintf("Linting report available at: <%s>\n", input.LintingReportURL))
+		body.WriteString("</details>\n")
+	}
+
+	// OpenAPI changes section
+	if input.ChangesReportURL != "" {
+		body.WriteString("\n<details>\n")
+		body.WriteString("<summary>OpenAPI Changes</summary>\n\n")
+		body.WriteString(fmt.Sprintf("OpenAPI Change report available at: <%s>\n", input.ChangesReportURL))
+		body.WriteString("</details>\n")
 	}
 
 	// Versioning section
