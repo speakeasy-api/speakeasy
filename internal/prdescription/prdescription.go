@@ -44,9 +44,9 @@ type Output struct {
 
 // PR title prefixes
 const (
-	prTitleSDK   = "chore: Update SDK - "
-	prTitleSpecs = "chore: Update Specs - "
-	prTitleDocs  = "chore: Update SDK Docs - "
+	prTitleSDK   = "chore: 🐝 Update SDK - "
+	prTitleSpecs = "chore: 🐝 Update Specs - "
+	prTitleDocs  = "chore: 🐝 Update SDK Docs - "
 )
 
 // Generate creates a PR title and body from the given input.
