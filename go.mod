@@ -42,8 +42,9 @@ require (
 	github.com/speakeasy-api/openapi v1.15.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.801.0
 	github.com/speakeasy-api/sdk-gen-config v1.45.0
+	github.com/speakeasy-api/speakeasy-agent-mode-content v0.0.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.21.1
+	github.com/speakeasy-api/speakeasy-core v0.22.0
 	github.com/speakeasy-api/versioning-reports v0.6.1
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.9
@@ -141,6 +142,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/go-test/deep v1.0.8 // indirect
+	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -200,7 +202,7 @@ require (
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
-	github.com/posthog/posthog-go v1.6.13 // indirect
+	github.com/posthog/posthog-go v1.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/pterm/pterm v0.12.80 // indirect
 	github.com/rivo/tview v0.0.0-20240424133105-0d02bb78244d // indirect

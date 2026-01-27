@@ -29,9 +29,11 @@ import (
 	"go.uber.org/zap"
 )
 
-const rootLong = `# Speakeasy 
+const rootLong = `# Speakeasy
 
 A CLI tool for interacting with the [Speakeasy platform](https://www.speakeasy.com/) and its APIs.
+
+AI Agents: run **speakeasy agent context** for structured documentation and project guidance.
 
 Use this CLI to:
 - Lint and validate OpenAPI specs
@@ -72,6 +74,7 @@ func Init(version, artifactArch string) {
 	rootCmd.PersistentFlags().String("logLevel", string(log.LevelInfo), fmt.Sprintf("the log level (available options: [%s])", strings.Join(log.Levels, ", ")))
 
 	// TODO: migrate this file to use model.CommandGroup once all subcommands have been refactored
+	addCommand(rootCmd, agentCmd)
 	addCommand(rootCmd, statusCmd)
 	addCommand(rootCmd, quickstartCmd)
 	addCommand(rootCmd, billingCmd)
