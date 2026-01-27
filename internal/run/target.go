@@ -247,6 +247,16 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	}
 	w.generationAccess = generationAccess
 
+	// After generation, update gen.lock with event ID for debugging/repro purposes
+	if cliEvent := events.GetTelemetryEventFromContext(ctx); cliEvent != nil && cliEvent.ExecutionID != "" {
+		if cfg, err := sdkGenConfig.Load(outDir); err == nil && cfg.LockFile != nil {
+			cfg.LockFile.Management.LastEventID = cliEvent.ExecutionID
+			if err := sdkGenConfig.SaveLockFile(outDir, cfg.LockFile); err != nil {
+				log.From(ctx).Warnf("Failed to save event ID to gen.lock: %s", err)
+			}
+		}
+	}
+
 	if !w.ShouldCompile {
 		log.From(ctx).Warnf("Compilation was skipped. The generated SDK may not be ready for use without manual compilation. To enable compilation DO NOT pass the --skip-compile flag.")
 	}
