@@ -133,16 +133,32 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	githubactions.AddStepSummary(summaryMarkdown.String())
 
 	// Add linting report to version report for PR description
+	var errorCount, warnCount, hintCount int
+	for _, err := range summary.Errors {
+		vErr := errors.GetValidationErr(err)
+		if vErr != nil {
+			switch vErr.Severity {
+			case errors.SeverityError:
+				errorCount++
+			case errors.SeverityWarn:
+				warnCount++
+			case errors.SeverityHint:
+				hintCount++
+			}
+			continue
+		}
+		if errors.GetUnsupportedErr(err) != nil {
+			warnCount++
+		}
+	}
+
 	var prMD string
 	reportLink := ""
 	if summary.ReportURL != "" {
 		reportLink = "\n\n[View full report](" + summary.ReportURL + ")"
 	}
-	if len(summary.Errors) > 0 {
-		prMD = "<details>\n<summary>Linting Report</summary>\n" + summary.Status + "\n\n" + contentsMarkdown + reportLink + "\n" + "</details>\n"
-	} else {
-		prMD = "<details>\n<summary>Linting Report</summary>\n" + summary.Status + reportLink + "\n" + "</details>\n"
-	}
+	lintingSummary := fmt.Sprintf("%d errors, %d warnings, %d hints", errorCount, warnCount, hintCount)
+	prMD = "<details>\n<summary>Linting Report</summary>\n" + lintingSummary + reportLink + "\n" + "</details>\n"
 
 	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
 		Key:      "linting_report",
