@@ -158,12 +158,8 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	if summary.ReportURL != "" {
 		reportLink = "\n\n[View full report](" + summary.ReportURL + ")"
 	}
-	executionID := ""
-	if cliEvent := events.GetTelemetryEventFromContext(ctx); cliEvent != nil && cliEvent.ExecutionID != "" {
-		executionID = "\n\nExecution ID: `" + cliEvent.ExecutionID + "`"
-	}
 	lintingSummary := fmt.Sprintf("%d errors, %d warnings, %d hints", errorCount, warnCount, hintCount)
-	prMD = "<details>\n<summary>Linting Report</summary>\n" + lintingSummary + reportLink + executionID + "\n" + "</details>\n"
+	prMD = "<details>\n<summary>Linting Report</summary>\n" + lintingSummary + reportLink + "\n" + "</details>\n"
 
 	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
 		Key:      "linting_report",
@@ -229,14 +225,10 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 	if url != "" {
 		reportLink = "\n\n[View full report](" + url + ")"
 	}
-	executionID := ""
-	if cliEvent := events.GetTelemetryEventFromContext(ctx); cliEvent != nil && cliEvent.ExecutionID != "" {
-		executionID = "\n\nExecution ID: `" + cliEvent.ExecutionID + "`"
-	}
 	if len(summary.Text) > 0 {
-		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\n" + summary.Text + reportLink + executionID + "\n" + "</details>\n"
+		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\n" + summary.Text + reportLink + "\n" + "</details>\n"
 	} else {
-		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\nNo specification changes" + reportLink + executionID + "\n" + "</details>\n"
+		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\nNo specification changes" + reportLink + "\n" + "</details>\n"
 	}
 
 	// New form -- the above form is deprecated.
@@ -246,6 +238,15 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		PRReport:     prMD,
 		Priority:     5, // High priority -- place at top
 	})
+
+	// Add execution ID as hidden comment at bottom of PR description
+	if cliEvent := events.GetTelemetryEventFromContext(ctx); cliEvent != nil && cliEvent.ExecutionID != "" {
+		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+			Key:      "execution_id",
+			PRReport: "<!-- execution_id: " + cliEvent.ExecutionID + " -->",
+			Priority: 0, // Lowest priority -- place at bottom
+		})
+	}
 }
 
 func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {
