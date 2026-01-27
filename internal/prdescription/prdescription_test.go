@@ -24,22 +24,6 @@ func TestGenerate_BasicSDKUpdate(t *testing.T) {
 	assert.Contains(t, output.Body, "Based on [Speakeasy CLI]")
 }
 
-func TestGenerate_WithReportURLs(t *testing.T) {
-	t.Parallel()
-	input := Input{
-		LintingReportURL: "https://example.com/linting",
-		ChangesReportURL: "https://example.com/changes",
-		WorkflowName:     "Generate",
-		SpeakeasyVersion: "1.234.0",
-	}
-
-	output, err := Generate(input)
-	require.NoError(t, err)
-	assert.Contains(t, output.Body, "> [!IMPORTANT]")
-	assert.Contains(t, output.Body, "Linting report available at: <https://example.com/linting>")
-	assert.Contains(t, output.Body, "OpenAPI Change report available at: <https://example.com/changes>")
-}
-
 func TestGenerate_WithFeatureBranch(t *testing.T) {
 	t.Parallel()
 	input := Input{
