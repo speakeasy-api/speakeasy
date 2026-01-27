@@ -19,7 +19,7 @@ func TestGenerate_BasicSDKUpdate(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update SDK - Generate", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK - Generate", output.Title)
 	assert.Contains(t, output.Body, "# SDK update")
 	assert.Contains(t, output.Body, "Based on [Speakeasy CLI]")
 }
@@ -35,7 +35,7 @@ func TestGenerate_WithFeatureBranch(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update SDK - Generate [feature/new-api]", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK - Generate [feature/new-api]", output.Title)
 }
 
 func TestGenerate_WithNonMainSourceBranch(t *testing.T) {
@@ -48,7 +48,7 @@ func TestGenerate_WithNonMainSourceBranch(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update SDK - Generate [develop]", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK - Generate [develop]", output.Title)
 }
 
 func TestGenerate_SourceGeneration(t *testing.T) {
@@ -60,7 +60,7 @@ func TestGenerate_SourceGeneration(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update Specs - Generate", output.Title)
+	assert.Equal(t, "chore: 🐝 Update Specs - Generate", output.Title)
 	assert.Contains(t, output.Body, "Update of compiled sources")
 	assert.NotContains(t, output.Body, "Based on [Speakeasy CLI]")
 }
@@ -74,7 +74,7 @@ func TestGenerate_DocsGeneration(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update SDK Docs - Generate", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK Docs - Generate", output.Title)
 }
 
 func TestGenerate_WithVersionReport(t *testing.T) {
@@ -96,7 +96,7 @@ func TestGenerate_WithVersionReport(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update SDK - Generate 0.5.1", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK - Generate 0.5.1", output.Title)
 	assert.Contains(t, output.Body, "Version Bump Type: [patch]")
 	assert.Contains(t, output.Body, "(automated)")
 	assert.Contains(t, output.Body, "## Typescript SDK Changes:")
@@ -141,7 +141,7 @@ func TestGenerate_MultipleTargets_NoVersionInTitle(t *testing.T) {
 	output, err := Generate(input)
 	require.NoError(t, err)
 	// Multiple different versions should not include version in title
-	assert.Equal(t, "chore: Update SDK - Generate", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK - Generate", output.Title)
 }
 
 func TestGenerate_SpecifiedTarget(t *testing.T) {
@@ -153,7 +153,7 @@ func TestGenerate_SpecifiedTarget(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update SDK - Generate PYTHON", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK - Generate PYTHON", output.Title)
 }
 
 func TestStripANSICodes(t *testing.T) {
@@ -186,6 +186,6 @@ func TestGenerate_EmptyInput(t *testing.T) {
 
 	output, err := Generate(input)
 	require.NoError(t, err)
-	assert.Equal(t, "chore: Update SDK - ", output.Title)
+	assert.Equal(t, "chore: 🐝 Update SDK - ", output.Title)
 	assert.True(t, strings.HasPrefix(output.Body, "# SDK update"))
 }
