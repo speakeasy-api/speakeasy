@@ -23,6 +23,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
+	"github.com/speakeasy-api/versioning-reports/versioning"
 )
 
 const ErrNoRollback = errors.Error("failed with error that shouldn't be rolled back")
@@ -132,6 +133,15 @@ func (w *Workflow) Run(ctx context.Context) error {
 	w.Duration = time.Since(startTime)
 
 	enrichTelemetryWithCompletedWorkflow(ctx, w)
+
+	// Add execution ID as hidden comment at bottom of PR description
+	if cliEvent := events.GetTelemetryEventFromContext(ctx); cliEvent != nil && cliEvent.ExecutionID != "" {
+		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+			Key:      "execution_id",
+			PRReport: "<!-- execution_id: " + cliEvent.ExecutionID + " -->",
+			Priority: 0, // Lowest priority -- place at bottom
+		})
+	}
 
 	// If there's an error and telemetry is not disabled, show repro message
 	if err != nil && !utils.IsZeroTelemetryOrganization(ctx) {

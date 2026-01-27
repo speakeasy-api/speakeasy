@@ -11,7 +11,6 @@ import (
 
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
-	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -238,15 +237,6 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		PRReport:     prMD,
 		Priority:     5, // High priority -- place at top
 	})
-
-	// Add execution ID as hidden comment at bottom of PR description
-	if cliEvent := events.GetTelemetryEventFromContext(ctx); cliEvent != nil && cliEvent.ExecutionID != "" {
-		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
-			Key:      "execution_id",
-			PRReport: "<!-- execution_id: " + cliEvent.ExecutionID + " -->",
-			Priority: 0, // Lowest priority -- place at bottom
-		})
-	}
 }
 
 func GenerateWorkflowSummary(ctx context.Context, summary WorkflowSummary) {
