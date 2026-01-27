@@ -12,29 +12,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Frontmatter represents YAML frontmatter from agent-context markdown files.
 type Frontmatter struct {
 	ShortDescription string `yaml:"short_description" json:"short_description,omitempty"`
 	LongDescription  string `yaml:"long_description" json:"long_description,omitempty"`
 }
 
-// ParseFrontmatter splits a markdown file into frontmatter and body.
-// Returns empty frontmatter if none is found.
 func ParseFrontmatter(content string) (Frontmatter, string) {
 	var fm Frontmatter
 
-	// Handle optional BOM
 	trimmed := strings.TrimPrefix(content, "\xef\xbb\xbf")
 
 	if !strings.HasPrefix(trimmed, "---\n") && !strings.HasPrefix(trimmed, "---\r\n") {
 		return fm, content
 	}
 
-	// Find closing ---
-	rest := trimmed[4:] // skip opening "---\n"
+	rest := trimmed[4:]
 	idx := strings.Index(rest, "\n---\n")
 	if idx == -1 {
-		// Try \r\n
 		idx = strings.Index(rest, "\r\n---\r\n")
 		if idx == -1 {
 			return fm, content
@@ -43,14 +37,12 @@ func ParseFrontmatter(content string) (Frontmatter, string) {
 
 	yamlContent := rest[:idx]
 	body := rest[idx:]
-	// Skip the closing "---\n" line
 	if after, ok := strings.CutPrefix(body, "\n---\n"); ok {
 		body = after
 	} else if after, ok := strings.CutPrefix(body, "\r\n---\r\n"); ok {
 		body = after
 	}
 
-	// Strip one optional leading blank line from body
 	body = strings.TrimPrefix(body, "\n")
 	body = strings.TrimPrefix(body, "\r\n")
 
@@ -58,62 +50,48 @@ func ParseFrontmatter(content string) (Frontmatter, string) {
 	return fm, body
 }
 
-// NormalizePath cleans up user-provided path input.
 func NormalizePath(p string) (string, error) {
-	// Convert backslashes to forward slashes
 	p = strings.ReplaceAll(p, "\\", "/")
-	// Clean
 	p = path.Clean(p)
-	// Reject ..
 	if strings.Contains(p, "..") {
 		return "", fmt.Errorf("invalid path: must not contain ..")
 	}
-	// Strip leading /
 	p = strings.TrimPrefix(p, "/")
-	// Treat . as empty (root)
 	if p == "." {
 		p = ""
 	}
-	// Strip trailing .md
 	p = strings.TrimSuffix(p, ".md")
 	return p, nil
 }
 
-// ResolveResult describes what a path resolved to.
 type ResolveResult struct {
 	IsDir        bool
-	ResolvedPath string // the actual path in the FS (with .md for files)
+	ResolvedPath string // actual FS path (with .md for files)
 }
 
-// ResolvePath tries to find what the user-provided path refers to.
 func ResolvePath(contentFS fs.FS, p string) (*ResolveResult, error) {
 	if p == "" {
 		return &ResolveResult{IsDir: false, ResolvedPath: "INDEX.md"}, nil
 	}
 
-	// 1. Try {path}.md as a file
 	filePath := p + ".md"
 	if info, err := fs.Stat(contentFS, filePath); err == nil && !info.IsDir() {
 		return &ResolveResult{IsDir: false, ResolvedPath: filePath}, nil
 	}
 
-	// 2. Try {path} as a directory
 	if info, err := fs.Stat(contentFS, p); err == nil && info.IsDir() {
 		return &ResolveResult{IsDir: true, ResolvedPath: p}, nil
 	}
 
-	// 3. Try {path} as an exact file match
 	if info, err := fs.Stat(contentFS, p); err == nil && !info.IsDir() {
 		return &ResolveResult{IsDir: false, ResolvedPath: p}, nil
 	}
 
-	// 4. Case-insensitive fallback
 	if result := caseInsensitiveResolve(contentFS, p); result != nil {
 		return result, nil
 	}
 
-	// 5. Not found — generate suggestions
-	suggestions := FindSuggestions(contentFS, p)
+	suggestions := findSuggestions(contentFS, p)
 	msg := fmt.Sprintf("path not found: %s", p)
 	if len(suggestions) > 0 {
 		msg += "\n\nDid you mean:\n"
@@ -124,36 +102,27 @@ func ResolvePath(contentFS fs.FS, p string) (*ResolveResult, error) {
 	return nil, fmt.Errorf("%s", msg)
 }
 
-// caseInsensitiveResolve walks the FS trying case-insensitive matches.
 func caseInsensitiveResolve(contentFS fs.FS, p string) *ResolveResult {
 	lowerTarget := strings.ToLower(p)
-
-	// Collect all paths
-	var allPaths []string
+	var result *ResolveResult
 	fs.WalkDir(contentFS, ".", func(walkPath string, d fs.DirEntry, err error) error {
 		if err != nil || walkPath == "." {
 			return nil
 		}
-		allPaths = append(allPaths, walkPath)
+		withoutMD := strings.TrimSuffix(walkPath, ".md")
+		if strings.ToLower(withoutMD) == lowerTarget {
+			info, statErr := fs.Stat(contentFS, walkPath)
+			if statErr == nil {
+				result = &ResolveResult{IsDir: info.IsDir(), ResolvedPath: walkPath}
+				return fs.SkipAll
+			}
+		}
 		return nil
 	})
-
-	for _, candidate := range allPaths {
-		// Try without .md
-		withoutMD := strings.TrimSuffix(candidate, ".md")
-		if strings.ToLower(withoutMD) == lowerTarget {
-			info, err := fs.Stat(contentFS, candidate)
-			if err != nil {
-				continue
-			}
-			return &ResolveResult{IsDir: info.IsDir(), ResolvedPath: candidate}
-		}
-	}
-	return nil
+	return result
 }
 
-// FindSuggestions returns up to 5 paths similar to the target.
-func FindSuggestions(contentFS fs.FS, target string) []string {
+func findSuggestions(contentFS fs.FS, target string) []string {
 	target = strings.ToLower(target)
 	type scored struct {
 		path  string
@@ -166,7 +135,7 @@ func FindSuggestions(contentFS fs.FS, target string) []string {
 			return nil
 		}
 		docID := strings.TrimSuffix(p, ".md")
-		score := Levenshtein(strings.ToLower(docID), target)
+		score := levenshtein(strings.ToLower(docID), target)
 		candidates = append(candidates, scored{path: docID, score: score})
 		return nil
 	})
@@ -175,18 +144,15 @@ func FindSuggestions(contentFS fs.FS, target string) []string {
 		return candidates[i].score < candidates[j].score
 	})
 
-	var result []string
-	for i, c := range candidates {
-		if i >= 5 {
-			break
-		}
-		result = append(result, c.path)
+	limit := min(len(candidates), 5)
+	result := make([]string, limit)
+	for i := range limit {
+		result[i] = candidates[i].path
 	}
 	return result
 }
 
-// Levenshtein computes edit distance between two strings.
-func Levenshtein(a, b string) int {
+func levenshtein(a, b string) int {
 	la, lb := len(a), len(b)
 	if la == 0 {
 		return lb
@@ -216,7 +182,6 @@ func Levenshtein(a, b string) int {
 	return prev[lb]
 }
 
-// ReadFile reads and outputs a single file from the content FS.
 func ReadFile(contentFS fs.FS, resolvedPath, requestedPath string, jsonOutput bool) error {
 	data, err := fs.ReadFile(contentFS, resolvedPath)
 	if err != nil {
@@ -234,14 +199,13 @@ func ReadFile(contentFS fs.FS, resolvedPath, requestedPath string, jsonOutput bo
 			"content":       body,
 			"size":          len(data),
 		}
-		return WriteJSON(out)
+		return writeJSON(out)
 	}
 
 	fmt.Print(body)
 	return nil
 }
 
-// ListDir lists the contents of a directory in the content FS.
 func ListDir(contentFS fs.FS, dirPath string, jsonOutput bool) error {
 	entries, err := fs.ReadDir(contentFS, dirPath)
 	if err != nil {
@@ -259,7 +223,6 @@ func ListDir(contentFS fs.FS, dirPath string, jsonOutput bool) error {
 	var items []entry
 	for _, e := range entries {
 		name := e.Name()
-		// Skip INDEX.md from directory listings
 		if strings.EqualFold(name, "INDEX.md") {
 			continue
 		}
@@ -303,7 +266,7 @@ func ListDir(contentFS fs.FS, dirPath string, jsonOutput bool) error {
 			"type":    "directory",
 			"entries": items,
 		}
-		return WriteJSON(out)
+		return writeJSON(out)
 	}
 
 	fmt.Printf("%s/\n\n", dirPath)
@@ -321,7 +284,6 @@ func ListDir(contentFS fs.FS, dirPath string, jsonOutput bool) error {
 	return nil
 }
 
-// ListAll lists all doc paths in the content FS.
 func ListAll(contentFS fs.FS, jsonOutput bool) error {
 	type entry struct {
 		Path             string `json:"path"`
@@ -356,7 +318,7 @@ func ListAll(contentFS fs.FS, jsonOutput bool) error {
 			"type":    "listing",
 			"entries": entries,
 		}
-		return WriteJSON(out)
+		return writeJSON(out)
 	}
 
 	for _, e := range entries {
@@ -365,7 +327,6 @@ func ListAll(contentFS fs.FS, jsonOutput bool) error {
 	return nil
 }
 
-// GrepMatch represents a single grep match with context.
 type GrepMatch struct {
 	File          string   `json:"file"`
 	Line          int      `json:"line"`
@@ -374,7 +335,6 @@ type GrepMatch struct {
 	ContextAfter  []string `json:"context_after,omitempty"`
 }
 
-// GrepOptions holds parameters for a grep search.
 type GrepOptions struct {
 	ScopePath  string
 	Pattern    string
@@ -385,9 +345,7 @@ type GrepOptions struct {
 	JSONOutput bool
 }
 
-// Grep searches files in the content FS for a pattern.
 func Grep(contentFS fs.FS, opts GrepOptions) error {
-	// Build matcher
 	var matcher func(string) bool
 	if opts.IsRegex {
 		re, err := regexp.Compile(opts.Pattern)
@@ -402,17 +360,14 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 		}
 	}
 
-	// Determine which files to search
 	var filesToSearch []string
 
 	if opts.ScopePath != "" {
-		// Try to resolve the scope path
 		result, err := ResolvePath(contentFS, opts.ScopePath)
 		if err != nil {
 			return err
 		}
 		if result.IsDir {
-			// Search all files in this directory
 			fs.WalkDir(contentFS, result.ResolvedPath, func(p string, d fs.DirEntry, err error) error {
 				if err != nil || d.IsDir() {
 					return nil
@@ -424,7 +379,6 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 			filesToSearch = []string{result.ResolvedPath}
 		}
 	} else {
-		// Search all files
 		fs.WalkDir(contentFS, ".", func(p string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || p == "." {
 				return nil
@@ -456,7 +410,6 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 			matchingFiles[filePath] = true
 			lineNum := i + 1
 
-			// Collect context
 			var before, after []string
 			for b := max(0, i-opts.Before); b < i; b++ {
 				before = append(before, lines[b])
@@ -479,26 +432,21 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 		return fmt.Errorf("no matches found for: %s", opts.Pattern)
 	}
 
-	// --list mode: just file paths
 	if opts.ListOnly {
+		files := make([]string, 0, len(matchingFiles))
+		for f := range matchingFiles {
+			files = append(files, f)
+		}
+		sort.Strings(files)
+
 		if opts.JSONOutput {
-			var files []string
-			for f := range matchingFiles {
-				files = append(files, f)
-			}
-			sort.Strings(files)
-			return WriteJSON(map[string]any{
+			return writeJSON(map[string]any{
 				"pattern":    opts.Pattern,
 				"is_regex":   opts.IsRegex,
 				"file_count": len(files),
 				"files":      files,
 			})
 		}
-		var files []string
-		for f := range matchingFiles {
-			files = append(files, f)
-		}
-		sort.Strings(files)
 		for _, f := range files {
 			fmt.Println(f)
 		}
@@ -506,7 +454,7 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 	}
 
 	if opts.JSONOutput {
-		return WriteJSON(map[string]any{
+		return writeJSON(map[string]any{
 			"pattern":     opts.Pattern,
 			"is_regex":    opts.IsRegex,
 			"match_count": len(allMatches),
@@ -515,28 +463,24 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 		})
 	}
 
-	// Standard grep output
 	lastFile := ""
 	lastEndLine := -1
 
 	for _, m := range allMatches {
 		startLine := m.Line - len(m.ContextBefore)
 
-		// Print separator between non-adjacent matches
+		// Separator between non-adjacent matches
 		if lastFile != "" && (m.File != lastFile || startLine > lastEndLine+1) {
 			fmt.Println("--")
 		}
 
-		// Print context before
 		for i, line := range m.ContextBefore {
 			lineNum := m.Line - len(m.ContextBefore) + i
 			fmt.Printf("%s-%d-%s\n", m.File, lineNum, line)
 		}
 
-		// Print match line
 		fmt.Printf("%s:%d:%s\n", m.File, m.Line, m.Content)
 
-		// Print context after
 		for i, line := range m.ContextAfter {
 			lineNum := m.Line + i + 1
 			fmt.Printf("%s-%d-%s\n", m.File, lineNum, line)
@@ -549,8 +493,7 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 	return nil
 }
 
-// WriteJSON marshals v as indented JSON and prints it.
-func WriteJSON(v any) error {
+func writeJSON(v any) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err

@@ -7,7 +7,6 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/feedback"
 )
 
-// SubmitFeedback records a feedback event via PostHog.
 func SubmitFeedback(ctx context.Context, feedbackType, message, contextPath string) error {
 	if message == "" {
 		return fmt.Errorf("--message is required")

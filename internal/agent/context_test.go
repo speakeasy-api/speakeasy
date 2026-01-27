@@ -186,9 +186,9 @@ func TestLevenshtein(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.a+"_"+tt.b, func(t *testing.T) {
-			got := Levenshtein(tt.a, tt.b)
+			got := levenshtein(tt.a, tt.b)
 			if got != tt.want {
-				t.Errorf("Levenshtein(%q, %q) = %d, want %d", tt.a, tt.b, got, tt.want)
+				t.Errorf("levenshtein(%q, %q) = %d, want %d", tt.a, tt.b, got, tt.want)
 			}
 		})
 	}
@@ -201,7 +201,6 @@ func TestGrepSearchesBodyOnly(t *testing.T) {
 		},
 	}
 
-	// Grep for content in body — should find it
 	bodyMatches := grepFS(testFS, ".", "retryConfig", false)
 	if len(bodyMatches) != 1 {
 		t.Fatalf("expected 1 body match, got %d", len(bodyMatches))
@@ -210,13 +209,11 @@ func TestGrepSearchesBodyOnly(t *testing.T) {
 		t.Errorf("expected line 3 (of body), got %d", bodyMatches[0].Line)
 	}
 
-	// Grep for content in frontmatter — should NOT find it
 	fmMatches := grepFS(testFS, ".", "short_description", false)
 	if len(fmMatches) != 0 {
 		t.Errorf("expected 0 frontmatter matches, got %d", len(fmMatches))
 	}
 
-	// Grep for content that doesn't exist — should return empty
 	noMatches := grepFS(testFS, ".", "nonexistent_string_xyz", false)
 	if len(noMatches) != 0 {
 		t.Errorf("expected 0 matches, got %d", len(noMatches))
@@ -230,7 +227,7 @@ func TestGrepWithContext(t *testing.T) {
 		},
 	}
 
-	matches := grepFSWithContext(testFS, ".", "MATCH", false, 1, 1)
+	matches := grepFSWithContext(testFS, ".", "MATCH", 1, 1)
 	if len(matches) != 1 {
 		t.Fatalf("expected 1 match, got %d", len(matches))
 	}
@@ -251,23 +248,20 @@ func TestFindSuggestions(t *testing.T) {
 		"sdk-testing/contract-testing.md": &fstest.MapFile{Data: []byte("content")},
 	}
 
-	suggestions := FindSuggestions(testFS, "sdk-cocepts") // typo
+	suggestions := findSuggestions(testFS, "sdk-cocepts")
 	if len(suggestions) == 0 {
 		t.Fatal("expected suggestions, got none")
 	}
-	// The closest match should be sdk-concepts
 	if suggestions[0] != "sdk-concepts" {
 		t.Errorf("first suggestion = %q, want %q", suggestions[0], "sdk-concepts")
 	}
 }
 
-// grepFS is a test helper that performs a grep across an fs.FS.
-func grepFS(contentFS fs.FS, root, pattern string, isRegex bool) []GrepMatch {
-	return grepFSWithContext(contentFS, root, pattern, isRegex, 0, 0)
+func grepFS(contentFS fs.FS, root, pattern string, _ bool) []GrepMatch {
+	return grepFSWithContext(contentFS, root, pattern, 0, 0)
 }
 
-// grepFSWithContext performs grep with context lines.
-func grepFSWithContext(contentFS fs.FS, root, pattern string, isRegex bool, before, after int) []GrepMatch {
+func grepFSWithContext(contentFS fs.FS, root, pattern string, before, after int) []GrepMatch {
 	var filesToSearch []string
 	fs.WalkDir(contentFS, root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || p == "." {

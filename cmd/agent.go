@@ -18,8 +18,6 @@ var agentCmd = &model.CommandGroup{
 	Commands:       []model.Command{agentContextCmd, agentFeedbackCmd},
 }
 
-// Context subcommand
-
 type AgentContextFlags struct {
 	Path    string `json:"path"`
 	Grep    string `json:"grep"`
@@ -90,12 +88,10 @@ func runAgentContext(ctx context.Context, flags AgentContextFlags) error {
 		return err
 	}
 
-	// --list without --grep → list all doc paths
 	if flags.List && flags.Grep == "" {
 		return agent.ListAll(contentFS, flags.JSON)
 	}
 
-	// --grep → search
 	if flags.Grep != "" {
 		beforeCount := flags.Context
 		afterCount := flags.Context
@@ -116,22 +112,17 @@ func runAgentContext(ctx context.Context, flags AgentContextFlags) error {
 		})
 	}
 
-	// Resolve path
 	result, err := agent.ResolvePath(contentFS, p)
 	if err != nil {
 		return err
 	}
 
-	// Directory → list contents
 	if result.IsDir {
 		return agent.ListDir(contentFS, result.ResolvedPath, flags.JSON)
 	}
 
-	// File → read
 	return agent.ReadFile(contentFS, result.ResolvedPath, p, flags.JSON)
 }
-
-// Feedback subcommand
 
 type AgentFeedbackFlags struct {
 	Message     string `json:"message"`
