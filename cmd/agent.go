@@ -12,8 +12,8 @@ import (
 
 var agentCmd = &model.CommandGroup{
 	Usage:          "agent",
-	Short:          "Agent-related tools and documentation",
-	Long:           "Commands for AI agents interacting with Speakeasy.",
+	Short:          "Docs & guided workflows for AI coding agents (start here: speakeasy agent context)",
+	Long:           "Commands for AI agents interacting with Speakeasy. Run 'speakeasy agent context' for structured documentation.",
 	InteractiveMsg: "What would you like to do?",
 	Commands:       []model.Command{agentContextCmd, agentFeedbackCmd},
 }
