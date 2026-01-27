@@ -131,6 +131,24 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	}
 
 	githubactions.AddStepSummary(summaryMarkdown.String())
+
+	// Add linting report to version report for PR description
+	var prMD string
+	reportLink := ""
+	if summary.ReportURL != "" {
+		reportLink = "\n\n[View full report](" + summary.ReportURL + ")"
+	}
+	if len(summary.Errors) > 0 {
+		prMD = "<details>\n<summary>Linting Report</summary>\n" + summary.Status + "\n\n" + contentsMarkdown + reportLink + "\n" + "</details>\n"
+	} else {
+		prMD = "<details>\n<summary>Linting Report</summary>\n" + summary.Status + reportLink + "\n" + "</details>\n"
+	}
+
+	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+		Key:      "linting_report",
+		PRReport: prMD,
+		Priority: 4, // Slightly lower priority than OpenAPI changes
+	})
 }
 
 func GenerateChangesSummary(ctx context.Context, url string, summary changes.Summary) {
