@@ -70,9 +70,14 @@ var (
 )
 
 var GenerateCmd = &model.CommandGroup{
-	Usage:          "generate",
-	Short:          "One off Generations for client SDKs and more",
-	Long:           `The "generate" command provides a set of commands for one off generations of client SDKs and Terraform providers`,
+	Usage: "generate",
+	Short: "One-off generation (prefer 'speakeasy run' with workflow files)",
+	Long: `The "generate" command provides commands for one-off generation of client SDKs and Terraform providers.
+
+NOTE: For project-based SDK generation, use "speakeasy run" with a .speakeasy/workflow.yaml file instead.
+Workflow files provide reproducible, versioned builds with support for multiple targets and CI/CD integration.
+
+AI Agents: run "speakeasy agent context" for structured documentation before generating.`,
 	InteractiveMsg: "What do you want to generate?",
 	Commands:       []model.Command{genSDKCmd, genUsageSnippetCmd, codeSamplesCmd, genSDKVersionCmd, genSDKChangelogCmd, suportedTargetsCmd},
 	Hidden:         true,

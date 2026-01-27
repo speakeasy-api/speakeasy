@@ -32,7 +32,7 @@ type GenerateFlags struct {
 
 var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 	Usage:        "sdk",
-	Short:        fmt.Sprintf("Generating Client SDKs from OpenAPI specs (%s)", strings.Join(GeneratorSupportedTargetNames(), ", ")),
+	Short:        fmt.Sprintf("One-off SDK generation from OpenAPI specs (%s)", strings.Join(GeneratorSupportedTargetNames(), ", ")),
 	Long:         generateLongDesc,
 	Run:          genSDKs,
 	RequiresAuth: true,
@@ -112,7 +112,15 @@ func genSDKs(ctx context.Context, flags GenerateFlags) error {
 	return err
 }
 
-var generateLongDesc = fmt.Sprintf(`Using the "speakeasy generate sdk" command you can generate client SDK packages for various languages
+var generateLongDesc = fmt.Sprintf(`RECOMMENDED: If your project has a .speakeasy/workflow.yaml file, use "speakeasy run" instead.
+Workflow files provide reproducible generation with versioning, multi-target support, and CI/CD integration.
+
+AI AGENTS: Run "speakeasy agent context" for structured documentation and guided workflows before generating.
+Learn about workflow files: "speakeasy agent context plans/sdk-generation"
+
+---
+
+Using the "speakeasy generate sdk" command you can generate client SDK packages for various languages
 that are ready to use and publish to your favorite package registry.
 
 The following languages are currently supported:
