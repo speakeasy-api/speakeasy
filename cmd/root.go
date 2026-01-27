@@ -100,6 +100,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, diffCmd)
 	addCommand(rootCmd, orphanedFilesCmd)
 	addCommand(rootCmd, ciCmd)
+	addCommand(rootCmd, agentCmd)
 	pullInit()
 }
 
