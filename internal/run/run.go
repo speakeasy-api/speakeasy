@@ -20,6 +20,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
+	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
@@ -138,7 +139,7 @@ func (w *Workflow) Run(ctx context.Context) error {
 	if cliEvent := events.GetTelemetryEventFromContext(ctx); cliEvent != nil && cliEvent.ExecutionID != "" {
 		_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
 			Key:      "execution_id",
-			PRReport: "<!-- execution_id: " + cliEvent.ExecutionID + " -->",
+			PRReport: github.ExecutionIDComment(cliEvent.ExecutionID),
 			Priority: 0, // Lowest priority -- place at bottom
 		})
 	}
