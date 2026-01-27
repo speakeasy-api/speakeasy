@@ -54,7 +54,7 @@ func NormalizePath(p string) (string, error) {
 	p = strings.ReplaceAll(p, "\\", "/")
 	p = path.Clean(p)
 	if strings.Contains(p, "..") {
-		return "", fmt.Errorf("invalid path: must not contain ..")
+		return "", fmt.Errorf("invalid path: must not contain parent directory references")
 	}
 	p = strings.TrimPrefix(p, "/")
 	if p == "." {
@@ -87,11 +87,18 @@ func ResolvePath(contentFS fs.FS, p string) (*ResolveResult, error) {
 		return &ResolveResult{IsDir: false, ResolvedPath: p}, nil
 	}
 
-	if result := caseInsensitiveResolve(contentFS, p); result != nil {
+	result, err := caseInsensitiveResolve(contentFS, p)
+	if err != nil {
+		return nil, err
+	}
+	if result != nil {
 		return result, nil
 	}
 
-	suggestions := findSuggestions(contentFS, p)
+	suggestions, err := findSuggestions(contentFS, p)
+	if err != nil {
+		return nil, err
+	}
 	msg := fmt.Sprintf("path not found: %s", p)
 	if len(suggestions) > 0 {
 		msg += "\n\nDid you mean:\n"
@@ -102,11 +109,14 @@ func ResolvePath(contentFS fs.FS, p string) (*ResolveResult, error) {
 	return nil, fmt.Errorf("%s", msg)
 }
 
-func caseInsensitiveResolve(contentFS fs.FS, p string) *ResolveResult {
+func caseInsensitiveResolve(contentFS fs.FS, p string) (*ResolveResult, error) {
 	lowerTarget := strings.ToLower(p)
 	var result *ResolveResult
-	fs.WalkDir(contentFS, ".", func(walkPath string, d fs.DirEntry, err error) error {
-		if err != nil || walkPath == "." {
+	err := fs.WalkDir(contentFS, ".", func(walkPath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if walkPath == "." {
 			return nil
 		}
 		withoutMD := strings.TrimSuffix(walkPath, ".md")
@@ -119,10 +129,10 @@ func caseInsensitiveResolve(contentFS fs.FS, p string) *ResolveResult {
 		}
 		return nil
 	})
-	return result
+	return result, err
 }
 
-func findSuggestions(contentFS fs.FS, target string) []string {
+func findSuggestions(contentFS fs.FS, target string) ([]string, error) {
 	target = strings.ToLower(target)
 	type scored struct {
 		path  string
@@ -130,8 +140,11 @@ func findSuggestions(contentFS fs.FS, target string) []string {
 	}
 	var candidates []scored
 
-	fs.WalkDir(contentFS, ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || p == "." {
+	err := fs.WalkDir(contentFS, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if p == "." {
 			return nil
 		}
 		docID := strings.TrimSuffix(p, ".md")
@@ -139,6 +152,9 @@ func findSuggestions(contentFS fs.FS, target string) []string {
 		candidates = append(candidates, scored{path: docID, score: score})
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	sort.Slice(candidates, func(i, j int) bool {
 		return candidates[i].score < candidates[j].score
@@ -149,7 +165,7 @@ func findSuggestions(contentFS fs.FS, target string) []string {
 	for i := range limit {
 		result[i] = candidates[i].path
 	}
-	return result
+	return result, nil
 }
 
 func levenshtein(a, b string) int {
@@ -292,8 +308,11 @@ func ListAll(contentFS fs.FS, jsonOutput bool) error {
 
 	var entries []entry
 
-	fs.WalkDir(contentFS, ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || p == "." {
+	if err := fs.WalkDir(contentFS, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || p == "." {
 			return nil
 		}
 		docID := strings.TrimSuffix(p, ".md")
@@ -307,7 +326,9 @@ func ListAll(contentFS fs.FS, jsonOutput bool) error {
 
 		entries = append(entries, entry{Path: docID, ShortDescription: desc})
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
 
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].Path < entries[j].Path
@@ -368,24 +389,34 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 			return err
 		}
 		if result.IsDir {
-			fs.WalkDir(contentFS, result.ResolvedPath, func(p string, d fs.DirEntry, err error) error {
-				if err != nil || d.IsDir() {
+			if err := fs.WalkDir(contentFS, result.ResolvedPath, func(p string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if d.IsDir() {
 					return nil
 				}
 				filesToSearch = append(filesToSearch, p)
 				return nil
-			})
+			}); err != nil {
+				return err
+			}
 		} else {
 			filesToSearch = []string{result.ResolvedPath}
 		}
 	} else {
-		fs.WalkDir(contentFS, ".", func(p string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || p == "." {
+		if err := fs.WalkDir(contentFS, ".", func(p string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() || p == "." {
 				return nil
 			}
 			filesToSearch = append(filesToSearch, p)
 			return nil
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
 	sort.Strings(filesToSearch)

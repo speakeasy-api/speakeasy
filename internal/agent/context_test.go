@@ -8,6 +8,8 @@ import (
 )
 
 func TestParseFrontmatter(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		input     string
@@ -42,6 +44,8 @@ func TestParseFrontmatter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			fm, body := ParseFrontmatter(tt.input)
 
 			if fm.ShortDescription != tt.wantShort {
@@ -56,6 +60,8 @@ func TestParseFrontmatter(t *testing.T) {
 }
 
 func TestNormalizePath(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   string
@@ -79,6 +85,8 @@ func TestNormalizePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := NormalizePath(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NormalizePath(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
@@ -92,6 +100,8 @@ func TestNormalizePath(t *testing.T) {
 }
 
 func TestResolvePath(t *testing.T) {
+	t.Parallel()
+
 	testFS := fstest.MapFS{
 		"INDEX.md": &fstest.MapFile{
 			Data: []byte("---\nshort_description: \"Index\"\n---\n\n# Index\n"),
@@ -153,6 +163,8 @@ func TestResolvePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := ResolvePath(testFS, tt.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ResolvePath(%q) error = %v, wantErr %v", tt.path, err, tt.wantErr)
@@ -172,6 +184,8 @@ func TestResolvePath(t *testing.T) {
 }
 
 func TestLevenshtein(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		a, b string
 		want int
@@ -186,6 +200,8 @@ func TestLevenshtein(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.a+"_"+tt.b, func(t *testing.T) {
+			t.Parallel()
+
 			got := levenshtein(tt.a, tt.b)
 			if got != tt.want {
 				t.Errorf("levenshtein(%q, %q) = %d, want %d", tt.a, tt.b, got, tt.want)
@@ -195,13 +211,15 @@ func TestLevenshtein(t *testing.T) {
 }
 
 func TestGrepSearchesBodyOnly(t *testing.T) {
+	t.Parallel()
+
 	testFS := fstest.MapFS{
 		"test.md": &fstest.MapFile{
 			Data: []byte("---\nshort_description: \"Hidden metadata\"\n---\n\n# Visible Title\n\nretryConfig:\n  strategy: backoff\n"),
 		},
 	}
 
-	bodyMatches := grepFS(testFS, ".", "retryConfig", false)
+	bodyMatches := grepFS(t, testFS, ".", "retryConfig")
 	if len(bodyMatches) != 1 {
 		t.Fatalf("expected 1 body match, got %d", len(bodyMatches))
 	}
@@ -209,25 +227,27 @@ func TestGrepSearchesBodyOnly(t *testing.T) {
 		t.Errorf("expected line 3 (of body), got %d", bodyMatches[0].Line)
 	}
 
-	fmMatches := grepFS(testFS, ".", "short_description", false)
+	fmMatches := grepFS(t, testFS, ".", "short_description")
 	if len(fmMatches) != 0 {
 		t.Errorf("expected 0 frontmatter matches, got %d", len(fmMatches))
 	}
 
-	noMatches := grepFS(testFS, ".", "nonexistent_string_xyz", false)
+	noMatches := grepFS(t, testFS, ".", "nonexistent_string_xyz")
 	if len(noMatches) != 0 {
 		t.Errorf("expected 0 matches, got %d", len(noMatches))
 	}
 }
 
 func TestGrepWithContext(t *testing.T) {
+	t.Parallel()
+
 	testFS := fstest.MapFS{
 		"test.md": &fstest.MapFile{
 			Data: []byte("---\nshort_description: \"Test\"\n---\n\nline1\nline2\nMATCH\nline4\nline5\n"),
 		},
 	}
 
-	matches := grepFSWithContext(testFS, ".", "MATCH", 1, 1)
+	matches := grepFSWithContext(t, testFS, ".", "MATCH", 1, 1)
 	if len(matches) != 1 {
 		t.Fatalf("expected 1 match, got %d", len(matches))
 	}
@@ -242,13 +262,18 @@ func TestGrepWithContext(t *testing.T) {
 }
 
 func TestFindSuggestions(t *testing.T) {
+	t.Parallel()
+
 	testFS := fstest.MapFS{
-		"sdk-concepts.md":                &fstest.MapFile{Data: []byte("content")},
+		"sdk-concepts.md":                 &fstest.MapFile{Data: []byte("content")},
 		"sdk-testing/arazzo-testing.md":   &fstest.MapFile{Data: []byte("content")},
 		"sdk-testing/contract-testing.md": &fstest.MapFile{Data: []byte("content")},
 	}
 
-	suggestions := findSuggestions(testFS, "sdk-cocepts")
+	suggestions, err := findSuggestions(testFS, "sdk-cocepts")
+	if err != nil {
+		t.Fatalf("findSuggestions returned error: %v", err)
+	}
 	if len(suggestions) == 0 {
 		t.Fatal("expected suggestions, got none")
 	}
@@ -257,19 +282,28 @@ func TestFindSuggestions(t *testing.T) {
 	}
 }
 
-func grepFS(contentFS fs.FS, root, pattern string, _ bool) []GrepMatch {
-	return grepFSWithContext(contentFS, root, pattern, 0, 0)
+func grepFS(t *testing.T, contentFS fs.FS, root, pattern string) []GrepMatch {
+	t.Helper()
+
+	return grepFSWithContext(t, contentFS, root, pattern, 0, 0)
 }
 
-func grepFSWithContext(contentFS fs.FS, root, pattern string, before, after int) []GrepMatch {
+func grepFSWithContext(t *testing.T, contentFS fs.FS, root, pattern string, before, after int) []GrepMatch {
+	t.Helper()
+
 	var filesToSearch []string
-	fs.WalkDir(contentFS, root, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || p == "." {
+	if err := fs.WalkDir(contentFS, root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || p == "." {
 			return nil
 		}
 		filesToSearch = append(filesToSearch, p)
 		return nil
-	})
+	}); err != nil {
+		t.Fatalf("WalkDir failed: %v", err)
+	}
 
 	matcher := func(line string) bool {
 		return strings.Contains(line, pattern)
