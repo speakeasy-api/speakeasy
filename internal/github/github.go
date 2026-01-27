@@ -131,6 +131,40 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	}
 
 	githubactions.AddStepSummary(summaryMarkdown.String())
+
+	// Add linting report to version report for PR description
+	var errorCount, warnCount, hintCount int
+	for _, err := range summary.Errors {
+		vErr := errors.GetValidationErr(err)
+		if vErr != nil {
+			switch vErr.Severity {
+			case errors.SeverityError:
+				errorCount++
+			case errors.SeverityWarn:
+				warnCount++
+			case errors.SeverityHint:
+				hintCount++
+			}
+			continue
+		}
+		if errors.GetUnsupportedErr(err) != nil {
+			warnCount++
+		}
+	}
+
+	var prMD string
+	reportLink := ""
+	if summary.ReportURL != "" {
+		reportLink = "\n\n[View full report](" + summary.ReportURL + ")"
+	}
+	lintingSummary := fmt.Sprintf("%d errors, %d warnings, %d hints", errorCount, warnCount, hintCount)
+	prMD = "<details>\n<summary>Linting Report</summary>\n" + lintingSummary + reportLink + "\n" + "</details>\n"
+
+	_ = versioning.AddVersionReport(ctx, versioning.VersionReport{
+		Key:      "linting_report",
+		PRReport: prMD,
+		Priority: 4, // Slightly lower priority than OpenAPI changes
+	})
 }
 
 func GenerateChangesSummary(ctx context.Context, url string, summary changes.Summary) {
@@ -186,10 +220,14 @@ func GenerateChangesSummary(ctx context.Context, url string, summary changes.Sum
 		log.From(ctx).Infof("wrote changes summary to \"%s\"", filepath)
 	}
 	var prMD string
+	reportLink := ""
+	if url != "" {
+		reportLink = "\n\n[View full report](" + url + ")"
+	}
 	if len(summary.Text) > 0 {
-		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\n" + summary.Text + "\n" + "</details>\n"
+		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\n" + summary.Text + reportLink + "\n" + "</details>\n"
 	} else {
-		prMD = "<details open>\n<summary>OpenAPI Change Summary</summary>\nNo specification changes\n" + "</details>\n"
+		prMD = "<details>\n<summary>OpenAPI Change Summary</summary>\nNo specification changes" + reportLink + "\n" + "</details>\n"
 	}
 
 	// New form -- the above form is deprecated.

@@ -15,6 +15,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
+	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -150,6 +151,7 @@ type prIdentifiers struct {
 	previousSourceDigest string // extracted from workflow.lock diff (OLD digest)
 	newSourceDigest      string // extracted from workflow.lock diff (NEW digest)
 	sourceNamespace      string // extracted from workflow.lock diff
+	executionID          string // extracted from <!-- execution_id: ... --> comment
 }
 
 // checkGHCLIAvailable checks if the GitHub CLI is installed
@@ -193,6 +195,9 @@ func extractIdentifiersFromPR(ctx context.Context, pr *parsedPRUrl) (*prIdentifi
 	if matches := changesPattern.FindStringSubmatch(body); len(matches) > 1 {
 		ids.changesReportDigest = matches[1]
 	}
+
+	// Extract execution ID from HTML comment
+	ids.executionID = github.ParseExecutionIDComment(body)
 
 	if ids.lintReportDigest == "" && ids.changesReportDigest == "" {
 		return nil, fmt.Errorf("could not find Speakeasy report URLs in PR body")

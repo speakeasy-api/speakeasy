@@ -44,9 +44,9 @@ type Output struct {
 
 // PR title prefixes
 const (
-	prTitleSDK   = "chore: Update SDK - "
-	prTitleSpecs = "chore: Update Specs - "
-	prTitleDocs  = "chore: Update SDK Docs - "
+	prTitleSDK   = "chore: 🐝 Update SDK - "
+	prTitleSpecs = "chore: 🐝 Update Specs - "
+	prTitleDocs  = "chore: 🐝 Update SDK Docs - "
 )
 
 // Generate creates a PR title and body from the given input.
@@ -93,17 +93,6 @@ func buildTitle(input Input) string {
 
 func buildBody(input Input) string {
 	var body strings.Builder
-
-	// IMPORTANT block with report URLs
-	if input.LintingReportURL != "" || input.ChangesReportURL != "" {
-		body.WriteString("> [!IMPORTANT]\n")
-		if input.LintingReportURL != "" {
-			body.WriteString(fmt.Sprintf("> Linting report available at: <%s>\n", input.LintingReportURL))
-		}
-		if input.ChangesReportURL != "" {
-			body.WriteString(fmt.Sprintf("> OpenAPI Change report available at: <%s>\n", input.ChangesReportURL))
-		}
-	}
 
 	// Main heading
 	if input.SourceGeneration {
