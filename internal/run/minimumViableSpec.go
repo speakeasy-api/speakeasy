@@ -15,17 +15,14 @@ import (
 
 func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, res *validation.ValidationResult) (string, *SourceResult, error) {
 	targetLanguage := w.workflow.Targets[targetID].Target
-	var invalidOperations []string
-
-	invalidOperations = res.InvalidOperations
 
 	substep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
 
-	if len(invalidOperations) > 0 {
+	if len(res.InvalidOperations) > 0 {
 		source.Transformations = append(source.Transformations, workflow.Transformation{
 			FilterOperations: &workflow.FilterOperationsOptions{
-				Operations: strings.Join(invalidOperations, ","),
+				Operations: strings.Join(res.InvalidOperations, ","),
 				Exclude:    pointer.From(true),
 			},
 		})
