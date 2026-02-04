@@ -135,6 +135,11 @@ type ConfigureGithubFlags struct {
 	WorkflowDirectory string `json:"workflow-directory"`
 }
 
+type ConfigurePublishingFlags struct {
+	WorkflowDirectory     string `json:"workflow-directory"`
+	PyPITrustedPublishing bool   `json:"pypi-trusted-publishing"`
+}
+
 var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	Usage: "github",
 	Short: "Configure Speakeasy for github.",
@@ -150,7 +155,7 @@ var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	RequiresAuth: true,
 }
 
-var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+var configurePublishingCmd = &model.ExecutableCommand[ConfigurePublishingFlags]{
 	Usage: "publishing",
 	Short: "Configure Speakeasy for publishing.",
 	Long:  "Configure your Speakeasy workflow to publish to package managers from your github repo.",
@@ -160,6 +165,10 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 			Name:        "workflow-directory",
 			Shorthand:   "d",
 			Description: "directory of speakeasy workflow file",
+		},
+		flag.BooleanFlag{
+			Name:        "pypi-trusted-publishing",
+			Description: "use PyPI trusted publishing instead of API tokens for Python targets",
 		},
 	},
 	RequiresAuth: true,
@@ -452,7 +461,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	return nil
 }
 
-func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error {
+func configurePublishing(ctx context.Context, flags ConfigurePublishingFlags) error {
 	logger := log.From(ctx)
 
 	rootDir, err := os.Getwd()
@@ -495,7 +504,9 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
-		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
+		modifiedTarget, err := prompts.ConfigurePublishing(&target, name, prompts.ConfigurePublishingOptions{
+			PyPITrustedPublishing: flags.PyPITrustedPublishing,
+		})
 		if err != nil {
 			return err
 		}
