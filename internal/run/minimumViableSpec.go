@@ -5,23 +5,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlekSi/pointer"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
+	"github.com/speakeasy-api/openapi/pointer"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/studio/modifications"
+	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
 
-func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, vErrs []error) (string, *SourceResult, error) {
+func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID string, res *validation.ValidationResult) (string, *SourceResult, error) {
 	targetLanguage := w.workflow.Targets[targetID].Target
 	var invalidOperations []string
-	for _, err := range vErrs {
-		vErr := errors.GetValidationErr(err)
-		if vErr.Severity == errors.SeverityError {
-			invalidOperations = append(invalidOperations, vErr.AffectedOperationIDs...)
-		}
-	}
+
+	invalidOperations = res.InvalidOperations
 
 	substep := parentStep.NewSubstep("Retrying with minimum viable document")
 	source := w.workflow.Sources[sourceID]
@@ -30,13 +26,13 @@ func (w *Workflow) retryWithMinimumViableSpec(ctx context.Context, parentStep *w
 		source.Transformations = append(source.Transformations, workflow.Transformation{
 			FilterOperations: &workflow.FilterOperationsOptions{
 				Operations: strings.Join(invalidOperations, ","),
-				Exclude:    pointer.ToBool(true),
+				Exclude:    pointer.From(true),
 			},
 		})
 	} else {
 		// Sometimes the document has invalid, unused sections
 		source.Transformations = append(source.Transformations, workflow.Transformation{
-			RemoveUnused: pointer.ToBool(true),
+			RemoveUnused: pointer.From(true),
 		})
 	}
 	w.workflow.Sources[sourceID] = source

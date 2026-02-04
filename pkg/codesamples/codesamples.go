@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/AlekSi/pointer"
 	"github.com/speakeasy-api/openapi/overlay"
+	"github.com/speakeasy-api/openapi/pointer"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/config"
@@ -222,7 +222,7 @@ func singleCodeSampleNode(snippet usagegen.UsageSnippet, opts workflow.CodeSampl
 		lang = *opts.LangOverride
 	}
 
-	label := pointer.ToString(snippet.OperationId)
+	label := pointer.From(snippet.OperationId)
 	if opts.LabelOverride != nil {
 		if opts.LabelOverride.Omit != nil {
 			if *opts.LabelOverride.Omit {

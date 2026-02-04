@@ -12,10 +12,10 @@ import (
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 
-	"github.com/AlekSi/pointer"
 	"github.com/samber/lo"
 	vErrs "github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/openapi/overlay"
+	"github.com/speakeasy-api/openapi/pointer"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/run"
@@ -207,7 +207,7 @@ func convertSourceResultIntoSourceResponseData(sourceResult run.SourceResult, so
 				diagnosis = append(diagnosis, components.Diagnostic{
 					Message:  vErr.Message,
 					Severity: string(vErr.Severity),
-					Line:     pointer.ToInt64(int64(vErr.LineNumber)),
+					Line:     pointer.From(int64(vErr.GetLineNumber())),
 					Type:     vErr.Rule,
 				})
 				continue
@@ -267,9 +267,8 @@ func convertWarningToDiagnostic(w error) components.Diagnostic {
 		return components.Diagnostic{
 			Message:  vErr.Message,
 			Severity: string(vErr.Severity),
-			Line:     pointer.ToInt64(int64(vErr.LineNumber)),
+			Line:     pointer.From(int64(vErr.GetLineNumber())),
 			Type:     vErr.Rule,
-			Path:     []string{vErr.Path},
 		}
 	}
 
@@ -278,10 +277,10 @@ func convertWarningToDiagnostic(w error) components.Diagnostic {
 		skippedStr := fmt.Sprintf("Skipping %s %q", skippedErr.SkippedEntity.Type, skippedErr.SkippedEntity.Name)
 		return components.Diagnostic{
 			Message:     skippedErr.Message,
-			Line:        pointer.ToInt64(int64(skippedErr.LineNumber)),
+			Line:        pointer.From(int64(skippedErr.GetLineNumber())),
 			Severity:    "warn",
 			Type:        fmt.Sprintf("Skipped %ss", cases.Title(language.English).String(skippedErr.SkippedEntity.Type)),
-			HelpMessage: pointer.ToString(skippedStr),
+			HelpMessage: pointer.From(skippedStr),
 		}
 	}
 
@@ -289,7 +288,7 @@ func convertWarningToDiagnostic(w error) components.Diagnostic {
 	if errors.As(w, &uErr) {
 		return components.Diagnostic{
 			Message:  uErr.Message,
-			Line:     pointer.ToInt64(int64(uErr.LineNumber)),
+			Line:     pointer.From(int64(uErr.GetLineNumber())),
 			Severity: "warn",
 			Type:     "Unsupported",
 		}

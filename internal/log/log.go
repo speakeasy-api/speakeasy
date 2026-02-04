@@ -468,12 +468,12 @@ func getGithubAnnotationAttributes(associatedFile string, err error) string {
 			severity = "Hint"
 		}
 
-		return fmt.Sprintf(" file=%s,line=%d,title=Validation %s", filepath.Clean(associatedFile), vErr.LineNumber, severity)
+		return fmt.Sprintf(" file=%s,line=%d,col=%d,title=Validation %s", filepath.Clean(associatedFile), vErr.GetLineNumber(), vErr.GetColumnNumber(), severity)
 	}
 
 	uErr := errors.GetUnsupportedErr(err)
 	if uErr != nil {
-		return fmt.Sprintf(" file=%s,line=%d,title=Unsupported", filepath.Clean(associatedFile), uErr.LineNumber)
+		return fmt.Sprintf(" file=%s,line=%d,col=%d,title=Unsupported", filepath.Clean(associatedFile), uErr.GetLineNumber(), uErr.GetColumnNumber())
 	}
 
 	return ""

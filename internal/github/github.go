@@ -90,13 +90,13 @@ func GenerateLintingSummary(ctx context.Context, summary LintingSummary) {
 	for _, err := range summary.Errors {
 		vErr := errors.GetValidationErr(err)
 		if vErr != nil {
-			contents = append(contents, []string{strings.ToUpper(string(vErr.Severity)), "validation", vErr.Error(), strconv.Itoa(vErr.LineNumber)})
+			contents = append(contents, []string{strings.ToUpper(string(vErr.Severity)), "validation", vErr.Error(), strconv.Itoa(vErr.GetLineNumber())})
 			continue
 		}
 
 		uErr := errors.GetUnsupportedErr(err)
 		if uErr != nil {
-			contents = append(contents, []string{string(errors.SeverityWarn), uErr.Error(), "unsupported", strconv.Itoa(uErr.LineNumber)})
+			contents = append(contents, []string{string(errors.SeverityWarn), uErr.Error(), "unsupported", strconv.Itoa(uErr.GetLineNumber())})
 			continue
 		}
 
@@ -282,9 +282,16 @@ func SortErrors(errs []error) {
 			}
 
 			switch {
-			case iVErr.LineNumber < jVErr.LineNumber:
+			case iVErr.GetLineNumber() < jVErr.GetLineNumber():
 				return -1
-			case iVErr.LineNumber > jVErr.LineNumber:
+			case iVErr.GetLineNumber() > jVErr.GetLineNumber():
+				return 1
+			}
+
+			switch {
+			case iVErr.GetColumnNumber() < jVErr.GetColumnNumber():
+				return -1
+			case iVErr.GetColumnNumber() > jVErr.GetColumnNumber():
 				return 1
 			default:
 				return 0
@@ -301,9 +308,15 @@ func SortErrors(errs []error) {
 		switch {
 		case iUErr != nil && jUErr != nil:
 			switch {
-			case iUErr.LineNumber < jUErr.LineNumber:
+			case iUErr.GetLineNumber() < jUErr.GetLineNumber():
 				return -1
-			case iUErr.LineNumber > jUErr.LineNumber:
+			case iUErr.GetLineNumber() > jUErr.GetLineNumber():
+				return 1
+			}
+			switch {
+			case iUErr.GetColumnNumber() < jUErr.GetColumnNumber():
+				return -1
+			case iUErr.GetColumnNumber() > jUErr.GetColumnNumber():
 				return 1
 			default:
 				return 0

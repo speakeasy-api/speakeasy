@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/AlekSi/pointer"
+	"github.com/speakeasy-api/openapi/pointer"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
@@ -19,10 +19,10 @@ func ConvertOASSummary(summary openapi.Summary) shared.OASSummary {
 		}
 
 		if operation.GroupOverride != "" {
-			o.GroupOverride = pointer.ToString(operation.GroupOverride)
+			o.GroupOverride = pointer.From(operation.GroupOverride)
 		}
 		if operation.MethodNameOverride != "" {
-			o.MethodNameOverride = pointer.ToString(operation.MethodNameOverride)
+			o.MethodNameOverride = pointer.From(operation.MethodNameOverride)
 		}
 
 		operations = append(operations, o)
