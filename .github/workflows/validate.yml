@@ -84,9 +84,16 @@ jobs:
 
       - name: Set up .NET
         if: runner.os == 'Windows'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
+        env:
+          # Prevent "Unable to locate dotnet CLI" transient errors
+          # Reference: https://github.com/dotnet/sdk/issues/44957
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/.dotnet
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: |
+            5.x
+            6.x
+            8.x
 
       - name: Set up gotestfmt
         run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest

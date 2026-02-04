@@ -206,6 +206,11 @@ type ConfigureGithubFlags struct {
 	WorkflowDirectory string `json:"workflow-directory"`
 }
 
+type ConfigurePublishingFlags struct {
+	WorkflowDirectory     string `json:"workflow-directory"`
+	PyPITrustedPublishing bool   `json:"pypi-trusted-publishing"`
+}
+
 var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	Usage: "github",
 	Short: "Configure Speakeasy for github.",
@@ -221,7 +226,7 @@ var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	RequiresAuth: true,
 }
 
-var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+var configurePublishingCmd = &model.ExecutableCommand[ConfigurePublishingFlags]{
 	Usage: "publishing",
 	Short: "Configure Speakeasy for publishing.",
 	Long:  "Configure your Speakeasy workflow to publish to package managers from your github repo.",
@@ -231,6 +236,10 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 			Name:        "workflow-directory",
 			Shorthand:   "d",
 			Description: "directory of speakeasy workflow file",
+		},
+		flag.BooleanFlag{
+			Name:        "pypi-trusted-publishing",
+			Description: "use PyPI trusted publishing instead of API tokens for Python targets",
 		},
 	},
 	RequiresAuth: true,
@@ -814,7 +823,7 @@ func configureTargetNonInteractive(ctx context.Context, workingDir string, workf
 	return nil
 }
 
-func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error {
+func configurePublishing(ctx context.Context, flags ConfigurePublishingFlags) error {
 	logger := log.From(ctx)
 
 	rootDir, err := os.Getwd()
@@ -857,7 +866,9 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
-		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
+		modifiedTarget, err := prompts.ConfigurePublishing(&target, name, prompts.ConfigurePublishingOptions{
+			PyPITrustedPublishing: flags.PyPITrustedPublishing,
+		})
 		if err != nil {
 			return err
 		}
@@ -982,6 +993,53 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	}
 	agenda = append(agenda, getNPMTrustedPublishingInstructions(ctx, npmTrustedPublishingConfigs)...)
 
+	// Add instructions for PyPI Trusted Publishing (python)
+	pypiTrustedPublishingConfigs := make(map[string]PyPITrustedPublishingConfig)
+	for name, wfp := range workflowPaths {
+		target := workflowFile.Targets[name]
+		if target.Publishing != nil && target.Publishing.PyPi != nil && target.Publishing.PyPi.UseTrustedPublishing != nil && *target.Publishing.PyPi.UseTrustedPublishing {
+			var publishPath string
+			switch len(wfp.publishWorkflowPaths) {
+			case 0:
+				// No publish path means generation and publishing are combined into a single workflow
+				publishPath = wfp.generationWorkflowPath
+			case 1:
+				publishPath = wfp.publishWorkflowPaths[0]
+			default:
+				// For python, if the publish and generation workflow files
+				// are distinct (pr mode), then we only expect a single publish path.
+				return errors.Wrapf(err, "multiple publish workflow paths found for target %s", name)
+			}
+
+			// Get the packageName from the config file
+			packageName := "<packageName>"
+			outDir := ""
+			if target.Output != nil {
+				outDir = *target.Output
+			}
+			workflowDir := filepath.Join(rootDir, actionWorkingDir)
+			configPath := filepath.Join(workflowDir, outDir)
+			cfg, err := config.Load(configPath)
+			if err == nil {
+				if langCfg, ok := cfg.Config.Languages[target.Target]; ok {
+					if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
+						packageName = pkgName
+					}
+				}
+			}
+
+			pypiTrustedPublishingConfigs[name] = PyPITrustedPublishingConfig{
+				target:          target,
+				workflowDir:     filepath.Join(rootDir, actionWorkingDir),
+				actionPath:      actionPath,
+				publishFileName: filepath.Base(publishPath),
+				packageName:     packageName,
+				remoteURL:       remoteURL,
+			}
+		}
+	}
+	agenda = append(agenda, getPyPITrustedPublishingInstructions(ctx, pypiTrustedPublishingConfigs)...)
+
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
 	for _, statusMsg := range status {
 		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
@@ -995,7 +1053,16 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	return nil
 }
 
-type NPMTrustedPublishingConfig = struct {
+type NPMTrustedPublishingConfig struct {
+	target          workflow.Target
+	workflowDir     string
+	actionPath      string
+	publishFileName string
+	packageName     string
+	remoteURL       string
+}
+
+type PyPITrustedPublishingConfig struct {
 	target          workflow.Target
 	workflowDir     string
 	actionPath      string
@@ -1051,6 +1118,65 @@ func getNPMTrustedPublishingInstructions(_ context.Context, npmConfigs map[strin
 		} else {
 			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish new versions of your packages.", actionPath))
 			agenda = append(agenda, "• Your packages' latest versions should now be labelled with a green check mark and include a 'Provenance'.")
+		}
+	}
+
+	return agenda
+}
+
+func getPyPITrustedPublishingInstructions(_ context.Context, pypiConfigs map[string]PyPITrustedPublishingConfig) []string {
+	var agenda []string
+
+	if len(pypiConfigs) == 0 {
+		return agenda
+	}
+
+	// Collect unique action paths
+	actionPaths := make(map[string][]string)
+	for _, pypiConfig := range pypiConfigs {
+		if _, exists := actionPaths[pypiConfig.actionPath]; !exists {
+			actionPaths[pypiConfig.actionPath] = []string{}
+		}
+		actionPaths[pypiConfig.actionPath] = append(actionPaths[pypiConfig.actionPath], pypiConfig.packageName)
+	}
+
+	for targetName, pypiConfig := range pypiConfigs {
+		repoOwner := "<user>"
+		repoName := "<repository>"
+		if pypiConfig.remoteURL != "" {
+			// Expected format: "https://github.com/<user>/<repository>"
+			re := regexp.MustCompile(`^https://github\.com/([^/]+)/([^/]+)/?$`)
+			matches := re.FindStringSubmatch(pypiConfig.remoteURL)
+			if len(matches) == 3 {
+				repoOwner = matches[1]
+				repoName = matches[2]
+			}
+		}
+
+		if len(pypiConfigs) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Configure trusted publishing for your PyPI package '%s':", pypiConfig.packageName))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• [%s] Configure trusted publishing for PyPI package '%s':", strings.ToUpper(pypiConfig.target.Target), targetName))
+		}
+
+		agenda = append(agenda, fmt.Sprintf("\t◦ Navigate to https://pypi.org/manage/project/%s/settings/publishing/", pypiConfig.packageName))
+
+		configLines := []string{
+			fmt.Sprintf("\t\t- Owner: %s", repoOwner),
+			fmt.Sprintf("\t\t- Repository name: %s", repoName),
+			fmt.Sprintf("\t\t- Workflow name: %s", pypiConfig.publishFileName),
+			"\t\t- Environment name: <Leave Blank>",
+		}
+		agenda = append(agenda, fmt.Sprintf("\t◦ Add a new 'trusted publisher' with the following configuration:\n%s", strings.Join(configLines, "\n")))
+	}
+
+	for actionPath, packageNames := range actionPaths {
+		if len(packageNames) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish a new version of the %s package.", actionPath, packageNames[0]))
+			agenda = append(agenda, fmt.Sprintf("• Your package will be published with attestations. Verify at https://pypi.org/project/%s/#files", packageNames[0]))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish new versions of your packages.", actionPath))
+			agenda = append(agenda, "• Your packages will be published with attestations.")
 		}
 	}
 
