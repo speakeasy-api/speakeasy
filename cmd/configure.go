@@ -77,12 +77,13 @@ var configureGenerationCmd = &model.CommandGroup{
 }
 
 type ConfigureSourcesFlags struct {
-	ID         string `json:"id"`
-	New        bool   `json:"new"`
-	Location   string `json:"location"`
-	SourceName string `json:"source-name"`
-	AuthHeader string `json:"auth-header"`
-	OutputPath string `json:"output"`
+	ID             string `json:"id"`
+	New            bool   `json:"new"`
+	Location       string `json:"location"`
+	SourceName     string `json:"source-name"`
+	AuthHeader     string `json:"auth-header"`
+	OutputPath     string `json:"output"`
+	NonInteractive bool   `json:"non-interactive"`
 }
 
 var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
@@ -121,19 +122,24 @@ var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
 			Shorthand:   "o",
 			Description: "output path for the compiled source document",
 		},
+		flag.BooleanFlag{
+			Name:        "non-interactive",
+			Description: "run in non-interactive mode; requires --location and --source-name",
+		},
 	},
 }
 
 type ConfigureTargetFlags struct {
-	ID            string `json:"id"`
-	New           bool   `json:"new"`
-	TargetType    string `json:"target-type"`
-	SourceID      string `json:"source"`
-	TargetName    string `json:"target-name"`
-	SDKClassName  string `json:"sdk-class-name"`
-	PackageName   string `json:"package-name"`
-	BaseServerURL string `json:"base-server-url"`
-	OutputDir     string `json:"output"`
+	ID             string `json:"id"`
+	New            bool   `json:"new"`
+	TargetType     string `json:"target-type"`
+	SourceID       string `json:"source"`
+	TargetName     string `json:"target-name"`
+	SDKClassName   string `json:"sdk-class-name"`
+	PackageName    string `json:"package-name"`
+	BaseServerURL  string `json:"base-server-url"`
+	OutputDir      string `json:"output"`
+	NonInteractive bool   `json:"non-interactive"`
 }
 
 var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
@@ -183,6 +189,10 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 			Name:        "output",
 			Shorthand:   "o",
 			Description: "output directory for the generated target",
+		},
+		flag.BooleanFlag{
+			Name:        "non-interactive",
+			Description: "run in non-interactive mode; requires --target-type and --source",
 		},
 	},
 }
@@ -282,6 +292,13 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 	// Non-interactive mode: when both --location and --source-name are provided
 	if flags.Location != "" && flags.SourceName != "" {
 		return configureSourcesNonInteractive(ctx, workingDir, workflowFile, flags)
+	}
+
+	// If --non-interactive flag is set but required args are missing, return a helpful error
+	if flags.NonInteractive {
+		if err := checkNonInteractiveSourcesFlags(flags); err != nil {
+			return err
+		}
 	}
 
 	var existingSourceName string
@@ -432,6 +449,38 @@ func configureSourcesNonInteractive(ctx context.Context, workingDir string, work
 	return nil
 }
 
+// checkNonInteractiveSourcesFlags validates that required flags are provided for non-interactive mode.
+// Returns an error listing missing flags if any are not provided.
+func checkNonInteractiveSourcesFlags(flags ConfigureSourcesFlags) error {
+	var missing []string
+	if flags.Location == "" {
+		missing = append(missing, "--location")
+	}
+	if flags.SourceName == "" {
+		missing = append(missing, "--source-name")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("non-interactive mode requires the following flags: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// checkNonInteractiveTargetFlags validates that required flags are provided for non-interactive mode.
+// Returns an error listing missing flags if any are not provided.
+func checkNonInteractiveTargetFlags(flags ConfigureTargetFlags) error {
+	var missing []string
+	if flags.TargetType == "" {
+		missing = append(missing, "--target-type")
+	}
+	if flags.SourceID == "" {
+		missing = append(missing, "--source")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("non-interactive mode requires the following flags: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -456,6 +505,13 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	// Non-interactive mode: when --target-type and --source are provided
 	if flags.TargetType != "" && flags.SourceID != "" {
 		return configureTargetNonInteractive(ctx, workingDir, workflowFile, flags)
+	}
+
+	// If --non-interactive flag is set but required args are missing, return a helpful error
+	if flags.NonInteractive {
+		if err := checkNonInteractiveTargetFlags(flags); err != nil {
+			return err
+		}
 	}
 
 	existingTarget := ""

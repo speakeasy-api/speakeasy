@@ -174,6 +174,51 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 	}
 }
 
+func TestConfigureSourcesNonInteractiveFlag(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		flags    ConfigureSourcesFlags
+		errorMsg string
+	}{
+		{
+			name: "non-interactive flag with missing location returns error",
+			flags: ConfigureSourcesFlags{
+				SourceName:     "my-source",
+				NonInteractive: true,
+			},
+			errorMsg: "non-interactive mode requires the following flags: --location",
+		},
+		{
+			name: "non-interactive flag with missing source-name returns error",
+			flags: ConfigureSourcesFlags{
+				Location:       "https://example.com/openapi.yaml",
+				NonInteractive: true,
+			},
+			errorMsg: "non-interactive mode requires the following flags: --source-name",
+		},
+		{
+			name: "non-interactive flag with all missing flags returns error",
+			flags: ConfigureSourcesFlags{
+				NonInteractive: true,
+			},
+			errorMsg: "non-interactive mode requires the following flags: --location, --source-name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Test the checkNonInteractiveSourcesFlags function directly
+			err := checkNonInteractiveSourcesFlags(tt.flags)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errorMsg)
+		})
+	}
+}
+
 func TestConfigureTargetNonInteractive(t *testing.T) {
 	t.Parallel()
 
@@ -357,6 +402,51 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 			}
 			_, ok := loadedWf.Targets[expectedTargetName]
 			assert.True(t, ok, "target should be saved to disk")
+		})
+	}
+}
+
+func TestConfigureTargetNonInteractiveFlag(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		flags    ConfigureTargetFlags
+		errorMsg string
+	}{
+		{
+			name: "non-interactive flag with missing target-type returns error",
+			flags: ConfigureTargetFlags{
+				SourceID:       "my-source",
+				NonInteractive: true,
+			},
+			errorMsg: "non-interactive mode requires the following flags: --target-type",
+		},
+		{
+			name: "non-interactive flag with missing source returns error",
+			flags: ConfigureTargetFlags{
+				TargetType:     "typescript",
+				NonInteractive: true,
+			},
+			errorMsg: "non-interactive mode requires the following flags: --source",
+		},
+		{
+			name: "non-interactive flag with all missing flags returns error",
+			flags: ConfigureTargetFlags{
+				NonInteractive: true,
+			},
+			errorMsg: "non-interactive mode requires the following flags: --target-type, --source",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Test the checkNonInteractiveTargetFlags function directly
+			err := checkNonInteractiveTargetFlags(tt.flags)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errorMsg)
 		})
 	}
 }
