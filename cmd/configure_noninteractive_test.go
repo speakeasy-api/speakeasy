@@ -23,7 +23,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 	tests := []struct {
 		name        string
 		flags       ConfigureSourcesFlags
-		setup       func(t *testing.T, dir string) *workflow.Workflow
+		setup       func() *workflow.Workflow
 		expectError bool
 		errorMsg    string
 		validate    func(t *testing.T, wf *workflow.Workflow)
@@ -34,7 +34,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				Location:   "https://petstore.swagger.io/v2/swagger.json",
 				SourceName: "petstore",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: make(map[string]workflow.Source),
@@ -42,6 +42,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				}
 			},
 			validate: func(t *testing.T, wf *workflow.Workflow) {
+				t.Helper()
 				source, ok := wf.Sources["petstore"]
 				assert.True(t, ok, "source 'petstore' should exist")
 				assert.Len(t, source.Inputs, 1)
@@ -55,7 +56,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				SourceName: "my-api",
 				AuthHeader: "X-API-Key",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: make(map[string]workflow.Source),
@@ -63,6 +64,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				}
 			},
 			validate: func(t *testing.T, wf *workflow.Workflow) {
+				t.Helper()
 				source := wf.Sources["my-api"]
 				require.NotNil(t, source.Inputs[0].Auth)
 				assert.Equal(t, "X-API-Key", source.Inputs[0].Auth.Header)
@@ -76,7 +78,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				SourceName: "my-api",
 				OutputPath: "compiled/openapi.yaml",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: make(map[string]workflow.Source),
@@ -84,6 +86,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				}
 			},
 			validate: func(t *testing.T, wf *workflow.Workflow) {
+				t.Helper()
 				source := wf.Sources["my-api"]
 				require.NotNil(t, source.Output)
 				assert.Equal(t, "compiled/openapi.yaml", *source.Output)
@@ -95,7 +98,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				Location:   "https://api.example.com/openapi.yaml",
 				SourceName: "existing-source",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: map[string]workflow.Source{
@@ -115,7 +118,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 				Location:   "https://api.example.com/openapi.yaml",
 				SourceName: "my source",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: make(map[string]workflow.Source),
@@ -132,9 +135,7 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 			t.Parallel()
 
 			// Create temp directory
-			tmpDir, err := os.MkdirTemp("", "speakeasy-test-*")
-			require.NoError(t, err)
-			defer os.RemoveAll(tmpDir)
+			tmpDir := t.TempDir()
 
 			// Create .speakeasy directory
 			require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".speakeasy"), 0o755))
@@ -142,11 +143,11 @@ func TestConfigureSourcesNonInteractive(t *testing.T) {
 			// Run setup to get workflow
 			var wf *workflow.Workflow
 			if tt.setup != nil {
-				wf = tt.setup(t, tmpDir)
+				wf = tt.setup()
 			}
 
 			// Run non-interactive configuration
-			err = configureSourcesNonInteractive(testContext(), tmpDir, wf, tt.flags)
+			err := configureSourcesNonInteractive(testContext(), tmpDir, wf, tt.flags)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -179,7 +180,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 	tests := []struct {
 		name        string
 		flags       ConfigureTargetFlags
-		setup       func(t *testing.T, dir string) *workflow.Workflow
+		setup       func() *workflow.Workflow
 		expectError bool
 		errorMsg    string
 		validate    func(t *testing.T, wf *workflow.Workflow)
@@ -190,7 +191,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				TargetType: "typescript",
 				SourceID:   "my-source",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: map[string]workflow.Source{
@@ -200,6 +201,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				}
 			},
 			validate: func(t *testing.T, wf *workflow.Workflow) {
+				t.Helper()
 				target, ok := wf.Targets["typescript"]
 				assert.True(t, ok, "target 'typescript' should exist")
 				assert.Equal(t, "typescript", target.Target)
@@ -213,7 +215,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				SourceID:   "api-source",
 				TargetName: "my-python-sdk",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: map[string]workflow.Source{
@@ -223,6 +225,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				}
 			},
 			validate: func(t *testing.T, wf *workflow.Workflow) {
+				t.Helper()
 				_, ok := wf.Targets["my-python-sdk"]
 				assert.True(t, ok, "target 'my-python-sdk' should exist")
 			},
@@ -234,7 +237,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				SourceID:   "api",
 				OutputDir:  "sdk/go",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: map[string]workflow.Source{
@@ -244,6 +247,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				}
 			},
 			validate: func(t *testing.T, wf *workflow.Workflow) {
+				t.Helper()
 				target := wf.Targets["go"]
 				require.NotNil(t, target.Output)
 				assert.Equal(t, "sdk/go", *target.Output)
@@ -255,7 +259,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				TargetType: "unsupported-lang",
 				SourceID:   "api",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: map[string]workflow.Source{
@@ -273,7 +277,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				TargetType: "typescript",
 				SourceID:   "nonexistent",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: map[string]workflow.Source{
@@ -292,7 +296,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 				SourceID:   "api",
 				TargetName: "existing-target",
 			},
-			setup: func(t *testing.T, dir string) *workflow.Workflow {
+			setup: func() *workflow.Workflow {
 				return &workflow.Workflow{
 					Version: workflow.WorkflowVersion,
 					Sources: map[string]workflow.Source{
@@ -313,9 +317,7 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 			t.Parallel()
 
 			// Create temp directory
-			tmpDir, err := os.MkdirTemp("", "speakeasy-test-*")
-			require.NoError(t, err)
-			defer os.RemoveAll(tmpDir)
+			tmpDir := t.TempDir()
 
 			// Create .speakeasy directory
 			require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".speakeasy"), 0o755))
@@ -323,11 +325,11 @@ func TestConfigureTargetNonInteractive(t *testing.T) {
 			// Run setup to get workflow
 			var wf *workflow.Workflow
 			if tt.setup != nil {
-				wf = tt.setup(t, tmpDir)
+				wf = tt.setup()
 			}
 
 			// Run non-interactive configuration
-			err = configureTargetNonInteractive(testContext(), tmpDir, wf, tt.flags)
+			err := configureTargetNonInteractive(testContext(), tmpDir, wf, tt.flags)
 
 			if tt.expectError {
 				require.Error(t, err)
