@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/speakeasy-api/openapi/openapi"
@@ -41,8 +42,8 @@ func TestNormalize(t *testing.T) {
 	_, _ = testOutput.ReadFrom(reader)
 	require.NoError(t, err)
 
-	// Compare the content (trimmed to handle whitespace differences)
-	require.Equal(t, testOutput.String(), testInput.String())
+	// Compare the content, normalizing line endings for Windows compatibility
+	require.Equal(t, strings.ReplaceAll(testOutput.String(), "\r\n", "\n"), testInput.String())
 }
 
 func TestNormalizeNoPrefixItems(t *testing.T) {
@@ -75,6 +76,6 @@ func TestNormalizeNoPrefixItems(t *testing.T) {
 	_, _ = testOutput.ReadFrom(reader)
 	require.NoError(t, err)
 
-	// Compare the content
-	require.Equal(t, testOutput.String(), testInput.String())
+	// Compare the content, normalizing line endings for Windows compatibility
+	require.Equal(t, strings.ReplaceAll(testOutput.String(), "\r\n", "\n"), testInput.String())
 }

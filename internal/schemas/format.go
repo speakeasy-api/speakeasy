@@ -50,5 +50,5 @@ func RenderDocument(y *yaml.Node, schemaPath string, yamlIn bool, yamlOut bool) 
 	if err := json.YAMLToJSON(y, 2, &buf); err != nil {
 		return nil, fmt.Errorf("failed to convert to JSON: %w", err)
 	}
-	return buf.Bytes(), nil
+	return bytes.TrimRight(buf.Bytes(), "\n"), nil
 }

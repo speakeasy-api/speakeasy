@@ -9,6 +9,8 @@ import (
 )
 
 func TestCleanupDocument_RemovesEmptyPathsAndTrimsMultiline(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.0.3
 info:
   title: Cleanup Test

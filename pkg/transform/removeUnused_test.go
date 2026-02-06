@@ -9,6 +9,8 @@ import (
 )
 
 func TestRemoveUnused_RemovesOrphanedSchemas(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.0.3
 info:
   title: Remove Unused Test
@@ -55,6 +57,8 @@ components:
 }
 
 func TestRemoveUnused_KeepsReferencedResponses(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.0.3
 info:
   title: Remove Unused Test
@@ -93,6 +97,8 @@ components:
 }
 
 func TestRemoveUnused_KeepsNestedReferences(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.0.3
 info:
   title: Remove Unused Test
@@ -140,6 +146,8 @@ components:
 }
 
 func TestRemoveUnused_KeepsSecuritySchemes(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.0.3
 info:
   title: Remove Unused Test
@@ -178,6 +186,8 @@ components:
 }
 
 func TestRemoveUnused_KeepsPolymorphicReferences(t *testing.T) {
+	t.Parallel()
+
 	input := `openapi: 3.0.3
 info:
   title: Remove Unused Test
@@ -228,6 +238,8 @@ components:
 }
 
 func TestRemoveUnused_WithEmptyComponents(t *testing.T) {
+	t.Parallel()
+
 	// Test with empty but present components section (no panic)
 	input := `openapi: 3.0.3
 info:
@@ -254,6 +266,8 @@ components:
 // NOTE: Documents with no components section at all cause a nil pointer panic in the current implementation
 // This test is skipped to document the known issue
 func TestRemoveUnused_NoComponentsSectionPanics(t *testing.T) {
+	t.Parallel()
+
 	t.Skip("Known issue: RemoveOrphans panics with nil pointer when document has no components section")
 
 	input := `openapi: 3.0.3

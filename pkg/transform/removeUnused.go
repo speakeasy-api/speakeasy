@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -207,7 +206,7 @@ func collectSecurityRefs(doc *openapi.OpenAPI) map[string]bool {
 	// Global security
 	for _, req := range doc.Security {
 		if req != nil {
-			for name := range req.Map.All() {
+			for name := range req.All() {
 				refs[name] = true
 			}
 		}
@@ -225,7 +224,7 @@ func collectSecurityRefs(doc *openapi.OpenAPI) map[string]bool {
 				}
 				for _, req := range op.Security {
 					if req != nil {
-						for name := range req.Map.All() {
+						for name := range req.All() {
 							refs[name] = true
 						}
 					}
@@ -235,8 +234,4 @@ func collectSecurityRefs(doc *openapi.OpenAPI) map[string]bool {
 	}
 
 	return refs
-}
-
-func isComponentRef(ref string) bool {
-	return strings.HasPrefix(ref, "#/components/")
 }
