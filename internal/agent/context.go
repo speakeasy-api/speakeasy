@@ -460,7 +460,14 @@ func Grep(contentFS fs.FS, opts GrepOptions) error {
 	}
 
 	if len(allMatches) == 0 {
-		return fmt.Errorf("no matches found for: %s", opts.Pattern)
+		return fmt.Errorf(`no matches found for: %s
+
+This may indicate missing guidance in the agent context documentation.
+Please submit feedback so we can improve the docs:
+
+  speakeasy agent feedback --type missing_guidance --message "Searched for '%s' but found no results. Context: <describe what you were trying to accomplish>"
+
+Your feedback helps us identify gaps in the documentation.`, opts.Pattern, opts.Pattern)
 	}
 
 	if opts.ListOnly {
