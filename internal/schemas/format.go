@@ -34,6 +34,10 @@ func Render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
 // RenderDocument - schemaPath can be unset if the docuemnt does not need reference resolution
 func RenderDocument(y *yaml.Node, schemaPath string, yamlIn bool, yamlOut bool) ([]byte, error) {
 	if yamlOut {
+		if !yamlIn {
+			// JSON-parsed nodes use flow style; reset to block for readable YAML output
+			resetJSONStyle(y, false)
+		}
 		var res bytes.Buffer
 		encoder := yaml.NewEncoder(&res)
 		// Note: would love to make this generic but the indentation information isn't in go-yaml nodes
@@ -51,4 +55,33 @@ func RenderDocument(y *yaml.Node, schemaPath string, yamlIn bool, yamlOut bool) 
 		return nil, fmt.Errorf("failed to convert to JSON: %w", err)
 	}
 	return bytes.TrimRight(buf.Bytes(), "\n"), nil
+}
+
+// resetJSONStyle recursively adjusts JSON-parsed nodes for readable YAML output:
+// resets FlowStyle to block on mappings/sequences and removes double-quote style from keys.
+func resetJSONStyle(node *yaml.Node, isKey bool) {
+	if node == nil {
+		return
+	}
+	switch node.Kind {
+	case yaml.MappingNode:
+		node.Style &^= yaml.FlowStyle
+		for i := 0; i < len(node.Content); i += 2 {
+			resetJSONStyle(node.Content[i], true)
+			resetJSONStyle(node.Content[i+1], false)
+		}
+	case yaml.SequenceNode:
+		node.Style &^= yaml.FlowStyle
+		for _, child := range node.Content {
+			resetJSONStyle(child, false)
+		}
+	case yaml.ScalarNode:
+		if isKey {
+			node.Style &^= yaml.DoubleQuotedStyle
+		}
+	case yaml.DocumentNode:
+		for _, child := range node.Content {
+			resetJSONStyle(child, false)
+		}
+	}
 }
