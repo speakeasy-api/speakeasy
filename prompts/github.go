@@ -113,7 +113,11 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 	return githubWorkflow, nil
 }
 
-func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target, error) {
+type ConfigurePublishingOptions struct {
+	PyPITrustedPublishing bool
+}
+
+func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePublishingOptions) (*workflow.Target, error) {
 	promptMap := make(map[publishingPrompt]*string)
 
 	// If the target already has a publishing definition for the package manager
@@ -161,10 +165,19 @@ func ConfigurePublishing(target *workflow.Target, name string) (*workflow.Target
 			},
 		}
 	case "python":
-		target.Publishing = &workflow.Publishing{
-			PyPi: &workflow.PyPi{
-				Token: formatWorkflowSecret(pypiTokenDefault),
-			},
+		if opts.PyPITrustedPublishing {
+			useTrustedPublishing := true
+			target.Publishing = &workflow.Publishing{
+				PyPi: &workflow.PyPi{
+					UseTrustedPublishing: &useTrustedPublishing,
+				},
+			}
+		} else {
+			target.Publishing = &workflow.Publishing{
+				PyPi: &workflow.PyPi{
+					Token: formatWorkflowSecret(pypiTokenDefault),
+				},
+			}
 		}
 	case "csharp":
 		target.Publishing = &workflow.Publishing{
@@ -352,7 +365,10 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	secrets := []string{}
 
 	if publishing.PyPi != nil {
-		secrets = append(secrets, publishing.PyPi.Token)
+		// Skip token if using trusted publishing
+		if publishing.PyPi.UseTrustedPublishing == nil || !*publishing.PyPi.UseTrustedPublishing {
+			secrets = append(secrets, publishing.PyPi.Token)
+		}
 	}
 
 	if publishing.NPM != nil {

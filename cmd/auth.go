@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/list"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
@@ -9,8 +12,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/spf13/cobra"
-	"slices"
-	"strings"
 )
 
 var authCmd = &cobra.Command{
@@ -41,10 +42,18 @@ var switchCmd = &cobra.Command{
 	RunE:  switchExec,
 }
 
+var authStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Show authentication status",
+	Long:  `Display information about your current API key authentication status.`,
+	RunE:  authStatusExec,
+}
+
 func authInit() {
 	authCmd.AddCommand(loginCmd)
 	authCmd.AddCommand(logoutCmd)
 	authCmd.AddCommand(switchCmd)
+	authCmd.AddCommand(authStatusCmd)
 	rootCmd.AddCommand(authCmd)
 }
 
@@ -113,6 +122,55 @@ func login(cmd *cobra.Command, force bool) error {
 	log.From(cmd.Context()).
 		WithInteractiveOnly().
 		Infof("Review the workspace with `speakeasy status` or create a new target with `speakeasy quickstart`.")
+
+	return nil
+}
+
+func authStatusExec(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	logger := log.From(ctx)
+
+	apiKey := config.GetSpeakeasyAPIKey()
+	if apiKey == "" {
+		logger.Println("Authentication Status: Not authenticated")
+		logger.Println("")
+		logger.Println("No API key found. Run 'speakeasy auth login' to authenticate.")
+		return nil
+	}
+
+	// Try to validate and get claims from the API key
+	authCtx, err := core.NewContextWithSDK(ctx, apiKey)
+	if err != nil {
+		logger.Println("Authentication Status: Invalid")
+		logger.Println("")
+		logger.Printf("Error: %s", err.Error())
+		logger.Println("Run 'speakeasy auth login' to re-authenticate.")
+		return nil
+	}
+
+	// Get claims from context
+	workspaceID, err := core.GetWorkspaceIDFromContext(authCtx)
+	if err != nil {
+		logger.Println("Authentication Status: Invalid")
+		logger.Printf("Error: %s", err.Error())
+		return nil
+	}
+
+	workspaceSlug := core.GetWorkspaceSlugFromContext(authCtx)
+	orgSlug := core.GetOrgSlugFromContext(authCtx)
+	accountType := core.GetAccountTypeFromContext(authCtx)
+	workspaceURL := core.GetWorkspaceBaseURL(authCtx)
+
+	// Print status
+	logger.Println("Authentication Status: Authenticated")
+	logger.Println("")
+	logger.Printf("Organization:    %s", orgSlug)
+	logger.Printf("Workspace:       %s", workspaceSlug)
+	logger.Printf("Workspace ID:    %s", workspaceID)
+	if accountType != nil {
+		logger.Printf("Account Type:    %s", string(*accountType))
+	}
+	logger.Printf("Workspace URL:   %s", workspaceURL)
 
 	return nil
 }
