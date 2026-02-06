@@ -33,10 +33,13 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 
 			overlay, err := errorCodes.BuildErrorCodesOverlay(ctx, tt.in)
 			require.NoError(t, err)
-			_, _, model, err := schemas.LoadDocument(ctx, tt.in)
+
+			schemaBytes, err := os.ReadFile(tt.in)
 			require.NoError(t, err)
-			root := model.Index.GetRootNode()
-			err = overlay.ApplyTo(root)
+
+			var root yaml.Node
+			require.NoError(t, yaml.Unmarshal(schemaBytes, &root))
+			err = overlay.ApplyTo(&root)
 			require.NoError(t, err)
 
 			// Read the expected YAML file
@@ -44,7 +47,7 @@ func TestBuildErrorCodesOverlay(t *testing.T) {
 			require.NoError(t, err)
 
 			// Convert root to YAML
-			actualBytes, err := yaml.Marshal(root)
+			actualBytes, err := yaml.Marshal(&root)
 			require.NoError(t, err)
 
 			// Compare the actual and expected YAML
@@ -70,10 +73,10 @@ func TestDiagnose(t *testing.T) {
 			t.Parallel()
 
 			ctx := context.Background()
-			_, _, model, err := schemas.LoadDocument(ctx, tt.schema)
+			_, doc, err := schemas.LoadDocument(ctx, tt.schema)
 			require.NoError(t, err)
 
-			diagnosis := errorCodes.Diagnose(model.Model)
+			diagnosis := errorCodes.Diagnose(doc)
 			if tt.expectedCount == 0 {
 				require.Empty(t, diagnosis)
 				return

@@ -6,11 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/pb33f/libopenapi"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/pb33f/libopenapi/index"
-	"github.com/pb33f/libopenapi/orderedmap"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/log"
+	"gopkg.in/yaml.v3"
 )
 
 func RemoveUnused(ctx context.Context, schemaPath string, yamlOut bool, w io.Writer) error {
@@ -32,197 +30,213 @@ func RemoveUnusedFromReader(ctx context.Context, schema io.Reader, schemaPath st
 	}.Do(ctx)
 }
 
-func RemoveOrphans(ctx context.Context, doc libopenapi.Document, _ *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
+func RemoveOrphans(ctx context.Context, doc *openapi.OpenAPI, _ interface{}) (*openapi.OpenAPI, error) {
 	logger := log.From(ctx)
 
-	_, doc, model, errs := doc.RenderAndReload()
-
-	// remove nil errs
-	var nonNilErrs []error
-	for _, e := range errs {
-		if e != nil {
-			nonNilErrs = append(nonNilErrs, e)
-		}
-	}
-	if len(nonNilErrs) > 0 {
-		return nil, nil, fmt.Errorf("failed to render and reload document: %v", errs)
+	if doc.Components == nil {
+		return doc, nil
 	}
 
-	components := model.Model.Components
-	context := model
-	allRefs := context.Index.GetAllReferences()
-	schemasIdx := context.Index.GetAllComponentSchemas()
-	responsesIdx := context.Index.GetAllResponses()
-	parametersIdx := context.Index.GetAllParameters()
-	examplesIdx := context.Index.GetAllExamples()
-	requestBodiesIdx := context.Index.GetAllRequestBodies()
-	headersIdx := context.Index.GetAllHeaders()
-	securitySchemesIdx := context.Index.GetAllSecuritySchemes()
-	linksIdx := context.Index.GetAllLinks()
-	callbacksIdx := context.Index.GetAllCallbacks()
-	mappedRefs := context.Index.GetMappedReferences()
-
-	checkOpenAPISecurity := func(key string) bool {
-		if strings.Contains(key, "securitySchemes") {
-			segs := strings.Split(key, "/")
-			def := segs[len(segs)-1]
-			for r := range context.Index.GetSecurityRequirementReferences() {
-				if r == def {
-					return true
-				}
-			}
-		}
-		return false
+	// Sync to ensure YAML is up to date, then collect all refs from YAML
+	if err := syncDoc(ctx, doc); err != nil {
+		return doc, err
 	}
 
-	// create poly maps.
-	oneOfRefs := make(map[string]*index.Reference)
-	allOfRefs := make(map[string]*index.Reference)
-	anyOfRefs := make(map[string]*index.Reference)
+	root := doc.GetCore().GetRootNode()
 
-	// include all polymorphic references.
-	for _, ref := range context.Index.GetPolyAllOfReferences() {
-		allOfRefs[ref.Definition] = ref
-	}
-	for _, ref := range context.Index.GetPolyOneOfReferences() {
-		oneOfRefs[ref.Definition] = ref
-	}
-	for _, ref := range context.Index.GetPolyAnyOfReferences() {
-		anyOfRefs[ref.Definition] = ref
-	}
+	// Collect all $ref values in the document
+	allRefs := collectAllRefs(root)
 
-	notUsed := make(map[string]*index.Reference)
-	mapsToSearch := []map[string]*index.Reference{
-		schemasIdx,
-		responsesIdx,
-		parametersIdx,
-		examplesIdx,
-		requestBodiesIdx,
-		headersIdx,
-		securitySchemesIdx,
-		linksIdx,
-		callbacksIdx,
-	}
+	// Also collect security requirement references
+	securityRefs := collectSecurityRefs(doc)
 
-	for _, resultMap := range mapsToSearch {
-		for key, ref := range resultMap {
-
-			u := strings.Split(key, "#/")
-			keyAlt := key
-			if len(u) == 2 {
-				if u[0] == "" {
-					keyAlt = fmt.Sprintf("%s#/%s", context.Index.GetSpecAbsolutePath(), u[1])
-				}
-			}
-
-			if allRefs[key] == nil && allRefs[keyAlt] == nil {
-				found := false
-
-				if oneOfRefs[key] != nil || allOfRefs[key] != nil || anyOfRefs[key] != nil {
-					found = true
-				}
-
-				if mappedRefs[key] != nil || mappedRefs[keyAlt] != nil {
-					found = true
-				}
-
-				if !found {
-					found = checkOpenAPISecurity(key)
-				}
-
-				if !found {
-					notUsed[key] = ref
-				}
-			}
-		}
-	}
-
-	// let's start killing orphans
 	anyRemoved := false
-	schemas := components.Schemas
-	toDelete := make([]string, 0)
-	for pair := orderedmap.First(schemas); pair != nil; pair = pair.Next() {
-		// remove all schemas that are not referenced
-		if !isReferenced(pair.Key(), "schemas", notUsed) {
-			toDelete = append(toDelete, pair.Key())
-			logger.Printf("dropped #/components/schemas/%s\n", pair.Key())
-			anyRemoved = true
+
+	// Remove unused schemas
+	if doc.Components.Schemas != nil {
+		var toDelete []string
+		for name := range doc.Components.Schemas.All() {
+			ref := fmt.Sprintf("#/components/schemas/%s", name)
+			if !allRefs[ref] {
+				toDelete = append(toDelete, name)
+				logger.Printf("dropped #/components/schemas/%s\n", name)
+				anyRemoved = true
+			}
 		}
-	}
-	for _, key := range toDelete {
-		schemas.Delete(key)
+		for _, key := range toDelete {
+			doc.Components.Schemas.Delete(key)
+		}
 	}
 
-	responses := components.Responses
-	toDelete = make([]string, 0)
-	for pair := orderedmap.First(responses); pair != nil; pair = pair.Next() {
-		// remove all responses that are not referenced
-		if !isReferenced(pair.Key(), "responses", notUsed) {
-			toDelete = append(toDelete, pair.Key())
-			logger.Printf("dropped #/components/responses/%s\n", pair.Key())
-			anyRemoved = true
+	// Remove unused responses
+	if doc.Components.Responses != nil {
+		var toDelete []string
+		for name := range doc.Components.Responses.All() {
+			ref := fmt.Sprintf("#/components/responses/%s", name)
+			if !allRefs[ref] {
+				toDelete = append(toDelete, name)
+				logger.Printf("dropped #/components/responses/%s\n", name)
+				anyRemoved = true
+			}
 		}
-	}
-	for _, key := range toDelete {
-		responses.Delete(key)
-	}
-	parameters := components.Parameters
-	toDelete = make([]string, 0)
-	for pair := orderedmap.First(parameters); pair != nil; pair = pair.Next() {
-		// remove all parameters that are not referenced
-		if !isReferenced(pair.Key(), "parameters", notUsed) {
-			toDelete = append(toDelete, pair.Key())
-			anyRemoved = true
+		for _, key := range toDelete {
+			doc.Components.Responses.Delete(key)
 		}
-	}
-	for _, key := range toDelete {
-		parameters.Delete(key)
-	}
-	examples := components.Examples
-	toDelete = make([]string, 0)
-	for pair := orderedmap.First(examples); pair != nil; pair = pair.Next() {
-		// remove all examples that are not referenced
-		if !isReferenced(pair.Key(), "examples", notUsed) {
-			toDelete = append(toDelete, pair.Key())
-			anyRemoved = true
-		}
-	}
-	for _, key := range toDelete {
-		examples.Delete(key)
-	}
-	requestBodies := components.RequestBodies
-	toDelete = make([]string, 0)
-	for pair := orderedmap.First(requestBodies); pair != nil; pair = pair.Next() {
-		// remove all requestBodies that are not referenced
-		if !isReferenced(pair.Key(), "requestBodies", notUsed) {
-			toDelete = append(toDelete, pair.Key())
-			anyRemoved = true
-		}
-	}
-	for _, key := range toDelete {
-		requestBodies.Delete(key)
 	}
 
-	headers := components.Headers
-	toDelete = make([]string, 0)
-	for pair := orderedmap.First(headers); pair != nil; pair = pair.Next() {
-		// remove all headers that are not referenced
-		if !isReferenced(pair.Key(), "headers", notUsed) {
-			toDelete = append(toDelete, pair.Key())
-			anyRemoved = true
+	// Remove unused parameters
+	if doc.Components.Parameters != nil {
+		var toDelete []string
+		for name := range doc.Components.Parameters.All() {
+			ref := fmt.Sprintf("#/components/parameters/%s", name)
+			if !allRefs[ref] {
+				toDelete = append(toDelete, name)
+				anyRemoved = true
+			}
+		}
+		for _, key := range toDelete {
+			doc.Components.Parameters.Delete(key)
 		}
 	}
-	for _, key := range toDelete {
-		headers.Delete(key)
+
+	// Remove unused examples
+	if doc.Components.Examples != nil {
+		var toDelete []string
+		for name := range doc.Components.Examples.All() {
+			ref := fmt.Sprintf("#/components/examples/%s", name)
+			if !allRefs[ref] {
+				toDelete = append(toDelete, name)
+				anyRemoved = true
+			}
+		}
+		for _, key := range toDelete {
+			doc.Components.Examples.Delete(key)
+		}
 	}
+
+	// Remove unused request bodies
+	if doc.Components.RequestBodies != nil {
+		var toDelete []string
+		for name := range doc.Components.RequestBodies.All() {
+			ref := fmt.Sprintf("#/components/requestBodies/%s", name)
+			if !allRefs[ref] {
+				toDelete = append(toDelete, name)
+				anyRemoved = true
+			}
+		}
+		for _, key := range toDelete {
+			doc.Components.RequestBodies.Delete(key)
+		}
+	}
+
+	// Remove unused headers
+	if doc.Components.Headers != nil {
+		var toDelete []string
+		for name := range doc.Components.Headers.All() {
+			ref := fmt.Sprintf("#/components/headers/%s", name)
+			if !allRefs[ref] {
+				toDelete = append(toDelete, name)
+				anyRemoved = true
+			}
+		}
+		for _, key := range toDelete {
+			doc.Components.Headers.Delete(key)
+		}
+	}
+
+	// Keep security schemes that are referenced in security requirements
+	// (don't remove unused security schemes - they might be intentionally defined)
+	_ = securityRefs
 
 	if anyRemoved {
-		return RemoveOrphans(ctx, doc, model, nil)
+		// Reload and recurse to handle transitive removals
+		if err := syncDoc(ctx, doc); err != nil {
+			return doc, err
+		}
+		root = doc.GetCore().GetRootNode()
+		newDoc, err := reloadFromYAML(ctx, root)
+		if err != nil {
+			return doc, err
+		}
+		return RemoveOrphans(ctx, newDoc, nil)
 	}
-	return doc, model, nil
+
+	return doc, nil
 }
 
-func isReferenced(key string, within string, notUsed map[string]*index.Reference) bool {
-	ref := fmt.Sprintf("#/components/%s/%s", within, key)
-	return notUsed[ref] == nil
+// collectAllRefs walks the YAML tree and collects all $ref values
+func collectAllRefs(node *yaml.Node) map[string]bool {
+	refs := make(map[string]bool)
+	collectRefsRecursive(node, refs)
+	return refs
+}
+
+func collectRefsRecursive(node *yaml.Node, refs map[string]bool) {
+	if node == nil {
+		return
+	}
+
+	switch node.Kind {
+	case yaml.DocumentNode:
+		for _, child := range node.Content {
+			collectRefsRecursive(child, refs)
+		}
+	case yaml.MappingNode:
+		for i := 0; i < len(node.Content); i += 2 {
+			keyNode := node.Content[i]
+			valueNode := node.Content[i+1]
+
+			if keyNode.Value == "$ref" && valueNode.Kind == yaml.ScalarNode {
+				refs[valueNode.Value] = true
+			}
+
+			// Also check for allOf, anyOf, oneOf which contain refs
+			collectRefsRecursive(valueNode, refs)
+		}
+	case yaml.SequenceNode:
+		for _, child := range node.Content {
+			collectRefsRecursive(child, refs)
+		}
+	}
+}
+
+// collectSecurityRefs collects security scheme names from security requirements
+func collectSecurityRefs(doc *openapi.OpenAPI) map[string]bool {
+	refs := make(map[string]bool)
+
+	// Global security
+	for _, req := range doc.Security {
+		if req != nil {
+			for name := range req.Map.All() {
+				refs[name] = true
+			}
+		}
+	}
+
+	// Operation-level security
+	if doc.Paths != nil {
+		for _, pathItem := range doc.Paths.All() {
+			if pathItem == nil || pathItem.Object == nil {
+				continue
+			}
+			for _, op := range pathItem.Object.All() {
+				if op == nil {
+					continue
+				}
+				for _, req := range op.Security {
+					if req != nil {
+						for name := range req.Map.All() {
+							refs[name] = true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return refs
+}
+
+func isComponentRef(ref string) bool {
+	return strings.HasPrefix(ref, "#/components/")
 }

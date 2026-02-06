@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"slices"
 
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/pb33f/libopenapi/orderedmap"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/openapi/overlay"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	coreopenapi "github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy-core/yamlutil"
 	"github.com/speakeasy-api/speakeasy/internal/schemas"
@@ -16,46 +15,40 @@ import (
 )
 
 func BuildErrorCodesOverlay(ctx context.Context, schemaPath string) (*overlay.Overlay, error) {
-	_, _, model, err := schemas.LoadDocument(ctx, schemaPath)
+	_, doc, err := schemas.LoadDocument(ctx, schemaPath)
 	if err != nil {
 		return nil, err
 	}
 
 	groups := initErrorGroups()
-	groups.DeduplicateComponentNames(model.Model)
+	groups.DeduplicateComponentNames(doc)
 
-	builder := builder{document: model.Model, errorGroups: groups}
+	builder := builder{document: doc, errorGroups: groups}
 	o := builder.Build()
 	return &o, nil
 }
 
 type builder struct {
-	document    v3.Document
+	document    *openapi.OpenAPI
 	errorGroups errorGroupSlice
 }
 
 func (b *builder) Build() overlay.Overlay {
 	// Track which operations are missing which response codes
-	operationToMissingCodes := map[openapi.OperationElem][]string{}
+	operationToMissingCodes := map[coreopenapi.OperationElem][]string{}
 	// Track if certain response codes are already defined elsewhere in the document so we don't duplicate them
 	codeUsedComponents := map[string]map[string]int{}
 
-	for op := range openapi.IterateOperations(b.document) {
+	for op := range coreopenapi.IterateOperations(b.document) {
 		operation := op.Operation
-
-		codes := orderedmap.New[string, *v3.Response]()
-		if operation.Responses != nil && operation.Responses.Codes != nil {
-			codes = operation.Responses.Codes
-		}
 
 		// TODO account for "complex" error responses that may not actually be returned by the endpoint
 		for _, code := range b.errorGroups.AllCodes() {
-			if response, matchedCode := getResponseForCode(codes, code); response != nil {
+			if responseRef, matchedCode := getResponseForCode(&operation.Responses, code); responseRef != nil {
 				// If the response code is defined and is a ref, record the ref
-				low := response.GoLow()
-				if low.IsReference() {
+				if responseRef.IsReference() {
 					// The matchedCode will be, for example, 4XX if that's what's defined in the actual spec
-					incrementCount(codeUsedComponents, matchedCode, low.GetReference())
+					incrementCount(codeUsedComponents, matchedCode, string(responseRef.GetReference()))
 				}
 			} else {
 				// Otherwise, record that the response code is missing
@@ -99,8 +92,8 @@ func (b *builder) Build() overlay.Overlay {
 		}
 		suggestions.AddModificationExtension(&action, &suggestions.ModificationExtension{
 			Type:   suggestions.ModificationTypeErrorNames,
-			Before: fmt.Sprintf("%s:\n\tcatch(SDKError) { ... }", operation.Operation.OperationId),
-			After:  fmt.Sprintf("%s:\n\tcatch(Unauthorized) { ... }", operation.Operation.OperationId),
+			Before: fmt.Sprintf("%s:\n\tcatch(SDKError) { ... }", operation.Operation.GetOperationID()),
+			After:  fmt.Sprintf("%s:\n\tcatch(Unauthorized) { ... }", operation.Operation.GetOperationID()),
 		})
 		actions = append(actions, action)
 	}
@@ -118,7 +111,7 @@ func (b *builder) Build() overlay.Overlay {
 
 		// If components.schemas doesn't already exist, appending will fail silently
 		// If components.schemas does exist, we don't want to overwrite it
-		missingSchemasComponents := b.document.Components == nil || b.document.Components.Schemas == nil || b.document.Components.Schemas.IsZero()
+		missingSchemasComponents := b.document.Components == nil || b.document.Components.Schemas == nil || b.document.Components.Schemas.Len() == 0
 		if missingSchemasComponents {
 			actions = append(actions, overlay.Action{
 				Target: "$.components",
@@ -137,7 +130,7 @@ func (b *builder) Build() overlay.Overlay {
 
 		// If components.responses doesn't already exist, appending will fail silently
 		// If components.responses does exist, we don't want to overwrite it
-		missingResponseComponents := b.document.Components == nil || b.document.Components.Responses == nil || b.document.Components.Responses.IsZero()
+		missingResponseComponents := b.document.Components == nil || b.document.Components.Responses == nil || b.document.Components.Responses.Len() == 0
 		if missingResponseComponents {
 			actions = append(actions, overlay.Action{
 				Target: "$.components",
@@ -169,8 +162,11 @@ func incrementCount(m map[string]map[string]int, code, path string) {
 	}
 }
 
-// returns the response and the actual code that was matched
-func getResponseForCode(responses *orderedmap.Map[string, *v3.Response], code string) (*v3.Response, string) {
+// returns the response ref and the actual code that was matched
+func getResponseForCode(responses *openapi.Responses, code string) (*openapi.ReferencedResponse, string) {
+	if responses == nil || responses.Map == nil {
+		return nil, ""
+	}
 	for _, c := range possibleCodes(code) {
 		if v, ok := responses.Get(c); ok {
 			return v, c
