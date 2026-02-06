@@ -38,8 +38,8 @@ require (
 	github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
-	github.com/speakeasy-api/openapi v1.15.2-0.20260204001502-c174a3cd9623
-	github.com/speakeasy-api/openapi-generation/v2 v2.805.9-0.20260204005313-4013d37944fa
+	github.com/speakeasy-api/openapi v1.15.2-0.20260206041549-000051fcf482
+	github.com/speakeasy-api/openapi-generation/v2 v2.805.9-0.20260206041617-5d8c37835b08
 	github.com/speakeasy-api/sdk-gen-config v1.47.1-0.20260203025017-30c6968df5c0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.0.1
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -114,7 +114,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dop251/goja v0.0.0-20241024094426-79f3a7efcdbd // indirect
+	github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20240728170619-29b559befffc // indirect
 	github.com/dprotaso/go-yit v0.0.0-20240618133044-5a0af90af097 // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
@@ -122,7 +122,7 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
-	github.com/evanw/esbuild v0.24.0 // indirect
+	github.com/evanw/esbuild v0.27.2 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -217,6 +217,7 @@ require (
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.11.2 // indirect
 	github.com/speakeasy-api/jsonpath v0.6.2 // indirect
+	github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
