@@ -77,14 +77,19 @@ var configureGenerationCmd = &model.CommandGroup{
 }
 
 type ConfigureSourcesFlags struct {
-	ID  string `json:"id"`
-	New bool   `json:"new"`
+	ID             string `json:"id"`
+	New            bool   `json:"new"`
+	Location       string `json:"location"`
+	SourceName     string `json:"source-name"`
+	AuthHeader     string `json:"auth-header"`
+	OutputPath     string `json:"output"`
+	NonInteractive bool   `json:"non-interactive"`
 }
 
 var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
 	Usage:        "sources",
 	Short:        "Configure new or existing sources.",
-	Long:         "Guided prompts to configure a new or existing source in your speakeasy workflow.",
+	Long:         "Guided prompts to configure a new or existing source in your speakeasy workflow. When --location and --source-name are provided, runs in non-interactive mode suitable for CI/CD.",
 	Run:          configureSources,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
@@ -98,18 +103,49 @@ var configureSourcesCmd = &model.ExecutableCommand[ConfigureSourcesFlags]{
 			Shorthand:   "n",
 			Description: "configure a new source",
 		},
+		flag.StringFlag{
+			Name:        "location",
+			Shorthand:   "l",
+			Description: "location of the OpenAPI document (local file path or URL); enables non-interactive mode when combined with --source-name",
+		},
+		flag.StringFlag{
+			Name:        "source-name",
+			Shorthand:   "s",
+			Description: "name for the source; enables non-interactive mode when combined with --location",
+		},
+		flag.StringFlag{
+			Name:        "auth-header",
+			Description: "authentication header name for remote documents (value from $OPENAPI_DOC_AUTH_TOKEN)",
+		},
+		flag.StringFlag{
+			Name:        "output",
+			Shorthand:   "o",
+			Description: "output path for the compiled source document",
+		},
+		flag.BooleanFlag{
+			Name:        "non-interactive",
+			Description: "run in non-interactive mode; requires --location and --source-name",
+		},
 	},
 }
 
 type ConfigureTargetFlags struct {
-	ID  string `json:"id"`
-	New bool   `json:"new"`
+	ID             string `json:"id"`
+	New            bool   `json:"new"`
+	TargetType     string `json:"target-type"`
+	SourceID       string `json:"source"`
+	TargetName     string `json:"target-name"`
+	SDKClassName   string `json:"sdk-class-name"`
+	PackageName    string `json:"package-name"`
+	BaseServerURL  string `json:"base-server-url"`
+	OutputDir      string `json:"output"`
+	NonInteractive bool   `json:"non-interactive"`
 }
 
 var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 	Usage:        "targets",
 	Short:        "Configure new or existing targets.",
-	Long:         "Guided prompts to configure a new or existing target in your speakeasy workflow.",
+	Long:         "Guided prompts to configure a new or existing target in your speakeasy workflow. When --target-type and --source are provided, runs in non-interactive mode suitable for CI/CD.",
 	Run:          configureTarget,
 	RequiresAuth: true,
 	Flags: []flag.Flag{
@@ -123,6 +159,41 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 			Shorthand:   "n",
 			Description: "configure a new target",
 		},
+		flag.StringFlag{
+			Name:        "target-type",
+			Shorthand:   "t",
+			Description: "target language/type: typescript, python, go, java, csharp, php, ruby, terraform, mcp-typescript; enables non-interactive mode",
+		},
+		flag.StringFlag{
+			Name:        "source",
+			Shorthand:   "s",
+			Description: "name of the source to generate from; enables non-interactive mode when combined with --target-type",
+		},
+		flag.StringFlag{
+			Name:        "target-name",
+			Description: "name for the target (defaults to target-type if not specified)",
+		},
+		flag.StringFlag{
+			Name:        "sdk-class-name",
+			Description: "SDK class name (PascalCase, e.g., MyCompanySDK)",
+		},
+		flag.StringFlag{
+			Name:        "package-name",
+			Description: "package name for the generated SDK",
+		},
+		flag.StringFlag{
+			Name:        "base-server-url",
+			Description: "base server URL for the SDK",
+		},
+		flag.StringFlag{
+			Name:        "output",
+			Shorthand:   "o",
+			Description: "output directory for the generated target",
+		},
+		flag.BooleanFlag{
+			Name:        "non-interactive",
+			Description: "run in non-interactive mode; requires --target-type and --source",
+		},
 	},
 }
 
@@ -133,6 +204,11 @@ type ConfigureTestsFlags struct {
 
 type ConfigureGithubFlags struct {
 	WorkflowDirectory string `json:"workflow-directory"`
+}
+
+type ConfigurePublishingFlags struct {
+	WorkflowDirectory     string `json:"workflow-directory"`
+	PyPITrustedPublishing bool   `json:"pypi-trusted-publishing"`
 }
 
 var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
@@ -150,7 +226,7 @@ var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 	RequiresAuth: true,
 }
 
-var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
+var configurePublishingCmd = &model.ExecutableCommand[ConfigurePublishingFlags]{
 	Usage: "publishing",
 	Short: "Configure Speakeasy for publishing.",
 	Long:  "Configure your Speakeasy workflow to publish to package managers from your github repo.",
@@ -160,6 +236,10 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
 			Name:        "workflow-directory",
 			Shorthand:   "d",
 			Description: "directory of speakeasy workflow file",
+		},
+		flag.BooleanFlag{
+			Name:        "pypi-trusted-publishing",
+			Description: "use PyPI trusted publishing instead of API tokens for Python targets",
 		},
 	},
 	RequiresAuth: true,
@@ -215,6 +295,18 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 			Version: workflow.WorkflowVersion,
 			Sources: make(map[string]workflow.Source),
 			Targets: make(map[string]workflow.Target),
+		}
+	}
+
+	// Non-interactive mode: when both --location and --source-name are provided
+	if flags.Location != "" && flags.SourceName != "" {
+		return configureSourcesNonInteractive(ctx, workingDir, workflowFile, flags)
+	}
+
+	// If --non-interactive flag is set but required args are missing, return a helpful error
+	if flags.NonInteractive {
+		if err := checkNonInteractiveSourcesFlags(flags); err != nil {
+			return err
 		}
 	}
 
@@ -291,6 +383,113 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 	return nil
 }
 
+// configureSourcesNonInteractive handles source configuration without interactive prompts.
+// This is used when --location and --source-name flags are both provided.
+func configureSourcesNonInteractive(ctx context.Context, workingDir string, workflowFile *workflow.Workflow, flags ConfigureSourcesFlags) error {
+	logger := log.From(ctx)
+
+	// Validate source name doesn't already exist
+	if _, ok := workflowFile.Sources[flags.SourceName]; ok {
+		return fmt.Errorf("a source with the name %q already exists", flags.SourceName)
+	}
+
+	// Validate source name format
+	if strings.Contains(flags.SourceName, " ") {
+		return fmt.Errorf("source name must not contain spaces")
+	}
+
+	// Build the source document
+	document := workflow.Document{
+		Location: workflow.LocationString(flags.Location),
+	}
+
+	// Add authentication if provided
+	if flags.AuthHeader != "" {
+		document.Auth = &workflow.Auth{
+			Header: flags.AuthHeader,
+			Secret: "$openapi_doc_auth_token",
+		}
+	}
+
+	// Build the source
+	source := workflow.Source{
+		Inputs: []workflow.Document{document},
+	}
+
+	// Set output path if provided
+	if flags.OutputPath != "" {
+		source.Output = &flags.OutputPath
+	}
+
+	// Validate the source
+	if err := source.Validate(); err != nil {
+		return errors.Wrap(err, "failed to validate source configuration")
+	}
+
+	// Add source to workflow
+	workflowFile.Sources[flags.SourceName] = source
+
+	// Validate the workflow
+	if err := workflowFile.Validate(generate.GetSupportedTargetNames()); err != nil {
+		return errors.Wrap(err, "failed to validate workflow file")
+	}
+
+	// Ensure .speakeasy directory exists
+	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
+		if err := os.MkdirAll(".speakeasy", 0o755); err != nil {
+			return err
+		}
+	}
+
+	// Save the workflow
+	if err := workflow.Save(workingDir, workflowFile); err != nil {
+		return errors.Wrap(err, "failed to save workflow file")
+	}
+
+	// Print success message
+	logger.Printf("Successfully configured source %q with location %q\n", flags.SourceName, flags.Location)
+	if flags.OutputPath != "" {
+		logger.Printf("  Output path: %s\n", flags.OutputPath)
+	}
+	if flags.AuthHeader != "" {
+		logger.Printf("  Auth header: %s (value from $OPENAPI_DOC_AUTH_TOKEN)\n", flags.AuthHeader)
+	}
+
+	return nil
+}
+
+// checkNonInteractiveSourcesFlags validates that required flags are provided for non-interactive mode.
+// Returns an error listing missing flags if any are not provided.
+func checkNonInteractiveSourcesFlags(flags ConfigureSourcesFlags) error {
+	var missing []string
+	if flags.Location == "" {
+		missing = append(missing, "--location")
+	}
+	if flags.SourceName == "" {
+		missing = append(missing, "--source-name")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("non-interactive mode requires the following flags: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// checkNonInteractiveTargetFlags validates that required flags are provided for non-interactive mode.
+// Returns an error listing missing flags if any are not provided.
+func checkNonInteractiveTargetFlags(flags ConfigureTargetFlags) error {
+	var missing []string
+	if flags.TargetType == "" {
+		missing = append(missing, "--target-type")
+	}
+	if flags.SourceID == "" {
+		missing = append(missing, "--source")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("non-interactive mode requires the following flags: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -310,6 +509,18 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 
 	if workflowFile.Targets == nil {
 		workflowFile.Targets = make(map[string]workflow.Target)
+	}
+
+	// Non-interactive mode: when --target-type and --source are provided
+	if flags.TargetType != "" && flags.SourceID != "" {
+		return configureTargetNonInteractive(ctx, workingDir, workflowFile, flags)
+	}
+
+	// If --non-interactive flag is set but required args are missing, return a helpful error
+	if flags.NonInteractive {
+		if err := checkNonInteractiveTargetFlags(flags); err != nil {
+			return err
+		}
 	}
 
 	existingTarget := ""
@@ -452,7 +663,167 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 	return nil
 }
 
-func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error {
+// configureTargetNonInteractive handles target configuration without interactive prompts.
+// This is used when --target-type and --source flags are both provided.
+func configureTargetNonInteractive(ctx context.Context, workingDir string, workflowFile *workflow.Workflow, flags ConfigureTargetFlags) error {
+	logger := log.From(ctx)
+
+	// Validate target type is supported
+	supportedTargets := generate.GetSupportedTargetNames()
+	if !slices.Contains(supportedTargets, flags.TargetType) {
+		return fmt.Errorf("unsupported target type %q; supported types: %s", flags.TargetType, strings.Join(supportedTargets, ", "))
+	}
+
+	// Validate source exists
+	if _, ok := workflowFile.Sources[flags.SourceID]; !ok {
+		var sourceNames []string
+		for name := range workflowFile.Sources {
+			sourceNames = append(sourceNames, name)
+		}
+		return fmt.Errorf("source %q not found; available sources: %s", flags.SourceID, strings.Join(sourceNames, ", "))
+	}
+
+	// Default target name to target type if not provided
+	targetName := flags.TargetName
+	if targetName == "" {
+		targetName = flags.TargetType
+	}
+
+	// Validate target name doesn't already exist
+	if _, ok := workflowFile.Targets[targetName]; ok {
+		return fmt.Errorf("a target with the name %q already exists", targetName)
+	}
+
+	// Validate target name format
+	if strings.Contains(targetName, " ") {
+		return fmt.Errorf("target name must not contain spaces")
+	}
+
+	// Build the target
+	target := workflow.Target{
+		Target: flags.TargetType,
+		Source: flags.SourceID,
+	}
+
+	// Set output directory if provided
+	if flags.OutputDir != "" {
+		target.Output = &flags.OutputDir
+	}
+
+	// Validate the target
+	if err := target.Validate(supportedTargets, workflowFile.Sources); err != nil {
+		return errors.Wrap(err, "failed to validate target configuration")
+	}
+
+	// Add target to workflow
+	workflowFile.Targets[targetName] = target
+
+	// Build config for target
+	targetConfig, err := config.GetDefaultConfig(true, generate.GetLanguageConfigDefaults, map[string]bool{flags.TargetType: true})
+	if err != nil {
+		return errors.Wrapf(err, "failed to generate config for target %s", targetName)
+	}
+
+	// Set SDK class name if provided
+	if flags.SDKClassName != "" {
+		targetConfig.Generation.SDKClassName = flags.SDKClassName
+	}
+
+	// Set base server URL if provided
+	if flags.BaseServerURL != "" {
+		targetConfig.Generation.BaseServerURL = flags.BaseServerURL
+	}
+
+	// Set package name if provided
+	if flags.PackageName != "" {
+		if langConfig, ok := targetConfig.Languages[flags.TargetType]; ok {
+			if langConfig.Cfg == nil {
+				langConfig.Cfg = make(map[string]interface{})
+			}
+			// Different languages use different config keys for package name
+			switch flags.TargetType {
+			case "go":
+				langConfig.Cfg["modulePath"] = flags.PackageName
+			case "java":
+				// For Java, split packageName into groupID and artifactID if it contains a colon
+				if strings.Contains(flags.PackageName, ":") {
+					parts := strings.SplitN(flags.PackageName, ":", 2)
+					langConfig.Cfg["groupID"] = parts[0]
+					langConfig.Cfg["artifactID"] = parts[1]
+				} else {
+					langConfig.Cfg["groupID"] = flags.PackageName
+				}
+			default:
+				langConfig.Cfg["packageName"] = flags.PackageName
+			}
+			targetConfig.Languages[flags.TargetType] = langConfig
+		}
+	}
+
+	// Determine output directory
+	outDir := workingDir
+	if target.Output != nil {
+		outDir = *target.Output
+	}
+
+	// Ensure .speakeasy directory exists in output dir
+	if _, err := os.Stat(filepath.Join(outDir, ".speakeasy")); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Join(outDir, ".speakeasy"), 0o755); err != nil {
+			return err
+		}
+	}
+
+	// Create empty gen.yaml if it doesn't exist
+	genYamlPath := filepath.Join(outDir, ".speakeasy/gen.yaml")
+	if _, err := os.Stat(genYamlPath); os.IsNotExist(err) {
+		if err := os.WriteFile(genYamlPath, []byte{}, 0o644); err != nil {
+			return err
+		}
+	}
+
+	// Save config
+	if err := config.SaveConfig(outDir, targetConfig); err != nil {
+		return errors.Wrapf(err, "failed to save config for target %s", targetName)
+	}
+
+	// Validate the workflow
+	if err := workflowFile.Validate(supportedTargets); err != nil {
+		return errors.Wrap(err, "failed to validate workflow file")
+	}
+
+	// Ensure .speakeasy directory exists in working dir
+	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
+		if err := os.MkdirAll(".speakeasy", 0o755); err != nil {
+			return err
+		}
+	}
+
+	// Save the workflow
+	if err := workflow.Save(workingDir, workflowFile); err != nil {
+		return errors.Wrap(err, "failed to save workflow file")
+	}
+
+	// Print success message
+	logger.Printf("Successfully configured target %q\n", targetName)
+	logger.Printf("  Type: %s\n", flags.TargetType)
+	logger.Printf("  Source: %s\n", flags.SourceID)
+	if flags.OutputDir != "" {
+		logger.Printf("  Output: %s\n", flags.OutputDir)
+	}
+	if flags.SDKClassName != "" {
+		logger.Printf("  SDK Class Name: %s\n", flags.SDKClassName)
+	}
+	if flags.PackageName != "" {
+		logger.Printf("  Package Name: %s\n", flags.PackageName)
+	}
+	if flags.BaseServerURL != "" {
+		logger.Printf("  Base Server URL: %s\n", flags.BaseServerURL)
+	}
+
+	return nil
+}
+
+func configurePublishing(ctx context.Context, flags ConfigurePublishingFlags) error {
 	logger := log.From(ctx)
 
 	rootDir, err := os.Getwd()
@@ -495,7 +866,9 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
-		modifiedTarget, err := prompts.ConfigurePublishing(&target, name)
+		modifiedTarget, err := prompts.ConfigurePublishing(&target, name, prompts.ConfigurePublishingOptions{
+			PyPITrustedPublishing: flags.PyPITrustedPublishing,
+		})
 		if err != nil {
 			return err
 		}
@@ -620,6 +993,53 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	}
 	agenda = append(agenda, getNPMTrustedPublishingInstructions(ctx, npmTrustedPublishingConfigs)...)
 
+	// Add instructions for PyPI Trusted Publishing (python)
+	pypiTrustedPublishingConfigs := make(map[string]PyPITrustedPublishingConfig)
+	for name, wfp := range workflowPaths {
+		target := workflowFile.Targets[name]
+		if target.Publishing != nil && target.Publishing.PyPi != nil && target.Publishing.PyPi.UseTrustedPublishing != nil && *target.Publishing.PyPi.UseTrustedPublishing {
+			var publishPath string
+			switch len(wfp.publishWorkflowPaths) {
+			case 0:
+				// No publish path means generation and publishing are combined into a single workflow
+				publishPath = wfp.generationWorkflowPath
+			case 1:
+				publishPath = wfp.publishWorkflowPaths[0]
+			default:
+				// For python, if the publish and generation workflow files
+				// are distinct (pr mode), then we only expect a single publish path.
+				return errors.Wrapf(err, "multiple publish workflow paths found for target %s", name)
+			}
+
+			// Get the packageName from the config file
+			packageName := "<packageName>"
+			outDir := ""
+			if target.Output != nil {
+				outDir = *target.Output
+			}
+			workflowDir := filepath.Join(rootDir, actionWorkingDir)
+			configPath := filepath.Join(workflowDir, outDir)
+			cfg, err := config.Load(configPath)
+			if err == nil {
+				if langCfg, ok := cfg.Config.Languages[target.Target]; ok {
+					if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
+						packageName = pkgName
+					}
+				}
+			}
+
+			pypiTrustedPublishingConfigs[name] = PyPITrustedPublishingConfig{
+				target:          target,
+				workflowDir:     filepath.Join(rootDir, actionWorkingDir),
+				actionPath:      actionPath,
+				publishFileName: filepath.Base(publishPath),
+				packageName:     packageName,
+				remoteURL:       remoteURL,
+			}
+		}
+	}
+	agenda = append(agenda, getPyPITrustedPublishingInstructions(ctx, pypiTrustedPublishingConfigs)...)
+
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
 	for _, statusMsg := range status {
 		logger.Println(styles.Info.Render(fmt.Sprintf("• %s", statusMsg)))
@@ -633,7 +1053,16 @@ func configurePublishing(ctx context.Context, flags ConfigureGithubFlags) error 
 	return nil
 }
 
-type NPMTrustedPublishingConfig = struct {
+type NPMTrustedPublishingConfig struct {
+	target          workflow.Target
+	workflowDir     string
+	actionPath      string
+	publishFileName string
+	packageName     string
+	remoteURL       string
+}
+
+type PyPITrustedPublishingConfig struct {
 	target          workflow.Target
 	workflowDir     string
 	actionPath      string
@@ -689,6 +1118,65 @@ func getNPMTrustedPublishingInstructions(_ context.Context, npmConfigs map[strin
 		} else {
 			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish new versions of your packages.", actionPath))
 			agenda = append(agenda, "• Your packages' latest versions should now be labelled with a green check mark and include a 'Provenance'.")
+		}
+	}
+
+	return agenda
+}
+
+func getPyPITrustedPublishingInstructions(_ context.Context, pypiConfigs map[string]PyPITrustedPublishingConfig) []string {
+	var agenda []string
+
+	if len(pypiConfigs) == 0 {
+		return agenda
+	}
+
+	// Collect unique action paths
+	actionPaths := make(map[string][]string)
+	for _, pypiConfig := range pypiConfigs {
+		if _, exists := actionPaths[pypiConfig.actionPath]; !exists {
+			actionPaths[pypiConfig.actionPath] = []string{}
+		}
+		actionPaths[pypiConfig.actionPath] = append(actionPaths[pypiConfig.actionPath], pypiConfig.packageName)
+	}
+
+	for targetName, pypiConfig := range pypiConfigs {
+		repoOwner := "<user>"
+		repoName := "<repository>"
+		if pypiConfig.remoteURL != "" {
+			// Expected format: "https://github.com/<user>/<repository>"
+			re := regexp.MustCompile(`^https://github\.com/([^/]+)/([^/]+)/?$`)
+			matches := re.FindStringSubmatch(pypiConfig.remoteURL)
+			if len(matches) == 3 {
+				repoOwner = matches[1]
+				repoName = matches[2]
+			}
+		}
+
+		if len(pypiConfigs) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Configure trusted publishing for your PyPI package '%s':", pypiConfig.packageName))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• [%s] Configure trusted publishing for PyPI package '%s':", strings.ToUpper(pypiConfig.target.Target), targetName))
+		}
+
+		agenda = append(agenda, fmt.Sprintf("\t◦ Navigate to https://pypi.org/manage/project/%s/settings/publishing/", pypiConfig.packageName))
+
+		configLines := []string{
+			fmt.Sprintf("\t\t- Owner: %s", repoOwner),
+			fmt.Sprintf("\t\t- Repository name: %s", repoName),
+			fmt.Sprintf("\t\t- Workflow name: %s", pypiConfig.publishFileName),
+			"\t\t- Environment name: <Leave Blank>",
+		}
+		agenda = append(agenda, fmt.Sprintf("\t◦ Add a new 'trusted publisher' with the following configuration:\n%s", strings.Join(configLines, "\n")))
+	}
+
+	for actionPath, packageNames := range actionPaths {
+		if len(packageNames) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish a new version of the %s package.", actionPath, packageNames[0]))
+			agenda = append(agenda, fmt.Sprintf("• Your package will be published with attestations. Verify at https://pypi.org/project/%s/#files", packageNames[0]))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish new versions of your packages.", actionPath))
+			agenda = append(agenda, "• Your packages will be published with attestations.")
 		}
 	}
 
