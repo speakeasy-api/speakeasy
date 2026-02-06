@@ -143,6 +143,12 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 			return nil, fmt.Errorf("source %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", source, opts)
 		}
 
+		if sourceConfig := wf.Sources[source]; sourceConfig.Registry != nil {
+			if err := validateRegistryWorkspace(ctx, sourceConfig.Registry); err != nil {
+				return nil, fmt.Errorf("source %s: %w", source, err)
+			}
+		}
+
 		namespace := lf.Sources[source].SourceNamespace
 		revisionDigest := lf.Sources[source].SourceRevisionDigest
 
@@ -158,6 +164,12 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 			return nil, fmt.Errorf("target %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", target, opts)
 		}
 
+		if targetConfig := wf.Targets[target]; targetConfig.CodeSamples != nil && targetConfig.CodeSamples.Registry != nil {
+			if err := validateRegistryWorkspace(ctx, targetConfig.CodeSamples.Registry); err != nil {
+				return nil, fmt.Errorf("target %s code samples: %w", target, err)
+			}
+		}
+
 		namespace := lf.Targets[target].CodeSamplesNamespace
 		revisionDigest := lf.Targets[target].CodeSamplesRevisionDigest
 
@@ -165,6 +177,28 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 	}
 
 	return slices.Collect(maps.Values(revisions)), nil
+}
+
+func validateRegistryWorkspace(ctx context.Context, reg *workflow.SourceRegistry) error {
+	orgSlug, wsSlug, _, _, err := reg.ParseRegistryLocation()
+	if err != nil {
+		return err
+	}
+
+	authOrg := core.GetOrgSlugFromContext(ctx)
+	authWs := core.GetWorkspaceSlugFromContext(ctx)
+
+	// Admin bypass
+	if authOrg == "speakeasy-self" {
+		return nil
+	}
+
+	if orgSlug != authOrg || wsSlug != authWs {
+		return fmt.Errorf("workspace mismatch: workflow.yaml references registry '%s/%s' but you are authenticated to '%s/%s'. Ensure the SPEAKEASY_API_KEY matches the workspace used during 'speakeasy run'",
+			orgSlug, wsSlug, authOrg, authWs)
+	}
+
+	return nil
 }
 
 func addRevision(ctx context.Context, revisions map[string]revision, owner, namespace, revisionDigest string) {
