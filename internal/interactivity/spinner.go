@@ -51,8 +51,15 @@ func (m *model) View() string {
 		return ""
 	}
 
-	s := fmt.Sprintf("%s\n%s", styles.HeavilyEmphasized.Render(m.message), m.spinner.View())
-	return styles.MakeBoxed(s, styles.Colors.DimYellow, lipgloss.Center)
+	message := styles.HeavilyEmphasized.Render(m.message)
+	messageWidth := lipgloss.Width(message)
+
+	// Pad spinner to message width so the box size remains consistent during animation
+	spinnerView := lipgloss.NewStyle().Width(messageWidth).Align(lipgloss.Center).Render(m.spinner.View())
+
+	s := fmt.Sprintf("%s\n%s", message, spinnerView)
+	// Add trailing newline to prevent the bottom border from being cut off during animation
+	return styles.MakeBoxed(s, styles.Colors.DimYellow, lipgloss.Center) + "\n"
 }
 
 func StartSpinner(message string) func() {
