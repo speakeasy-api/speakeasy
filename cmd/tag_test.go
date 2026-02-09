@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,12 +18,12 @@ func withAuthContext(ctx context.Context, orgSlug, workspaceSlug string) context
 	return ctx
 }
 
-func TestValidateNamespaceWorkspace(t *testing.T) {
+func TestValidateRegistryWorkspace(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name          string
-		namespace     string
+		location      string
 		orgSlug       string
 		workspaceSlug string
 		expectError   bool
@@ -30,50 +31,34 @@ func TestValidateNamespaceWorkspace(t *testing.T) {
 	}{
 		{
 			name:          "matching workspace - no error",
-			namespace:     "org-a/ws-b/my-sdk",
+			location:      "registry.speakeasyapi.dev/org-a/ws-b/my-sdk",
 			orgSlug:       "org-a",
 			workspaceSlug: "ws-b",
 			expectError:   false,
 		},
 		{
 			name:          "org mismatch",
-			namespace:     "org-a/ws-b/my-sdk",
+			location:      "registry.speakeasyapi.dev/org-a/ws-b/my-sdk",
 			orgSlug:       "org-x",
 			workspaceSlug: "ws-b",
 			expectError:   true,
-			errorContains: []string{"org-a/ws-b/my-sdk", "org-x/ws-b"},
+			errorContains: []string{"org-a/ws-b", "org-x/ws-b"},
 		},
 		{
 			name:          "workspace mismatch",
-			namespace:     "org-a/ws-b/my-sdk",
+			location:      "registry.speakeasyapi.dev/org-a/ws-b/my-sdk",
 			orgSlug:       "org-a",
 			workspaceSlug: "ws-y",
 			expectError:   true,
-			errorContains: []string{"org-a/ws-b/my-sdk", "org-a/ws-y"},
+			errorContains: []string{"org-a/ws-b", "org-a/ws-y"},
 		},
 		{
 			name:          "both org and workspace mismatch",
-			namespace:     "org-a/ws-b/my-sdk",
+			location:      "registry.speakeasyapi.dev/org-a/ws-b/my-sdk",
 			orgSlug:       "org-x",
 			workspaceSlug: "ws-y",
 			expectError:   true,
-			errorContains: []string{"org-a/ws-b/my-sdk", "org-x/ws-y"},
-		},
-		{
-			name:          "invalid namespace format - missing parts",
-			namespace:     "org-a/my-sdk",
-			orgSlug:       "org-a",
-			workspaceSlug: "ws-b",
-			expectError:   true,
-			errorContains: []string{"unexpected namespace format"},
-		},
-		{
-			name:          "invalid namespace format - single segment",
-			namespace:     "my-sdk",
-			orgSlug:       "org-a",
-			workspaceSlug: "ws-b",
-			expectError:   true,
-			errorContains: []string{"unexpected namespace format"},
+			errorContains: []string{"org-a/ws-b", "org-x/ws-y"},
 		},
 	}
 
@@ -82,8 +67,11 @@ func TestValidateNamespaceWorkspace(t *testing.T) {
 			t.Parallel()
 
 			ctx := withAuthContext(context.Background(), tt.orgSlug, tt.workspaceSlug)
+			reg := &workflow.SourceRegistry{
+				Location: workflow.SourceRegistryLocation(tt.location),
+			}
 
-			err := validateNamespaceWorkspace(ctx, tt.namespace)
+			err := validateRegistryWorkspace(ctx, reg)
 
 			if tt.expectError {
 				require.Error(t, err)

@@ -110,12 +110,6 @@ func runTagPromote(ctx context.Context, flags tagPromoteFlagsArgs) error {
 	}
 
 	for _, revision := range revisions {
-		if err := validateNamespaceWorkspace(ctx, revision.namespace); err != nil {
-			return err
-		}
-	}
-
-	for _, revision := range revisions {
 		err = registry.AddTags(ctx, revision.namespace, revision.revisionDigest, flags.Tags)
 		if err != nil {
 			return err
@@ -142,11 +136,18 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 
 	opts := strings.Join(slices.Collect(maps.Keys(wf.Sources)), ", ")
 	for _, source := range sources {
-		if _, ok := wf.Sources[source]; !ok {
+		sourceConfig, ok := wf.Sources[source]
+		if !ok {
 			return nil, fmt.Errorf("source %s not found in workflow.yaml. Options: %s", source, opts)
 		}
 		if _, ok := lf.Sources[source]; !ok {
 			return nil, fmt.Errorf("source %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", source, opts)
+		}
+
+		if sourceConfig.Registry != nil {
+			if err := validateRegistryWorkspace(ctx, sourceConfig.Registry); err != nil {
+				return nil, fmt.Errorf("source %s: %w", source, err)
+			}
 		}
 
 		namespace := lf.Sources[source].SourceNamespace
@@ -157,11 +158,18 @@ func getRevisions(ctx context.Context, sources, targets []string, wf *workflow.W
 
 	opts = strings.Join(slices.Collect(maps.Keys(wf.Targets)), ", ")
 	for _, target := range targets {
-		if _, ok := wf.Targets[target]; !ok {
+		targetConfig, ok := wf.Targets[target]
+		if !ok {
 			return nil, fmt.Errorf("target %s not found in workflow.yaml. Options: %s", target, opts)
 		}
 		if _, ok := lf.Targets[target]; !ok {
 			return nil, fmt.Errorf("target %s not found in workflow.lock. If it was recently added, execute `speakeasy run` before adding tags. Options: %s", target, opts)
+		}
+
+		if targetConfig.CodeSamples != nil && targetConfig.CodeSamples.Registry != nil {
+			if err := validateRegistryWorkspace(ctx, targetConfig.CodeSamples.Registry); err != nil {
+				return nil, fmt.Errorf("target %s: %w", target, err)
+			}
 		}
 
 		namespace := lf.Targets[target].CodeSamplesNamespace
@@ -187,20 +195,23 @@ func addRevision(ctx context.Context, revisions map[string]revision, owner, name
 	}
 }
 
-func validateNamespaceWorkspace(ctx context.Context, namespace string) error {
+func validateRegistryWorkspace(ctx context.Context, reg *workflow.SourceRegistry) error {
 	orgSlug := core.GetOrgSlugFromContext(ctx)
 	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
 
-	parts := strings.SplitN(namespace, "/", 3)
-	if len(parts) != 3 {
-		return fmt.Errorf("unexpected namespace format %q: expected \"org/workspace/name\"", namespace)
+	if orgSlug == "speakeasy-self" {
+		return nil
 	}
 
-	nsOrg, nsWorkspace := parts[0], parts[1]
-	if nsOrg != orgSlug || nsWorkspace != workspaceSlug {
+	regOrg, regWorkspace, _, _, err := reg.ParseRegistryLocation()
+	if err != nil {
+		return fmt.Errorf("error parsing registry location %s: %w", string(reg.Location), err)
+	}
+
+	if regOrg != orgSlug || regWorkspace != workspaceSlug {
 		return fmt.Errorf(
-			"workflow.lock references registry namespace %q but the current API key is authenticated to workspace %q, ensure you are using an API key from the same workspace that ran \"speakeasy run\"",
-			namespace, orgSlug+"/"+workspaceSlug,
+			"registry location %q belongs to workspace %q but the current API key is authenticated to workspace %q, ensure you are using an API key from the same workspace that ran \"speakeasy run\"",
+			string(reg.Location), regOrg+"/"+regWorkspace, orgSlug+"/"+workspaceSlug,
 		)
 	}
 
