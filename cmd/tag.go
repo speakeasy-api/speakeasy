@@ -110,6 +110,12 @@ func runTagPromote(ctx context.Context, flags tagPromoteFlagsArgs) error {
 	}
 
 	for _, revision := range revisions {
+		if err := validateNamespaceWorkspace(ctx, revision.namespace); err != nil {
+			return err
+		}
+	}
+
+	for _, revision := range revisions {
 		err = registry.AddTags(ctx, revision.namespace, revision.revisionDigest, flags.Tags)
 		if err != nil {
 			return err
@@ -179,6 +185,26 @@ func addRevision(ctx context.Context, revisions map[string]revision, owner, name
 			usedBy:         []string{owner},
 		}
 	}
+}
+
+func validateNamespaceWorkspace(ctx context.Context, namespace string) error {
+	orgSlug := core.GetOrgSlugFromContext(ctx)
+	workspaceSlug := core.GetWorkspaceSlugFromContext(ctx)
+
+	parts := strings.SplitN(namespace, "/", 3)
+	if len(parts) != 3 {
+		return fmt.Errorf("unexpected namespace format %q: expected \"org/workspace/name\"", namespace)
+	}
+
+	nsOrg, nsWorkspace := parts[0], parts[1]
+	if nsOrg != orgSlug || nsWorkspace != workspaceSlug {
+		return fmt.Errorf(
+			"workflow.lock references registry namespace %q but the current API key is authenticated to workspace %q. Ensure you are using an API key from the same workspace that ran \"speakeasy run\".",
+			namespace, orgSlug+"/"+workspaceSlug,
+		)
+	}
+
+	return nil
 }
 
 func runTagApply(ctx context.Context, flags tagApplyFlagsArgs) error {
