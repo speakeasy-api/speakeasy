@@ -199,7 +199,7 @@ func validateNamespaceWorkspace(ctx context.Context, namespace string) error {
 	nsOrg, nsWorkspace := parts[0], parts[1]
 	if nsOrg != orgSlug || nsWorkspace != workspaceSlug {
 		return fmt.Errorf(
-			"workflow.lock references registry namespace %q but the current API key is authenticated to workspace %q. Ensure you are using an API key from the same workspace that ran \"speakeasy run\".",
+			"workflow.lock references registry namespace %q but the current API key is authenticated to workspace %q, ensure you are using an API key from the same workspace that ran \"speakeasy run\"",
 			namespace, orgSlug+"/"+workspaceSlug,
 		)
 	}
