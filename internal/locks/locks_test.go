@@ -130,7 +130,10 @@ func TestCLIUpdateMutex_Unlock(t *testing.T) {
 	require.NoError(t, err, "Should successfully release the lock")
 
 	// Verify we can acquire it again
-	resultCh = mutex.TryLock(ctx, 50*time.Millisecond)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel2()
+
+	resultCh = mutex.TryLock(ctx2, 50*time.Millisecond)
 	result = <-resultCh
 
 	assert.True(t, result.Success, "Should successfully acquire the lock again")
