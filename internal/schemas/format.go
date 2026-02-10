@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/pb33f/libopenapi/json"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+
+	"github.com/speakeasy-api/openapi/json"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -13,12 +13,17 @@ import (
 // Format reformats a document to the desired output format while preserving key ordering
 // Can be used to convert output types, or improve readability (e.g. prettifying single-line documents)
 func Format(ctx context.Context, schemaPath string, yamlOut bool) ([]byte, error) {
-	_, _, model, err := LoadDocument(ctx, schemaPath)
+	schemaBytes, _, err := LoadDocument(ctx, schemaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse document: %w", err)
 	}
 
-	return Render(model.Index.GetRootNode(), schemaPath, yamlOut)
+	var root yaml.Node
+	if err := yaml.Unmarshal(schemaBytes, &root); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	return Render(&root, schemaPath, yamlOut)
 }
 
 func Render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
@@ -28,7 +33,11 @@ func Render(y *yaml.Node, schemaPath string, yamlOut bool) ([]byte, error) {
 
 // RenderDocument - schemaPath can be unset if the docuemnt does not need reference resolution
 func RenderDocument(y *yaml.Node, schemaPath string, yamlIn bool, yamlOut bool) ([]byte, error) {
-	if yamlIn && yamlOut {
+	if yamlOut {
+		if !yamlIn {
+			// JSON-parsed nodes use flow style; reset to block for readable YAML output
+			resetJSONStyle(y, false)
+		}
 		var res bytes.Buffer
 		encoder := yaml.NewEncoder(&res)
 		// Note: would love to make this generic but the indentation information isn't in go-yaml nodes
@@ -40,23 +49,39 @@ func RenderDocument(y *yaml.Node, schemaPath string, yamlIn bool, yamlOut bool) 
 		return res.Bytes(), nil
 	}
 
-	// Preserves key ordering
-	specBytes, err := json.YAMLNodeToJSON(y, "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert YAML to JSON: %w", err)
+	// Convert to JSON, preserving key ordering
+	var buf bytes.Buffer
+	if err := json.YAMLToJSON(y, 2, &buf); err != nil {
+		return nil, fmt.Errorf("failed to convert to JSON: %w", err)
 	}
+	return bytes.TrimRight(buf.Bytes(), "\n"), nil
+}
 
-	if yamlOut {
-		// Use libopenapi to convert JSON to YAML to preserve key ordering
-		_, model, err := openapi.Load(specBytes, schemaPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load document: %w", err)
+// resetJSONStyle recursively adjusts JSON-parsed nodes for readable YAML output:
+// resets FlowStyle to block on mappings/sequences and removes double-quote style from keys.
+func resetJSONStyle(node *yaml.Node, isKey bool) {
+	if node == nil {
+		return
+	}
+	switch node.Kind {
+	case yaml.MappingNode:
+		node.Style &^= yaml.FlowStyle
+		for i := 0; i < len(node.Content); i += 2 {
+			resetJSONStyle(node.Content[i], true)
+			resetJSONStyle(node.Content[i+1], false)
 		}
-
-		yamlBytes := model.Model.RenderWithIndention(2)
-
-		return yamlBytes, nil
-	} else {
-		return specBytes, nil
+	case yaml.SequenceNode:
+		node.Style &^= yaml.FlowStyle
+		for _, child := range node.Content {
+			resetJSONStyle(child, false)
+		}
+	case yaml.ScalarNode:
+		if isKey {
+			node.Style &^= yaml.DoubleQuotedStyle
+		}
+	case yaml.DocumentNode:
+		for _, child := range node.Content {
+			resetJSONStyle(child, false)
+		}
 	}
 }

@@ -2,26 +2,26 @@ package errorCodes
 
 import (
 	"fmt"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+
+	"github.com/speakeasy-api/openapi/openapi"
+	coreopenapi "github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 )
 
 var errorGroupsDiagnose = initErrorGroups()
 
-func Diagnose(document v3.Document) suggestions.Diagnosis {
+func Diagnose(doc *openapi.OpenAPI) suggestions.Diagnosis {
 	diagnosis := suggestions.Diagnosis{}
 
-	for op := range openapi.IterateOperations(document) {
+	for op := range coreopenapi.IterateOperations(doc) {
 		method, path, operation := op.Method, op.Path, op.Operation
 
-		schemaPath := openapi.GetOperationSchemaPath(path, method)
+		schemaPath := coreopenapi.GetOperationSchemaPath(path, method)
 
-		codes := operation.Responses.Codes
-		if codes == nil {
+		if operation.Responses.Len() == 0 {
 			diagnosis.Add(suggestions.MissingErrorCodes, suggestions.Diagnostic{
 				SchemaPath: schemaPath,
-				Message:    fmt.Sprintf("Operation %s (%s %s) has no responses defined!", operation.OperationId, method, path),
+				Message:    fmt.Sprintf("Operation %s (%s %s) has no responses defined!", operation.GetOperationID(), method, path),
 			})
 		}
 
@@ -29,7 +29,7 @@ func Diagnose(document v3.Document) suggestions.Diagnosis {
 		if len(missingCodes) > 0 {
 			diagnosis.Add(suggestions.MissingErrorCodes, suggestions.Diagnostic{
 				SchemaPath: schemaPath,
-				Message:    fmt.Sprintf("Operation %s (%s %s) is missing definitions for %d recommended error codes", operation.OperationId, method, path, len(missingCodes)),
+				Message:    fmt.Sprintf("Operation %s (%s %s) is missing definitions for %d recommended error codes", operation.GetOperationID(), method, path, len(missingCodes)),
 			})
 		}
 	}
@@ -37,11 +37,11 @@ func Diagnose(document v3.Document) suggestions.Diagnosis {
 	return diagnosis
 }
 
-func getMissingErrorCodes(operation *v3.Operation) []string {
+func getMissingErrorCodes(operation *openapi.Operation) []string {
 	var missingCodes []string
 
 	for _, code := range errorGroupsDiagnose.AllCodes() {
-		if response, _ := getResponseForCode(operation.Responses.Codes, code); response == nil {
+		if responseRef, _ := getResponseForCode(&operation.Responses, code); responseRef == nil {
 			missingCodes = append(missingCodes, code)
 		}
 	}

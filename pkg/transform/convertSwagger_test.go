@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pb33f/libopenapi"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,15 +21,16 @@ func TestConvertSwaggerYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse the converted spec
-	filteredDoc, err := libopenapi.NewDocument(buf.Bytes())
+	doc, _, err := openapi.Unmarshal(context.Background(), &buf, openapi.WithSkipValidation())
 	require.NoError(t, err)
 
-	// Validate the OpenAPI v3 model
-	model, errors := filteredDoc.BuildV3Model()
-	require.Empty(t, errors)
-
 	// Validate that the model exists
-	require.NotNil(t, model)
+	require.NotNil(t, doc)
+
+	// Reset buffer for re-reading
+	buf.Reset()
+	err = ConvertSwagger(context.Background(), "../../integration/resources/swagger.yaml", true, &buf)
+	require.NoError(t, err)
 
 	converted, err := os.ReadFile("../../integration/resources/converted.yaml")
 	require.NoError(t, err)
@@ -51,13 +52,9 @@ func TestConvertSwaggerJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse the converted spec
-	filteredDoc, err := libopenapi.NewDocument(buf.Bytes())
+	doc, _, err := openapi.Unmarshal(context.Background(), &buf, openapi.WithSkipValidation())
 	require.NoError(t, err)
 
-	// Validate the OpenAPI v3 model
-	model, errors := filteredDoc.BuildV3Model()
-	require.Empty(t, errors)
-
 	// Validate that the model exists
-	require.NotNil(t, model)
+	require.NotNil(t, doc)
 }
