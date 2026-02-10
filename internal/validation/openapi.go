@@ -177,7 +177,7 @@ func errorsToTabContents(schema []byte, errs []error) []interactivity.Inspectabl
 		if vErr == nil {
 			s = fmt.Sprintf("%v", err)
 		} else {
-			lineNumber := styles.SeverityToStyle(vErr.Severity).Render(fmt.Sprintf("Line %d:", vErr.LineNumber))
+			lineNumber := styles.SeverityToStyle(vErr.Severity).Render(fmt.Sprintf("Line %d:%d - ", vErr.GetLineNumber(), vErr.GetColumnNumber()))
 			errType := styles.Dimmed.Render(vErr.Rule)
 			s = fmt.Sprintf("%s %s - %s", lineNumber, errType, vErr.Message)
 			d := getDetailedView(lines, *vErr)
@@ -207,12 +207,12 @@ func errorsToTabContents(schema []byte, errs []error) []interactivity.Inspectabl
 func getDetailedView(lines []string, err errors.ValidationError) string {
 	var sb strings.Builder
 
-	errAndLine := styles.SeverityToStyle(err.Severity).Render(fmt.Sprintf("%s on line %d", err.Severity, err.LineNumber))
+	errAndLine := styles.SeverityToStyle(err.Severity).Render(fmt.Sprintf("%s on line %d:%d", err.Severity, err.GetLineNumber(), err.GetColumnNumber()))
 	sb.WriteString(fmt.Sprintf("%s %s\n", errAndLine, styles.Dimmed.Render(err.Rule)))
 	sb.WriteString(err.Message)
 	sb.WriteString("\n\n")
 
-	if err.LineNumber < 0 || err.LineNumber > len(lines)-1 {
+	if err.GetLineNumber() < 0 || err.GetLineNumber() > len(lines)-1 {
 		sb.WriteString(styles.Dimmed.Render("This error does not apply to any specific line."))
 		return sb.String()
 	}
@@ -220,12 +220,12 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	sb.WriteString(styles.Emphasized.Render("Surrounding Lines:"))
 	sb.WriteString("\n")
 
-	startLine := err.LineNumber - 4
+	startLine := err.GetLineNumber() - 4
 	if startLine < 0 {
 		startLine = 0
 	}
 
-	endLine := err.LineNumber + 3
+	endLine := err.GetLineNumber() + 3
 	if endLine > len(lines)-1 {
 		endLine = len(lines) - 1
 	}
@@ -242,7 +242,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	for i, line := range lines[startLine:endLine] {
 		lineNumber := startLine + i + 1
 		lineNumString := styles.Dimmed.Render(fmt.Sprintf("%d", lineNumber))
-		if lineNumber == err.LineNumber {
+		if lineNumber == err.GetLineNumber() {
 			lineNumString = styles.Error.Render(fmt.Sprintf("%d", lineNumber))
 		}
 

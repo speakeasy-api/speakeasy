@@ -7,6 +7,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 func TestSortErrors(t *testing.T) {
@@ -25,45 +26,45 @@ func TestSortErrors(t *testing.T) {
 			args: args{
 				errs: []error{
 					fmt.Errorf("random error"),
-					errors.NewValidationError("error 2", 10, fmt.Errorf("validation error 2")),
-					errors.NewValidationWarning("warning 1", 2, fmt.Errorf("validation warning 1")),
-					errors.NewValidationWarning("warning 2", 3, fmt.Errorf("validation warning 2")),
-					errors.NewUnsupportedError("unsupported 2", 5),
-					errors.NewUnsupportedError("unsupported 1", 4),
+					errors.NewValidationError("error 2", &yaml.Node{Line: 10}, fmt.Errorf("validation error 2")),
+					errors.NewValidationWarning("warning 1", &yaml.Node{Line: 2}, fmt.Errorf("validation warning 1")),
+					errors.NewValidationWarning("warning 2", &yaml.Node{Line: 3}, fmt.Errorf("validation warning 2")),
+					errors.NewUnsupportedError("unsupported 2", &yaml.Node{Line: 5}),
+					errors.NewUnsupportedError("unsupported 1", &yaml.Node{Line: 4}),
 					&errors.ValidationError{
-						Severity:   errors.SeverityHint,
-						Message:    "hint 2",
-						LineNumber: 7,
-						Cause:      fmt.Errorf("validation hint 2"),
+						Severity: errors.SeverityHint,
+						Message:  "hint 2",
+						Node:     &yaml.Node{Line: 7},
+						Cause:    fmt.Errorf("validation hint 2"),
 					},
 					&errors.ValidationError{
-						Severity:   errors.SeverityHint,
-						Message:    "hint 1",
-						LineNumber: 6,
-						Cause:      fmt.Errorf("validation hint 1"),
+						Severity: errors.SeverityHint,
+						Message:  "hint 1",
+						Node:     &yaml.Node{Line: 6},
+						Cause:    fmt.Errorf("validation hint 1"),
 					},
-					errors.NewValidationError("error 1", 1, fmt.Errorf("validation error 1")),
+					errors.NewValidationError("error 1", &yaml.Node{Line: 1}, fmt.Errorf("validation error 1")),
 				},
 			},
 			want: []error{
-				errors.NewValidationError("error 1", 1, fmt.Errorf("validation error 1")),
-				errors.NewValidationError("error 2", 10, fmt.Errorf("validation error 2")),
-				errors.NewValidationWarning("warning 1", 2, fmt.Errorf("validation warning 1")),
-				errors.NewValidationWarning("warning 2", 3, fmt.Errorf("validation warning 2")),
+				errors.NewValidationError("error 1", &yaml.Node{Line: 1}, fmt.Errorf("validation error 1")),
+				errors.NewValidationError("error 2", &yaml.Node{Line: 10}, fmt.Errorf("validation error 2")),
+				errors.NewValidationWarning("warning 1", &yaml.Node{Line: 2}, fmt.Errorf("validation warning 1")),
+				errors.NewValidationWarning("warning 2", &yaml.Node{Line: 3}, fmt.Errorf("validation warning 2")),
 				&errors.ValidationError{
-					Severity:   errors.SeverityHint,
-					Message:    "hint 1",
-					LineNumber: 6,
-					Cause:      fmt.Errorf("validation hint 1"),
+					Severity: errors.SeverityHint,
+					Message:  "hint 1",
+					Node:     &yaml.Node{Line: 6},
+					Cause:    fmt.Errorf("validation hint 1"),
 				},
 				&errors.ValidationError{
-					Severity:   errors.SeverityHint,
-					Message:    "hint 2",
-					LineNumber: 7,
-					Cause:      fmt.Errorf("validation hint 2"),
+					Severity: errors.SeverityHint,
+					Message:  "hint 2",
+					Node:     &yaml.Node{Line: 7},
+					Cause:    fmt.Errorf("validation hint 2"),
 				},
-				errors.NewUnsupportedError("unsupported 1", 4),
-				errors.NewUnsupportedError("unsupported 2", 5),
+				errors.NewUnsupportedError("unsupported 1", &yaml.Node{Line: 4}),
+				errors.NewUnsupportedError("unsupported 2", &yaml.Node{Line: 5}),
 				fmt.Errorf("random error"),
 			},
 		},
