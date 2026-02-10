@@ -1,17 +1,16 @@
 package merge
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/pb33f/libopenapi"
-	"github.com/pb33f/libopenapi/datamodel"
-	"github.com/stretchr/testify/require"
-
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_merge_determinism(t *testing.T) {
@@ -38,22 +37,14 @@ func Test_merge_determinism(t *testing.T) {
 	require.NoError(t, err)
 	got2, err := merge(t.Context(), absSchemas, nil, true)
 	require.NoError(t, err)
-	doc1, err := libopenapi.NewDocumentWithConfiguration(got1, &datamodel.DocumentConfiguration{
-		AllowFileReferences:                 true,
-		IgnorePolymorphicCircularReferences: true,
-		IgnoreArrayCircularReferences:       true,
-	})
+
+	// Verify both outputs parse as valid OpenAPI documents
+	_, _, err = openapi.Unmarshal(context.Background(), bytes.NewReader(got1), openapi.WithSkipValidation())
 	require.NoError(t, err)
-	doc2, err := libopenapi.NewDocumentWithConfiguration(got2, &datamodel.DocumentConfiguration{
-		AllowFileReferences:                 true,
-		IgnorePolymorphicCircularReferences: true,
-		IgnoreArrayCircularReferences:       true,
-	})
+	_, _, err = openapi.Unmarshal(context.Background(), bytes.NewReader(got2), openapi.WithSkipValidation())
 	require.NoError(t, err)
-	documentChanges, errs := libopenapi.CompareDocuments(doc1, doc2)
-	require.Empty(t, errs)
-	// When no changes, CompareDocuments returns nil
-	require.Nil(t, documentChanges)
+
+	// Compare outputs for determinism
 	require.Equal(t, string(got1), string(got2))
 }
 
@@ -919,22 +910,22 @@ paths:
 
 	expectedOutput := `openapi: "3.1"
 info:
-    title: Main Schema
-    version: 1.0.0
+  title: Main Schema
+  version: 1.0.0
 paths:
-    /example:
-        get:
-            summary: Example endpoint
-            responses:
-                '200':
-                    description: Success
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    name:
-                                        type: string
+  /example:
+    get:
+      summary: Example endpoint
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
 `
 	assert.Equal(t, expectedOutput, string(outputData))
 }

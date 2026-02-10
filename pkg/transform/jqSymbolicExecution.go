@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/pb33f/libopenapi/json"
 	"github.com/speakeasy-api/jq/pkg/playground"
+	"github.com/speakeasy-api/openapi/json"
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,10 +37,5 @@ func JQSymbolicExecutionFromReader(ctx context.Context, in io.Reader, schemaPath
 	if err := yaml.Unmarshal([]byte(newSchema), &node); err != nil {
 		return err
 	}
-	out, err := json.YAMLNodeToJSON(&node, "  ")
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(out)
-	return err
+	return json.YAMLToJSON(&node, 2, w)
 }

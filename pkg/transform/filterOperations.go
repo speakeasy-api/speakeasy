@@ -1,19 +1,15 @@
 package transform
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"maps"
 	"slices"
 
-	"github.com/pb33f/libopenapi"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/openapi/overlay"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
-	"gopkg.in/yaml.v3"
 )
 
 func FilterOperations(ctx context.Context, schemaPath string, includeOps []string, include bool, yamlOut bool, w io.Writer) error {
@@ -51,89 +47,102 @@ type args struct {
 	schemaPath string
 }
 
-func filterOperations(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	overlay := BuildFilterOperationsOverlay(model, args.include, args.includeOps, nil)
+func filterOperations(ctx context.Context, doc *openapi.OpenAPI, args args) (*openapi.OpenAPI, error) {
+	ol := BuildFilterOperationsOverlay(doc, args.include, args.includeOps, nil)
 
-	root := model.Index.GetRootNode()
-	if err := overlay.ApplyTo(root); err != nil {
-		return doc, model, err
+	// Sync to get current YAML nodes
+	if err := syncDoc(ctx, doc); err != nil {
+		return doc, err
 	}
 
-	newSpec := bytes.Buffer{}
-	enc := yaml.NewEncoder(&newSpec)
-	enc.SetIndent(2)
-	if err := enc.Encode(root); err != nil {
-		return doc, model, err
+	root := doc.GetCore().GetRootNode()
+	if err := ol.ApplyTo(root); err != nil {
+		return doc, err
 	}
 
-	// Unfortunately, in order to remove orphans, we need to re-render the document.
-	updatedDoc, _, err := openapi.Load(newSpec.Bytes(), args.schemaPath)
+	// Reload from modified YAML
+	doc, err := reloadFromYAML(ctx, root)
 	if err != nil {
-		return doc, model, err
+		return doc, err
 	}
-	doc = *updatedDoc
 
-	_, model, err = RemoveOrphans(ctx, doc, nil, nil)
+	// Remove orphaned components
+	doc, err = RemoveOrphans(ctx, doc, nil)
 	if err != nil {
-		return doc, model, err
+		return doc, err
 	}
 
-	_, model, err = Cleanup(ctx, doc, model, nil)
+	// Clean up empty paths
+	doc, err = Cleanup(ctx, doc, nil)
 	if err != nil {
-		return doc, model, err
+		return doc, err
 	}
 
-	return doc, model, err
+	return doc, nil
 }
 
-func BuildRemoveInvalidOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], opToErr map[string]error) overlay.Overlay {
-	return BuildFilterOperationsOverlay(model, false, slices.Collect(maps.Keys(opToErr)), opToErr)
+func BuildRemoveInvalidOperationsOverlay(doc *openapi.OpenAPI, opToErr map[string]error) overlay.Overlay {
+	return BuildFilterOperationsOverlay(doc, false, slices.Collect(maps.Keys(opToErr)), opToErr)
 }
 
-func BuildFilterOperationsOverlay(model *libopenapi.DocumentModel[v3.Document], include bool, ops []string, opToErr map[string]error) overlay.Overlay {
-	actionFn := func(method, path string, operation *v3.Operation) (map[string]string, *overlay.Action, *suggestions.ModificationExtension) {
-		operationID := operation.OperationId
+func BuildFilterOperationsOverlay(doc *openapi.OpenAPI, include bool, ops []string, opToErr map[string]error) overlay.Overlay {
+	var actions []overlay.Action
 
-		if operationID == "" {
-			operationID = fmt.Sprintf("%s_%s", method, path)
-		}
-
-		remove := false
-		if include {
-			if !slices.Contains(ops, operationID) {
-				remove = true
-			}
-		} else {
-			if slices.Contains(ops, operationID) {
-				remove = true
-			}
-		}
-
-		if remove {
-			target := overlay.NewTargetSelector(path, method)
-			action := overlay.Action{
-				Target: target,
-				Remove: true,
-			}
-
-			before := "<invalid_operation>"
-			if err, ok := opToErr[operationID]; ok {
-				before = err.Error()
-			}
-
-			return nil, &action, &suggestions.ModificationExtension{
-				Type:   suggestions.ModificationTypeRemoveInvalid,
-				Before: before,
-				After:  "<removed>",
-			}
-		}
-
-		return nil, nil, nil
+	if doc.Paths == nil {
+		return overlay.Overlay{Actions: actions}
 	}
 
-	builder := suggestions.ModificationsBuilder{
-		ActionFn: actionFn,
+	for path, pathItem := range doc.Paths.All() {
+		if pathItem == nil || pathItem.Object == nil {
+			continue
+		}
+
+		for method, operation := range pathItem.Object.All() {
+			if operation == nil {
+				continue
+			}
+
+			operationID := ""
+			if operation.OperationID != nil {
+				operationID = *operation.OperationID
+			}
+			if operationID == "" {
+				operationID = fmt.Sprintf("%s_%s", string(method), path)
+			}
+
+			remove := false
+			if include {
+				if !slices.Contains(ops, operationID) {
+					remove = true
+				}
+			} else {
+				if slices.Contains(ops, operationID) {
+					remove = true
+				}
+			}
+
+			if remove {
+				target := overlay.NewTargetSelector(path, string(method))
+				action := overlay.Action{
+					Target: target,
+					Remove: true,
+				}
+
+				before := "<invalid_operation>"
+				if err, ok := opToErr[operationID]; ok {
+					before = err.Error()
+				}
+
+				suggestions.AddModificationExtension(&action, &suggestions.ModificationExtension{
+					Type:   suggestions.ModificationTypeRemoveInvalid,
+					Before: before,
+					After:  "<removed>",
+				})
+
+				actions = append(actions, action)
+			}
+		}
 	}
 
-	return builder.Construct(model.Model)
+	return overlay.Overlay{Actions: actions}
 }

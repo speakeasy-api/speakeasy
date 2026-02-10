@@ -16,6 +16,7 @@ paths:
                 minItems: 1
                 maxItems: 1
                 type: array
+          description: ""
 components:
   schemas:
     test:
