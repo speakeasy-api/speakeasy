@@ -33,15 +33,14 @@ type CodeSampleExampleSource struct {
 }
 
 func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, isSilent bool, opts workflow.CodeSamples) (string, error) {
-	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
-	isJSON := filepath.Ext(schema) == ".json"
-
 	if isSilent {
 		logger := log.From(ctx)
 		var logs bytes.Buffer
 		logCapture := logger.WithWriter(&logs)
 		ctx = log.With(ctx, logCapture)
 	}
+
+	var allSnippets []usagegen.UsageSnippet
 
 	for _, lang := range langs {
 		usageOutput := &bytes.Buffer{}
@@ -72,70 +71,10 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 			return "", err
 		}
 
-		for _, snippet := range snippets {
-			target := overlay.NewTargetSelector(snippet.Path, snippet.Method)
-
-			targetToCodeSamples[target] = append(targetToCodeSamples[target], snippet)
-		}
+		allSnippets = append(allSnippets, snippets...)
 	}
 
-	var actions []overlay.Action
-	targets := []string{}
-	for target := range targetToCodeSamples {
-		targets = append(targets, target)
-	}
-	sort.Strings(targets)
-
-	for _, target := range targets {
-		snippets := targetToCodeSamples[target]
-		actions = append(actions, overlay.Action{
-			Target: target,
-			Update: *rootCodeSampleNode(snippets, opts, isJSON),
-		})
-	}
-
-	extends := schema
-	title := fmt.Sprintf("CodeSamples overlay for %s", schema)
-	abs, err := filepath.Abs(schema)
-	if err == nil {
-		extends = "file://" + abs
-	}
-
-	if isWorkflow {
-		title = fmt.Sprintf("CodeSamples overlay for %s target", langs[0])
-	}
-
-	overlay := &overlay.Overlay{
-		Version: "1.0.0",
-		Info: overlay.Info{
-			Title:   title,
-			Version: "0.0.0",
-		},
-		Actions: actions,
-	}
-
-	if !isWorkflow {
-		overlay.Extends = extends
-	}
-
-	overlayString, err := overlay.ToString()
-	if err != nil {
-		return "", err
-	}
-
-	if overlayFilename != "" {
-		f, err := os.Create(overlayFilename)
-		if err != nil {
-			return overlayString, err
-		}
-		defer f.Close()
-
-		if _, err = f.WriteString(overlayString); err != nil {
-			return overlayString, err
-		}
-	}
-
-	return overlayString, nil
+	return buildOverlay(allSnippets, schema, langs[0], overlayFilename, isWorkflow, opts)
 }
 
 // GenerateOverlayFromRawSnippets builds a code samples overlay from pre-rendered
