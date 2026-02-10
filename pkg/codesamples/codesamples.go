@@ -138,6 +138,89 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	return overlayString, nil
 }
 
+// GenerateOverlayFromRawSnippets builds a code samples overlay from pre-rendered
+// raw snippet output, bypassing the need to create a new Generator and re-resolve
+// the AST. The rawOutput is expected to contain "// Usage snippet provided for ..."
+// sections as produced by standalone.ts.
+func GenerateOverlayFromRawSnippets(ctx context.Context, rawOutput, lang, schema string, overlayFilename string, isWorkflow bool, opts workflow.CodeSamples) (string, error) {
+	snippets, err := usagegen.ParseUsageOutput(lang, rawOutput)
+	if err != nil {
+		return "", err
+	}
+
+	log.From(ctx).Infof("\nUsing pre-rendered usage snippets for %s\n\n", lang)
+
+	return buildOverlay(snippets, schema, lang, overlayFilename, isWorkflow, opts)
+}
+
+func buildOverlay(snippets []usagegen.UsageSnippet, schema, lang, overlayFilename string, isWorkflow bool, opts workflow.CodeSamples) (string, error) {
+	isJSON := filepath.Ext(schema) == ".json"
+
+	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
+	for _, snippet := range snippets {
+		target := overlay.NewTargetSelector(snippet.Path, snippet.Method)
+		targetToCodeSamples[target] = append(targetToCodeSamples[target], snippet)
+	}
+
+	var actions []overlay.Action
+	targets := []string{}
+	for target := range targetToCodeSamples {
+		targets = append(targets, target)
+	}
+	sort.Strings(targets)
+
+	for _, target := range targets {
+		snippets := targetToCodeSamples[target]
+		actions = append(actions, overlay.Action{
+			Target: target,
+			Update: *rootCodeSampleNode(snippets, opts, isJSON),
+		})
+	}
+
+	extends := schema
+	title := fmt.Sprintf("CodeSamples overlay for %s", schema)
+	abs, err := filepath.Abs(schema)
+	if err == nil {
+		extends = "file://" + abs
+	}
+
+	if isWorkflow {
+		title = fmt.Sprintf("CodeSamples overlay for %s target", lang)
+	}
+
+	o := &overlay.Overlay{
+		Version: "1.0.0",
+		Info: overlay.Info{
+			Title:   title,
+			Version: "0.0.0",
+		},
+		Actions: actions,
+	}
+
+	if !isWorkflow {
+		o.Extends = extends
+	}
+
+	overlayString, err := o.ToString()
+	if err != nil {
+		return "", err
+	}
+
+	if overlayFilename != "" {
+		f, err := os.Create(overlayFilename)
+		if err != nil {
+			return overlayString, err
+		}
+		defer f.Close()
+
+		if _, err = f.WriteString(overlayString); err != nil {
+			return overlayString, err
+		}
+	}
+
+	return overlayString, nil
+}
+
 // GenerateUsageSnippet us used in the Temporal job in SpeakeasyRegistry
 func GenerateUsageSnippet(ctx context.Context, schema, header, token, configPath, lang string, isSilent bool, operationID *string, example *CodeSampleExampleSource) ([]usagegen.UsageSnippet, error) {
 	if isSilent {
