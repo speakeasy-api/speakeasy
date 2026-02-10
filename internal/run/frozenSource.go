@@ -47,18 +47,19 @@ func (f FrozenSource) Do(ctx context.Context, _ string) (string, error) {
 	var err error
 
 	switch {
-	case isSingleRegistrySource(f.workflow.workflow.Sources[f.sourceID]) && f.workflow.workflow.Sources[f.sourceID].Registry == nil:
+	case isSingleRegistrySource(f.workflow.workflow.Sources[f.sourceID]):
 		d := f.workflow.workflow.Sources[f.sourceID].Inputs[0]
-		registryBreakdown := workflow.ParseSpeakeasyRegistryReference(d.Location.Resolve())
+		resolvedLocation := d.Location.Resolve()
+		registryBreakdown := workflow.ParseSpeakeasyRegistryReference(resolvedLocation)
 		if registryBreakdown == nil {
-			return "", fmt.Errorf("failed to parse speakeasy registry reference %s", d.Location)
+			return "", fmt.Errorf("failed to parse speakeasy registry reference %s", resolvedLocation)
 		}
 		orgSlug = registryBreakdown.OrganizationSlug
 		workspaceSlug = registryBreakdown.WorkspaceSlug
-		// odd edge case: we are not migrating the registry location when we're a single registry source.
-		// Unfortunately can't just fix here as it needs a migration
-		registryNamespace = lockSource.SourceNamespace
-	case !isSingleRegistrySource(f.workflow.workflow.Sources[f.sourceID]) && f.workflow.workflow.Sources[f.sourceID].Registry == nil:
+		// Derive expected namespace from the current input location so frozen validation
+		// can detect lockfile drift when workflow input has changed.
+		registryNamespace = registryBreakdown.NamespaceName
+	case f.workflow.workflow.Sources[f.sourceID].Registry == nil:
 		return "", fmt.Errorf("invalid workflow lockfile: no registry location found for source %s", f.sourceID)
 	case f.workflow.workflow.Sources[f.sourceID].Registry != nil:
 		orgSlug, workspaceSlug, registryNamespace, _, err = f.workflow.workflow.Sources[f.sourceID].Registry.ParseRegistryLocation()

@@ -145,7 +145,7 @@ var agentFeedbackCmd = &model.ExecutableCommand[AgentFeedbackFlags]{
 		flag.StringFlag{
 			Name:         "type",
 			Shorthand:    "t",
-			Description:  "Feedback type: agent_context or general",
+			Description:  "Feedback type: agent_context, missing_guidance, or general",
 			DefaultValue: "agent_context",
 		},
 		flag.StringFlag{
