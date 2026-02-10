@@ -33,15 +33,14 @@ type CodeSampleExampleSource struct {
 }
 
 func GenerateOverlay(ctx context.Context, schema, header, token, configPath, overlayFilename string, langs []string, isWorkflow bool, isSilent bool, opts workflow.CodeSamples) (string, error) {
-	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
-	isJSON := filepath.Ext(schema) == ".json"
-
 	if isSilent {
 		logger := log.From(ctx)
 		var logs bytes.Buffer
 		logCapture := logger.WithWriter(&logs)
 		ctx = log.With(ctx, logCapture)
 	}
+
+	var allSnippets []usagegen.UsageSnippet
 
 	for _, lang := range langs {
 		usageOutput := &bytes.Buffer{}
@@ -72,11 +71,34 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 			return "", err
 		}
 
-		for _, snippet := range snippets {
-			target := overlay.NewTargetSelector(snippet.Path, snippet.Method)
+		allSnippets = append(allSnippets, snippets...)
+	}
 
-			targetToCodeSamples[target] = append(targetToCodeSamples[target], snippet)
-		}
+	return buildOverlay(allSnippets, schema, langs[0], overlayFilename, isWorkflow, opts)
+}
+
+// GenerateOverlayFromRawSnippets builds a code samples overlay from pre-rendered
+// raw snippet output, bypassing the need to create a new Generator and re-resolve
+// the AST. The rawOutput is expected to contain "// Usage snippet provided for ..."
+// sections as produced by standalone.ts.
+func GenerateOverlayFromRawSnippets(ctx context.Context, rawOutput, lang, schema string, overlayFilename string, isWorkflow bool, opts workflow.CodeSamples) (string, error) {
+	snippets, err := usagegen.ParseUsageOutput(lang, rawOutput)
+	if err != nil {
+		return "", err
+	}
+
+	log.From(ctx).Infof("\nUsing pre-rendered usage snippets for %s\n\n", lang)
+
+	return buildOverlay(snippets, schema, lang, overlayFilename, isWorkflow, opts)
+}
+
+func buildOverlay(snippets []usagegen.UsageSnippet, schema, lang, overlayFilename string, isWorkflow bool, opts workflow.CodeSamples) (string, error) {
+	isJSON := filepath.Ext(schema) == ".json"
+
+	targetToCodeSamples := map[string][]usagegen.UsageSnippet{}
+	for _, snippet := range snippets {
+		target := overlay.NewTargetSelector(snippet.Path, snippet.Method)
+		targetToCodeSamples[target] = append(targetToCodeSamples[target], snippet)
 	}
 
 	var actions []overlay.Action
@@ -102,10 +124,10 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	}
 
 	if isWorkflow {
-		title = fmt.Sprintf("CodeSamples overlay for %s target", langs[0])
+		title = fmt.Sprintf("CodeSamples overlay for %s target", lang)
 	}
 
-	overlay := &overlay.Overlay{
+	o := &overlay.Overlay{
 		Version: "1.0.0",
 		Info: overlay.Info{
 			Title:   title,
@@ -115,10 +137,10 @@ func GenerateOverlay(ctx context.Context, schema, header, token, configPath, ove
 	}
 
 	if !isWorkflow {
-		overlay.Extends = extends
+		o.Extends = extends
 	}
 
-	overlayString, err := overlay.ToString()
+	overlayString, err := o.ToString()
 	if err != nil {
 		return "", err
 	}
