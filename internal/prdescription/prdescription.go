@@ -31,6 +31,7 @@ type Input struct {
 	// Version information
 	SpeakeasyVersion string `json:"speakeasy_version,omitempty"`
 	ManualBump       bool   `json:"manual_bump,omitempty"`
+	ActionRunURL     string `json:"action_run_url,omitempty"`
 
 	// Version report data (from SPEAKEASY_VERSION_REPORT_LOCATION)
 	VersionReport *versioning.MergedVersionReport `json:"version_report,omitempty"`
@@ -132,9 +133,14 @@ func buildBody(input Input) string {
 		body.WriteString(stripANSICodes(markdownSection))
 	}
 
-	// Footer with CLI version
-	if !input.SourceGeneration && input.SpeakeasyVersion != "" {
-		body.WriteString(fmt.Sprintf("\nBased on [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy) %s\n", input.SpeakeasyVersion))
+	// Footer
+	if !input.SourceGeneration {
+		if input.SpeakeasyVersion != "" {
+			body.WriteString(fmt.Sprintf("\nBased on [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy) %s\n", input.SpeakeasyVersion))
+		}
+		if input.ActionRunURL != "" {
+			body.WriteString(fmt.Sprintf("\nLast updated by [Speakeasy workflow](%s)\n", input.ActionRunURL))
+		}
 	}
 
 	return body.String()

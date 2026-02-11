@@ -365,6 +365,15 @@ func GetGithubServerURL() string {
 	return os.Getenv("GITHUB_SERVER_URL")
 }
 
+func GetActionRunURL(repo string) string {
+	serverURL := os.Getenv("GITHUB_SERVER_URL")
+	runID := os.Getenv("GITHUB_RUN_ID")
+	if serverURL == "" || repo == "" || runID == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/actions/runs/%s", serverURL, repo, runID)
+}
+
 func GetGithubOIDCRequestURL() string {
 	return os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
 }
