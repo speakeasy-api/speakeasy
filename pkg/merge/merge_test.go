@@ -1132,6 +1132,516 @@ info:
   version: ""
 `,
 		},
+		{
+			name: "parameters are namespaced with extensions on schema",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer`),
+					[]byte(`openapi: 3.1
+components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: string`),
+				},
+				namespaces: []string{"foo", "bar"},
+			},
+			want: `openapi: "3.1"
+components:
+  parameters:
+    foo_Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        x-speakeasy-name-override: Limit
+        x-speakeasy-model-namespace: foo
+    bar_Limit:
+      name: limit
+      in: query
+      schema:
+        type: string
+        x-speakeasy-name-override: Limit
+        x-speakeasy-model-namespace: bar
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "parameter references are updated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        200:
+          description: Success
+components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer`),
+				},
+				namespaces: []string{"api"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/api_Limit'
+      responses:
+        200:
+          description: Success
+components:
+  parameters:
+    api_Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        x-speakeasy-name-override: Limit
+        x-speakeasy-model-namespace: api
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "responses are namespaced with extensions on content schema",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string`),
+				},
+				namespaces: []string{"v1"},
+			},
+			want: `openapi: "3.1"
+components:
+  responses:
+    v1_NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            x-speakeasy-name-override: NotFound
+            x-speakeasy-model-namespace: v1
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "response references are updated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        404:
+          $ref: '#/components/responses/NotFound'
+components:
+  responses:
+    NotFound:
+      description: Not found`),
+				},
+				namespaces: []string{"api"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      responses:
+        404:
+          $ref: '#/components/responses/api_NotFound'
+components:
+  responses:
+    api_NotFound:
+      description: 'Not found'
+info:
+  title: ''
+  version: ''
+`,
+		},
+		{
+			name: "request bodies are namespaced with extensions on content schema",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  requestBodies:
+    CreatePet:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string`),
+				},
+				namespaces: []string{"v1"},
+			},
+			want: `openapi: "3.1"
+components:
+  requestBodies:
+    v1_CreatePet:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+            x-speakeasy-name-override: CreatePet
+            x-speakeasy-model-namespace: v1
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "request body references are updated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    post:
+      requestBody:
+        $ref: '#/components/requestBodies/CreatePet'
+      responses:
+        200:
+          description: Success
+components:
+  requestBodies:
+    CreatePet:
+      content:
+        application/json:
+          schema:
+            type: object`),
+				},
+				namespaces: []string{"api"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    post:
+      requestBody:
+        $ref: '#/components/requestBodies/api_CreatePet'
+      responses:
+        200:
+          description: Success
+components:
+  requestBodies:
+    api_CreatePet:
+      content:
+        application/json:
+          schema:
+            type: object
+            x-speakeasy-name-override: CreatePet
+            x-speakeasy-model-namespace: api
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "headers are namespaced with extensions on schema",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  headers:
+    X-Rate-Limit:
+      schema:
+        type: integer`),
+				},
+				namespaces: []string{"api"},
+			},
+			want: `openapi: "3.1"
+components:
+  headers:
+    api_X-Rate-Limit:
+      schema:
+        type: integer
+        x-speakeasy-name-override: X-Rate-Limit
+        x-speakeasy-model-namespace: api
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "header references in responses are updated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: Success
+          headers:
+            X-Rate-Limit:
+              $ref: '#/components/headers/X-Rate-Limit'
+components:
+  headers:
+    X-Rate-Limit:
+      schema:
+        type: integer`),
+				},
+				namespaces: []string{"api"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: Success
+          headers:
+            X-Rate-Limit:
+              $ref: '#/components/headers/api_X-Rate-Limit'
+components:
+  headers:
+    api_X-Rate-Limit:
+      schema:
+        type: integer
+        x-speakeasy-name-override: X-Rate-Limit
+        x-speakeasy-model-namespace: api
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "security schemes are namespaced with extensions and requirements updated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+paths:
+  /pets:
+    get:
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Success
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer`),
+				},
+				namespaces: []string{"v1"},
+			},
+			want: `openapi: "3.1"
+security:
+  - v1_bearerAuth: []
+paths:
+  /pets:
+    get:
+      security:
+        - v1_bearerAuth: []
+      responses:
+        200:
+          description: Success
+components:
+  securitySchemes:
+    v1_bearerAuth:
+      type: http
+      scheme: bearer
+      x-speakeasy-name-override: bearerAuth
+      x-speakeasy-model-namespace: v1
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "conflicting security schemes from different namespaces coexist",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: apiKey
+      name: X-API-Key
+      in: header`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - svcB_bearerAuth: []
+components:
+  securitySchemes:
+    svcA_bearerAuth:
+      type: http
+      scheme: bearer
+      x-speakeasy-name-override: bearerAuth
+      x-speakeasy-model-namespace: svcA
+    svcB_bearerAuth:
+      type: apiKey
+      name: X-API-Key
+      in: header
+      x-speakeasy-name-override: bearerAuth
+      x-speakeasy-model-namespace: svcB
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "all component types namespaced together",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+paths:
+  /pets:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        200:
+          $ref: '#/components/responses/Success'
+        404:
+          description: Not found
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+components:
+  schemas:
+    Pet:
+      type: object
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+  responses:
+    Success:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+  headers:
+    X-Request-Id:
+      schema:
+        type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer`),
+				},
+				namespaces: []string{"api"},
+			},
+			want: `openapi: "3.1"
+security:
+  - api_bearerAuth: []
+paths:
+  /pets:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/api_Limit'
+      responses:
+        200:
+          $ref: '#/components/responses/api_Success'
+        404:
+          description: Not found
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/api_X-Request-Id'
+components:
+  schemas:
+    api_Pet:
+      type: 'object'
+      x-speakeasy-name-override: Pet
+      x-speakeasy-model-namespace: api
+  parameters:
+    api_Limit:
+      name: 'limit'
+      in: 'query'
+      schema:
+        type: 'integer'
+        x-speakeasy-name-override: Limit
+        x-speakeasy-model-namespace: api
+  responses:
+    api_Success:
+      description: 'OK'
+      content:
+        application/json:
+          schema:
+            type: 'object'
+            x-speakeasy-name-override: Success
+            x-speakeasy-model-namespace: api
+  headers:
+    api_X-Request-Id:
+      schema:
+        type: 'string'
+        x-speakeasy-name-override: X-Request-Id
+        x-speakeasy-model-namespace: api
+  securitySchemes:
+    api_bearerAuth:
+      type: 'http'
+      scheme: 'bearer'
+      x-speakeasy-name-override: bearerAuth
+      x-speakeasy-model-namespace: api
+info:
+  title: ''
+  version: ''
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
