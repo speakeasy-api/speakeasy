@@ -135,15 +135,15 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 
 		if namespace != "" {
 			// Apply namespace prefixes to all component types
-			applyNamespaceToSchemas(doc, namespace)
+			schemaMappings := applyNamespaceToSchemas(doc, namespace)
 			paramMappings := applyNamespaceToParameters(doc, namespace)
 			responseMappings := applyNamespaceToResponses(doc, namespace)
 			requestBodyMappings := applyNamespaceToRequestBodies(doc, namespace)
 			headerMappings := applyNamespaceToHeaders(doc, namespace)
 			secSchemeMappings := applyNamespaceToSecuritySchemes(doc, namespace)
 
-			// Update schema references (uses extension-based discovery)
-			if err := updateSchemaReferencesInDocument(ctx, doc, namespace); err != nil {
+			// Update schema references using explicit mappings
+			if err := updateSchemaReferencesInDocument(ctx, doc, schemaMappings); err != nil {
 				return nil, fmt.Errorf("failed to update schema references for namespace %s: %w", namespace, err)
 			}
 

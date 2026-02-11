@@ -142,26 +142,30 @@ func setExtensions(exts **extensions.Extensions, originalName, namespace string)
 //   - x-speakeasy-name-override: original schema name
 //   - x-speakeasy-model-namespace: namespace value
 //
-// The function mutates doc.Components.Schemas in place. Reference updates should be
-// performed by calling updateSchemaReferencesInDocument after this function.
-func applyNamespaceToSchemas(doc *openapi.OpenAPI, namespace string) {
+// Returns a mapping of originalName -> newName for use in reference updates.
+// Note: extensions are only applied to inline schemas, not pure $ref schemas, to avoid
+// invalid YAML output. The returned mapping handles ref updates for all schemas regardless.
+func applyNamespaceToSchemas(doc *openapi.OpenAPI, namespace string) map[string]string {
+	mappings := make(map[string]string)
 	if namespace == "" {
-		return
+		return mappings
 	}
 
 	if doc.Components == nil || doc.Components.Schemas == nil {
-		return
+		return mappings
 	}
 
 	newSchemas := sequencedmap.New[string, *oas3.JSONSchema[oas3.Referenceable]]()
 
 	for name, schema := range doc.Components.Schemas.All() {
 		newName := fmt.Sprintf("%s_%s", namespace, name)
+		mappings[name] = newName
 		applySchemaExtensions(schema, name, namespace)
 		newSchemas.Set(newName, schema)
 	}
 
 	doc.Components.Schemas = newSchemas
+	return mappings
 }
 
 // applyNamespaceToParameters applies namespace prefixes to all parameters in components/parameters.
@@ -426,6 +430,7 @@ func updateComponentRef(ref *references.Reference, mappings map[string]string, c
 // based on the security scheme name mappings. It replaces SecurityRequirement objects
 // rather than modifying them in place, because the underlying core model used for
 // marshaling is not updated by high-level map operations.
+// Covers document-level security, paths, and webhooks.
 func updateSecurityRequirements(doc *openapi.OpenAPI, mappings map[string]string) {
 	if doc == nil || len(mappings) == 0 {
 		return
@@ -434,17 +439,30 @@ func updateSecurityRequirements(doc *openapi.OpenAPI, mappings map[string]string
 	// Update document-level security
 	doc.Security = remapSecurityArray(doc.Security, mappings)
 
-	// Update operation-level security
+	// Update operation-level security in paths
 	if doc.Paths != nil {
 		for _, pathItem := range doc.Paths.All() {
-			if pathItem.Object == nil {
-				continue
-			}
-			for _, op := range pathItem.Object.All() {
-				if op != nil && op.Security != nil {
-					op.Security = remapSecurityArray(op.Security, mappings)
-				}
-			}
+			remapPathItemOperationsSecurity(pathItem, mappings)
+		}
+	}
+
+	// Update operation-level security in webhooks
+	if doc.Webhooks != nil {
+		for _, pathItem := range doc.Webhooks.All() {
+			remapPathItemOperationsSecurity(pathItem, mappings)
+		}
+	}
+}
+
+// remapPathItemOperationsSecurity remaps security requirement keys for all operations
+// in a single path item.
+func remapPathItemOperationsSecurity(pathItem *openapi.ReferencedPathItem, mappings map[string]string) {
+	if pathItem == nil || pathItem.Object == nil {
+		return
+	}
+	for _, op := range pathItem.Object.All() {
+		if op != nil && op.Security != nil {
+			op.Security = remapSecurityArray(op.Security, mappings)
 		}
 	}
 }
@@ -476,33 +494,8 @@ func remapSecurityArray(security []*openapi.SecurityRequirement, mappings map[st
 }
 
 // updateSchemaReferencesInDocument updates all $ref values pointing to schemas
-// based on the namespace. It determines the mapping from the x-speakeasy-name-override
-// extension in the document's schemas.
-func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, namespace string) error {
-	if namespace == "" {
-		return nil
-	}
-
-	if doc.Components == nil || doc.Components.Schemas == nil {
-		return nil
-	}
-
-	// Build schema mappings from the document's schemas using the x-speakeasy-name-override extension
-	schemaMappings := make(map[string]string)
-	for newName, schema := range doc.Components.Schemas.All() {
-		if schema != nil && schema.IsSchema() {
-			schemaObj := schema.GetSchema()
-			if schemaObj != nil && schemaObj.Extensions != nil {
-				if nameOverrideNode, ok := schemaObj.Extensions.Get("x-speakeasy-name-override"); ok {
-					var originalName string
-					if err := nameOverrideNode.Decode(&originalName); err == nil && originalName != "" {
-						schemaMappings[originalName] = newName
-					}
-				}
-			}
-		}
-	}
-
+// based on the provided mappings of originalName -> newName.
+func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, schemaMappings map[string]string) error {
 	if len(schemaMappings) == 0 {
 		return nil
 	}
