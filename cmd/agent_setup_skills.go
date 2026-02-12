@@ -49,7 +49,6 @@ var skillCatalog = []struct {
 	{"customize-sdk-hooks", "Add custom SDK lifecycle hooks", false},
 	{"setup-sdk-testing", "Set up SDK contract/integration tests", false},
 	{"generate-mcp-server", "Generate an MCP server", false},
-	{"customize-sdk-runtime", "Configure retries, timeouts, pagination", false},
 	{"orchestrate-multi-repo-sdks", "Multi-repo SDK management", false},
 	{"orchestrate-multi-target-sdks", "Multi-language SDK generation", false},
 }
@@ -69,9 +68,9 @@ func installSkills(ctx context.Context, skills []string) error {
 		return err
 	}
 
-	args := []string{"--yes", "skills", "add"}
+	args := []string{"--yes", "skills", "add", "speakeasy-api/skills", "--agent", "*", "-y"}
 	for _, s := range skills {
-		args = append(args, fmt.Sprintf("speakeasy-api/skills/%s", s))
+		args = append(args, "--skill", s)
 	}
 
 	cmd := exec.CommandContext(ctx, "npx", args...)
