@@ -175,20 +175,16 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 		warnings = append(warnings, errs...)
 	}
 
-	// Post-merge: deduplicate operationIds
-	if mergedDoc != nil {
-		deduplicateOperationIds(state, mergedDoc)
-	}
-
-	// Post-merge: collapse namespaced components that are equivalent
-	// (ignoring description/summary differences)
-	if mergedDoc != nil {
-		deduplicateEquivalentComponents(mergedDoc)
-	}
-
 	if mergedDoc == nil {
 		return nil, errors.New("no documents to merge")
 	}
+
+	// Post-merge: deduplicate operationIds
+	deduplicateOperationIds(state, mergedDoc)
+
+	// Post-merge: collapse namespaced components that are equivalent
+	// (ignoring description/summary differences)
+	deduplicateEquivalentComponents(mergedDoc)
 
 	buf := bytes.NewBuffer(nil)
 	var err error

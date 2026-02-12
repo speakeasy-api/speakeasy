@@ -204,6 +204,64 @@ info:
 `,
 		},
 		{
+			name: "three docs no namespaces fragment suffix matches document position",
+			args: args{
+				inSchemas: [][]byte{
+					// Doc 1 (counter=1): only /cats, no conflict yet
+					[]byte(`openapi: 3.1
+paths:
+  /cats:
+    get:
+      operationId: listCats
+      responses:
+        200:
+          description: List cats`),
+					// Doc 2 (counter=2): introduces /pets GET
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV2
+      responses:
+        200:
+          description: List pets v2`),
+					// Doc 3 (counter=3): conflicts with doc 2's /pets GET
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV3
+      responses:
+        200:
+          description: List pets v3`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /cats:
+    get:
+      operationId: listCats
+      responses:
+        200:
+          description: List cats
+  /pets#2:
+    get:
+      operationId: listPetsV2
+      responses:
+        "200":
+          description: List pets v2
+  /pets#3:
+    get:
+      operationId: listPetsV3
+      responses:
+        "200":
+          description: List pets v3
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
 			name: "mixed conflicting and non-conflicting methods",
 			args: args{
 				inSchemas: [][]byte{
