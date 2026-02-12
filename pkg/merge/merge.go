@@ -682,7 +682,7 @@ func stripDescriptiveFields(node *yaml.Node) {
 
 	if node.Kind == yaml.MappingNode {
 		filtered := make([]*yaml.Node, 0, len(node.Content))
-		for i := 0; i < len(node.Content)-1; i += 2 {
+		for i := 0; i+1 < len(node.Content); i += 2 {
 			key := node.Content[i]
 			value := node.Content[i+1]
 			if key.Kind == yaml.ScalarNode && descriptiveFields[key.Value] {
@@ -899,7 +899,7 @@ func stripSpeakeasyExtensions(node *yaml.Node) {
 
 	if node.Kind == yaml.MappingNode {
 		filtered := make([]*yaml.Node, 0, len(node.Content))
-		for i := 0; i < len(node.Content)-1; i += 2 {
+		for i := 0; i+1 < len(node.Content); i += 2 {
 			key := node.Content[i]
 			value := node.Content[i+1]
 			if key.Kind == yaml.ScalarNode &&
