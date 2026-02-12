@@ -49,7 +49,12 @@ func mergeTagsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docN
 
 		if tagsContentEqual(existingTag, newTag) {
 			// Same content, only casing may differ — last one wins (replace in-place)
+			oldName := existingTag.Name
 			mergedDoc.Tags[matchIdx] = newTag
+			// Record rename if the name changed (e.g. casing difference)
+			if oldName != newTag.Name {
+				tagRenames[oldName] = newTag.Name
+			}
 			// Update the tracker entry
 			state.tagTracker[key][matchEntry] = tagEntry{
 				currentName: newTag.Name,

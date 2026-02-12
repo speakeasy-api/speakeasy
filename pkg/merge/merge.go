@@ -238,7 +238,9 @@ func loadOpenAPIDocument(ctx context.Context, data []byte) (*openapi.OpenAPI, er
 func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error) {
 	state := newMergeState()
 	initMergeState(state, mergedDoc, "")
-	return mergeDocumentsWithState(state, mergedDoc, doc, "", 2)
+	merged, errs := mergeDocumentsWithState(state, mergedDoc, doc, "", 2)
+	deduplicateOperationIds(state, merged)
+	return merged, errs
 }
 
 // mergeDocumentsWithState merges two OpenAPI documents with namespace-aware

@@ -246,6 +246,41 @@ func Test_merge_OperationIdDeduplication(t *testing.T) {
 		want string
 	}{
 		{
+			name: "same operationId same content not falsely duplicated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        200:
+          description: OK`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        200:
+          description: OK
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
 			name: "unique operationIds unchanged",
 			args: args{
 				inSchemas: [][]byte{

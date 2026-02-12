@@ -75,6 +75,15 @@ func registerOp(state *mergeState, path string, method openapi.HTTPMethod, names
 
 	if op != nil && op.OperationID != nil && *op.OperationID != "" {
 		opId := *op.OperationID
+		// Remove any existing entry for this path+method to avoid duplicates
+		// when an operation is overwritten during a "same content, last wins" merge.
+		entries := state.opIdTracker[opId]
+		for i, e := range entries {
+			if e.path == path && e.method == method {
+				state.opIdTracker[opId] = append(entries[:i], entries[i+1:]...)
+				break
+			}
+		}
 		state.opIdTracker[opId] = append(state.opIdTracker[opId], opIdEntry{
 			path:      path,
 			method:    method,

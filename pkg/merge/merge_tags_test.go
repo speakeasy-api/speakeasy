@@ -66,6 +66,60 @@ info:
 `,
 		},
 		{
+			name: "different casing same content updates operation tag refs",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: Pet operations
+paths:
+  /pets:
+    get:
+      tags:
+        - Pets
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: pets
+    description: Pet operations
+paths:
+  /dogs:
+    get:
+      tags:
+        - pets
+      responses:
+        200:
+          description: OK`),
+				},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: pets
+    description: Pet operations
+paths:
+  /pets:
+    get:
+      tags:
+        - pets
+      responses:
+        200:
+          description: OK
+  /dogs:
+    get:
+      tags:
+        - pets
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
 			name: "different casing different content gets suffixed without namespaces",
 			args: args{
 				inSchemas: [][]byte{
