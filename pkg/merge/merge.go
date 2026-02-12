@@ -120,6 +120,7 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 
 	var mergedDoc *openapi.OpenAPI
 	var warnings []error
+	state := newMergeState()
 
 	for i, schema := range inSchemas {
 		doc, err := loadOpenAPIDocument(ctx, schema)
@@ -164,12 +165,18 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 
 		if mergedDoc == nil {
 			mergedDoc = doc
+			initMergeState(state, doc, namespace)
 			continue
 		}
 
 		var errs []error
-		mergedDoc, errs = MergeDocuments(mergedDoc, doc)
+		mergedDoc, errs = mergeDocumentsWithState(state, mergedDoc, doc, namespace, i+1)
 		warnings = append(warnings, errs...)
+	}
+
+	// Post-merge: deduplicate operationIds
+	if mergedDoc != nil {
+		deduplicateOperationIds(state, mergedDoc)
 	}
 
 	if mergedDoc == nil {
@@ -226,7 +233,17 @@ func loadOpenAPIDocument(ctx context.Context, data []byte) (*openapi.OpenAPI, er
 }
 
 // MergeDocuments merges two OpenAPI documents into one.
+// This is the public backward-compatible API. For namespace-aware merging,
+// the internal mergeDocumentsWithState is used instead.
 func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error) {
+	state := newMergeState()
+	initMergeState(state, mergedDoc, "")
+	return mergeDocumentsWithState(state, mergedDoc, doc, "", 2)
+}
+
+// mergeDocumentsWithState merges two OpenAPI documents with namespace-aware
+// tag deduplication, path/method conflict disambiguation, and operationId tracking.
+func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docNamespace string, docCounter int) (*openapi.OpenAPI, []error) {
 	mergedVersion, _ := version.NewSemver(mergedDoc.OpenAPI)
 	docVersion, _ := version.NewSemver(doc.OpenAPI)
 	errs := make([]error, 0)
@@ -262,47 +279,15 @@ func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error)
 		mergedDoc.Security = doc.Security
 	}
 
-	// Merge Tags
-	if doc.Tags != nil {
-		if mergedDoc.Tags == nil {
-			mergedDoc.Tags = doc.Tags
-		} else {
-			for _, tag := range doc.Tags {
-				replaced := false
-				for i, mergedTag := range mergedDoc.Tags {
-					if mergedTag.Name == tag.Name {
-						mergedDoc.Tags[i] = tag
-						replaced = true
-						break
-					}
-				}
-				if !replaced {
-					mergedDoc.Tags = append(mergedDoc.Tags, tag)
-				}
-			}
-		}
-	}
+	// Merge Tags (case-insensitive with content-aware disambiguation)
+	tagRenames := mergeTagsWithState(state, mergedDoc, doc, docNamespace, docCounter)
+	// Update operation-level tag references in both docs
+	updateOperationTagRefs(mergedDoc, tagRenames)
+	updateOperationTagRefs(doc, tagRenames)
 
-	// Merge Paths
-	if doc.Paths != nil {
-		if mergedDoc.Paths == nil {
-			mergedDoc.Paths = doc.Paths
-		} else {
-			var extensionErr []error
-			mergedDoc.Paths.Extensions, extensionErr = mergeExtensions(mergedDoc.Paths.Extensions, doc.Paths.Extensions)
-			errs = append(errs, extensionErr...)
-
-			for path, pathItem := range doc.Paths.All() {
-				if mergedPathItem, ok := mergedDoc.Paths.Get(path); !ok {
-					mergedDoc.Paths.Set(path, pathItem)
-				} else {
-					pi, pathItemErrs := mergePathItems(mergedPathItem, pathItem)
-					mergedDoc.Paths.Set(path, pi)
-					errs = append(errs, pathItemErrs...)
-				}
-			}
-		}
-	}
+	// Merge Paths (with method-level conflict detection and fragment disambiguation)
+	pathErrs := mergePathsWithState(state, mergedDoc, doc, docNamespace, docCounter)
+	errs = append(errs, pathErrs...)
 
 	// Merge Components
 	if doc.Components != nil {

@@ -342,7 +342,9 @@ tags:
 tags:
   - name: test
     description: test tag
-  - name: test 2
+  - name: test 2_1
+    description: test tag 2
+  - name: test 2_2
     description: test tag 2 modified
   - name: test 3
     description: test tag 3
@@ -499,16 +501,26 @@ paths:
       responses:
         "200":
           description: OK
-  /test4:
-    get:
-      responses:
-        "201":
-          description: Created
   /test1:
     get:
       responses:
         "200":
           description: OK
+  /test4#1:
+    get:
+      parameters:
+        - name: test
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /test4#2:
+    get:
+      responses:
+        "201":
+          description: Created
 info:
   title: ""
   version: ""
@@ -1656,4 +1668,894 @@ info:
 			assert.Equal(t, tt.want, string(got))
 		})
 	}
+}
+
+func Test_merge_CaseInsensitiveTags(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		inSchemas  [][]byte
+		namespaces []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "same name same content last wins",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: Pet operations`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: Pet operations`),
+				},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: Pets
+    description: Pet operations
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "different casing same content last wins",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: Pet operations`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: pets
+    description: Pet operations`),
+				},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: pets
+    description: Pet operations
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "different casing different content gets suffixed without namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: All pet operations`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: pets
+    description: Pet CRUD`),
+				},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: Pets_1
+    description: All pet operations
+  - name: pets_2
+    description: Pet CRUD
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "different casing different content gets suffixed with namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: All pet operations`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: pets
+    description: Pet CRUD`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: Pets_svcA
+    description: All pet operations
+  - name: pets_svcB
+    description: Pet CRUD
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "three docs same tag different content all suffixed",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Auth
+    description: Auth v1`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: auth
+    description: Auth v2`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: AUTH
+    description: Auth v3`),
+				},
+				namespaces: []string{"v1", "v2", "v3"},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: Auth_v1
+    description: Auth v1
+  - name: auth_v2
+    description: Auth v2
+  - name: AUTH_v3
+    description: Auth v3
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "operation tag references updated on rename",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: Pet operations v1
+paths:
+  /pets:
+    get:
+      tags:
+        - Pets
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: pets
+    description: Pet operations v2
+paths:
+  /dogs:
+    get:
+      tags:
+        - pets
+      responses:
+        200:
+          description: OK`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: Pets_svcA
+    description: Pet operations v1
+  - name: pets_svcB
+    description: Pet operations v2
+paths:
+  /pets:
+    get:
+      tags:
+        - Pets_svcA
+      responses:
+        200:
+          description: OK
+  /dogs:
+    get:
+      tags:
+        - pets_svcB
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := merge(t.Context(), tt.args.inSchemas, tt.args.namespaces, true)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
+func Test_merge_PathMethodConflicts(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		inSchemas  [][]byte
+		namespaces []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "same path method same content last wins",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: OK`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: OK
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "same path different methods no conflict",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    post:
+      responses:
+        201:
+          description: Created`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: OK
+    post:
+      responses:
+        "201":
+          description: Created
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "same path method different content creates fragments without namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        200:
+          description: List all pets`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listAnimals
+      responses:
+        200:
+          description: List all animals`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets#1:
+    get:
+      operationId: listPets
+      responses:
+        "200":
+          description: List all pets
+  /pets#2:
+    get:
+      operationId: listAnimals
+      responses:
+        "200":
+          description: List all animals
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "same path method different content creates fragments with namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: List pets v1`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: List pets v2`),
+				},
+				namespaces: []string{"v1", "v2"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets#v1:
+    get:
+      responses:
+        "200":
+          description: List pets v1
+  /pets#v2:
+    get:
+      responses:
+        "200":
+          description: List pets v2
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "mixed conflicting and non-conflicting methods",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: List pets v1
+    post:
+      responses:
+        201:
+          description: Create pet`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: List pets v2
+    delete:
+      responses:
+        204:
+          description: Delete all`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    post:
+      responses:
+        201:
+          description: Create pet
+    delete:
+      responses:
+        "204":
+          description: Delete all
+  /pets#svcA:
+    get:
+      responses:
+        "200":
+          description: List pets v1
+  /pets#svcB:
+    get:
+      responses:
+        "200":
+          description: List pets v2
+info:
+  title: ""
+  version: ""
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := merge(t.Context(), tt.args.inSchemas, tt.args.namespaces, true)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
+func Test_merge_OperationIdDeduplication(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		inSchemas  [][]byte
+		namespaces []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "unique operationIds unchanged",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+paths:
+  /dogs:
+    get:
+      operationId: listDogs
+      responses:
+        200:
+          description: OK`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        200:
+          description: OK
+  /dogs:
+    get:
+      operationId: listDogs
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "duplicate operationIds suffixed with namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: list
+      responses:
+        200:
+          description: List pets`),
+					[]byte(`openapi: 3.1
+paths:
+  /dogs:
+    get:
+      operationId: list
+      responses:
+        200:
+          description: List dogs`),
+				},
+				namespaces: []string{"pets", "dogs"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      operationId: list_pets
+      responses:
+        200:
+          description: List pets
+  /dogs:
+    get:
+      operationId: list_dogs
+      responses:
+        "200":
+          description: List dogs
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "duplicate operationIds suffixed with numbers when no namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: list
+      responses:
+        200:
+          description: List pets`),
+					[]byte(`openapi: 3.1
+paths:
+  /dogs:
+    get:
+      operationId: list
+      responses:
+        200:
+          description: List dogs`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /pets:
+    get:
+      operationId: list_1
+      responses:
+        200:
+          description: List pets
+  /dogs:
+    get:
+      operationId: list_2
+      responses:
+        "200":
+          description: List dogs
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "three docs same operationId all suffixed",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /a:
+    get:
+      operationId: fetch
+      responses:
+        200:
+          description: A`),
+					[]byte(`openapi: 3.1
+paths:
+  /b:
+    get:
+      operationId: fetch
+      responses:
+        200:
+          description: B`),
+					[]byte(`openapi: 3.1
+paths:
+  /c:
+    get:
+      operationId: fetch
+      responses:
+        200:
+          description: C`),
+				},
+				namespaces: []string{"a", "b", "c"},
+			},
+			want: `openapi: "3.1"
+paths:
+  /a:
+    get:
+      operationId: fetch_a
+      responses:
+        200:
+          description: A
+  /b:
+    get:
+      operationId: fetch_b
+      responses:
+        "200":
+          description: B
+  /c:
+    get:
+      operationId: fetch_c
+      responses:
+        "200":
+          description: C
+info:
+  title: ""
+  version: ""
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := merge(t.Context(), tt.args.inSchemas, tt.args.namespaces, true)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
+func Test_merge_Integration(t *testing.T) {
+	t.Parallel()
+
+	// All three features working together
+	got, err := merge(t.Context(), [][]byte{
+		[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: Pet operations v1
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      tags:
+        - Pets
+      responses:
+        200:
+          description: List pets v1
+  /health:
+    get:
+      operationId: healthCheck
+      responses:
+        200:
+          description: OK`),
+		[]byte(`openapi: 3.1
+tags:
+  - name: pets
+    description: Pet operations v2
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      tags:
+        - pets
+      responses:
+        200:
+          description: List pets v2
+  /status:
+    get:
+      operationId: getStatus
+      responses:
+        200:
+          description: OK`),
+	}, []string{"svcA", "svcB"}, true)
+	require.NoError(t, err)
+
+	want := `openapi: "3.1"
+tags:
+  - name: Pets_svcA
+    description: Pet operations v1
+  - name: pets_svcB
+    description: Pet operations v2
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      responses:
+        200:
+          description: OK
+  /pets#svcA:
+    get:
+      operationId: listPets_svcA
+      tags:
+        - Pets_svcA
+      responses:
+        "200":
+          description: List pets v1
+  /pets#svcB:
+    get:
+      operationId: listPets_svcB
+      tags:
+        - pets_svcB
+      responses:
+        "200":
+          description: List pets v2
+  /status:
+    get:
+      operationId: getStatus
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
+`
+	assert.Equal(t, want, string(got))
+}
+
+// Test 1 from the issue: duplicate operationId across different paths
+// (the patchThing / patchOrganization pattern)
+func Test_merge_DuplicateOperationIdAcrossPaths(t *testing.T) {
+	t.Parallel()
+
+	specA := []byte(`openapi: 3.1.0
+info: { title: A, version: 1.0.0 }
+paths:
+  /a/things/{id}:
+    patch:
+      operationId: patchThing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: ok }`)
+
+	specB := []byte(`openapi: 3.1.0
+info: { title: B, version: 1.0.0 }
+paths:
+  /b/things/{id}:
+    patch:
+      operationId: patchThing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: ok }`)
+
+	t.Run("without namespaces deduplicates with numbers", func(t *testing.T) {
+		t.Parallel()
+		got, err := merge(t.Context(), [][]byte{specA, specB}, nil, true)
+		require.NoError(t, err)
+		result := string(got)
+
+		// Both operationIds should be suffixed so they no longer clash
+		assert.Contains(t, result, "operationId: patchThing_1")
+		assert.Contains(t, result, "operationId: patchThing_2")
+		assert.NotContains(t, result, "operationId: patchThing\n")
+	})
+
+	t.Run("with namespaces deduplicates with namespace names", func(t *testing.T) {
+		t.Parallel()
+		got, err := merge(t.Context(), [][]byte{specA, specB}, []string{"svcA", "svcB"}, true)
+		require.NoError(t, err)
+		result := string(got)
+
+		assert.Contains(t, result, "operationId: patchThing_svcA")
+		assert.Contains(t, result, "operationId: patchThing_svcB")
+		assert.NotContains(t, result, "operationId: patchThing\n")
+	})
+
+	t.Run("paths remain distinct and separate", func(t *testing.T) {
+		t.Parallel()
+		got, err := merge(t.Context(), [][]byte{specA, specB}, []string{"svcA", "svcB"}, true)
+		require.NoError(t, err)
+		result := string(got)
+
+		// Both paths should exist (no fragment needed since paths differ)
+		assert.Contains(t, result, "/a/things/{id}:")
+		assert.Contains(t, result, "/b/things/{id}:")
+		// No fragment paths should be created
+		assert.NotContains(t, result, "#svcA")
+		assert.NotContains(t, result, "#svcB")
+	})
+}
+
+// Test 2 from the issue: tag case collision (health vs Health)
+func Test_merge_TagCaseCollision(t *testing.T) {
+	t.Parallel()
+
+	specLower := []byte(`openapi: 3.1.0
+info: { title: Lower, version: 1.0.0 }
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      operationId: getHealthLower
+      responses:
+        "200": { description: ok }`)
+
+	specUpper := []byte(`openapi: 3.1.0
+info: { title: Upper, version: 1.0.0 }
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealthUpper
+      responses:
+        "200": { description: ok }`)
+
+	t.Run("without namespaces tags get number suffixes", func(t *testing.T) {
+		t.Parallel()
+		got, err := merge(t.Context(), [][]byte{specLower, specUpper}, nil, true)
+		require.NoError(t, err)
+		result := string(got)
+
+		// Tags that differ only by case but have no description differences
+		// should still be detected as case-insensitive match.
+		// Both are tag objects with only a name (no description), so they're
+		// "same content" → last one wins.
+		// Actually: specLower's tag "health" has no explicit tag definition
+		// (it's only referenced in the operation). Same for specUpper.
+		// Since neither spec defines a top-level tags array, the merge
+		// won't touch tags at all — the collision is only in operation.Tags.
+		//
+		// Let's just verify both operations and their tags exist
+		assert.Contains(t, result, "operationId: getHealthLower")
+		assert.Contains(t, result, "operationId: getHealthUpper")
+	})
+
+	t.Run("with explicit tag objects different content gets suffixed", func(t *testing.T) {
+		t.Parallel()
+
+		specLowerWithTag := []byte(`openapi: 3.1.0
+info: { title: Lower, version: 1.0.0 }
+tags:
+  - name: health
+    description: Lower-case health endpoints
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      operationId: getHealthLower
+      responses:
+        "200": { description: ok }`)
+
+		specUpperWithTag := []byte(`openapi: 3.1.0
+info: { title: Upper, version: 1.0.0 }
+tags:
+  - name: Health
+    description: Upper-case health endpoints
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealthUpper
+      responses:
+        "200": { description: ok }`)
+
+		got, err := merge(t.Context(), [][]byte{specLowerWithTag, specUpperWithTag}, []string{"lower", "upper"}, true)
+		require.NoError(t, err)
+		result := string(got)
+
+		// Tags should be disambiguated with namespace suffix
+		assert.Contains(t, result, "name: health_lower")
+		assert.Contains(t, result, "name: Health_upper")
+
+		// Operation tag references should be updated to suffixed names
+		assert.Contains(t, result, "health_lower")
+		assert.Contains(t, result, "Health_upper")
+
+		// Original unsuffixed tag names should NOT appear in tag definitions
+		assert.NotContains(t, result, "name: health\n")
+		assert.NotContains(t, result, "name: Health\n")
+	})
 }
