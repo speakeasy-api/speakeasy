@@ -120,7 +120,7 @@ info:
 `,
 		},
 		{
-			name: "different casing different content gets suffixed without namespaces",
+			name: "different casing description-only diff is treated as equivalent",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
@@ -135,9 +135,7 @@ tags:
 			},
 			want: `openapi: "3.1"
 tags:
-  - name: Pets_1
-    description: All pet operations
-  - name: pets_2
+  - name: pets
     description: Pet CRUD
 info:
   title: ""
@@ -145,7 +143,7 @@ info:
 `,
 		},
 		{
-			name: "different casing different content gets suffixed with namespaces",
+			name: "different casing description-only diff is treated as equivalent with namespaces",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
@@ -161,9 +159,7 @@ tags:
 			},
 			want: `openapi: "3.1"
 tags:
-  - name: Pets_svcA
-    description: All pet operations
-  - name: pets_svcB
+  - name: pets
     description: Pet CRUD
 info:
   title: ""
@@ -171,7 +167,7 @@ info:
 `,
 		},
 		{
-			name: "three docs same tag different content all suffixed",
+			name: "three docs same tag description-only diff last wins",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
@@ -191,11 +187,7 @@ tags:
 			},
 			want: `openapi: "3.1"
 tags:
-  - name: Auth_v1
-    description: Auth v1
-  - name: auth_v2
-    description: Auth v2
-  - name: AUTH_v3
+  - name: AUTH
     description: Auth v3
 info:
   title: ""
@@ -203,13 +195,44 @@ info:
 `,
 		},
 		{
-			name: "operation tag references updated on rename",
+			name: "different casing different content gets suffixed with namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+tags:
+  - name: Pets
+    description: All pet operations
+    x-custom: v1`),
+					[]byte(`openapi: 3.1
+tags:
+  - name: pets
+    description: Pet CRUD
+    x-custom: v2`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+tags:
+  - name: Pets_svcA
+    description: All pet operations
+    x-custom: v1
+  - name: pets_svcB
+    description: Pet CRUD
+    x-custom: v2
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "operation tag references updated on rename when content differs",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
 tags:
   - name: Pets
     description: Pet operations v1
+    x-group: alpha
 paths:
   /pets:
     get:
@@ -222,6 +245,7 @@ paths:
 tags:
   - name: pets
     description: Pet operations v2
+    x-group: beta
 paths:
   /dogs:
     get:
@@ -237,8 +261,10 @@ paths:
 tags:
   - name: Pets_svcA
     description: Pet operations v1
+    x-group: alpha
   - name: pets_svcB
     description: Pet operations v2
+    x-group: beta
 paths:
   /pets:
     get:
@@ -315,7 +341,7 @@ paths:
 		assert.Contains(t, result, "operationId: getHealthUpper")
 	})
 
-	t.Run("with explicit tag objects different content gets suffixed", func(t *testing.T) {
+	t.Run("with explicit tag objects description-only diff treated as equivalent", func(t *testing.T) {
 		t.Parallel()
 
 		specLowerWithTag := []byte(`openapi: 3.1.0
@@ -348,16 +374,57 @@ paths:
 		require.NoError(t, err)
 		result := string(got)
 
-		// Tags should be disambiguated with namespace suffix
+		// Tags that differ only by description are now treated as equivalent
+		// (last one wins), so no suffixing should occur
+		assert.Contains(t, result, "name: Health")
+		assert.Contains(t, result, "Upper-case health endpoints")
+
+		// Both operations should exist and reference the winning tag name
+		assert.Contains(t, result, "operationId: getHealthLower")
+		assert.Contains(t, result, "operationId: getHealthUpper")
+	})
+
+	t.Run("with explicit tag objects truly different content gets suffixed", func(t *testing.T) {
+		t.Parallel()
+
+		specLowerWithTag := []byte(`openapi: 3.1.0
+info: { title: Lower, version: 1.0.0 }
+tags:
+  - name: health
+    description: Lower-case health endpoints
+    x-group: infra
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      operationId: getHealthLower
+      responses:
+        "200": { description: ok }`)
+
+		specUpperWithTag := []byte(`openapi: 3.1.0
+info: { title: Upper, version: 1.0.0 }
+tags:
+  - name: Health
+    description: Upper-case health endpoints
+    x-group: monitoring
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealthUpper
+      responses:
+        "200": { description: ok }`)
+
+		got, err := merge(t.Context(), [][]byte{specLowerWithTag, specUpperWithTag}, []string{"lower", "upper"}, true)
+		require.NoError(t, err)
+		result := string(got)
+
+		// Tags differ in extensions, so they should be suffixed
 		assert.Contains(t, result, "name: health_lower")
 		assert.Contains(t, result, "name: Health_upper")
 
 		// Operation tag references should be updated to suffixed names
 		assert.Contains(t, result, "health_lower")
 		assert.Contains(t, result, "Health_upper")
-
-		// Original unsuffixed tag names should NOT appear in tag definitions
-		assert.NotContains(t, result, "name: health\n")
-		assert.NotContains(t, result, "name: Health\n")
 	})
 }

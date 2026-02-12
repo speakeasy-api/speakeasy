@@ -129,7 +129,7 @@ info:
 `,
 		},
 		{
-			name: "same path method different content creates fragments with namespaces",
+			name: "same path method description-only diff treated as equivalent with namespaces",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
@@ -151,16 +151,111 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: List pets v2
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "same path method different content creates fragments with namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV1
+      responses:
+        200:
+          description: List pets v1`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV2
+      responses:
+        200:
+          description: List pets v2`),
+				},
+				namespaces: []string{"v1", "v2"},
+			},
+			want: `openapi: "3.1"
+paths:
   /pets#v1:
     get:
+      operationId: listPetsV1
       responses:
         "200":
           description: List pets v1
   /pets#v2:
     get:
+      operationId: listPetsV2
       responses:
         "200":
           description: List pets v2
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "three docs no namespaces fragment suffix matches document position",
+			args: args{
+				inSchemas: [][]byte{
+					// Doc 1 (counter=1): only /cats, no conflict yet
+					[]byte(`openapi: 3.1
+paths:
+  /cats:
+    get:
+      operationId: listCats
+      responses:
+        200:
+          description: List cats`),
+					// Doc 2 (counter=2): introduces /pets GET
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV2
+      responses:
+        200:
+          description: List pets v2`),
+					// Doc 3 (counter=3): conflicts with doc 2's /pets GET
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV3
+      responses:
+        200:
+          description: List pets v3`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /cats:
+    get:
+      operationId: listCats
+      responses:
+        200:
+          description: List cats
+  /pets#2:
+    get:
+      operationId: listPetsV2
+      responses:
+        "200":
+          description: List pets v2
+  /pets#3:
+    get:
+      operationId: listPetsV3
+      responses:
+        "200":
+          description: List pets v3
 info:
   title: ""
   version: ""
@@ -174,6 +269,7 @@ info:
 paths:
   /pets:
     get:
+      operationId: listPetsV1
       responses:
         200:
           description: List pets v1
@@ -185,6 +281,7 @@ paths:
 paths:
   /pets:
     get:
+      operationId: listPetsV2
       responses:
         200:
           description: List pets v2
@@ -208,11 +305,13 @@ paths:
           description: Delete all
   /pets#svcA:
     get:
+      operationId: listPetsV1
       responses:
         "200":
           description: List pets v1
   /pets#svcB:
     get:
+      operationId: listPetsV2
       responses:
         "200":
           description: List pets v2

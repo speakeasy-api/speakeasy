@@ -15,8 +15,8 @@ type mergeState struct {
 	// distinct tag with that name (possibly suffixed).
 	tagTracker map[string][]tagEntry
 
-	// opTracker maps "path|method" → namespace that contributed it.
-	opTracker map[string]string
+	// opTracker maps "path|method" → provenance of the document that contributed it.
+	opTracker map[string]opProvenance
 
 	// opIdTracker maps operationId → list of locations using that id.
 	opIdTracker map[string][]opIdEntry
@@ -29,6 +29,12 @@ type tagEntry struct {
 	suffixed    bool   // whether this entry has already been disambiguated
 }
 
+// opProvenance records which document contributed an operation.
+type opProvenance struct {
+	namespace string
+	counter   int
+}
+
 // opIdEntry tracks a single operationId occurrence.
 type opIdEntry struct {
 	path      string
@@ -39,7 +45,7 @@ type opIdEntry struct {
 func newMergeState() *mergeState {
 	return &mergeState{
 		tagTracker:  make(map[string][]tagEntry),
-		opTracker:   make(map[string]string),
+		opTracker:   make(map[string]opProvenance),
 		opIdTracker: make(map[string][]opIdEntry),
 	}
 }
@@ -62,16 +68,16 @@ func initMergeState(state *mergeState, doc *openapi.OpenAPI, namespace string) {
 				continue
 			}
 			for method, op := range pathItem.Object.All() {
-				registerOp(state, path, method, namespace, op)
+				registerOp(state, path, method, namespace, 1, op)
 			}
 		}
 	}
 }
 
 // registerOp registers an operation in both the opTracker and opIdTracker.
-func registerOp(state *mergeState, path string, method openapi.HTTPMethod, namespace string, op *openapi.Operation) {
+func registerOp(state *mergeState, path string, method openapi.HTTPMethod, namespace string, counter int, op *openapi.Operation) {
 	pmKey := pathMethodKey(path, method)
-	state.opTracker[pmKey] = namespace
+	state.opTracker[pmKey] = opProvenance{namespace: namespace, counter: counter}
 
 	if op != nil && op.OperationID != nil && *op.OperationID != "" {
 		opId := *op.OperationID
@@ -100,7 +106,7 @@ func unregisterOp(state *mergeState, path string, method openapi.HTTPMethod, op 
 	}
 	opId := *op.OperationID
 	entries := state.opIdTracker[opId]
-	filtered := entries[:0]
+	filtered := make([]opIdEntry, 0, len(entries))
 	for _, e := range entries {
 		if e.path == path && e.method == method {
 			continue

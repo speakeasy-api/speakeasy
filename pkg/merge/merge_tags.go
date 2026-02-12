@@ -115,8 +115,8 @@ func findCounterForEntry(_ []tagEntry, idx int) int {
 	return idx + 1
 }
 
-// tagsContentEqual compares two tags ignoring the Name field.
-// Returns true if all other fields (Description, Summary, ExternalDocs,
+// tagsContentEqual compares two tags ignoring the Name, Description, and
+// Summary fields. Returns true if all other fields (ExternalDocs,
 // Extensions, Parent, Kind) are equivalent.
 func tagsContentEqual(a, b *openapi.Tag) bool {
 	if a == nil && b == nil {
@@ -126,13 +126,8 @@ func tagsContentEqual(a, b *openapi.Tag) bool {
 		return false
 	}
 
-	// Compare pointer string fields
-	if !ptrStringEqual(a.Summary, b.Summary) {
-		return false
-	}
-	if !ptrStringEqual(a.Description, b.Description) {
-		return false
-	}
+	// Compare pointer string fields (skip Summary and Description as they
+	// are descriptive-only and shouldn't cause merge conflicts)
 	if !ptrStringEqual(a.Parent, b.Parent) {
 		return false
 	}

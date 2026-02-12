@@ -22,7 +22,7 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 				continue
 			}
 			for method, op := range pathItem.Object.All() {
-				registerOp(state, path, method, docNamespace, op)
+				registerOp(state, path, method, docNamespace, docCounter, op)
 			}
 		}
 		return errs
@@ -40,7 +40,7 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 			mergedDoc.Paths.Set(path, pathItem)
 			if pathItem != nil && pathItem.Object != nil {
 				for method, op := range pathItem.Object.All() {
-					registerOp(state, path, method, docNamespace, op)
+					registerOp(state, path, method, docNamespace, docCounter, op)
 				}
 			}
 			continue
@@ -53,7 +53,7 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 			mergedDoc.Paths.Set(path, pathItem)
 			if pathItem.Object != nil {
 				for method, op := range pathItem.Object.All() {
-					registerOp(state, path, method, docNamespace, op)
+					registerOp(state, path, method, docNamespace, docCounter, op)
 				}
 			}
 			continue
@@ -82,7 +82,7 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 			errs = append(errs, pathItemErrs...)
 			// Register new operations
 			for method, op := range pathItem.Object.All() {
-				registerOp(state, path, method, docNamespace, op)
+				registerOp(state, path, method, docNamespace, docCounter, op)
 			}
 			continue
 		}
@@ -99,7 +99,7 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 				continue
 			}
 			mergedPathItem.Object.Set(method, op)
-			registerOp(state, path, method, docNamespace, op)
+			registerOp(state, path, method, docNamespace, docCounter, op)
 		}
 
 		// Also merge non-operation fields from the incoming path item
@@ -122,19 +122,19 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 			existingOp := mergedPathItem.Object.GetOperation(method)
 			incomingOp := pathItem.Object.GetOperation(method)
 
-			existingNamespace := state.opTracker[pathMethodKey(path, method)]
+			existing := state.opTracker[pathMethodKey(path, method)]
 
 			// Unregister the existing operation from its original path before moving
 			unregisterOp(state, path, method, existingOp)
 
 			// Move existing operation to a fragment path
-			existingSuffix := disambiguatingSuffix(existingNamespace, findOpCounter(state, path, method, existingNamespace))
+			existingSuffix := disambiguatingSuffix(existing.namespace, existing.counter)
 			existingFragPath := path + "#" + existingSuffix
 			if _, alreadyMoved := mergedDoc.Paths.Get(existingFragPath); !alreadyMoved {
 				existingFragItem := openapi.NewPathItem()
 				existingFragItem.Set(method, existingOp)
 				mergedDoc.Paths.Set(existingFragPath, openapi.NewReferencedPathItemFromPathItem(existingFragItem))
-				registerOp(state, existingFragPath, method, existingNamespace, existingOp)
+				registerOp(state, existingFragPath, method, existing.namespace, existing.counter, existingOp)
 			}
 
 			// Create fragment path for incoming operation
@@ -143,7 +143,7 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 			incomingFragItem := openapi.NewPathItem()
 			incomingFragItem.Set(method, incomingOp)
 			mergedDoc.Paths.Set(incomingFragPath, openapi.NewReferencedPathItemFromPathItem(incomingFragItem))
-			registerOp(state, incomingFragPath, method, docNamespace, incomingOp)
+			registerOp(state, incomingFragPath, method, docNamespace, docCounter, incomingOp)
 
 			// Remove conflicting method from original path
 			mergedPathItem.Object.Map.Delete(method)
@@ -156,16 +156,6 @@ func mergePathsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, doc
 	}
 
 	return errs
-}
-
-// findOpCounter determines a counter value for an operation based on its position
-// among tracked operations for the same path+method.
-func findOpCounter(state *mergeState, path string, method openapi.HTTPMethod, namespace string) int {
-	_ = state
-	_ = path
-	_ = method
-	_ = namespace
-	return 1
 }
 
 // deduplicateOperationIds performs a post-merge pass to suffix duplicate operationIds.
