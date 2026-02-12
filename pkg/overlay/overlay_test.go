@@ -73,6 +73,7 @@ func TestApply_StrictFailure(t *testing.T) {
 
 	tmpFile, err := os.CreateTemp(t.TempDir(), "output.yaml")
 	require.NoError(t, err)
+	defer tmpFile.Close()
 	_, err = Apply(schemaFile, overlayStrictFailure, true, tmpFile, true, true)
 	assert.Errorf(t, err, "unknown-element")
 }

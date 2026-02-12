@@ -342,7 +342,9 @@ tags:
 tags:
   - name: test
     description: test tag
-  - name: test 2
+  - name: test 2_1
+    description: test tag 2
+  - name: test 2_2
     description: test tag 2 modified
   - name: test 3
     description: test tag 3
@@ -499,16 +501,26 @@ paths:
       responses:
         "200":
           description: OK
-  /test4:
-    get:
-      responses:
-        "201":
-          description: Created
   /test1:
     get:
       responses:
         "200":
           description: OK
+  /test4#1:
+    get:
+      parameters:
+        - name: test
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /test4#2:
+    get:
+      responses:
+        "201":
+          description: Created
 info:
   title: ""
   version: ""
