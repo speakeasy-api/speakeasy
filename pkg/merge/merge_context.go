@@ -106,7 +106,7 @@ func unregisterOp(state *mergeState, path string, method openapi.HTTPMethod, op 
 	}
 	opId := *op.OperationID
 	entries := state.opIdTracker[opId]
-	filtered := entries[:0]
+	filtered := make([]opIdEntry, 0, len(entries))
 	for _, e := range entries {
 		if e.path == path && e.method == method {
 			continue
