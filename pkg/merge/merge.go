@@ -349,10 +349,6 @@ func mergeReferencedPathItems(mergedPathItem, pathItem *openapi.ReferencedPathIt
 	return mergedPathItem, errs
 }
 
-func mergePathItems(mergedPathItem, pathItem *openapi.ReferencedPathItem) (*openapi.ReferencedPathItem, []error) {
-	return mergeReferencedPathItems(mergedPathItem, pathItem)
-}
-
 func mergePathItemObjects(mergedPathItem, pathItem *openapi.PathItem) (*openapi.PathItem, []error) {
 	var errs []error
 

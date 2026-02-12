@@ -106,7 +106,7 @@ func findTagInMergedDoc(mergedDoc *openapi.OpenAPI, entries []tagEntry) (int, in
 
 // findCounterForEntry returns a 1-based counter position for the entry,
 // used when no namespace is available.
-func findCounterForEntry(entries []tagEntry, idx int) int {
+func findCounterForEntry(_ []tagEntry, idx int) int {
 	return idx + 1
 }
 
@@ -136,22 +136,24 @@ func tagsContentEqual(a, b *openapi.Tag) bool {
 	}
 
 	// Compare ExternalDocs
-	if a.ExternalDocs == nil && b.ExternalDocs == nil {
+	switch {
+	case a.ExternalDocs == nil && b.ExternalDocs == nil:
 		// both nil, ok
-	} else if a.ExternalDocs == nil || b.ExternalDocs == nil {
+	case a.ExternalDocs == nil || b.ExternalDocs == nil:
 		return false
-	} else {
+	default:
 		if err := isReferencedEquivalent(a.ExternalDocs, b.ExternalDocs); err != nil {
 			return false
 		}
 	}
 
 	// Compare Extensions
-	if a.Extensions == nil && b.Extensions == nil {
+	switch {
+	case a.Extensions == nil && b.Extensions == nil:
 		// both nil, ok
-	} else if a.Extensions == nil || b.Extensions == nil {
+	case a.Extensions == nil || b.Extensions == nil:
 		return false
-	} else {
+	default:
 		if err := isReferencedEquivalent(a.Extensions, b.Extensions); err != nil {
 			return false
 		}
