@@ -342,9 +342,7 @@ tags:
 tags:
   - name: test
     description: test tag
-  - name: test 2_1
-    description: test tag 2
-  - name: test 2_2
+  - name: test 2
     description: test tag 2 modified
   - name: test 3
     description: test tag 3
@@ -822,6 +820,79 @@ webhooks:
       responses:
         "200":
           description: OK
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "security schemes differing only in description are equivalent",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: OAuth 2.0 Bearer token from Identity Broker.
+      scheme: bearer
+      bearerFormat: OAuth2 Access Token`),
+					[]byte(`openapi: 3.1
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: Bearer token authentication for service accounts.
+      scheme: bearer
+      bearerFormat: OAuth2 Access Token`),
+				},
+			},
+			want: `openapi: "3.1"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: Bearer token authentication for service accounts.
+      scheme: bearer
+      bearerFormat: OAuth2 Access Token
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "schemas differing only in description are equivalent",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Pet:
+      type: object
+      description: A pet in the store
+      properties:
+        name:
+          type: string`),
+					[]byte(`openapi: 3.1
+components:
+  schemas:
+    Pet:
+      type: object
+      description: A pet object
+      properties:
+        name:
+          type: string`),
+				},
+			},
+			want: `openapi: "3.1"
+components:
+  schemas:
+    Pet:
+      type: object
+      description: A pet object
+      properties:
+        name:
+          type: string
 info:
   title: ""
   version: ""
@@ -1500,6 +1571,48 @@ components:
       scheme: bearer
       x-speakeasy-name-override: bearerAuth
       x-speakeasy-model-namespace: v1
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "equivalent security schemes from different namespaces are deduplicated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: OAuth 2.0 Bearer token from Identity Broker.
+      scheme: bearer
+      bearerFormat: OAuth2 Access Token`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: Bearer token for service accounts.
+      scheme: bearer
+      bearerFormat: OAuth2 Access Token`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: Bearer token for service accounts.
+      scheme: bearer
+      bearerFormat: OAuth2 Access Token
 info:
   title: ""
   version: ""

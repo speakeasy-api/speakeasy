@@ -53,35 +53,27 @@ paths:
 	}, []string{"svcA", "svcB"}, true)
 	require.NoError(t, err)
 
+	// Tags and operations that differ only in description/summary (and tag casing)
+	// are treated as equivalent — last wins, no suffixing or path fragments.
 	want := `openapi: "3.1"
 tags:
-  - name: Pets_svcA
-    description: Pet operations v1
-  - name: pets_svcB
+  - name: pets
     description: Pet operations v2
 paths:
+  /pets:
+    get:
+      operationId: listPets
+      tags:
+        - pets
+      responses:
+        200:
+          description: List pets v2
   /health:
     get:
       operationId: healthCheck
       responses:
         200:
           description: OK
-  /pets#svcA:
-    get:
-      operationId: listPets_svcA
-      tags:
-        - Pets_svcA
-      responses:
-        "200":
-          description: List pets v1
-  /pets#svcB:
-    get:
-      operationId: listPets_svcB
-      tags:
-        - pets_svcB
-      responses:
-        "200":
-          description: List pets v2
   /status:
     get:
       operationId: getStatus

@@ -129,7 +129,7 @@ info:
 `,
 		},
 		{
-			name: "same path method different content creates fragments with namespaces",
+			name: "same path method description-only diff treated as equivalent with namespaces",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
@@ -151,13 +151,50 @@ paths:
 			},
 			want: `openapi: "3.1"
 paths:
+  /pets:
+    get:
+      responses:
+        200:
+          description: List pets v2
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "same path method different content creates fragments with namespaces",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV1
+      responses:
+        200:
+          description: List pets v1`),
+					[]byte(`openapi: 3.1
+paths:
+  /pets:
+    get:
+      operationId: listPetsV2
+      responses:
+        200:
+          description: List pets v2`),
+				},
+				namespaces: []string{"v1", "v2"},
+			},
+			want: `openapi: "3.1"
+paths:
   /pets#v1:
     get:
+      operationId: listPetsV1
       responses:
         "200":
           description: List pets v1
   /pets#v2:
     get:
+      operationId: listPetsV2
       responses:
         "200":
           description: List pets v2
@@ -174,6 +211,7 @@ info:
 paths:
   /pets:
     get:
+      operationId: listPetsV1
       responses:
         200:
           description: List pets v1
@@ -185,6 +223,7 @@ paths:
 paths:
   /pets:
     get:
+      operationId: listPetsV2
       responses:
         200:
           description: List pets v2
@@ -208,11 +247,13 @@ paths:
           description: Delete all
   /pets#svcA:
     get:
+      operationId: listPetsV1
       responses:
         "200":
           description: List pets v1
   /pets#svcB:
     get:
+      operationId: listPetsV2
       responses:
         "200":
           description: List pets v2
