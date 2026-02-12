@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -32,26 +31,7 @@ var agentSetupSkillsCmd = &model.ExecutableCommand[AgentSetupSkillsFlags]{
 	},
 }
 
-var skillCatalog = []struct {
-	ID          string
-	Label       string
-	Preselected bool
-}{
-	{"speakeasy-context", "Session bootstrap: always run agent context first", true},
-	{"start-new-sdk-project", "Generate a new SDK from an OpenAPI spec", false},
-	{"diagnose-generation-failure", "Diagnose SDK generation errors", false},
-	{"configure-sdk-options", "Configure gen.yaml for SDK targets", false},
-	{"writing-openapi-specs", "Author or improve OpenAPI specs", false},
-	{"manage-openapi-overlays", "Create and apply OpenAPI overlays", false},
-	{"improve-sdk-naming", "AI-powered SDK naming suggestions", false},
-	{"generate-terraform-provider", "Generate Terraform provider", false},
-	{"extract-openapi-from-code", "Extract OpenAPI spec from code", false},
-	{"customize-sdk-hooks", "Add custom SDK lifecycle hooks", false},
-	{"setup-sdk-testing", "Set up SDK contract/integration tests", false},
-	{"generate-mcp-server", "Generate an MCP server", false},
-	{"orchestrate-multi-repo-sdks", "Multi-repo SDK management", false},
-	{"orchestrate-multi-target-sdks", "Multi-language SDK generation", false},
-}
+const skillsRepo = "speakeasy-api/skills"
 
 func checkNpxAvailable() error {
 	_, err := exec.LookPath("npx")
@@ -63,35 +43,43 @@ func checkNpxAvailable() error {
 	return nil
 }
 
-func installSkills(ctx context.Context, skills []string) error {
-	if err := checkNpxAvailable(); err != nil {
-		return err
-	}
+func runNpxSkills(ctx context.Context, args ...string) error {
+	fullArgs := append([]string{"--yes", "skills"}, args...)
 
-	args := []string{"--yes", "skills", "add", "speakeasy-api/skills", "--agent", "*", "-y"}
-	for _, s := range skills {
-		args = append(args, "--skill", s)
-	}
+	log.From(ctx).Infof("Running: npx %s", fmt.Sprintf("skills %s", joinArgs(args)))
 
-	cmd := exec.CommandContext(ctx, "npx", args...)
+	cmd := exec.CommandContext(ctx, "npx", fullArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
 	return cmd.Run()
 }
 
+func joinArgs(args []string) string {
+	result := ""
+	for i, a := range args {
+		if i > 0 {
+			result += " "
+		}
+		result += a
+	}
+	return result
+}
+
 func runSetupSkills(ctx context.Context, flags AgentSetupSkillsFlags) error {
 	if flags.Auto {
-		defaultSkills := []string{}
-		for _, s := range skillCatalog {
-			if s.Preselected {
-				defaultSkills = append(defaultSkills, s.ID)
-			}
-		}
-		if err := installSkills(ctx, defaultSkills); err != nil {
+		if err := checkNpxAvailable(); err != nil {
 			return err
 		}
-		log.From(ctx).Successf("Installed default agent skills: %s", strings.Join(defaultSkills, ", "))
+
+		fmt.Println("This will use npx (Node.js) to install agent skills from github.com/" + skillsRepo)
+		fmt.Println()
+
+		if err := runNpxSkills(ctx, "add", skillsRepo, "--skill", "speakeasy-context", "--agent", "*", "-y"); err != nil {
+			return err
+		}
+		log.From(ctx).Successf("Installed default agent skill: speakeasy-context")
 		return nil
 	}
 
@@ -111,38 +99,27 @@ func runSetupSkillsInteractive(ctx context.Context, flags AgentSetupSkillsFlags)
 		return nil
 	}
 
-	options := make([]huh.Option[string], 0, len(skillCatalog))
-	selectedSkills := make([]string, 0)
-	for _, s := range skillCatalog {
-		opt := huh.NewOption(fmt.Sprintf("%s — %s", s.ID, s.Label), s.ID)
-		if s.Preselected {
-			opt = opt.Selected(true)
-			selectedSkills = append(selectedSkills, s.ID)
-		}
-		options = append(options, opt)
-	}
+	fmt.Println("Speakeasy offers companion skills for AI coding assistants (Claude Code, Cursor, etc.).")
+	fmt.Println("This will use npx (Node.js) to install skills from github.com/" + skillsRepo)
+	fmt.Println()
 
+	proceed := true
 	form := charm.NewForm(huh.NewForm(huh.NewGroup(
-		huh.NewMultiSelect[string]().
-			Title("Select Speakeasy agent skills to install").
-			Description("These skills help AI coding assistants work with Speakeasy.\n").
-			Options(options...).
-			Value(&selectedSkills),
-	)), charm.WithKey("x/space", "toggle"))
+		huh.NewConfirm().
+			Title("Would you like to install agent skills?").
+			Value(&proceed),
+	)))
 
 	if _, err := form.ExecuteForm(); err != nil {
 		return err
 	}
 
-	if len(selectedSkills) == 0 {
+	if !proceed {
 		fmt.Println("Skipping skill installation.")
 		return nil
 	}
 
-	if err := installSkills(ctx, selectedSkills); err != nil {
-		return err
-	}
-
-	log.From(ctx).Successf("Installed %d agent skill(s): %s", len(selectedSkills), strings.Join(selectedSkills, ", "))
-	return nil
+	// Delegate skill selection to the skills CLI — it fetches the catalog
+	// directly from the repo so there's no duplicate list to maintain.
+	return runNpxSkills(ctx, "add", skillsRepo)
 }
