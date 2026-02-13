@@ -283,7 +283,7 @@ EOF
   # Offer to install agent skills if running in an interactive terminal
   if [ -t 0 ] && [ -t 1 ]; then
     echo ""
-    "$INSTALL_DIR/$BINARY_NAME" agent setup-skills 2>/dev/null || true
+    "$INSTALL_DIR/$BINARY_NAME" agent setup-skills || true
   fi
 
 }

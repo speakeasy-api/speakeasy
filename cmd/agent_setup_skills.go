@@ -46,7 +46,7 @@ func checkNpxAvailable() error {
 func runNpxSkills(ctx context.Context, args ...string) error {
 	fullArgs := append([]string{"--yes", "skills"}, args...)
 
-	log.From(ctx).Infof("Running: npx %s", fmt.Sprintf("skills %s", joinArgs(args)))
+	log.From(ctx).Infof("Running: npx --yes skills %s", joinArgs(args))
 
 	cmd := exec.CommandContext(ctx, "npx", fullArgs...)
 	cmd.Stdout = os.Stdout
