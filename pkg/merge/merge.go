@@ -19,6 +19,7 @@ import (
 	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/openapi/sequencedmap"
+	openapiValidation "github.com/speakeasy-api/openapi/validation"
 	"github.com/speakeasy-api/openapi/yml"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -78,6 +79,11 @@ func MergeOpenAPIDocumentsWithNamespaces(ctx context.Context, inputs []MergeInpu
 		return err
 	}
 
+	// Validate the merged document by re-parsing without skipping validation
+	if err := validateMergedOutput(ctx, mergedSchema); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -109,6 +115,31 @@ func validate(ctx context.Context, schemaPath string, schema []byte, defaultRule
 	}
 
 	log.From(ctx).Success(fmt.Sprintf("Successfully validated %s", schemaPath))
+
+	return nil
+}
+
+// validateMergedOutput re-parses the merged schema with validation enabled
+// and returns an error if any validation errors (not warnings) are found.
+func validateMergedOutput(ctx context.Context, schema []byte) error {
+	_, validationErrs, err := openapi.Unmarshal(ctx, bytes.NewReader(schema))
+	if err != nil {
+		return fmt.Errorf("merged document failed to parse: %w", err)
+	}
+
+	var errsOut []error
+	for _, validationErr := range validationErrs {
+		var ve *openapiValidation.Error
+		if errors.As(validationErr, &ve) && ve.Severity == openapiValidation.SeverityWarning {
+			log.From(ctx).Warn(fmt.Sprintf("merged document validation: %s", validationErr.Error()))
+		} else {
+			errsOut = append(errsOut, validationErr)
+		}
+	}
+
+	if len(errsOut) > 0 {
+		return multierror.Append(fmt.Errorf("merged document is invalid"), errsOut...)
+	}
 
 	return nil
 }
@@ -186,6 +217,10 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 	// (ignoring description/summary differences)
 	deduplicateEquivalentComponents(mergedDoc)
 
+	// Post-merge: normalize operation-level tag references to match
+	// the chosen document-level tag names (case-insensitive)
+	normalizeOperationTags(mergedDoc)
+
 	buf := bytes.NewBuffer(nil)
 	var err error
 
@@ -243,6 +278,7 @@ func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error)
 	initMergeState(state, mergedDoc, "")
 	merged, errs := mergeDocumentsWithState(state, mergedDoc, doc, "", 2)
 	deduplicateOperationIds(state, merged)
+	normalizeOperationTags(merged)
 	return merged, errs
 }
 
@@ -285,10 +321,11 @@ func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI,
 	}
 
 	// Merge Tags (case-insensitive with content-aware disambiguation)
-	tagRenames := mergeTagsWithState(state, mergedDoc, doc, docNamespace, docCounter)
-	// Update operation-level tag references in both docs
-	updateOperationTagRefs(mergedDoc, tagRenames)
-	updateOperationTagRefs(doc, tagRenames)
+	tagResult := mergeTagsWithState(state, mergedDoc, doc, docNamespace, docCounter)
+	// Update operation-level tag references in each doc using its own rename map
+	// (case-insensitive matching, per-document maps avoid ambiguity)
+	updateOperationTagRefs(mergedDoc, tagResult.existingRenames)
+	updateOperationTagRefs(doc, tagResult.incomingRenames)
 
 	// Merge Paths (with method-level conflict detection and fragment disambiguation)
 	pathErrs := mergePathsWithState(state, mergedDoc, doc, docNamespace, docCounter)
