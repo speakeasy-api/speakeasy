@@ -187,10 +187,16 @@ func ptrStringEqual(a, b *string) bool {
 }
 
 // updateOperationTagRefs walks all operations in the document and updates
-// tag name references according to the renames map.
+// tag name references according to the renames map (case-insensitive).
 func updateOperationTagRefs(doc *openapi.OpenAPI, renames map[string]string) {
 	if len(renames) == 0 {
 		return
+	}
+
+	// Build case-insensitive lookup once and reuse for all operations.
+	ciRenames := make(map[string]string, len(renames))
+	for oldName, newName := range renames {
+		ciRenames[strings.ToLower(oldName)] = newName
 	}
 
 	if doc.Paths != nil {
@@ -199,7 +205,7 @@ func updateOperationTagRefs(doc *openapi.OpenAPI, renames map[string]string) {
 				continue
 			}
 			for _, op := range pathItem.Object.All() {
-				renameOpTags(op, renames)
+				renameOpTags(op, ciRenames)
 			}
 		}
 	}
@@ -210,25 +216,17 @@ func updateOperationTagRefs(doc *openapi.OpenAPI, renames map[string]string) {
 				continue
 			}
 			for _, op := range pathItem.Object.All() {
-				renameOpTags(op, renames)
+				renameOpTags(op, ciRenames)
 			}
 		}
 	}
 }
 
-// renameOpTags updates the Tags slice of a single operation using
-// case-insensitive matching. Each rename map should come from a single
-// document's perspective (existingRenames or incomingRenames) so there
-// is at most one target per case-insensitive tag name.
-func renameOpTags(op *openapi.Operation, renames map[string]string) {
-	if op == nil || len(renames) == 0 {
+// renameOpTags updates the Tags slice of a single operation using a
+// pre-built case-insensitive rename map (lowercase keys → new names).
+func renameOpTags(op *openapi.Operation, ciRenames map[string]string) {
+	if op == nil {
 		return
-	}
-
-	// Build case-insensitive lookup once per call.
-	ciRenames := make(map[string]string, len(renames))
-	for oldName, newName := range renames {
-		ciRenames[strings.ToLower(oldName)] = newName
 	}
 
 	for i, tag := range op.Tags {
