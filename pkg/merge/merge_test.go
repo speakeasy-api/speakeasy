@@ -1782,3 +1782,65 @@ info:
 		})
 	}
 }
+
+func Test_validateMergedOutput(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid spec passes", func(t *testing.T) {
+		t.Parallel()
+
+		schema := []byte(`openapi: 3.1.0
+info:
+  title: Test
+  version: 1.0.0
+paths:
+  /test:
+    get:
+      responses:
+        "200":
+          description: OK
+`)
+		err := validateMergedOutput(t.Context(), schema)
+		assert.NoError(t, err)
+	})
+
+	t.Run("severity error causes failure", func(t *testing.T) {
+		t.Parallel()
+
+		// Missing info object entirely and invalid version — should trigger severity-error validation
+		schema := []byte(`openapi: not-a-version
+paths:
+  /test:
+    get:
+      responses:
+        "200":
+          description: OK
+`)
+		err := validateMergedOutput(t.Context(), schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "merged document is invalid")
+	})
+
+	t.Run("warnings only do not cause failure", func(t *testing.T) {
+		t.Parallel()
+
+		// A valid spec — warnings (if any) should not cause failure
+		schema := []byte(`openapi: 3.1.0
+info:
+  title: Test
+  version: 1.0.0
+paths: {}
+`)
+		err := validateMergedOutput(t.Context(), schema)
+		assert.NoError(t, err)
+	})
+
+	t.Run("unparseable document causes failure", func(t *testing.T) {
+		t.Parallel()
+
+		schema := []byte(`not: valid: yaml: [`)
+		err := validateMergedOutput(t.Context(), schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to parse")
+	})
+}

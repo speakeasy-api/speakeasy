@@ -6,13 +6,26 @@ import (
 	"github.com/speakeasy-api/openapi/openapi"
 )
 
+// tagRenameResult holds separate rename maps for the existing (merged) document
+// and the incoming document. Keeping them separate allows case-insensitive
+// operation-level tag renaming without ambiguity — each map has at most one
+// entry per case-insensitive tag name.
+type tagRenameResult struct {
+	existingRenames map[string]string // renames for operations already in mergedDoc
+	incomingRenames map[string]string // renames for operations in the incoming doc
+}
+
 // mergeTagsWithState performs case-insensitive tag merging with content-aware disambiguation.
-// It returns a map of old tag name → new tag name for updating operation-level tag references.
-func mergeTagsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docNamespace string, docCounter int) map[string]string {
-	tagRenames := make(map[string]string)
+// It returns separate rename maps for updating operation-level tag references in the
+// existing merged document and the incoming document.
+func mergeTagsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docNamespace string, docCounter int) tagRenameResult {
+	result := tagRenameResult{
+		existingRenames: make(map[string]string),
+		incomingRenames: make(map[string]string),
+	}
 
 	if doc.Tags == nil {
-		return tagRenames
+		return result
 	}
 
 	if mergedDoc.Tags == nil {
@@ -53,7 +66,7 @@ func mergeTagsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docN
 			mergedDoc.Tags[matchIdx] = newTag
 			// Record rename if the name changed (e.g. casing difference)
 			if oldName != newTag.Name {
-				tagRenames[oldName] = newTag.Name
+				result.existingRenames[oldName] = newTag.Name
 			}
 			// Update the tracker entry
 			state.tagTracker[key][matchEntry] = tagEntry{
@@ -70,7 +83,7 @@ func mergeTagsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docN
 				oldName := existingTag.Name
 				newName := oldName + "_" + existingSuffix
 				existingTag.Name = newName
-				tagRenames[oldName] = newName
+				result.existingRenames[oldName] = newName
 				state.tagTracker[key][matchEntry] = tagEntry{
 					currentName: newName,
 					namespace:   entries[matchEntry].namespace,
@@ -82,7 +95,7 @@ func mergeTagsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docN
 			newSuffix := disambiguatingSuffix(docNamespace, docCounter)
 			oldNewTagName := newTag.Name
 			newTag.Name = oldNewTagName + "_" + newSuffix
-			tagRenames[oldNewTagName] = newTag.Name
+			result.incomingRenames[oldNewTagName] = newTag.Name
 
 			mergedDoc.Tags = append(mergedDoc.Tags, newTag)
 			state.tagTracker[key] = append(state.tagTracker[key], tagEntry{
@@ -93,7 +106,7 @@ func mergeTagsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docN
 		}
 	}
 
-	return tagRenames
+	return result
 }
 
 // findTagInMergedDoc locates the tag in mergedDoc.Tags that corresponds to one
@@ -203,14 +216,75 @@ func updateOperationTagRefs(doc *openapi.OpenAPI, renames map[string]string) {
 	}
 }
 
-// renameOpTags updates the Tags slice of a single operation.
+// renameOpTags updates the Tags slice of a single operation using
+// case-insensitive matching. Each rename map should come from a single
+// document's perspective (existingRenames or incomingRenames) so there
+// is at most one target per case-insensitive tag name.
 func renameOpTags(op *openapi.Operation, renames map[string]string) {
-	if op == nil {
+	if op == nil || len(renames) == 0 {
 		return
 	}
+
+	// Build case-insensitive lookup once per call.
+	ciRenames := make(map[string]string, len(renames))
+	for oldName, newName := range renames {
+		ciRenames[strings.ToLower(oldName)] = newName
+	}
+
 	for i, tag := range op.Tags {
-		if newName, ok := renames[tag]; ok {
+		if newName, ok := ciRenames[strings.ToLower(tag)]; ok {
 			op.Tags[i] = newName
+		}
+	}
+}
+
+// normalizeOperationTags is a post-merge pass that ensures all operation-level
+// tag references use the same casing as the document-level tag definitions.
+// This catches cases where operations reference tags with a casing that wasn't
+// directly involved in a rename (e.g. "PETS" when the rename only covered
+// "Pets" → "pets"), or where tags are used only in operations without any
+// document-level definition.
+func normalizeOperationTags(doc *openapi.OpenAPI) {
+	// Build canonical name map from document-level tags.
+	canonical := make(map[string]string, len(doc.Tags))
+	for _, tag := range doc.Tags {
+		canonical[strings.ToLower(tag.Name)] = tag.Name
+	}
+
+	normalize := func(op *openapi.Operation) {
+		if op == nil {
+			return
+		}
+		for i, tag := range op.Tags {
+			key := strings.ToLower(tag)
+			if chosen, ok := canonical[key]; ok {
+				op.Tags[i] = chosen
+			} else {
+				// Tag not defined at document level — use first occurrence as canonical.
+				canonical[key] = tag
+			}
+		}
+	}
+
+	if doc.Paths != nil {
+		for _, pathItem := range doc.Paths.All() {
+			if pathItem == nil || pathItem.Object == nil {
+				continue
+			}
+			for _, op := range pathItem.Object.All() {
+				normalize(op)
+			}
+		}
+	}
+
+	if doc.Webhooks != nil {
+		for _, pathItem := range doc.Webhooks.All() {
+			if pathItem == nil || pathItem.Object == nil {
+				continue
+			}
+			for _, op := range pathItem.Object.All() {
+				normalize(op)
+			}
 		}
 	}
 }
