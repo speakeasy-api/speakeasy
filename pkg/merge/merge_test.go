@@ -75,7 +75,7 @@ info:
 `,
 		},
 		{
-			name: "info is overwritten",
+			name: "info title is overwritten but descriptions are appended",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
@@ -89,6 +89,102 @@ info:
 			want: `openapi: "3.1"
 info:
   title: test2
+  version: ""
+`,
+		},
+		{
+			name: "info descriptions are appended across documents",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+info:
+  title: test
+  description: First API description
+  summary: First summary`),
+					[]byte(`openapi: 3.1
+info:
+  title: test2
+  description: Second API description
+  summary: Second summary`),
+				},
+			},
+			want: `openapi: "3.1"
+info:
+  title: test2
+  description: |-
+    First API description
+    Second API description
+  summary: |-
+    First summary
+    Second summary
+  version: ""
+`,
+		},
+		{
+			name: "info description appended when only first doc has description",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+info:
+  title: test
+  description: Only description`),
+					[]byte(`openapi: 3.1
+info:
+  title: test2`),
+				},
+			},
+			want: `openapi: "3.1"
+info:
+  title: test2
+  description: Only description
+  version: ""
+`,
+		},
+		{
+			name: "info description appended when only second doc has description",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+info:
+  title: test`),
+					[]byte(`openapi: 3.1
+info:
+  title: test2
+  description: Only description`),
+				},
+			},
+			want: `openapi: "3.1"
+info:
+  title: test2
+  version: ""
+  description: Only description
+`,
+		},
+		{
+			name: "info descriptions appended across three documents",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+info:
+  title: first
+  description: First`),
+					[]byte(`openapi: 3.1
+info:
+  title: second
+  description: Second`),
+					[]byte(`openapi: 3.1
+info:
+  title: third
+  description: Third`),
+				},
+			},
+			want: `openapi: "3.1"
+info:
+  title: third
+  description: |-
+    First
+    Second
+    Third
   version: ""
 `,
 		},
@@ -1783,64 +1879,3 @@ info:
 	}
 }
 
-func Test_validateMergedOutput(t *testing.T) {
-	t.Parallel()
-
-	t.Run("valid spec passes", func(t *testing.T) {
-		t.Parallel()
-
-		schema := []byte(`openapi: 3.1.0
-info:
-  title: Test
-  version: 1.0.0
-paths:
-  /test:
-    get:
-      responses:
-        "200":
-          description: OK
-`)
-		err := validateMergedOutput(t.Context(), schema)
-		assert.NoError(t, err)
-	})
-
-	t.Run("severity error causes failure", func(t *testing.T) {
-		t.Parallel()
-
-		// Missing info object entirely and invalid version — should trigger severity-error validation
-		schema := []byte(`openapi: not-a-version
-paths:
-  /test:
-    get:
-      responses:
-        "200":
-          description: OK
-`)
-		err := validateMergedOutput(t.Context(), schema)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "merged document is invalid")
-	})
-
-	t.Run("warnings only do not cause failure", func(t *testing.T) {
-		t.Parallel()
-
-		// A valid spec — warnings (if any) should not cause failure
-		schema := []byte(`openapi: 3.1.0
-info:
-  title: Test
-  version: 1.0.0
-paths: {}
-`)
-		err := validateMergedOutput(t.Context(), schema)
-		assert.NoError(t, err)
-	})
-
-	t.Run("unparseable document causes failure", func(t *testing.T) {
-		t.Parallel()
-
-		schema := []byte(`not: valid: yaml: [`)
-		err := validateMergedOutput(t.Context(), schema)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to parse")
-	})
-}

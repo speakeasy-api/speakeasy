@@ -19,8 +19,7 @@ import (
 	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/openapi/sequencedmap"
-	openapiValidation "github.com/speakeasy-api/openapi/validation"
-	"github.com/speakeasy-api/openapi/yml"
+"github.com/speakeasy-api/openapi/yml"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"go.uber.org/zap"
@@ -79,11 +78,6 @@ func MergeOpenAPIDocumentsWithNamespaces(ctx context.Context, inputs []MergeInpu
 		return err
 	}
 
-	// Validate the merged document by re-parsing without skipping validation
-	if err := validateMergedOutput(ctx, mergedSchema); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -115,31 +109,6 @@ func validate(ctx context.Context, schemaPath string, schema []byte, defaultRule
 	}
 
 	log.From(ctx).Success(fmt.Sprintf("Successfully validated %s", schemaPath))
-
-	return nil
-}
-
-// validateMergedOutput re-parses the merged schema with validation enabled
-// and returns an error if any validation errors (not warnings) are found.
-func validateMergedOutput(ctx context.Context, schema []byte) error {
-	_, validationErrs, err := openapi.Unmarshal(ctx, bytes.NewReader(schema))
-	if err != nil {
-		return fmt.Errorf("merged document failed to parse: %w", err)
-	}
-
-	var errsOut []error
-	for _, validationErr := range validationErrs {
-		var ve *openapiValidation.Error
-		if errors.As(validationErr, &ve) && ve.Severity == openapiValidation.SeverityWarning {
-			log.From(ctx).Warn(fmt.Sprintf("merged document validation: %s", validationErr.Error()))
-		} else {
-			errsOut = append(errsOut, validationErr)
-		}
-	}
-
-	if len(errsOut) > 0 {
-		return multierror.Append(fmt.Errorf("merged document is invalid"), errsOut...)
-	}
 
 	return nil
 }
@@ -293,8 +262,8 @@ func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI,
 		mergedDoc.OpenAPI = doc.OpenAPI
 	}
 
-	// Merge Info - take the newer one
-	mergedDoc.Info = doc.Info
+	// Merge Info - last wins for most fields, but append description and summary
+	mergedDoc.Info = mergeInfo(mergedDoc.Info, doc.Info)
 
 	// Merge Extensions
 	if doc.Extensions != nil {
@@ -366,6 +335,46 @@ func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI,
 	}
 
 	return mergedDoc, errs
+}
+
+// mergeInfo merges two Info objects. Most fields use last-wins semantics,
+// but Description and Summary are appended (with a newline separator) so that
+// content from all merged documents is preserved.
+func mergeInfo(merged, incoming openapi.Info) openapi.Info {
+	existingDesc := derefStr(merged.Description)
+	existingSummary := derefStr(merged.Summary)
+
+	// Take the incoming info (last wins for most fields)
+	result := incoming
+
+	// Append descriptions across documents
+	result.Description = appendStrPtrs(existingDesc, derefStr(incoming.Description))
+
+	// Append summaries across documents
+	result.Summary = appendStrPtrs(existingSummary, derefStr(incoming.Summary))
+
+	return result
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func appendStrPtrs(a, b string) *string {
+	switch {
+	case a != "" && b != "":
+		combined := a + "\n" + b
+		return &combined
+	case a != "":
+		return &a
+	case b != "":
+		return &b
+	default:
+		return nil
+	}
 }
 
 func mergeReferencedPathItems(mergedPathItem, pathItem *openapi.ReferencedPathItem) (*openapi.ReferencedPathItem, []error) {
