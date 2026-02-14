@@ -19,7 +19,7 @@ import (
 	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/openapi/overlay"
 	"github.com/speakeasy-api/openapi/sequencedmap"
-"github.com/speakeasy-api/openapi/yml"
+	"github.com/speakeasy-api/openapi/yml"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 	"go.uber.org/zap"
@@ -364,8 +364,11 @@ func derefStr(s *string) string {
 }
 
 func appendStrPtrs(a, b string) *string {
+	a = strings.TrimSpace(a)
+	b = strings.TrimSpace(b)
+
 	switch {
-	case a != "" && b != "":
+	case a != "" && b != "" && a != b:
 		combined := a + "\n" + b
 		return &combined
 	case a != "":

@@ -189,6 +189,51 @@ info:
 `,
 		},
 		{
+			name: "duplicate info descriptions are deduplicated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+info:
+  title: test
+  description: Same description
+  summary: Same summary`),
+					[]byte(`openapi: 3.1
+info:
+  title: test2
+  description: Same description
+  summary: Same summary`),
+				},
+			},
+			want: `openapi: "3.1"
+info:
+  title: test2
+  description: Same description
+  summary: Same summary
+  version: ""
+`,
+		},
+		{
+			name: "duplicate descriptions with whitespace differences are deduplicated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+info:
+  title: test
+  description: "  Same description  "`),
+					[]byte(`openapi: 3.1
+info:
+  title: test2
+  description: Same description`),
+				},
+			},
+			want: `openapi: "3.1"
+info:
+  title: test2
+  description: "Same description"
+  version: ""
+`,
+		},
+		{
 			name: "doc extensions are populated",
 			args: args{
 				inSchemas: [][]byte{
@@ -1878,4 +1923,3 @@ info:
 		})
 	}
 }
-
