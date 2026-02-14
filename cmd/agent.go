@@ -15,7 +15,7 @@ var agentCmd = &model.CommandGroup{
 	Short:          "Docs & guided workflows for AI coding agents (start here: speakeasy agent context)",
 	Long:           "Commands for AI agents interacting with Speakeasy. Run 'speakeasy agent context' for structured documentation.",
 	InteractiveMsg: "What would you like to do?",
-	Commands:       []model.Command{agentContextCmd, agentFeedbackCmd},
+	Commands:       []model.Command{agentContextCmd, agentFeedbackCmd, agentSetupSkillsCmd},
 }
 
 type AgentContextFlags struct {
