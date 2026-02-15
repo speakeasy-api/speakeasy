@@ -54,13 +54,13 @@ type agentConfig struct {
 var knownAgents = []agentConfig{
 	// Popular agents — preselected
 	{Name: "Claude Code", Dir: ".claude/skills", Preselected: true},
+	{Name: "Codex", Dir: ".agents/skills", Preselected: true},
 	{Name: "Cursor", Dir: ".cursor/skills", Preselected: true},
 	{Name: "Windsurf", Dir: ".codeium/windsurf/skills", Preselected: true},
 	{Name: "Copilot", Dir: ".github/copilot/skills", Preselected: true},
 
-	// Other agents
+	// Other agents (share .agents/skills universal dir)
 	{Name: "Amp", Dir: ".agents/skills"},
-	{Name: "Codex", Dir: ".agents/skills"},
 	{Name: "Gemini CLI", Dir: ".agents/skills"},
 	{Name: "Antigravity", Dir: ".agent/skills"},
 	{Name: "Augment", Dir: ".augment/skills"},
