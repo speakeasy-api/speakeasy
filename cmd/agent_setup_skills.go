@@ -58,6 +58,7 @@ var knownAgents = []agentConfig{
 	{Name: "Cursor", Dir: ".cursor/skills", Preselected: true},
 	{Name: "Windsurf", Dir: ".codeium/windsurf/skills", Preselected: true},
 	{Name: "Copilot", Dir: ".github/copilot/skills", Preselected: true},
+	{Name: "Mistral Vibe", Dir: ".vibe/skills"},
 
 	// Other agents
 	{Name: "Antigravity", Dir: ".agent/skills"},
@@ -85,7 +86,6 @@ var knownAgents = []agentConfig{
 	{Name: "Qwen Code", Dir: ".qwen/skills"},
 	{Name: "Roo", Dir: ".roo/skills"},
 	{Name: "Trae", Dir: ".trae/skills"},
-	{Name: "Vibe", Dir: ".vibe/skills"},
 	{Name: "Zencoder", Dir: ".zencoder/skills"},
 	{Name: "Adal", Dir: ".adal/skills"},
 }
