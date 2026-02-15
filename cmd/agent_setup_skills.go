@@ -173,7 +173,7 @@ func installSkillsNative(ctx context.Context, projectDir string, skills []string
 			}
 
 			// Remove existing symlink/dir if present, then create
-			os.Remove(linkPath)
+			os.RemoveAll(linkPath)
 			if err := os.Symlink(relTarget, linkPath); err != nil {
 				return fmt.Errorf("failed to create symlink %s: %w", linkPath, err)
 			}
