@@ -287,7 +287,7 @@ func runSetupSkillsInteractive(ctx context.Context, flags AgentSetupSkillsFlags)
 	agentForm := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
 			Title("Which agents do you use?").
-			Description("Skills will be installed for the selected agents.\n").
+			Description("Skills are always written to .agents/skills/ (canonical). Symlinks are created for each selected agent.\n").
 			Options(agentOptions...).
 			Value(&selectedAgentDirs),
 	)), charm.WithKey("x/space", "toggle"))
