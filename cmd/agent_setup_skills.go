@@ -41,40 +41,71 @@ const (
 	skillsPath  = "skills" // directory in the repo containing skills
 )
 
-// agentDirs lists well-known agent skill directory paths (relative to project root).
-// .agents/skills is the canonical location; the rest are symlinked to it.
-var agentDirs = []string{
-	".adal/skills",
-	".agent/skills",
-	".augment/skills",
-	".claude/skills",
-	".cline/skills",
-	".codebuddy/skills",
-	".commandcode/skills",
-	".continue/skills",
-	".crush/skills",
-	".cursor/skills",
-	".factory/skills",
-	".goose/skills",
-	".iflow/skills",
-	".junie/skills",
-	".kilocode/skills",
-	".kiro/skills",
-	".kode/skills",
-	".mcpjam/skills",
-	".mux/skills",
-	".neovate/skills",
-	".openhands/skills",
-	".pi/skills",
-	".pochi/skills",
-	".qoder/skills",
-	".qwen/skills",
-	".roo/skills",
-	".trae/skills",
-	".vibe/skills",
-	".windsurf/skills",
-	".zencoder/skills",
-	"skills",
+// agentConfig describes a coding agent and its skills directory.
+type agentConfig struct {
+	Name        string // display name
+	Dir         string // skills directory relative to project root
+	Preselected bool   // selected by default in the multi-select
+}
+
+// knownAgents lists all supported agents, matching the upstream skills registry.
+// Agents marked Preselected are the most commonly used and selected by default.
+// The .agents/skills directory is the canonical/universal location — always installed.
+var knownAgents = []agentConfig{
+	// Popular agents — preselected
+	{Name: "Claude Code", Dir: ".claude/skills", Preselected: true},
+	{Name: "Cursor", Dir: ".cursor/skills", Preselected: true},
+	{Name: "Windsurf", Dir: ".codeium/windsurf/skills", Preselected: true},
+	{Name: "Copilot", Dir: ".github/copilot/skills", Preselected: true},
+
+	// Other agents
+	{Name: "Amp", Dir: ".agents/skills"},
+	{Name: "Codex", Dir: ".agents/skills"},
+	{Name: "Gemini CLI", Dir: ".agents/skills"},
+	{Name: "Antigravity", Dir: ".agent/skills"},
+	{Name: "Augment", Dir: ".augment/skills"},
+	{Name: "Cline", Dir: ".cline/skills"},
+	{Name: "CodeBuddy", Dir: ".codebuddy/skills"},
+	{Name: "Command Code", Dir: ".commandcode/skills"},
+	{Name: "Continue", Dir: ".continue/skills"},
+	{Name: "Crush", Dir: ".crush/skills"},
+	{Name: "Droid", Dir: ".factory/skills"},
+	{Name: "Goose", Dir: ".goose/skills"},
+	{Name: "iFlow", Dir: ".iflow/skills"},
+	{Name: "Junie", Dir: ".junie/skills"},
+	{Name: "Kilo", Dir: ".kilocode/skills"},
+	{Name: "Kiro", Dir: ".kiro/skills"},
+	{Name: "Kode", Dir: ".kode/skills"},
+	{Name: "MCPJam", Dir: ".mcpjam/skills"},
+	{Name: "Mux", Dir: ".mux/skills"},
+	{Name: "Neovate", Dir: ".neovate/skills"},
+	{Name: "OpenClaw", Dir: "skills"},
+	{Name: "OpenHands", Dir: ".openhands/skills"},
+	{Name: "Pi", Dir: ".pi/agent/skills"},
+	{Name: "Pochi", Dir: ".pochi/skills"},
+	{Name: "Qoder", Dir: ".qoder/skills"},
+	{Name: "Qwen Code", Dir: ".qwen/skills"},
+	{Name: "Roo", Dir: ".roo/skills"},
+	{Name: "Trae", Dir: ".trae/skills"},
+	{Name: "Vibe", Dir: ".vibe/skills"},
+	{Name: "Zencoder", Dir: ".zencoder/skills"},
+	{Name: "Adal", Dir: ".adal/skills"},
+}
+
+// defaultAgentDirs returns the directories for the preselected (default) agents.
+func defaultAgentDirs() []string {
+	seen := make(map[string]bool)
+	var dirs []string
+	// Always include the universal canonical dir
+	dirs = append(dirs, ".agents/skills")
+	seen[".agents/skills"] = true
+	for _, a := range knownAgents {
+		if a.Preselected && !seen[a.Dir] {
+			dirs = append(dirs, a.Dir)
+			seen[a.Dir] = true
+		}
+	}
+	return dirs
 }
 
 // githubEntry represents a file/dir entry from the GitHub Contents API.
@@ -137,11 +168,12 @@ func fetchSkillContent(ctx context.Context, skillName string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// installSkillsNative writes skill files and creates symlinks for all known agents.
-func installSkillsNative(ctx context.Context, projectDir string, skills []string) error {
+// installSkillsNative writes skill files to the canonical location and creates
+// symlinks in the specified agent directories.
+func installSkillsNative(ctx context.Context, projectDir string, skillNames []string, agentDirs []string) error {
 	canonicalDir := filepath.Join(projectDir, ".agents", "skills")
 
-	for _, skillName := range skills {
+	for _, skillName := range skillNames {
 		log.From(ctx).Infof("Fetching skill: %s", skillName)
 
 		content, err := fetchSkillContent(ctx, skillName)
@@ -158,21 +190,23 @@ func installSkillsNative(ctx context.Context, projectDir string, skills []string
 			return fmt.Errorf("failed to write %s/SKILL.md: %w", skillName, err)
 		}
 
-		// Create symlinks from each agent's skills dir
+		// Create symlinks from each selected agent's skills dir
 		for _, agentDir := range agentDirs {
+			if agentDir == ".agents/skills" {
+				continue // canonical dir already has the file, no symlink needed
+			}
+
 			agentSkillsDir := filepath.Join(projectDir, agentDir)
 			if err := os.MkdirAll(agentSkillsDir, 0o755); err != nil {
 				return fmt.Errorf("failed to create directory %s: %w", agentSkillsDir, err)
 			}
 
 			linkPath := filepath.Join(agentSkillsDir, skillName)
-			// Compute relative path from agent skills dir to canonical location
 			relTarget, err := filepath.Rel(agentSkillsDir, filepath.Join(canonicalDir, skillName))
 			if err != nil {
 				return fmt.Errorf("failed to compute relative path for symlink: %w", err)
 			}
 
-			// Remove existing symlink/dir if present, then create
 			_ = os.RemoveAll(linkPath)
 			if err := os.Symlink(relTarget, linkPath); err != nil {
 				return fmt.Errorf("failed to create symlink %s: %w", linkPath, err)
@@ -190,7 +224,7 @@ func runSetupSkills(ctx context.Context, flags AgentSetupSkillsFlags) error {
 			return err
 		}
 
-		if err := installSkillsNative(ctx, projectDir, []string{"speakeasy-context"}); err != nil {
+		if err := installSkillsNative(ctx, projectDir, []string{"speakeasy-context"}, defaultAgentDirs()); err != nil {
 			return err
 		}
 		log.From(ctx).Successf("Installed default agent skill: speakeasy-context")
@@ -233,7 +267,53 @@ func runSetupSkillsInteractive(ctx context.Context, flags AgentSetupSkillsFlags)
 		return nil
 	}
 
-	// Fetch available skills from the repo
+	// --- Agent selection ---
+	agentOptions := make([]huh.Option[string], 0, len(knownAgents))
+	selectedAgentDirs := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, a := range knownAgents {
+		if seen[a.Dir] {
+			continue // skip duplicate dirs (e.g. Amp/Codex/Gemini share .agents/skills)
+		}
+		seen[a.Dir] = true
+		opt := huh.NewOption(a.Name, a.Dir)
+		if a.Preselected {
+			opt = opt.Selected(true)
+			selectedAgentDirs = append(selectedAgentDirs, a.Dir)
+		}
+		agentOptions = append(agentOptions, opt)
+	}
+
+	agentForm := charm.NewForm(huh.NewForm(huh.NewGroup(
+		huh.NewMultiSelect[string]().
+			Title("Which agents do you use?").
+			Description("Skills will be installed for the selected agents.\n").
+			Options(agentOptions...).
+			Value(&selectedAgentDirs),
+	)), charm.WithKey("x/space", "toggle"))
+
+	if _, err := agentForm.ExecuteForm(); err != nil {
+		return err
+	}
+
+	if len(selectedAgentDirs) == 0 {
+		fmt.Println("No agents selected. Skipping skill installation.")
+		return nil
+	}
+
+	// Always include canonical dir
+	hasCanonical := false
+	for _, d := range selectedAgentDirs {
+		if d == ".agents/skills" {
+			hasCanonical = true
+			break
+		}
+	}
+	if !hasCanonical {
+		selectedAgentDirs = append([]string{".agents/skills"}, selectedAgentDirs...)
+	}
+
+	// --- Skill selection ---
 	log.From(ctx).Infof("Fetching skill catalog from github.com/%s/%s...", skillsOwner, skillsRepo)
 	skillNames, err := fetchSkillNames(ctx)
 	if err != nil {
@@ -245,8 +325,7 @@ func runSetupSkillsInteractive(ctx context.Context, flags AgentSetupSkillsFlags)
 		return nil
 	}
 
-	// Build options with speakeasy-context preselected
-	options := make([]huh.Option[string], 0, len(skillNames))
+	skillOptions := make([]huh.Option[string], 0, len(skillNames))
 	selectedSkills := make([]string, 0)
 	for _, name := range skillNames {
 		opt := huh.NewOption(name, name)
@@ -254,30 +333,32 @@ func runSetupSkillsInteractive(ctx context.Context, flags AgentSetupSkillsFlags)
 			opt = opt.Selected(true)
 			selectedSkills = append(selectedSkills, name)
 		}
-		options = append(options, opt)
+		skillOptions = append(skillOptions, opt)
 	}
 
-	selectForm := charm.NewForm(huh.NewForm(huh.NewGroup(
+	skillForm := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewMultiSelect[string]().
 			Title("Select skills to install").
 			Description("These skills help AI coding assistants work with Speakeasy.\n").
-			Options(options...).
+			Options(skillOptions...).
 			Value(&selectedSkills),
 	)), charm.WithKey("x/space", "toggle"))
 
-	if _, err := selectForm.ExecuteForm(); err != nil {
+	if _, err := skillForm.ExecuteForm(); err != nil {
 		return err
 	}
 
 	if len(selectedSkills) == 0 {
-		fmt.Println("Skipping skill installation.")
+		fmt.Println("No skills selected. Skipping installation.")
 		return nil
 	}
 
-	if err := installSkillsNative(ctx, projectDir, selectedSkills); err != nil {
+	// --- Install ---
+	if err := installSkillsNative(ctx, projectDir, selectedSkills, selectedAgentDirs); err != nil {
 		return err
 	}
 
-	log.From(ctx).Successf("Installed %d skill(s): %s", len(selectedSkills), strings.Join(selectedSkills, ", "))
+	log.From(ctx).Successf("Installed %d skill(s) for %d agent(s): %s",
+		len(selectedSkills), len(selectedAgentDirs), strings.Join(selectedSkills, ", "))
 	return nil
 }
