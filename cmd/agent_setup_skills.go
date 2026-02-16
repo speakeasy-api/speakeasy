@@ -245,14 +245,30 @@ func runSetupSkillsInteractive(ctx context.Context, flags AgentSetupSkillsFlags)
 		return err
 	}
 
-	fmt.Println("Speakeasy offers companion skills for AI coding assistants (Claude Code, Cursor, etc.).")
+	// Detect whether skills are already installed to adjust wording
+	canonicalDir := filepath.Join(projectDir, ".agents", "skills", "speakeasy-context")
+	isUpdate := false
+	if _, err := os.Stat(canonicalDir); err == nil {
+		isUpdate = true
+	}
+
+	if isUpdate {
+		fmt.Println("Speakeasy agent skills are already installed. You can update them to add new agents or skills.")
+	} else {
+		fmt.Println("Speakeasy offers companion skills for AI coding assistants (Claude Code, Cursor, etc.).")
+	}
 	fmt.Println("Skills will be fetched from github.com/" + skillsOwner + "/" + skillsRepo + " and installed locally.")
 	fmt.Println()
+
+	confirmTitle := "Would you like to install agent skills?"
+	if isUpdate {
+		confirmTitle = "Would you like to update agent skills?"
+	}
 
 	proceed := true
 	confirmForm := charm.NewForm(huh.NewForm(huh.NewGroup(
 		huh.NewConfirm().
-			Title("Would you like to install agent skills?").
+			Title(confirmTitle).
 			Value(&proceed),
 	)))
 
