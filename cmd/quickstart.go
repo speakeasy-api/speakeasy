@@ -430,6 +430,11 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
+	// Offer to install agent skills before generation (interactive only)
+	if !quickstartObj.SkipInteractive {
+		offerSkillInstall(ctx, outDir)
+	}
+
 	// Execute the workflow based on output mode
 	switch flags.Output {
 	case "summary":
@@ -670,4 +675,26 @@ func currentDirectoryEmpty() bool {
 
 	_, err = dir.Readdirnames(1)
 	return errors.Is(err, io.EOF)
+}
+
+// offerSkillInstall prompts the user to install the default Speakeasy agent skill
+// if skills are not already installed in the output directory.
+func offerSkillInstall(ctx context.Context, outDir string) {
+	// Skip if skills already installed
+	canonicalDir := filepath.Join(outDir, ".agents", "skills", "speakeasy-context")
+	if _, err := os.Stat(canonicalDir); err == nil {
+		return
+	}
+
+	if !interactivity.SimpleConfirm(
+		"Install Speakeasy agent skills for AI coding assistants (Claude Code, Cursor, etc.)?",
+		true,
+	) {
+		return
+	}
+
+	// Reuse the existing setup-skills command in auto mode
+	if err := runSetupSkills(ctx, AgentSetupSkillsFlags{Auto: true}); err != nil {
+		log.From(ctx).Warnf("Failed to install agent skills: %s", err.Error())
+	}
 }
