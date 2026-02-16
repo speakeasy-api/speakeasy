@@ -26,6 +26,7 @@ func skipUnlessIntegration(t *testing.T) {
 // TestFallbackList verifies that the fallback caching proxy returns a
 // non-empty list of releases that can be decoded as GitHub RepositoryRelease objects.
 func TestFallbackList(t *testing.T) {
+	t.Parallel()
 	skipUnlessIntegration(t)
 
 	releases, err := fetchReleasesFromFallback(testTimeout)
@@ -52,6 +53,7 @@ func TestFallbackList(t *testing.T) {
 // TestFallbackDownload verifies that the fallback download endpoint returns a
 // signed URL for a known release asset.
 func TestFallbackDownload(t *testing.T) {
+	t.Parallel()
 	skipUnlessIntegration(t)
 
 	// First, get a real tag and asset name from the list endpoint.
@@ -99,6 +101,7 @@ func TestFallbackDownload(t *testing.T) {
 // TestFallbackListRawHTTP exercises the raw HTTP endpoint directly (no helper)
 // to ensure the JSON shape matches what the Go GitHub client expects.
 func TestFallbackListRawHTTP(t *testing.T) {
+	t.Parallel()
 	skipUnlessIntegration(t)
 
 	c := &http.Client{Timeout: testTimeout}
