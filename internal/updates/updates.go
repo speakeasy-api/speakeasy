@@ -316,9 +316,10 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 
 	releases, _, err := client.Repositories.ListReleases(context.Background(), "speakeasy-api", "speakeasy", nil)
 	if err != nil {
-		releases, err = fetchReleasesFromFallback(timeout)
-		if err != nil {
-			return nil, nil, err
+		var fallbackErr error
+		releases, fallbackErr = fetchReleasesFromFallback(timeout)
+		if fallbackErr != nil {
+			return nil, nil, err // return original error
 		}
 	}
 
