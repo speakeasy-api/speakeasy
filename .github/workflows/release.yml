@@ -63,7 +63,7 @@ jobs:
               with:
                   distribution: goreleaser
                   version: latest
-                  args: release --clean ${{ inputs.is_draft == true && '--draft' || '' }} ${{ vars.SKIP_CHOCOLATEY == 'true' && '--skip=chocolatey' || '' }} ${{ inputs.pre_release == true && '--skip=homebrew,chocolatey,winget' || '' }}
+                  args: release --clean ${{ inputs.is_draft == true && '--draft' || '' }} ${{ vars.SKIP_CHOCOLATEY == 'true' && '--skip=chocolatey' || '' }} ${{ inputs.pre_release == true && '--skip=homebrew_casks,chocolatey,winget' || '' }}
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
