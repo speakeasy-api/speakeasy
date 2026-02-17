@@ -405,15 +405,10 @@ func TestGit_FindOrCreateBranch_FeatureBranchOverride(t *testing.T) {
 }
 
 func TestGit_FindOrCreateBranch_NonCIPendingCommits(t *testing.T) {
-	workspace := t.TempDir()
-	repoPath := filepath.Join(workspace, "repo")
-	remotePath := filepath.Join(workspace, "remote.git")
+	repoPath := t.TempDir()
+	remotePath := filepath.Join(t.TempDir(), "remote.git")
 
-	if err := os.MkdirAll(repoPath, 0o755); err != nil {
-		t.Fatalf("failed to create repo dir: %v", err)
-	}
-
-	runGitCLI(t, workspace, "init", "--bare", remotePath)
+	runGitCLI(t, t.TempDir(), "init", "--bare", remotePath)
 	runGitCLI(t, repoPath, "init")
 	runGitCLI(t, repoPath, "config", "user.name", "Test User")
 	runGitCLI(t, repoPath, "config", "user.email", "test@example.com")
@@ -458,9 +453,10 @@ func TestGit_FindOrCreateBranch_NonCIPendingCommits(t *testing.T) {
 
 	g := New("test-token")
 	g.repo = repo
+	g.repoRoot = repoPath
 	runGitCLI(t, repoPath, "config", "pull.rebase", "false")
 
-	t.Setenv("GITHUB_WORKSPACE", workspace)
+	t.Setenv("GITHUB_WORKSPACE", repoPath)
 	t.Setenv("INPUT_WORKING_DIRECTORY", "")
 
 	_, err = g.FindOrCreateBranch("regen", environment.ActionRunWorkflow)
@@ -470,15 +466,10 @@ func TestGit_FindOrCreateBranch_NonCIPendingCommits(t *testing.T) {
 }
 
 func TestGit_FindOrCreateBranch_BotCommitAllowed(t *testing.T) {
-	workspace := t.TempDir()
-	repoPath := filepath.Join(workspace, "repo")
-	remotePath := filepath.Join(workspace, "remote.git")
+	repoPath := t.TempDir()
+	remotePath := filepath.Join(t.TempDir(), "remote.git")
 
-	if err := os.MkdirAll(repoPath, 0o755); err != nil {
-		t.Fatalf("failed to create repo dir: %v", err)
-	}
-
-	runGitCLI(t, workspace, "init", "--bare", remotePath)
+	runGitCLI(t, t.TempDir(), "init", "--bare", remotePath)
 	runGitCLI(t, repoPath, "init")
 	runGitCLI(t, repoPath, "config", "user.name", "Test User")
 	runGitCLI(t, repoPath, "config", "user.email", "test@example.com")
@@ -517,10 +508,10 @@ func TestGit_FindOrCreateBranch_BotCommitAllowed(t *testing.T) {
 	repo, err := git.PlainOpen(repoPath)
 	require.NoError(t, err)
 
-	g := Git{repo: repo}
+	g := Git{repo: repo, repoRoot: repoPath}
 	runGitCLI(t, repoPath, "config", "pull.rebase", "false")
 
-	t.Setenv("GITHUB_WORKSPACE", workspace)
+	t.Setenv("GITHUB_WORKSPACE", repoPath)
 	t.Setenv("INPUT_WORKING_DIRECTORY", "")
 
 	branch, err := g.FindOrCreateBranch("regen", environment.ActionRunWorkflow)
@@ -529,15 +520,10 @@ func TestGit_FindOrCreateBranch_BotCommitAllowed(t *testing.T) {
 }
 
 func TestGit_FindOrCreateBranch_BotAliasCommitAllowed(t *testing.T) {
-	workspace := t.TempDir()
-	repoPath := filepath.Join(workspace, "repo")
-	remotePath := filepath.Join(workspace, "remote.git")
+	repoPath := t.TempDir()
+	remotePath := filepath.Join(t.TempDir(), "remote.git")
 
-	if err := os.MkdirAll(repoPath, 0o755); err != nil {
-		t.Fatalf("failed to create repo dir: %v", err)
-	}
-
-	runGitCLI(t, workspace, "init", "--bare", remotePath)
+	runGitCLI(t, t.TempDir(), "init", "--bare", remotePath)
 	runGitCLI(t, repoPath, "init")
 	runGitCLI(t, repoPath, "config", "user.name", "Test User")
 	runGitCLI(t, repoPath, "config", "user.email", "test@example.com")
@@ -576,10 +562,10 @@ func TestGit_FindOrCreateBranch_BotAliasCommitAllowed(t *testing.T) {
 	repo, err := git.PlainOpen(repoPath)
 	require.NoError(t, err)
 
-	g := Git{repo: repo}
+	g := Git{repo: repo, repoRoot: repoPath}
 	runGitCLI(t, repoPath, "config", "pull.rebase", "false")
 
-	t.Setenv("GITHUB_WORKSPACE", workspace)
+	t.Setenv("GITHUB_WORKSPACE", repoPath)
 	t.Setenv("INPUT_WORKING_DIRECTORY", "")
 	t.Setenv("INPUT_FEATURE_BRANCH", "")
 

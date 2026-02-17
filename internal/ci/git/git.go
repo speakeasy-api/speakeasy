@@ -35,9 +35,14 @@ import (
 
 type Git struct {
 	accessToken string
+	repoRoot    string
 	repo        *git.Repository       // go-git repo (existing)
 	gitRepo     *sharedgit.Repository // shared Repository from internal/git/
 	client      *github.Client
+}
+
+func (g *Git) GetRepoRoot() string {
+	return g.repoRoot
 }
 
 const (
@@ -61,50 +66,29 @@ func New(accessToken string) *Git {
 	}
 }
 
-func (g *Git) CloneRepo() error {
-	githubURL := os.Getenv("GITHUB_SERVER_URL")
-	githubRepoLocation := os.Getenv("GITHUB_REPOSITORY")
-
-	repoPath, err := url.JoinPath(githubURL, githubRepoLocation)
+func (g *Git) OpenRepo() error {
+	r, err := git.PlainOpenWithOptions(".", &git.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
-		return fmt.Errorf("failed to construct repo url: %w", err)
-	}
-
-	ref := environment.GetRef()
-
-	logging.Info("Cloning repo: %s from ref: %s", repoPath, ref)
-
-	workspace := environment.GetWorkspace()
-
-	// Remove the repo if it exists
-	// Flow is useful when testing locally, but we're usually in a fresh image so unnecessary most of the time
-	repoDir := path.Join(workspace, "repo")
-	if err := os.RemoveAll(repoDir); err != nil {
-		return err
-	}
-
-	r, err := git.PlainClone(path.Join(workspace, "repo"), false, &git.CloneOptions{
-		URL:           repoPath,
-		Progress:      os.Stdout,
-		Auth:          sharedgit.BasicAuth(g.accessToken),
-		ReferenceName: plumbing.ReferenceName(ref),
-		SingleBranch:  true,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to clone repo: %w", err)
+		return fmt.Errorf("failed to open repo: %w", err)
 	}
 	g.repo = r
 	g.gitRepo = &sharedgit.Repository{}
 	g.gitRepo.SetGoGitRepo(r)
 
-	if err := g.configureSystemGitAuth(repoDir); err != nil {
+	wt, err := r.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+	g.repoRoot = wt.Filesystem.Root()
+
+	if err := g.configureSystemGitAuth(g.repoRoot); err != nil {
 		logging.Info("Warning: failed to configure system git credentials: %v", err)
 	}
 
 	return nil
 }
 
-// configureSystemGitAuth configures the cloned repo's local git config so that
+// configureSystemGitAuth configures the repo's local git config so that
 // system git commands (invoked by speakeasy CLI subprocesses) can authenticate.
 // It sets url.<authenticated>.insteadOf so that any HTTPS URL for the GitHub host
 // is transparently rewritten to include credentials.
@@ -192,7 +176,7 @@ func (g *Git) CheckDirDirty(dir string, ignoreChangePatterns map[string]string) 
 		return false, "", nil
 	}
 
-	diffOutput, err := sharedgit.RunGitCommand(filepath.Join(environment.GetWorkspace(), "repo"), "diff", "--word-diff=porcelain")
+	diffOutput, err := sharedgit.RunGitCommand(g.repoRoot, "diff", "--word-diff=porcelain")
 	if err != nil {
 		return false, "", fmt.Errorf("error running git diff: %w", err)
 	}
@@ -314,7 +298,7 @@ func (g *Git) Reset(args ...string) error {
 
 	logging.Info("Running git  %s", strings.Join(fullArgs, " "))
 
-	dir := filepath.Join(environment.GetWorkspace(), "repo", environment.GetWorkingDirectory())
+	dir := filepath.Join(g.repoRoot, environment.GetWorkingDirectory())
 	if _, err := sharedgit.RunGitCommand(dir, fullArgs...); err != nil {
 		return fmt.Errorf("error running `git %s`: %w", strings.Join(fullArgs, " "), err)
 	}
@@ -460,7 +444,7 @@ func (g *Git) findNonCICommits(branchName, defaultBranch string) ([]string, erro
 	}
 
 	revSpec := fmt.Sprintf("origin/%s..%s", defaultBranch, branchName)
-	dir := filepath.Join(environment.GetWorkspace(), "repo", environment.GetWorkingDirectory())
+	dir := filepath.Join(g.repoRoot, environment.GetWorkingDirectory())
 	output, err := sharedgit.RunGitCommand(dir, "log", revSpec, "--pretty=format:%H%x09%an%x09%cn%x09%s")
 	if err != nil {
 		return nil, fmt.Errorf("error checking outstanding commits on %s: %w", branchName, err)
@@ -760,7 +744,7 @@ func (g *Git) createAndPushTree(ref *github.Reference, sourceFiles git.Status) (
 
 func (g *Git) Add(arg string) error {
 	// We execute this manually because go-git doesn't properly support gitignore
-	dir := filepath.Join(environment.GetWorkspace(), "repo", environment.GetWorkingDirectory())
+	dir := filepath.Join(g.repoRoot, environment.GetWorkingDirectory())
 	if _, err := sharedgit.RunGitCommand(dir, "add", arg); err != nil {
 		return fmt.Errorf("error running `git add %s`: %w", arg, err)
 	}
@@ -1025,7 +1009,7 @@ func (g *Git) tryGeneratePRDescription(info PRInfo) *prdescription.Output {
 // --- Helper function for changelog generation for old CLI versions ---
 func (g *Git) generateGeneratorChangelogForOldCLIVersions(info PRInfo, previousGenVersions []string, changelog string) (string, error) {
 	for language, genInfo := range info.ReleaseInfo.LanguagesGenerated {
-		genPath := path.Join(environment.GetWorkspace(), "repo", genInfo.Path)
+		genPath := path.Join(g.repoRoot, genInfo.Path)
 
 		var targetVersions map[string]string
 
@@ -1281,15 +1265,14 @@ func (g *Git) MergeBranch(branchName string) (string, error) {
 		return "", fmt.Errorf("error checking out branch: %w", err)
 	}
 
-	repoDir := filepath.Join(environment.GetWorkspace(), "repo")
-	output, err := sharedgit.RunGitCommand(repoDir, "merge", branchName)
+	output, err := sharedgit.RunGitCommand(g.repoRoot, "merge", branchName)
 	if err != nil {
 		// This can happen if a "compile" has changed something unexpectedly. Add a "git status --porcelain" into the action output
-		debugOutput, _ := sharedgit.RunGitCommand(repoDir, "status", "--porcelain")
+		debugOutput, _ := sharedgit.RunGitCommand(g.repoRoot, "status", "--porcelain")
 		if len(debugOutput) > 0 {
 			logging.Info("git status\n%s", debugOutput)
 		}
-		debugOutput, _ = sharedgit.RunGitCommand(repoDir, "diff")
+		debugOutput, _ = sharedgit.RunGitCommand(g.repoRoot, "diff")
 		if len(debugOutput) > 0 {
 			logging.Info("git diff\n%s", debugOutput)
 		}

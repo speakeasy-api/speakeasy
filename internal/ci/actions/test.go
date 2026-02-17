@@ -59,7 +59,7 @@ func Test(ctx context.Context) error {
 		for _, file := range files {
 			if strings.Contains(file, "gen.yaml") || strings.Contains(file, "gen.lock") {
 				configDir := filepath.Dir(filepath.Dir(file)) // gets out of .speakeasy
-				cfg, err := config.Load(filepath.Join(environment.GetWorkspace(), "repo", configDir))
+				cfg, err := config.Load(filepath.Join(environment.GetWorkspace(), configDir))
 				if err != nil {
 					return fmt.Errorf("failed to load config: %w", err)
 				}

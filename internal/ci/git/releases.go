@@ -83,7 +83,7 @@ func (g *Git) CreateRelease(oldReleaseContent string, languages map[string]relea
 				return fmt.Errorf("failed to write goreleaser config: %w", err)
 			}
 			cmd := exec.Command("goreleaser", "release", "--clean", "--config", "/tmp/.goreleaser.yml")
-			cmd.Dir = filepath.Join(environment.GetWorkspace(), "repo")
+			cmd.Dir = g.repoRoot
 			cmd.Env = append(os.Environ(),
 				"GORELEASER_PREVIOUS_TAG="+info.PreviousVersion,
 				"GORELEASER_CURRENT_TAG="+tag,
@@ -161,7 +161,7 @@ func (g *Git) CreateRelease(oldReleaseContent string, languages map[string]relea
 }
 
 func (g *Git) AttachMCPReleaseTag(path, tagName string, outputs map[string]string) error {
-	loadedCfg, err := config.Load(filepath.Join(environment.GetWorkspace(), "repo", path))
+	loadedCfg, err := config.Load(filepath.Join(g.repoRoot, path))
 	if err != nil {
 		return err
 	}
