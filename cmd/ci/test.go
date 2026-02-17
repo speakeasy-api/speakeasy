@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -57,5 +57,5 @@ func runCITest(ctx context.Context, flags testFlags) error {
 	setEnvIfNotEmpty("INPUT_WORKING_DIRECTORY", flags.WorkingDirectory)
 	setEnvBool("INPUT_OUTPUT_TESTS", flags.OutputTests)
 	setEnvBool("INPUT_DEBUG", flags.Debug)
-	return fmt.Errorf("ci test: not yet implemented")
+	return actions.Test(ctx)
 }

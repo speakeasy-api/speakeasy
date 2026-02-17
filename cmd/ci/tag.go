@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -51,5 +51,5 @@ func runTag(ctx context.Context, flags tagFlags) error {
 	setEnvIfNotEmpty("INPUT_CODE_SAMPLES", flags.CodeSamples)
 	setEnvBool("INPUT_DEBUG", flags.Debug)
 
-	return fmt.Errorf("ci tag: not yet implemented")
+	return actions.Tag(ctx)
 }
