@@ -10,6 +10,11 @@ on:
                 required: false
                 type: boolean
                 default: false
+            pre_release:
+                description: 'Is this a pre-release?'
+                required: false
+                type: boolean
+                default: false
 permissions:
     contents: write
     packages: write
@@ -39,6 +44,7 @@ jobs:
                   output-file: "false"
                   skip-on-empty: "false"
                   preset: conventionalcommits
+                  pre-release: ${{ inputs.pre_release == true && 'rc' || '' }}
             - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
               with:
                   go-version-file: "go.mod"
@@ -57,7 +63,7 @@ jobs:
               with:
                   distribution: goreleaser
                   version: latest
-                  args: release --clean ${{ inputs.is_draft == true && '--draft' || '' }} ${{ vars.SKIP_CHOCOLATEY == 'true' && '--skip=chocolatey' || '' }}
+                  args: release --clean ${{ inputs.is_draft == true && '--draft' || '' }} ${{ vars.SKIP_CHOCOLATEY == 'true' && '--skip=chocolatey' || '' }} ${{ inputs.pre_release == true && '--skip=homebrew,chocolatey,winget' || '' }}
               env:
                   GITHUB_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
                   CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
