@@ -198,7 +198,7 @@ func GetLastReleaseInfo(dir string) (*ReleasesInfo, error) {
 
 func GetReleaseInfoFromGenerationFiles(path string) (*ReleasesInfo, error) {
 
-	cfg, err := config.Load(filepath.Join(environment.GetWorkspace(), "repo", path))
+	cfg, err := config.Load(filepath.Join(environment.GetWorkspace(), path))
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func GetReleaseInfoFromGenerationFiles(path string) (*ReleasesInfo, error) {
 
 func GetTargetSpecificReleaseNotes(path string) (TargetReleaseNotes, error) {
 	releaseInfoFromLockFile := make(TargetReleaseNotes)
-	cfg, err := config.Load(filepath.Join(environment.GetWorkspace(), "repo", path))
+	cfg, err := config.Load(filepath.Join(environment.GetWorkspace(), path))
 	if err != nil {
 		return nil, err
 	}
@@ -481,5 +481,5 @@ func ParseReleases(data string) (*ReleasesInfo, error) {
 }
 
 func GetReleasesPath(dir string) string {
-	return path.Join(environment.GetWorkspace(), "repo", dir, "RELEASES.md")
+	return path.Join(environment.GetWorkspace(), dir, "RELEASES.md")
 }

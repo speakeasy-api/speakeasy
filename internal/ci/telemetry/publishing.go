@@ -15,8 +15,7 @@ import (
 
 func TriggerPublishingEvent(targetDirectory, result, registryName string) (string, error) {
 	workspace := environment.GetWorkspace()
-	path := filepath.Join(workspace, "repo")
-	path = filepath.Join(path, targetDirectory)
+	path := filepath.Join(workspace, targetDirectory)
 
 	var packageVersion string
 	return packageVersion, Track(context.Background(), shared.InteractionTypePublish, func(ctx context.Context, event *shared.CliEvent) error {
@@ -131,7 +130,7 @@ func processGo(cfg *config.Config, event *shared.CliEvent, path string, version 
 	event.PublishPackageName = &packageName
 
 	if packageName != "" && version != "" {
-		relPath, err := filepath.Rel(filepath.Join(environment.GetWorkspace(), "repo"), path)
+		relPath, err := filepath.Rel(environment.GetWorkspace(), path)
 		if err != nil {
 			return err
 		}

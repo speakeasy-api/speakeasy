@@ -84,7 +84,7 @@ func Run(g Git, pr *github.PullRequest, wf *workflow.Workflow) (*RunResult, map[
 		}
 
 		dir = filepath.Join(environment.GetWorkingDirectory(), dir)
-		return dir, path.Join(workspace, "repo", dir)
+		return dir, path.Join(workspace, dir)
 	}
 
 	includesTerraform := false

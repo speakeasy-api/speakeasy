@@ -14,7 +14,7 @@ func initAction() (*git.Git, error) {
 	}
 
 	g := git.New(accessToken)
-	if err := g.CloneRepo(); err != nil {
+	if err := g.OpenRepo(); err != nil {
 		return nil, err
 	}
 

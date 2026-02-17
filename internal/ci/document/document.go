@@ -140,7 +140,7 @@ func resolveFiles(files []file, typ string) ([]string, error) {
 	outFiles := []string{}
 
 	for i, file := range files {
-		localPath := filepath.Join(workspace, "repo", file.Location)
+		localPath := filepath.Join(workspace, file.Location)
 
 		if _, err := os.Stat(localPath); err == nil {
 			fmt.Printf("Found local %s file: %s\n", typ, localPath)
