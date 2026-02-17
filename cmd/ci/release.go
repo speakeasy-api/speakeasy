@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -66,7 +66,5 @@ func runRelease(ctx context.Context, flags releaseFlags) error {
 	setEnvIfNotEmpty("INPUT_REGISTRY_TAGS", flags.RegistryTags)
 	setEnvIfNotEmpty("INPUT_ENABLE_SDK_CHANGELOG", flags.EnableSDKChangelog)
 
-	// TODO: delegate to actual release logic
-	// This will be implemented when the action logic is extracted
-	return fmt.Errorf("ci release: not yet implemented")
+	return actions.Release(ctx)
 }

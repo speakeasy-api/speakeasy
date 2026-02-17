@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -79,7 +79,5 @@ func runCISuggest(ctx context.Context, flags suggestFlags) error {
 	setEnvIfNotEmpty("INPUT_OPENAPI_DOC_AUTH_TOKEN", flags.OpenAPIDocAuthToken)
 	setEnvBool("INPUT_DEBUG", flags.Debug)
 
-	// TODO: delegate to actual suggest logic
-	// This will be implemented when the action logic is extracted
-	return fmt.Errorf("ci suggest: not yet implemented")
+	return actions.Suggest(ctx)
 }

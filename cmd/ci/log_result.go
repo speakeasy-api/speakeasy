@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -72,5 +72,5 @@ func runLogResult(ctx context.Context, flags logResultFlags) error {
 	setEnvIfNotEmpty("RESOLVED_SPEAKEASY_VERSION", flags.ResolvedSpeakeasyVersion)
 	setEnvBool("INPUT_DEBUG", flags.Debug)
 
-	return fmt.Errorf("ci log-result: not yet implemented")
+	return actions.LogActionResult()
 }

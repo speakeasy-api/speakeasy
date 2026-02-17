@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -58,5 +58,5 @@ func runPublishEvent(ctx context.Context, flags publishEventFlags) error {
 	setEnvIfNotEmpty("INPUT_REGISTRY_NAME", flags.RegistryName)
 	setEnvBool("INPUT_DEBUG", flags.Debug)
 
-	return fmt.Errorf("ci publish-event: not yet implemented")
+	return actions.PublishEventAction()
 }

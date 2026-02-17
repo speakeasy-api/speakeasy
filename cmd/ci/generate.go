@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -179,7 +179,5 @@ func runGenerate(ctx context.Context, flags generateFlags) error {
 	setEnvBool("INPUT_SIGNED_COMMITS", flags.SignedCommits)
 	setEnvIfNotEmpty("INPUT_BRANCH_NAME", flags.BranchName)
 
-	// TODO: delegate to actual generation logic
-	// This will be implemented when the action logic is extracted
-	return fmt.Errorf("ci generate: not yet implemented")
+	return actions.RunWorkflow(ctx)
 }

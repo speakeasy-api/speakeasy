@@ -2,9 +2,9 @@ package ci
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
@@ -66,5 +66,5 @@ func runFinalize(ctx context.Context, flags finalizeFlags) error {
 	setEnvIfNotEmpty("INPUT_CLI_OUTPUT", flags.CliOutput)
 	setEnvBool("INPUT_DEBUG", flags.Debug)
 
-	return fmt.Errorf("ci finalize: not yet implemented")
+	return actions.FinalizeSuggestion()
 }
