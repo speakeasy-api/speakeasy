@@ -1,4 +1,4 @@
-package cmd
+package ci
 
 import (
 	"context"
@@ -11,19 +11,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/prdescription"
 )
-
-// ciCmd is a hidden command group for CI/CD integrations.
-// These commands are called by the speakeasy-sdk-generation-action and other CI tools.
-// Hidden from help to avoid confusing end users.
-var ciCmd = &model.CommandGroup{
-	Usage:  "ci",
-	Short:  "CI/CD integration commands",
-	Long:   "Commands used by CI/CD integrations like GitHub Actions. Not intended for direct user invocation.",
-	Hidden: true,
-	Commands: []model.Command{
-		prDescriptionCmd,
-	},
-}
 
 type PRDescriptionFlags struct {
 	Input string `json:"input"`
