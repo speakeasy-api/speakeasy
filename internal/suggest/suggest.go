@@ -43,7 +43,7 @@ func SuggestAndWrite(
 		yamlOut = true
 	}
 
-	schemaBytes, _, model, err := schemas.LoadDocument(ctx, schemaLocation)
+	schemaBytes, _, err := schemas.LoadDocument(ctx, schemaLocation)
 	if err != nil {
 		return err
 	}
@@ -75,12 +75,15 @@ func SuggestAndWrite(
 		}
 	} else {
 		log.From(ctx).Infof("\nApplying overlay...")
-		root := model.Index.GetRootNode()
-		if err := overlay.ApplyTo(root); err != nil {
+		var root yaml.Node
+		if err := yaml.Unmarshal(schemaBytes, &root); err != nil {
+			return err
+		}
+		if err := overlay.ApplyTo(&root); err != nil {
 			return err
 		}
 
-		finalBytes, err := schemas.Render(root, schemaLocation, yamlOut)
+		finalBytes, err := schemas.Render(&root, schemaLocation, yamlOut)
 		if err != nil {
 			return err
 		}

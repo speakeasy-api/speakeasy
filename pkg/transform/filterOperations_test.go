@@ -5,7 +5,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pb33f/libopenapi"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,28 +21,27 @@ func TestFilterOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse the filtered spec
-	filteredDoc, err := libopenapi.NewDocument(buf.Bytes())
+	doc, _, err := openapi.Unmarshal(context.Background(), &buf, openapi.WithSkipValidation())
 	require.NoError(t, err)
 
-	model, errors := filteredDoc.BuildV3Model()
-	require.Empty(t, errors)
-
 	// Check that the delete operation is removed
-	paths := model.Model.Paths
-	petPath, ok := paths.PathItems.Get("/pet/{petId}")
+	paths := doc.Paths
+	petPathRef, ok := paths.Get("/pet/{petId}")
 	require.True(t, ok)
-	assert.Nil(t, petPath.Delete, "Delete operation should be removed")
+	petPath := petPathRef.GetObject()
+	require.NotNil(t, petPath)
+	assert.Nil(t, petPath.Delete(), "Delete operation should be removed")
 
 	// Check that the findPetsByStatus operation is removed
 	// The entire path should be removed because findPetsByStatus was the only operation in it
-	_, ok = paths.PathItems.Get("/pet/findByStatus")
+	_, ok = paths.Get("/pet/findByStatus")
 	require.False(t, ok)
 
 	// Check that other operations still exist
-	assert.NotNil(t, petPath.Get, "Get operation should still exist")
+	assert.NotNil(t, petPath.Get(), "Get operation should still exist")
 
 	// Check components
-	components := model.Model.Components
+	components := doc.Components
 
 	// Check schemas
 	pet, ok := components.Schemas.Get("Pet")

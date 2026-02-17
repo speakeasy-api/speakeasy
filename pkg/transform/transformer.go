@@ -1,20 +1,21 @@
 package transform
 
 import (
+	"bytes"
 	"context"
-	"github.com/pb33f/libopenapi"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
-	"github.com/speakeasy-api/speakeasy/internal/schemas"
 	"io"
 	"os"
+
+	"github.com/speakeasy-api/openapi/openapi"
+	"github.com/speakeasy-api/openapi/yml"
+	"gopkg.in/yaml.v3"
 )
 
 type transformer[Args interface{}] struct {
 	r           io.Reader
 	schemaPath  string
 	jsonOut     bool
-	transformFn func(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args Args) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error)
+	transformFn func(ctx context.Context, doc *openapi.OpenAPI, args Args) (*openapi.OpenAPI, error)
 	w           io.Writer
 	args        Args
 }
@@ -28,40 +29,52 @@ func (t transformer[Args]) Do(ctx context.Context) error {
 		}
 	}
 
-	schemaBytes, err := io.ReadAll(t.r)
-	if err != nil {
-		return err
-	}
-	doc, model, err := openapi.Load(schemaBytes, t.schemaPath)
+	doc, _, err := openapi.Unmarshal(ctx, t.r, openapi.WithSkipValidation())
 	if err != nil {
 		return err
 	}
 
-	_, model, err = t.transformFn(ctx, *doc, model, t.args)
+	doc, err = t.transformFn(ctx, doc, t.args)
 	if err != nil {
 		return err
 	}
 
-	bytes, err := schemas.Render(model.Index.GetRootNode(), t.schemaPath, !t.jsonOut)
-	if err != nil {
-		return err
+	// Configure output format
+	if core := doc.GetCore(); core != nil {
+		config := core.Config
+		if config == nil {
+			config = yml.GetDefaultConfig()
+		}
+		if t.jsonOut {
+			config.OutputFormat = yml.OutputFormatJSON
+		} else {
+			config.OutputFormat = yml.OutputFormatYAML
+		}
+		core.SetConfig(config)
 	}
 
-	_, err = t.w.Write(bytes)
-	return err
+	return openapi.Marshal(ctx, doc, t.w)
 }
 
-// Note, doc.RenderAndReload() is not sufficient because it does not reload changes to the model
-func reload(model *libopenapi.DocumentModel[v3.Document], basePath string) (*libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	updatedBytes, err := model.Model.Render()
-	if err != nil {
-		return nil, model, err
+// syncDoc syncs high-level model changes to YAML nodes in-memory
+func syncDoc(ctx context.Context, doc *openapi.OpenAPI) error {
+	return openapi.Sync(ctx, doc)
+}
+
+// reloadFromYAML marshals the YAML node directly and re-parses to create a fresh document.
+// Use this after modifying YAML nodes directly to ensure high-level and YAML are in sync.
+func reloadFromYAML(ctx context.Context, root *yaml.Node) (*openapi.OpenAPI, error) {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(root); err != nil {
+		return nil, err
 	}
 
-	doc, model, err := openapi.Load(updatedBytes, basePath)
+	doc, _, err := openapi.Unmarshal(ctx, &buf, openapi.WithSkipValidation())
 	if err != nil {
-		return doc, model, err
+		return nil, err
 	}
 
-	return doc, model, nil
+	return doc, nil
 }

@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pb33f/libopenapi"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -23,13 +23,14 @@ func TestFormat(t *testing.T) {
 	err := FormatDocument(context.Background(), "../../integration/resources/unformatted.yaml", true, &testInput)
 	require.NoError(t, err)
 
-	// Parse the formatted spec
-	formattedDoc, err := libopenapi.NewDocument(testInput.Bytes())
+	// Parse the formatted spec to verify it's valid
+	_, _, err = openapi.Unmarshal(context.Background(), &testInput, openapi.WithSkipValidation())
 	require.NoError(t, err)
 
-	// Check that the formatted spec is valid
-	_, errors := formattedDoc.BuildV3Model()
-	require.Empty(t, errors)
+	// Reset buffer position for comparison
+	testInput.Reset()
+	err = FormatDocument(context.Background(), "../../integration/resources/unformatted.yaml", true, &testInput)
+	require.NoError(t, err)
 
 	// Open the spec we expect to see to compare
 	file, err := os.Open("../../integration/resources/formatted.yaml")

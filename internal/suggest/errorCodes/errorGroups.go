@@ -3,8 +3,8 @@ package errorCodes
 import (
 	"slices"
 
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/openapi/openapi"
+	coreopenapi "github.com/speakeasy-api/speakeasy-core/openapi"
 )
 
 type errorGroup struct {
@@ -65,14 +65,14 @@ func (e errorGroupSlice) AllCodes() []string {
 	return codes
 }
 
-func (e errorGroupSlice) DeduplicateComponentNames(document v3.Document) {
+func (e errorGroupSlice) DeduplicateComponentNames(doc *openapi.OpenAPI) {
 	var schemaNames []string
-	for s := range openapi.IterateSchemas(document) {
+	for s := range coreopenapi.IterateSchemas(doc) {
 		schemaNames = append(schemaNames, s.Name)
 	}
 
 	var responseNames []string
-	for r := range openapi.IterateResponses(document) {
+	for r := range coreopenapi.IterateResponses(doc) {
 		responseNames = append(responseNames, r.Name)
 	}
 

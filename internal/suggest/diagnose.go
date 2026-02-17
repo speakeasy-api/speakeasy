@@ -8,7 +8,7 @@ import (
 )
 
 func Diagnose(ctx context.Context, schemaPath string) (suggestions.Diagnosis, error) {
-	data, _, _, err := schemas.LoadDocument(ctx, schemaPath)
+	data, _, err := schemas.LoadDocument(ctx, schemaPath)
 	if err != nil {
 		return nil, err
 	}

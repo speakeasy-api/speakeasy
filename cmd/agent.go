@@ -15,7 +15,7 @@ var agentCmd = &model.CommandGroup{
 	Short:          "Docs & guided workflows for AI coding agents (start here: speakeasy agent context)",
 	Long:           "Commands for AI agents interacting with Speakeasy. Run 'speakeasy agent context' for structured documentation.",
 	InteractiveMsg: "What would you like to do?",
-	Commands:       []model.Command{agentContextCmd, agentFeedbackCmd},
+	Commands:       []model.Command{agentContextCmd, agentFeedbackCmd, agentSetupSkillsCmd},
 }
 
 type AgentContextFlags struct {
@@ -145,7 +145,7 @@ var agentFeedbackCmd = &model.ExecutableCommand[AgentFeedbackFlags]{
 		flag.StringFlag{
 			Name:         "type",
 			Shorthand:    "t",
-			Description:  "Feedback type: agent_context or general",
+			Description:  "Feedback type: agent_context, missing_guidance, or general",
 			DefaultValue: "agent_context",
 		},
 		flag.StringFlag{

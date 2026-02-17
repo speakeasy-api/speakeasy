@@ -38,9 +38,10 @@ import (
 var PromptForCustomCode = prompts.PromptForCustomCode
 
 type GenerationAccess struct {
-	AccessAllowed bool
-	Message       string
-	Level         *shared.Level
+	AccessAllowed         bool
+	Message               string
+	Level                 *shared.Level
+	RenderedUsageSnippets *generate.RenderedUsageSnippets // pre-rendered snippets from SDK generation (nil if not requested)
 }
 
 type CancellableGeneration struct {
@@ -85,6 +86,10 @@ type GenerateOptions struct {
 	// WorkflowStep enables running prompts through the workflow visualizer.
 	// If nil, prompts will run directly without visualizer integration.
 	WorkflowStep *workflowTracking.WorkflowStep
+
+	// RenderUsageSnippets opts in to pre-rendering standalone usage snippets
+	// during SDK generation, reusing the already-resolved AST.
+	RenderUsageSnippets bool
 }
 
 func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, error) {
@@ -177,6 +182,9 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	}
 	if opts.SkipVersioning {
 		generatorOpts = append(generatorOpts, generate.WithSkipVersioning(opts.SkipVersioning))
+	}
+	if opts.RenderUsageSnippets {
+		generatorOpts = append(generatorOpts, generate.WithRenderUsageSnippets())
 	}
 
 	// Track the current generation step for error reporting
@@ -320,8 +328,9 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	}
 
 	return &GenerationAccess{
-		AccessAllowed: generationAccess,
-		Message:       message,
+		AccessAllowed:         generationAccess,
+		Message:               message,
+		RenderedUsageSnippets: g.GetRenderedUsageSnippets(),
 	}, nil
 }
 

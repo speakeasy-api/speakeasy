@@ -11,6 +11,7 @@ paths:
             application/json:
               schema:
                 type: string
+          description: ""
 components:
   schemas:
     test:

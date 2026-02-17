@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pb33f/libopenapi"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/openapi/openapi"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,22 +45,23 @@ func NormalizeFromReader(ctx context.Context, schema io.Reader, schemaPath strin
 	}.Do(ctx)
 }
 
-func Normalize(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], args normalizeArgs) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	root := model.Index.GetRootNode()
+func Normalize(ctx context.Context, doc *openapi.OpenAPI, args normalizeArgs) (*openapi.OpenAPI, error) {
+	// Sync to get current YAML nodes
+	if err := syncDoc(ctx, doc); err != nil {
+		return doc, fmt.Errorf("failed to sync document: %w", err)
+	}
+
+	root := doc.GetCore().GetRootNode()
 
 	walkAndNormalizeDocument(root, args.NormalizeOptions)
 
-	updatedDoc, err := yaml.Marshal(root)
+	// Reload from modified YAML to create fresh document
+	newDoc, err := reloadFromYAML(ctx, root)
 	if err != nil {
-		return doc, model, fmt.Errorf("failed to marshal document: %w", err)
+		return doc, fmt.Errorf("failed to reload document: %w", err)
 	}
 
-	docNew, model, err := openapi.Load(updatedDoc, doc.GetConfiguration().BasePath)
-	if err != nil {
-		return doc, model, fmt.Errorf("failed to reload document: %w", err)
-	}
-
-	return *docNew, model, nil
+	return newDoc, nil
 }
 
 type NormalizeOptions struct {

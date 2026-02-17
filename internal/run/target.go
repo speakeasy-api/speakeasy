@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/auth"
@@ -82,7 +83,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 					*cliEvent.GenerateNumberOfOperationsIgnored = int64(len(sourceRes.LintResult.InvalidOperations))
 				}
 
-				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, sourceRes.LintResult.AllErrors)
+				retriedPath, retriedRes, retriedErr := w.retryWithMinimumViableSpec(ctx, rootStep, t.Source, target, sourceRes.LintResult)
 				if retriedErr != nil {
 					log.From(ctx).Errorf("Failed to retry with minimum viable spec: %s", retriedErr)
 					// return the original error
@@ -240,6 +241,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			StreamableGeneration:  w.StreamableGeneration,
 			ReleaseNotes:          changelogContent,
 			WorkflowStep:          genStep,
+			RenderUsageSnippets:   t.CodeSamplesEnabled(),
 		},
 	)
 	if err != nil {
@@ -253,7 +255,7 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 
 	if t.CodeSamplesEnabled() {
 		codeSamplesStep := rootStep.NewSubstep("Generating Code Samples")
-		namespaceName, digest, err := w.runCodeSamples(ctx, codeSamplesStep, *t.CodeSamples, t.Target, sourcePath, t.Output)
+		namespaceName, digest, err := w.runCodeSamples(ctx, codeSamplesStep, *t.CodeSamples, t.Target, sourcePath, t.Output, generationAccess.RenderedUsageSnippets)
 		if err != nil {
 			// Block by default. Only warn if explicitly set to non-blocking
 			if t.CodeSamples.Blocking == nil || *t.CodeSamples.Blocking {
@@ -298,8 +300,10 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	return sourceRes, &targetResult, nil
 }
 
-// Returns codeSamples namespace name and digest
-func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflowTracking.WorkflowStep, codeSamples workflow.CodeSamples, target, sourcePath string, targetOutputPath *string) (string, string, error) {
+// Returns codeSamples namespace name and digest.
+// If preRendered is non-nil with content, it is used to build the overlay directly,
+// avoiding a second AST resolution pass.
+func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflowTracking.WorkflowStep, codeSamples workflow.CodeSamples, target, sourcePath string, targetOutputPath *string, preRendered *generate.RenderedUsageSnippets) (string, string, error) {
 	configPath := "."
 	writeFileLocation := codeSamples.Output
 
@@ -312,7 +316,14 @@ func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflow
 		}
 	}
 
-	overlayString, err := codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, writeFileLocation, []string{target}, true, false, codeSamples)
+	var overlayString string
+	var err error
+
+	if preRendered != nil && preRendered.RawOutput != "" {
+		overlayString, err = codesamples.GenerateOverlayFromRawSnippets(ctx, preRendered.RawOutput, target, sourcePath, writeFileLocation, true, codeSamples)
+	} else {
+		overlayString, err = codesamples.GenerateOverlay(ctx, sourcePath, "", "", configPath, writeFileLocation, []string{target}, true, false, codeSamples)
+	}
 	if err != nil {
 		return "", "", err
 	}

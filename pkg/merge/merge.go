@@ -18,6 +18,7 @@ import (
 	"github.com/speakeasy-api/openapi/marshaller"
 	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/openapi/overlay"
+	"github.com/speakeasy-api/openapi/sequencedmap"
 	"github.com/speakeasy-api/openapi/yml"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/validation"
@@ -120,6 +121,7 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 
 	var mergedDoc *openapi.OpenAPI
 	var warnings []error
+	state := newMergeState()
 
 	for i, schema := range inSchemas {
 		doc, err := loadOpenAPIDocument(ctx, schema)
@@ -134,26 +136,59 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 		}
 
 		if namespace != "" {
-			applyNamespaceToSchemas(doc, namespace)
+			// Apply namespace prefixes to all component types
+			schemaMappings := applyNamespaceToSchemas(doc, namespace)
+			paramMappings := applyNamespaceToParameters(doc, namespace)
+			responseMappings := applyNamespaceToResponses(doc, namespace)
+			requestBodyMappings := applyNamespaceToRequestBodies(doc, namespace)
+			headerMappings := applyNamespaceToHeaders(doc, namespace)
+			secSchemeMappings := applyNamespaceToSecuritySchemes(doc, namespace)
 
-			if err := updateSchemaReferencesInDocument(ctx, doc, namespace); err != nil {
-				return nil, fmt.Errorf("failed to update references for namespace %s: %w", namespace, err)
+			// Update schema references using explicit mappings
+			if err := updateSchemaReferencesInDocument(ctx, doc, schemaMappings); err != nil {
+				return nil, fmt.Errorf("failed to update schema references for namespace %s: %w", namespace, err)
 			}
+
+			// Update component references for parameters, responses, requestBodies, headers, securitySchemes
+			if err := updateComponentReferencesInDocument(ctx, doc, namespaceMappings{
+				Parameters:      paramMappings,
+				Responses:       responseMappings,
+				RequestBodies:   requestBodyMappings,
+				Headers:         headerMappings,
+				SecuritySchemes: secSchemeMappings,
+			}); err != nil {
+				return nil, fmt.Errorf("failed to update component references for namespace %s: %w", namespace, err)
+			}
+
+			// Update security requirement keys to match renamed security schemes
+			updateSecurityRequirements(doc, secSchemeMappings)
 		}
 
 		if mergedDoc == nil {
 			mergedDoc = doc
+			initMergeState(state, doc, namespace)
 			continue
 		}
 
 		var errs []error
-		mergedDoc, errs = MergeDocuments(mergedDoc, doc)
+		mergedDoc, errs = mergeDocumentsWithState(state, mergedDoc, doc, namespace, i+1)
 		warnings = append(warnings, errs...)
 	}
 
 	if mergedDoc == nil {
 		return nil, errors.New("no documents to merge")
 	}
+
+	// Post-merge: deduplicate operationIds
+	deduplicateOperationIds(state, mergedDoc)
+
+	// Post-merge: collapse namespaced components that are equivalent
+	// (ignoring description/summary differences)
+	deduplicateEquivalentComponents(mergedDoc)
+
+	// Post-merge: normalize operation-level tag references to match
+	// the chosen document-level tag names (case-insensitive)
+	normalizeOperationTags(mergedDoc)
 
 	buf := bytes.NewBuffer(nil)
 	var err error
@@ -205,7 +240,20 @@ func loadOpenAPIDocument(ctx context.Context, data []byte) (*openapi.OpenAPI, er
 }
 
 // MergeDocuments merges two OpenAPI documents into one.
+// This is the public backward-compatible API. For namespace-aware merging,
+// the internal mergeDocumentsWithState is used instead.
 func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error) {
+	state := newMergeState()
+	initMergeState(state, mergedDoc, "")
+	merged, errs := mergeDocumentsWithState(state, mergedDoc, doc, "", 2)
+	deduplicateOperationIds(state, merged)
+	normalizeOperationTags(merged)
+	return merged, errs
+}
+
+// mergeDocumentsWithState merges two OpenAPI documents with namespace-aware
+// tag deduplication, path/method conflict disambiguation, and operationId tracking.
+func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docNamespace string, docCounter int) (*openapi.OpenAPI, []error) {
 	mergedVersion, _ := version.NewSemver(mergedDoc.OpenAPI)
 	docVersion, _ := version.NewSemver(doc.OpenAPI)
 	errs := make([]error, 0)
@@ -214,8 +262,8 @@ func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error)
 		mergedDoc.OpenAPI = doc.OpenAPI
 	}
 
-	// Merge Info - take the newer one
-	mergedDoc.Info = doc.Info
+	// Merge Info - last wins for most fields, but append description and summary
+	mergedDoc.Info = mergeInfo(mergedDoc.Info, doc.Info)
 
 	// Merge Extensions
 	if doc.Extensions != nil {
@@ -241,47 +289,16 @@ func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error)
 		mergedDoc.Security = doc.Security
 	}
 
-	// Merge Tags
-	if doc.Tags != nil {
-		if mergedDoc.Tags == nil {
-			mergedDoc.Tags = doc.Tags
-		} else {
-			for _, tag := range doc.Tags {
-				replaced := false
-				for i, mergedTag := range mergedDoc.Tags {
-					if mergedTag.Name == tag.Name {
-						mergedDoc.Tags[i] = tag
-						replaced = true
-						break
-					}
-				}
-				if !replaced {
-					mergedDoc.Tags = append(mergedDoc.Tags, tag)
-				}
-			}
-		}
-	}
+	// Merge Tags (case-insensitive with content-aware disambiguation)
+	tagResult := mergeTagsWithState(state, mergedDoc, doc, docNamespace, docCounter)
+	// Update operation-level tag references in each doc using its own rename map
+	// (case-insensitive matching, per-document maps avoid ambiguity)
+	updateOperationTagRefs(mergedDoc, tagResult.existingRenames)
+	updateOperationTagRefs(doc, tagResult.incomingRenames)
 
-	// Merge Paths
-	if doc.Paths != nil {
-		if mergedDoc.Paths == nil {
-			mergedDoc.Paths = doc.Paths
-		} else {
-			var extensionErr []error
-			mergedDoc.Paths.Extensions, extensionErr = mergeExtensions(mergedDoc.Paths.Extensions, doc.Paths.Extensions)
-			errs = append(errs, extensionErr...)
-
-			for path, pathItem := range doc.Paths.All() {
-				if mergedPathItem, ok := mergedDoc.Paths.Get(path); !ok {
-					mergedDoc.Paths.Set(path, pathItem)
-				} else {
-					pi, pathItemErrs := mergePathItems(mergedPathItem, pathItem)
-					mergedDoc.Paths.Set(path, pi)
-					errs = append(errs, pathItemErrs...)
-				}
-			}
-		}
-	}
+	// Merge Paths (with method-level conflict detection and fragment disambiguation)
+	pathErrs := mergePathsWithState(state, mergedDoc, doc, docNamespace, docCounter)
+	errs = append(errs, pathErrs...)
 
 	// Merge Components
 	if doc.Components != nil {
@@ -320,6 +337,49 @@ func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error)
 	return mergedDoc, errs
 }
 
+// mergeInfo merges two Info objects. Most fields use last-wins semantics,
+// but Description and Summary are appended (with a newline separator) so that
+// content from all merged documents is preserved.
+func mergeInfo(merged, incoming openapi.Info) openapi.Info {
+	existingDesc := derefStr(merged.Description)
+	existingSummary := derefStr(merged.Summary)
+
+	// Take the incoming info (last wins for most fields)
+	result := incoming
+
+	// Append descriptions across documents
+	result.Description = appendStrPtrs(existingDesc, derefStr(incoming.Description))
+
+	// Append summaries across documents
+	result.Summary = appendStrPtrs(existingSummary, derefStr(incoming.Summary))
+
+	return result
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func appendStrPtrs(a, b string) *string {
+	a = strings.TrimSpace(a)
+	b = strings.TrimSpace(b)
+
+	switch {
+	case a != "" && b != "" && a != b:
+		combined := a + "\n" + b
+		return &combined
+	case a != "":
+		return &a
+	case b != "":
+		return &b
+	default:
+		return nil
+	}
+}
+
 func mergeReferencedPathItems(mergedPathItem, pathItem *openapi.ReferencedPathItem) (*openapi.ReferencedPathItem, []error) {
 	if pathItem == nil {
 		return mergedPathItem, nil
@@ -341,10 +401,6 @@ func mergeReferencedPathItems(mergedPathItem, pathItem *openapi.ReferencedPathIt
 	merged, errs := mergePathItemObjects(mergedPathItem.Object, pathItem.Object)
 	mergedPathItem.Object = merged
 	return mergedPathItem, errs
-}
-
-func mergePathItems(mergedPathItem, pathItem *openapi.ReferencedPathItem) (*openapi.ReferencedPathItem, []error) {
-	return mergeReferencedPathItems(mergedPathItem, pathItem)
 }
 
 func mergePathItemObjects(mergedPathItem, pathItem *openapi.PathItem) (*openapi.PathItem, []error) {
@@ -646,6 +702,51 @@ func mergeComponents(mergedComponents, components *openapi.Components) (*openapi
 	return mergedComponents, errs
 }
 
+// descriptiveFields are fields that should be ignored when comparing components
+// for equivalence during merging. Two components that differ only in these fields
+// are considered equivalent (e.g. security schemes with different descriptions
+// but the same type/scheme/bearerFormat).
+var descriptiveFields = map[string]bool{
+	"description": true,
+	"summary":     true,
+}
+
+// stripDescriptiveFields removes description and summary keys from a yaml.Node
+// tree so that they don't cause false conflicts during merge comparison.
+func stripDescriptiveFields(node *yaml.Node) {
+	if node == nil {
+		return
+	}
+
+	if node.Kind == yaml.DocumentNode {
+		for _, child := range node.Content {
+			stripDescriptiveFields(child)
+		}
+		return
+	}
+
+	if node.Kind == yaml.MappingNode {
+		filtered := make([]*yaml.Node, 0, len(node.Content))
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			key := node.Content[i]
+			value := node.Content[i+1]
+			if key.Kind == yaml.ScalarNode && descriptiveFields[key.Value] {
+				continue
+			}
+			stripDescriptiveFields(value)
+			filtered = append(filtered, key, value)
+		}
+		node.Content = filtered
+		return
+	}
+
+	if node.Kind == yaml.SequenceNode {
+		for _, child := range node.Content {
+			stripDescriptiveFields(child)
+		}
+	}
+}
+
 // isSchemaEquivalent checks if two schemas are equivalent
 func isSchemaEquivalent(a, b *oas3.JSONSchema[oas3.Referenceable]) error {
 	if a == nil || b == nil {
@@ -671,6 +772,10 @@ func isSchemaEquivalent(a, b *oas3.JSONSchema[oas3.Referenceable]) error {
 	if err := yaml.Unmarshal(bufB.Bytes(), &nodeB); err != nil {
 		return fmt.Errorf("error unmarshalling schema b: %w", err)
 	}
+
+	// Strip description/summary so they don't cause false conflicts
+	stripDescriptiveFields(&nodeA)
+	stripDescriptiveFields(&nodeB)
 
 	nodeOverlay, err := overlay.Compare("comparison between schemas", &nodeA, nodeB)
 	if err != nil {
@@ -713,6 +818,10 @@ func isReferencedEquivalent[T any](a, b *T) error {
 	if err := yaml.Unmarshal(bytesB, &nodeB); err != nil {
 		return fmt.Errorf("error unmarshalling b: %w", err)
 	}
+
+	// Strip description/summary so they don't cause false conflicts
+	stripDescriptiveFields(&nodeA)
+	stripDescriptiveFields(&nodeB)
 
 	nodeOverlay, err := overlay.Compare("comparison between objects", &nodeA, nodeB)
 	if err != nil {
@@ -757,6 +866,194 @@ func mergeExtensions(mergedExtensions, exts *extensions.Extensions) (*extensions
 	}
 
 	return mergedExtensions, errs
+}
+
+// deduplicateEquivalentComponents collapses namespaced components that are
+// equivalent (ignoring description/summary). For example, if svcA_bearerAuth
+// and svcB_bearerAuth are identical security schemes except for description,
+// they are collapsed into a single bearerAuth entry.
+func deduplicateEquivalentComponents(doc *openapi.OpenAPI) {
+	if doc == nil || doc.Components == nil {
+		return
+	}
+
+	deduplicateSecuritySchemes(doc)
+}
+
+// getNameOverride reads the x-speakeasy-name-override extension value from an extensions map.
+func getNameOverride(exts *extensions.Extensions) string {
+	if exts == nil {
+		return ""
+	}
+	node, ok := exts.Get("x-speakeasy-name-override")
+	if !ok || node == nil {
+		return ""
+	}
+	return node.Value
+}
+
+// isEquivalentIgnoringDescriptiveAndNamespaceFields checks if two objects are
+// equivalent after stripping description, summary, and x-speakeasy-* extension fields.
+func isEquivalentIgnoringDescriptiveAndNamespaceFields[T any](a, b *T) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+
+	bytesA, err := yaml.Marshal(a)
+	if err != nil {
+		return false
+	}
+	bytesB, err := yaml.Marshal(b)
+	if err != nil {
+		return false
+	}
+
+	var nodeA, nodeB yaml.Node
+	if err := yaml.Unmarshal(bytesA, &nodeA); err != nil {
+		return false
+	}
+	if err := yaml.Unmarshal(bytesB, &nodeB); err != nil {
+		return false
+	}
+
+	stripDescriptiveFields(&nodeA)
+	stripDescriptiveFields(&nodeB)
+	stripSpeakeasyExtensions(&nodeA)
+	stripSpeakeasyExtensions(&nodeB)
+
+	nodeOverlay, err := overlay.Compare("equivalence check", &nodeA, nodeB)
+	if err != nil {
+		return false
+	}
+	return len(nodeOverlay.Actions) == 0
+}
+
+// stripSpeakeasyExtensions removes x-speakeasy-name-override and
+// x-speakeasy-model-namespace from yaml mapping nodes.
+func stripSpeakeasyExtensions(node *yaml.Node) {
+	if node == nil {
+		return
+	}
+
+	if node.Kind == yaml.DocumentNode {
+		for _, child := range node.Content {
+			stripSpeakeasyExtensions(child)
+		}
+		return
+	}
+
+	if node.Kind == yaml.MappingNode {
+		filtered := make([]*yaml.Node, 0, len(node.Content))
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			key := node.Content[i]
+			value := node.Content[i+1]
+			if key.Kind == yaml.ScalarNode &&
+				(key.Value == "x-speakeasy-name-override" || key.Value == "x-speakeasy-model-namespace") {
+				continue
+			}
+			stripSpeakeasyExtensions(value)
+			filtered = append(filtered, key, value)
+		}
+		node.Content = filtered
+		return
+	}
+
+	if node.Kind == yaml.SequenceNode {
+		for _, child := range node.Content {
+			stripSpeakeasyExtensions(child)
+		}
+	}
+}
+
+// deduplicateSecuritySchemes collapses namespaced security schemes that are
+// equivalent (ignoring description/summary). Updates security requirements
+// throughout the document to reference the collapsed name.
+func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
+	if doc.Components == nil || doc.Components.SecuritySchemes == nil {
+		return
+	}
+
+	// Group namespaced schemes by their original name (x-speakeasy-name-override)
+	type schemeEntry struct {
+		namespacedName string
+		scheme         *openapi.ReferencedSecurityScheme
+	}
+	groups := make(map[string][]schemeEntry)
+	var groupOrder []string
+
+	for name, scheme := range doc.Components.SecuritySchemes.All() {
+		if scheme == nil || scheme.IsReference() || scheme.Object == nil {
+			continue
+		}
+		override := getNameOverride(scheme.Object.Extensions)
+		if override == "" {
+			continue // not a namespaced component
+		}
+		if _, seen := groups[override]; !seen {
+			groupOrder = append(groupOrder, override)
+		}
+		groups[override] = append(groups[override], schemeEntry{namespacedName: name, scheme: scheme})
+	}
+
+	// For each group, check if all entries are equivalent
+	renameMappings := make(map[string]string) // namespacedName -> originalName
+	removals := make(map[string]bool)
+
+	for _, originalName := range groupOrder {
+		entries := groups[originalName]
+		if len(entries) < 2 {
+			continue
+		}
+
+		// Check if all entries are equivalent
+		allEquivalent := true
+		for i := 1; i < len(entries); i++ {
+			if !isEquivalentIgnoringDescriptiveAndNamespaceFields(entries[0].scheme, entries[i].scheme) {
+				allEquivalent = false
+				break
+			}
+		}
+
+		if !allEquivalent {
+			continue
+		}
+
+		// All equivalent: keep the last entry (last wins), remove others
+		winner := entries[len(entries)-1]
+		for _, entry := range entries {
+			renameMappings[entry.namespacedName] = originalName
+			if entry.namespacedName != winner.namespacedName {
+				removals[entry.namespacedName] = true
+			}
+		}
+
+		// Clean up the x-speakeasy-* extensions from the winner since it's no longer namespaced
+		if winner.scheme.Object.Extensions != nil {
+			winner.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
+			winner.scheme.Object.Extensions.Delete("x-speakeasy-model-namespace")
+		}
+	}
+
+	if len(renameMappings) == 0 {
+		return
+	}
+
+	// Rebuild the security schemes map: remove duplicates, rename winner
+	newSchemes := sequencedmap.New[string, *openapi.ReferencedSecurityScheme]()
+	for name, scheme := range doc.Components.SecuritySchemes.All() {
+		if removals[name] {
+			continue
+		}
+		if newName, ok := renameMappings[name]; ok {
+			newSchemes.Set(newName, scheme)
+		} else {
+			newSchemes.Set(name, scheme)
+		}
+	}
+	doc.Components.SecuritySchemes = newSchemes
+
+	// Update security requirements throughout the document
+	updateSecurityRequirements(doc, renameMappings)
 }
 
 func setOperationServers(doc *openapi.OpenAPI, opServers []*openapi.Server) {

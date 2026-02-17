@@ -25,6 +25,9 @@ func SubmitFeedback(ctx context.Context, feedbackType, message, contextPath stri
 	}
 
 	metadata := map[string]any{}
+	if feedbackType == "missing_guidance" {
+		metadata["feedback_subtype"] = "missing_guidance"
+	}
 	if contextPath != "" {
 		metadata["context_path"] = contextPath
 	}

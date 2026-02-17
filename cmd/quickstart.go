@@ -430,6 +430,11 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		}
 	}
 
+	// Offer to install agent skills before generation (interactive only)
+	if !quickstartObj.SkipInteractive {
+		offerSkillInstall(ctx, outDir)
+	}
+
 	// Execute the workflow based on output mode
 	switch flags.Output {
 	case "summary":
@@ -670,4 +675,31 @@ func currentDirectoryEmpty() bool {
 
 	_, err = dir.Readdirnames(1)
 	return errors.Is(err, io.EOF)
+}
+
+// offerSkillInstall runs the full interactive skill setup flow (agent selection,
+// skill selection) at the git repo root.
+func offerSkillInstall(ctx context.Context, outDir string) {
+	// Find the git repo root — skills belong at the repo level, not the SDK output dir
+	repo, err := gitc.PlainOpenWithOptions(outDir, &gitc.PlainOpenOptions{DetectDotGit: true})
+	if err != nil {
+		return // not in a git repo, skip silently
+	}
+	wt, err := repo.Worktree()
+	if err != nil {
+		return
+	}
+	repoRoot := wt.Filesystem.Root()
+
+	// runSetupSkillsInteractive uses os.Getwd() as project dir, so temporarily
+	// chdir to repo root for the install, then restore.
+	if err := os.Chdir(repoRoot); err != nil {
+		return
+	}
+	defer os.Chdir(outDir) //nolint:errcheck
+
+	// Reuse the full interactive setup-skills flow (same as install.sh)
+	if err := runSetupSkillsInteractive(ctx, AgentSetupSkillsFlags{}); err != nil {
+		log.From(ctx).Warnf("Failed to install agent skills: %s", err.Error())
+	}
 }

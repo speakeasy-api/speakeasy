@@ -2,52 +2,43 @@ package merge
 
 import (
 	"context"
-	"fmt"
 	"os"
 
-	"github.com/pb33f/libopenapi"
-	"github.com/pb33f/libopenapi/bundler"
-	"github.com/pb33f/libopenapi/datamodel"
+	"github.com/speakeasy-api/openapi/openapi"
 )
 
 // MergeByResolvingLocalReferences bundles an OpenAPI document by resolving all local
 // and remote $ref references into a single self-contained document.
-// This uses libopenapi for bundling functionality.
 func MergeByResolvingLocalReferences(ctx context.Context, inFile, outFile, basePath string, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
-	data, err := os.ReadFile(inFile)
+	f, err := os.Open(inFile)
 	if err != nil {
-		panic(fmt.Errorf("error reading file %s: %w", inFile, err))
+		return err
 	}
+	defer f.Close()
 
-	config := datamodel.DocumentConfiguration{
-		AllowFileReferences:   true,
-		AllowRemoteReferences: true,
-		BasePath:              basePath,
-	}
-
-	doc, err := libopenapi.NewDocumentWithConfiguration(data, &config)
+	doc, _, err := openapi.Unmarshal(ctx, f, openapi.WithSkipValidation())
 	if err != nil {
-		fmt.Printf("Error creating document: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
-	v3Model, errors := doc.BuildV3Model()
-	if errors != nil {
-		for _, err = range errors {
-			fmt.Printf("Error building model: %v\n", err)
-		}
-		os.Exit(1)
-	}
-
-	bytes, e := bundler.BundleDocument(&v3Model.Model)
-	if e != nil {
-		panic(fmt.Errorf("bundling failed: %w", e))
-	}
-
-	err = os.WriteFile(outFile, bytes, 0o644)
+	// Inline resolves all external references and replaces them with their content
+	err = openapi.Inline(ctx, doc, openapi.InlineOptions{
+		ResolveOptions: openapi.ResolveOptions{
+			RootDocument:   doc,
+			TargetLocation: inFile,
+		},
+		RemoveUnusedComponents: true,
+	})
 	if err != nil {
-		panic(fmt.Errorf("failed to write bundled file: %w", err))
+		return err
 	}
 
-	return nil
+	// Write the inlined document
+	out, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	return openapi.Marshal(ctx, doc, out)
 }

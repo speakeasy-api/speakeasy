@@ -6,10 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/pb33f/libopenapi"
-	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
-	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/speakeasy-api/speakeasy-core/openapi"
+	"github.com/speakeasy-api/openapi/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"gopkg.in/yaml.v3"
 )
@@ -33,46 +30,44 @@ func CleanupFromReader(ctx context.Context, schema io.Reader, schemaPath string,
 	}.Do(ctx)
 }
 
-func Cleanup(ctx context.Context, doc libopenapi.Document, model *libopenapi.DocumentModel[v3.Document], _ interface{}) (libopenapi.Document, *libopenapi.DocumentModel[v3.Document], error) {
-	pathItems := model.Model.Paths.PathItems
+func Cleanup(ctx context.Context, doc *openapi.OpenAPI, _ interface{}) (*openapi.OpenAPI, error) {
+	if doc.Paths == nil {
+		return doc, nil
+	}
+
 	var pathsToDelete []string
 
-	for pathPair := orderedmap.First(pathItems); pathPair != nil; pathPair = pathPair.Next() {
-		path := pathPair.Key()
-		pathVal := pathPair.Value()
-		operations := pathVal.GetOperations()
-		if operations.Len() == 0 {
+	for path, pathItem := range doc.Paths.All() {
+		// Check if the path item has any operations
+		hasOperations := false
+		if pathItem != nil && pathItem.Object != nil {
+			hasOperations = pathItem.Object.Len() > 0
+		}
+		if !hasOperations {
 			pathsToDelete = append(pathsToDelete, path)
 		}
 	}
 
 	for _, path := range pathsToDelete {
 		log.From(ctx).Printf("Dropped empty path: %s\n", path)
-		pathItems.Delete(path)
+		doc.Paths.Delete(path)
 	}
 
-	// Unfortunately, rendering and reloading is the only way to "apply" the path changes
-	_, model, err := reload(model, doc.GetConfiguration().BasePath)
-	if err != nil {
-		return doc, model, err
+	// Sync to apply path deletions to YAML nodes, then improve multiline strings
+	if err := syncDoc(ctx, doc); err != nil {
+		return doc, err
 	}
 
-	root := model.Index.GetRootNode()
+	root := doc.GetCore().GetRootNode()
 	improveMultilineStrings(ctx, root)
 
-	// Render and reload the document to ensure that the changes are reflected in the model
-	updatedDoc, err := yaml.Marshal(root)
+	// Reload from modified YAML to create fresh document that won't be overwritten by sync during marshal
+	newDoc, err := reloadFromYAML(ctx, root)
 	if err != nil {
-		return doc, model, err
+		return doc, err
 	}
 
-	docNew, model, err := openapi.Load(updatedDoc, doc.GetConfiguration().BasePath)
-
-	if err != nil {
-		return doc, model, err
-	}
-
-	return *docNew, model, nil
+	return newDoc, nil
 }
 
 // Trim trailing whitespace from multiline strings

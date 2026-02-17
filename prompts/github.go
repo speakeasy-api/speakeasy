@@ -532,6 +532,29 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 
 		publishingFile.Jobs.Publish.Secrets = publishingSecrets
 
+		// Add publish-pypi job if PyPI trusted publishing is enabled
+		if target.Target == "python" && target.Publishing != nil && target.Publishing.PyPi != nil &&
+			target.Publishing.PyPi.UseTrustedPublishing != nil && *target.Publishing.PyPi.UseTrustedPublishing {
+			publishingFile.Jobs.PublishPypi = &config.PublishPyPiJob{
+				Needs:  []string{"publish"},
+				If:     "${{ needs.publish.outputs.python_regenerated == 'true' && needs.publish.outputs.publish_python == 'true' && needs.publish.outputs.use_pypi_trusted_publishing == 'true' }}",
+				RunsOn: "ubuntu-latest",
+				Steps: []config.PublishPyPiStep{
+					{
+						Uses: "actions/checkout@v4",
+					},
+					{
+						Uses: "speakeasy-api/sdk-generation-action/publish-pypi@v15",
+						With: map[string]any{
+							"python-directory":    "${{ needs.publish.outputs.python_directory }}",
+							"speakeasy_api_key":   formatGithubSecretName(defaultSpeakeasyAPIKeySecretName),
+							"github_access_token": formatGithubSecretName(defaultGithubTokenSecretName),
+						},
+					},
+				},
+			}
+		}
+
 		// Write a github publishing file.
 		var publishingWorkflowBuf bytes.Buffer
 		yamlEncoder := yaml.NewEncoder(&publishingWorkflowBuf)
