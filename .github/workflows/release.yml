@@ -44,7 +44,7 @@ jobs:
                   output-file: "false"
                   skip-on-empty: "false"
                   preset: conventionalcommits
-                  pre-release: ${{ inputs.pre_release == true && 'rc' || '' }}
+                  pre-release: ${{ inputs.pre_release == true && 'true' || 'false' }}
             - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
               with:
                   go-version-file: "go.mod"
