@@ -33,7 +33,7 @@ changelog:
       - "^docs:"
       - "^test:"
 
-homebrew_casks:
+brews:
   - name: speakeasy
     repository:
       owner: speakeasy-api
