@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v63/github"
+	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/ci/runbridge"
 	"github.com/speakeasy-api/speakeasy/internal/ci/utils"
 	"github.com/speakeasy-api/speakeasy/internal/ci/versionbumps"
@@ -134,7 +135,8 @@ func Run(g Git, pr *github.PullRequest, wf *workflow.Workflow) (*RunResult, map[
 	var changereport *versioning.MergedVersionReport
 	var err error
 
-	changereport, runRes, err = versioning.WithVersionReportCapture[*runbridge.RunResults](context.Background(), func(ctx context.Context) (*runbridge.RunResults, error) {
+	runCtx := events.SetSpeakeasyVersionInContext(context.Background(), speakeasyVersion)
+	changereport, runRes, err = versioning.WithVersionReportCapture[*runbridge.RunResults](runCtx, func(ctx context.Context) (*runbridge.RunResults, error) {
 		return runbridge.Run(ctx, wf.Targets == nil || len(wf.Targets) == 0, installationURLs, repoURL, repoSubdirectories, manualVersioningBump)
 	})
 	if err != nil {
