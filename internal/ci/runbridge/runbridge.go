@@ -53,7 +53,7 @@ func Run(ctx context.Context, sourcesOnly bool, installationURLs map[string]stri
 		return nil, fmt.Errorf("error creating workflow: %w", err)
 	}
 
-	if err := wf.RunWithVisualization(ctx); err != nil {
+	if err := wf.Run(ctx); err != nil {
 		return nil, fmt.Errorf("error running workflow: %w", err)
 	}
 
