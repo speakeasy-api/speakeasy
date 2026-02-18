@@ -965,19 +965,168 @@ func stripSpeakeasyExtensions(node *yaml.Node) {
 	}
 }
 
+// schemeEntry pairs a namespaced component name with its security scheme.
+// Used during deduplication to track grouped entries.
+type schemeEntry struct {
+	namespacedName string
+	scheme         *openapi.ReferencedSecurityScheme
+}
+
+// areMergeableSecuritySchemes checks whether two security schemes can be
+// collapsed into one during deduplication. The check is type-aware:
+//   - oauth2: mergeable if same flow types present with matching URLs (scopes may differ)
+//   - http: mergeable if same scheme and bearerFormat
+//   - apiKey: mergeable if same name and in
+//   - openIdConnect: mergeable if same openIdConnectUrl
+//   - mutualTLS: always mergeable
+func areMergeableSecuritySchemes(a, b *openapi.SecurityScheme) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	if a.Type != b.Type {
+		return false
+	}
+
+	switch a.Type {
+	case openapi.SecuritySchemeTypeOAuth2:
+		return areMergeableOAuth2Schemes(a, b)
+	case openapi.SecuritySchemeTypeHTTP:
+		return a.GetScheme() == b.GetScheme() && a.GetBearerFormat() == b.GetBearerFormat()
+	case openapi.SecuritySchemeTypeAPIKey:
+		return a.GetName() == b.GetName() && a.GetIn() == b.GetIn()
+	case openapi.SecuritySchemeTypeOpenIDConnect:
+		return a.GetOpenIdConnectUrl() == b.GetOpenIdConnectUrl()
+	case openapi.SecuritySchemeTypeMutualTLS:
+		return true
+	default:
+		return isEquivalentIgnoringDescriptiveAndNamespaceFields(a, b)
+	}
+}
+
+// areMergeableOAuth2Schemes checks whether two oauth2 security schemes have
+// the same flow types present with matching URLs per flow. Scopes and
+// descriptions are allowed to differ.
+func areMergeableOAuth2Schemes(a, b *openapi.SecurityScheme) bool {
+	af, bf := a.Flows, b.Flows
+	if (af == nil) != (bf == nil) {
+		return false
+	}
+	if af == nil {
+		return true
+	}
+
+	// Check that both schemes have the same set of flows present
+	if (af.Implicit == nil) != (bf.Implicit == nil) ||
+		(af.Password == nil) != (bf.Password == nil) ||
+		(af.ClientCredentials == nil) != (bf.ClientCredentials == nil) ||
+		(af.AuthorizationCode == nil) != (bf.AuthorizationCode == nil) ||
+		(af.DeviceAuthorization == nil) != (bf.DeviceAuthorization == nil) {
+		return false
+	}
+
+	// For each present flow, check that URLs match
+	if af.Implicit != nil && !oauthFlowURLsMatch(af.Implicit, bf.Implicit) {
+		return false
+	}
+	if af.Password != nil && !oauthFlowURLsMatch(af.Password, bf.Password) {
+		return false
+	}
+	if af.ClientCredentials != nil && !oauthFlowURLsMatch(af.ClientCredentials, bf.ClientCredentials) {
+		return false
+	}
+	if af.AuthorizationCode != nil && !oauthFlowURLsMatch(af.AuthorizationCode, bf.AuthorizationCode) {
+		return false
+	}
+	if af.DeviceAuthorization != nil && !oauthFlowURLsMatch(af.DeviceAuthorization, bf.DeviceAuthorization) {
+		return false
+	}
+
+	return true
+}
+
+// oauthFlowURLsMatch checks whether two OAuth flows have identical URLs.
+func oauthFlowURLsMatch(a, b *openapi.OAuthFlow) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.GetAuthorizationURL() == b.GetAuthorizationURL() &&
+		a.GetTokenURL() == b.GetTokenURL() &&
+		a.GetRefreshURL() == b.GetRefreshURL() &&
+		a.GetDeviceAuthorizationURL() == b.GetDeviceAuthorizationURL()
+}
+
+// mergeSecuritySchemeDescriptions appends descriptions from all entries using
+// the same deduplicating newline-separated pattern used for info descriptions.
+func mergeSecuritySchemeDescriptions(winner *openapi.SecurityScheme, entries []schemeEntry) {
+	combined := ""
+	for _, entry := range entries {
+		desc := entry.scheme.Object.GetDescription()
+		combined = derefStr(appendStrPtrs(combined, desc))
+	}
+	if combined != "" {
+		winner.Description = &combined
+	}
+}
+
+// mergeOAuth2Scopes unions the scopes from all entries into the winner's flows.
+// Only operates on oauth2 security schemes. A fresh scopes map is built from
+// all entries in order so that the merged result is deterministic. For
+// duplicate scope keys the last description wins.
+func mergeOAuth2Scopes(winner *openapi.SecurityScheme, entries []schemeEntry) {
+	if winner.Type != openapi.SecuritySchemeTypeOAuth2 || winner.Flows == nil {
+		return
+	}
+
+	type flowPair struct {
+		winnerFlow *openapi.OAuthFlow
+		getFlow    func(*openapi.OAuthFlows) *openapi.OAuthFlow
+	}
+
+	pairs := []flowPair{
+		{winner.Flows.Implicit, (*openapi.OAuthFlows).GetImplicit},
+		{winner.Flows.Password, (*openapi.OAuthFlows).GetPassword},
+		{winner.Flows.ClientCredentials, (*openapi.OAuthFlows).GetClientCredentials},
+		{winner.Flows.AuthorizationCode, (*openapi.OAuthFlows).GetAuthorizationCode},
+		{winner.Flows.DeviceAuthorization, (*openapi.OAuthFlows).GetDeviceAuthorization},
+	}
+
+	for _, pair := range pairs {
+		wf := pair.winnerFlow
+		if wf == nil {
+			continue
+		}
+
+		// Build a fresh scopes map from all entries in order.
+		// For duplicate keys Set updates in-place (last wins for description,
+		// position preserved from first occurrence).
+		merged := sequencedmap.New[string, string]()
+		for _, entry := range entries {
+			obj := entry.scheme.Object
+			if obj.Type != openapi.SecuritySchemeTypeOAuth2 || obj.Flows == nil {
+				continue
+			}
+			ef := pair.getFlow(obj.Flows)
+			if ef == nil || ef.Scopes == nil {
+				continue
+			}
+			for scopeName, scopeDesc := range ef.Scopes.All() {
+				merged.Set(scopeName, scopeDesc)
+			}
+		}
+		wf.Scopes = merged
+	}
+}
+
 // deduplicateSecuritySchemes collapses namespaced security schemes that are
-// equivalent (ignoring description/summary). Updates security requirements
-// throughout the document to reference the collapsed name.
+// mergeable into a single entry. For oauth2 schemes this includes unioning
+// scopes; for all types descriptions are appended. Updates security
+// requirements throughout the document to reference the collapsed name.
 func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
 	if doc.Components == nil || doc.Components.SecuritySchemes == nil {
 		return
 	}
 
 	// Group namespaced schemes by their original name (x-speakeasy-name-override)
-	type schemeEntry struct {
-		namespacedName string
-		scheme         *openapi.ReferencedSecurityScheme
-	}
 	groups := make(map[string][]schemeEntry)
 	var groupOrder []string
 
@@ -1001,25 +1150,38 @@ func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
 
 	for _, originalName := range groupOrder {
 		entries := groups[originalName]
-		if len(entries) < 2 {
+
+		if len(entries) == 1 {
+			// Unique scheme (only in one document): strip namespace, rename back to original
+			entry := entries[0]
+			renameMappings[entry.namespacedName] = originalName
+			if entry.scheme.Object.Extensions != nil {
+				entry.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
+				entry.scheme.Object.Extensions.Delete("x-speakeasy-model-namespace")
+			}
 			continue
 		}
 
-		// Check if all entries are equivalent
-		allEquivalent := true
+		// Check if all entries are mergeable (type-aware check)
+		allMergeable := true
 		for i := 1; i < len(entries); i++ {
-			if !isEquivalentIgnoringDescriptiveAndNamespaceFields(entries[0].scheme, entries[i].scheme) {
-				allEquivalent = false
+			if !areMergeableSecuritySchemes(entries[0].scheme.Object, entries[i].scheme.Object) {
+				allMergeable = false
 				break
 			}
 		}
 
-		if !allEquivalent {
+		if !allMergeable {
 			continue
 		}
 
-		// All equivalent: keep the last entry (last wins), remove others
+		// All mergeable: keep the last entry, merge content, remove others
 		winner := entries[len(entries)-1]
+
+		// Merge descriptions (append across all entries) and scopes (union for oauth2)
+		mergeSecuritySchemeDescriptions(winner.scheme.Object, entries)
+		mergeOAuth2Scopes(winner.scheme.Object, entries)
+
 		for _, entry := range entries {
 			renameMappings[entry.namespacedName] = originalName
 			if entry.namespacedName != winner.namespacedName {

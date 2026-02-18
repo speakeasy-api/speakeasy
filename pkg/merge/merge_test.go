@@ -1696,22 +1696,20 @@ components:
 			},
 			want: `openapi: "3.1"
 security:
-  - v1_bearerAuth: []
+  - bearerAuth: []
 paths:
   /pets:
     get:
       security:
-        - v1_bearerAuth: []
+        - bearerAuth: []
       responses:
         200:
           description: Success
 components:
   securitySchemes:
-    v1_bearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
-      x-speakeasy-name-override: bearerAuth
-      x-speakeasy-model-namespace: v1
 info:
   title: ""
   version: ""
@@ -1751,7 +1749,9 @@ components:
   securitySchemes:
     bearerAuth:
       type: http
-      description: Bearer token for service accounts.
+      description: |-
+        OAuth 2.0 Bearer token from Identity Broker.
+        Bearer token for service accounts.
       scheme: bearer
       bearerFormat: OAuth2 Access Token
 info:
@@ -1799,6 +1799,398 @@ components:
       in: header
       x-speakeasy-name-override: bearerAuth
       x-speakeasy-model-namespace: svcB
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "oauth2 security schemes with different scopes but same tokenUrl are merged",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: Service A OAuth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+            write:pets: Write pets`),
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: Service B OAuth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read users
+            write:users: Write users`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: |-
+        Service A OAuth2
+        Service B OAuth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+            write:pets: Write pets
+            read:users: Read users
+            write:users: Write users
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "oauth2 security schemes with overlapping scopes are deduplicated",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+            shared:scope: Shared scope`),
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read users
+            shared:scope: Shared scope`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+            shared:scope: Shared scope
+            read:users: Read users
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "oauth2 security schemes with different tokenUrls coexist",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth-a.example.com/token
+          scopes:
+            read:pets: Read pets`),
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth-b.example.com/token
+          scopes:
+            read:users: Read users`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - svcB_oauth2: []
+components:
+  securitySchemes:
+    svcA_oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth-a.example.com/token
+          scopes:
+            read:pets: Read pets
+      x-speakeasy-name-override: oauth2
+      x-speakeasy-model-namespace: svcA
+    svcB_oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth-b.example.com/token
+          scopes:
+            read:users: Read users
+      x-speakeasy-name-override: oauth2
+      x-speakeasy-model-namespace: svcB
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "oauth2 security schemes with different flow types coexist",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets`),
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read users`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - svcB_oauth2: []
+components:
+  securitySchemes:
+    svcA_oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+      x-speakeasy-name-override: oauth2
+      x-speakeasy-model-namespace: svcA
+    svcB_oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read users
+      x-speakeasy-name-override: oauth2
+      x-speakeasy-model-namespace: svcB
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "three oauth2 schemes from three services are merged with scopes unioned",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: Service A
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets`),
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: Service B
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read users`),
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: Service C
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:orders: Read orders`),
+				},
+				namespaces: []string{"svcA", "svcB", "svcC"},
+			},
+			want: `openapi: "3.1"
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: |-
+        Service A
+        Service B
+        Service C
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+            read:users: Read users
+            read:orders: Read orders
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "oauth2 authorizationCode schemes with same URLs merge scopes",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets`),
+					[]byte(`openapi: 3.1
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read users`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - oauth2: []
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+            read:users: Read users
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "unique security schemes across documents are not namespaced",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer`),
+					[]byte(`openapi: 3.1
+security:
+  - apiKey: []
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: header`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - apiKey: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: header
 info:
   title: ""
   version: ""
@@ -1854,7 +2246,7 @@ components:
 			},
 			want: `openapi: "3.1"
 security:
-  - api_bearerAuth: []
+  - bearerAuth: []
 paths:
   /pets:
     get:
@@ -1898,11 +2290,9 @@ components:
         x-speakeasy-name-override: X-Request-Id
         x-speakeasy-model-namespace: api
   securitySchemes:
-    api_bearerAuth:
-      type: 'http'
-      scheme: 'bearer'
-      x-speakeasy-name-override: bearerAuth
-      x-speakeasy-model-namespace: api
+    bearerAuth:
+      type: http
+      scheme: bearer
 info:
   title: ''
   version: ''
