@@ -52,7 +52,7 @@ type Git interface {
 	CheckDirDirty(dir string, ignoreMap map[string]string) (bool, string, error)
 }
 
-func Run(g Git, pr *github.PullRequest, wf *workflow.Workflow) (*RunResult, map[string]string, error) {
+func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workflow) (*RunResult, map[string]string, error) {
 	workspace := environment.GetWorkspace()
 	outputs := map[string]string{}
 	releaseNotes := map[string]string{}
@@ -135,9 +135,9 @@ func Run(g Git, pr *github.PullRequest, wf *workflow.Workflow) (*RunResult, map[
 	var changereport *versioning.MergedVersionReport
 	var err error
 
-	runCtx := events.SetSpeakeasyVersionInContext(context.Background(), speakeasyVersion)
-	changereport, runRes, err = versioning.WithVersionReportCapture[*runbridge.RunResults](runCtx, func(ctx context.Context) (*runbridge.RunResults, error) {
-		return runbridge.Run(ctx, wf.Targets == nil || len(wf.Targets) == 0, installationURLs, repoURL, repoSubdirectories, manualVersioningBump)
+	runCtx := events.SetSpeakeasyVersionInContext(ctx, speakeasyVersion)
+	changereport, runRes, err = versioning.WithVersionReportCapture(runCtx, func(ctx context.Context) (*runbridge.RunResults, error) {
+		return runbridge.Run(ctx, len(wf.Targets) == 0, installationURLs, repoURL, repoSubdirectories, manualVersioningBump)
 	})
 	if err != nil {
 		return nil, outputs, err
