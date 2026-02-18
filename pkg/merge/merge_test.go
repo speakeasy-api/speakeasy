@@ -1696,22 +1696,20 @@ components:
 			},
 			want: `openapi: "3.1"
 security:
-  - v1_bearerAuth: []
+  - bearerAuth: []
 paths:
   /pets:
     get:
       security:
-        - v1_bearerAuth: []
+        - bearerAuth: []
       responses:
         200:
           description: Success
 components:
   securitySchemes:
-    v1_bearerAuth:
+    bearerAuth:
       type: http
       scheme: bearer
-      x-speakeasy-name-override: bearerAuth
-      x-speakeasy-model-namespace: v1
 info:
   title: ""
   version: ""
@@ -2158,6 +2156,47 @@ info:
 `,
 		},
 		{
+			name: "unique security schemes across documents are not namespaced",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer`),
+					[]byte(`openapi: 3.1
+security:
+  - apiKey: []
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: header`),
+				},
+				namespaces: []string{"svcA", "svcB"},
+			},
+			want: `openapi: "3.1"
+security:
+  - apiKey: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: header
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
 			name: "all component types namespaced together",
 			args: args{
 				inSchemas: [][]byte{
@@ -2207,7 +2246,7 @@ components:
 			},
 			want: `openapi: "3.1"
 security:
-  - api_bearerAuth: []
+  - bearerAuth: []
 paths:
   /pets:
     get:
@@ -2251,11 +2290,9 @@ components:
         x-speakeasy-name-override: X-Request-Id
         x-speakeasy-model-namespace: api
   securitySchemes:
-    api_bearerAuth:
-      type: 'http'
-      scheme: 'bearer'
-      x-speakeasy-name-override: bearerAuth
-      x-speakeasy-model-namespace: api
+    bearerAuth:
+      type: http
+      scheme: bearer
 info:
   title: ''
   version: ''

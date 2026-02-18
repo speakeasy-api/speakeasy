@@ -1150,7 +1150,15 @@ func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
 
 	for _, originalName := range groupOrder {
 		entries := groups[originalName]
-		if len(entries) < 2 {
+
+		if len(entries) == 1 {
+			// Unique scheme (only in one document): strip namespace, rename back to original
+			entry := entries[0]
+			renameMappings[entry.namespacedName] = originalName
+			if entry.scheme.Object.Extensions != nil {
+				entry.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
+				entry.scheme.Object.Extensions.Delete("x-speakeasy-model-namespace")
+			}
 			continue
 		}
 
