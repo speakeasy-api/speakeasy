@@ -61,7 +61,7 @@ func RunWorkflow(ctx context.Context) error {
 		return err
 	}
 
-	sourcesOnly := wf.Targets == nil || len(wf.Targets) == 0
+	sourcesOnly := len(wf.Targets) == 0
 
 	branchName := ""
 	var pr *github.PullRequest
@@ -98,7 +98,7 @@ func RunWorkflow(ctx context.Context) error {
 		os.Setenv("SPEAKEASY_ACTIVE_BRANCH", branchName)
 	}
 
-	runRes, outputs, err := run.Run(g, pr, wf)
+	runRes, outputs, err := run.Run(ctx, g, pr, wf)
 	if err != nil {
 		if err := setOutputs(outputs); err != nil {
 			logging.Debug("failed to set outputs: %v", err)
