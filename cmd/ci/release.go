@@ -28,7 +28,6 @@ var releaseCmd = &model.ExecutableCommand[releaseFlags]{
 			Name:         "github-access-token",
 			Description:  "GitHub access token for creating releases",
 			DefaultValue: os.Getenv("INPUT_GITHUB_ACCESS_TOKEN"),
-			Required:     true,
 		},
 		flag.StringFlag{
 			Name:         "target",
