@@ -33,7 +33,6 @@ var finalizeCmd = &model.ExecutableCommand[finalizeFlags]{
 			Name:         "branch-name",
 			Description:  "Branch name for the suggestion",
 			DefaultValue: os.Getenv("INPUT_BRANCH_NAME"),
-			Required:     true,
 		},
 		flag.StringFlag{
 			Name:         "speakeasy-version",
