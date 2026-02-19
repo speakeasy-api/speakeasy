@@ -181,7 +181,7 @@ func addCurrentBranchTagging(ctx context.Context, latestRelease map[string]relea
 	var sources, targets []string
 	// a tag that is applied if the target contributing is published
 	var isPublished bool
-	branch := strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+	branch := strings.TrimPrefix(environment.GetGithubRef(), "refs/heads/")
 	workflow, err := configuration.GetWorkflowAndValidateLanguages(true)
 	if err != nil {
 		return err

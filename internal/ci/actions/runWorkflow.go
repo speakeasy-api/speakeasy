@@ -381,7 +381,7 @@ func addDirectModeBranchTagging(ctx context.Context) error {
 		return err
 	}
 
-	branch := strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+	branch := strings.TrimPrefix(environment.GetGithubRef(), "refs/heads/")
 
 	var sources, targets []string
 	// a tag that is applied if the target contributing is published
