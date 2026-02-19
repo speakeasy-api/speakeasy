@@ -3,11 +3,11 @@ package configuration
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
-	"golang.org/x/exp/slices"
 )
 
 func GetWorkflowAndValidateLanguages(checkLangSupported bool) (*workflow.Workflow, error) {

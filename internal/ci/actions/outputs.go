@@ -1,12 +1,12 @@
 package actions
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"os"
 
 	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
-	"golang.org/x/exp/rand"
 
 	"github.com/speakeasy-api/speakeasy/internal/ci/logging"
 )

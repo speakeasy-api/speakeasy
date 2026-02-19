@@ -73,7 +73,9 @@ func RunWorkflow(ctx context.Context) error {
 		}
 
 		if pr != nil {
-			os.Setenv("GH_PULL_REQUEST", *pr.URL)
+			if err := os.Setenv("GH_PULL_REQUEST", *pr.URL); err != nil {
+				return fmt.Errorf("failed to set GH_PULL_REQUEST env: %w", err)
+			}
 		}
 	}
 
@@ -95,7 +97,9 @@ func RunWorkflow(ctx context.Context) error {
 	}()
 
 	if branchName != "" {
-		os.Setenv("SPEAKEASY_ACTIVE_BRANCH", branchName)
+		if err := os.Setenv("SPEAKEASY_ACTIVE_BRANCH", branchName); err != nil {
+			return fmt.Errorf("failed to set SPEAKEASY_ACTIVE_BRANCH env: %w", err)
+		}
 	}
 
 	runRes, outputs, err := run.Run(ctx, g, pr, wf)
@@ -129,7 +133,7 @@ func RunWorkflow(ctx context.Context) error {
 	anythingRegenerated := false
 
 	var releaseInfo releases.ReleasesInfo
-	runResultInfo, err := json.MarshalIndent(runRes, "", "  ")
+	runResultInfo, err := json.MarshalIndent(runRes, "", "  ") //nolint:musttag // debug logging only, json tags not required
 	if err != nil {
 		logging.Debug("failed to marshal runRes : %s\n", err)
 	} else {
@@ -205,8 +209,7 @@ func RunWorkflow(ctx context.Context) error {
 		return nil
 	}
 
-	if err := finalize(finalizeInputs{
-		ctx:                  ctx,
+	if err := finalize(ctx, finalizeInputs{
 		Outputs:              outputs,
 		BranchName:           branchName,
 		AnythingRegenerated:  anythingRegenerated,
@@ -244,7 +247,6 @@ func shouldDeleteBranch(success bool) bool {
 }
 
 type finalizeInputs struct {
-	ctx                  context.Context
 	Outputs              map[string]string
 	BranchName           string
 	AnythingRegenerated  bool
@@ -261,7 +263,7 @@ type finalizeInputs struct {
 }
 
 // Sets outputs and creates or adds releases info
-func finalize(inputs finalizeInputs) error {
+func finalize(ctx context.Context, inputs finalizeInputs) error {
 	// If nothing was regenerated, we don't need to do anything
 	if !inputs.AnythingRegenerated && !inputs.SourcesOnly {
 		return nil
@@ -305,7 +307,9 @@ func finalize(inputs finalizeInputs) error {
 		}
 
 		if pr != nil {
-			os.Setenv("GH_PULL_REQUEST", *pr.URL)
+			if err := os.Setenv("GH_PULL_REQUEST", *pr.URL); err != nil {
+				return fmt.Errorf("failed to set GH_PULL_REQUEST env: %w", err)
+			}
 		}
 
 		// If we are in PR mode and testing should be triggered by this PR we will attempt to fire an empty commit from our app so trigger github actions checks
@@ -366,10 +370,12 @@ func finalize(inputs finalizeInputs) error {
 		inputs.Outputs["commit_hash"] = commitHash
 
 		// add merging branch registry tag
-		if err = addDirectModeBranchTagging(inputs.ctx); err != nil {
+		if err = addDirectModeBranchTagging(ctx); err != nil {
 			return errors.Wrap(err, "failed to tag registry images")
 		}
 
+	case environment.ModeTest:
+		// Test mode is handled before finalize is called; nothing to do here.
 	}
 
 	return nil
@@ -381,7 +387,7 @@ func addDirectModeBranchTagging(ctx context.Context) error {
 		return err
 	}
 
-	branch := strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+	branch := strings.TrimPrefix(environment.GetGithubRef(), "refs/heads/")
 
 	var sources, targets []string
 	// a tag that is applied if the target contributing is published
@@ -450,7 +456,7 @@ func fireEmptyCommit(org, repo, branch string) error {
 		return fmt.Errorf("error marshalling request body: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", "https://api.speakeasy.com/v1/github/empty_commit", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, "https://api.speakeasy.com/v1/github/empty_commit", bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("error creating the request: %w", err)
 	}

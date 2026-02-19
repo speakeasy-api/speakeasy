@@ -103,7 +103,7 @@ func LogActionResult() error {
 		baseURL = serverURL
 	}
 
-	req, err := http.NewRequest("POST", baseURL+"/v1/log/proxy", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, baseURL+"/v1/log/proxy", bytes.NewBuffer(body))
 	if err != nil {
 		fmt.Print("failure sending log to speakeasy.")
 		return nil

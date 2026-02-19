@@ -3,10 +3,10 @@ package versionbumps
 import (
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/google/go-github/v63/github"
 	"github.com/speakeasy-api/versioning-reports/versioning"
-	"golang.org/x/exp/slices"
 )
 
 type BumpMethod string

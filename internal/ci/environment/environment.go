@@ -168,7 +168,7 @@ func GetMaxValidationErrors() (int, error) {
 
 	maxErrors, err := strconv.Atoi(maxVal)
 	if err != nil {
-		return DefaultMaxValidationErrors, fmt.Errorf("max_validaiton_errors must be an integer, falling back to default (%d): %v", DefaultMaxValidationErrors, err)
+		return DefaultMaxValidationErrors, fmt.Errorf("max_validation_errors must be an integer, falling back to default (%d): %w", DefaultMaxValidationErrors, err)
 	}
 
 	return maxErrors, nil
@@ -248,9 +248,18 @@ func SkipVersioning() bool {
 	return os.Getenv("INPUT_SKIP_VERSIONING") == "true"
 }
 
+// GetGithubRef returns the effective GITHUB_REF, checking INPUT_GITHUB_REF first
+// to support cross-repo testing where GITHUB_* vars are immutable.
+func GetGithubRef() string {
+	if ref := os.Getenv("INPUT_GITHUB_REF"); ref != "" {
+		return ref
+	}
+	return os.Getenv("GITHUB_REF")
+}
+
 // IsPRTriggered returns true if the action was triggered by a PR event
 func IsPRTriggered() bool {
-	githubRef := os.Getenv("GITHUB_REF")
+	githubRef := GetGithubRef()
 	return strings.Contains(githubRef, "refs/pull") || strings.Contains(githubRef, "refs/pulls")
 }
 
@@ -294,8 +303,10 @@ type gitHubEvent struct {
 }
 
 func GetRef() string {
+	githubRef := GetGithubRef()
+
 	// handle pr based action triggers
-	if strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull") || strings.Contains(os.Getenv("GITHUB_REF"), "refs/pulls") {
+	if strings.Contains(githubRef, "refs/pull") || strings.Contains(githubRef, "refs/pulls") {
 		ref := os.Getenv("GITHUB_HEAD_REF")
 		data, err := os.ReadFile(os.Getenv("GITHUB_EVENT_PATH"))
 		if err != nil {
@@ -315,7 +326,7 @@ func GetRef() string {
 
 		return ref
 	}
-	return os.Getenv("GITHUB_REF")
+	return githubRef
 }
 
 func GetWorkingDirectory() string {
@@ -368,9 +379,10 @@ func parseArrayInput(input string) []string {
 // GetSourceBranch returns the source branch that triggered the generation
 func GetSourceBranch() string {
 	ref := GetRef()
+	githubRef := GetGithubRef()
 
 	// Handle PR-based triggers - use the head ref (source branch)
-	if strings.Contains(os.Getenv("GITHUB_REF"), "refs/pull") || strings.Contains(os.Getenv("GITHUB_REF"), "refs/pulls") {
+	if strings.Contains(githubRef, "refs/pull") || strings.Contains(githubRef, "refs/pulls") {
 		return os.Getenv("GITHUB_HEAD_REF")
 	}
 

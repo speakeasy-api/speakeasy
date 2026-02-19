@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
 	"github.com/speakeasy-api/speakeasy/internal/ci/utils"
-	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 )
 
 func TriggerPublishingEvent(targetDirectory, result, registryName string) (string, error) {

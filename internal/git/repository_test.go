@@ -13,7 +13,7 @@ import (
 )
 
 // initTestRepo creates a temporary git repository with an initial commit on "main".
-func initTestRepo(t *testing.T) (*Repository, string) {
+func initTestRepo(t *testing.T) *Repository {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -31,7 +31,8 @@ func initTestRepo(t *testing.T) (*Repository, string) {
 
 	f, err := os.Create(filepath.Join(dir, "README.md"))
 	require.NoError(t, err)
-	f.WriteString("# test")
+	_, err = f.WriteString("# test")
+	require.NoError(t, err)
 	f.Close()
 
 	_, err = wt.Add("README.md")
@@ -45,26 +46,32 @@ func initTestRepo(t *testing.T) (*Repository, string) {
 	})
 	require.NoError(t, err)
 
-	return &Repository{repo: repo}, dir
+	return &Repository{repo: repo}
 }
 
 func TestHeadBranch_NilRepo(t *testing.T) {
+	t.Parallel()
+
 	r := &Repository{}
 	branch, err := r.HeadBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Empty(t, branch)
 }
 
 func TestHeadBranch_OnBranch(t *testing.T) {
-	r, _ := initTestRepo(t)
+	t.Parallel()
+
+	r := initTestRepo(t)
 
 	branch, err := r.HeadBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "main", branch)
 }
 
 func TestHeadBranch_DetachedHEAD(t *testing.T) {
-	r, _ := initTestRepo(t)
+	t.Parallel()
+
+	r := initTestRepo(t)
 
 	// Detach HEAD by checking out a specific commit
 	head, err := r.repo.Head()
@@ -79,19 +86,23 @@ func TestHeadBranch_DetachedHEAD(t *testing.T) {
 	require.NoError(t, err)
 
 	branch, err := r.HeadBranch()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Empty(t, branch)
 }
 
 func TestCheckoutBranch_NilRepo(t *testing.T) {
+	t.Parallel()
+
 	r := &Repository{}
 	err := r.CheckoutBranch("main")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository not initialized")
 }
 
 func TestCheckoutBranch_ExistingBranch(t *testing.T) {
-	r, _ := initTestRepo(t)
+	t.Parallel()
+
+	r := initTestRepo(t)
 
 	// Create a second branch, then switch back to main
 	err := r.CreateBranch("feature")
@@ -102,7 +113,7 @@ func TestCheckoutBranch_ExistingBranch(t *testing.T) {
 	assert.Equal(t, "feature", branch)
 
 	err = r.CheckoutBranch("main")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	branch, err = r.HeadBranch()
 	require.NoError(t, err)
@@ -110,24 +121,30 @@ func TestCheckoutBranch_ExistingBranch(t *testing.T) {
 }
 
 func TestCheckoutBranch_NonExistent(t *testing.T) {
-	r, _ := initTestRepo(t)
+	t.Parallel()
+
+	r := initTestRepo(t)
 
 	err := r.CheckoutBranch("nonexistent")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestCreateBranch_NilRepo(t *testing.T) {
+	t.Parallel()
+
 	r := &Repository{}
 	err := r.CreateBranch("feature")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repository not initialized")
 }
 
 func TestCreateBranch_NewBranch(t *testing.T) {
-	r, _ := initTestRepo(t)
+	t.Parallel()
+
+	r := initTestRepo(t)
 
 	err := r.CreateBranch("feature-x")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	branch, err := r.HeadBranch()
 	require.NoError(t, err)
@@ -135,8 +152,10 @@ func TestCreateBranch_NewBranch(t *testing.T) {
 }
 
 func TestCreateBranch_AlreadyExists(t *testing.T) {
-	r, _ := initTestRepo(t)
+	t.Parallel()
+
+	r := initTestRepo(t)
 
 	err := r.CreateBranch("main")
-	assert.Error(t, err) // "main" already exists
+	require.Error(t, err) // "main" already exists
 }

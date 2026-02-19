@@ -1,7 +1,6 @@
 package environment
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,25 +45,23 @@ func TestGetSourceBranch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
-			os.Setenv("GITHUB_REF", tt.githubRef)
+			t.Setenv("GITHUB_REF", tt.githubRef)
 			if tt.githubHeadRef != "" {
-				os.Setenv("GITHUB_HEAD_REF", tt.githubHeadRef)
+				t.Setenv("GITHUB_HEAD_REF", tt.githubHeadRef)
 			} else {
-				os.Unsetenv("GITHUB_HEAD_REF")
+				t.Setenv("GITHUB_HEAD_REF", "")
 			}
 
 			// Test
 			result := GetSourceBranch()
 			assert.Equal(t, tt.expected, result)
-
-			// Cleanup
-			os.Unsetenv("GITHUB_REF")
-			os.Unsetenv("GITHUB_HEAD_REF")
 		})
 	}
 }
 
 func TestIsMainBranch(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		branch   string
@@ -104,6 +101,7 @@ func TestIsMainBranch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := IsMainBranch(tt.branch)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -149,25 +147,23 @@ func TestGetTargetBaseBranch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
-			os.Setenv("GITHUB_REF", tt.githubRef)
+			t.Setenv("GITHUB_REF", tt.githubRef)
 			if tt.githubHeadRef != "" {
-				os.Setenv("GITHUB_HEAD_REF", tt.githubHeadRef)
+				t.Setenv("GITHUB_HEAD_REF", tt.githubHeadRef)
 			} else {
-				os.Unsetenv("GITHUB_HEAD_REF")
+				t.Setenv("GITHUB_HEAD_REF", "")
 			}
 
 			// Test
 			result := GetTargetBaseBranch()
 			assert.Equal(t, tt.expected, result)
-
-			// Cleanup
-			os.Unsetenv("GITHUB_REF")
-			os.Unsetenv("GITHUB_HEAD_REF")
 		})
 	}
 }
 
 func TestSanitizeBranchName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		branch   string
@@ -232,6 +228,7 @@ func TestSanitizeBranchName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := SanitizeBranchName(tt.branch)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -275,11 +272,11 @@ func TestGetSourceBranchIntegration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
-			os.Setenv("GITHUB_REF", tt.githubRef)
+			t.Setenv("GITHUB_REF", tt.githubRef)
 			if tt.githubHeadRef != "" {
-				os.Setenv("GITHUB_HEAD_REF", tt.githubHeadRef)
+				t.Setenv("GITHUB_HEAD_REF", tt.githubHeadRef)
 			} else {
-				os.Unsetenv("GITHUB_HEAD_REF")
+				t.Setenv("GITHUB_HEAD_REF", "")
 			}
 
 			// Test source branch detection
@@ -293,10 +290,6 @@ func TestGetSourceBranchIntegration(t *testing.T) {
 			// Test target base branch
 			targetBranch := GetTargetBaseBranch()
 			assert.Equal(t, tt.expectedTarget, targetBranch)
-
-			// Cleanup
-			os.Unsetenv("GITHUB_REF")
-			os.Unsetenv("GITHUB_HEAD_REF")
 		})
 	}
 }
@@ -343,29 +336,24 @@ func TestShouldSkipReleasing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set up environment
 			if tt.mode != "" {
-				os.Setenv("INPUT_MODE", tt.mode)
+				t.Setenv("INPUT_MODE", tt.mode)
 			} else {
-				os.Unsetenv("INPUT_MODE")
+				t.Setenv("INPUT_MODE", "")
 			}
 			if tt.githubRef != "" {
-				os.Setenv("GITHUB_REF", tt.githubRef)
+				t.Setenv("GITHUB_REF", tt.githubRef)
 			} else {
-				os.Unsetenv("GITHUB_REF")
+				t.Setenv("GITHUB_REF", "")
 			}
 			if tt.skipRelease != "" {
-				os.Setenv("INPUT_SKIP_RELEASE", tt.skipRelease)
+				t.Setenv("INPUT_SKIP_RELEASE", tt.skipRelease)
 			} else {
-				os.Unsetenv("INPUT_SKIP_RELEASE")
+				t.Setenv("INPUT_SKIP_RELEASE", "")
 			}
 
 			// Test
 			result := ShouldSkipReleasing()
 			assert.Equal(t, tt.expectedResult, result)
-
-			// Cleanup
-			os.Unsetenv("INPUT_MODE")
-			os.Unsetenv("GITHUB_REF")
-			os.Unsetenv("INPUT_SKIP_RELEASE")
 		})
 	}
 }

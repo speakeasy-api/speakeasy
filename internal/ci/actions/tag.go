@@ -2,13 +2,14 @@ package actions
 
 import (
 	"context"
+	"maps"
+	"slices"
 
 	"github.com/speakeasy-api/speakeasy/internal/ci/configuration"
 	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
 	"github.com/speakeasy-api/speakeasy/internal/ci/logging"
 	"github.com/speakeasy-api/speakeasy/internal/ci/registry"
 	"github.com/speakeasy-api/speakeasy/internal/ci/tagbridge"
-	"golang.org/x/exp/maps"
 )
 
 func Tag(ctx context.Context) error {
@@ -23,8 +24,8 @@ func Tag(ctx context.Context) error {
 			return err
 		}
 
-		sources = maps.Keys(wf.Sources)
-		targets = maps.Keys(wf.Targets)
+		sources = slices.Collect(maps.Keys(wf.Sources))
+		targets = slices.Collect(maps.Keys(wf.Targets))
 
 		logging.Info("No sources or targets specified, using all sources and targets from workflow")
 	}

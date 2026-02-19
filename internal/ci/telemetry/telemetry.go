@@ -12,20 +12,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
 	speakeasy "github.com/speakeasy-api/speakeasy-client-sdk-go/v3"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
 )
 
 type ContextKey string
 
-const ExecutionKeyEnvironmentVariable = "SPEAKEASY_EXECUTION_ID"
-const SpeakeasySDKKey ContextKey = "speakeasy.SDK"
-const WorkspaceIDKey ContextKey = "speakeasy.workspaceID"
-const AccountTypeKey ContextKey = "speakeasy.accountType"
-const WorkspaceSlugKey ContextKey = "speakeasy.workspaceSlug"
-const OrgSlugKey ContextKey = "speakeasy.orgSlug"
+const (
+	ExecutionKeyEnvironmentVariable            = "SPEAKEASY_EXECUTION_ID"
+	SpeakeasySDKKey                 ContextKey = "speakeasy.SDK"
+	WorkspaceIDKey                  ContextKey = "speakeasy.workspaceID"
+	AccountTypeKey                  ContextKey = "speakeasy.accountType"
+	WorkspaceSlugKey                ContextKey = "speakeasy.workspaceSlug"
+	OrgSlugKey                      ContextKey = "speakeasy.orgSlug"
+)
 
 // a random UUID. Change this to fan-out executions with the same gh run id.
 const speakeasyGithubActionNamespace = "360D564A-5583-4EF6-BC2B-99530BF036CC"
@@ -146,7 +148,7 @@ func Track(ctx context.Context, exec shared.InteractionType, fn func(ctx context
 					fmt.Println("Failed to link github account", err)
 				}
 
-				if res != nil && res.StatusCode != 200 {
+				if res != nil && res.StatusCode != http.StatusOK {
 					fmt.Println("Failed to link github account", err)
 				}
 			}
@@ -177,7 +179,7 @@ func Track(ctx context.Context, exec shared.InteractionType, fn func(ctx context
 	runEvent.ContinuousIntegrationEnvironment = &currentIntegrationEnvironment
 
 	// Attempt to flush any stored events (swallow errors)
-	sdk.Events.Post(ctx, operations.PostWorkspaceEventsRequest{
+	_, _ = sdk.Events.Post(ctx, operations.PostWorkspaceEventsRequest{
 		RequestBody: []shared.CliEvent{*runEvent},
 		WorkspaceID: &workspaceID,
 	})
@@ -206,7 +208,7 @@ func getIDToken(requestURL string, requestToken string) (string, error) {
 	q.Set("audience", speakeasyAudience)
 	tokenURL.RawQuery = q.Encode()
 
-	req, err := http.NewRequest("GET", tokenURL.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, tokenURL.String(), nil)
 	if err != nil {
 		return "", err
 	}

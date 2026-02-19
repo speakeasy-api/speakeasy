@@ -1,11 +1,11 @@
 package run_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/internal/ci/run"
+	"github.com/stretchr/testify/assert"
 )
 
 func ptr[T any](v T) *T {
@@ -235,10 +235,7 @@ func TestAddTargetPublishOutputs(t *testing.T) {
 			gotOutputs := make(map[string]string)
 			run.AddTargetPublishOutputs(tc.target, gotOutputs, tc.installationURL)
 
-			// Check if the outputs match the expected outputs
-			if !reflect.DeepEqual(gotOutputs, tc.expectedOutputs) {
-				t.Errorf("expected %v, got %v", tc.expectedOutputs, gotOutputs)
-			}
+			assert.Equal(t, tc.expectedOutputs, gotOutputs)
 		})
 	}
 }

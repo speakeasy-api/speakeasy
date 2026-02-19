@@ -328,7 +328,7 @@ func ParseReleases(data string) (*ReleasesInfo, error) {
 		return nil, fmt.Errorf("error parsing last release info")
 	}
 
-	genVersion := ""
+	var genVersion string
 	if len(matches) == 7 {
 		genVersion = matches[6]
 	} else {

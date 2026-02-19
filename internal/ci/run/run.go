@@ -106,10 +106,7 @@ func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workfl
 		}
 		previousManagementInfos[targetID] = loadedCfg.LockFile.Management
 
-		globalPreviousGenVersion, err = getPreviousGenVersion(loadedCfg.LockFile, lang, globalPreviousGenVersion)
-		if err != nil {
-			return nil, outputs, err
-		}
+		globalPreviousGenVersion = getPreviousGenVersion(loadedCfg.LockFile, lang, globalPreviousGenVersion)
 
 		fmt.Printf("Generating %s SDK in %s\n", lang, outputDir)
 
@@ -206,9 +203,6 @@ func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workfl
 
 		if dirty {
 			target.IsPublished()
-			if target.Testing != nil && target.Testing.Enabled != nil && *target.Testing.Enabled {
-				hasTestingEnabled = true
-			}
 			hasTestingEnabled = true
 			langGenerated[lang] = true
 			// Set speakeasy version and generation version to what was used by the CLI
@@ -269,10 +263,10 @@ func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workfl
 	}, outputs, nil
 }
 
-func getPreviousGenVersion(lockFile *config.LockFile, lang, globalPreviousGenVersion string) (string, error) {
+func getPreviousGenVersion(lockFile *config.LockFile, lang, globalPreviousGenVersion string) string {
 	previousFeatureVersions, ok := lockFile.Features[lang]
 	if !ok {
-		return globalPreviousGenVersion, nil
+		return globalPreviousGenVersion
 	}
 
 	if globalPreviousGenVersion != "" {
@@ -289,7 +283,7 @@ func getPreviousGenVersion(lockFile *config.LockFile, lang, globalPreviousGenVer
 
 	globalPreviousGenVersion += strings.Join(previousFeatureParts, ",")
 
-	return globalPreviousGenVersion, nil
+	return globalPreviousGenVersion
 }
 
 func getInstallationURL(lang, subdirectory string) string {

@@ -11,10 +11,11 @@ import (
 // slashes, so branches like "releases/2025.01" must be converted to "releases-2025.01".
 // This test documents the expected behavior used in addCurrentBranchTagging.
 func TestBranchNameSanitizationForOCITags(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
-		name         string
-		branchName   string
-		expectedTag  string
+		name        string
+		branchName  string
+		expectedTag string
 	}{
 		{
 			name:        "simple branch",
@@ -45,6 +46,7 @@ func TestBranchNameSanitizationForOCITags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// This mirrors the logic in addCurrentBranchTagging:
 			// tags := []string{environment.SanitizeBranchName(branch)}
 			tag := environment.SanitizeBranchName(tt.branchName)
@@ -56,6 +58,7 @@ func TestBranchNameSanitizationForOCITags(t *testing.T) {
 }
 
 func TestGetDirAndShouldUseReleasesMD(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		files           []string
 		dir             string
@@ -130,6 +133,7 @@ func TestGetDirAndShouldUseReleasesMD(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, got1 := GetDirAndShouldUseReleasesMD(tt.args.files, tt.args.dir, tt.args.usingReleasesMd)
 			if got != tt.want {
 				t.Errorf("GetDirAndShouldUseReleasesMD() got = %v, want %v", got, tt.want)

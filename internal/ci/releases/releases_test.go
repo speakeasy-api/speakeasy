@@ -1,15 +1,15 @@
 package releases_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/speakeasy-api/speakeasy/internal/ci/releases"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReleases_ReversableSerialization_Success(t *testing.T) {
-	os.Setenv("GITHUB_REPOSITORY", "test/repo")
+	t.Setenv("GITHUB_REPOSITORY", "test/repo")
 
 	r := releases.ReleasesInfo{
 		ReleaseTitle:      "2023-02-22",
@@ -114,12 +114,12 @@ func TestReleases_ReversableSerialization_Success(t *testing.T) {
 	}
 
 	info, err := releases.ParseReleases(r.String())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, r, *info)
 }
 
 func TestReleases_GoPackageNameConstruction_Success(t *testing.T) {
-	os.Setenv("GITHUB_REPOSITORY", "test/repo")
+	t.Setenv("GITHUB_REPOSITORY", "test/repo")
 
 	r := releases.ReleasesInfo{
 		ReleaseTitle:     "2023-02-22",
@@ -138,12 +138,12 @@ func TestReleases_GoPackageNameConstruction_Success(t *testing.T) {
 	}
 
 	info, err := releases.ParseReleases(r.String())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, r, *info)
 }
 
 func TestReleases_ReversableSerializationMultiple_Success(t *testing.T) {
-	os.Setenv("GITHUB_REPOSITORY", "test/repo")
+	t.Setenv("GITHUB_REPOSITORY", "test/repo")
 
 	r1 := releases.ReleasesInfo{
 		ReleaseTitle:     "Version 1.2.3",
@@ -310,11 +310,13 @@ func TestReleases_ReversableSerializationMultiple_Success(t *testing.T) {
 	}
 
 	info, err := releases.ParseReleases(r1.String() + r2.String())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, r2, *info)
 }
 
 func TestReleases_ParseVesselRelease_Success(t *testing.T) {
+	t.Parallel()
+
 	releasesStr := `
 
 ## Version 2.1.2
@@ -328,7 +330,7 @@ Based on:
 `
 
 	info, err := releases.ParseReleases(releasesStr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, releases.ReleasesInfo{
 		ReleaseTitle:     "Version 2.1.2",
 		DocVersion:       "2.0",
@@ -353,6 +355,8 @@ Based on:
 }
 
 func TestReleases_ParseCodatRelease_Success(t *testing.T) {
+	t.Parallel()
+
 	releasesStr := `
 
 ## Version 1.1.0
@@ -366,7 +370,7 @@ Based on:
 - [Go v1.1.0] https://github.com/speakeasy-sdks/codat-sdks/releases/tag/v1.1.0 - go-client-sdk`
 
 	info, err := releases.ParseReleases(releasesStr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, releases.ReleasesInfo{
 		ReleaseTitle:     "Version 1.1.0",
 		DocVersion:       "v1",
@@ -397,6 +401,8 @@ Based on:
 }
 
 func TestReleases_ParseCodatPreRelease_Success(t *testing.T) {
+	t.Parallel()
+
 	releasesStr := `
 
 ## Version 1.1.0
@@ -411,7 +417,7 @@ Based on:
 
 	info, err := releases.ParseReleases(releasesStr)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, releases.ReleasesInfo{
 		ReleaseTitle:     "Version 1.1.0",
 		DocVersion:       "v1",
@@ -442,6 +448,8 @@ Based on:
 }
 
 func TestLanguageReleaseInfo_IsPrerelease(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		version string
 		want    bool

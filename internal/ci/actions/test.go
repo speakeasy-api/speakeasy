@@ -8,13 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"slices"
+
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/ci/configuration"
 	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
 	"github.com/speakeasy-api/speakeasy/internal/ci/git"
 	"github.com/speakeasy-api/speakeasy/internal/ci/telemetry"
 	"github.com/speakeasy-api/speakeasy/internal/ci/testbridge"
-	"golang.org/x/exp/slices"
 )
 
 const testReportHeader = "SDK Tests Report"
@@ -51,7 +52,7 @@ func Test(ctx context.Context) error {
 		// We look for all files modified in the PR or Branch to see what SDK targets have been modified
 		files, number, err := g.GetChangedFilesForPRorBranch()
 		if err != nil {
-			fmt.Printf("Failed to get commited files: %s\n", err.Error())
+			fmt.Printf("Failed to get committed files: %s\n", err.Error())
 		}
 
 		prNumber = number
@@ -111,11 +112,11 @@ func Test(ctx context.Context) error {
 		if genLockID, ok := targetLockIDs[target]; ok && genLockID != "" {
 			testReportURL = formatTestReportURL(ctx, genLockID)
 		} else {
-			fmt.Println(fmt.Sprintf("No gen.lock ID found for target %s", target))
+			fmt.Printf("No gen.lock ID found for target %s\n", target)
 		}
 
 		if testReportURL == "" {
-			fmt.Println(fmt.Sprintf("No test report URL could be formed for target %s", target))
+			fmt.Printf("No test report URL could be formed for target %s\n", target)
 		} else {
 			testReports[target] = TestReport{
 				Success: err == nil,
@@ -126,12 +127,12 @@ func Test(ctx context.Context) error {
 
 	if len(testReports) > 0 {
 		if err := writeTestReportComment(g, prNumber, testReports); err != nil {
-			fmt.Println(fmt.Sprintf("Failed to write test report comment: %s\n", err.Error()))
+			fmt.Printf("Failed to write test report comment: %s\n", err.Error())
 		}
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("test failures occured: %w", errors.Join(errs...))
+		return fmt.Errorf("test failures occurred: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -172,7 +173,7 @@ func writeTestReportComment(g *git.Git, prNumber *int, testReports map[string]Te
 		commentBody := comment.GetBody()
 		if strings.Contains(commentBody, testReportHeader) {
 			if err := g.DeleteIssueComment(comment.GetID()); err != nil {
-				fmt.Println(fmt.Sprintf("Failed to delete existing test report comment: %s\n", err.Error()))
+				fmt.Printf("Failed to delete existing test report comment: %s\n", err.Error())
 			}
 		}
 	}

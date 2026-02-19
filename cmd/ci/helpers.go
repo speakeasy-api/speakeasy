@@ -11,7 +11,7 @@ import "os"
 // while the CLI provides a flag-based interface on top.
 func setEnvIfNotEmpty(key, value string) {
 	if value != "" {
-		os.Setenv(key, value)
+		_ = os.Setenv(key, value)
 	}
 }
 
@@ -19,6 +19,6 @@ func setEnvIfNotEmpty(key, value string) {
 // Does not set the variable if false (leaves existing env var state unchanged).
 func setEnvBool(key string, value bool) {
 	if value {
-		os.Setenv(key, "true")
+		_ = os.Setenv(key, "true")
 	}
 }

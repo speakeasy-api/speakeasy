@@ -81,6 +81,7 @@ func newTestRepo(t *testing.T) (*git.Repository, billy.Filesystem) {
 }
 
 func runGitCLI(t *testing.T, dir string, args ...string) string {
+	t.Helper()
 	return runGitCLIWithEnv(t, dir, nil, args...)
 }
 
@@ -115,12 +116,15 @@ func runGitCLIWithEnv(t *testing.T, dir string, extraEnv map[string]string, args
 }
 
 func TestGit_CheckDirDirty(t *testing.T) {
+	t.Parallel()
+
 	repo, mfs := newTestRepo(t)
 
 	f, err := mfs.Create("dirty-file")
 	require.NoError(t, err, "expected to create a dirty file")
 	defer f.Close()
-	fmt.Fprintln(f, "sample content")
+	_, err = fmt.Fprintln(f, "sample content")
+	require.NoError(t, err)
 
 	g := Git{repo: repo}
 	dirty, str, err := g.CheckDirDirty(".", map[string]string{})
@@ -131,22 +135,27 @@ func TestGit_CheckDirDirty(t *testing.T) {
 }
 
 func TestGit_CheckDirDirty_IgnoredFiles(t *testing.T) {
+	t.Parallel()
+
 	repo, mfs := newTestRepo(t)
 
 	f, err := mfs.Create("workflow.lock")
 	require.NoError(t, err, "expected to create a dirty file")
 	defer f.Close()
-	fmt.Fprintln(f, "sample content")
+	_, err = fmt.Fprintln(f, "sample content")
+	require.NoError(t, err)
 
 	g := Git{repo: repo}
 	dirty, str, err := g.CheckDirDirty(".", map[string]string{})
 	require.NoError(t, err, "expected to check the directory")
 
-	require.Equal(t, "", str, "expected no dirty files reported")
+	require.Empty(t, str, "expected no dirty files reported")
 	require.False(t, dirty, "expected the directory to be clean")
 }
 
 func TestArtifactMatchesRelease(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		assetName string
@@ -291,6 +300,7 @@ func TestArtifactMatchesRelease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := ArtifactMatchesRelease(tt.assetName, tt.goos, tt.goarch); got != tt.want {
 				t.Errorf("ArtifactMatchesRelease() = %v, want %v", got, tt.want)
 			}
@@ -340,29 +350,16 @@ func TestGit_FindOrCreateBranch_SourceBranchAware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up environment variables for the test
-			originalGithubRef := os.Getenv("GITHUB_REF")
-			originalGithubHeadRef := os.Getenv("GITHUB_HEAD_REF")
-			originalGithubBaseRef := os.Getenv("GITHUB_BASE_REF")
-			originalGithubEventName := os.Getenv("GITHUB_EVENT_NAME")
-
-			defer func() {
-				os.Setenv("GITHUB_REF", originalGithubRef)
-				os.Setenv("GITHUB_HEAD_REF", originalGithubHeadRef)
-				os.Setenv("GITHUB_BASE_REF", originalGithubBaseRef)
-				os.Setenv("GITHUB_EVENT_NAME", originalGithubEventName)
-			}()
-
 			// Set up test environment
 			if tt.sourceBranch == "main" || tt.sourceBranch == "master" {
-				os.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
-				os.Setenv("GITHUB_HEAD_REF", "")
-				os.Setenv("GITHUB_EVENT_NAME", "push")
+				t.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
+				t.Setenv("GITHUB_HEAD_REF", "")
+				t.Setenv("GITHUB_EVENT_NAME", "push")
 			} else {
-				os.Setenv("GITHUB_REF", "refs/pull/123/merge")
-				os.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
-				os.Setenv("GITHUB_BASE_REF", "main")
-				os.Setenv("GITHUB_EVENT_NAME", "pull_request")
+				t.Setenv("GITHUB_REF", "refs/pull/123/merge")
+				t.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
+				t.Setenv("GITHUB_BASE_REF", "main")
+				t.Setenv("GITHUB_EVENT_NAME", "pull_request")
 			}
 
 			repo, _ := newTestRepo(t)
@@ -371,8 +368,8 @@ func TestGit_FindOrCreateBranch_SourceBranchAware(t *testing.T) {
 			branchName, err := g.FindOrCreateBranch("", tt.action)
 			require.NoError(t, err)
 
-			assert.True(t, len(branchName) > len(tt.expectedPrefix), "Branch name should be longer than prefix")
-			assert.True(t, len(branchName) > 0, "Branch name should not be empty")
+			assert.Greater(t, len(branchName), len(tt.expectedPrefix), "Branch name should be longer than prefix")
+			assert.NotEmpty(t, branchName, "Branch name should not be empty")
 
 			// For main/master branches, should not include source branch in name
 			if tt.sourceBranch == "main" || tt.sourceBranch == "master" {
@@ -629,29 +626,16 @@ func TestGit_generatePRTitleAndBody_SourceBranchAware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up environment variables for the test
-			originalGithubRef := os.Getenv("GITHUB_REF")
-			originalGithubHeadRef := os.Getenv("GITHUB_HEAD_REF")
-			originalGithubBaseRef := os.Getenv("GITHUB_BASE_REF")
-			originalGithubEventName := os.Getenv("GITHUB_EVENT_NAME")
-
-			defer func() {
-				os.Setenv("GITHUB_REF", originalGithubRef)
-				os.Setenv("GITHUB_HEAD_REF", originalGithubHeadRef)
-				os.Setenv("GITHUB_BASE_REF", originalGithubBaseRef)
-				os.Setenv("GITHUB_EVENT_NAME", originalGithubEventName)
-			}()
-
 			// Set up test environment
 			if tt.sourceBranch == "main" || tt.sourceBranch == "master" {
-				os.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
-				os.Setenv("GITHUB_HEAD_REF", "")
-				os.Setenv("GITHUB_EVENT_NAME", "push")
+				t.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
+				t.Setenv("GITHUB_HEAD_REF", "")
+				t.Setenv("GITHUB_EVENT_NAME", "push")
 			} else {
-				os.Setenv("GITHUB_REF", "refs/pull/123/merge")
-				os.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
-				os.Setenv("GITHUB_BASE_REF", "main")
-				os.Setenv("GITHUB_EVENT_NAME", "pull_request")
+				t.Setenv("GITHUB_REF", "refs/pull/123/merge")
+				t.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
+				t.Setenv("GITHUB_BASE_REF", "main")
+				t.Setenv("GITHUB_EVENT_NAME", "pull_request")
 			}
 
 			g := Git{}
@@ -695,21 +679,10 @@ func TestGit_BackwardCompatibility_MainBranches(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up environment variables for the test
-			originalGithubRef := os.Getenv("GITHUB_REF")
-			originalGithubHeadRef := os.Getenv("GITHUB_HEAD_REF")
-			originalGithubEventName := os.Getenv("GITHUB_EVENT_NAME")
-
-			defer func() {
-				os.Setenv("GITHUB_REF", originalGithubRef)
-				os.Setenv("GITHUB_HEAD_REF", originalGithubHeadRef)
-				os.Setenv("GITHUB_EVENT_NAME", originalGithubEventName)
-			}()
-
 			// Set up test environment for main/master branch
-			os.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
-			os.Setenv("GITHUB_HEAD_REF", "")
-			os.Setenv("GITHUB_EVENT_NAME", "push")
+			t.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
+			t.Setenv("GITHUB_HEAD_REF", "")
+			t.Setenv("GITHUB_EVENT_NAME", "push")
 
 			repo, _ := newTestRepo(t)
 			g := Git{repo: repo}
@@ -775,29 +748,16 @@ func TestCreateOrUpdateDocsPR_SourceBranchAware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up environment
-			originalGithubRef := os.Getenv("GITHUB_REF")
-			originalGithubHeadRef := os.Getenv("GITHUB_HEAD_REF")
-			originalGithubBaseRef := os.Getenv("GITHUB_BASE_REF")
-			originalGithubEventName := os.Getenv("GITHUB_EVENT_NAME")
-
-			defer func() {
-				os.Setenv("GITHUB_REF", originalGithubRef)
-				os.Setenv("GITHUB_HEAD_REF", originalGithubHeadRef)
-				os.Setenv("GITHUB_BASE_REF", originalGithubBaseRef)
-				os.Setenv("GITHUB_EVENT_NAME", originalGithubEventName)
-			}()
-
 			// Set up test environment
 			if tt.sourceBranch == "main" || tt.sourceBranch == "master" {
-				os.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
-				os.Setenv("GITHUB_HEAD_REF", "")
-				os.Setenv("GITHUB_EVENT_NAME", "push")
+				t.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
+				t.Setenv("GITHUB_HEAD_REF", "")
+				t.Setenv("GITHUB_EVENT_NAME", "push")
 			} else {
-				os.Setenv("GITHUB_REF", "refs/pull/123/merge")
-				os.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
-				os.Setenv("GITHUB_BASE_REF", "main")
-				os.Setenv("GITHUB_EVENT_NAME", "pull_request")
+				t.Setenv("GITHUB_REF", "refs/pull/123/merge")
+				t.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
+				t.Setenv("GITHUB_BASE_REF", "main")
+				t.Setenv("GITHUB_EVENT_NAME", "pull_request")
 			}
 
 			// Test the title generation logic directly
@@ -826,6 +786,8 @@ func TestCreateOrUpdateDocsPR_SourceBranchAware(t *testing.T) {
 }
 
 func TestLegacyPRTitleWithoutBee(t *testing.T) {
+	t.Parallel()
+
 	// During a bug period, PR titles were created without the bee emoji.
 	// We need to ensure we can find those legacy PRs by stripping the bee.
 	withoutBee := func(s string) string {
@@ -861,6 +823,7 @@ func TestLegacyPRTitleWithoutBee(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tt.expected, withoutBee(tt.current))
 		})
 	}
@@ -897,6 +860,8 @@ func TestConfigureSystemGitAuth_GHESHost(t *testing.T) {
 }
 
 func TestConfigureSystemGitAuth_EmptyToken(t *testing.T) {
+	t.Parallel()
+
 	repoDir := t.TempDir()
 	runGitCLI(t, repoDir, "init")
 
@@ -909,7 +874,7 @@ func TestConfigureSystemGitAuth_EmptyToken(t *testing.T) {
 	cmd.Dir = repoDir
 	output, err := cmd.CombinedOutput()
 	// git config --get-regexp returns exit code 1 when no matches found
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Empty(t, strings.TrimSpace(string(output)))
 }
 
@@ -963,29 +928,16 @@ func TestCreateSuggestionPR_SourceBranchAware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set up environment
-			originalGithubRef := os.Getenv("GITHUB_REF")
-			originalGithubHeadRef := os.Getenv("GITHUB_HEAD_REF")
-			originalGithubBaseRef := os.Getenv("GITHUB_BASE_REF")
-			originalGithubEventName := os.Getenv("GITHUB_EVENT_NAME")
-
-			defer func() {
-				os.Setenv("GITHUB_REF", originalGithubRef)
-				os.Setenv("GITHUB_HEAD_REF", originalGithubHeadRef)
-				os.Setenv("GITHUB_BASE_REF", originalGithubBaseRef)
-				os.Setenv("GITHUB_EVENT_NAME", originalGithubEventName)
-			}()
-
 			// Set up test environment
 			if tt.sourceBranch == "main" || tt.sourceBranch == "master" {
-				os.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
-				os.Setenv("GITHUB_HEAD_REF", "")
-				os.Setenv("GITHUB_EVENT_NAME", "push")
+				t.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
+				t.Setenv("GITHUB_HEAD_REF", "")
+				t.Setenv("GITHUB_EVENT_NAME", "push")
 			} else {
-				os.Setenv("GITHUB_REF", "refs/pull/123/merge")
-				os.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
-				os.Setenv("GITHUB_BASE_REF", "main")
-				os.Setenv("GITHUB_EVENT_NAME", "pull_request")
+				t.Setenv("GITHUB_REF", "refs/pull/123/merge")
+				t.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
+				t.Setenv("GITHUB_BASE_REF", "main")
+				t.Setenv("GITHUB_EVENT_NAME", "pull_request")
 			}
 
 			// Test the title generation logic directly

@@ -13,9 +13,9 @@ import (
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
 	"github.com/speakeasy-api/speakeasy/internal/ci/logging"
+	"github.com/speakeasy-api/speakeasy/internal/ci/releases"
 	"github.com/speakeasy-api/speakeasy/internal/ci/telemetry"
 	"github.com/speakeasy-api/speakeasy/internal/ci/utils"
-	"github.com/speakeasy-api/speakeasy/internal/ci/releases"
 )
 
 //go:embed goreleaser.yml
@@ -103,7 +103,7 @@ func (g *Git) CreateRelease(oldReleaseContent string, languages map[string]relea
 			logging.Info("targetSpecificReleaseNotes.HasReleaseNotesForTarget(lang): %v", targetSpecificReleaseNotes.HasReleaseNotesForTarget(lang))
 			if environment.GetSDKChangelog() == "true" && targetSpecificReleaseNotes.HasReleaseNotesForTarget(lang) {
 				releaseBody = targetSpecificReleaseNotes.GetReleaseNotesForTarget(lang)
-				fmt.Println(fmt.Sprintf("Release Notes Body: \n%s\n", releaseBody))
+				fmt.Printf("Release Notes Body: \n%s\n\n", releaseBody)
 			}
 
 			release := &github.RepositoryRelease{
@@ -122,8 +122,8 @@ func (g *Git) CreateRelease(oldReleaseContent string, languages map[string]relea
 			if err != nil {
 				if release, _, err := g.client.Repositories.GetReleaseByTag(context.Background(), os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), *tagName); err == nil && release != nil {
 					if release.Body != nil && strings.Contains(*release.Body, PublishingCompletedString) {
-						fmt.Println(fmt.Sprintf("a github release with tag %s has already been published ... skipping publishing", *tagName))
-						fmt.Println(fmt.Sprintf("to publish this version again please check with your package managed delete the github tag and release"))
+						fmt.Printf("a github release with tag %s has already been published ... skipping publishing\n", *tagName)
+						fmt.Printf("to publish this version again please check with your package managed delete the github tag and release\n")
 						outputName := utils.OutputTargetPublish(lang)
 						if _, ok := outputs[outputName]; ok {
 							outputs[outputName] = "false"

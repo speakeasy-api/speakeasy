@@ -199,7 +199,7 @@ func (g *Git) FindExistingPR(branchName string, action environment.Action, sourc
 	isMainBranch := environment.IsMainBranch(sourceBranch)
 
 	var prTitle string
-	switch action {
+	switch action { //nolint:exhaustive
 	case environment.ActionRunWorkflow, environment.ActionFinalize:
 		prTitle = getGenPRTitlePrefix()
 		if sourceGeneration {
@@ -231,7 +231,7 @@ func (g *Git) FindExistingPR(branchName string, action environment.Action, sourc
 				return "", nil, fmt.Errorf("existing PR has different branch name: %s than expected: %s", p.GetHead().GetRef(), branchName)
 			}
 
-			// For non-main targetting branches, also verify the PR targets the correct base branch
+			// For non-main targeting branches, also verify the PR targets the correct base branch
 			if !isMainBranch {
 				expectedBaseBranch := environment.GetTargetBaseBranch()
 				actualBaseBranch := p.GetBase().GetRef()
@@ -275,7 +275,7 @@ func (g *Git) FindAndCheckoutBranch(branchName string) (string, error) {
 		RefSpecs: []config.RefSpec{
 			config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", branchName, branchName)),
 		},
-	}); err != nil && err != git.NoErrAlreadyUpToDate {
+	}); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return "", fmt.Errorf("error fetching remote: %w", err)
 	}
 
@@ -399,7 +399,8 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 	isMainBranch := environment.IsMainBranch(sourceBranch)
 	timestamp := time.Now().Unix()
 
-	if action == environment.ActionRunWorkflow {
+	switch {
+	case action == environment.ActionRunWorkflow:
 		if isMainBranch {
 			// Maintain backward compatibility for main/master branches
 			branchName = fmt.Sprintf("speakeasy-sdk-regen-%d", timestamp)
@@ -408,14 +409,14 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
 			branchName = fmt.Sprintf("speakeasy-sdk-regen-%s-%d", sanitizedSourceBranch, timestamp)
 		}
-	} else if action == environment.ActionSuggest {
+	case action == environment.ActionSuggest:
 		if isMainBranch {
 			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%d", timestamp)
 		} else {
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
 			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%s-%d", sanitizedSourceBranch, timestamp)
 		}
-	} else if environment.IsDocsGeneration() {
+	case environment.IsDocsGeneration():
 		if isMainBranch {
 			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%d", timestamp)
 		} else {
@@ -459,23 +460,23 @@ func (g *Git) findNonCICommits(branchName, defaultBranch string) ([]string, erro
 		}
 
 		parts := strings.SplitN(line, "\t", 4)
-		hash := ""
 		message := line
-		author := ""
-		committer := ""
-		if len(parts) >= 4 {
+		var author, committer string
+		var hash string
+		switch {
+		case len(parts) >= 4:
 			hash = parts[0]
 			author = parts[1]
 			committer = parts[2]
 			message = parts[3]
-		} else if len(parts) == 3 {
+		case len(parts) == 3:
 			hash = parts[0]
 			author = parts[1]
 			message = parts[2]
-		} else if len(parts) == 2 {
+		case len(parts) == 2:
 			hash = parts[0]
 			message = parts[1]
-		} else {
+		default:
 			hash = parts[0]
 		}
 
@@ -651,7 +652,7 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 		return "", fmt.Errorf("error creating new tree: %w", err)
 	}
 
-	_, githubRepoLocation := g.getRepoMetadata()
+	githubRepoLocation := g.getRepoMetadata()
 	owner, repo := g.getOwnerAndRepo(githubRepoLocation)
 
 	// Get parent commit
@@ -675,7 +676,9 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 		Ref:    github.String("refs/heads/" + branch),
 		Object: &github.GitObject{SHA: commitResult.SHA},
 	}
-	g.client.Git.UpdateRef(context.Background(), owner, repo, newRef, true)
+	if _, _, err := g.client.Git.UpdateRef(context.Background(), owner, repo, newRef, true); err != nil {
+		return "", fmt.Errorf("error updating ref: %w", err)
+	}
 
 	// This prevents subsequent checkout operations from failing due to uncommitted changes
 	if err := g.resetWorktree(w, branch); err != nil {
@@ -688,7 +691,7 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 // getOrCreateRef returns the commit branch reference object if it exists or creates it
 // from the base branch before returning it.
 func (g *Git) getOrCreateRef(commitRef string) (ref *github.Reference, err error) {
-	_, githubRepoLocation := g.getRepoMetadata()
+	githubRepoLocation := g.getRepoMetadata()
 	owner, repo := g.getOwnerAndRepo(githubRepoLocation)
 	environmentRef := environment.GetRef()
 
@@ -715,7 +718,7 @@ func (g *Git) getOrCreateRef(commitRef string) (ref *github.Reference, err error
 // Generates the tree to commit based on the commit reference and source files. If doesn't exist on the remote
 // host, it will create and push it.
 func (g *Git) createAndPushTree(ref *github.Reference, sourceFiles git.Status) (tree *github.Tree, err error) {
-	_, githubRepoLocation := g.getRepoMetadata()
+	githubRepoLocation := g.getRepoMetadata()
 	owner, repo := g.getOwnerAndRepo(githubRepoLocation)
 	w, _ := g.repo.Worktree()
 
@@ -764,11 +767,8 @@ type PRInfo struct {
 	VersioningInfo       versionbumps.VersioningInfo
 }
 
-func (g *Git) getRepoMetadata() (string, string) {
-	githubURL := os.Getenv("GITHUB_SERVER_URL")
-	githubRepoLocation := environment.GetRepo()
-
-	return githubURL, githubRepoLocation
+func (g *Git) getRepoMetadata() string {
+	return environment.GetRepo()
 }
 
 func (g *Git) getOwnerAndRepo(githubRepoLocation string) (string, string) {
@@ -782,7 +782,7 @@ func (g *Git) CreateOrUpdatePR(info PRInfo) (*github.PullRequest, error) {
 	labelTypes := g.UpsertLabelTypes(context.Background())
 	var changelog string
 	var err error
-	body := ""
+	var body string
 	var previousGenVersions []string
 	var title string
 	if info.PreviousGenVersion != "" {
@@ -936,7 +936,7 @@ func (g *Git) generatePRTitleAndBody(info PRInfo, labelTypes map[string]github.L
 				versionBumpMsg += string(versionbumps.BumpMethodAutomated) + " (automated)"
 
 				versionBumpMsg += "\n\n> [!TIP]"
-				switch *labelBumpType {
+				switch *labelBumpType { //nolint:exhaustive
 				case versioning.BumpPrerelease:
 					versionBumpMsg += "\n> To exit [pre-release versioning](https://www.speakeasy.com/docs/sdks/manage/versioning#pre-release-version-bumps), set a new version or run `speakeasy bump graduate`."
 				case versioning.BumpPatch, versioning.BumpMinor:
@@ -1017,13 +1017,13 @@ func (g *Git) generateGeneratorChangelogForOldCLIVersions(info PRInfo, previousG
 		if err != nil {
 			logging.Error("failed to load gen config for retrieving granular versions for changelog at path %s: %v", genPath, err)
 			continue
-		} else {
-			ok := false
-			targetVersions, ok = cfg.LockFile.Features[language]
-			if !ok {
-				logging.Error("failed to find language %s in gen config for retrieving granular versions for changelog at path %s", language, genPath)
-				continue
-			}
+		}
+
+		var ok bool
+		targetVersions, ok = cfg.LockFile.Features[language]
+		if !ok {
+			logging.Error("failed to find language %s in gen config for retrieving granular versions for changelog at path %s", language, genPath)
+			continue
 		}
 		var previousVersions map[string]string
 
@@ -1434,7 +1434,7 @@ func (g *Git) GetChangedFilesForPRorBranch() ([]string, *int, error) {
 
 		if prs, _, _ := g.client.PullRequests.List(ctx, os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), opts); len(prs) > 0 {
 			prNumber = prs[0].GetNumber()
-			os.Setenv("GH_PULL_REQUEST", prs[0].GetURL())
+			_ = os.Setenv("GH_PULL_REQUEST", prs[0].GetURL())
 		}
 
 		defaultBranch := "main"
@@ -1491,7 +1491,7 @@ func (g *Git) GetChangedFilesForPRorBranch() ([]string, *int, error) {
 
 	} else {
 		prURL := fmt.Sprintf("https://github.com/%s/%s/pull/%d", os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), prNumber)
-		os.Setenv("GH_PULL_REQUEST", prURL)
+		_ = os.Setenv("GH_PULL_REQUEST", prURL)
 		opts := &github.ListOptions{PerPage: 100}
 		var allFiles []string
 
@@ -1635,7 +1635,7 @@ func getSuggestPRTitlePrefix() string {
 }
 
 func pushErr(err error) error {
-	if err != nil && err != git.NoErrAlreadyUpToDate {
+	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		if strings.Contains(err.Error(), "protected branch hook declined") {
 			return fmt.Errorf("error pushing changes: %w\nThis is likely due to a branch protection rule. Please ensure that the branch is not protected (repo > settings > branches)", err)
 		}

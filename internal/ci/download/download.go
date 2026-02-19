@@ -8,7 +8,7 @@ import (
 )
 
 func DownloadFile(url string, outPath string, header string, token string) error {
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -27,11 +27,11 @@ func DownloadFile(url string, outPath string, header string, token string) error
 	defer res.Body.Close()
 
 	switch res.StatusCode {
-	case 204:
+	case http.StatusNoContent:
 		fallthrough
-	case 404:
+	case http.StatusNotFound:
 		return fmt.Errorf("file not found")
-	case 401:
+	case http.StatusUnauthorized:
 		return fmt.Errorf("unauthorized, please ensure auth_header and auth_token inputs are set correctly and a valid token has been provided")
 	default:
 		if res.StatusCode/100 != 2 {

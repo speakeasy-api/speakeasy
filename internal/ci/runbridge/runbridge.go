@@ -28,11 +28,11 @@ func Run(ctx context.Context, sourcesOnly bool, installationURLs map[string]stri
 	// Set environment variables that the old cli.Run() used to set
 	if environment.ForceGeneration() {
 		fmt.Println("\nforce input enabled - setting SPEAKEASY_FORCE_GENERATION=true")
-		os.Setenv("SPEAKEASY_FORCE_GENERATION", "true")
+		_ = os.Setenv("SPEAKEASY_FORCE_GENERATION", "true")
 	}
 
 	if manualVersionBump != nil {
-		os.Setenv("SPEAKEASY_BUMP_OVERRIDE", string(*manualVersionBump))
+		_ = os.Setenv("SPEAKEASY_BUMP_OVERRIDE", string(*manualVersionBump))
 	}
 
 	// Create a temp file for the OpenAPI change summary
@@ -40,7 +40,7 @@ func Run(ctx context.Context, sourcesOnly bool, installationURLs map[string]stri
 	if err != nil {
 		return nil, fmt.Errorf("error creating change summary file: %w", err)
 	}
-	os.Setenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY", changeSummaryFile.Name())
+	_ = os.Setenv("SPEAKEASY_OPENAPI_CHANGE_SUMMARY", changeSummaryFile.Name())
 	if err := changeSummaryFile.Close(); err != nil {
 		return nil, fmt.Errorf("error closing change summary file: %w", err)
 	}

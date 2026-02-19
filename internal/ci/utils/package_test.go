@@ -8,33 +8,37 @@ import (
 )
 
 func TestGetPackageName(t *testing.T) {
-	require.Equal(t, GetPackageName("java", &config.LanguageConfig{
+	t.Parallel()
+
+	require.Equal(t, "com.example.test", GetPackageName("java", &config.LanguageConfig{
 		Cfg: map[string]any{
 			"groupID":    "com.example",
 			"artifactID": "test",
 		},
-	}), "com.example.test")
-	require.Equal(t, GetPackageName("terraform", &config.LanguageConfig{
+	}))
+	require.Equal(t, "ryan/test", GetPackageName("terraform", &config.LanguageConfig{
 		Cfg: map[string]any{
 			"author":      "ryan",
 			"packageName": "test",
 		},
-	}), "ryan/test")
-	require.Equal(t, GetPackageName("go", &config.LanguageConfig{
+	}))
+	require.Equal(t, "test", GetPackageName("go", &config.LanguageConfig{
 		Cfg: map[string]any{
 			"author":      "ryan",
 			"packageName": "test",
 		},
-	}), "test")
+	}))
 }
 
 func TestGetRegistryName(t *testing.T) {
-	require.Equal(t, GetRegistryName("go"), "go")
-	require.Equal(t, GetRegistryName("python"), "pypi")
-	require.Equal(t, GetRegistryName("typescript"), "npm")
-	require.Equal(t, GetRegistryName("php"), "packagist")
-	require.Equal(t, GetRegistryName("ruby"), "gems")
-	require.Equal(t, GetRegistryName("java"), "sonatype")
-	require.Equal(t, GetRegistryName("terraform"), "terraform")
-	require.Equal(t, GetRegistryName("go"), "go")
+	t.Parallel()
+
+	require.Equal(t, "go", GetRegistryName("go"))
+	require.Equal(t, "pypi", GetRegistryName("python"))
+	require.Equal(t, "npm", GetRegistryName("typescript"))
+	require.Equal(t, "packagist", GetRegistryName("php"))
+	require.Equal(t, "gems", GetRegistryName("ruby"))
+	require.Equal(t, "sonatype", GetRegistryName("java"))
+	require.Equal(t, "terraform", GetRegistryName("terraform"))
+	require.Equal(t, "go", GetRegistryName("go"))
 }

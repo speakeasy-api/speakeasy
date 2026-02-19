@@ -34,7 +34,7 @@ func GetOpenAPIFileInfo(ctx context.Context) (string, string, error) {
 		return "", "", err
 	}
 
-	filePath := ""
+	var filePath string
 
 	if len(resolvedOpenAPIFiles) == 1 {
 		filePath = resolvedOpenAPIFiles[0]
@@ -162,7 +162,7 @@ func resolveFiles(files []file, typ string) ([]string, error) {
 
 			if environment.GetAction() == environment.ActionValidate {
 				if extension := path.Ext(u.Path); extension != "" {
-					filePath = filePath + extension
+					filePath += extension
 				}
 			}
 

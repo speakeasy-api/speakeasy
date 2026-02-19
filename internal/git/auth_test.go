@@ -8,6 +8,8 @@ import (
 )
 
 func TestBasicAuth_WithToken(t *testing.T) {
+	t.Parallel()
+
 	auth := BasicAuth("ghp_test123")
 	if auth == nil {
 		t.Fatal("expected non-nil auth")
@@ -21,6 +23,8 @@ func TestBasicAuth_WithToken(t *testing.T) {
 }
 
 func TestBasicAuth_EmptyToken(t *testing.T) {
+	t.Parallel()
+
 	auth := BasicAuth("")
 	if auth != nil {
 		t.Errorf("expected nil auth for empty token, got %+v", auth)
@@ -28,6 +32,8 @@ func TestBasicAuth_EmptyToken(t *testing.T) {
 }
 
 func TestConfigureURLRewrite_EmptyToken(t *testing.T) {
+	t.Parallel()
+
 	err := ConfigureURLRewrite("/tmp", "github.com", "")
 	if err != nil {
 		t.Errorf("expected no error for empty token, got %v", err)
@@ -35,6 +41,8 @@ func TestConfigureURLRewrite_EmptyToken(t *testing.T) {
 }
 
 func TestConfigureURLRewrite_SetsConfig(t *testing.T) {
+	t.Parallel()
+
 	// Create a temporary git repo for the test
 	dir := t.TempDir()
 	_, err := RunGitCommand(dir, "init")

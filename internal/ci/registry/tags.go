@@ -8,7 +8,7 @@ import (
 func ProcessRegistryTags() []string {
 	var tags []string
 	tagsInput := environment.RegistryTags()
-	if len(strings.Replace(tagsInput, " ", "", -1)) == 0 {
+	if len(strings.ReplaceAll(tagsInput, " ", "")) == 0 {
 		return tags
 	}
 
@@ -20,7 +20,7 @@ func ProcessRegistryTags() []string {
 	}
 
 	for _, tag := range processedTags {
-		tag = strings.Replace(tag, " ", "", -1)
+		tag = strings.ReplaceAll(tag, " ", "")
 		if len(tag) > 0 {
 			tags = append(tags, tag)
 		}

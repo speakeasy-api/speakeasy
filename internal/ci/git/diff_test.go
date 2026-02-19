@@ -4,9 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsGitDiffSignificant(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name           string
 		diff           string
@@ -267,8 +270,9 @@ index c093fc3..67a2a32 100644
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, _, err := IsGitDiffSignificant(tt.diff, tt.ignorePatterns)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}

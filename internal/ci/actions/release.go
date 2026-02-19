@@ -54,12 +54,12 @@ func Release(ctx context.Context) error {
 		// This searches for files that would be referenced in the GH Action trigger
 		files, err := g.GetCommitedFiles()
 		if err != nil {
-			fmt.Printf("Failed to get commited files: %s\n", err.Error())
+			fmt.Printf("Failed to get committed files: %s\n", err.Error())
 		}
 
 		if environment.IsDebugMode() {
 			for _, file := range files {
-				logging.Debug("Found commited file: %s", file)
+				logging.Debug("Found committed file: %s", file)
 			}
 		}
 
@@ -70,7 +70,6 @@ func Release(ctx context.Context) error {
 	var languages map[string]releases.LanguageReleaseInfo
 	var latestRelease *releases.ReleasesInfo
 	var targetSpecificReleaseNotes releases.TargetReleaseNotes = nil
-	oldReleaseContent := ""
 
 	// Old way of getting release Info (uses RELEASES.md)
 	if usingReleasesMd {
@@ -94,7 +93,7 @@ func Release(ctx context.Context) error {
 		return err
 	}
 	languages = latestRelease.Languages
-	oldReleaseContent = latestRelease.String()
+	oldReleaseContent := latestRelease.String()
 
 	outputs := map[string]string{}
 	for lang, info := range languages {
@@ -181,7 +180,7 @@ func addCurrentBranchTagging(ctx context.Context, latestRelease map[string]relea
 	var sources, targets []string
 	// a tag that is applied if the target contributing is published
 	var isPublished bool
-	branch := strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
+	branch := strings.TrimPrefix(environment.GetGithubRef(), "refs/heads/")
 	workflow, err := configuration.GetWorkflowAndValidateLanguages(true)
 	if err != nil {
 		return err
