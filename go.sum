@@ -538,8 +538,8 @@ github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed h1:PL/kpBY5vkBm
 github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed/go.mod h1:Gc8oQkjr2InxwumK0zOBtKN9gIlv9L2VmSVIUk2YxcU=
 github.com/speakeasy-api/openapi v1.16.1 h1:eUFWR7wqqT2GNXqOPMTbbW1zJE28qT1m1dWmNMEhviI=
 github.com/speakeasy-api/openapi v1.16.1/go.mod h1:aiVj+JnirrwZDtKegt0hQrj/ixl3v17EkN2YGnTuSro=
-github.com/speakeasy-api/openapi-generation/v2 v2.832.5 h1:HwN43+8azkdyJ5wJ5MsVn7634t0wleek1RqjxiDsl2c=
-github.com/speakeasy-api/openapi-generation/v2 v2.832.5/go.mod h1:cY7IhImqvA0lY8iCzATzqZTFERVpfsmnzPsuxqCrzHQ=
+github.com/speakeasy-api/openapi-generation/v2 v2.832.6 h1:VA9mjCNj9dl9DAWT/RsWM4upm3x442N2CFW35ueNWxE=
+github.com/speakeasy-api/openapi-generation/v2 v2.832.6/go.mod h1:cY7IhImqvA0lY8iCzATzqZTFERVpfsmnzPsuxqCrzHQ=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 h1:gV+lYeVNNJG9X3Sl9Su3cRh1iF/oNqzvb5Ijq2QR8jY=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4/go.mod h1:1zQpVio7X6QJDtyNdUguCgZ+IC7CzKhhjvNgJdvGVF0=
 github.com/speakeasy-api/sdk-gen-config v1.49.0 h1:zwOBNfQtip564bOcWEUSwwJxSGQGkWA15R8xIxFTgHs=
