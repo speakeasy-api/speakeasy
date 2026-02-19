@@ -409,6 +409,7 @@ func TestGit_FindOrCreateBranch_NonCIPendingCommits(t *testing.T) {
 	runGitCLI(t, repoPath, "init")
 	runGitCLI(t, repoPath, "config", "user.name", "Test User")
 	runGitCLI(t, repoPath, "config", "user.email", "test@example.com")
+	runGitCLI(t, repoPath, "config", "core.autocrlf", "false")
 
 	if err := os.WriteFile(filepath.Join(repoPath, "README.md"), []byte("initial\n"), 0o644); err != nil {
 		t.Fatalf("failed to write README: %v", err)
