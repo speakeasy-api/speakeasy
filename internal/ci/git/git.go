@@ -766,7 +766,7 @@ type PRInfo struct {
 
 func (g *Git) getRepoMetadata() (string, string) {
 	githubURL := os.Getenv("GITHUB_SERVER_URL")
-	githubRepoLocation := os.Getenv("GITHUB_REPOSITORY")
+	githubRepoLocation := environment.GetRepo()
 
 	return githubURL, githubRepoLocation
 }
@@ -1602,7 +1602,7 @@ func (g *Git) CreateTag(tag string, hash string) error {
 }
 
 func GetRepo() string {
-	repoPath := os.Getenv("GITHUB_REPOSITORY")
+	repoPath := environment.GetRepo()
 	parts := strings.Split(repoPath, "/")
 	return parts[len(parts)-1]
 }
