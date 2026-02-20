@@ -56,9 +56,10 @@ if [[ "$CURRENT_OG_VERSION" == "$PREV_OG_VERSION" ]]; then
 fi
 
 # Check if the release has already been updated (idempotency)
+# If the body already contains target/language headers, it's been compiled
 CURRENT_BODY=$(gh release view "$CURRENT_TAG" --repo "$CLI_REPO" --json body -q '.body')
-if echo "$CURRENT_BODY" | grep -q "openapi-generation Changes"; then
-  echo "Release notes already contain openapi-generation changes, skipping"
+if echo "$CURRENT_BODY" | grep -q "^### All Targets\|^### TypeScript\|^### Python\|^### Go\|^### Terraform"; then
+  echo "Release notes already compiled, skipping"
   exit 0
 fi
 
@@ -222,16 +223,7 @@ END {
 }
 ')
 
-# Build the updated release body
-NEW_BODY="${CURRENT_BODY}
-
----
-
-## openapi-generation Changes (\`${PREV_OG_VERSION}\` → \`${CURRENT_OG_VERSION}\`)
-
-${COMPILED_NOTES}"
-
-# Update the GitHub release
-echo "$NEW_BODY" | gh release edit "$CURRENT_TAG" --repo "$CLI_REPO" --notes-file -
+# Update the GitHub release, replacing the body entirely
+echo "$COMPILED_NOTES" | gh release edit "$CURRENT_TAG" --repo "$CLI_REPO" --notes-file -
 
 echo "Successfully updated release notes for $CURRENT_TAG with openapi-generation changes"
