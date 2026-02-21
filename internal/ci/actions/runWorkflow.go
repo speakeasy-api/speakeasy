@@ -432,7 +432,7 @@ func formatPinnedVersion(pinnedVersion string) string {
 	if pinnedVersion == "" {
 		return "latest"
 	}
-	if pinnedVersion != "latest" && (len(pinnedVersion) == 0 || pinnedVersion[0] != 'v') {
+	if pinnedVersion != "latest" && pinnedVersion[0] != 'v' {
 		return "v" + pinnedVersion
 	}
 	return pinnedVersion

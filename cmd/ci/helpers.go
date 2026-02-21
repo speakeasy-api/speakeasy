@@ -15,10 +15,11 @@ func setEnvIfNotEmpty(key, value string) {
 	}
 }
 
-// setEnvBool sets an environment variable to "true" if the bool is true.
-// Does not set the variable if false (leaves existing env var state unchanged).
+// setEnvBool sets an environment variable to "true" or "false" based on the bool value.
 func setEnvBool(key string, value bool) {
 	if value {
 		_ = os.Setenv(key, "true")
+	} else {
+		_ = os.Setenv(key, "false")
 	}
 }
