@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/speakeasy-api/speakeasy/cmd/ci"
 	"github.com/speakeasy-api/speakeasy/cmd/lint"
 
 	"github.com/speakeasy-api/speakeasy/cmd/generate"
@@ -102,7 +103,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, reproCmd)
 	addCommand(rootCmd, diffCmd)
 	addCommand(rootCmd, orphanedFilesCmd)
-	addCommand(rootCmd, ciCmd)
+	addCommand(rootCmd, ci.CICmd)
 	pullInit()
 }
 
@@ -131,6 +132,7 @@ func Execute(version, artifactArch string) {
 }
 
 func setupRootCmd(version, artifactArch string) {
+	env.SetSpeakeasyVersion(version)
 	rootCmd.Version = version + "\n" + artifactArch
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
