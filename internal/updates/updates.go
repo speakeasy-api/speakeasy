@@ -24,7 +24,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/locks"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 
-	"github.com/google/go-github/v58/github"
+	"github.com/google/go-github/v63/github"
 	"github.com/hashicorp/go-version"
 )
 

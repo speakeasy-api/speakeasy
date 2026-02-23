@@ -51,6 +51,7 @@ type CommandGroup struct {
 	Aliases                            []string
 	Commands                           []Command
 	Hidden                             bool
+	AllowUnknownFlags                  bool
 }
 
 func (c CommandGroup) Init() (*cobra.Command, error) {
@@ -67,6 +68,9 @@ func (c CommandGroup) Init() (*cobra.Command, error) {
 		subcmd, err := subcommand.Init()
 		if err != nil {
 			return nil, err
+		}
+		if c.AllowUnknownFlags {
+			subcmd.FParseErrWhitelist.UnknownFlags = true
 		}
 		cmd.AddCommand(subcmd)
 	}

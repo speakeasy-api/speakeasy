@@ -33,14 +33,11 @@ func (r *Repository) writeBlobNative(content []byte) (string, error) {
 		return "", fmt.Errorf("repository root not found")
 	}
 
-	cmd := exec.Command("git", "hash-object", "-w", "--stdin")
-	cmd.Dir = repoRoot
-	cmd.Stdin = bytes.NewReader(content)
-	output, err := cmd.Output()
+	output, err := RunGitCommandWithStdin(repoRoot, bytes.NewReader(content), "hash-object", "-w", "--stdin")
 	if err != nil {
 		return "", fmt.Errorf("git hash-object failed: %w", err)
 	}
-	return strings.TrimSpace(string(output)), nil
+	return strings.TrimSpace(output), nil
 }
 
 // writeBlobGoGit writes a blob using go-git (for non-Windows platforms).
@@ -74,22 +71,15 @@ func (r *Repository) GetBlob(hash string) ([]byte, error) {
 	// Strip "sha1:" prefix if present (common in some systems)
 	hash = strings.TrimPrefix(hash, "sha1:")
 
-	repoRoot := r.Root()
-	if repoRoot == "" {
-		return nil, fmt.Errorf("repository root not found")
-	}
-
 	// Use native git to read blob content.
 	// This is necessary because go-git's storer may not see objects
 	// that were fetched via native git fetch commands.
-	cmd := exec.Command("git", "cat-file", "blob", hash)
-	cmd.Dir = repoRoot
-	output, err := cmd.Output()
+	output, err := r.RunGitCommandInRepo("cat-file", "blob", hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read blob %s: %w", hash, err)
 	}
 
-	return output, nil
+	return []byte(output), nil
 }
 
 // TreeEntry represents a file or directory in a git tree.
@@ -127,14 +117,11 @@ func (r *Repository) writeTreeNative(entries []TreeEntry) (string, error) {
 		fmt.Fprintf(&treeInput, "%s %s %s\t%s\n", e.Mode, objType, e.Hash, e.Name)
 	}
 
-	cmd := exec.Command("git", "mktree")
-	cmd.Dir = repoRoot
-	cmd.Stdin = strings.NewReader(treeInput.String())
-	output, err := cmd.Output()
+	output, err := RunGitCommandWithStdin(repoRoot, strings.NewReader(treeInput.String()), "mktree")
 	if err != nil {
 		return "", fmt.Errorf("git mktree failed: %w", err)
 	}
-	return strings.TrimSpace(string(output)), nil
+	return strings.TrimSpace(output), nil
 }
 
 // writeTreeGoGit creates a tree object using go-git (for non-Windows platforms).
@@ -350,14 +337,11 @@ func (r *Repository) setConflictStateNative(path string, base, ours, theirs []by
 
 	// Helper to write blob using native git
 	writeBlob := func(content []byte) (string, error) {
-		cmd := exec.Command("git", "hash-object", "-w", "--stdin")
-		cmd.Dir = repoRoot
-		cmd.Stdin = bytes.NewReader(content)
-		output, err := cmd.Output()
+		output, err := RunGitCommandWithStdin(repoRoot, bytes.NewReader(content), "hash-object", "-w", "--stdin")
 		if err != nil {
 			return "", fmt.Errorf("git hash-object failed: %w", err)
 		}
-		return strings.TrimSpace(string(output)), nil
+		return strings.TrimSpace(output), nil
 	}
 
 	// Write the blob objects
@@ -381,10 +365,8 @@ func (r *Repository) setConflictStateNative(path string, base, ours, theirs []by
 	}
 
 	// First, remove any existing entry for this path from the index
-	cmd := exec.Command("git", "update-index", "--force-remove", "--", path)
-	cmd.Dir = repoRoot
 	// Ignore error - file might not be in index
-	_ = cmd.Run()
+	_, _ = RunGitCommand(repoRoot, "update-index", "--force-remove", "--", path)
 
 	// Build index entries for conflict stages
 	// Format for --index-info: <mode> SP <hash> SP <stage> TAB <path>
@@ -402,12 +384,8 @@ func (r *Repository) setConflictStateNative(path string, base, ours, theirs []by
 	fmt.Fprintf(&indexInfo, "%s %s 3\t%s\n", modeStr, theirsHash, path)
 
 	// Update the index with conflict entries
-	cmd = exec.Command("git", "update-index", "--index-info")
-	cmd.Dir = repoRoot
-	cmd.Stdin = strings.NewReader(indexInfo.String())
-
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to update index: %w: %s", err, string(output))
+	if _, err := RunGitCommandWithStdin(repoRoot, strings.NewReader(indexInfo.String()), "update-index", "--index-info"); err != nil {
+		return fmt.Errorf("failed to update index: %w", err)
 	}
 
 	return nil

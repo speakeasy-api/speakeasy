@@ -42,3 +42,17 @@ func IsCI() bool {
 func SpeakeasyRunLocation() string {
 	return os.Getenv("SPEAKEASY_RUN_LOCATION")
 }
+
+// speakeasyVersion holds the version of the currently running speakeasy CLI binary,
+// set during startup via cmd.Execute -> SetSpeakeasyVersion.
+var speakeasyVersion string
+
+// SetSpeakeasyVersion stores the CLI version for access by internal packages.
+func SetSpeakeasyVersion(v string) {
+	speakeasyVersion = v
+}
+
+// SpeakeasyVersion returns the version of the currently running speakeasy CLI binary.
+func SpeakeasyVersion() string {
+	return speakeasyVersion
+}
