@@ -49,7 +49,8 @@ type RunFlags struct {
 	Minimal            bool              `json:"minimal"`
 	Dependent          string            `json:"dependent"`
 	SourceLocation     string            `json:"source-location"`
-	AutoYes            bool              `json:"auto-yes"`
+	AutoYes              bool              `json:"auto-yes"`
+	OutputMergeConflicts bool              `json:"output-merge-conflicts"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -199,6 +200,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Name:        "auto-yes",
 			Shorthand:   "y",
 			Description: "auto confirm all prompts",
+		},
+		flag.BooleanFlag{
+			Name:        "output-merge-conflicts",
+			Description: "write merge conflict markers to files and continue instead of failing when persistent edit conflicts are detected",
 		},
 	},
 }
@@ -443,6 +448,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
 		run.WithAutoYes(flags.AutoYes),
+		run.WithOutputMergeConflicts(flags.OutputMergeConflicts),
 		run.WithAllowPrompts(false), // Non-interactive mode
 	}
 
@@ -508,6 +514,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
 		run.WithAutoYes(flags.AutoYes),
+		run.WithOutputMergeConflicts(flags.OutputMergeConflicts),
 	}
 
 	if flags.Minimal {

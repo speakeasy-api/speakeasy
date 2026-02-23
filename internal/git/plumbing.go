@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -486,6 +487,125 @@ func (r *Repository) setConflictStateGoGit(path string, base, ours, theirs []byt
 		ModifiedAt: now,
 		Size:       uint32(len(theirs)),
 	})
+
+	// Sort entries by (Name, Stage) as required by git index format
+	sort.Slice(idx.Entries, func(i, j int) bool {
+		if idx.Entries[i].Name != idx.Entries[j].Name {
+			return idx.Entries[i].Name < idx.Entries[j].Name
+		}
+		return idx.Entries[i].Stage < idx.Entries[j].Stage
+	})
+
+	// Write the index back
+	if err := r.repo.Storer.SetIndex(idx); err != nil {
+		return fmt.Errorf("failed to write index: %w", err)
+	}
+
+	return nil
+}
+
+// ResolveConflictState resolves a conflicted file in the git index by replacing
+// stages 1/2/3 with a normal stage 0 entry using the file's current content on disk.
+// This allows the file (which may contain conflict markers) to be committed.
+func (r *Repository) ResolveConflictState(path string) error {
+	if r.repo == nil {
+		return fmt.Errorf("git repository not initialized")
+	}
+
+	// Ensure path is relative to the repository root
+	if filepath.IsAbs(path) {
+		relPath, err := filepath.Rel(r.Root(), path)
+		if err == nil {
+			path = relPath
+		}
+	}
+
+	// Git index always uses forward slashes, even on Windows
+	path = filepath.ToSlash(path)
+
+	// On Windows, use native git commands due to go-git file locking issues
+	if runtime.GOOS == "windows" {
+		return r.resolveConflictStateNative(path)
+	}
+
+	return r.resolveConflictStateGoGit(path)
+}
+
+// resolveConflictStateNative resolves a conflict using native git commands (for Windows).
+func (r *Repository) resolveConflictStateNative(path string) error {
+	repoRoot := r.Root()
+	if repoRoot == "" {
+		return fmt.Errorf("repository root not found")
+	}
+
+	cmd := exec.Command("git", "add", "--", path)
+	cmd.Dir = repoRoot
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git add failed for %s: %w: %s", path, err, string(output))
+	}
+
+	return nil
+}
+
+// resolveConflictStateGoGit resolves a conflict using go-git by reading the file
+// from disk, writing a blob, and replacing conflict stage entries with a stage 0 entry.
+func (r *Repository) resolveConflictStateGoGit(path string) error {
+	// Read current file content from disk
+	absPath := filepath.Join(r.Root(), filepath.FromSlash(path))
+	content, err := os.ReadFile(absPath)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+
+	// Write blob to object database
+	blobHash, err := r.WriteBlob(content)
+	if err != nil {
+		return fmt.Errorf("failed to write blob for %s: %w", path, err)
+	}
+
+	// Read the current index
+	idx, err := r.repo.Storer.Index()
+	if err != nil {
+		return fmt.Errorf("failed to read index: %w", err)
+	}
+
+	// Determine file mode from existing entries (default to regular)
+	mode := filemode.Regular
+	for _, e := range idx.Entries {
+		if e.Name == path {
+			mode = e.Mode
+			break
+		}
+	}
+
+	// Remove all entries for this path (stages 1, 2, 3)
+	newEntries := make([]*index.Entry, 0, len(idx.Entries))
+	for _, e := range idx.Entries {
+		if e.Name != path {
+			newEntries = append(newEntries, e)
+		}
+	}
+
+	// Get file info for timestamps and size
+	fi, err := os.Stat(absPath)
+	if err != nil {
+		return fmt.Errorf("failed to stat file %s: %w", path, err)
+	}
+
+	now := fi.ModTime()
+
+	// Add stage 0 (resolved) entry
+	newEntries = append(newEntries, &index.Entry{
+		Name:       path,
+		Hash:       plumbing.NewHash(blobHash),
+		Mode:       mode,
+		Stage:      index.Merged, // Stage 0
+		CreatedAt:  now,
+		ModifiedAt: now,
+		Size:       uint32(fi.Size()),
+	})
+
+	idx.Entries = newEntries
 
 	// Sort entries by (Name, Stage) as required by git index format
 	sort.Slice(idx.Entries, func(i, j int) bool {
