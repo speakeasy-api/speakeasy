@@ -37,8 +37,8 @@ require (
 	github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
-	github.com/speakeasy-api/openapi v1.16.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.835.2
+	github.com/speakeasy-api/openapi v1.19.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.836.4
 	github.com/speakeasy-api/sdk-gen-config v1.50.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -53,7 +53,7 @@ require (
 	goa.design/goa/v3 v3.24.1
 	golang.org/x/sync v0.19.0
 	golang.org/x/term v0.39.0
-	golang.org/x/text v0.33.0
+	golang.org/x/text v0.34.0
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go/v2 v2.5.0
 )
@@ -216,7 +216,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/speakeasy-api/easytemplate v0.11.2 // indirect
-	github.com/speakeasy-api/jsonpath v0.6.2 // indirect
+	github.com/speakeasy-api/jsonpath v0.6.3 // indirect
 	github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
