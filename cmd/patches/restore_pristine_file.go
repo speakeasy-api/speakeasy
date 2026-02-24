@@ -8,15 +8,15 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 )
 
-type viewPristineFlags struct {
+type restorePristineFileFlags struct {
 	Dir  string `json:"dir"`
 	File string `json:"file"`
 }
 
-var viewPristineCmd = &model.ExecutableCommand[viewPristineFlags]{
-	Usage: "view-pristine",
-	Short: "Show the pristine (generated) version of a tracked file",
-	Run:   runViewPristine,
+var restorePristineFileCmd = &model.ExecutableCommand[restorePristineFileFlags]{
+	Usage: "file",
+	Short: "Restore a file to its pristine (generated) version, discarding custom edits",
+	Run:   runRestorePristineFile,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:         "dir",
@@ -33,8 +33,8 @@ var viewPristineCmd = &model.ExecutableCommand[viewPristineFlags]{
 	},
 }
 
-func runViewPristine(ctx context.Context, flags viewPristineFlags) error {
-	_, tracked, gitRepo, err := loadTrackedFile(flags.Dir, flags.File)
+func runRestorePristineFile(ctx context.Context, flags restorePristineFileFlags) error {
+	dir, tracked, gitRepo, err := loadTrackedFile(flags.Dir, flags.File)
 	if err != nil {
 		return err
 	}
@@ -44,6 +44,10 @@ func runViewPristine(ctx context.Context, flags viewPristineFlags) error {
 		return fmt.Errorf("failed to read pristine object %s: %w", tracked.PristineGitObject, err)
 	}
 
-	fmt.Print(string(content))
+	if err := restoreFileToPristine(dir, flags.File, content); err != nil {
+		return err
+	}
+
+	fmt.Printf("Restored %s to pristine version\n", flags.File)
 	return nil
 }

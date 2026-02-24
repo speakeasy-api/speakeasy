@@ -3,10 +3,8 @@ package patches
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"os"
 
-	config "github.com/speakeasy-api/sdk-gen-config"
-	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	internalPatches "github.com/speakeasy-api/speakeasy/internal/patches"
@@ -31,35 +29,29 @@ var viewDiffFilesCmd = &model.ExecutableCommand[viewDiffFilesFlags]{
 }
 
 func runViewDiffFiles(ctx context.Context, flags viewDiffFilesFlags) error {
-	dir, err := filepath.Abs(flags.Dir)
+	dir, lf, err := loadLockFile(flags.Dir)
 	if err != nil {
-		return fmt.Errorf("failed to resolve directory: %w", err)
+		return err
 	}
 
-	cfg, err := config.Load(dir)
+	gitRepo, err := internalPatches.OpenGitRepository(dir)
 	if err != nil {
-		return fmt.Errorf("failed to load config from %s: %w", dir, err)
+		return err
 	}
-	if cfg.LockFile == nil {
-		return fmt.Errorf("no gen.lock found in %s", dir)
-	}
-
-	// Open git repo — required for reading pristine blobs
-	repo, err := git.NewLocalRepository(dir)
-	if err != nil {
-		return fmt.Errorf("failed to open git repository: %w", err)
-	}
-	if repo.IsNil() {
-		return fmt.Errorf("no git repository found at %s", dir)
-	}
-	gitRepo := internalPatches.WrapGitRepository(repo)
 
 	// Compare every tracked file on disk against its pristine git object.
 	// "Custom code" = file exists on disk AND differs from the pristine (generated) version.
 	var diffs []internalPatches.FileDiff
-	for path := range cfg.LockFile.TrackedFiles.Keys() {
-		tracked, ok := cfg.LockFile.TrackedFiles.Get(path)
+	for path := range lf.TrackedFiles.Keys() {
+		tracked, ok := lf.TrackedFiles.Get(path)
 		if !ok || tracked.PristineGitObject == "" {
+			continue
+		}
+
+		// Verify we can read the pristine blob before computing the diff.
+		// ComputeFileDiff buries GetBlob errors internally, so check here first.
+		if _, err := gitRepo.GetBlob(tracked.PristineGitObject); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not read pristine object for %s: %v\n", path, err)
 			continue
 		}
 

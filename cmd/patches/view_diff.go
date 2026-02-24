@@ -7,5 +7,5 @@ import (
 var viewDiffCmd = &model.CommandGroup{
 	Usage:    "view-diff",
 	Short:    "View diffs between pristine (generated) and current SDK files",
-	Commands: []model.Command{viewDiffFilesCmd},
+	Commands: []model.Command{viewDiffFileCmd, viewDiffFilesCmd},
 }
