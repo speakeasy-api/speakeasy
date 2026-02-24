@@ -9,6 +9,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/cmd/ci"
 	"github.com/speakeasy-api/speakeasy/cmd/lint"
+	"github.com/speakeasy-api/speakeasy/cmd/patches"
 
 	"github.com/speakeasy-api/speakeasy/cmd/generate"
 	"github.com/speakeasy-api/speakeasy/cmd/mcp"
@@ -103,6 +104,7 @@ func Init(version, artifactArch string) {
 	addCommand(rootCmd, reproCmd)
 	addCommand(rootCmd, diffCmd)
 	addCommand(rootCmd, orphanedFilesCmd)
+	addCommand(rootCmd, patches.PatchesCmd)
 	addCommand(rootCmd, ci.CICmd)
 	pullInit()
 }
