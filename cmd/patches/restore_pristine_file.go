@@ -3,8 +3,6 @@ package patches
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -41,21 +39,8 @@ func runRestorePristineFile(ctx context.Context, flags restorePristineFileFlags)
 		return err
 	}
 
-	content, err := gitRepo.GetBlob(tracked.PristineGitObject)
-	if err != nil {
-		return fmt.Errorf("failed to read pristine object %s: %w", tracked.PristineGitObject, err)
-	}
-
-	fullPath := filepath.Join(dir, flags.File)
-
-	// Preserve existing file permissions
-	perm := os.FileMode(0o644)
-	if info, err := os.Stat(fullPath); err == nil {
-		perm = info.Mode().Perm()
-	}
-
-	if err := os.WriteFile(fullPath, content, perm); err != nil {
-		return fmt.Errorf("failed to write file %s: %w", fullPath, err)
+	if err := restoreFileToPristine(dir, flags.File, gitRepo, tracked); err != nil {
+		return err
 	}
 
 	fmt.Printf("Restored %s to pristine version\n", flags.File)

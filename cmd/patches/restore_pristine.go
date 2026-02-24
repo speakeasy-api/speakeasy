@@ -7,5 +7,5 @@ import (
 var restorePristineCmd = &model.CommandGroup{
 	Usage:    "restore-pristine",
 	Short:    "Restore files to their pristine (generated) version, discarding custom edits",
-	Commands: []model.Command{restorePristineFileCmd},
+	Commands: []model.Command{restorePristineAllCmd, restorePristineFileCmd},
 }

@@ -2,6 +2,7 @@ package patches
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
@@ -51,4 +52,26 @@ func loadTrackedFile(dir, file string) (string, lockfile.TrackedFile, internalPa
 	}
 
 	return absDir, tracked, gitRepo, nil
+}
+
+// restoreFileToPristine writes the pristine content of a tracked file to disk,
+// preserving existing file permissions.
+func restoreFileToPristine(dir, filePath string, gitRepo internalPatches.GitRepository, tracked lockfile.TrackedFile) error {
+	content, err := gitRepo.GetBlob(tracked.PristineGitObject)
+	if err != nil {
+		return fmt.Errorf("failed to read pristine object %s: %w", tracked.PristineGitObject, err)
+	}
+
+	fullPath := filepath.Join(dir, filePath)
+
+	perm := os.FileMode(0o644)
+	if info, err := os.Stat(fullPath); err == nil {
+		perm = info.Mode().Perm()
+	}
+
+	if err := os.WriteFile(fullPath, content, perm); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", fullPath, err)
+	}
+
+	return nil
 }
