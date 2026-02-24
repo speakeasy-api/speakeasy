@@ -31,11 +31,10 @@ type CheckUpgradeFlags struct {
 }
 
 var configureGenerationCheckCmd = &model.ExecutableCommand[CheckUpgradeFlags]{
-	Usage:            "check",
-	Short:            "Check gen.yaml config values against newSDK defaults for targets in workflow.yaml",
-	Long:             "Analyzes the gen.yaml files for SDK targets defined in workflow.yaml and compares their values against the defaults for new SDKs, identifying which settings differ from the recommended defaults.",
-	Run:              checkUpgradeExec,
-	UsesWorkflowFile: true,
+	Usage: "check",
+	Short: "Check gen.yaml config values against newSDK defaults for targets in workflow.yaml",
+	Long:  "Analyzes the gen.yaml files for SDK targets defined in workflow.yaml and compares their values against the defaults for new SDKs, identifying which settings differ from the recommended defaults.",
+	Run:   checkUpgradeExec,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "target",
