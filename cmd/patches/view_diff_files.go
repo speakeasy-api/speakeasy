@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
-	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	internalPatches "github.com/speakeasy-api/speakeasy/internal/patches"
@@ -44,15 +43,10 @@ func runViewDiffFiles(ctx context.Context, flags viewDiffFilesFlags) error {
 		return fmt.Errorf("no gen.lock found in %s", dir)
 	}
 
-	// Open git repo — required for reading pristine blobs
-	repo, err := git.NewLocalRepository(dir)
+	gitRepo, err := internalPatches.OpenGitRepository(dir)
 	if err != nil {
-		return fmt.Errorf("failed to open git repository: %w", err)
+		return err
 	}
-	if repo.IsNil() {
-		return fmt.Errorf("no git repository found at %s", dir)
-	}
-	gitRepo := internalPatches.WrapGitRepository(repo)
 
 	// Compare every tracked file on disk against its pristine git object.
 	// "Custom code" = file exists on disk AND differs from the pristine (generated) version.

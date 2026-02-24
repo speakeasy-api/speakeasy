@@ -1,6 +1,8 @@
 package patches
 
 import (
+	"fmt"
+
 	"github.com/speakeasy-api/speakeasy/internal/git"
 )
 
@@ -15,6 +17,20 @@ var _ GitRepository = (*GitRepositoryWrapper)(nil)
 // WrapGitRepository wraps a git.Repository to implement the GitRepository interface.
 func WrapGitRepository(repo *git.Repository) *GitRepositoryWrapper {
 	return &GitRepositoryWrapper{repo: repo}
+}
+
+// OpenGitRepository opens the git repository at the given directory and returns
+// a GitRepository ready for use. This is the single entry point for obtaining a
+// GitRepository from a directory path.
+func OpenGitRepository(dir string) (GitRepository, error) {
+	repo, err := git.NewLocalRepository(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open git repository: %w", err)
+	}
+	if repo.IsNil() {
+		return nil, fmt.Errorf("no git repository found at %s", dir)
+	}
+	return WrapGitRepository(repo), nil
 }
 
 func (w *GitRepositoryWrapper) IsNil() bool {

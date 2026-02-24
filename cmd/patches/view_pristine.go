@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
-	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	internalPatches "github.com/speakeasy-api/speakeasy/internal/patches"
 )
 
 type viewPristineFlags struct {
@@ -59,15 +59,12 @@ func runViewPristine(ctx context.Context, flags viewPristineFlags) error {
 		return fmt.Errorf("file %q has no pristine git object recorded", flags.File)
 	}
 
-	repo, err := git.NewLocalRepository(dir)
+	gitRepo, err := internalPatches.OpenGitRepository(dir)
 	if err != nil {
-		return fmt.Errorf("failed to open git repository: %w", err)
-	}
-	if repo.IsNil() {
-		return fmt.Errorf("no git repository found at %s", dir)
+		return err
 	}
 
-	content, err := repo.GetBlob(tracked.PristineGitObject)
+	content, err := gitRepo.GetBlob(tracked.PristineGitObject)
 	if err != nil {
 		return fmt.Errorf("failed to read pristine object %s: %w", tracked.PristineGitObject, err)
 	}

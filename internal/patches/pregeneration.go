@@ -9,7 +9,6 @@ import (
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/lockfile"
 	"github.com/speakeasy-api/speakeasy/internal/env"
-	"github.com/speakeasy-api/speakeasy/internal/git"
 	"github.com/speakeasy-api/speakeasy/prompts"
 )
 
@@ -260,10 +259,7 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 			warnFunc("Failed to detect file changes: %v", err)
 		} else if isDirty && !autoYes && promptFunc != nil {
 			// Initialize git repo for reading blobs (for diff display)
-			var gitRepo GitRepository
-			if repo, gitErr := git.NewLocalRepository(outDir); gitErr == nil && !repo.IsNil() {
-				gitRepo = WrapGitRepository(repo)
-			}
+			gitRepo, _ := OpenGitRepository(outDir)
 
 			// Get summary with diffs for display
 			summary := GetFileChangeSummaryWithDiffs(outDir, cfg.LockFile, modifiedPaths, gitRepo)
