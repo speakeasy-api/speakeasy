@@ -3,9 +3,7 @@ package patches
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
-	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	internalPatches "github.com/speakeasy-api/speakeasy/internal/patches"
@@ -30,17 +28,9 @@ var viewDiffFilesCmd = &model.ExecutableCommand[viewDiffFilesFlags]{
 }
 
 func runViewDiffFiles(ctx context.Context, flags viewDiffFilesFlags) error {
-	dir, err := filepath.Abs(flags.Dir)
+	dir, lf, err := loadLockFile(flags.Dir)
 	if err != nil {
-		return fmt.Errorf("failed to resolve directory: %w", err)
-	}
-
-	cfg, err := config.Load(dir)
-	if err != nil {
-		return fmt.Errorf("failed to load config from %s: %w", dir, err)
-	}
-	if cfg.LockFile == nil {
-		return fmt.Errorf("no gen.lock found in %s", dir)
+		return err
 	}
 
 	gitRepo, err := internalPatches.OpenGitRepository(dir)
@@ -51,8 +41,8 @@ func runViewDiffFiles(ctx context.Context, flags viewDiffFilesFlags) error {
 	// Compare every tracked file on disk against its pristine git object.
 	// "Custom code" = file exists on disk AND differs from the pristine (generated) version.
 	var diffs []internalPatches.FileDiff
-	for path := range cfg.LockFile.TrackedFiles.Keys() {
-		tracked, ok := cfg.LockFile.TrackedFiles.Get(path)
+	for path := range lf.TrackedFiles.Keys() {
+		tracked, ok := lf.TrackedFiles.Get(path)
 		if !ok || tracked.PristineGitObject == "" {
 			continue
 		}

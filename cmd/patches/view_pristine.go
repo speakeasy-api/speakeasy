@@ -3,12 +3,9 @@ package patches
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
-	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
-	internalPatches "github.com/speakeasy-api/speakeasy/internal/patches"
 )
 
 type viewPristineFlags struct {
@@ -37,29 +34,7 @@ var viewPristineCmd = &model.ExecutableCommand[viewPristineFlags]{
 }
 
 func runViewPristine(ctx context.Context, flags viewPristineFlags) error {
-	dir, err := filepath.Abs(flags.Dir)
-	if err != nil {
-		return fmt.Errorf("failed to resolve directory: %w", err)
-	}
-
-	cfg, err := config.Load(dir)
-	if err != nil {
-		return fmt.Errorf("failed to load config from %s: %w", dir, err)
-	}
-	if cfg.LockFile == nil {
-		return fmt.Errorf("no gen.lock found in %s", dir)
-	}
-
-	tracked, ok := cfg.LockFile.TrackedFiles.Get(flags.File)
-	if !ok {
-		return fmt.Errorf("file %q is not tracked in gen.lock", flags.File)
-	}
-
-	if tracked.PristineGitObject == "" {
-		return fmt.Errorf("file %q has no pristine git object recorded", flags.File)
-	}
-
-	gitRepo, err := internalPatches.OpenGitRepository(dir)
+	_, tracked, gitRepo, err := loadTrackedFile(flags.Dir, flags.File)
 	if err != nil {
 		return err
 	}
