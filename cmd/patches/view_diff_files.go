@@ -3,6 +3,7 @@ package patches
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -44,6 +45,13 @@ func runViewDiffFiles(ctx context.Context, flags viewDiffFilesFlags) error {
 	for path := range lf.TrackedFiles.Keys() {
 		tracked, ok := lf.TrackedFiles.Get(path)
 		if !ok || tracked.PristineGitObject == "" {
+			continue
+		}
+
+		// Verify we can read the pristine blob before computing the diff.
+		// ComputeFileDiff buries GetBlob errors internally, so check here first.
+		if _, err := gitRepo.GetBlob(tracked.PristineGitObject); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not read pristine object for %s: %v\n", path, err)
 			continue
 		}
 

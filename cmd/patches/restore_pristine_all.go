@@ -3,6 +3,7 @@ package patches
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -47,10 +48,16 @@ func runRestorePristineAll(ctx context.Context, flags restorePristineAllFlags) e
 
 		pristine, err := gitRepo.GetBlob(tracked.PristineGitObject)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not read pristine object for %s: %v\n", path, err)
 			continue
 		}
 
-		if fileMatchesPristine(dir, path, pristine) {
+		matches, err := fileMatchesPristine(dir, path, pristine)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+			continue
+		}
+		if matches {
 			continue
 		}
 

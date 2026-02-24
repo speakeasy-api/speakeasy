@@ -56,12 +56,12 @@ func loadTrackedFile(dir, file string) (string, lockfile.TrackedFile, internalPa
 }
 
 // fileMatchesPristine checks if the file on disk is identical to its pristine version.
-func fileMatchesPristine(dir, filePath string, pristineContent []byte) bool {
+func fileMatchesPristine(dir, filePath string, pristineContent []byte) (bool, error) {
 	current, err := os.ReadFile(filepath.Join(dir, filePath))
 	if err != nil {
-		return false
+		return false, fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
-	return bytes.Equal(current, pristineContent)
+	return bytes.Equal(current, pristineContent), nil
 }
 
 // restoreFileToPristine writes the pristine content of a tracked file to disk,
