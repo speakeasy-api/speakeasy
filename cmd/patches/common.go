@@ -1,6 +1,7 @@
 package patches
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,14 +55,18 @@ func loadTrackedFile(dir, file string) (string, lockfile.TrackedFile, internalPa
 	return absDir, tracked, gitRepo, nil
 }
 
+// fileMatchesPristine checks if the file on disk is identical to its pristine version.
+func fileMatchesPristine(dir, filePath string, pristineContent []byte) bool {
+	current, err := os.ReadFile(filepath.Join(dir, filePath))
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(current, pristineContent)
+}
+
 // restoreFileToPristine writes the pristine content of a tracked file to disk,
 // preserving existing file permissions.
-func restoreFileToPristine(dir, filePath string, gitRepo internalPatches.GitRepository, tracked lockfile.TrackedFile) error {
-	content, err := gitRepo.GetBlob(tracked.PristineGitObject)
-	if err != nil {
-		return fmt.Errorf("failed to read pristine object %s: %w", tracked.PristineGitObject, err)
-	}
-
+func restoreFileToPristine(dir, filePath string, pristineContent []byte) error {
 	fullPath := filepath.Join(dir, filePath)
 
 	perm := os.FileMode(0o644)
@@ -69,7 +74,7 @@ func restoreFileToPristine(dir, filePath string, gitRepo internalPatches.GitRepo
 		perm = info.Mode().Perm()
 	}
 
-	if err := os.WriteFile(fullPath, content, perm); err != nil {
+	if err := os.WriteFile(fullPath, pristineContent, perm); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", fullPath, err)
 	}
 

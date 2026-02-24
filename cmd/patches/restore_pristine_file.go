@@ -39,7 +39,12 @@ func runRestorePristineFile(ctx context.Context, flags restorePristineFileFlags)
 		return err
 	}
 
-	if err := restoreFileToPristine(dir, flags.File, gitRepo, tracked); err != nil {
+	content, err := gitRepo.GetBlob(tracked.PristineGitObject)
+	if err != nil {
+		return fmt.Errorf("failed to read pristine object %s: %w", tracked.PristineGitObject, err)
+	}
+
+	if err := restoreFileToPristine(dir, flags.File, content); err != nil {
 		return err
 	}
 

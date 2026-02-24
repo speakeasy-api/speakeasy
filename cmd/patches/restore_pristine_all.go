@@ -45,12 +45,16 @@ func runRestorePristineAll(ctx context.Context, flags restorePristineAllFlags) e
 			continue
 		}
 
-		fd := internalPatches.ComputeFileDiff(dir, path, tracked.PristineGitObject, gitRepo)
-		if fd.Stats.Added+fd.Stats.Removed == 0 {
+		pristine, err := gitRepo.GetBlob(tracked.PristineGitObject)
+		if err != nil {
 			continue
 		}
 
-		if err := restoreFileToPristine(dir, path, gitRepo, tracked); err != nil {
+		if fileMatchesPristine(dir, path, pristine) {
+			continue
+		}
+
+		if err := restoreFileToPristine(dir, path, pristine); err != nil {
 			return err
 		}
 
