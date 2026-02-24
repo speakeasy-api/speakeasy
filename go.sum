@@ -169,8 +169,6 @@ github.com/docker/go-connections v0.6.0 h1:LlMG9azAe1TqfR7sO+NJttz1gy6KO7VJBh+pM
 github.com/docker/go-connections v0.6.0/go.mod h1:AahvXYshr6JgfUJGdDCs2b5EZG/vmaMAntpSFH5BFKE=
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
-github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3 h1:bVp3yUzvSAJzu9GqID+Z96P+eu5TKnIMJSV4QaZMauM=
-github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3/go.mod h1:MxLav0peU43GgvwVgNbLAj1s/bSGboKkhuULvq/7hx4=
 github.com/dop251/goja_nodejs v0.0.0-20240728170619-29b559befffc h1:MKYt39yZJi0Z9xEeRmDX2L4ocE0ETKcHKw6MVL3R+co=
 github.com/dop251/goja_nodejs v0.0.0-20240728170619-29b559befffc/go.mod h1:VULptt4Q/fNzQUJlqY/GP3qHyU7ZH46mFkBZe0ZTokU=
 github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960/go.mod h1:9HQzr9D/0PGwMEbC3d5AB7oi67+h4TsQqItC1GVYG58=
@@ -279,6 +277,8 @@ github.com/google/go-cmp v0.5.2/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
+github.com/google/go-dap v0.12.0 h1:rVcjv3SyMIrpaOoTAdFDyHs99CwVOItIJGKLQFQhNeM=
+github.com/google/go-dap v0.12.0/go.mod h1:tNjCASCm5cqePi/RVXXWEVqtnNLV1KTWtYOqu6rZNzc=
 github.com/google/go-github/v63 v63.0.0 h1:13xwK/wk9alSokujB9lJkuzdmQuVn2QCPeck76wR3nE=
 github.com/google/go-github/v63 v63.0.0/go.mod h1:IqbcrgUmIcEaioWrGYei/09o+ge5vhffGOcxrO0AfmA=
 github.com/google/go-querystring v1.1.0 h1:AnCroh3fv4ZBgVIf1Iwtovgjaw/GiKJo8M8yD/fhyJ8=
@@ -526,10 +526,14 @@ github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9yS
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/sourcegraph/jsonrpc2 v0.2.0 h1:KjN/dC4fP6aN9030MZCJs9WQbTOjWHhrtKVpzzSrr/U=
 github.com/sourcegraph/jsonrpc2 v0.2.0/go.mod h1:ZafdZgk/axhT1cvZAPOhw+95nz2I/Ra5qMlU4gTRwIo=
-github.com/speakeasy-api/easytemplate v0.11.2 h1:aiZodmDW+c2WpVc3p6S682xAqk6JcxkZjNy/OWxcGjA=
-github.com/speakeasy-api/easytemplate v0.11.2/go.mod h1:C2px2dvDShpIVSMy6IjKymMNHMHWKv/wngLsf9bLHkA=
+github.com/speakeasy-api/easytemplate v0.12.0 h1:cC1/8ogaO9PsgCUpLtCwutI1tdeGyAXiOKNvrCaz+Oo=
+github.com/speakeasy-api/easytemplate v0.12.0/go.mod h1:UF8bFhTpyr1sHiEWacT7ULN67Bve6UIrTH7uvzdbTEY=
 github.com/speakeasy-api/git-diff-parser v0.0.3 h1:LL12d+HMtSyj6O/hQqIn/lgDPYI6ci/DEhk0la/xA+0=
 github.com/speakeasy-api/git-diff-parser v0.0.3/go.mod h1:P46HmmVVmwA9P8h2wa0fDpmRM8/grbVQ+uKhWDtpkIY=
+github.com/speakeasy-api/goja v0.0.0-20260223084236-ed0328a0a462 h1:wFAq/dFgXzPkOpI36BkHdUl4rKi7qh6iMsvlRkh2fCs=
+github.com/speakeasy-api/goja v0.0.0-20260223084236-ed0328a0a462/go.mod h1:MxLav0peU43GgvwVgNbLAj1s/bSGboKkhuULvq/7hx4=
+github.com/speakeasy-api/goja/debugger v0.0.0-20260223084236-ed0328a0a462 h1:nUt3SsRswHluxTc/qFGckNMWuVV0xxkSbj6Dpswfjqg=
+github.com/speakeasy-api/goja/debugger v0.0.0-20260223084236-ed0328a0a462/go.mod h1:ij6kCeDng7tnlD0KT9qv78Lp76mOUhlaH1APHLr6Rzg=
 github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929 h1:/NuLsgVgtKFhB1oaW3MR3dApf+JLnoRtXNqemifDk58=
 github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929/go.mod h1:3VWcrfNstVYAu4JGQej/wj35gY5+iJy2ZooCbI5uG7k=
 github.com/speakeasy-api/huh v1.1.2 h1:5unC7BZBwq35D45ZUMnNPdiK4c+yFsGFQcnsfNHZ+wA=
@@ -542,8 +546,8 @@ github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed h1:PL/kpBY5vkBm
 github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed/go.mod h1:Gc8oQkjr2InxwumK0zOBtKN9gIlv9L2VmSVIUk2YxcU=
 github.com/speakeasy-api/openapi v1.19.1 h1:tJ1J4WpCimHgicwh15gsACFj37es7oBip3Ee2xmXW7c=
 github.com/speakeasy-api/openapi v1.19.1/go.mod h1:UfKa7FqE4jgexJZuj51MmdHAFGmDv0Zaw3+yOd81YKU=
-github.com/speakeasy-api/openapi-generation/v2 v2.836.5 h1:uILo66vaC+dqM16s3PcdCFXfFrSs0D1ifXsTqIk609k=
-github.com/speakeasy-api/openapi-generation/v2 v2.836.5/go.mod h1:u11qOKf88vbQoFQqUjcuQA0jcb6gpOwiqrdonJGHQ08=
+github.com/speakeasy-api/openapi-generation/v2 v2.839.0 h1:ME9NMPr9qFn8viDNM7ORgRYdyAJ2cq5ZOauvZmO1XZE=
+github.com/speakeasy-api/openapi-generation/v2 v2.839.0/go.mod h1:rYsSY/8w5hRmrgcorC289TyvMXvr3R/stYlaPjWbRS4=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 h1:gV+lYeVNNJG9X3Sl9Su3cRh1iF/oNqzvb5Ijq2QR8jY=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4/go.mod h1:1zQpVio7X6QJDtyNdUguCgZ+IC7CzKhhjvNgJdvGVF0=
 github.com/speakeasy-api/sdk-gen-config v1.50.0 h1:U3x3ieEj1+iQxNGrfI5oGrvL9lrFqjijt5KQEaQ76mw=
