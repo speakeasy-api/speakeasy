@@ -8,6 +8,10 @@ replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.16.16
 
+replace github.com/dop251/goja => github.com/speakeasy-api/goja v0.0.0-20260223084236-ed0328a0a462
+
+replace github.com/dop251/goja/debugger => github.com/speakeasy-api/goja/debugger v0.0.0-20260223084236-ed0328a0a462
+
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -41,7 +45,7 @@ require (
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.19.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.836.5
+	github.com/speakeasy-api/openapi-generation/v2 v2.839.0
 	github.com/speakeasy-api/sdk-gen-config v1.50.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -117,7 +121,8 @@ require (
 	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3 // indirect
+	github.com/dop251/goja v0.0.0 // indirect
+	github.com/dop251/goja/debugger v0.0.0 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20240728170619-29b559befffc // indirect
 	github.com/dprotaso/go-yit v0.0.0-20240618133044-5a0af90af097 // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
@@ -144,6 +149,7 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a // indirect
+	github.com/google/go-dap v0.12.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
 	github.com/gookit/color v1.5.4 // indirect
@@ -218,7 +224,7 @@ require (
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.11.2 // indirect
+	github.com/speakeasy-api/easytemplate v0.12.0 // indirect
 	github.com/speakeasy-api/jsonpath v0.6.3 // indirect
 	github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
