@@ -22,7 +22,7 @@ func WrapGitRepository(repo *git.Repository) *GitRepositoryWrapper {
 // OpenGitRepository opens the git repository at the given directory and returns
 // a GitRepository ready for use. This is the single entry point for obtaining a
 // GitRepository from a directory path.
-func OpenGitRepository(dir string) (GitRepository, error) {
+func OpenGitRepository(dir string) (*GitRepositoryWrapper, error) {
 	repo, err := git.NewLocalRepository(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open git repository: %w", err)
