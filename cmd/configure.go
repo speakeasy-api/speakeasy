@@ -272,7 +272,7 @@ type ConfigureLocalWorkflowFlags struct {
 var configureLocalWorkflowCmd = &model.ExecutableCommand[ConfigureLocalWorkflowFlags]{
 	Usage: "local-workflow",
 	Short: "Create a local workflow configuration file.",
-	Long:  "Copies workflow.yaml to workflow.local.yaml with all settings commented out for local overrides.",
+	Long:  "Copies workflow.yaml to workflow.local.yaml with all settings commented out for local overrides.\n\nThis file is intended for local development only and should be added to .gitignore.\nIf you need a shared workflow configuration (e.g. generating multiple API versions in CI),\ndefine those targets directly in workflow.yaml instead.",
 	Run:   configureLocalWorkflow,
 	Flags: []flag.Flag{
 		flag.StringFlag{
@@ -1714,7 +1714,7 @@ func configureLocalWorkflow(ctx context.Context, flags ConfigureLocalWorkflowFla
 	}
 
 	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(styles.Colors.Green).Padding(0, 1)
-	successMsg := fmt.Sprintf("Successfully created workflow.local.yaml 🎉\n\nLocation: %s\n\nYou can now uncomment and modify any field in this file to override values from workflow.yaml for local development.", localWorkflowPath)
+	successMsg := fmt.Sprintf("Successfully created workflow.local.yaml 🎉\n\nLocation: %s\n\nYou can now uncomment and modify any field in this file to override values from workflow.yaml for local development.\n\nNote: This file is for local use only — make sure to add it to .gitignore.\nFor shared workflows (e.g. CI), define targets directly in workflow.yaml.", localWorkflowPath)
 	success := styles.Success.Render(successMsg)
 	logger.PrintfStyled(boxStyle, "%s", success)
 

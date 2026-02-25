@@ -211,11 +211,15 @@ func CreateWorkflowLocalFile(workflowDir string) error {
 	commentedContent := commentOutYAMLContent(string(workflowContent))
 
 	instructions := `# Local Workflow Configuration Override File
-# 
+#
 # This file allows you to override any field from workflow.yaml for local development.
 # Uncomment and modify any section below to override the corresponding values.
-# 
-# Only uncomment the specific fields (and their parent keys) that you want to override - you don't need to 
+#
+# IMPORTANT: This file should be added to .gitignore — it is not intended to run in CI
+# or be shared across environments. If you need shared workflow configuration (e.g.
+# generating multiple API versions in CI), define those targets directly in workflow.yaml.
+#
+# Only uncomment the specific fields (and their parent keys) that you want to override - you don't need to
 # uncomment entire sections if you only want to change one value.
 #
 # Example: To override just the speakeasyVersion, uncomment only that line:
