@@ -61,7 +61,6 @@ var generatedIDPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{12})`)
 
 // ScanForGeneratedIDs scans the root directory for files with @generated-id headers.
 // Returns a map of ID -> relative file path.
-// This is used to detect when users have moved generated files.
 func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 	if f.outDir == "" {
 		return nil, nil
