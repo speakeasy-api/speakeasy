@@ -77,37 +77,6 @@ func TestDetectFileChanges_DeletedFile(t *testing.T) {
 	tracked, ok := lf.TrackedFiles.Get("src/deleted.go")
 	require.True(t, ok)
 	assert.True(t, tracked.Deleted, "TrackedFile.Deleted should be true")
-	assert.Empty(t, tracked.MovedTo, "TrackedFile.MovedTo should be empty")
-}
-
-func TestDetectFileChanges_MovedFile(t *testing.T) {
-	t.Parallel()
-
-	// Create a temp directory
-	tempDir := t.TempDir()
-
-	id := "112233445566" // 12 hex chars
-
-	// Create file at NEW location with the ID
-	createTestFileWithID(t, tempDir, "src/newlocation.go", id, "package foo")
-
-	// Set up lockfile with file tracked at OLD location
-	lf := lockfile.New()
-	lf.TrackedFiles.Set("src/oldlocation.go", lockfile.TrackedFile{
-		ID: id,
-	})
-
-	// Detect changes - ID found at different path
-	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
-	require.NoError(t, err)
-	assert.True(t, isDirty, "Should be dirty when file is moved")
-	assert.Empty(t, modifiedPaths, "No modified paths for moved file")
-
-	// Verify the tracked file has MovedTo set
-	tracked, ok := lf.TrackedFiles.Get("src/oldlocation.go")
-	require.True(t, ok)
-	assert.False(t, tracked.Deleted, "TrackedFile.Deleted should be false")
-	assert.Equal(t, "src/newlocation.go", tracked.MovedTo, "TrackedFile.MovedTo should point to new location")
 }
 
 func TestDetectFileChanges_ModifiedFile(t *testing.T) {
@@ -140,11 +109,10 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 	assert.True(t, isDirty, "Should be dirty when file checksum differs")
 	assert.Contains(t, modifiedPaths, "src/modified.go", "Should include modified file in modifiedPaths")
 
-	// File should not be marked as deleted or moved
+	// File should not be marked as deleted
 	tracked, ok := lf.TrackedFiles.Get("src/modified.go")
 	require.True(t, ok)
 	assert.False(t, tracked.Deleted)
-	assert.Empty(t, tracked.MovedTo)
 }
 
 func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
@@ -207,7 +175,6 @@ func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 	tracked, ok := lf.TrackedFiles.Get("src/restored.go")
 	require.True(t, ok)
 	assert.False(t, tracked.Deleted, "Stale Deleted marker should be cleared")
-	assert.Empty(t, tracked.MovedTo, "MovedTo should be empty")
 }
 
 func TestDetectFileChanges_MultipleFiles(t *testing.T) {
@@ -223,7 +190,7 @@ func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 	// Create file1 at expected location (unchanged)
 	createTestFileWithID(t, tempDir, "src/file1.go", id1, "package foo")
 
-	// Create file2 at NEW location (moved)
+	// Create file2 at NEW location (but tracked at old, so old is "deleted")
 	createTestFileWithID(t, tempDir, "src/newdir/file2.go", id2, "package bar")
 
 	// file3 doesn't exist on disk (deleted)
@@ -237,22 +204,19 @@ func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 	// Detect changes
 	isDirty, _, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
-	assert.True(t, isDirty, "Should be dirty when some files are moved/deleted")
+	assert.True(t, isDirty, "Should be dirty when some files are deleted")
 
 	// Check file1 - unchanged
 	tracked1, _ := lf.TrackedFiles.Get("src/file1.go")
 	assert.False(t, tracked1.Deleted)
-	assert.Empty(t, tracked1.MovedTo)
 
-	// Check file2 - moved
+	// Check file2 - file exists at new location but tracked at old, so old is "deleted"
 	tracked2, _ := lf.TrackedFiles.Get("src/file2.go")
-	assert.False(t, tracked2.Deleted)
-	assert.Equal(t, "src/newdir/file2.go", tracked2.MovedTo)
+	assert.True(t, tracked2.Deleted)
 
 	// Check file3 - deleted
 	tracked3, _ := lf.TrackedFiles.Get("src/file3.go")
 	assert.True(t, tracked3.Deleted)
-	assert.Empty(t, tracked3.MovedTo)
 }
 
 func TestGetFileChangeSummary_Empty(t *testing.T) {
@@ -260,7 +224,6 @@ func TestGetFileChangeSummary_Empty(t *testing.T) {
 
 	summary := GetFileChangeSummary(nil)
 	assert.Empty(t, summary.Deleted)
-	assert.Empty(t, summary.Moved)
 	assert.Empty(t, summary.Modified)
 	assert.True(t, summary.IsEmpty())
 }
@@ -271,7 +234,6 @@ func TestGetFileChangeSummary_WithChanges(t *testing.T) {
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("deleted1.go", lockfile.TrackedFile{Deleted: true})
 	lf.TrackedFiles.Set("deleted2.go", lockfile.TrackedFile{Deleted: true})
-	lf.TrackedFiles.Set("moved.go", lockfile.TrackedFile{MovedTo: "newpath/moved.go"})
 	lf.TrackedFiles.Set("unchanged.go", lockfile.TrackedFile{})
 
 	summary := GetFileChangeSummary(lf)
@@ -280,18 +242,13 @@ func TestGetFileChangeSummary_WithChanges(t *testing.T) {
 	assert.Contains(t, summary.Deleted, "deleted1.go")
 	assert.Contains(t, summary.Deleted, "deleted2.go")
 
-	assert.Len(t, summary.Moved, 1)
-	assert.Equal(t, "newpath/moved.go", summary.Moved["moved.go"])
-
 	assert.False(t, summary.IsEmpty())
 }
 
 func TestFormatSummary_Empty(t *testing.T) {
 	t.Parallel()
 
-	summary := FileChangeSummary{
-		Moved: make(map[string]string),
-	}
+	summary := FileChangeSummary{}
 	result := summary.FormatSummary(10, false)
 	assert.Empty(t, result)
 }
@@ -301,7 +258,6 @@ func TestFormatSummary_WithChanges(t *testing.T) {
 
 	summary := FileChangeSummary{
 		Deleted:  []string{"file1.go", "file2.go"},
-		Moved:    map[string]string{"old.go": "new.go"},
 		Modified: []FileDiff{{Path: "changed.go"}},
 	}
 
@@ -309,7 +265,6 @@ func TestFormatSummary_WithChanges(t *testing.T) {
 
 	assert.Contains(t, result, "D file1.go")
 	assert.Contains(t, result, "D file2.go")
-	assert.Contains(t, result, "R old.go -> new.go")
 	assert.Contains(t, result, "M changed.go")
 }
 
@@ -318,7 +273,6 @@ func TestFormatSummary_Truncation(t *testing.T) {
 
 	summary := FileChangeSummary{
 		Deleted: []string{"f1.go", "f2.go", "f3.go", "f4.go", "f5.go"},
-		Moved:   make(map[string]string),
 	}
 
 	result := summary.FormatSummary(3, false)

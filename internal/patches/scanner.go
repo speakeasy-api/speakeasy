@@ -11,7 +11,7 @@ import (
 )
 
 // Scanner scans a directory for files containing @generated-id UUIDs.
-// This enables tracking file identity across renames/moves.
+// This enables verifying ID uniqueness across targets.
 type Scanner struct {
 	rootDir string
 }
@@ -28,7 +28,6 @@ var generatedIDPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{12})`)
 // ScanResult contains the mapping of UUIDs to file paths.
 type ScanResult struct {
 	// UUIDToPath maps file UUIDs to their current relative paths.
-	// Used to detect file moves/renames.
 	UUIDToPath map[string]string
 
 	// PathToUUID maps relative paths to their UUIDs.
