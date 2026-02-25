@@ -96,7 +96,7 @@ func mergeFiles(ctx context.Context, files []string) (string, error) {
 		return "", fmt.Errorf("failed to get absolute path for openapi file: %w", err)
 	}
 
-	if err := merge.MergeOpenAPIDocuments(ctx, files, absOutPath, "", "", false); err != nil {
+	if err := merge.MergeOpenAPIDocuments(ctx, files, absOutPath); err != nil {
 		return "", fmt.Errorf("failed to merge openapi files: %w", err)
 	}
 

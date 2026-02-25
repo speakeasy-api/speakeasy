@@ -18,6 +18,16 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/workflowTracking"
 )
 
+// sourceInflight tracks an in-progress RunSource call so that concurrent
+// callers for the same sourceID can wait for the first caller to finish
+// rather than duplicating work.
+type sourceInflight struct {
+	done   chan struct{} // closed when the source run completes
+	path   string
+	result *SourceResult
+	err    error
+}
+
 type Workflow struct {
 	// Opts
 	Target                 string
@@ -61,13 +71,17 @@ type Workflow struct {
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
 
-	computedChanges map[string]bool
-	SourceResults   map[string]*SourceResult
-	TargetResults   map[string]*TargetResult
-	OnSourceResult  SourceResultCallback
-	Duration        time.Duration
-	criticalWarns   []string
-	Error           error
+	computedChanges  map[string]bool
+	SourceResults    map[string]*SourceResult
+	sourceOrder      []string                    // tracks the order in which sources completed, for deterministic output
+	TargetResults    map[string]*TargetResult
+	OnSourceResult   SourceResultCallback
+	Duration         time.Duration
+	criticalWarns    []string
+	Error            error
+	sourceMu         sync.Mutex                  // protects concurrent access to shared maps/slices during parallel source resolution
+	sourceInflightMu sync.Mutex                  // protects sourceInflight map
+	sourceInflight   map[string]*sourceInflight   // tracks in-progress source resolutions
 
 	// Studio
 	CancellableGeneration *sdkgen.CancellableGeneration
@@ -128,6 +142,7 @@ func NewWorkflow(
 		computedChanges:  make(map[string]bool),
 		lockfile:         lockfile,
 		lockfileOld:      lockfileOld,
+		sourceInflight:   make(map[string]*sourceInflight),
 	}
 
 	for _, opt := range opts {
