@@ -493,6 +493,7 @@ func remapSecurityArray(security []*openapi.SecurityRequirement, mappings map[st
 	return result
 }
 
+// updateSchemaReference updates a single schema's $ref if it points to a renamed schema.
 // updateSchemaReferencesInDocument updates all $ref values pointing to schemas
 // based on the provided mappings of originalName -> newName.
 func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, schemaMappings map[string]string) error {
