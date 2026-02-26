@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/speakeasy-api/versioning-reports/versioning"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-core/errors"
@@ -78,15 +79,95 @@ func (e *LintingError) Error() string {
 }
 
 func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string) (string, *SourceResult, error) {
-	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
+	// Fast path: return cached result if this source was already run
+	w.sourceMu.Lock()
+	if cached, ok := w.SourceResults[sourceID]; ok && cached.OutputPath != "" {
+		w.sourceMu.Unlock()
+		return cached.OutputPath, cached, nil
+	}
+	w.sourceMu.Unlock()
+
+	// Check if another goroutine is already running this source (diamond dependency case).
+	// If so, wait for it to finish and return its result.
+	w.sourceInflightMu.Lock()
+	if inflight, ok := w.sourceInflight[sourceID]; ok {
+		w.sourceInflightMu.Unlock()
+		<-inflight.done
+		if inflight.err != nil {
+			return "", nil, inflight.err
+		}
+		return inflight.path, inflight.result, nil
+	}
+	// Register ourselves as the in-flight resolver for this source
+	inflight := &sourceInflight{done: make(chan struct{})}
+	w.sourceInflight[sourceID] = inflight
+	w.sourceInflightMu.Unlock()
+
+	path, result, err := w.runSourceInner(ctx, parentStep, sourceID, targetID, targetLanguage)
+
+	// Signal completion to any waiters
+	inflight.path = path
+	inflight.result = result
+	inflight.err = err
+	close(inflight.done)
+
+	return path, result, err
+}
+
+func (w *Workflow) runSourceInner(ctx context.Context, parentStep *workflowTracking.WorkflowStep, sourceID, targetID, targetLanguage string) (string, *SourceResult, error) {
 	source := w.workflow.Sources[sourceID]
+
+	// Resolve any source ref inputs before proceeding. Source refs are resolved
+	// in parallel using an errgroup, which significantly speeds up workflows
+	// where a source has many independent source ref inputs.
+	// Note: we resolve refs BEFORE creating this source's progress step so that
+	// dependency steps appear first in the progress tree.
+	resolvedInputs := make([]workflow.Document, len(source.Inputs))
+	copy(resolvedInputs, source.Inputs)
+
+	// Collect source ref indices for parallel resolution
+	var sourceRefIndices []int
+	for i, input := range resolvedInputs {
+		if input.IsSourceRef() {
+			refName := input.SourceRefName()
+			if _, ok := w.workflow.Sources[refName]; !ok {
+				return "", nil, fmt.Errorf("source %q references unknown source %q", sourceID, refName)
+			}
+			sourceRefIndices = append(sourceRefIndices, i)
+		}
+	}
+
+	if len(sourceRefIndices) > 0 {
+		g, gCtx := errgroup.WithContext(ctx)
+		for _, idx := range sourceRefIndices {
+			refName := resolvedInputs[idx].SourceRefName()
+			g.Go(func() error {
+				refPath, _, err := w.RunSource(gCtx, parentStep, refName, targetID, targetLanguage)
+				if err != nil {
+					return fmt.Errorf("failed to resolve source ref %q: %w", refName, err)
+				}
+				resolvedInputs[idx].Location = workflow.LocationString(refPath)
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return "", nil, err
+		}
+	}
+	source.Inputs = resolvedInputs
+
+	rootStep := parentStep.NewSubstep(fmt.Sprintf("Source: %s", sourceID))
+
 	hasRemoteInputs := workflowSourceHasRemoteInputs(source)
 	sourceRes := &SourceResult{
 		Source:    sourceID,
 		Diagnosis: suggestions.Diagnosis{},
 	}
 	defer func() {
+		w.sourceMu.Lock()
 		w.SourceResults[sourceID] = sourceRes
+		w.sourceOrder = append(w.sourceOrder, sourceID)
+		w.sourceMu.Unlock()
 		_ = w.OnSourceResult(sourceRes, SourceStepComplete)
 	}()
 	_ = w.OnSourceResult(sourceRes, SourceStepFetch)
@@ -142,7 +223,7 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 		}
 		sourceRes.MergeResult.InputSchemaLocation = []string{currentDocument}
 	default:
-		sourceRes.MergeResult, err = NewMerge(w, rootStep, source, rulesetToUse).Do(ctx, currentDocument)
+		sourceRes.MergeResult, err = NewMerge(rootStep, source).Do(ctx, currentDocument)
 		if err != nil {
 			return "", nil, err
 		}
@@ -256,7 +337,11 @@ func (w *Workflow) RunSource(ctx context.Context, parentStep *workflowTracking.W
 func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTracking.WorkflowStep, source, schemaPath, defaultRuleset, projectDir string, target string) (*validation.ValidationResult, error) {
 	step := parentStep.NewSubstep("Validating Document")
 
-	if slices.Contains(w.validatedDocuments, schemaPath) {
+	w.sourceMu.Lock()
+	alreadyValidated := slices.Contains(w.validatedDocuments, schemaPath)
+	w.sourceMu.Unlock()
+
+	if alreadyValidated {
 		step.Skip("already validated")
 		return nil, nil
 	}
@@ -268,7 +353,9 @@ func (w *Workflow) validateDocument(ctx context.Context, parentStep *workflowTra
 
 	res, err := validation.ValidateOpenAPI(ctx, source, schemaPath, "", "", limits, defaultRuleset, projectDir, w.FromQuickstart, w.SkipGenerateLintReport, target)
 
+	w.sourceMu.Lock()
 	w.validatedDocuments = append(w.validatedDocuments, schemaPath)
+	w.sourceMu.Unlock()
 	if err != nil {
 		step.FailWorkflow()
 	} else {
@@ -286,7 +373,11 @@ func (w *Workflow) printSourceSuccessMessage(ctx context.Context) {
 	logger := log.From(ctx)
 	logger.Println("") // Newline for better readability
 
-	for sourceID, sourceRes := range w.SourceResults {
+	for _, sourceID := range w.sourceOrder {
+		sourceRes := w.SourceResults[sourceID]
+		if sourceRes == nil {
+			continue
+		}
 		heading := fmt.Sprintf("Source `%s` Compiled Successfully", sourceID)
 		var additionalLines []string
 

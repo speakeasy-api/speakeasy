@@ -145,11 +145,16 @@ func (w *Workflow) computeChanges(ctx context.Context, rootStep *workflowTrackin
 
 	// Do not write github action changes if we have already processed this source
 	// If we don't do this check we will see duplicate openapi changes summaries in the PR
-	if _, ok := w.computedChanges[targetLock.Source]; !ok && computedChanges.report != nil {
+	w.sourceMu.Lock()
+	alreadyComputed := w.computedChanges[targetLock.Source]
+	w.sourceMu.Unlock()
+	if !alreadyComputed && computedChanges.report != nil {
 		github.GenerateChangesSummary(ctx, computedChanges.report.URL, *summary)
 	}
 
+	w.sourceMu.Lock()
 	w.computedChanges[targetLock.Source] = true
+	w.sourceMu.Unlock()
 
 	changesStep.SucceedWorkflow()
 	return computedChanges, err
@@ -214,12 +219,14 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		}
 
 		namespaceName = document.NamespaceName
+		w.sourceMu.Lock()
 		w.lockfile.Sources[sourceID] = workflow.SourceLock{
 			SourceNamespace:      namespaceName,
 			SourceRevisionDigest: document.ManifestDigest,
 			SourceBlobDigest:     document.BlobDigest,
 			Tags:                 tags,
 		}
+		w.sourceMu.Unlock()
 		return nil
 	}
 
@@ -325,20 +332,24 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 	}
 
 	// Automatically migrate speakeasy registry users to have a source publishing location
+	w.sourceMu.Lock()
 	if source.Registry == nil && registry.IsRegistryEnabled(ctx) {
 		registryEntry := &workflow.SourceRegistry{}
 		if err := registryEntry.SetNamespace(fmt.Sprintf("%s/%s/%s", auth.GetOrgSlugFromContext(ctx), auth.GetWorkspaceSlugFromContext(ctx), namespaceName)); err != nil {
+			w.sourceMu.Unlock()
 			return err
 		}
 		source.Registry = registryEntry
 		w.workflow.Sources[sourceID] = source
 		if err := workflow.Save(w.ProjectDir, &w.workflow); err != nil {
+			w.sourceMu.Unlock()
 			return err
 		}
 	} else if source.Registry != nil && !registry.IsRegistryEnabled(ctx) { // Automatically remove source publishing location if registry is disabled
 		source.Registry = nil
 		w.workflow.Sources[sourceID] = source
 		if err := workflow.Save(w.ProjectDir, &w.workflow); err != nil {
+			w.sourceMu.Unlock()
 			return err
 		}
 	}
@@ -349,6 +360,7 @@ func (w *Workflow) snapshotSource(ctx context.Context, parentStep *workflowTrack
 		SourceBlobDigest:     *blobDigest,
 		Tags:                 tags,
 	}
+	w.sourceMu.Unlock()
 
 	return nil
 }
