@@ -29,7 +29,7 @@ type flag struct {
 }
 
 type StudioHandlers struct {
-	WorkflowRunner *run.Workflow
+	WorkflowRunner run.Workflow
 	SourceID       string
 	OverlayPath    string
 	Ctx            context.Context //nolint:containedctx // Intentional: maintains request context for handler lifecycle
@@ -43,9 +43,9 @@ type StudioHandlers struct {
 }
 
 func NewStudioHandlers(ctx context.Context, workflowRunner *run.Workflow) (*StudioHandlers, error) {
-	ret := &StudioHandlers{WorkflowRunner: workflowRunner, Ctx: ctx}
+	ret := &StudioHandlers{WorkflowRunner: *workflowRunner, Ctx: ctx}
 
-	sourceID, err := findWorkflowSourceIDBasedOnTarget(workflowRunner, workflowRunner.Target)
+	sourceID, err := findWorkflowSourceIDBasedOnTarget(*workflowRunner, workflowRunner.Target)
 	if err != nil {
 		return ret, fmt.Errorf("error finding source: %w", err)
 	}
@@ -158,7 +158,7 @@ func (h *StudioHandlers) reRun(ctx context.Context, w http.ResponseWriter, r *ht
 	if err != nil {
 		return fmt.Errorf("error cloning workflow runner: %w", err)
 	}
-	h.WorkflowRunner = clonedWorkflow
+	h.WorkflowRunner = *clonedWorkflow
 
 	if runRequestBody.Stream != nil {
 		h.enableGenerationProgressUpdates(w, flusher, runRequestBody.Stream.GenSteps, runRequestBody.Stream.FileStatus)

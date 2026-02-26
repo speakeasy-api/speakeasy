@@ -29,7 +29,7 @@ import (
 
 type TargetResults = map[string]components.TargetRunSummary
 
-func runSource(ctx context.Context, workflowRunner *run.Workflow, sourceID string) (*run.SourceResult, error) {
+func runSource(ctx context.Context, workflowRunner run.Workflow, sourceID string) (*run.SourceResult, error) {
 	workflowRunnerPtr, err := workflowRunner.Clone(
 		ctx,
 		run.WithSkipCleanup(),
@@ -41,7 +41,7 @@ func runSource(ctx context.Context, workflowRunner *run.Workflow, sourceID strin
 	if err != nil {
 		return nil, fmt.Errorf("error cloning workflow runner: %w", err)
 	}
-	workflowRunner = workflowRunnerPtr
+	workflowRunner = *workflowRunnerPtr
 
 	_, sourceResult, err := workflowRunner.RunSource(ctx, workflowRunner.RootStep, sourceID, "", "")
 	if err != nil {
@@ -51,7 +51,7 @@ func runSource(ctx context.Context, workflowRunner *run.Workflow, sourceID strin
 	return sourceResult, nil
 }
 
-func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner *run.Workflow, sourceID, overlayPath string) run.SourceResultCallback {
+func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string) run.SourceResultCallback {
 	return func(sourceResult *run.SourceResult, sourceStep run.SourceStepID) error {
 		if sourceResult.Source == sourceID {
 			sourceResponseData, err := convertSourceResultIntoSourceResponseData(*sourceResult, sourceID, overlayPath)
@@ -78,7 +78,7 @@ func onSourceResult(ctx context.Context, w http.ResponseWriter, flusher http.Flu
 	}
 }
 
-func sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner *run.Workflow, sourceID, overlayPath string, step run.SourceStepID) error {
+func sendLastRunResultToStream(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, workflowRunner run.Workflow, sourceID, overlayPath string, step run.SourceStepID) error {
 	runResponseData, err := convertLastRunResult(ctx, workflowRunner, sourceID, overlayPath, step)
 	if err != nil {
 		return fmt.Errorf("error getting last completed run result: %w", err)
@@ -117,7 +117,7 @@ func readFileData(name string, path string) (components.FileData, error) {
 	}, nil
 }
 
-func convertLastRunResult(_ context.Context, workflowRunner *run.Workflow, sourceID, overlayPath string, step run.SourceStepID) (components.RunResponseData, error) {
+func convertLastRunResult(_ context.Context, workflowRunner run.Workflow, sourceID, overlayPath string, step run.SourceStepID) (components.RunResponseData, error) {
 	workflowConfig := workflowRunner.GetWorkflowFile()
 	workflow, err := convertWorkflowToComponentsWorkflow(*workflowConfig, workflowRunner.ProjectDir)
 	if err != nil {
@@ -387,7 +387,7 @@ func convertWorkflowToComponentsWorkflow(w workflow.Workflow, workingDir string)
 	return c, nil
 }
 
-func findWorkflowSourceIDBasedOnTarget(workflow *run.Workflow, targetID string) (string, error) {
+func findWorkflowSourceIDBasedOnTarget(workflow run.Workflow, targetID string) (string, error) {
 	if workflow.Source != "" {
 		return workflow.Source, nil
 	}
@@ -441,7 +441,7 @@ func isStudioModificationsOverlay(overlay workflow.Overlay) (string, error) {
 	return asString, nil
 }
 
-func upsertOverlay(overlay overlay.Overlay, workflowRunner *run.Workflow, sourceID, overlayPath string) (string, error) {
+func upsertOverlay(overlay overlay.Overlay, workflowRunner run.Workflow, sourceID, overlayPath string) (string, error) {
 	if overlayPath == "" {
 		var err error
 		overlayPath, err = modifications.GetOverlayPath(workflowRunner.ProjectDir)
@@ -463,7 +463,7 @@ func upsertOverlay(overlay overlay.Overlay, workflowRunner *run.Workflow, source
 	return newOverlayPath, workflow.Save(workflowRunner.ProjectDir, workflowConfig)
 }
 
-func updateSourceAndTarget(workflowRunner *run.Workflow, sourceID, overlayPath string, runRequestBody components.RunRequestBody) (string, error) {
+func updateSourceAndTarget(workflowRunner run.Workflow, sourceID, overlayPath string, runRequestBody components.RunRequestBody) (string, error) {
 	var err error
 
 	if runRequestBody.Input != nil && *runRequestBody.Input != "" {
