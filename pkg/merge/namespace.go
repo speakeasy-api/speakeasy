@@ -32,7 +32,10 @@ type MergeInput struct {
 
 // MergeOptions contains options for the merge operation
 type MergeOptions struct {
-	YAMLOutput bool
+	DefaultRuleset         string
+	WorkingDir             string
+	SkipGenerateLintReport bool
+	YAMLOutput             bool
 }
 
 // validNamespacePattern defines the allowed characters for namespace values.
@@ -332,66 +335,59 @@ type namespaceMappings struct {
 	SecuritySchemes map[string]string
 }
 
-// updateAllReferencesInDocument updates all $ref values in a single walk pass.
-// It handles both schema references and component references (parameters, responses,
-// requestBodies, headers, securitySchemes) to avoid walking the document twice.
-func updateAllReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, schemaMappings map[string]string, compMappings namespaceMappings) error {
+// updateComponentReferencesInDocument updates all $ref values pointing to parameters,
+// responses, requestBodies, headers, and securitySchemes based on the provided mappings.
+// It performs a single walk pass over the document for efficiency.
+func updateComponentReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, mappings namespaceMappings) error {
 	if doc == nil {
 		return nil
 	}
 
-	hasSchemas := len(schemaMappings) > 0
-	hasComponents := len(compMappings.Parameters) > 0 ||
-		len(compMappings.Responses) > 0 ||
-		len(compMappings.RequestBodies) > 0 ||
-		len(compMappings.Headers) > 0 ||
-		len(compMappings.SecuritySchemes) > 0
+	hasAnyMappings := len(mappings.Parameters) > 0 ||
+		len(mappings.Responses) > 0 ||
+		len(mappings.RequestBodies) > 0 ||
+		len(mappings.Headers) > 0 ||
+		len(mappings.SecuritySchemes) > 0
 
-	if !hasSchemas && !hasComponents {
+	if !hasAnyMappings {
 		return nil
 	}
 
 	for item := range openapi.Walk(ctx, doc) {
 		err := item.Match(openapi.Matcher{
-			Schema: func(schema *oas3.JSONSchema[oas3.Referenceable]) error {
-				if !hasSchemas || schema == nil {
-					return nil
-				}
-				return updateSchemaReference(schema, schemaMappings)
-			},
 			ReferencedParameter: func(param *openapi.ReferencedParameter) error {
-				if !hasComponents || param == nil || param.Reference == nil {
+				if param == nil || param.Reference == nil {
 					return nil
 				}
-				return updateComponentRef(param.Reference, compMappings.Parameters, "parameters")
+				return updateComponentRef(param.Reference, mappings.Parameters, "parameters")
 			},
 			ReferencedResponse: func(resp *openapi.ReferencedResponse) error {
-				if !hasComponents || resp == nil || resp.Reference == nil {
+				if resp == nil || resp.Reference == nil {
 					return nil
 				}
-				return updateComponentRef(resp.Reference, compMappings.Responses, "responses")
+				return updateComponentRef(resp.Reference, mappings.Responses, "responses")
 			},
 			ReferencedRequestBody: func(rb *openapi.ReferencedRequestBody) error {
-				if !hasComponents || rb == nil || rb.Reference == nil {
+				if rb == nil || rb.Reference == nil {
 					return nil
 				}
-				return updateComponentRef(rb.Reference, compMappings.RequestBodies, "requestBodies")
+				return updateComponentRef(rb.Reference, mappings.RequestBodies, "requestBodies")
 			},
 			ReferencedHeader: func(h *openapi.ReferencedHeader) error {
-				if !hasComponents || h == nil || h.Reference == nil {
+				if h == nil || h.Reference == nil {
 					return nil
 				}
-				return updateComponentRef(h.Reference, compMappings.Headers, "headers")
+				return updateComponentRef(h.Reference, mappings.Headers, "headers")
 			},
 			ReferencedSecurityScheme: func(ss *openapi.ReferencedSecurityScheme) error {
-				if !hasComponents || ss == nil || ss.Reference == nil {
+				if ss == nil || ss.Reference == nil {
 					return nil
 				}
-				return updateComponentRef(ss.Reference, compMappings.SecuritySchemes, "securitySchemes")
+				return updateComponentRef(ss.Reference, mappings.SecuritySchemes, "securitySchemes")
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to update reference at %s: %w", item.Location.ToJSONPointer().String(), err)
+			return fmt.Errorf("failed to update component reference at %s: %w", item.Location.ToJSONPointer().String(), err)
 		}
 	}
 
@@ -495,6 +491,31 @@ func remapSecurityArray(security []*openapi.SecurityRequirement, mappings map[st
 		result[i] = openapi.NewSecurityRequirement(elems...)
 	}
 	return result
+}
+
+// updateSchemaReferencesInDocument updates all $ref values pointing to schemas
+// based on the provided mappings of originalName -> newName.
+func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI, schemaMappings map[string]string) error {
+	if len(schemaMappings) == 0 {
+		return nil
+	}
+
+	// Walk through the document and update schema references
+	for item := range openapi.Walk(ctx, doc) {
+		err := item.Match(openapi.Matcher{
+			Schema: func(schema *oas3.JSONSchema[oas3.Referenceable]) error {
+				if schema == nil {
+					return nil
+				}
+				return updateSchemaReference(schema, schemaMappings)
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update reference at %s: %w", item.Location.ToJSONPointer().String(), err)
+		}
+	}
+
+	return nil
 }
 
 // updateSchemaReference updates a single schema's $ref if it points to a renamed schema.

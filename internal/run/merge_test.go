@@ -181,7 +181,7 @@ func TestMergeDocuments(t *testing.T) {
 				outFile = filepath.Join(tmpDir, "merged.yaml")
 			}
 
-			err := mergeDocuments(ctx, tt.inSchemas, tt.modelNamespaces, outFile)
+			err := mergeDocuments(ctx, tt.inSchemas, tt.modelNamespaces, outFile, "", "", true)
 
 			if tt.wantErr {
 				if err == nil {
@@ -244,7 +244,7 @@ func TestMergeDocumentsWithInvalidInput(t *testing.T) {
 			tmpDir := t.TempDir()
 			outFile := filepath.Join(tmpDir, "merged.yaml")
 
-			err := mergeDocuments(ctx, tt.inSchemas, tt.modelNamespaces, outFile)
+			err := mergeDocuments(ctx, tt.inSchemas, tt.modelNamespaces, outFile, "", "", true)
 
 			if tt.wantErr {
 				if err == nil {
