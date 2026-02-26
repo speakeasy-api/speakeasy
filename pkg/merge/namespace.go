@@ -518,7 +518,6 @@ func updateSchemaReferencesInDocument(ctx context.Context, doc *openapi.OpenAPI,
 	return nil
 }
 
-// updateSchemaReference updates a single schema's $ref if it points to a renamed schema.
 // Supports both direct schema references (e.g., #/components/schemas/Pet) and property references
 // (e.g., #/components/schemas/Pet/properties/name).
 func updateSchemaReference(schema *oas3.JSONSchema[oas3.Referenceable], schemaMappings map[string]string) error {
