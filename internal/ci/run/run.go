@@ -302,7 +302,7 @@ func getInstallationURL(lang, subdirectory string) string {
 		if subdirectory == "." {
 			return fmt.Sprintf("%s/%s", environment.GetGithubServerURL(), environment.GetRepo())
 		} else {
-			return fmt.Sprintf("https://gitpkg.now.sh/%s/%s", environment.GetRepo(), subdirectory)
+			return ""
 		}
 	case "python":
 		base := fmt.Sprintf("%s/%s.git", environment.GetGithubServerURL(), environment.GetRepo())
