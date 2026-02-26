@@ -71,17 +71,18 @@ type Workflow struct {
 	lockfile           *workflow.LockFile
 	lockfileOld        *workflow.LockFile // the lockfile as it was before the current run
 
-	computedChanges  map[string]bool
-	SourceResults    map[string]*SourceResult
-	sourceOrder      []string                    // tracks the order in which sources completed, for deterministic output
-	TargetResults    map[string]*TargetResult
-	OnSourceResult   SourceResultCallback
-	Duration         time.Duration
-	criticalWarns    []string
-	Error            error
-	sourceMu         sync.Mutex                  // protects concurrent access to shared maps/slices during parallel source resolution
-	sourceInflightMu sync.Mutex                  // protects sourceInflight map
-	sourceInflight   map[string]*sourceInflight   // tracks in-progress source resolutions
+	computedChanges map[string]bool
+	SourceResults   map[string]*SourceResult
+	sourceOrder     []string // tracks the order in which sources completed, for deterministic output
+	TargetResults   map[string]*TargetResult
+	OnSourceResult  SourceResultCallback
+	Duration        time.Duration
+	criticalWarns   []string
+	Error           error
+
+	sourceMu         sync.Mutex                 // protects concurrent access to shared maps/slices during parallel source resolution
+	sourceInflightMu sync.Mutex                 // protects sourceInflight map
+	sourceInflight   map[string]*sourceInflight // tracks in-progress source resolutions
 
 	// Studio
 	CancellableGeneration *sdkgen.CancellableGeneration

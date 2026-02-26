@@ -140,7 +140,6 @@ func (w *Workflow) runSourceInner(ctx context.Context, parentStep *workflowTrack
 	if len(sourceRefIndices) > 0 {
 		g, gCtx := errgroup.WithContext(ctx)
 		for _, idx := range sourceRefIndices {
-			idx := idx // capture loop variable
 			refName := resolvedInputs[idx].SourceRefName()
 			g.Go(func() error {
 				refPath, _, err := w.RunSource(gCtx, parentStep, refName, targetID, targetLanguage)

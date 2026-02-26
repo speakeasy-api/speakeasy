@@ -497,8 +497,6 @@ func remapSecurityArray(security []*openapi.SecurityRequirement, mappings map[st
 	return result
 }
 
-
-
 // updateSchemaReference updates a single schema's $ref if it points to a renamed schema.
 // Supports both direct schema references (e.g., #/components/schemas/Pet) and property references
 // (e.g., #/components/schemas/Pet/properties/name).
