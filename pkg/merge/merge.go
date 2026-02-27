@@ -21,24 +21,19 @@ import (
 	"github.com/speakeasy-api/openapi/sequencedmap"
 	"github.com/speakeasy-api/openapi/yml"
 	"github.com/speakeasy-api/speakeasy/internal/log"
-	"github.com/speakeasy-api/speakeasy/internal/validation"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
 // MergeOpenAPIDocuments merges multiple OpenAPI documents into a single document.
 // This is the legacy function that maintains backward compatibility.
-func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
+func MergeOpenAPIDocuments(ctx context.Context, inFiles []string, outFile string) error {
 	inputs := make([]MergeInput, len(inFiles))
 	for i, inFile := range inFiles {
 		inputs[i] = MergeInput{Path: inFile}
 	}
 
 	return MergeOpenAPIDocumentsWithNamespaces(ctx, inputs, outFile, MergeOptions{
-		DefaultRuleset:         defaultRuleset,
-		WorkingDir:             workingDir,
-		SkipGenerateLintReport: skipGenerateLintReport,
-		YAMLOutput:             utils2.HasYAMLExt(outFile),
+		YAMLOutput: utils2.HasYAMLExt(outFile),
 	})
 }
 
@@ -59,10 +54,6 @@ func MergeOpenAPIDocumentsWithNamespaces(ctx context.Context, inputs []MergeInpu
 			return err
 		}
 
-		if err := validate(ctx, input.Path, data, opts.DefaultRuleset, opts.WorkingDir, opts.SkipGenerateLintReport); err != nil {
-			log.From(ctx).Error(fmt.Sprintf("failed validating spec %s", input.Path), zap.Error(err))
-		}
-
 		inSchemas[i] = data
 		namespaces[i] = input.Namespace
 	}
@@ -77,38 +68,6 @@ func MergeOpenAPIDocumentsWithNamespaces(ctx context.Context, inputs []MergeInpu
 	if err := os.WriteFile(outFile, mergedSchema, 0o644); err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func validate(ctx context.Context, schemaPath string, schema []byte, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
-	logger := log.From(ctx)
-	logger.Info(fmt.Sprintf("Validating OpenAPI spec %s...\n", schemaPath))
-
-	prefixedLogger := logger.WithAssociatedFile(schemaPath).WithFormatter(log.PrefixedFormatter)
-
-	limits := &validation.OutputLimits{
-		MaxWarns: 10,
-	}
-
-	res, err := validation.Validate(ctx, logger, schema, schemaPath, limits, false, defaultRuleset, workingDir, false, skipGenerateLintReport, "")
-	if err != nil {
-		return err
-	}
-
-	for _, warn := range res.Warnings {
-		prefixedLogger.Warn("", zap.Error(warn))
-	}
-	for _, err := range res.Errors {
-		prefixedLogger.Error("", zap.Error(err))
-	}
-
-	if len(res.Errors) > 0 {
-		status := "\nOpenAPI spec invalid ✖"
-		return errors.New(status)
-	}
-
-	log.From(ctx).Success(fmt.Sprintf("Successfully validated %s", schemaPath))
 
 	return nil
 }
@@ -144,20 +103,15 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 			headerMappings := applyNamespaceToHeaders(doc, namespace)
 			secSchemeMappings := applyNamespaceToSecuritySchemes(doc, namespace)
 
-			// Update schema references using explicit mappings
-			if err := updateSchemaReferencesInDocument(ctx, doc, schemaMappings); err != nil {
-				return nil, fmt.Errorf("failed to update schema references for namespace %s: %w", namespace, err)
-			}
-
-			// Update component references for parameters, responses, requestBodies, headers, securitySchemes
-			if err := updateComponentReferencesInDocument(ctx, doc, namespaceMappings{
+			// Update all references (schemas + components) in a single document walk
+			if err := updateAllReferencesInDocument(ctx, doc, schemaMappings, namespaceMappings{
 				Parameters:      paramMappings,
 				Responses:       responseMappings,
 				RequestBodies:   requestBodyMappings,
 				Headers:         headerMappings,
 				SecuritySchemes: secSchemeMappings,
 			}); err != nil {
-				return nil, fmt.Errorf("failed to update component references for namespace %s: %w", namespace, err)
+				return nil, fmt.Errorf("failed to update references for namespace %s: %w", namespace, err)
 			}
 
 			// Update security requirement keys to match renamed security schemes

@@ -14,7 +14,7 @@ import (
 )
 
 // Prepares and returns the target testing generator instance.
-func (w Workflow) prepareTestingGenerator(ctx context.Context) (*generate.Generator, error) {
+func (w *Workflow) prepareTestingGenerator(ctx context.Context) (*generate.Generator, error) {
 	logger := log.From(ctx)
 	runLocation := env.SpeakeasyRunLocation()
 
@@ -45,7 +45,7 @@ func (w Workflow) prepareTestingGenerator(ctx context.Context) (*generate.Genera
 
 // Runs target testing for the given target. Returns an error if the generator
 // setup or testing commands failed.
-func (w Workflow) runTesting(ctx context.Context, workflowTargetName string, target workflow.Target, testingStep *workflowTracking.WorkflowStep, outputDir string) error {
+func (w *Workflow) runTesting(ctx context.Context, workflowTargetName string, target workflow.Target, testingStep *workflowTracking.WorkflowStep, outputDir string) error {
 	logger := log.From(ctx)
 	logListener := make(chan log.Msg)
 

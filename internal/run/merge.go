@@ -15,10 +15,8 @@ import (
 )
 
 type Merge struct {
-	workflow   *Workflow
 	parentStep *workflowTracking.WorkflowStep
 	source     workflow.Source
-	ruleset    string
 }
 
 type MergeResult struct {
@@ -26,12 +24,10 @@ type MergeResult struct {
 	InputSchemaLocation []string
 }
 
-func NewMerge(w *Workflow, parentStep *workflowTracking.WorkflowStep, source workflow.Source, ruleset string) Merge {
+func NewMerge(parentStep *workflowTracking.WorkflowStep, source workflow.Source) Merge {
 	return Merge{
-		workflow:   w,
 		parentStep: parentStep,
 		source:     source,
-		ruleset:    ruleset,
 	}
 }
 
@@ -56,14 +52,14 @@ func (m Merge) Do(ctx context.Context, _ string) (result MergeResult, err error)
 
 	mergeStep.NewSubstep(fmt.Sprintf("Merge %d documents", len(m.source.Inputs)))
 
-	if err = mergeDocuments(ctx, result.InputSchemaLocation, modelNamespaces, result.Location, m.ruleset, m.workflow.ProjectDir, m.workflow.SkipGenerateLintReport); err != nil {
+	if err = mergeDocuments(ctx, result.InputSchemaLocation, modelNamespaces, result.Location); err != nil {
 		return
 	}
 
 	return result, nil
 }
 
-func mergeDocuments(ctx context.Context, inSchemas []string, modelNamespaces []string, outFile, defaultRuleset, workingDir string, skipGenerateLintReport bool) error {
+func mergeDocuments(ctx context.Context, inSchemas []string, modelNamespaces []string, outFile string) error {
 	if err := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); err != nil {
 		return err
 	}
@@ -92,16 +88,13 @@ func mergeDocuments(ctx context.Context, inSchemas []string, modelNamespaces []s
 		}
 
 		if err := merge.MergeOpenAPIDocumentsWithNamespaces(ctx, inputs, outFile, merge.MergeOptions{
-			DefaultRuleset:         defaultRuleset,
-			WorkingDir:             workingDir,
-			SkipGenerateLintReport: skipGenerateLintReport,
-			YAMLOutput:             utils.HasYAMLExt(outFile),
+			YAMLOutput: utils.HasYAMLExt(outFile),
 		}); err != nil {
 			return err
 		}
 	} else {
 		// Use standard merge without namespaces
-		if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile, defaultRuleset, workingDir, skipGenerateLintReport); err != nil {
+		if err := merge.MergeOpenAPIDocuments(ctx, inSchemas, outFile); err != nil {
 			return err
 		}
 	}

@@ -51,7 +51,7 @@ func mergeExec(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else {
-		if err := merge.MergeOpenAPIDocuments(cmd.Context(), inSchemas, outFile, "speakeasy-recommended", "", false); err != nil {
+		if err := merge.MergeOpenAPIDocuments(cmd.Context(), inSchemas, outFile); err != nil {
 			return err
 		}
 	}
