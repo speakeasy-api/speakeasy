@@ -11,6 +11,7 @@ import (
 type CreateOrUpdatePRFlags struct {
 	Input  string `json:"input"`
 	Branch string `json:"branch"`
+	DryRun bool   `json:"dry-run"`
 }
 
 var createOrUpdatePRCmd = &model.ExecutableCommand[CreateOrUpdatePRFlags]{
@@ -23,6 +24,8 @@ version reports, generates a PR title and body, and creates or updates the PR.
 
 The input file format is a JSON object where keys are target names and values
 are per-target generation report objects containing version_report, URLs, etc.
+
+Use --dry-run to print the generated title and body without creating a PR.
 
 Environment variables:
   - INPUT_GITHUB_ACCESS_TOKEN: GitHub token for API access
@@ -41,11 +44,14 @@ Environment variables:
 			Name:        "branch",
 			Shorthand:   "b",
 			Description: "Branch name for the PR head",
-			Required:    true,
+		},
+		flag.BooleanFlag{
+			Name:        "dry-run",
+			Description: "Print generated PR title and body without creating a PR",
 		},
 	},
 }
 
 func runCreateOrUpdatePR(ctx context.Context, flags CreateOrUpdatePRFlags) error {
-	return actions.CreateOrUpdatePR(ctx, flags.Input, flags.Branch)
+	return actions.CreateOrUpdatePR(ctx, flags.Input, flags.Branch, flags.DryRun)
 }

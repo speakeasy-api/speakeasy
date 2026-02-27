@@ -17,22 +17,22 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// CreateOrUpdatePR reads an accumulated reports JSON file, builds a merged PR
-// description, and creates or updates a GitHub PR on the given branch.
-func CreateOrUpdatePR(ctx context.Context, inputFile, branchName string) error {
+// GeneratePRFromReports reads an accumulated reports JSON file, merges all
+// per-target version reports, and generates a PR title and body.
+// This is the pure logic with no side effects.
+func GeneratePRFromReports(inputFile string) (*prdescription.Output, *versioning.MergedVersionReport, error) {
 	data, err := os.ReadFile(inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to read accumulated reports: %w", err)
+		return nil, nil, fmt.Errorf("failed to read accumulated reports: %w", err)
 	}
 
 	var accumulated map[string]TargetGenerationReport
 	if err := json.Unmarshal(data, &accumulated); err != nil {
-		return fmt.Errorf("failed to parse accumulated reports: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse accumulated reports: %w", err)
 	}
 
 	if len(accumulated) == 0 {
-		logging.Info("No reports in accumulated file, skipping PR creation")
-		return nil
+		return nil, nil, fmt.Errorf("no reports in accumulated file")
 	}
 
 	// Sort target names alphabetically for stable ordering
@@ -69,7 +69,6 @@ func CreateOrUpdatePR(ctx context.Context, inputFile, branchName string) error {
 
 	mergedReport := &versioning.MergedVersionReport{Reports: allReports}
 
-	// Build PR description
 	input := prdescription.Input{
 		VersionReport:    mergedReport,
 		WorkflowName:     environment.GetWorkflowName(),
@@ -82,7 +81,36 @@ func CreateOrUpdatePR(ctx context.Context, inputFile, branchName string) error {
 
 	output, err := prdescription.Generate(input)
 	if err != nil {
-		return fmt.Errorf("failed to generate PR description: %w", err)
+		return nil, nil, fmt.Errorf("failed to generate PR description: %w", err)
+	}
+
+	return output, mergedReport, nil
+}
+
+// CreateOrUpdatePR reads an accumulated reports JSON file, builds a merged PR
+// description, and creates or updates a GitHub PR on the given branch.
+func CreateOrUpdatePR(ctx context.Context, inputFile, branchName string, dryRun bool) error {
+	output, mergedReport, err := GeneratePRFromReports(inputFile)
+	if err != nil {
+		return err
+	}
+
+	title := output.Title
+	body := output.Body
+
+	const maxBodyLength = 65536
+	if len(body) > maxBodyLength {
+		body = body[:maxBodyLength-3] + "..."
+	}
+
+	if dryRun {
+		result := map[string]string{
+			"title": title,
+			"body":  body,
+		}
+		out, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Println(string(out))
+		return nil
 	}
 
 	// Initialize Git client
@@ -91,7 +119,6 @@ func CreateOrUpdatePR(ctx context.Context, inputFile, branchName string) error {
 		return fmt.Errorf("failed to initialize git: %w", err)
 	}
 
-	// Find existing PR for this branch
 	owner := os.Getenv("GITHUB_REPOSITORY_OWNER")
 	repo := git.GetRepo()
 
@@ -104,20 +131,10 @@ func CreateOrUpdatePR(ctx context.Context, inputFile, branchName string) error {
 		prClient = github.NewClient(tc)
 	}
 
-	// Search for existing PR from this branch
 	existingPR := findPRForBranch(ctx, prClient, owner, repo, branchName)
 
-	// Compute labels from version report
 	labelTypes := g.UpsertLabelTypes(ctx)
 	_, _, labels := git.PRVersionMetadata(mergedReport, labelTypes)
-
-	title := output.Title
-	body := output.Body
-
-	const maxBodyLength = 65536
-	if len(body) > maxBodyLength {
-		body = body[:maxBodyLength-3] + "..."
-	}
 
 	if existingPR != nil {
 		logging.Info("Updating PR #%d", existingPR.GetNumber())
