@@ -197,21 +197,6 @@ func RunWorkflow(ctx context.Context) error {
 		}
 	}
 
-	// Write per-target generation report for matrix mode accumulation.
-	// This file is CI-agnostic and will be uploaded as an artifact by the workflow.
-	if reportPath, err := writeGenerationReport(TargetGenerationReport{
-		VersionReport:        runRes.VersioningInfo.VersionReport,
-		LintingReportURL:     runRes.LintingReportURL,
-		ChangesReportURL:     runRes.ChangesReportURL,
-		OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
-		SpeakeasyVersion:     resolvedVersion,
-		ManualBump:           runRes.VersioningInfo.ManualBump,
-	}); err != nil {
-		logging.Debug("failed to write generation report: %v", err)
-	} else if reportPath != "" {
-		outputs["generation_report_file"] = reportPath
-	}
-
 	// If test mode is successful to this point, exit here
 	if environment.IsTestMode() {
 		success = true
@@ -233,6 +218,21 @@ func RunWorkflow(ctx context.Context) error {
 		releaseNotes:         runRes.ReleaseNotes,
 	}); err != nil {
 		return err
+	}
+
+	// Write per-target generation report after finalize so the file survives
+	// any git operations (rebase, checkout) that happen during commit and push.
+	if reportPath, err := writeGenerationReport(TargetGenerationReport{
+		VersionReport:        runRes.VersioningInfo.VersionReport,
+		LintingReportURL:     runRes.LintingReportURL,
+		ChangesReportURL:     runRes.ChangesReportURL,
+		OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
+		SpeakeasyVersion:     resolvedVersion,
+		ManualBump:           runRes.VersioningInfo.ManualBump,
+	}); err != nil {
+		logging.Debug("failed to write generation report: %v", err)
+	} else if reportPath != "" {
+		outputs["generation_report_file"] = reportPath
 	}
 
 	success = true
@@ -315,7 +315,6 @@ func finalize(ctx context.Context, inputs finalizeInputs) error {
 			VersioningInfo:       inputs.VersioningInfo,
 			OpenAPIChangeSummary: inputs.OpenAPIChangeSummary,
 		})
-
 		if err != nil {
 			return err
 		}
