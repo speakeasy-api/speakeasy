@@ -201,7 +201,9 @@ func (g *Git) FindExistingPR(branchName string, action environment.Action, sourc
 	var prTitle string
 	switch action { //nolint:exhaustive
 	case environment.ActionRunWorkflow, environment.ActionFinalize:
-		prTitle = getGenPRTitlePrefix()
+		// Use the search prefix (without target name) so matrix jobs with different
+		// INPUT_TARGET values can find the same shared PR.
+		prTitle = getGenPRTitleSearchPrefix()
 		if sourceGeneration {
 			prTitle = getGenSourcesTitlePrefix()
 		}
@@ -349,6 +351,13 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 
 		existingBranch, err := g.FindAndCheckoutBranch(branchName)
 		if err == nil {
+			// When INPUT_BRANCH_NAME is set (matrix workflow), the branch is CI-owned and shared
+			// across parallel jobs. Don't reset to main — preserve commits from earlier matrix jobs.
+			if environment.GetBranchName() != "" {
+				logging.Info("Using explicit branch %s (matrix mode), preserving existing commits", branchName)
+				return existingBranch, nil
+			}
+
 			// Find non-CI commits that should be preserved
 			nonCICommits, err := g.findNonCICommits(branchName, defaultBranch)
 			if err != nil {
@@ -614,11 +623,20 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 			return "", fmt.Errorf("error committing changes: %w", err)
 		}
 
-		if err := g.repo.Push(&git.PushOptions{
-			Auth:  sharedgit.BasicAuth(g.accessToken),
-			Force: true, // This is necessary because at the beginning of the workflow we reset the branch
-		}); err != nil {
-			return "", pushErr(err)
+		if environment.GetBranchName() != "" {
+			// Matrix mode: rebase onto remote then push without force.
+			// Each matrix job targets a different dist/<lang>/ directory so rebases succeed cleanly.
+			if err := g.rebaseAndPush(); err != nil {
+				return "", err
+			}
+		} else {
+			// Default: force push (branch was reset to main at the beginning of the workflow)
+			if err := g.repo.Push(&git.PushOptions{
+				Auth:  sharedgit.BasicAuth(g.accessToken),
+				Force: true,
+			}); err != nil {
+				return "", pushErr(err)
+			}
 		}
 		return commitHash.String(), nil
 	}
@@ -686,6 +704,44 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 	}
 
 	return *commitResult.SHA, nil
+}
+
+// rebaseAndPush fetches the latest remote branch, rebases the local commit(s) on top,
+// and pushes. This is used in matrix mode (INPUT_BRANCH_NAME set) where multiple parallel
+// jobs push to the same branch. Each job targets a different output directory so rebases
+// succeed without conflicts. Retries up to 3 times on non-fast-forward errors.
+func (g *Git) rebaseAndPush() error {
+	dir := filepath.Join(g.repoRoot, environment.GetWorkingDirectory())
+	branch, err := g.GetCurrentBranch()
+	if err != nil {
+		return fmt.Errorf("error getting current branch for rebase: %w", err)
+	}
+
+	const maxRetries = 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// Fetch latest from remote
+		if _, err := sharedgit.RunGitCommand(dir, "fetch", "origin", branch); err != nil {
+			logging.Info("fetch failed (attempt %d): %v", attempt+1, err)
+		}
+
+		// Rebase local commits onto remote
+		if _, err := sharedgit.RunGitCommand(dir, "rebase", "origin/"+branch); err != nil {
+			return fmt.Errorf("error rebasing onto origin/%s: %w", branch, err)
+		}
+
+		// Push without force
+		if _, err := sharedgit.RunGitCommand(dir, "push", "origin", branch); err != nil {
+			if attempt < maxRetries-1 {
+				logging.Info("push failed (attempt %d), retrying after fetch+rebase: %v", attempt+1, err)
+				continue
+			}
+			return fmt.Errorf("error pushing after %d attempts: %w", maxRetries, err)
+		}
+
+		return nil
+	}
+
+	return nil
 }
 
 // getOrCreateRef returns the commit branch reference object if it exists or creates it
@@ -1614,8 +1670,16 @@ const (
 	speakeasyDocsPRTitle    = "chore: 🐝 Update SDK Docs - "
 )
 
+// getGenPRTitleSearchPrefix returns the prefix used by FindExistingPR to match existing PRs.
+// It deliberately excludes the target name so that matrix jobs (each with a different INPUT_TARGET)
+// can find and update the same shared PR.
+func getGenPRTitleSearchPrefix() string {
+	return speakeasyGenPRTitle + environment.GetWorkflowName()
+}
+
+// getGenPRTitlePrefix returns the full title prefix for PR creation/update, including the target name.
 func getGenPRTitlePrefix() string {
-	title := speakeasyGenPRTitle + environment.GetWorkflowName()
+	title := getGenPRTitleSearchPrefix()
 	if environment.SpecifiedTarget() != "" && !strings.Contains(title, strings.ToUpper(environment.SpecifiedTarget())) {
 		title += " " + strings.ToUpper(environment.SpecifiedTarget())
 	}
