@@ -45,6 +45,10 @@ func (g *Git) GetRepoRoot() string {
 	return g.repoRoot
 }
 
+func (g *Git) GetClient() *github.Client {
+	return g.client
+}
+
 const (
 	speakeasyBotName       = "speakeasybot"
 	speakeasyBotAlias      = "speakeasy-bot"
@@ -912,7 +916,7 @@ func (g *Git) CreateOrUpdatePR(info PRInfo) (*github.PullRequest, error) {
 		info.PR.Title = &title
 		info.PR, _, err = prClient.PullRequests.Edit(context.Background(), os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), info.PR.GetNumber(), info.PR)
 		// Set labels MUST always follow updating the PR
-		g.setPRLabels(context.Background(), os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), info.PR.GetNumber(), labelTypes, info.PR.Labels, labels)
+		g.SetPRLabels(context.Background(), os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), info.PR.GetNumber(), labelTypes, info.PR.Labels, labels)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update PR: %w", err)
 		}
@@ -940,7 +944,7 @@ func (g *Git) CreateOrUpdatePR(info PRInfo) (*github.PullRequest, error) {
 			}
 			return nil, fmt.Errorf("failed to create PR: %w%s", err, messageSuffix)
 		} else if info.PR != nil && len(labels) > 0 {
-			g.setPRLabels(context.Background(), os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), info.PR.GetNumber(), labelTypes, info.PR.Labels, labels)
+			g.SetPRLabels(context.Background(), os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), info.PR.GetNumber(), labelTypes, info.PR.Labels, labels)
 		}
 	}
 
