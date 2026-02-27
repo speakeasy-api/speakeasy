@@ -49,6 +49,14 @@ func (g *Git) GetClient() *github.Client {
 	return g.client
 }
 
+func (g *Git) GetHeadHash() (string, error) {
+	ref, err := g.repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("error getting head ref: %w", err)
+	}
+	return ref.Hash().String(), nil
+}
+
 const (
 	speakeasyBotName       = "speakeasybot"
 	speakeasyBotAlias      = "speakeasy-bot"
