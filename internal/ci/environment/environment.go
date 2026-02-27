@@ -17,6 +17,7 @@ type Mode string
 const (
 	ModeDirect Mode = "direct"
 	ModePR     Mode = "pr"
+	ModeMatrix Mode = "matrix"
 	ModeTest   Mode = "test"
 )
 

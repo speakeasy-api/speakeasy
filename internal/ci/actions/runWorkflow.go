@@ -55,11 +55,14 @@ func RunWorkflow(ctx context.Context) error {
 
 	sourcesOnly := len(wf.Targets) == 0
 
-	// Honour explicit branch name (e.g. from matrix workflow prep job via INPUT_BRANCH_NAME).
-	// When set, we skip PR-based branch discovery and use the provided branch directly.
 	branchName := environment.GetBranchName()
+
+	if mode == environment.ModeMatrix && branchName == "" {
+		return fmt.Errorf("INPUT_BRANCH_NAME is required when INPUT_MODE=matrix")
+	}
+
 	var pr *github.PullRequest
-	if branchName == "" && mode == environment.ModePR {
+	if mode == environment.ModePR {
 		var err error
 		branchName, pr, err = g.FindExistingPR(environment.GetFeatureBranch(), environment.ActionRunWorkflow, sourcesOnly)
 		if err != nil {
@@ -197,21 +200,6 @@ func RunWorkflow(ctx context.Context) error {
 		}
 	}
 
-	// Write per-target generation report for matrix mode accumulation.
-	// This file is CI-agnostic and will be uploaded as an artifact by the workflow.
-	if reportPath, err := writeGenerationReport(TargetGenerationReport{
-		VersionReport:        runRes.VersioningInfo.VersionReport,
-		LintingReportURL:     runRes.LintingReportURL,
-		ChangesReportURL:     runRes.ChangesReportURL,
-		OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
-		SpeakeasyVersion:     resolvedVersion,
-		ManualBump:           runRes.VersioningInfo.ManualBump,
-	}); err != nil {
-		logging.Debug("failed to write generation report: %v", err)
-	} else if reportPath != "" {
-		outputs["generation_report_file"] = reportPath
-	}
-
 	// If test mode is successful to this point, exit here
 	if environment.IsTestMode() {
 		success = true
@@ -233,6 +221,21 @@ func RunWorkflow(ctx context.Context) error {
 		releaseNotes:         runRes.ReleaseNotes,
 	}); err != nil {
 		return err
+	}
+
+	// Write per-target generation report after finalize so the file survives
+	// any git operations (rebase, checkout) that happen during commit and push.
+	if reportPath, err := writeGenerationReport(TargetGenerationReport{
+		VersionReport:        runRes.VersioningInfo.VersionReport,
+		LintingReportURL:     runRes.LintingReportURL,
+		ChangesReportURL:     runRes.ChangesReportURL,
+		OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
+		SpeakeasyVersion:     resolvedVersion,
+		ManualBump:           runRes.VersioningInfo.ManualBump,
+	}); err != nil {
+		logging.Debug("failed to write generation report: %v", err)
+	} else if reportPath != "" {
+		outputs["generation_report_file"] = reportPath
 	}
 
 	success = true
@@ -315,7 +318,6 @@ func finalize(ctx context.Context, inputs finalizeInputs) error {
 			VersioningInfo:       inputs.VersioningInfo,
 			OpenAPIChangeSummary: inputs.OpenAPIChangeSummary,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -363,9 +365,22 @@ func finalize(ctx context.Context, inputs finalizeInputs) error {
 			}
 		}
 
-		commitHash, err := inputs.Git.MergeBranch(branchName)
-		if err != nil {
-			return err
+		// In matrix mode, commits are already on the regen branch. Skip merging
+		// back to the source branch — the finalize job handles PR creation.
+		var commitHash string
+		if environment.GetMode() == environment.ModeMatrix {
+			logging.Info("Matrix mode: skipping merge back to source branch")
+			headRef, err := inputs.Git.GetHeadHash()
+			if err != nil {
+				return err
+			}
+			commitHash = headRef
+		} else {
+			var err error
+			commitHash, err = inputs.Git.MergeBranch(branchName)
+			if err != nil {
+				return err
+			}
 		}
 
 		// Skip releasing and tagging when configured to do so or when triggered by PR events
@@ -388,6 +403,8 @@ func finalize(ctx context.Context, inputs finalizeInputs) error {
 			return errors.Wrap(err, "failed to tag registry images")
 		}
 
+	case environment.ModeMatrix:
+		// Matrix mode: finalize is handled by a separate job (create-or-update-pr).
 	case environment.ModeTest:
 		// Test mode is handled before finalize is called; nothing to do here.
 	}

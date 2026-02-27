@@ -965,3 +965,75 @@ func TestCreateSuggestionPR_SourceBranchAware(t *testing.T) {
 		})
 	}
 }
+
+func TestExpectedBranchPrefix(t *testing.T) {
+	tests := []struct {
+		name           string
+		sourceBranch   string
+		action         environment.Action
+		docsGeneration string
+		expected       string
+	}{
+		{
+			name:         "main - run workflow",
+			sourceBranch: "main",
+			action:       environment.ActionRunWorkflow,
+			expected:     "speakeasy-sdk-regen",
+		},
+		{
+			name:         "feature branch - run workflow",
+			sourceBranch: "feature/new-api",
+			action:       environment.ActionRunWorkflow,
+			expected:     "speakeasy-sdk-regen-feature-new-api",
+		},
+		{
+			name:         "main - suggest",
+			sourceBranch: "main",
+			action:       environment.ActionSuggest,
+			expected:     "speakeasy-openapi-suggestion",
+		},
+		{
+			name:         "feature branch - suggest",
+			sourceBranch: "feature/api-v2",
+			action:       environment.ActionSuggest,
+			expected:     "speakeasy-openapi-suggestion-feature-api-v2",
+		},
+		{
+			name:           "main - docs generation",
+			sourceBranch:   "main",
+			action:         environment.ActionRunWorkflow,
+			docsGeneration: "true",
+			expected:       "speakeasy-sdk-docs-regen",
+		},
+		{
+			name:           "feature branch - docs generation",
+			sourceBranch:   "feature/docs-update",
+			action:         environment.ActionRunWorkflow,
+			docsGeneration: "true",
+			expected:       "speakeasy-sdk-docs-regen-feature-docs-update",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.sourceBranch == "main" || tt.sourceBranch == "master" {
+				t.Setenv("GITHUB_REF", "refs/heads/"+tt.sourceBranch)
+				t.Setenv("GITHUB_HEAD_REF", "")
+				t.Setenv("GITHUB_EVENT_NAME", "push")
+			} else {
+				t.Setenv("GITHUB_REF", "refs/pull/123/merge")
+				t.Setenv("GITHUB_HEAD_REF", tt.sourceBranch)
+				t.Setenv("GITHUB_BASE_REF", "main")
+				t.Setenv("GITHUB_EVENT_NAME", "pull_request")
+			}
+			if tt.docsGeneration != "" {
+				t.Setenv("INPUT_LANGUAGES", "docs")
+			} else {
+				t.Setenv("INPUT_LANGUAGES", "")
+			}
+
+			result := expectedBranchPrefix(tt.action)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
