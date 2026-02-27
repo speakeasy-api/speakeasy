@@ -31,10 +31,6 @@ func Test(ctx context.Context) error {
 		return err
 	}
 
-	if err := SetupEnvironment(); err != nil {
-		return fmt.Errorf("failed to setup environment: %w", err)
-	}
-
 	wf, err := configuration.GetWorkflowAndValidateLanguages(false)
 	if err != nil {
 		return err
