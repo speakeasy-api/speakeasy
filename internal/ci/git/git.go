@@ -205,7 +205,7 @@ func (g *Git) FindExistingPR(branchName string, action environment.Action, sourc
 	repo := GetRepo()
 
 	// Determine the expected stable branch prefix for this action/context.
-	branchPrefix := expectedBranchPrefix(action, sourceGeneration)
+	branchPrefix := expectedBranchPrefix(action)
 
 	prs, _, err := g.client.PullRequests.List(context.Background(), owner, repo, nil)
 	if err != nil {
@@ -250,7 +250,7 @@ func (g *Git) FindExistingPR(branchName string, action environment.Action, sourc
 }
 
 // expectedBranchPrefix returns the stable branch name prefix for the given action.
-func expectedBranchPrefix(action environment.Action, sourceGeneration bool) string {
+func expectedBranchPrefix(action environment.Action) string {
 	sourceBranch := environment.GetSourceBranch()
 	isMainBranch := environment.IsMainBranch(sourceBranch)
 	sanitized := environment.SanitizeBranchName(sourceBranch)
@@ -367,8 +367,8 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 
 		existingBranch, err := g.FindAndCheckoutBranch(branchName)
 		if err == nil {
-			// When INPUT_BRANCH_NAME is set (matrix workflow), the branch is CI-owned and shared
-			// across parallel jobs. Don't reset to main — preserve commits from earlier matrix jobs.
+			// When INPUT_BRANCH_NAME is set, the branch is CI-owned and shared
+			// across parallel jobs. Don't reset to main — preserve existing commits.
 			if environment.GetBranchName() != "" {
 				logging.Info("Using explicit branch %s (matrix mode), preserving existing commits", branchName)
 				return existingBranch, nil
@@ -419,33 +419,34 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 		return branchName, nil
 	}
 
-	// Get source branch for context-aware branch naming.
-	// Branch names are stable (no timestamp) so that subsequent runs reuse the
-	// same branch and PR instead of creating new ones each time.
+	// Get source branch for context-aware branch naming
 	sourceBranch := environment.GetSourceBranch()
 	isMainBranch := environment.IsMainBranch(sourceBranch)
+	timestamp := time.Now().Unix()
 
 	switch {
 	case action == environment.ActionRunWorkflow:
 		if isMainBranch {
-			branchName = "speakeasy-sdk-regen"
+			// Maintain backward compatibility for main/master branches
+			branchName = fmt.Sprintf("speakeasy-sdk-regen-%d", timestamp)
 		} else {
+			// Include source branch context for feature branches
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-sdk-regen-%s", sanitizedSourceBranch)
+			branchName = fmt.Sprintf("speakeasy-sdk-regen-%s-%d", sanitizedSourceBranch, timestamp)
 		}
 	case action == environment.ActionSuggest:
 		if isMainBranch {
-			branchName = "speakeasy-openapi-suggestion"
+			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%d", timestamp)
 		} else {
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%s", sanitizedSourceBranch)
+			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%s-%d", sanitizedSourceBranch, timestamp)
 		}
 	case environment.IsDocsGeneration():
 		if isMainBranch {
-			branchName = "speakeasy-sdk-docs-regen"
+			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%d", timestamp)
 		} else {
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%s", sanitizedSourceBranch)
+			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%s-%d", sanitizedSourceBranch, timestamp)
 		}
 	}
 
@@ -639,7 +640,7 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 		}
 
 		if environment.GetBranchName() != "" {
-			// Matrix mode: rebase onto remote then push without force.
+			// Explicit branch: rebase onto remote then push without force.
 			// Each matrix job targets a different dist/<lang>/ directory so rebases succeed cleanly.
 			if err := g.rebaseAndPush(); err != nil {
 				return "", err

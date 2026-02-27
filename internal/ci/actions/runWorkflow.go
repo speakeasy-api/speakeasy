@@ -55,11 +55,14 @@ func RunWorkflow(ctx context.Context) error {
 
 	sourcesOnly := len(wf.Targets) == 0
 
-	// Honour explicit branch name (e.g. from matrix workflow prep job via INPUT_BRANCH_NAME).
-	// When set, we skip PR-based branch discovery and use the provided branch directly.
 	branchName := environment.GetBranchName()
+
+	if mode == environment.ModeMatrix && branchName == "" {
+		return fmt.Errorf("INPUT_BRANCH_NAME is required when INPUT_MODE=matrix")
+	}
+
 	var pr *github.PullRequest
-	if branchName == "" && mode == environment.ModePR {
+	if mode == environment.ModePR {
 		var err error
 		branchName, pr, err = g.FindExistingPR(environment.GetFeatureBranch(), environment.ActionRunWorkflow, sourcesOnly)
 		if err != nil {
@@ -362,11 +365,10 @@ func finalize(ctx context.Context, inputs finalizeInputs) error {
 			}
 		}
 
-		// In matrix mode (INPUT_BRANCH_NAME set), commits are already on the
-		// regen branch. Skip merging back to the source branch — the separate
-		// finalize job handles PR creation from the regen branch.
+		// In matrix mode, commits are already on the regen branch. Skip merging
+		// back to the source branch — the finalize job handles PR creation.
 		var commitHash string
-		if environment.GetBranchName() != "" {
+		if environment.GetMode() == environment.ModeMatrix {
 			logging.Info("Matrix mode: skipping merge back to source branch")
 			headRef, err := inputs.Git.GetHeadHash()
 			if err != nil {
@@ -401,6 +403,8 @@ func finalize(ctx context.Context, inputs finalizeInputs) error {
 			return errors.Wrap(err, "failed to tag registry images")
 		}
 
+	case environment.ModeMatrix:
+		// Matrix mode: finalize is handled by a separate job (create-or-update-pr).
 	case environment.ModeTest:
 		// Test mode is handled before finalize is called; nothing to do here.
 	}
