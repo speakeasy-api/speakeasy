@@ -23,10 +23,18 @@ type TargetGenerationReport struct {
 	ManualBump           bool                            `json:"manual_bump,omitempty"`
 }
 
-const reportsDir = ".speakeasy/reports"
+// getReportsDir returns the directory for generation reports.
+// Uses RUNNER_TEMP if available (GitHub Actions) to survive git operations
+// that clean the working tree, otherwise falls back to a repo-relative path.
+func getReportsDir() string {
+	if tmp := os.Getenv("RUNNER_TEMP"); tmp != "" {
+		return filepath.Join(tmp, "speakeasy-reports")
+	}
+	return ".speakeasy/reports"
+}
 
 // writeGenerationReport serializes a TargetGenerationReport to
-// .speakeasy/reports/<target>.json and returns the file path.
+// <reports-dir>/<target>.json and returns the file path.
 // Only writes when a specific target is set (matrix mode).
 func writeGenerationReport(report TargetGenerationReport) (string, error) {
 	target := environment.SpecifiedTarget()
@@ -36,6 +44,7 @@ func writeGenerationReport(report TargetGenerationReport) (string, error) {
 
 	report.Target = target
 
+	reportsDir := getReportsDir()
 	if err := os.MkdirAll(reportsDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create reports directory: %w", err)
 	}
