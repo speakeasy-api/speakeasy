@@ -21,6 +21,10 @@ func SetupEnvironment() error {
 		return err
 	}
 
+	if err := installBundler(); err != nil {
+		return err
+	}
+
 	if pnpmVersion := environment.GetPnpmVersion(); pnpmVersion != "" {
 		pnpmPackageSpec := "pnpm@" + pnpmVersion
 		cmd := exec.Command("npm", "install", "-g", pnpmPackageSpec)
@@ -46,6 +50,22 @@ func installPoetry() error {
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("error installing poetry: %w", err)
+	}
+
+	return nil
+}
+
+// installBundler ensures the Ruby bundler gem is available.
+// ubuntu-24.04 runners have Ruby pre-installed but bundler is not on PATH.
+func installBundler() error {
+	if _, err := exec.LookPath("bundle"); err == nil {
+		return nil // already available
+	}
+
+	cmd := exec.Command("gem", "install", "bundler")
+	if err := cmd.Run(); err != nil {
+		// Non-fatal: only Ruby targets need bundler, and gem may not be installed.
+		return nil
 	}
 
 	return nil
