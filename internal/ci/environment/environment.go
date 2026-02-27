@@ -224,17 +224,6 @@ func GetOpenAPIDocAuthToken() string {
 	return os.Getenv("INPUT_OPENAPI_DOC_AUTH_TOKEN")
 }
 
-func GetPoetryVersion() string {
-	return os.Getenv("INPUT_POETRY_VERSION")
-}
-
-func GetPnpmVersion() string {
-	return os.Getenv("INPUT_PNPM_VERSION")
-}
-
-func GetUvVersion() string {
-	return os.Getenv("INPUT_UV_VERSION")
-}
 
 func GetSDKChangelog() string {
 	return os.Getenv("INPUT_ENABLE_SDK_CHANGELOG")

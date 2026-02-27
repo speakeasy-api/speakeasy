@@ -33,14 +33,6 @@ func RunWorkflow(ctx context.Context) error {
 		return err
 	}
 
-	if !environment.SkipCompile() {
-		if err := SetupEnvironment(); err != nil {
-			return fmt.Errorf("failed to setup environment: %w", err)
-		}
-	} else {
-		logging.Info("Skipping environment setup due to skip_compile input")
-	}
-
 	// We ARE the CLI — no download needed. Use the current version.
 	resolvedVersion := versioninfo.GetSpeakeasyVersion()
 

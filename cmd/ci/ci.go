@@ -19,7 +19,7 @@ var CICmd = &model.CommandGroup{
 		finalizeCmd,
 		prDescriptionCmd,
 		publishEventCmd,
-		setupEnvCmd,
+
 		tagCmd,
 		ciTestCmd,
 		logResultCmd,
