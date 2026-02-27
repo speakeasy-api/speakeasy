@@ -188,9 +188,14 @@ func isMainBranch(branch string) bool {
 	return branch == "main" || branch == "master"
 }
 
-// sanitizeBranchName removes refs/heads/ prefix if present
+// sanitizeBranchName normalizes a branch name for use in PR titles.
+// Must match environment.SanitizeBranchName so FindExistingPR can find PRs we create.
 func sanitizeBranchName(branch string) string {
 	branch = strings.TrimPrefix(branch, "refs/heads/")
+	branch = strings.ReplaceAll(branch, "/", "-")
+	branch = strings.ReplaceAll(branch, "_", "-")
+	branch = strings.ReplaceAll(branch, " ", "-")
+	branch = strings.Trim(branch, "-")
 	return branch
 }
 
