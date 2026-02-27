@@ -63,9 +63,11 @@ func RunWorkflow(ctx context.Context) error {
 
 	sourcesOnly := len(wf.Targets) == 0
 
-	branchName := ""
+	// Honour explicit branch name (e.g. from matrix workflow prep job via INPUT_BRANCH_NAME).
+	// When set, we skip PR-based branch discovery and use the provided branch directly.
+	branchName := environment.GetBranchName()
 	var pr *github.PullRequest
-	if mode == environment.ModePR {
+	if branchName == "" && mode == environment.ModePR {
 		var err error
 		branchName, pr, err = g.FindExistingPR(environment.GetFeatureBranch(), environment.ActionRunWorkflow, sourcesOnly)
 		if err != nil {
@@ -234,6 +236,11 @@ func RunWorkflow(ctx context.Context) error {
 func shouldDeleteBranch(success bool) bool {
 	// Never delete when operating on a user-provided feature branch
 	if environment.GetFeatureBranch() != "" {
+		return false
+	}
+
+	// Never delete when branch was explicitly provided (e.g. matrix workflow)
+	if environment.GetBranchName() != "" {
 		return false
 	}
 
