@@ -347,6 +347,10 @@ func preRun(cmd *cobra.Command, flags *RunFlags) error {
 }
 
 func askForTarget(title, description, confirmation string, targets []string, allowAll bool) (string, error) {
+	if !utils.IsInteractive() || env.IsCI() {
+		return "all", nil
+	}
+
 	var targetOptions []huh.Option[string]
 
 	for _, targetName := range targets {
@@ -367,6 +371,10 @@ func askForTarget(title, description, confirmation string, targets []string, all
 }
 
 func askForSource(sources []string, allowAll bool) (string, error) {
+	if !utils.IsInteractive() || env.IsCI() {
+		return "all", nil
+	}
+
 	var sourceOptions []huh.Option[string]
 
 	for _, sourceName := range sources {
