@@ -193,73 +193,77 @@ func (g *Git) FindExistingPR(branchName string, action environment.Action, sourc
 		return "", nil, fmt.Errorf("repo not cloned")
 	}
 
-	prs, _, err := g.client.PullRequests.List(context.Background(), os.Getenv("GITHUB_REPOSITORY_OWNER"), GetRepo(), nil)
+	owner := os.Getenv("GITHUB_REPOSITORY_OWNER")
+	repo := GetRepo()
+
+	// Determine the expected stable branch prefix for this action/context.
+	branchPrefix := expectedBranchPrefix(action, sourceGeneration)
+
+	prs, _, err := g.client.PullRequests.List(context.Background(), owner, repo, nil)
 	if err != nil {
 		return "", nil, fmt.Errorf("error getting pull requests: %w", err)
 	}
 
-	// Get source branch for context-aware PR matching
 	sourceBranch := environment.GetSourceBranch()
 	isMainBranch := environment.IsMainBranch(sourceBranch)
 
-	var prTitle string
-	switch action { //nolint:exhaustive
-	case environment.ActionRunWorkflow, environment.ActionFinalize:
-		// Use the search prefix (without target name) so matrix jobs with different
-		// INPUT_TARGET values can find the same shared PR.
-		prTitle = getGenPRTitleSearchPrefix()
-		if sourceGeneration {
-			prTitle = getGenSourcesTitlePrefix()
-		}
-	case environment.ActionFinalizeSuggestion:
-		prTitle = getSuggestPRTitlePrefix()
-	}
-
-	if environment.IsDocsGeneration() {
-		prTitle = getDocsPRTitlePrefix()
-	}
-
-	if environment.GetFeatureBranch() != "" {
-		prTitle = prTitle + " [" + environment.GetFeatureBranch() + "]"
-	} else if !isMainBranch {
-		sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-		prTitle = prTitle + " [" + sanitizedSourceBranch + "]"
-	}
-
-	// Also check for legacy PR titles (without the bee emoji)
-	legacyPrTitle := strings.ReplaceAll(prTitle, "🐝 ", "")
-
 	for _, p := range prs {
-		if strings.HasPrefix(p.GetTitle(), prTitle) || strings.HasPrefix(p.GetTitle(), legacyPrTitle) {
-			logging.Info("Found existing PR %s", *p.Title)
+		headRef := p.GetHead().GetRef()
 
-			if branchName != "" && p.GetHead().GetRef() != branchName {
-				return "", nil, fmt.Errorf("existing PR has different branch name: %s than expected: %s", p.GetHead().GetRef(), branchName)
-			}
-
-			// For non-main targeting branches, also verify the PR targets the correct base branch
-			if !isMainBranch {
-				expectedBaseBranch := environment.GetTargetBaseBranch()
-				actualBaseBranch := p.GetBase().GetRef()
-
-				// Handle the case where GetTargetBaseBranch returns a full ref
-				if strings.HasPrefix(expectedBaseBranch, "refs/") {
-					expectedBaseBranch = strings.TrimPrefix(expectedBaseBranch, "refs/heads/")
-				}
-
-				if actualBaseBranch != expectedBaseBranch {
-					logging.Info("Found PR with matching title but wrong base branch: expected %s, got %s", expectedBaseBranch, actualBaseBranch)
-					continue
-				}
-			}
-
-			return p.GetHead().GetRef(), p, nil
+		// Match by head branch: either exact match or prefix match for legacy timestamped branches.
+		if headRef != branchPrefix && !strings.HasPrefix(headRef, branchPrefix+"-") {
+			continue
 		}
+
+		// If a specific branch was requested, verify it matches
+		if branchName != "" && headRef != branchName {
+			continue
+		}
+
+		// For non-main targeting branches, verify the PR targets the correct base branch
+		if !isMainBranch {
+			expectedBaseBranch := environment.GetTargetBaseBranch()
+			if strings.HasPrefix(expectedBaseBranch, "refs/") {
+				expectedBaseBranch = strings.TrimPrefix(expectedBaseBranch, "refs/heads/")
+			}
+			if p.GetBase().GetRef() != expectedBaseBranch {
+				logging.Info("Found PR on branch %s but wrong base: expected %s, got %s", headRef, expectedBaseBranch, p.GetBase().GetRef())
+				continue
+			}
+		}
+
+		logging.Info("Found existing PR #%d on branch %s", p.GetNumber(), headRef)
+		return headRef, p, nil
 	}
 
 	logging.Info("Existing PR not found")
 
 	return branchName, nil, nil
+}
+
+// expectedBranchPrefix returns the stable branch name prefix for the given action.
+func expectedBranchPrefix(action environment.Action, sourceGeneration bool) string {
+	sourceBranch := environment.GetSourceBranch()
+	isMainBranch := environment.IsMainBranch(sourceBranch)
+	sanitized := environment.SanitizeBranchName(sourceBranch)
+
+	switch {
+	case environment.IsDocsGeneration():
+		if isMainBranch {
+			return "speakeasy-sdk-docs-regen"
+		}
+		return "speakeasy-sdk-docs-regen-" + sanitized
+	case action == environment.ActionFinalizeSuggestion || action == environment.ActionSuggest:
+		if isMainBranch {
+			return "speakeasy-openapi-suggestion"
+		}
+		return "speakeasy-openapi-suggestion-" + sanitized
+	default:
+		if isMainBranch {
+			return "speakeasy-sdk-regen"
+		}
+		return "speakeasy-sdk-regen-" + sanitized
+	}
 }
 
 func (g *Git) FindAndCheckoutBranch(branchName string) (string, error) {
@@ -407,34 +411,33 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 		return branchName, nil
 	}
 
-	// Get source branch for context-aware branch naming
+	// Get source branch for context-aware branch naming.
+	// Branch names are stable (no timestamp) so that subsequent runs reuse the
+	// same branch and PR instead of creating new ones each time.
 	sourceBranch := environment.GetSourceBranch()
 	isMainBranch := environment.IsMainBranch(sourceBranch)
-	timestamp := time.Now().Unix()
 
 	switch {
 	case action == environment.ActionRunWorkflow:
 		if isMainBranch {
-			// Maintain backward compatibility for main/master branches
-			branchName = fmt.Sprintf("speakeasy-sdk-regen-%d", timestamp)
+			branchName = "speakeasy-sdk-regen"
 		} else {
-			// Include source branch context for feature branches
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-sdk-regen-%s-%d", sanitizedSourceBranch, timestamp)
+			branchName = fmt.Sprintf("speakeasy-sdk-regen-%s", sanitizedSourceBranch)
 		}
 	case action == environment.ActionSuggest:
 		if isMainBranch {
-			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%d", timestamp)
+			branchName = "speakeasy-openapi-suggestion"
 		} else {
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%s-%d", sanitizedSourceBranch, timestamp)
+			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%s", sanitizedSourceBranch)
 		}
 	case environment.IsDocsGeneration():
 		if isMainBranch {
-			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%d", timestamp)
+			branchName = "speakeasy-sdk-docs-regen"
 		} else {
 			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%s-%d", sanitizedSourceBranch, timestamp)
+			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%s", sanitizedSourceBranch)
 		}
 	}
 
