@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -17,22 +18,37 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// GeneratePRFromReports reads an accumulated reports JSON file, merges all
-// per-target version reports, and generates a PR title and body.
-// This is the pure logic with no side effects.
-func GeneratePRFromReports(inputFile string) (*prdescription.Output, *versioning.MergedVersionReport, error) {
-	data, err := os.ReadFile(inputFile)
+// GeneratePRFromReports reads a directory of per-target JSON report files,
+// merges all version reports, and generates a PR title and body.
+// Each file in the directory should be a TargetGenerationReport JSON.
+func GeneratePRFromReports(inputDir string) (*prdescription.Output, *versioning.MergedVersionReport, error) {
+	entries, err := os.ReadDir(inputDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read accumulated reports: %w", err)
+		return nil, nil, fmt.Errorf("failed to read reports directory: %w", err)
 	}
 
-	var accumulated map[string]TargetGenerationReport
-	if err := json.Unmarshal(data, &accumulated); err != nil {
-		return nil, nil, fmt.Errorf("failed to parse accumulated reports: %w", err)
+	accumulated := make(map[string]TargetGenerationReport)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(inputDir, entry.Name()))
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to read report %s: %w", entry.Name(), err)
+		}
+		var report TargetGenerationReport
+		if err := json.Unmarshal(data, &report); err != nil {
+			logging.Debug("skipping %s: %v", entry.Name(), err)
+			continue
+		}
+		if report.Target == "" {
+			report.Target = strings.TrimSuffix(entry.Name(), ".json")
+		}
+		accumulated[report.Target] = report
 	}
 
 	if len(accumulated) == 0 {
-		return nil, nil, fmt.Errorf("no reports in accumulated file")
+		return nil, nil, fmt.Errorf("no reports found in %s", inputDir)
 	}
 
 	// Sort target names alphabetically for stable ordering
@@ -87,10 +103,10 @@ func GeneratePRFromReports(inputFile string) (*prdescription.Output, *versioning
 	return output, mergedReport, nil
 }
 
-// CreateOrUpdatePR reads an accumulated reports JSON file, builds a merged PR
-// description, and creates or updates a GitHub PR on the given branch.
-func CreateOrUpdatePR(ctx context.Context, inputFile, branchName string, dryRun bool) error {
-	output, mergedReport, err := GeneratePRFromReports(inputFile)
+// CreateOrUpdatePR reads a directory of per-target report files, builds a merged
+// PR description, and creates or updates a GitHub PR on the given branch.
+func CreateOrUpdatePR(ctx context.Context, inputDir, branchName string, dryRun bool) error {
+	output, mergedReport, err := GeneratePRFromReports(inputDir)
 	if err != nil {
 		return err
 	}

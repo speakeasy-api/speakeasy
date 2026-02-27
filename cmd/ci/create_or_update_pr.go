@@ -17,13 +17,13 @@ type CreateOrUpdatePRFlags struct {
 var createOrUpdatePRCmd = &model.ExecutableCommand[CreateOrUpdatePRFlags]{
 	Usage: "create-or-update-pr",
 	Short: "Create or update a PR from accumulated generation reports",
-	Long: `Create or update a GitHub PR from accumulated per-target generation reports.
+	Long: `Create or update a GitHub PR from per-target generation reports.
 
-Reads an accumulated reports JSON file (keyed by target name), merges all
-version reports, generates a PR title and body, and creates or updates the PR.
+Reads a directory of per-target report JSON files, merges all version reports,
+generates a PR title and body, and creates or updates the PR.
 
-The input file format is a JSON object where keys are target names and values
-are per-target generation report objects containing version_report, URLs, etc.
+Each file in the directory should be a JSON object with target, version_report,
+speakeasy_version, etc. Files are keyed by filename (target name + .json).
 
 Use --dry-run to print the generated title and body without creating a PR.
 
@@ -37,7 +37,7 @@ Environment variables:
 		flag.StringFlag{
 			Name:        "input",
 			Shorthand:   "i",
-			Description: "Path to accumulated reports JSON file",
+			Description: "Path to directory containing per-target report JSON files",
 			Required:    true,
 		},
 		flag.StringFlag{

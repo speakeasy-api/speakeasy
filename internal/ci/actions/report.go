@@ -14,13 +14,13 @@ import (
 // TargetGenerationReport captures all CI-agnostic data from a single target's
 // generation run that is needed to build a PR description later.
 type TargetGenerationReport struct {
-	Target               string                         `json:"target"`
+	Target               string                          `json:"target"`
 	VersionReport        *versioning.MergedVersionReport `json:"version_report,omitempty"`
-	LintingReportURL     string                         `json:"linting_report_url,omitempty"`
-	ChangesReportURL     string                         `json:"changes_report_url,omitempty"`
-	OpenAPIChangeSummary string                         `json:"openapi_change_summary,omitempty"`
-	SpeakeasyVersion     string                         `json:"speakeasy_version,omitempty"`
-	ManualBump           bool                           `json:"manual_bump,omitempty"`
+	LintingReportURL     string                          `json:"linting_report_url,omitempty"`
+	ChangesReportURL     string                          `json:"changes_report_url,omitempty"`
+	OpenAPIChangeSummary string                          `json:"openapi_change_summary,omitempty"`
+	SpeakeasyVersion     string                          `json:"speakeasy_version,omitempty"`
+	ManualBump           bool                            `json:"manual_bump,omitempty"`
 }
 
 const reportsDir = ".speakeasy/reports"
