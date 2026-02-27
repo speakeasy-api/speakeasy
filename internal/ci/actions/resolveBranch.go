@@ -22,10 +22,15 @@ func ResolveBranch() error {
 		return err
 	}
 
-	// If no existing PR was found, create a new branch
+	// If no existing PR was found, create a new branch and push it to origin
+	// so that parallel matrix jobs can find it.
 	if branchName == "" {
 		branchName, err = g.FindOrCreateBranch("", environment.ActionRunWorkflow)
 		if err != nil {
+			return err
+		}
+		logging.Info("Pushing new branch %s to origin", branchName)
+		if err := g.PushCurrentBranch(); err != nil {
 			return err
 		}
 	} else {
