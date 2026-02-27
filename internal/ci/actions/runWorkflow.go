@@ -362,9 +362,23 @@ func finalize(ctx context.Context, inputs finalizeInputs) error {
 			}
 		}
 
-		commitHash, err := inputs.Git.MergeBranch(branchName)
-		if err != nil {
-			return err
+		// In matrix mode (INPUT_BRANCH_NAME set), commits are already on the
+		// regen branch. Skip merging back to the source branch — the separate
+		// finalize job handles PR creation from the regen branch.
+		var commitHash string
+		if environment.GetBranchName() != "" {
+			logging.Info("Matrix mode: skipping merge back to source branch")
+			headRef, err := inputs.Git.GetHeadHash()
+			if err != nil {
+				return err
+			}
+			commitHash = headRef
+		} else {
+			var err error
+			commitHash, err = inputs.Git.MergeBranch(branchName)
+			if err != nil {
+				return err
+			}
 		}
 
 		// Skip releasing and tagging when configured to do so or when triggered by PR events
