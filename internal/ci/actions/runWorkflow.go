@@ -197,6 +197,21 @@ func RunWorkflow(ctx context.Context) error {
 		}
 	}
 
+	// Write per-target generation report for matrix mode accumulation.
+	// This file is CI-agnostic and will be uploaded as an artifact by the workflow.
+	if reportPath, err := writeGenerationReport(TargetGenerationReport{
+		VersionReport:        runRes.VersioningInfo.VersionReport,
+		LintingReportURL:     runRes.LintingReportURL,
+		ChangesReportURL:     runRes.ChangesReportURL,
+		OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
+		SpeakeasyVersion:     resolvedVersion,
+		ManualBump:           runRes.VersioningInfo.ManualBump,
+	}); err != nil {
+		logging.Debug("failed to write generation report: %v", err)
+	} else if reportPath != "" {
+		outputs["generation_report_file"] = reportPath
+	}
+
 	// If test mode is successful to this point, exit here
 	if environment.IsTestMode() {
 		success = true
