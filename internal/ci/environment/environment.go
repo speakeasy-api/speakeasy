@@ -224,7 +224,6 @@ func GetOpenAPIDocAuthToken() string {
 	return os.Getenv("INPUT_OPENAPI_DOC_AUTH_TOKEN")
 }
 
-
 func GetSDKChangelog() string {
 	return os.Getenv("INPUT_ENABLE_SDK_CHANGELOG")
 }
