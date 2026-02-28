@@ -83,7 +83,7 @@ func FanoutFinalize(ctx context.Context, inputs FanoutFinalizeInputs) error {
 			return fmt.Errorf("failed to resolve worker branch %s head: %w", workerBranch, err)
 		}
 
-		if _, err := runGit(repoDir, "cherry-pick", workerCommit); err != nil {
+		if _, err := runGit(repoDir, "cherry-pick", "-X", "ours", workerCommit); err != nil {
 			return fmt.Errorf("failed to cherry-pick worker commit %s from %s: %w", workerCommit, workerBranch, err)
 		}
 	}
