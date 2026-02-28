@@ -120,15 +120,16 @@ jobs:
     name: Build PR Artifacts
     if: ${{ github.event.pull_request.draft == false }}
     permissions:
-      contents: read
+      contents: write
     runs-on:
       group: ubuntu-latest-large
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set short SHA
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
       - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version-file: "go.mod"
@@ -140,10 +141,12 @@ jobs:
         with:
           version: '~> v2'
           args: release --snapshot --clean --config .goreleaser.pr.yaml
-      - uses: actions/upload-artifact@ea165f8d65b6db9a2b7fea927e32b8583aea15ce # v4.6.2
-        with:
-          name: speakeasy-${{ env.SHORT_SHA }}
-          path: |
-            dist/*.zip
-            dist/checksums.txt
-          retention-days: 14
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v0.0.0-${SHORT_SHA}" \
+            --title "PR Build (${SHORT_SHA})" \
+            --notes "Built from commit ${{ github.event.pull_request.head.sha }} on PR #${{ github.event.pull_request.number }}" \
+            --prerelease \
+            dist/*.zip dist/checksums.txt
