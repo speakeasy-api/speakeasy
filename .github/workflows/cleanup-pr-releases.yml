@@ -1,0 +1,26 @@
+name: Cleanup PR Build Releases
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # Daily at 3 AM UTC
+
+jobs:
+  cleanup:
+    name: Delete old PR build releases
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete PR build releases older than 14 days
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cutoff=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          gh release list --repo speakeasy-api/speakeasy --limit 100 --json tagName,createdAt \
+            | jq -r --arg cutoff "$cutoff" \
+              '.[] | select(.tagName | startswith("v0.0.0-")) | select(.createdAt < $cutoff) | .tagName' \
+            | while read -r tag; do
+                echo "Deleting release ${tag}"
+                gh release delete "${tag}" --repo speakeasy-api/speakeasy --yes --cleanup-tag
+              done
