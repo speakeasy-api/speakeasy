@@ -29,6 +29,10 @@ const reportsDir = ".speakeasy/reports"
 // .speakeasy/reports/<target>.json and returns the file path.
 // Only writes when a specific target is set (matrix mode).
 func writeGenerationReport(report TargetGenerationReport) (string, error) {
+	if environment.GetMode() != environment.ModeMatrix {
+		return "", nil
+	}
+
 	target := environment.SpecifiedTarget()
 	if target == "" {
 		return "", nil

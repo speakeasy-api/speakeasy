@@ -19,6 +19,7 @@ var CICmd = &model.CommandGroup{
 		finalizeCmd,
 		prDescriptionCmd,
 		createOrUpdatePRCmd,
+		fanoutFinalizeCmd,
 		publishEventCmd,
 
 		tagCmd,

@@ -111,6 +111,10 @@ func CreateOrUpdatePR(ctx context.Context, inputDir, branchName string, dryRun b
 		return err
 	}
 
+	return createOrUpdatePRFromGenerated(ctx, branchName, output, mergedReport, dryRun)
+}
+
+func createOrUpdatePRFromGenerated(ctx context.Context, branchName string, output *prdescription.Output, mergedReport *versioning.MergedVersionReport, dryRun bool) error {
 	title := output.Title
 	body := output.Body
 
