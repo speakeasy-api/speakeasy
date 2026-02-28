@@ -238,70 +238,16 @@ do_install_binary() {
   echo "Installed speakeasy to $INSTALL_DIR"
 }
 
-do_install_from_artifact() {
-  _artifact_short_sha="$1"
-  _artifact_name="speakeasy-${_artifact_short_sha}"
-  _artifact_platform="${os}_${machine}"
-
-  if [ -z "$GITHUB_TOKEN" ]; then
-    fmt_error "GITHUB_TOKEN is required to download PR build artifacts"
-    exit 1
-  fi
-
-  echo "Looking up artifact ${_artifact_name}..."
-
-  _artifacts_json="$tmp_dir/artifacts.json"
-  if ! github_api_curl "$_artifacts_json" --silent "https://api.github.com/repos/${REPO_NAME}/actions/artifacts?name=${_artifact_name}"; then
-    fmt_error "Failed to list artifacts from GitHub API"
-    exit 1
-  fi
-
-  # Extract the download URL of the first (most recent) matching artifact
-  _artifact_download_url=$(grep '"archive_download_url":' "$_artifacts_json" | head -1 | sed -E 's/.*"(https:[^"]+)".*/\1/')
-
-  if [ -z "$_artifact_download_url" ]; then
-    fmt_error "No artifact found named ${_artifact_name}. Has the PR CI run completed?"
-    exit 1
-  fi
-
-  echo "Downloading artifact from ${_artifact_download_url}"
-
-  _artifact_zip="$tmp_dir/artifact.zip"
-  if ! github_api_curl "$_artifact_zip" -fL "$_artifact_download_url"; then
-    fmt_error "Failed to download artifact"
-    exit 1
-  fi
-
-  # GitHub wraps all artifact files in an outer zip
-  _artifact_extract_dir="$tmp_dir/artifact"
-  mkdir -p "$_artifact_extract_dir"
-  (cd "$_artifact_extract_dir" && unzip -q "$_artifact_zip")
-
-  # Find the platform-specific zip inside the extracted artifact
-  _platform_zip=$(find "$_artifact_extract_dir" -name "speakeasy_${_artifact_platform}.zip" | head -1)
-
-  if [ -z "$_platform_zip" ]; then
-    fmt_error "No binary found for platform ${_artifact_platform} in artifact"
-    echo "Available files:"
-    ls "$_artifact_extract_dir"
-    exit 1
-  fi
-
-  # Extract the binary
-  (cd "$tmp_dir" && unzip -q "$_platform_zip")
-
-  # Install binary
-  sudo_cmd='mv '"$tmp_dir/$BINARY_NAME"' '"$INSTALL_DIR"' && chmod a+x '"$INSTALL_DIR/$BINARY_NAME"
-  sudo -p "sudo password required for installing to $INSTALL_DIR: " -- sh -c "$sudo_cmd"
-  echo "Installed speakeasy (commit ${_artifact_short_sha}) to $INSTALL_DIR"
-}
-
 main() {
   setup_color
   check_dependencies
 
   tmp_dir="$(mktemp -d)"
   trap 'rm -rf "$tmp_dir"' EXIT
+
+  latest_tag=$(get_latest_release "$REPO_NAME")
+  latest_version=$(echo "$latest_tag" | sed 's/v//')
+  version=${VERSION:-$latest_version}
 
   os=$(get_os)
   if test -z "$os"; then
@@ -316,23 +262,7 @@ main() {
     echo "Please create an issue so we can add support. $ISSUE_URL"
     exit 1
   fi
-
-  _raw_version=${VERSION:-""}
-
-  # VERSION=sha:<commit> installs from PR build artifacts
-  case "$_raw_version" in
-    sha:*)
-      _commit_sha="${_raw_version#sha:}"
-      _short_sha="$(echo "$_commit_sha" | cut -c1-7)"
-      do_install_from_artifact "$_short_sha"
-      ;;
-    *)
-      latest_tag=$(get_latest_release "$REPO_NAME")
-      latest_version=$(echo "$latest_tag" | sed 's/v//')
-      version=${_raw_version:-$latest_version}
-      do_install_binary
-      ;;
-  esac
+  do_install_binary
 
   printf "%s" "${YELLOW}"
   cat <<'EOF'
