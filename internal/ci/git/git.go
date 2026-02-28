@@ -33,6 +33,24 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	BranchPrefixSDKRegen      = "speakeasy-sdk-regen"
+	BranchPrefixDocsRegen     = "speakeasy-sdk-docs-regen"
+	BranchPrefixSuggestion    = "speakeasy-openapi-suggestion"
+	BranchPrefixFanout        = "speakeasy-fanout"
+)
+
+// IsGeneratedBranch returns true if the branch name is one of our standard generated branches.
+func IsGeneratedBranch(branch string) bool {
+	return strings.HasPrefix(branch, BranchPrefixSDKRegen+"-") ||
+		strings.HasPrefix(branch, BranchPrefixDocsRegen+"-") ||
+		strings.HasPrefix(branch, BranchPrefixSuggestion+"-") ||
+		strings.HasPrefix(branch, BranchPrefixFanout+"-") ||
+		branch == BranchPrefixSDKRegen ||
+		branch == BranchPrefixDocsRegen ||
+		branch == BranchPrefixSuggestion
+}
+
 type Git struct {
 	accessToken string
 	repoRoot    string
@@ -255,23 +273,20 @@ func expectedBranchPrefix(action environment.Action) string {
 	isMainBranch := environment.IsMainBranch(sourceBranch)
 	sanitized := environment.SanitizeBranchName(sourceBranch)
 
+	var prefix string
 	switch {
 	case environment.IsDocsGeneration():
-		if isMainBranch {
-			return "speakeasy-sdk-docs-regen"
-		}
-		return "speakeasy-sdk-docs-regen-" + sanitized
+		prefix = BranchPrefixDocsRegen
 	case action == environment.ActionFinalizeSuggestion || action == environment.ActionSuggest:
-		if isMainBranch {
-			return "speakeasy-openapi-suggestion"
-		}
-		return "speakeasy-openapi-suggestion-" + sanitized
+		prefix = BranchPrefixSuggestion
 	default:
-		if isMainBranch {
-			return "speakeasy-sdk-regen"
-		}
-		return "speakeasy-sdk-regen-" + sanitized
+		prefix = BranchPrefixSDKRegen
 	}
+
+	if isMainBranch {
+		return prefix
+	}
+	return prefix + "-" + sanitized
 }
 
 func (g *Git) FindAndCheckoutBranch(branchName string) (string, error) {
@@ -424,30 +439,21 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 	isMainBranch := environment.IsMainBranch(sourceBranch)
 	timestamp := time.Now().Unix()
 
+	var prefix string
 	switch {
 	case action == environment.ActionRunWorkflow:
-		if isMainBranch {
-			// Maintain backward compatibility for main/master branches
-			branchName = fmt.Sprintf("speakeasy-sdk-regen-%d", timestamp)
-		} else {
-			// Include source branch context for feature branches
-			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-sdk-regen-%s-%d", sanitizedSourceBranch, timestamp)
-		}
+		prefix = BranchPrefixSDKRegen
 	case action == environment.ActionSuggest:
-		if isMainBranch {
-			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%d", timestamp)
-		} else {
-			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-openapi-suggestion-%s-%d", sanitizedSourceBranch, timestamp)
-		}
+		prefix = BranchPrefixSuggestion
 	case environment.IsDocsGeneration():
-		if isMainBranch {
-			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%d", timestamp)
-		} else {
-			sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
-			branchName = fmt.Sprintf("speakeasy-sdk-docs-regen-%s-%d", sanitizedSourceBranch, timestamp)
-		}
+		prefix = BranchPrefixDocsRegen
+	}
+
+	if isMainBranch {
+		branchName = fmt.Sprintf("%s-%d", prefix, timestamp)
+	} else {
+		sanitizedSourceBranch := environment.SanitizeBranchName(sourceBranch)
+		branchName = fmt.Sprintf("%s-%s-%d", prefix, sanitizedSourceBranch, timestamp)
 	}
 
 	logging.Info("Creating branch %s", branchName)
