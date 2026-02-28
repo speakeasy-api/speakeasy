@@ -8,6 +8,8 @@ import (
 )
 
 func TestIsStableRelease(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		release    *github.RepositoryRelease
@@ -80,6 +82,8 @@ func TestIsStableRelease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := isStableRelease(tt.release)
 			assert.Equal(t, tt.wantStable, got)
 		})
