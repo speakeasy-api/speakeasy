@@ -18,6 +18,7 @@ type fanoutFinalizeFlags struct {
 	CleanupPaths       string `json:"cleanup-paths"`
 	PostGenerateScript string `json:"post-generate-script"`
 	CommitMessage      string `json:"commit-message"`
+	CleanupWorkers     bool   `json:"cleanup-workers"`
 }
 
 var fanoutFinalizeCmd = &model.ExecutableCommand[fanoutFinalizeFlags]{
@@ -69,6 +70,11 @@ force-pushes the PR branch, and creates or updates the PR.`,
 			Description:  "Squashed commit message override",
 			DefaultValue: os.Getenv("INPUT_COMMIT_MESSAGE"),
 		},
+		flag.BooleanFlag{
+			Name:         "cleanup-workers",
+			Description:  "Delete worker branches after successful finalization",
+			DefaultValue: os.Getenv("INPUT_CLEANUP_WORKERS") != "false",
+		},
 	},
 }
 
@@ -81,6 +87,7 @@ func runFanoutFinalize(ctx context.Context, flags fanoutFinalizeFlags) error {
 	setEnvIfNotEmpty("INPUT_CLEANUP_PATHS", flags.CleanupPaths)
 	setEnvIfNotEmpty("INPUT_POST_GENERATE_SCRIPT", flags.PostGenerateScript)
 	setEnvIfNotEmpty("INPUT_COMMIT_MESSAGE", flags.CommitMessage)
+	setEnvBool("INPUT_CLEANUP_WORKERS", flags.CleanupWorkers)
 
 	return actions.FanoutFinalize(ctx, actions.FanoutFinalizeInputs{
 		BaseBranch:         flags.BaseBranch,
@@ -90,5 +97,6 @@ func runFanoutFinalize(ctx context.Context, flags fanoutFinalizeFlags) error {
 		CleanupPaths:       flags.CleanupPaths,
 		PostGenerateScript: flags.PostGenerateScript,
 		CommitMessage:      flags.CommitMessage,
+		CleanupWorkers:     flags.CleanupWorkers,
 	})
 }

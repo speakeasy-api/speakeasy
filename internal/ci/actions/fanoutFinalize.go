@@ -11,6 +11,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy/internal/ci/environment"
 	cigit "github.com/speakeasy-api/speakeasy/internal/ci/git"
+	"github.com/speakeasy-api/speakeasy/internal/ci/logging"
 	sharedgit "github.com/speakeasy-api/speakeasy/internal/git"
 )
 
@@ -22,6 +23,7 @@ type FanoutFinalizeInputs struct {
 	CleanupPaths       string
 	PostGenerateScript string
 	CommitMessage      string
+	CleanupWorkers     bool
 }
 
 func FanoutFinalize(ctx context.Context, inputs FanoutFinalizeInputs) error {
@@ -158,7 +160,22 @@ func FanoutFinalize(ctx context.Context, inputs FanoutFinalizeInputs) error {
 		return fmt.Errorf("failed to force push %s: %w", targetBranch, err)
 	}
 
-	return createOrUpdatePRFromGenerated(ctx, targetBranch, output, mergedReport, false)
+	if err := createOrUpdatePRFromGenerated(ctx, targetBranch, output, mergedReport, false); err != nil {
+		return err
+	}
+
+	if inputs.CleanupWorkers {
+		for _, workerBranch := range workerBranches {
+			if workerBranch == "" || workerBranch == targetBranch || workerBranch == baseBranch {
+				continue
+			}
+			if err := g.DeleteBranch(workerBranch); err != nil {
+				logging.Info("failed to delete worker branch %s: %v", workerBranch, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func resolveTargetBranchName(g *cigit.Git, baseBranch string) (string, error) {
