@@ -723,24 +723,7 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 }
 
 // rebaseAndPush fetches the latest remote branch, rebases the local commit(s) on top,
-// and pushes. This is used in matrix mode (INPUT_BRANCH_NAME set) where multiple parallel
-// jobs push to the same branch. Each job targets a different output directory so rebases
-// succeed without conflicts. Retries up to 3 times on non-fast-forward errors.
-// PushCurrentBranch pushes the current branch to origin, creating it on the remote if needed.
-func (g *Git) PushCurrentBranch() error {
-	dir := filepath.Join(g.repoRoot, environment.GetWorkingDirectory())
-	branch, err := g.GetCurrentBranch()
-	if err != nil {
-		return fmt.Errorf("error getting current branch: %w", err)
-	}
-
-	if _, err := sharedgit.RunGitCommand(dir, "push", "-u", "origin", branch); err != nil {
-		return fmt.Errorf("error pushing branch %s: %w", branch, err)
-	}
-
-	return nil
-}
-
+// and pushes. Retries up to 3 times on non-fast-forward errors.
 func (g *Git) rebaseAndPush() error {
 	dir := filepath.Join(g.repoRoot, environment.GetWorkingDirectory())
 	branch, err := g.GetCurrentBranch()

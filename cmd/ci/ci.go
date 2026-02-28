@@ -19,11 +19,11 @@ var CICmd = &model.CommandGroup{
 		finalizeCmd,
 		prDescriptionCmd,
 		createOrUpdatePRCmd,
+		fanoutFinalizeCmd,
 		publishEventCmd,
 
 		tagCmd,
 		ciTestCmd,
 		logResultCmd,
-		resolveBranchCmd,
 	},
 }

@@ -129,6 +129,20 @@ func RunWorkflow(ctx context.Context) error {
 
 	anythingRegenerated := false
 
+	// Write per-target generation report early so it is included in worker commits.
+	if reportPath, err := writeGenerationReport(TargetGenerationReport{
+		VersionReport:        runRes.VersioningInfo.VersionReport,
+		LintingReportURL:     runRes.LintingReportURL,
+		ChangesReportURL:     runRes.ChangesReportURL,
+		OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
+		SpeakeasyVersion:     resolvedVersion,
+		ManualBump:           runRes.VersioningInfo.ManualBump,
+	}); err != nil {
+		logging.Debug("failed to write generation report: %v", err)
+	} else if reportPath != "" {
+		outputs["generation_report_file"] = reportPath
+	}
+
 	var releaseInfo releases.ReleasesInfo
 	runResultInfo, err := json.MarshalIndent(runRes, "", "  ") //nolint:musttag // debug logging only, json tags not required
 	if err != nil {
@@ -194,6 +208,15 @@ func RunWorkflow(ctx context.Context) error {
 	}
 
 	outputs["resolved_speakeasy_version"] = resolvedVersion
+
+	// In matrix mode we still need to commit/push when no SDK files changed so
+	// the worker branch carries its generation report for finalization.
+	if mode == environment.ModeMatrix && runRes.GenInfo == nil && outputs["generation_report_file"] != "" {
+		if _, err := g.CommitAndPush("", resolvedVersion, "", environment.ActionRunWorkflow, false, runRes.VersioningInfo.VersionReport); err != nil {
+			return err
+		}
+	}
+
 	if sourcesOnly {
 		if _, err := g.CommitAndPush("", resolvedVersion, "", environment.ActionRunWorkflow, sourcesOnly, nil); err != nil {
 			return err
@@ -221,21 +244,6 @@ func RunWorkflow(ctx context.Context) error {
 		releaseNotes:         runRes.ReleaseNotes,
 	}); err != nil {
 		return err
-	}
-
-	// Write per-target generation report after finalize so the file survives
-	// any git operations (rebase, checkout) that happen during commit and push.
-	if reportPath, err := writeGenerationReport(TargetGenerationReport{
-		VersionReport:        runRes.VersioningInfo.VersionReport,
-		LintingReportURL:     runRes.LintingReportURL,
-		ChangesReportURL:     runRes.ChangesReportURL,
-		OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
-		SpeakeasyVersion:     resolvedVersion,
-		ManualBump:           runRes.VersioningInfo.ManualBump,
-	}); err != nil {
-		logging.Debug("failed to write generation report: %v", err)
-	} else if reportPath != "" {
-		outputs["generation_report_file"] = reportPath
 	}
 
 	success = true
