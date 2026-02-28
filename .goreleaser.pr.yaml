@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# Stripped-down GoReleaser config for PR snapshot builds.
+# Produces cross-compiled archives named like releases but versioned with the commit SHA.
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+    - go run scripts/completions.go
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    ldflags:
+      - "-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X main.artifactArch={{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    formats: [zip]
+    files:
+      - completions/*
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  version_template: "0.0.0-{{ .ShortCommit }}"

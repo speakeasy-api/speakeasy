@@ -116,3 +116,34 @@ jobs:
       - run: go test -json -v -timeout=20m ./... | gotestfmt
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
+  build-artifacts:
+    name: Build PR Artifacts
+    if: ${{ github.event.pull_request.draft == false }}
+    permissions:
+      contents: read
+    runs-on:
+      group: ubuntu-latest-large
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: "go.mod"
+      - name: Configure git for private modules
+        env:
+          GIT_AUTH_TOKEN: ${{ secrets.BOT_REPO_TOKEN }}
+        run: git config --global url."https://speakeasybot:${GIT_AUTH_TOKEN}@github.com".insteadOf "https://github.com"
+      - uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf # v6.1.0
+        with:
+          version: '~> v2'
+          args: release --snapshot --clean --config .goreleaser.pr.yaml
+      - uses: actions/upload-artifact@ea165f8d65b6db9a2b7fea927e32b8583aea15ce # v4.6.2
+        with:
+          name: speakeasy-${{ env.SHORT_SHA }}
+          path: |
+            dist/*.zip
+            dist/checksums.txt
+          retention-days: 14
