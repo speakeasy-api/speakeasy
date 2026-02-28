@@ -367,10 +367,17 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 
 		existingBranch, err := g.FindAndCheckoutBranch(branchName)
 		if err == nil {
-			// When INPUT_BRANCH_NAME is set, the branch is CI-owned and shared
-			// across parallel jobs. Don't reset to main — preserve existing commits.
+			// In matrix mode the branch is CI-owned and shared across parallel
+			// jobs. We still reset to the default branch so each job starts
+			// from a clean baseline — the lockfile will reflect the pre-generation
+			// state, which lets computeChanges correctly diff old vs new specs
+			// for the changelog. Each job's rebaseAndPush merges the results.
 			if environment.GetBranchName() != "" {
-				logging.Info("Using explicit branch %s (matrix mode), preserving existing commits", branchName)
+				logging.Info("Using explicit branch %s (matrix mode), resetting to %s", branchName, defaultBranch)
+				origin := fmt.Sprintf("origin/%s", defaultBranch)
+				if err = g.Reset("--hard", origin); err != nil {
+					logging.Info("failed to reset branch: %s", err.Error())
+				}
 				return existingBranch, nil
 			}
 
