@@ -69,7 +69,7 @@ jobs:
 
           Install with:
           \`\`\`sh
-          VERSION=0.0.0-${SHORT_SHA} curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
+          curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | VERSION=0.0.0-${SHORT_SHA} sh
           \`\`\`
 
           Built from commit \`${{ github.event.pull_request.head.sha }}\`"
