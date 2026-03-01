@@ -108,7 +108,7 @@ func Migrate(ctx context.Context, directory string) error {
 		return err
 	}
 
-	if err := workspace.EnsureDir(directory); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(directory); err != nil {
 		return err
 	}
 

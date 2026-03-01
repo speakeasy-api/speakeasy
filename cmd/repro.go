@@ -315,7 +315,7 @@ func setupDirectoryStructure(outputDir string, events []shared.CliEvent, logger 
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	if err := workspace.EnsureDir(outputDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(outputDir); err != nil {
 		return err
 	}
 	speakeasyDir := filepath.Join(outputDir, ".speakeasy")

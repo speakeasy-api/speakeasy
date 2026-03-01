@@ -361,7 +361,7 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	if err := workspace.EnsureDir(workingDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
 		return err
 	}
 
@@ -433,7 +433,7 @@ func configureSourcesNonInteractive(ctx context.Context, workingDir string, work
 	}
 
 	// Ensure .speakeasy directory exists
-	if err := workspace.EnsureDir(workingDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
 		return err
 	}
 
@@ -610,7 +610,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		outDir = *target.Output
 	}
 
-	if err := workspace.EnsureDir(outDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(outDir); err != nil {
 		return err
 	}
 
@@ -632,7 +632,7 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	if err := workspace.EnsureDir(workingDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
 		return err
 	}
 
@@ -757,7 +757,7 @@ func configureTargetNonInteractive(ctx context.Context, workingDir string, workf
 	}
 
 	// Ensure .speakeasy directory exists in output dir
-	if err := workspace.EnsureDir(outDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(outDir); err != nil {
 		return err
 	}
 
@@ -780,7 +780,7 @@ func configureTargetNonInteractive(ctx context.Context, workingDir string, workf
 	}
 
 	// Ensure .speakeasy directory exists in working dir
-	if err := workspace.EnsureDir(workingDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
 		return err
 	}
 

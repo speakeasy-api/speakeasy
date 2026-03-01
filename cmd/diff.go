@@ -103,7 +103,7 @@ func computeAndOutputDiff(ctx context.Context, params DiffComputeParams) (*DiffC
 	// Write generate config files if provided (used by the changes library)
 	speakeasyDir := filepath.Join(params.OutputDir, ".speakeasy")
 	if params.GenerateConfigOldRaw != nil || params.GenerateConfigNewRaw != nil {
-		if err := workspace.EnsureDir(params.OutputDir); err != nil {
+		if err := workspace.EnsureSpeakeasyDir(params.OutputDir); err != nil {
 			return nil, err
 		}
 	}

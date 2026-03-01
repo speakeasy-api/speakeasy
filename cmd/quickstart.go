@@ -292,7 +292,7 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		return err
 	}
 
-	if err := workspace.EnsureDir(outDir); err != nil {
+	if err := workspace.EnsureSpeakeasyDir(outDir); err != nil {
 		return err
 	}
 

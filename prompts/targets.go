@@ -313,7 +313,7 @@ func moveOutDir(outDir string, previousDir string) error {
 	newSpeakeasyFolderPath := filepath.Join(newDirPath, ".speakeasy")
 	existingSpeakeasyFolderPath := filepath.Join(previousDirPath, ".speakeasy")
 	if newSpeakeasyFolderPath != existingSpeakeasyFolderPath {
-		if err := workspace.EnsureDir(newDirPath); err != nil {
+		if err := workspace.EnsureSpeakeasyDir(newDirPath); err != nil {
 			return err
 		}
 
