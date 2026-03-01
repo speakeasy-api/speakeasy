@@ -113,6 +113,15 @@ func buildBody(input Input) string {
 				versionMsg += fmt.Sprintf("\n\nThis PR will stay on the current version until the %s label is removed and/or modified.", bumpType)
 			} else {
 				versionMsg += "\U0001F916 (automated)" // 🤖
+				versionMsg += "\n\n> [!TIP]"
+				switch *labelBumpType {
+				case versioning.BumpPrerelease:
+					versionMsg += "\n> To exit [pre-release versioning](https://www.speakeasy.com/docs/sdks/manage/versioning#pre-release-version-bumps), set a new version or run `speakeasy bump graduate`."
+				case versioning.BumpPatch, versioning.BumpMinor:
+					versionMsg += "\n> If updates to your OpenAPI document introduce breaking changes, be sure to update the `info.version` field to [trigger the correct version bump](https://www.speakeasy.com/docs/sdks/manage/versioning#openapi-document-changes)."
+				}
+
+				versionMsg += "\n> Speakeasy supports manual control of SDK versioning through [multiple methods](https://www.speakeasy.com/docs/sdks/manage/versioning#manual-version-bumps)."
 			}
 			body.WriteString(versionMsg + "\n")
 		}
