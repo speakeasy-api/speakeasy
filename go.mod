@@ -12,7 +12,7 @@ replace github.com/dop251/goja => github.com/speakeasy-api/goja v0.0.0-202602230
 
 replace github.com/dop251/goja/debugger => github.com/speakeasy-api/goja/debugger v0.0.0-20260223084236-ed0328a0a462
 
-replace github.com/speakeasy-api/sdk-gen-config => github.com/speakeasy-api/sdk-gen-config v0.0.0-20260301204603-99c6d0599dab
+replace github.com/speakeasy-api/sdk-gen-config => github.com/speakeasy-api/sdk-gen-config v0.0.0-20260301210536-b1f81dfae284
 
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5

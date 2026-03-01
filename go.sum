@@ -550,8 +550,8 @@ github.com/speakeasy-api/openapi-generation/v2 v2.845.15 h1:39hONT3QD2sVeCCPU1vt
 github.com/speakeasy-api/openapi-generation/v2 v2.845.15/go.mod h1:rYsSY/8w5hRmrgcorC289TyvMXvr3R/stYlaPjWbRS4=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 h1:gV+lYeVNNJG9X3Sl9Su3cRh1iF/oNqzvb5Ijq2QR8jY=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4/go.mod h1:1zQpVio7X6QJDtyNdUguCgZ+IC7CzKhhjvNgJdvGVF0=
-github.com/speakeasy-api/sdk-gen-config v0.0.0-20260301204603-99c6d0599dab h1:30HtlL6+GBHC+yHMvemVCxyfdO3vD6dn4GJSkA5LoJY=
-github.com/speakeasy-api/sdk-gen-config v0.0.0-20260301204603-99c6d0599dab/go.mod h1:kD0NPNX5yaG4j+dcCpLL0hHKQbFk6X93obp+v1XlK5E=
+github.com/speakeasy-api/sdk-gen-config v0.0.0-20260301210536-b1f81dfae284 h1:dCCOgKb8IuuLLzMqqS43vF7pJ1ZniaisArfPWdPmrwU=
+github.com/speakeasy-api/sdk-gen-config v0.0.0-20260301210536-b1f81dfae284/go.mod h1:kD0NPNX5yaG4j+dcCpLL0hHKQbFk6X93obp+v1XlK5E=
 github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.0 h1:xqEoL+MY3gqJkDMjBqP++fieYilgI1pOeYycHfG3EUE=
 github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.0/go.mod h1:AiZRZLL+sv9uwtTHIECc1dcTgfJrXrEB5QxcAGifMkI=
 github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7 h1:SoWZkRlpFlv8qibCfXWrBZay1JeLS9uqJ+1cu+DFgXo=
