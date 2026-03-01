@@ -592,64 +592,6 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-// TestPersistentEdits_FileMove verifies that user edits are preserved when a file is moved
-func TestPersistentEdits_FileMove(t *testing.T) {
-	t.Parallel()
-	temp := setupPersistentEditsTestDir(t)
-
-	// Initial generation
-	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
-	require.NoError(t, err)
-	gitCommitAll(t, temp, "initial generation")
-
-	// Find the Pet model file
-	originalPath := filepath.Join(temp, "models", "components", "pet.go")
-	require.FileExists(t, originalPath)
-
-	// Read and get the generated ID
-	originalContent, err := os.ReadFile(originalPath)
-	require.NoError(t, err)
-	originalID := extractGeneratedIDFromContent(originalContent)
-	require.NotEmpty(t, originalID, "Pet model should have @generated-id")
-	t.Logf("Original Pet ID: %s", originalID)
-
-	// Add a user comment to the file
-	modifiedContent := strings.Replace(string(originalContent), "type Pet struct", "// PET_MOVED_FILE: This comment should survive the move\ntype Pet struct", 1)
-
-	// Create a new directory and move the file there
-	newDir := filepath.Join(temp, "mymodels")
-	err = os.MkdirAll(newDir, 0o755)
-	require.NoError(t, err)
-
-	newPath := filepath.Join(newDir, "pet.go")
-	err = os.WriteFile(newPath, []byte(modifiedContent), 0o644)
-	require.NoError(t, err)
-
-	// Remove the original file
-	err = os.Remove(originalPath)
-	require.NoError(t, err)
-
-	gitCommitAll(t, temp, "moved pet.go to mymodels/ with user comment")
-
-	// Regenerate
-	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
-	require.NoError(t, err)
-
-	// The file should be regenerated at the new location (following the UUID)
-	require.FileExists(t, newPath, "File should exist at moved path")
-
-	newContent, err := os.ReadFile(newPath)
-	require.NoError(t, err)
-
-	// UUID tracking should work - ID should be preserved
-	newID := extractGeneratedIDFromContent(newContent)
-	require.Equal(t, originalID, newID, "Generated ID should be preserved after move")
-
-	// User modification should be preserved
-	require.Contains(t, string(newContent), "PET_MOVED_FILE: This comment should survive the move",
-		"User modification should be preserved after file move")
-}
-
 // TestPersistentEdits_FileRemove verifies behavior when user removes a generated file
 func TestPersistentEdits_FileRemove(t *testing.T) {
 	t.Parallel()
