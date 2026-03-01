@@ -34,10 +34,10 @@ import (
 )
 
 const (
-	BranchPrefixSDKRegen      = "speakeasy-sdk-regen"
-	BranchPrefixDocsRegen     = "speakeasy-sdk-docs-regen"
-	BranchPrefixSuggestion    = "speakeasy-openapi-suggestion"
-	BranchPrefixFanout        = "speakeasy-fanout"
+	BranchPrefixSDKRegen   = "speakeasy-sdk-regen"
+	BranchPrefixDocsRegen  = "speakeasy-sdk-docs-regen"
+	BranchPrefixSuggestion = "speakeasy-openapi-suggestion"
+	BranchPrefixFanout     = "speakeasy-fanout"
 )
 
 // IsGeneratedBranch returns true if the branch name is one of our standard generated branches.
