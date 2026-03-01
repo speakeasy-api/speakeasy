@@ -20,6 +20,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-core/ocicommon"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/changes"
+	cigit "github.com/speakeasy-api/speakeasy/internal/ci/git"
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/github"
@@ -424,11 +425,11 @@ func (w *Workflow) getRegistryTags(_ context.Context, sourceID string, lintingEr
 		default:
 			branch = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/heads/")
 		}
-
 		// trim to fit docker tag format
 		branch = strings.TrimSpace(branch)
 		branch = strings.ReplaceAll(branch, "/", "-")
-		if branch != "" {
+		// if branch is one of our standard generated branches, don't add it as a tag
+		if branch != "" && !cigit.IsGeneratedBranch(branch) {
 			tags = append(tags, branch)
 		}
 	}

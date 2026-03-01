@@ -194,10 +194,10 @@ func resolveTargetBranchName(g *cigit.Git, baseBranch string) (string, error) {
 
 	timestamp := time.Now().Unix()
 	if environment.IsMainBranch(sourceBranch) {
-		return fmt.Sprintf("speakeasy-sdk-regen-%d", timestamp), nil
+		return fmt.Sprintf("%s-%d", cigit.BranchPrefixSDKRegen, timestamp), nil
 	}
 
-	return fmt.Sprintf("speakeasy-sdk-regen-%s-%d", environment.SanitizeBranchName(sourceBranch), timestamp), nil
+	return fmt.Sprintf("%s-%s-%d", cigit.BranchPrefixSDKRegen, environment.SanitizeBranchName(sourceBranch), timestamp), nil
 }
 
 func runPostGenerateScript(repoRoot, scriptPath string) error {
