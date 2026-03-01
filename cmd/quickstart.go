@@ -31,6 +31,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	speakeasyErrors "github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/run"
@@ -291,12 +292,8 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 		return err
 	}
 
-	speakeasyFolderPath := filepath.Join(outDir, ".speakeasy")
-	if _, err := os.Stat(speakeasyFolderPath); os.IsNotExist(err) {
-		err = os.MkdirAll(speakeasyFolderPath, 0o755)
-		if err != nil {
-			return err
-		}
+	if err := workspace.EnsureDir(outDir); err != nil {
+		return err
 	}
 
 	initialiseRepo := false

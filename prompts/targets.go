@@ -11,6 +11,7 @@ import (
 	"github.com/speakeasy-api/huh"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -312,11 +313,8 @@ func moveOutDir(outDir string, previousDir string) error {
 	newSpeakeasyFolderPath := filepath.Join(newDirPath, ".speakeasy")
 	existingSpeakeasyFolderPath := filepath.Join(previousDirPath, ".speakeasy")
 	if newSpeakeasyFolderPath != existingSpeakeasyFolderPath {
-		if _, err := os.Stat(newSpeakeasyFolderPath); os.IsNotExist(err) {
-			err = os.MkdirAll(newSpeakeasyFolderPath, 0o755)
-			if err != nil {
-				return err
-			}
+		if err := workspace.EnsureDir(newDirPath); err != nil {
+			return err
 		}
 
 		if _, err := os.Stat(existingSpeakeasyFolderPath + "/" + "gen.yaml"); err == nil {

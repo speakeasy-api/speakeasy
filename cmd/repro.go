@@ -16,6 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
@@ -314,10 +315,10 @@ func setupDirectoryStructure(outputDir string, events []shared.CliEvent, logger 
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	speakeasyDir := filepath.Join(outputDir, ".speakeasy")
-	if err := os.MkdirAll(speakeasyDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create .speakeasy directory: %w", err)
+	if err := workspace.EnsureDir(outputDir); err != nil {
+		return err
 	}
+	speakeasyDir := filepath.Join(outputDir, ".speakeasy")
 
 	logsDir := filepath.Join(speakeasyDir, "logs")
 	if err := os.MkdirAll(logsDir, 0o755); err != nil {

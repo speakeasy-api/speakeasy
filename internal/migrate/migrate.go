@@ -11,6 +11,7 @@ import (
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -107,7 +108,7 @@ func Migrate(ctx context.Context, directory string) error {
 		return err
 	}
 
-	if err := os.Mkdir(fmt.Sprintf("%s/.speakeasy", directory), 0o755); err != nil && !os.IsExist(err) {
+	if err := workspace.EnsureDir(directory); err != nil {
 		return err
 	}
 
