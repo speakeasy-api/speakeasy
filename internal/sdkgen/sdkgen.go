@@ -76,8 +76,9 @@ type GenerateOptions struct {
 	Verbose         bool
 	Compile         bool
 	TargetName      string
-	SkipVersioning  bool
-	AllowPrompts    bool
+	SkipVersioning       bool
+	AllowPrompts         bool
+	OutputMergeConflicts bool
 
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
@@ -258,6 +259,8 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}, err
 	}
 
+	hasConflictWarning := false
+
 	err = events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &opts.TargetName
 
@@ -275,22 +278,44 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}
 
 		if len(errs) > 0 {
+			var conflictErr *merge.ConflictsError
+			var hasOtherErrors bool
+
 			for _, err := range errs {
-				// Check if it's a ConflictsError - render pretty conflict message
-				var conflictErr *merge.ConflictsError
 				if stderrors.As(err, &conflictErr) {
-					renderConflictsError(logger, conflictErr)
-					// Don't log the generic error for conflicts - we rendered a nice message
 					continue
 				}
 				logger.Error("", zap.Error(err))
+				hasOtherErrors = true
 			}
 
-			if failedStepMessage != "" {
-				return fmt.Errorf("generation failed for %q during step %q", opts.Language, failedStepMessage)
+			if conflictErr != nil {
+				if opts.OutputMergeConflicts && !hasOtherErrors {
+					// Resolve git conflict state so files can be committed
+					renderConflictsWarning(logger, conflictErr)
+					if repoErr == nil && !repo.IsNil() {
+						for _, file := range conflictErr.Files {
+							gitPath := filepath.Join(opts.OutDir, file)
+							if err := repo.ResolveConflictState(gitPath); err != nil {
+								logger.Warnf("Failed to resolve conflict state for %s: %v", file, err)
+							}
+						}
+					}
+					hasConflictWarning = true
+					// Fall through — don't return error
+				} else {
+					// Default: keep existing behavior
+					renderConflictsError(logger, conflictErr)
+					hasOtherErrors = true
+				}
 			}
 
-			return fmt.Errorf("failed to generate %q", opts.Language)
+			if hasOtherErrors {
+				if failedStepMessage != "" {
+					return fmt.Errorf("generation failed for %q during step %q", opts.Language, failedStepMessage)
+				}
+				return fmt.Errorf("failed to generate %q", opts.Language)
+			}
 		}
 
 		return nil
@@ -316,7 +341,11 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}
 	}
 
-	logger.Successf("\nSDK for %s generated successfully ✓", opts.Language)
+	if hasConflictWarning {
+		logger.Warnf("\nSDK for %s generated with merge conflicts ⚠", opts.Language)
+	} else {
+		logger.Successf("\nSDK for %s generated successfully ✓", opts.Language)
+	}
 	logger.WithStyle(styles.HeavilyEmphasized).Printf("For docs on customising the SDK check out: %s", sdkDocsLink)
 
 	if !generationAccess {
@@ -370,6 +399,26 @@ func GetGenLockID(outDir string) *string {
 	}
 
 	return nil
+}
+
+// renderConflictsWarning renders a warning message for merge conflicts when --output-merge-conflicts is used.
+func renderConflictsWarning(logger log.Logger, conflictErr *merge.ConflictsError) {
+	var fileLines strings.Builder
+	for _, file := range conflictErr.Files {
+		fileLines.WriteString(fmt.Sprintf("    both modified:   %s\n", file))
+	}
+
+	msg := styles.RenderWarningMessage(
+		"Merge Conflicts Detected",
+		fmt.Sprintf("%d file(s) have conflicts:\n%s", len(conflictErr.Files), fileLines.String()),
+		"Conflict markers have been written to these files. Please resolve them in your PR.",
+	)
+	logger.Println("\n" + msg)
+
+	// Emit GitHub Actions warning annotations for each conflicting file
+	for _, file := range conflictErr.Files {
+		logger.Printf("::warning file=%s::Merge conflict detected - resolve conflict markers in PR", file)
+	}
 }
 
 // renderConflictsError renders a git-status style error message for merge conflicts.
