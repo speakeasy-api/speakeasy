@@ -455,8 +455,10 @@ func addDirectModeBranchTagging(ctx context.Context) error {
 			}
 		}
 	}
-	if (len(sources) > 0 || len(targets) > 0) && branch != "" {
-		tags := []string{environment.SanitizeBranchName(branch)}
+	sanitizedBranch := environment.SanitizeBranchName(branch)
+	// if branch is one of our standard generated branches, don't add it as a tag
+	if (len(sources) > 0 || len(targets) > 0) && sanitizedBranch != "" && !git.IsGeneratedBranch(sanitizedBranch) {
+		tags := []string{sanitizedBranch}
 		if isPublished {
 			tags = append(tags, "published")
 		}
