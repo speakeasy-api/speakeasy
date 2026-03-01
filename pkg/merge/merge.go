@@ -1183,8 +1183,8 @@ func setOperationServers(doc *openapi.OpenAPI, opServers []*openapi.Server) {
 		}
 
 		for _, op := range pathItem.Object.All() {
-			if op != nil {
-				op.Servers, _ = mergeServers(op.Servers, opServers, false)
+			if op != nil && len(op.Servers) == 0 {
+				op.Servers = append([]*openapi.Server{}, opServers...)
 			}
 		}
 	}
