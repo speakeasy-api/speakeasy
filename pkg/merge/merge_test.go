@@ -380,8 +380,91 @@ paths:
     get:
       servers:
         - url: https://api2.example.com
-        - url: https://api.example.com
-          description: production api server
+      responses:
+        "200":
+          description: OK
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "four specs with different servers do not accumulate servers across operations",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+servers:
+  - url: https://api.example.com/service-a
+paths:
+  /widgets:
+    get:
+      operationId: listWidgets
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+servers:
+  - url: https://api.example.com/service-b
+paths:
+  /gadgets:
+    get:
+      operationId: listGadgets
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+servers:
+  - url: https://api.example.com/service-c
+paths:
+  /gizmos:
+    get:
+      operationId: listGizmos
+      responses:
+        200:
+          description: OK`),
+					[]byte(`openapi: 3.1
+servers:
+  - url: https://api.example.com/service-d
+paths:
+  /thingamajigs:
+    get:
+      operationId: listThingamajigs
+      responses:
+        200:
+          description: OK`),
+				},
+			},
+			want: `openapi: "3.1"
+paths:
+  /widgets:
+    get:
+      operationId: listWidgets
+      responses:
+        200:
+          description: OK
+      servers:
+        - url: https://api.example.com/service-a
+  /gadgets:
+    get:
+      operationId: listGadgets
+      servers:
+        - url: https://api.example.com/service-b
+      responses:
+        "200":
+          description: OK
+  /gizmos:
+    get:
+      operationId: listGizmos
+      servers:
+        - url: https://api.example.com/service-c
+      responses:
+        "200":
+          description: OK
+  /thingamajigs:
+    get:
+      operationId: listThingamajigs
+      servers:
+        - url: https://api.example.com/service-d
       responses:
         "200":
           description: OK
