@@ -12,8 +12,6 @@ replace github.com/dop251/goja => github.com/speakeasy-api/goja v0.0.0-202602230
 
 replace github.com/dop251/goja/debugger => github.com/speakeasy-api/goja/debugger v0.0.0-20260223084236-ed0328a0a462
 
-replace github.com/speakeasy-api/sdk-gen-config => github.com/speakeasy-api/sdk-gen-config v0.0.0-20260301232913-284f0f5ec601
-
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -48,7 +46,7 @@ require (
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.19.1
 	github.com/speakeasy-api/openapi-generation/v2 v2.845.15
-	github.com/speakeasy-api/sdk-gen-config v1.52.0
+	github.com/speakeasy-api/sdk-gen-config v1.53.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.22.1
