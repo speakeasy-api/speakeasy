@@ -55,8 +55,9 @@ type Workflow struct {
 	// workflow configuration enabling testing.
 	SkipTesting   bool
 	BoostrapTests bool
-	AutoYes       bool
-	AllowPrompts  bool
+	AutoYes              bool
+	AllowPrompts         bool
+	OutputMergeConflicts bool
 
 	// Internal
 	workflowName       string
@@ -299,6 +300,12 @@ func WithAutoYes(autoYes bool) Opt {
 func WithAllowPrompts(allowPrompts bool) Opt {
 	return func(w *Workflow) {
 		w.AllowPrompts = allowPrompts
+	}
+}
+
+func WithOutputMergeConflicts(outputMergeConflicts bool) Opt {
+	return func(w *Workflow) {
+		w.OutputMergeConflicts = outputMergeConflicts
 	}
 }
 
