@@ -220,7 +220,6 @@ func TestFormatSummary_WithDiffs(t *testing.T) {
 				DiffText: "@@ -1,3 +1,6 @@\n unchanged\n-removed\n+added1\n+added2",
 			},
 		},
-		Moved: make(map[string]string),
 	}
 
 	// Without diffs
