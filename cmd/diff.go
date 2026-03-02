@@ -10,6 +10,7 @@ import (
 
 	changes "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -102,8 +103,8 @@ func computeAndOutputDiff(ctx context.Context, params DiffComputeParams) (*DiffC
 	// Write generate config files if provided (used by the changes library)
 	speakeasyDir := filepath.Join(params.OutputDir, ".speakeasy")
 	if params.GenerateConfigOldRaw != nil || params.GenerateConfigNewRaw != nil {
-		if err := os.MkdirAll(speakeasyDir, 0o755); err != nil {
-			return nil, fmt.Errorf("failed to create .speakeasy directory: %w", err)
+		if err := workspace.EnsureSpeakeasyDir(params.OutputDir); err != nil {
+			return nil, err
 		}
 	}
 	if params.GenerateConfigOldRaw != nil {

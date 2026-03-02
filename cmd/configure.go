@@ -27,6 +27,7 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -360,11 +361,8 @@ func configureSources(ctx context.Context, flags ConfigureSourcesFlags) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
-		err = os.MkdirAll(".speakeasy", 0o755)
-		if err != nil {
-			return err
-		}
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
+		return err
 	}
 
 	if err := workflow.Save(workingDir, workflowFile); err != nil {
@@ -435,10 +433,8 @@ func configureSourcesNonInteractive(ctx context.Context, workingDir string, work
 	}
 
 	// Ensure .speakeasy directory exists
-	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
-		if err := os.MkdirAll(".speakeasy", 0o755); err != nil {
-			return err
-		}
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
+		return err
 	}
 
 	// Save the workflow
@@ -614,11 +610,8 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		outDir = *target.Output
 	}
 
-	if _, err := os.Stat(filepath.Join(outDir, ".speakeasy")); os.IsNotExist(err) {
-		err = os.MkdirAll(filepath.Join(outDir, ".speakeasy"), 0o755)
-		if err != nil {
-			return err
-		}
+	if err := workspace.EnsureSpeakeasyDir(outDir); err != nil {
+		return err
 	}
 
 	// If we are creating a new target we must make sure an empty gen.yaml file exists so SaveConfig writes in the correct place
@@ -639,11 +632,8 @@ func configureTarget(ctx context.Context, flags ConfigureTargetFlags) error {
 		return errors.Wrapf(err, "failed to validate workflow file")
 	}
 
-	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
-		err = os.MkdirAll(".speakeasy", 0o755)
-		if err != nil {
-			return err
-		}
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
+		return err
 	}
 
 	if err := workflow.Save(workingDir, workflowFile); err != nil {
@@ -767,10 +757,8 @@ func configureTargetNonInteractive(ctx context.Context, workingDir string, workf
 	}
 
 	// Ensure .speakeasy directory exists in output dir
-	if _, err := os.Stat(filepath.Join(outDir, ".speakeasy")); os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Join(outDir, ".speakeasy"), 0o755); err != nil {
-			return err
-		}
+	if err := workspace.EnsureSpeakeasyDir(outDir); err != nil {
+		return err
 	}
 
 	// Create empty gen.yaml if it doesn't exist
@@ -792,10 +780,8 @@ func configureTargetNonInteractive(ctx context.Context, workingDir string, workf
 	}
 
 	// Ensure .speakeasy directory exists in working dir
-	if _, err := os.Stat(".speakeasy"); os.IsNotExist(err) {
-		if err := os.MkdirAll(".speakeasy", 0o755); err != nil {
-			return err
-		}
+	if err := workspace.EnsureSpeakeasyDir(workingDir); err != nil {
+		return err
 	}
 
 	// Save the workflow
