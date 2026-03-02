@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -448,11 +450,60 @@ func runParallel(ctx context.Context, flags RunFlags) error {
 	logger.Infof("Running %d targets in parallel...\n", len(targets))
 
 	flagsStr := stringifyFlags(flags, []string{"target", "parallel", "output"})
-	results := run.RunTargetsParallel(ctx, targets, flagsStr)
+
+	// Track which targets are still running for the progress ticker
+	var mu sync.Mutex
+	pending := make(map[string]bool, len(targets))
+	for _, t := range targets {
+		pending[t] = true
+	}
+	startTime := time.Now()
+
+	onProgress := func(targetID string, event run.TargetEvent) {
+		mu.Lock()
+		defer mu.Unlock()
+		switch event {
+		case run.TargetStarted:
+			logger.Infof("  [%s] started", targetID)
+		case run.TargetSucceeded:
+			delete(pending, targetID)
+			logger.Infof("  [%s] completed (success)", targetID)
+		case run.TargetFailed:
+			delete(pending, targetID)
+			logger.Errorf("  [%s] completed (failed)", targetID)
+		}
+	}
+
+	// Print a periodic status line so the user knows things are still running
+	ticker := time.NewTicker(15 * time.Second)
+	done := make(chan struct{})
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				mu.Lock()
+				if len(pending) > 0 {
+					names := make([]string, 0, len(pending))
+					for name := range pending {
+						names = append(names, name)
+					}
+					slices.Sort(names)
+					logger.Infof("  ... %s elapsed, still running: %s", time.Since(startTime).Truncate(time.Second), strings.Join(names, ", "))
+				}
+				mu.Unlock()
+			}
+		}
+	}()
+
+	results := run.RunTargetsParallel(ctx, targets, flagsStr, onProgress)
+	close(done)
 
 	var errs []error
 	for _, r := range results {
-		header := fmt.Sprintf("\n=== Target: %s ===\n", r.TargetID)
+		header := fmt.Sprintf("\n=== Target: %s (%.1fs) ===\n", r.TargetID, r.Duration.Seconds())
 		logger.Println(header)
 		if r.Output != "" {
 			logger.PrintlnUnstyled(r.Output)
