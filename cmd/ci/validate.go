@@ -16,6 +16,7 @@ type validateFlags struct {
 	MaxValidationErrors   int      `json:"max-validation-errors"`
 	MaxValidationWarnings int      `json:"max-validation-warnings"`
 	Ruleset               string   `json:"ruleset"`
+	FailOnSkipped         bool     `json:"fail-on-skipped"`
 }
 
 var validateCmd = &model.ExecutableCommand[validateFlags]{
@@ -51,6 +52,11 @@ var validateCmd = &model.ExecutableCommand[validateFlags]{
 			Description:  "Validation ruleset to use",
 			DefaultValue: "speakeasy-recommended",
 		},
+		flag.BooleanFlag{
+			Name:         "fail-on-skipped",
+			Description:  "Fail if any operations would be skipped during SDK generation",
+			DefaultValue: false,
+		},
 	},
 }
 
@@ -62,5 +68,5 @@ func runValidate(ctx context.Context, flags validateFlags) error {
 		MaxWarns:  flags.MaxValidationWarnings,
 	}
 
-	return actions.ValidateSpecs(ctx, flags.Specs, limits, flags.Ruleset)
+	return actions.ValidateSpecs(ctx, flags.Specs, limits, flags.Ruleset, flags.FailOnSkipped)
 }

@@ -18,7 +18,7 @@ import (
 )
 
 // ValidateSpecs discovers specs via glob patterns, validates each, posts a PR comment, and writes a step summary.
-func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validation.OutputLimits, ruleset string) error {
+func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validation.OutputLimits, ruleset string, failOnSkipped bool) error {
 	logger := log.From(ctx)
 
 	// Expand globs
@@ -68,7 +68,7 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 			continue
 		}
 
-		res, err := validation.Validate(ctx, logger, schema, specPath, limits, isRemote, ruleset, ".", false, true, "")
+		res, err := validation.Validate(ctx, logger, schema, specPath, limits, isRemote, ruleset, ".", true, true, "")
 		if err != nil {
 			results = append(results, github.SpecValidationResult{
 				SpecPath: specPath,
@@ -79,10 +79,11 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 		}
 
 		result := github.SpecValidationResult{
-			SpecPath: specPath,
-			Errors:   res.Errors,
-			Warnings: res.Warnings,
-			Hints:    res.Infos,
+			SpecPath:          specPath,
+			Errors:            res.Errors,
+			Warnings:          res.Warnings,
+			Hints:             res.Infos,
+			InvalidOperations: res.InvalidOperations,
 		}
 		results = append(results, result)
 
@@ -111,6 +112,14 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 
 	if hasErrors {
 		return fmt.Errorf("one or more OpenAPI specs failed validation")
+	}
+
+	if failOnSkipped {
+		for _, r := range results {
+			if len(r.InvalidOperations) > 0 {
+				return fmt.Errorf("one or more OpenAPI specs have operations that would be skipped during generation")
+			}
+		}
 	}
 
 	return nil

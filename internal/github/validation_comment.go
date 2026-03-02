@@ -12,10 +12,11 @@ const ValidationCommentMarker = "<!-- speakeasy-validation-comment -->"
 
 // SpecValidationResult holds the validation results for a single OpenAPI spec.
 type SpecValidationResult struct {
-	SpecPath string
-	Errors   []error
-	Warnings []error
-	Hints    []error
+	SpecPath          string
+	Errors            []error
+	Warnings          []error
+	Hints             []error
+	InvalidOperations []string
 }
 
 // BuildValidationComment generates a consolidated markdown comment for all spec validation results.
@@ -31,64 +32,90 @@ func BuildValidationComment(results []SpecValidationResult) string {
 	}
 
 	// Summary table
-	md.WriteString("| Spec | Status | Errors | Warnings |\n")
-	md.WriteString("|------|--------|--------|----------|\n")
+	md.WriteString("| Spec | Status | Errors | Warnings | Skipped Ops |\n")
+	md.WriteString("|------|--------|--------|----------|-------------|\n")
 
 	for _, r := range results {
 		status := ":white_check_mark: Valid"
 		if len(r.Errors) > 0 {
 			status = ":x: Invalid"
 		}
-		md.WriteString(fmt.Sprintf("| %s | %s | %d | %d |\n",
-			r.SpecPath, status, len(r.Errors), len(r.Warnings)))
+		if len(r.InvalidOperations) > 0 {
+			status = ":warning: Skipped Ops"
+		}
+		md.WriteString(fmt.Sprintf("| %s | %s | %d | %d | %d |\n",
+			r.SpecPath, status, len(r.Errors), len(r.Warnings), len(r.InvalidOperations)))
 	}
 
 	md.WriteString("\n")
 
 	// Expandable details for specs with issues
 	for _, r := range results {
-		if len(r.Errors) == 0 && len(r.Warnings) == 0 {
+		if len(r.Errors) == 0 && len(r.Warnings) == 0 && len(r.InvalidOperations) == 0 {
 			continue
 		}
 
-		summary := fmt.Sprintf(":x: %s — %s, %s",
-			r.SpecPath, pluralize(len(r.Errors), "error"), pluralize(len(r.Warnings), "warning"))
-		if len(r.Errors) == 0 {
-			summary = fmt.Sprintf(":warning: %s — %s",
-				r.SpecPath, pluralize(len(r.Warnings), "warning"))
+		// Build summary line
+		var parts []string
+		if len(r.Errors) > 0 {
+			parts = append(parts, pluralize(len(r.Errors), "error"))
 		}
+		if len(r.Warnings) > 0 {
+			parts = append(parts, pluralize(len(r.Warnings), "warning"))
+		}
+		if len(r.InvalidOperations) > 0 {
+			parts = append(parts, pluralize(len(r.InvalidOperations), "skipped operation"))
+		}
+
+		icon := ":warning:"
+		if len(r.Errors) > 0 {
+			icon = ":x:"
+		}
+		summary := fmt.Sprintf("%s %s — %s", icon, r.SpecPath, strings.Join(parts, ", "))
 
 		md.WriteString("<details>\n")
 		md.WriteString(fmt.Sprintf("<summary>%s</summary>\n\n", summary))
-		md.WriteString("| Severity | Rule | Message | Line |\n")
-		md.WriteString("|----------|------|---------|------|\n")
 
-		allErrs := append(append([]error{}, r.Errors...), r.Warnings...)
-		SortErrors(allErrs)
+		if len(r.Errors) > 0 || len(r.Warnings) > 0 {
+			md.WriteString("| Severity | Rule | Message | Line |\n")
+			md.WriteString("|----------|------|---------|------|\n")
 
-		for _, err := range allErrs {
-			vErr := errors.GetValidationErr(err)
-			if vErr != nil {
-				md.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
-					strings.ToUpper(string(vErr.Severity)),
-					vErr.Rule,
-					vErr.Message,
-					strconv.Itoa(vErr.GetLineNumber())))
-				continue
+			allErrs := append(append([]error{}, r.Errors...), r.Warnings...)
+			SortErrors(allErrs)
+
+			for _, err := range allErrs {
+				vErr := errors.GetValidationErr(err)
+				if vErr != nil {
+					md.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
+						strings.ToUpper(string(vErr.Severity)),
+						vErr.Rule,
+						vErr.Message,
+						strconv.Itoa(vErr.GetLineNumber())))
+					continue
+				}
+
+				uErr := errors.GetUnsupportedErr(err)
+				if uErr != nil {
+					md.WriteString(fmt.Sprintf("| WARN | unsupported | %s | %s |\n",
+						uErr.Error(),
+						strconv.Itoa(uErr.GetLineNumber())))
+					continue
+				}
+
+				md.WriteString(fmt.Sprintf("| UNKNOWN | unknown | %s | |\n", err.Error()))
 			}
-
-			uErr := errors.GetUnsupportedErr(err)
-			if uErr != nil {
-				md.WriteString(fmt.Sprintf("| WARN | unsupported | %s | %s |\n",
-					uErr.Error(),
-					strconv.Itoa(uErr.GetLineNumber())))
-				continue
-			}
-
-			md.WriteString(fmt.Sprintf("| UNKNOWN | unknown | %s | |\n", err.Error()))
+			md.WriteString("\n")
 		}
 
-		md.WriteString("\n</details>\n\n")
+		if len(r.InvalidOperations) > 0 {
+			md.WriteString("**Skipped operations** (would be excluded from generated SDK):\n")
+			for _, op := range r.InvalidOperations {
+				md.WriteString(fmt.Sprintf("- `%s`\n", op))
+			}
+			md.WriteString("\n")
+		}
+
+		md.WriteString("</details>\n\n")
 	}
 
 	return md.String()
