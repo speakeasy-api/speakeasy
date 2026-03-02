@@ -21,6 +21,8 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
 	"github.com/speakeasy-api/speakeasy/internal/run"
+
+	stdErrors "errors"
 )
 
 type RunFlags struct {
@@ -50,6 +52,7 @@ type RunFlags struct {
 	Dependent          string            `json:"dependent"`
 	SourceLocation     string            `json:"source-location"`
 	AutoYes            bool              `json:"auto-yes"`
+	Parallel           bool              `json:"parallel"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -199,6 +202,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Name:        "auto-yes",
 			Shorthand:   "y",
 			Description: "auto confirm all prompts",
+		},
+		flag.BooleanFlag{
+			Name:        "parallel",
+			Description: "run targets in parallel as separate subprocesses",
 		},
 	},
 }
@@ -425,12 +432,63 @@ var minimalOpts = []run.Opt{
 	run.WithSkipGenerateLintReport(),
 }
 
+func runParallel(ctx context.Context, flags RunFlags) error {
+	logger := log.From(ctx)
+
+	_, targets, err := run.ParseSourcesAndTargets()
+	if err != nil {
+		return err
+	}
+
+	if len(targets) <= 1 {
+		logger.Infof("Only one target found, falling back to serial execution")
+		return nil // caller will continue with normal serial path
+	}
+
+	logger.Infof("Running %d targets in parallel...\n", len(targets))
+
+	flagsStr := stringifyFlags(flags, []string{"target", "parallel", "output"})
+	results := run.RunTargetsParallel(ctx, targets, flagsStr)
+
+	var errs []error
+	for _, r := range results {
+		header := fmt.Sprintf("\n=== Target: %s ===\n", r.TargetID)
+		logger.Println(header)
+		if r.Output != "" {
+			logger.PrintlnUnstyled(r.Output)
+		}
+		if r.Err != nil {
+			logger.Errorf("Target %s failed: %s", r.TargetID, r.Err)
+			errs = append(errs, fmt.Errorf("target %s: %w", r.TargetID, r.Err))
+		} else {
+			logger.Infof("Target %s succeeded", r.TargetID)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("%d of %d targets failed: %w", len(errs), len(results), stdErrors.Join(errs...))
+	}
+
+	return nil
+}
+
 func runNonInteractive(ctx context.Context, flags RunFlags) error {
 	if flags.GitHub {
 		if flags.GitHubRepos != "" {
 			return run.RunGitHubRepos(ctx, flags.Target, flags.SetVersion, flags.Force, flags.GitHubRepos)
 		}
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
+	}
+
+	if flags.Parallel && (flags.Target == "all" || flags.Target == "") {
+		if err := runParallel(ctx, flags); err != nil {
+			return err
+		}
+		// runParallel returns nil without error when there's only 1 target (fallback to serial)
+		// but if it ran successfully with multiple targets, we're done
+		if _, targets, _ := run.ParseSourcesAndTargets(); len(targets) > 1 {
+			return nil
+		}
 	}
 
 	opts := []run.Opt{
@@ -497,6 +555,15 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 
 	if flags.Dependent != "" {
 		return run.RunDependent(ctx, flags.Source, flags.Dependent, stringifyFlags(flags, []string{"dependent", "source"}))
+	}
+
+	if flags.Parallel && (flags.Target == "all" || flags.Target == "") {
+		if err := runParallel(ctx, flags); err != nil {
+			return err
+		}
+		if _, targets, _ := run.ParseSourcesAndTargets(); len(targets) > 1 {
+			return nil
+		}
 	}
 
 	opts := []run.Opt{
