@@ -1075,14 +1075,20 @@ func mergeOAuth2Scopes(winner *openapi.SecurityScheme, entries []schemeEntry) {
 // mergeable into a single entry. For oauth2 schemes this includes unioning
 // scopes; for all types descriptions are appended. Updates security
 // requirements throughout the document to reference the collapsed name.
+//
+// Groups are formed using case-insensitive matching on the original name
+// (x-speakeasy-name-override), so "BearerAuth" and "bearerAuth" are treated
+// as the same group. Within a group, schemes are partitioned into subgroups
+// of mutually-mergeable entries (by type-aware checks), so a mixed group
+// containing both http and oauth2 schemes will merge each type independently
+// rather than blocking all deduplication.
 func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
 	if doc.Components == nil || doc.Components.SecuritySchemes == nil {
 		return
 	}
 
-	// Group namespaced schemes by their original name (x-speakeasy-name-override)
-	groups := make(map[string][]schemeEntry)
-	var groupOrder []string
+	// Group namespaced schemes by their case-insensitive original name
+	groups := sequencedmap.New[string, []schemeEntry]()
 
 	for name, scheme := range doc.Components.SecuritySchemes.All() {
 		if scheme == nil || scheme.IsReference() || scheme.Object == nil {
@@ -1092,22 +1098,21 @@ func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
 		if override == "" {
 			continue // not a namespaced component
 		}
-		if _, seen := groups[override]; !seen {
-			groupOrder = append(groupOrder, override)
-		}
-		groups[override] = append(groups[override], schemeEntry{namespacedName: name, scheme: scheme})
+		key := strings.ToLower(override)
+		existing, _ := groups.Get(key)
+		groups.Set(key, append(existing, schemeEntry{namespacedName: name, scheme: scheme}))
 	}
 
-	// For each group, check if all entries are equivalent
-	renameMappings := make(map[string]string) // namespacedName -> originalName
+	// For each group, partition into mergeable subgroups and process
+	renameMappings := make(map[string]string) // namespacedName -> canonicalName
 	removals := make(map[string]bool)
 
-	for _, originalName := range groupOrder {
-		entries := groups[originalName]
+	for _, entries := range groups.All() {
 
 		if len(entries) == 1 {
 			// Unique scheme (only in one document): strip namespace, rename back to original
 			entry := entries[0]
+			originalName := getNameOverride(entry.scheme.Object.Extensions)
 			renameMappings[entry.namespacedName] = originalName
 			if entry.scheme.Object.Extensions != nil {
 				entry.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
@@ -1116,38 +1121,12 @@ func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
 			continue
 		}
 
-		// Check if all entries are mergeable (type-aware check)
-		allMergeable := true
-		for i := 1; i < len(entries); i++ {
-			if !areMergeableSecuritySchemes(entries[0].scheme.Object, entries[i].scheme.Object) {
-				allMergeable = false
-				break
-			}
-		}
+		// Partition into subgroups of mutually-mergeable schemes
+		subgroups := partitionMergeableSchemes(entries)
 
-		if !allMergeable {
-			continue
-		}
-
-		// All mergeable: keep the last entry, merge content, remove others
-		winner := entries[len(entries)-1]
-
-		// Merge descriptions (append across all entries) and scopes (union for oauth2)
-		mergeSecuritySchemeDescriptions(winner.scheme.Object, entries)
-		mergeOAuth2Scopes(winner.scheme.Object, entries)
-
-		for _, entry := range entries {
-			renameMappings[entry.namespacedName] = originalName
-			if entry.namespacedName != winner.namespacedName {
-				removals[entry.namespacedName] = true
-			}
-		}
-
-		// Clean up the x-speakeasy-* extensions from the winner since it's no longer namespaced
-		if winner.scheme.Object.Extensions != nil {
-			winner.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
-			winner.scheme.Object.Extensions.Delete("x-speakeasy-model-namespace")
-		}
+		// Determine canonical names for each subgroup and resolve conflicts,
+		// then merge each subgroup that claims a name.
+		processSchemeSubgroups(subgroups, renameMappings, removals)
 	}
 
 	if len(renameMappings) == 0 {
@@ -1170,6 +1149,140 @@ func deduplicateSecuritySchemes(doc *openapi.OpenAPI) {
 
 	// Update security requirements throughout the document
 	updateSecurityRequirements(doc, renameMappings)
+}
+
+// partitionMergeableSchemes groups entries into subgroups where all members
+// within a subgroup are mutually mergeable. Uses greedy placement: each entry
+// is added to the first compatible subgroup.
+func partitionMergeableSchemes(entries []schemeEntry) [][]schemeEntry {
+	var subgroups [][]schemeEntry
+	for _, entry := range entries {
+		placed := false
+		for i, sg := range subgroups {
+			if areMergeableSecuritySchemes(sg[0].scheme.Object, entry.scheme.Object) {
+				subgroups[i] = append(subgroups[i], entry)
+				placed = true
+				break
+			}
+		}
+		if !placed {
+			subgroups = append(subgroups, []schemeEntry{entry})
+		}
+	}
+	return subgroups
+}
+
+// preferredOverrideName returns the most common x-speakeasy-name-override value
+// among the entries. Ties are broken by first occurrence (document order).
+func preferredOverrideName(entries []schemeEntry) string {
+	counts := sequencedmap.New[string, int]()
+	for _, entry := range entries {
+		name := getNameOverride(entry.scheme.Object.Extensions)
+		counts.Set(name, counts.GetOrZero(name)+1)
+	}
+	best := ""
+	bestCount := 0
+	for name, count := range counts.All() {
+		if best == "" || count > bestCount {
+			best = name
+			bestCount = count
+		}
+	}
+	return best
+}
+
+// processSchemeSubgroups handles naming and merging for partitioned subgroups.
+// Each subgroup picks a canonical name (most common original override name).
+// If multiple subgroups want the same case-sensitive name, the largest wins;
+// if tied, all stay namespaced (conservative). Subgroups that claim a name are
+// merged (descriptions appended, oauth2 scopes unioned).
+func processSchemeSubgroups(subgroups [][]schemeEntry, renameMappings map[string]string, removals map[string]bool) {
+	type subgroupInfo struct {
+		entries []schemeEntry
+		name    string // canonical name, or "" if staying namespaced
+	}
+
+	infos := make([]subgroupInfo, len(subgroups))
+	for i, sg := range subgroups {
+		infos[i] = subgroupInfo{entries: sg, name: preferredOverrideName(sg)}
+	}
+
+	// Resolve name conflicts: group subgroups by desired canonical name
+	nameClaims := sequencedmap.New[string, []int]() // canonical name -> indices into infos
+	for i, info := range infos {
+		existing, _ := nameClaims.Get(info.name)
+		nameClaims.Set(info.name, append(existing, i))
+	}
+	for _, indices := range nameClaims.All() {
+		if len(indices) <= 1 {
+			continue
+		}
+		// Multiple subgroups want the same name: largest wins, ties all stay namespaced
+		maxSize := 0
+		for _, idx := range indices {
+			if len(infos[idx].entries) > maxSize {
+				maxSize = len(infos[idx].entries)
+			}
+		}
+		winnerCount := 0
+		winnerIdx := -1
+		for _, idx := range indices {
+			if len(infos[idx].entries) == maxSize {
+				winnerCount++
+				winnerIdx = idx
+			}
+		}
+		if winnerCount == 1 {
+			// Clear winner: all others lose their name
+			for _, idx := range indices {
+				if idx != winnerIdx {
+					infos[idx].name = ""
+				}
+			}
+		} else {
+			// Tie: all stay namespaced
+			for _, idx := range indices {
+				infos[idx].name = ""
+			}
+		}
+	}
+
+	// Process each subgroup
+	for _, info := range infos {
+		if info.name == "" {
+			continue // stays namespaced, no action
+		}
+
+		if len(info.entries) == 1 {
+			// Single entry: strip namespace, rename to canonical name
+			entry := info.entries[0]
+			renameMappings[entry.namespacedName] = info.name
+			if entry.scheme.Object.Extensions != nil {
+				entry.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
+				entry.scheme.Object.Extensions.Delete("x-speakeasy-model-namespace")
+			}
+			continue
+		}
+
+		// Multiple entries: merge into last entry (winner)
+		winner := info.entries[len(info.entries)-1]
+
+		mergeSecuritySchemeDescriptions(winner.scheme.Object, info.entries)
+		mergeOAuth2Scopes(winner.scheme.Object, info.entries)
+
+		for _, entry := range info.entries {
+			renameMappings[entry.namespacedName] = info.name
+			if entry.namespacedName != winner.namespacedName {
+				removals[entry.namespacedName] = true
+			}
+		}
+
+		// Clean up extensions from the winner
+		if winner.scheme.Object.Extensions != nil {
+			winner.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
+			winner.scheme.Object.Extensions.Delete("x-speakeasy-model-namespace")
+		}
+	}
 }
 
 func setOperationServers(doc *openapi.OpenAPI, opServers []*openapi.Server) {
