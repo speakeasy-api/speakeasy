@@ -17,13 +17,28 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
+// ValidateSpecsInputs holds the inputs for ValidateSpecs.
+type ValidateSpecsInputs struct {
+	GithubAccessToken     string
+	Specs                 []string
+	MaxValidationErrors   int
+	MaxValidationWarnings int
+	Ruleset               string
+	FailOnSkipped         bool
+}
+
 // ValidateSpecs discovers specs via glob patterns, validates each, posts a PR comment, and writes a step summary.
-func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validation.OutputLimits, ruleset string, failOnSkipped bool) error {
+func ValidateSpecs(ctx context.Context, inputs ValidateSpecsInputs) error {
 	logger := log.From(ctx)
+
+	limits := &validation.OutputLimits{
+		MaxErrors: inputs.MaxValidationErrors,
+		MaxWarns:  inputs.MaxValidationWarnings,
+	}
 
 	// Expand globs
 	var specPaths []string
-	for _, pattern := range specPatterns {
+	for _, pattern := range inputs.Specs {
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
 			return fmt.Errorf("invalid glob pattern %q: %w", pattern, err)
@@ -32,7 +47,8 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 	}
 
 	if len(specPaths) == 0 {
-		return fmt.Errorf("no spec files found matching patterns: %s", strings.Join(specPatterns, ", "))
+		logger.Warnf("No spec files found matching patterns: %s\n", strings.Join(inputs.Specs, ", "))
+		return nil
 	}
 
 	// Deduplicate
@@ -51,7 +67,7 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 
 	// Validate each spec
 	var results []github.SpecValidationResult
-	hasErrors := false
+	totalErrors := 0
 
 	for _, specPath := range uniquePaths {
 		logger.Infof("Validating %s...\n", specPath)
@@ -64,45 +80,39 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 				SpecPath: specPath,
 				Errors:   []error{fmt.Errorf("failed to read spec: %w", err)},
 			})
-			hasErrors = true
+			totalErrors++
 			continue
 		}
 
-		res, err := validation.Validate(ctx, logger, schema, specPath, limits, isRemote, ruleset, ".", true, true, "")
+		res, err := validation.Validate(ctx, logger, schema, specPath, limits, isRemote, inputs.Ruleset, ".", true, true, "")
 		if err != nil {
 			results = append(results, github.SpecValidationResult{
 				SpecPath: specPath,
 				Errors:   []error{err},
 			})
-			hasErrors = true
+			totalErrors++
 			continue
 		}
 
-		result := github.SpecValidationResult{
+		results = append(results, github.SpecValidationResult{
 			SpecPath:          specPath,
 			Errors:            res.Errors,
 			Warnings:          res.Warnings,
 			Hints:             res.Infos,
 			InvalidOperations: res.InvalidOperations,
-		}
-		results = append(results, result)
+		})
 
-		if len(res.Errors) > 0 {
-			hasErrors = true
-		}
+		totalErrors += len(res.Errors)
 	}
 
 	// Build markdown
 	commentBody := github.BuildValidationComment(results)
 
-	// Write step summary
+	// Write step summary and post/update PR comment
 	if env.IsGithubAction() {
 		githubactions.AddStepSummary(commentBody)
-	}
 
-	// Post/update PR comment
-	if env.IsGithubAction() {
-		if err := postOrUpdateValidationComment(commentBody); err != nil {
+		if err := postOrUpdateValidationComment(inputs.GithubAccessToken, commentBody); err != nil {
 			logger.Warnf("Failed to post PR comment: %s\n", err.Error())
 		}
 	}
@@ -110,11 +120,13 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 	// Print to stdout for local usage
 	fmt.Println(commentBody)
 
-	if hasErrors {
-		return fmt.Errorf("one or more OpenAPI specs failed validation")
+	if totalErrors > 0 {
+		return fmt.Errorf("validation failed with %d %s across %d %s",
+			totalErrors, pluralWord(totalErrors, "error"),
+			len(results), pluralWord(len(results), "spec"))
 	}
 
-	if failOnSkipped {
+	if inputs.FailOnSkipped {
 		for _, r := range results {
 			if len(r.InvalidOperations) > 0 {
 				return fmt.Errorf("one or more OpenAPI specs have operations that would be skipped during generation")
@@ -125,8 +137,14 @@ func ValidateSpecs(ctx context.Context, specPatterns []string, limits *validatio
 	return nil
 }
 
-func postOrUpdateValidationComment(body string) error {
-	accessToken := os.Getenv("INPUT_GITHUB_ACCESS_TOKEN")
+func pluralWord(n int, word string) string {
+	if n == 1 {
+		return word
+	}
+	return word + "s"
+}
+
+func postOrUpdateValidationComment(accessToken, body string) error {
 	if accessToken == "" {
 		return fmt.Errorf("no github access token available, skipping PR comment")
 	}

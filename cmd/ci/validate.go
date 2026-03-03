@@ -7,7 +7,6 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/ci/actions"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
-	"github.com/speakeasy-api/speakeasy/internal/validation"
 )
 
 type validateFlags struct {
@@ -31,10 +30,10 @@ var validateCmd = &model.ExecutableCommand[validateFlags]{
 			DefaultValue: os.Getenv("INPUT_GITHUB_ACCESS_TOKEN"),
 		},
 		flag.StringSliceFlag{
-			Name:      "specs",
-			Shorthand: "s",
+			Name:        "specs",
+			Shorthand:   "s",
 			Description: "Glob patterns for OpenAPI spec files to validate",
-			Required:  true,
+			Required:    true,
 		},
 		flag.IntFlag{
 			Name:         "max-validation-errors",
@@ -50,23 +49,28 @@ var validateCmd = &model.ExecutableCommand[validateFlags]{
 			Name:         "ruleset",
 			Shorthand:    "r",
 			Description:  "Validation ruleset to use",
-			DefaultValue: "speakeasy-recommended",
+			DefaultValue: os.Getenv("INPUT_RULESET"),
 		},
 		flag.BooleanFlag{
 			Name:         "fail-on-skipped",
 			Description:  "Fail if any operations would be skipped during SDK generation",
-			DefaultValue: false,
+			DefaultValue: os.Getenv("INPUT_FAIL_ON_SKIPPED") == "true",
 		},
 	},
 }
 
 func runValidate(ctx context.Context, flags validateFlags) error {
-	setEnvIfNotEmpty("INPUT_GITHUB_ACCESS_TOKEN", flags.GithubAccessToken)
-
-	limits := &validation.OutputLimits{
-		MaxErrors: flags.MaxValidationErrors,
-		MaxWarns:  flags.MaxValidationWarnings,
+	ruleset := flags.Ruleset
+	if ruleset == "" {
+		ruleset = "speakeasy-recommended"
 	}
 
-	return actions.ValidateSpecs(ctx, flags.Specs, limits, flags.Ruleset, flags.FailOnSkipped)
+	return actions.ValidateSpecs(ctx, actions.ValidateSpecsInputs{
+		GithubAccessToken:     flags.GithubAccessToken,
+		Specs:                 flags.Specs,
+		MaxValidationErrors:   flags.MaxValidationErrors,
+		MaxValidationWarnings: flags.MaxValidationWarnings,
+		Ruleset:               ruleset,
+		FailOnSkipped:         flags.FailOnSkipped,
+	})
 }
