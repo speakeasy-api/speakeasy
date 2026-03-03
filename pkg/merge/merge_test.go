@@ -2820,6 +2820,108 @@ info:
 security: []
 `,
 		},
+		{
+			// When a subgroup loses the canonical name conflict (e.g. 2 http/bearer
+			// vs 3 oauth2, all named "bearerAuth"), the losing subgroup should still
+			// be merged internally under a single namespaced name rather than leaving
+			// each entry as a separate namespaced scheme.
+			name: "losing subgroup with multiple entries still merges internally",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HTTP bearer from service A`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HTTP bearer from service B`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 from service C
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:c: Read C`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 from service D
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:d: Read D`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 from service E
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:e: Read E`),
+				},
+				namespaces: []string{"svcA", "svcB", "svcC", "svcD", "svcE"},
+			},
+			// oauth2 subgroup (3 entries) wins "bearerAuth", http subgroup (2 entries) loses
+			// but the 2 http entries should still be merged into one namespaced scheme
+			want: `openapi: "3.1"
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: |-
+        OAuth2 from service C
+        OAuth2 from service D
+        OAuth2 from service E
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:c: Read C
+            read:d: Read D
+            read:e: Read E
+    svcB_bearerAuth:
+      type: http
+      description: |-
+        HTTP bearer from service A
+        HTTP bearer from service B
+      scheme: bearer
+      bearerFormat: JWT
+info:
+  title: ""
+  version: ""
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

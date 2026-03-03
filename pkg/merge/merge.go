@@ -1250,7 +1250,24 @@ func processSchemeSubgroups(subgroups [][]schemeEntry, renameMappings map[string
 	// Process each subgroup
 	for _, info := range infos {
 		if info.name == "" {
-			continue // stays namespaced, no action
+			// Subgroup lost the canonical name conflict — still merge internally
+			// under the last entry's namespaced name so duplicates are collapsed.
+			if len(info.entries) > 1 {
+				winner := info.entries[len(info.entries)-1]
+				mergeSecuritySchemeDescriptions(winner.scheme.Object, info.entries)
+				mergeOAuth2Scopes(winner.scheme.Object, info.entries)
+				for _, entry := range info.entries {
+					if entry.namespacedName != winner.namespacedName {
+						renameMappings[entry.namespacedName] = winner.namespacedName
+						removals[entry.namespacedName] = true
+					}
+				}
+				if winner.scheme.Object.Extensions != nil {
+					winner.scheme.Object.Extensions.Delete("x-speakeasy-name-override")
+					winner.scheme.Object.Extensions.Delete("x-speakeasy-model-namespace")
+				}
+			}
+			continue
 		}
 
 		if len(info.entries) == 1 {
