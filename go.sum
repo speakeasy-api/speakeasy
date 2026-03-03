@@ -526,8 +526,8 @@ github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9yS
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/sourcegraph/jsonrpc2 v0.2.0 h1:KjN/dC4fP6aN9030MZCJs9WQbTOjWHhrtKVpzzSrr/U=
 github.com/sourcegraph/jsonrpc2 v0.2.0/go.mod h1:ZafdZgk/axhT1cvZAPOhw+95nz2I/Ra5qMlU4gTRwIo=
-github.com/speakeasy-api/easytemplate v0.12.0 h1:cC1/8ogaO9PsgCUpLtCwutI1tdeGyAXiOKNvrCaz+Oo=
-github.com/speakeasy-api/easytemplate v0.12.0/go.mod h1:UF8bFhTpyr1sHiEWacT7ULN67Bve6UIrTH7uvzdbTEY=
+github.com/speakeasy-api/easytemplate v0.12.1 h1:GV70e5nnWWzyahlYblZUk3mVW/LasDq51+txIJfjgyQ=
+github.com/speakeasy-api/easytemplate v0.12.1/go.mod h1:UF8bFhTpyr1sHiEWacT7ULN67Bve6UIrTH7uvzdbTEY=
 github.com/speakeasy-api/git-diff-parser v0.0.3 h1:LL12d+HMtSyj6O/hQqIn/lgDPYI6ci/DEhk0la/xA+0=
 github.com/speakeasy-api/git-diff-parser v0.0.3/go.mod h1:P46HmmVVmwA9P8h2wa0fDpmRM8/grbVQ+uKhWDtpkIY=
 github.com/speakeasy-api/goja v0.0.0-20260223084236-ed0328a0a462 h1:wFAq/dFgXzPkOpI36BkHdUl4rKi7qh6iMsvlRkh2fCs=
@@ -546,8 +546,8 @@ github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed h1:PL/kpBY5vkBm
 github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed/go.mod h1:Gc8oQkjr2InxwumK0zOBtKN9gIlv9L2VmSVIUk2YxcU=
 github.com/speakeasy-api/openapi v1.19.1 h1:tJ1J4WpCimHgicwh15gsACFj37es7oBip3Ee2xmXW7c=
 github.com/speakeasy-api/openapi v1.19.1/go.mod h1:UfKa7FqE4jgexJZuj51MmdHAFGmDv0Zaw3+yOd81YKU=
-github.com/speakeasy-api/openapi-generation/v2 v2.845.19 h1:TQLBj1fSecTPcXtO0+y8DGC2+d6RQX0yFz+GZ5Hg+ag=
-github.com/speakeasy-api/openapi-generation/v2 v2.845.19/go.mod h1:rYsSY/8w5hRmrgcorC289TyvMXvr3R/stYlaPjWbRS4=
+github.com/speakeasy-api/openapi-generation/v2 v2.845.21 h1:Vtt98P3RSkUuO5evblj+Ljn9yzhytfE833iG5xvrvW4=
+github.com/speakeasy-api/openapi-generation/v2 v2.845.21/go.mod h1:q45jfhCnrvgG3HJpbv2LLi+OxhLdkV3sC+dunny9FvY=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 h1:gV+lYeVNNJG9X3Sl9Su3cRh1iF/oNqzvb5Ijq2QR8jY=
 github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4/go.mod h1:1zQpVio7X6QJDtyNdUguCgZ+IC7CzKhhjvNgJdvGVF0=
 github.com/speakeasy-api/sdk-gen-config v1.53.0 h1:cMbfKCLfui+uWUZp2Yb5boEhjcoN4LdFpO7J9AdHLw4=
