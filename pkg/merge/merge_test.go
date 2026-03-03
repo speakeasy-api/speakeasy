@@ -2381,6 +2381,547 @@ info:
   version: ''
 `,
 		},
+		{
+			name: "mixed http and oauth2 bearerAuth schemes are partially merged",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: Service A OAuth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: Service B OAuth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read users`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+				},
+				namespaces: []string{"svcA", "svcB", "svcC"},
+			},
+			want: `openapi: "3.1"
+security:
+  - svcC_bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: |-
+        Service A OAuth2
+        Service B OAuth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:pets: Read pets
+            read:users: Read users
+    svcC_bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-speakeasy-name-override: bearerAuth
+      x-speakeasy-model-namespace: svcC
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "case-insensitive name matching merges same-type schemes across casings",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+					[]byte(`openapi: 3.1
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+				},
+				namespaces: []string{"svcA", "svcB", "svcC"},
+			},
+			want: `openapi: "3.1"
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			name: "case-insensitive grouping with mixed types merges each type independently",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 Service
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:data: Read data`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 Service B
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            write:data: Write data`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+				},
+				namespaces: []string{"svcA", "svcB", "svcC", "svcD"},
+			},
+			want: `openapi: "3.1"
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    bearerAuth:
+      type: oauth2
+      description: |-
+        OAuth2 Service
+        OAuth2 Service B
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:data: Read data
+            write:data: Write data
+info:
+  title: ""
+  version: ""
+`,
+		},
+		{
+			// Mirrors a real-world multi-service API where different teams use
+			// different security scheme names and types for the same identity
+			// provider. Tests all key deduplication behaviors:
+			//   - Case-insensitive grouping: BearerAuth + bearerAuth in same group
+			//   - Subgroup partitioning: http/bearer and oauth2/CC merge separately
+			//   - OAuth2 scope union: scopes from users + tokens + flows merged
+			//   - basicAuth dedup: two identical http/basic schemes collapse
+			//   - HTTPBearer standalone: different name, no bearerFormat
+			name: "multi-service API with mixed security scheme names and types",
+			args: args{
+				inSchemas: [][]byte{
+					// storage: simple JWT bearer, no global security
+					[]byte(`openapi: 3.1
+paths:
+  /secrets:
+    get:
+      operationId: listSecrets
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+					// admin: simple JWT bearer, no global security
+					[]byte(`openapi: 3.1
+paths:
+  /tenants:
+    get:
+      operationId: listTenants
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+					// users: oauth2 CC with SCIM scopes + basicAuth, global security
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+paths:
+  /Users:
+    get:
+      operationId: listUsers
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth 2.0 Bearer token for user management
+      flows:
+        clientCredentials:
+          tokenUrl: https://idp.example.com/oauth2/token
+          scopes:
+            Users:Read: Read user profiles
+            Users:Write: Create and update users
+            Users:Groups: Manage group membership
+    basicAuth:
+      type: http
+      scheme: basic`),
+					// tokens: oauth2 CC with token management scopes + basicAuth, global security
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+paths:
+  /oauth2/clients:
+    get:
+      operationId: listClients
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth 2.0 Bearer token for token management
+      flows:
+        clientCredentials:
+          tokenUrl: https://idp.example.com/oauth2/token
+          scopes:
+            Tokens:Manage: Manage OAuth client registrations
+            Tokens:Read: Read token and client information
+    basicAuth:
+      type: http
+      scheme: basic`),
+					// flows: oauth2 CC with empty scopes (role-based), global security: []
+					[]byte(`openapi: 3.1
+security: []
+paths:
+  /login/flow:
+    post:
+      operationId: startLoginFlow
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: Bearer token for auth flow operations
+      flows:
+        clientCredentials:
+          tokenUrl: https://idp.example.com/oauth2/token
+          scopes: {}`),
+					// assistant: simple JWT bearer (lowercase name), no global security
+					[]byte(`openapi: 3.1
+paths:
+  /assistant/chat:
+    post:
+      operationId: chat
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT`),
+					// registry: HTTPBearer (different name, no bearerFormat), no global security
+					[]byte(`openapi: 3.1
+paths:
+  /skills:
+    get:
+      operationId: listSkills
+      security:
+        - HTTPBearer: []
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer`),
+				},
+				namespaces: []string{"storage", "admin", "users", "tokens", "flows", "assistant", "registry"},
+			},
+			// Expected: BearerAuth (http) merges storage+admin+assistant via case-insensitive grouping,
+			// bearerAuth (oauth2) merges users+tokens+flows with scopes unioned,
+			// basicAuth merges users+tokens, HTTPBearer stays standalone.
+			// Global security: flows has security:[] which clears the global security set by tokens.
+			// Operation-level security refs are remapped to the deduplicated names.
+			want: `openapi: "3.1"
+paths:
+  /secrets:
+    get:
+      operationId: listSecrets
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: OK
+  /tenants:
+    get:
+      operationId: listTenants
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+  /Users:
+    get:
+      operationId: listUsers
+      responses:
+        "200":
+          description: OK
+  /oauth2/clients:
+    get:
+      operationId: listClients
+      responses:
+        "200":
+          description: OK
+  /login/flow:
+    post:
+      operationId: startLoginFlow
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+  /assistant/chat:
+    post:
+      operationId: chat
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+  /skills:
+    get:
+      operationId: listSkills
+      security:
+        - HTTPBearer: []
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    basicAuth:
+      type: http
+      scheme: basic
+    bearerAuth:
+      type: oauth2
+      description: |-
+        OAuth 2.0 Bearer token for user management
+        OAuth 2.0 Bearer token for token management
+        Bearer token for auth flow operations
+      flows:
+        clientCredentials:
+          tokenUrl: https://idp.example.com/oauth2/token
+          scopes:
+            Users:Read: Read user profiles
+            Users:Write: Create and update users
+            Users:Groups: Manage group membership
+            Tokens:Manage: Manage OAuth client registrations
+            Tokens:Read: Read token and client information
+    HTTPBearer:
+      type: http
+      scheme: bearer
+info:
+  title: ""
+  version: ""
+security: []
+`,
+		},
+		{
+			// When a subgroup loses the canonical name conflict (e.g. 2 http/bearer
+			// vs 3 oauth2, all named "bearerAuth"), the losing subgroup should still
+			// be merged internally under a single namespaced name rather than leaving
+			// each entry as a separate namespaced scheme.
+			name: "losing subgroup with multiple entries still merges internally",
+			args: args{
+				inSchemas: [][]byte{
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HTTP bearer from service A`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HTTP bearer from service B`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 from service C
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:c: Read C`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 from service D
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:d: Read D`),
+					[]byte(`openapi: 3.1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: OAuth2 from service E
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:e: Read E`),
+				},
+				namespaces: []string{"svcA", "svcB", "svcC", "svcD", "svcE"},
+			},
+			// oauth2 subgroup (3 entries) wins "bearerAuth", http subgroup (2 entries) loses
+			// but the 2 http entries should still be merged into one namespaced scheme
+			want: `openapi: "3.1"
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      description: |-
+        OAuth2 from service C
+        OAuth2 from service D
+        OAuth2 from service E
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:c: Read C
+            read:d: Read D
+            read:e: Read E
+    svcB_bearerAuth:
+      type: http
+      description: |-
+        HTTP bearer from service A
+        HTTP bearer from service B
+      scheme: bearer
+      bearerFormat: JWT
+info:
+  title: ""
+  version: ""
+`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
