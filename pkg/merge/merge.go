@@ -1487,6 +1487,16 @@ func mergeSecurity(mergedDoc, doc *openapi.OpenAPI, mergedOrig, docOrig original
 	setOperationSecurity(mergedDoc, mergedDoc.Security)
 	setOperationSecurity(doc, doc.Security)
 
+	// For the side that had nil/empty security, operations that were implicitly
+	// inheriting "no security" need an explicit empty security requirement [{}]
+	// to preserve that intent after global security is cleared.
+	if len(mergedDoc.Security) == 0 {
+		setExplicitNoSecurity(mergedDoc)
+	}
+	if len(doc.Security) == 0 {
+		setExplicitNoSecurity(doc)
+	}
+
 	// Both docs' global security is now cleared; operations carry it inline.
 	return nil, nil, originalSecurityInfo{}
 }
@@ -1518,6 +1528,30 @@ func setOperationSecurity(doc *openapi.OpenAPI, security []*openapi.SecurityRequ
 				copy(copied, security)
 				op.Security = copied
 			}
+		}
+	}
+}
+
+// setExplicitNoSecurity sets an explicit empty security requirement ([{}]) on
+// operations that don't already have inline security. This is used when a
+// document had no global security (nil/empty), and we need to preserve the
+// "no security" intent after clearing global security during merge.
+func setExplicitNoSecurity(doc *openapi.OpenAPI) {
+	if doc.Paths == nil {
+		return
+	}
+
+	noSecurity := []*openapi.SecurityRequirement{openapi.NewSecurityRequirement()}
+
+	for _, pathItem := range doc.Paths.All() {
+		if pathItem.Object == nil {
+			continue
+		}
+		for _, op := range pathItem.Object.All() {
+			if op == nil || op.Security != nil {
+				continue
+			}
+			op.Security = noSecurity
 		}
 	}
 }
