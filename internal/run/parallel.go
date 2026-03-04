@@ -25,7 +25,7 @@ type OnTargetProgress func(targetID string, event TargetEvent)
 type TargetEvent int
 
 const (
-	TargetStarted   TargetEvent = iota
+	TargetStarted TargetEvent = iota
 	TargetSucceeded
 	TargetFailed
 )

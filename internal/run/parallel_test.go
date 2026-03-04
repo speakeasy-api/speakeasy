@@ -12,7 +12,7 @@ import (
 
 // TestHelperProcess is invoked by the test binary when GO_TEST_HELPER_PROCESS
 // is set. It simulates a speakeasy subprocess.
-func TestHelperProcess(t *testing.T) {
+func TestHelperProcess(t *testing.T) { //nolint:paralleltest // helper process, not a real test
 	if os.Getenv("GO_TEST_HELPER_PROCESS") != "1" {
 		return
 	}
@@ -42,7 +42,7 @@ func TestHelperProcess(t *testing.T) {
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "generated %s", target)
+	_, _ = fmt.Fprintf(os.Stdout, "generated %s", target)
 
 	if shouldFail && target == "target-fail" {
 		os.Exit(1)
