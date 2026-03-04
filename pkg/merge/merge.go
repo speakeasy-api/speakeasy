@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 
 	utils2 "github.com/speakeasy-api/speakeasy/internal/utils"
@@ -82,11 +83,21 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 	var warnings []error
 	state := newMergeState()
 
+	// Track pre-namespace security for the merged doc so we can compare
+	// originals (namespace prefixing makes equivalent schemes look different).
+	var mergedOrigSec originalSecurityInfo
+
 	for i, schema := range inSchemas {
 		doc, err := loadOpenAPIDocument(ctx, schema)
 		if err != nil {
 			return nil, err
 		}
+
+		// Save the original (pre-namespace) security for later comparison.
+		// This captures both the security requirements and the scheme definitions
+		// they reference, so we can detect cases where two specs use the same
+		// scheme name but with different definitions.
+		origSec := captureOriginalSecurity(doc)
 
 		// Apply namespace if provided
 		namespace := ""
@@ -120,12 +131,13 @@ func merge(ctx context.Context, inSchemas [][]byte, namespaces []string, yamlOut
 
 		if mergedDoc == nil {
 			mergedDoc = doc
+			mergedOrigSec = origSec
 			initMergeState(state, doc, namespace)
 			continue
 		}
 
 		var errs []error
-		mergedDoc, errs = mergeDocumentsWithState(state, mergedDoc, doc, namespace, i+1)
+		mergedDoc, mergedOrigSec, errs = mergeDocumentsWithState(state, mergedDoc, doc, mergedOrigSec, origSec, namespace, i+1)
 		warnings = append(warnings, errs...)
 	}
 
@@ -199,7 +211,7 @@ func loadOpenAPIDocument(ctx context.Context, data []byte) (*openapi.OpenAPI, er
 func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error) {
 	state := newMergeState()
 	initMergeState(state, mergedDoc, "")
-	merged, errs := mergeDocumentsWithState(state, mergedDoc, doc, "", 2)
+	merged, _, errs := mergeDocumentsWithState(state, mergedDoc, doc, captureOriginalSecurity(mergedDoc), captureOriginalSecurity(doc), "", 2)
 	deduplicateOperationIds(state, merged)
 	normalizeOperationTags(merged)
 	return merged, errs
@@ -207,7 +219,9 @@ func MergeDocuments(mergedDoc, doc *openapi.OpenAPI) (*openapi.OpenAPI, []error)
 
 // mergeDocumentsWithState merges two OpenAPI documents with namespace-aware
 // tag deduplication, path/method conflict disambiguation, and operationId tracking.
-func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, docNamespace string, docCounter int) (*openapi.OpenAPI, []error) {
+// mergedOrigSec and docOrigSec are the pre-namespace security info, used to detect
+// whether the two documents truly have different effective security.
+func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI, mergedOrigSec, docOrigSec originalSecurityInfo, docNamespace string, docCounter int) (*openapi.OpenAPI, originalSecurityInfo, []error) {
 	mergedVersion, _ := version.NewSemver(mergedDoc.OpenAPI)
 	docVersion, _ := version.NewSemver(doc.OpenAPI)
 	errs := make([]error, 0)
@@ -238,10 +252,11 @@ func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI,
 		mergedDoc.Servers = mergedServers
 	}
 
-	// Merge Security
-	if doc.Security != nil {
-		mergedDoc.Security = doc.Security
-	}
+	// Merge Security - inline to operations when global security differs between documents
+	// (analogous to how servers are handled when they conflict).
+	// We compare the pre-namespace originals because namespace prefixing makes
+	// equivalent schemes look different (svcA_bearer vs svcB_bearer).
+	mergedDoc.Security, doc.Security, mergedOrigSec = mergeSecurity(mergedDoc, doc, mergedOrigSec, docOrigSec)
 
 	// Merge Tags (case-insensitive with content-aware disambiguation)
 	tagResult := mergeTagsWithState(state, mergedDoc, doc, docNamespace, docCounter)
@@ -288,7 +303,7 @@ func mergeDocumentsWithState(state *mergeState, mergedDoc, doc *openapi.OpenAPI,
 		mergedDoc.ExternalDocs = doc.ExternalDocs
 	}
 
-	return mergedDoc, errs
+	return mergedDoc, mergedOrigSec, errs
 }
 
 // mergeInfo merges two Info objects. Most fields use last-wins semantics,
@@ -1315,6 +1330,193 @@ func setOperationServers(doc *openapi.OpenAPI, opServers []*openapi.Server) {
 		for _, op := range pathItem.Object.All() {
 			if op != nil && len(op.Servers) == 0 {
 				op.Servers = append([]*openapi.Server{}, opServers...)
+			}
+		}
+	}
+}
+
+// securityRequirementsEqual checks whether two global security requirement lists are
+// semantically equivalent (same scheme names with same scopes, in any order).
+func securityRequirementsEqual(a, b []*openapi.SecurityRequirement) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	// Build a comparable representation for each side.
+	type entry struct {
+		name   string
+		scopes string
+	}
+	toSet := func(reqs []*openapi.SecurityRequirement) map[entry]int {
+		m := make(map[entry]int)
+		for _, req := range reqs {
+			if req == nil {
+				continue
+			}
+			for k, v := range req.All() {
+				scopes := make([]string, len(v))
+				copy(scopes, v)
+				// Sort for deterministic comparison.
+				sort.Strings(scopes)
+				m[entry{name: k, scopes: strings.Join(scopes, ",")}]++
+			}
+		}
+		return m
+	}
+
+	return reflect.DeepEqual(toSet(a), toSet(b))
+}
+
+// originalSecurityInfo captures the pre-namespace global security requirements
+// and the security scheme definitions they reference. This allows us to compare
+// the effective security of two documents even after namespace prefixing has made
+// the scheme names look different.
+type originalSecurityInfo struct {
+	requirements []*openapi.SecurityRequirement
+	// schemes maps scheme name → serialized scheme definition (for equivalence checking).
+	schemes map[string]string
+}
+
+// captureOriginalSecurity snapshots a document's security info before namespace application.
+func captureOriginalSecurity(doc *openapi.OpenAPI) originalSecurityInfo {
+	info := originalSecurityInfo{
+		requirements: doc.Security,
+		schemes:      make(map[string]string),
+	}
+	if doc.Components != nil && doc.Components.SecuritySchemes != nil {
+		for name, scheme := range doc.Components.SecuritySchemes.All() {
+			if scheme != nil && scheme.Object != nil {
+				info.schemes[name] = fingerprintSecurityScheme(scheme.Object)
+			}
+		}
+	}
+	return info
+}
+
+// fingerprintSecurityScheme produces a comparable string from a security scheme's
+// structural fields (ignoring description and extensions). This captures enough
+// detail to distinguish schemes that share the same name but have different
+// configurations (e.g. different tokenUrls, different types).
+func fingerprintSecurityScheme(obj *openapi.SecurityScheme) string {
+	inVal := ""
+	if obj.In != nil {
+		inVal = obj.In.String()
+	}
+	fp := fmt.Sprintf("type=%s|scheme=%s|bearerFormat=%s|name=%s|in=%s|openIdConnectUrl=%s",
+		obj.Type,
+		derefStr(obj.Scheme),
+		derefStr(obj.BearerFormat),
+		derefStr(obj.Name),
+		inVal,
+		derefStr(obj.OpenIdConnectUrl))
+
+	// Include OAuth2 flow URLs to distinguish schemes with different token endpoints.
+	if obj.Flows != nil {
+		fp += "|flows="
+		fp += fingerprintOAuthFlow("implicit", obj.Flows.Implicit)
+		fp += fingerprintOAuthFlow("password", obj.Flows.Password)
+		fp += fingerprintOAuthFlow("clientCredentials", obj.Flows.ClientCredentials)
+		fp += fingerprintOAuthFlow("authorizationCode", obj.Flows.AuthorizationCode)
+		fp += fingerprintOAuthFlow("deviceAuthorization", obj.Flows.DeviceAuthorization)
+	}
+
+	return fp
+}
+
+func fingerprintOAuthFlow(name string, flow *openapi.OAuthFlow) string {
+	if flow == nil {
+		return ""
+	}
+	return fmt.Sprintf("[%s:authUrl=%s,tokenUrl=%s]",
+		name,
+		derefStr(flow.AuthorizationURL),
+		derefStr(flow.TokenURL))
+}
+
+// originalSecurityEqual checks whether two pre-namespace security infos represent
+// the same effective security. It compares both the requirement names/scopes AND
+// the underlying scheme definitions.
+func originalSecurityEqual(a, b originalSecurityInfo) bool {
+	if !securityRequirementsEqual(a.requirements, b.requirements) {
+		return false
+	}
+
+	// Even if the requirement names match, the underlying scheme definitions
+	// might differ (e.g. both use "bearerAuth" but one is http-bearer and
+	// the other is apiKey). Check that all referenced schemes are equivalent.
+	for _, req := range a.requirements {
+		if req == nil {
+			continue
+		}
+		for name := range req.All() {
+			schemeA, okA := a.schemes[name]
+			schemeB, okB := b.schemes[name]
+			if okA != okB || schemeA != schemeB {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// mergeSecurity handles merging of document-level security requirements.
+// When two documents have different global security, the global security from each
+// is inlined onto their respective operations (only those that don't already have
+// inline security). The merged document ends up with no global security, and every
+// operation carries its effective security explicitly.
+//
+// We compare the pre-namespace (original) security info rather than the
+// post-namespace ones, because namespace prefixing makes equivalent schemes look
+// different (e.g. svcA_bearerAuth vs svcB_bearerAuth).
+//
+// Returns (new mergedDoc security, new doc security, new merged original security info).
+func mergeSecurity(mergedDoc, doc *openapi.OpenAPI, mergedOrig, docOrig originalSecurityInfo) ([]*openapi.SecurityRequirement, []*openapi.SecurityRequirement, originalSecurityInfo) {
+	// Both nil — nothing to do.
+	if mergedDoc.Security == nil && doc.Security == nil {
+		return nil, nil, mergedOrig
+	}
+
+	// Compare the originals (pre-namespace) to determine if they're truly different.
+	if originalSecurityEqual(mergedOrig, docOrig) {
+		return mergedDoc.Security, doc.Security, mergedOrig
+	}
+
+	// Security differs — inline both sides' global security onto their operations
+	// and clear global security so the merged document has none.
+	setOperationSecurity(mergedDoc, mergedDoc.Security)
+	setOperationSecurity(doc, doc.Security)
+
+	// Both docs' global security is now cleared; operations carry it inline.
+	return nil, nil, originalSecurityInfo{}
+}
+
+// setOperationSecurity inlines the given security requirements onto all operations
+// in the document that don't already have explicit inline security.
+// An operation with security == nil (not set) inherits global security, so it gets
+// the global security inlined. An operation with security == [] (empty, meaning
+// "no security") is left untouched.
+func setOperationSecurity(doc *openapi.OpenAPI, security []*openapi.SecurityRequirement) {
+	if doc.Paths == nil {
+		return
+	}
+
+	for _, pathItem := range doc.Paths.All() {
+		if pathItem.Object == nil {
+			continue
+		}
+
+		for _, op := range pathItem.Object.All() {
+			if op == nil {
+				continue
+			}
+			// Only set security on operations that don't already have inline security.
+			// security == nil means "not specified, inherit global".
+			if op.Security == nil {
+				// Copy the slice so operations don't share a backing array.
+				copied := make([]*openapi.SecurityRequirement, len(security))
+				copy(copied, security)
+				op.Security = copied
 			}
 		}
 	}
