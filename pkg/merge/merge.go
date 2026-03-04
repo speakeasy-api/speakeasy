@@ -1497,7 +1497,7 @@ func mergeSecurity(mergedDoc, doc *openapi.OpenAPI, mergedOrig, docOrig original
 // the global security inlined. An operation with security == [] (empty, meaning
 // "no security") is left untouched.
 func setOperationSecurity(doc *openapi.OpenAPI, security []*openapi.SecurityRequirement) {
-	if doc.Paths == nil {
+	if doc.Paths == nil || len(security) == 0 {
 		return
 	}
 

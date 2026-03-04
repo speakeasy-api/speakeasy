@@ -515,7 +515,7 @@ components:
     BearerAuth:
       type: http
       scheme: bearer`),
-					// specB: no global security, op1 has inline basic, op2 has explicitly no security
+					// specB: no global security, op1 has inline basic, op2 has no security (implicit)
 					[]byte(`openapi: 3.0.3
 info:
   title: Service B
@@ -534,7 +534,6 @@ paths:
     get:
       operationId: listVets
       summary: List all vets
-      security: []
       responses:
         "204":
           description: No content
@@ -572,7 +571,6 @@ paths:
     get:
       operationId: listVets
       summary: List all vets
-      security: []
       responses:
         "204":
           description: No content
