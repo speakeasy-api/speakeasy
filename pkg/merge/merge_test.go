@@ -474,147 +474,24 @@ info:
 `,
 		},
 		{
-			name: "different global security is inlined to operations and cleared globally",
+			name: "security is overwritten",
 			args: args{
 				inSchemas: [][]byte{
 					[]byte(`openapi: 3.1
 security:
-  - apiKey: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content`),
+  - apiKey: []`),
 					[]byte(`openapi: 3.1
 security:
-  - bearerAuth: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content`),
+  - bearerAuth: []`),
 				},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - apiKey: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: No content
+security:
+  - apiKey: []
+    bearerAuth: []
 info:
   title: ""
   version: ""
-`,
-		},
-		{
-			name: "global security inlined to operations when specs differ",
-			args: args{
-				inSchemas: [][]byte{
-					// specA: global bearer auth, one operation inheriting it
-					[]byte(`openapi: 3.0.3
-info:
-  title: Service A
-  version: 1.0.0
-security:
-  - BearerAuth: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      summary: List all pets
-      responses:
-        "204":
-          description: No content
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer`),
-					// specB: no global security, op1 has inline basic, op2 has no security (implicit)
-					[]byte(`openapi: 3.0.3
-info:
-  title: Service B
-  version: 1.0.0
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      summary: List all owners
-      security:
-        - BasicAuth: []
-      responses:
-        "204":
-          description: No content
-  /vets:
-    get:
-      operationId: listVets
-      summary: List all vets
-      responses:
-        "204":
-          description: No content
-components:
-  securitySchemes:
-    BasicAuth:
-      type: http
-      scheme: basic`),
-				},
-			},
-			want: `openapi: 3.0.3
-info:
-  title: Service B
-  version: 1.0.0
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      summary: List all pets
-      responses:
-        "204":
-          description: No content
-      security:
-        - BearerAuth: []
-  /owners:
-    get:
-      operationId: listOwners
-      summary: List all owners
-      security:
-        - BasicAuth: []
-      responses:
-        "204":
-          description: No content
-  /vets:
-    get:
-      operationId: listVets
-      summary: List all vets
-      security:
-        - {}
-      responses:
-        "204":
-          description: No content
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-    BasicAuth:
-      type: http
-      scheme: basic
 `,
 		},
 		{
@@ -1972,13 +1849,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -1987,13 +1857,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2004,23 +1867,8 @@ components:
 				namespaces: []string{"svcA", "svcB"},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - svcA_bearerAuth: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - svcB_bearerAuth: []
-      responses:
-        "204":
-          description: No content
+security:
+  - svcB_bearerAuth: []
 components:
   securitySchemes:
     svcA_bearerAuth:
@@ -2156,13 +2004,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - oauth2: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     oauth2:
@@ -2175,13 +2016,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - oauth2: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     oauth2:
@@ -2195,23 +2029,8 @@ components:
 				namespaces: []string{"svcA", "svcB"},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - svcA_oauth2: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - svcB_oauth2: []
-      responses:
-        "204":
-          description: No content
+security:
+  - svcB_oauth2: []
 components:
   securitySchemes:
     svcA_oauth2:
@@ -2244,13 +2063,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - oauth2: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     oauth2:
@@ -2263,13 +2075,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - oauth2: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     oauth2:
@@ -2284,23 +2089,8 @@ components:
 				namespaces: []string{"svcA", "svcB"},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - svcA_oauth2: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - svcB_oauth2: []
-      responses:
-        "204":
-          description: No content
+security:
+  - svcB_oauth2: []
 components:
   securitySchemes:
     svcA_oauth2:
@@ -2455,13 +2245,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2470,13 +2253,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - apiKey: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     apiKey:
@@ -2487,23 +2263,8 @@ components:
 				namespaces: []string{"svcA", "svcB"},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - bearerAuth: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - apiKey: []
-      responses:
-        "204":
-          description: No content
+security:
+  - apiKey: []
 components:
   securitySchemes:
     bearerAuth:
@@ -2627,13 +2388,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2647,13 +2401,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2667,13 +2414,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /vets:
-    get:
-      operationId: listVets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2684,31 +2424,8 @@ components:
 				namespaces: []string{"svcA", "svcB", "svcC"},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - bearerAuth: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: No content
-  /vets:
-    get:
-      operationId: listVets
-      security:
-        - svcC_bearerAuth: []
-      responses:
-        "204":
-          description: No content
+security:
+  - svcC_bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -2740,13 +2457,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - BearerAuth: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     BearerAuth:
@@ -2756,13 +2466,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - BearerAuth: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     BearerAuth:
@@ -2772,13 +2475,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /vets:
-    get:
-      operationId: listVets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2789,31 +2485,8 @@ components:
 				namespaces: []string{"svcA", "svcB", "svcC"},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - BearerAuth: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - BearerAuth: []
-      responses:
-        "204":
-          description: No content
-  /vets:
-    get:
-      operationId: listVets
-      security:
-        - BearerAuth: []
-      responses:
-        "204":
-          description: No content
+security:
+  - BearerAuth: []
 components:
   securitySchemes:
     BearerAuth:
@@ -2832,13 +2505,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - BearerAuth: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     BearerAuth:
@@ -2848,13 +2514,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2868,13 +2527,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /vets:
-    get:
-      operationId: listVets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2888,13 +2540,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /items:
-    get:
-      operationId: listItems
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -2905,39 +2550,8 @@ components:
 				namespaces: []string{"svcA", "svcB", "svcC", "svcD"},
 			},
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - BearerAuth: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: No content
-  /vets:
-    get:
-      operationId: listVets
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: No content
-  /items:
-    get:
-      operationId: listItems
-      security:
-        - BearerAuth: []
-      responses:
-        "204":
-          description: No content
+security:
+  - BearerAuth: []
 components:
   securitySchemes:
     BearerAuth:
@@ -3140,16 +2754,12 @@ paths:
   /Users:
     get:
       operationId: listUsers
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: OK
   /oauth2/clients:
     get:
       operationId: listClients
-      security:
-        - bearerAuth: []
       responses:
         "200":
           description: OK
@@ -3207,6 +2817,7 @@ components:
 info:
   title: ""
   version: ""
+security: []
 `,
 		},
 		{
@@ -3220,13 +2831,6 @@ info:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -3237,13 +2841,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /owners:
-    get:
-      operationId: listOwners
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -3254,13 +2851,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /vets:
-    get:
-      operationId: listVets
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -3274,13 +2864,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /items:
-    get:
-      operationId: listItems
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -3294,13 +2877,6 @@ components:
 					[]byte(`openapi: 3.1
 security:
   - bearerAuth: []
-paths:
-  /things:
-    get:
-      operationId: listThings
-      responses:
-        "204":
-          description: No content
 components:
   securitySchemes:
     bearerAuth:
@@ -3317,47 +2893,8 @@ components:
 			// oauth2 subgroup (3 entries) wins "bearerAuth", http subgroup (2 entries) loses
 			// but the 2 http entries should still be merged into one namespaced scheme
 			want: `openapi: "3.1"
-paths:
-  /pets:
-    get:
-      operationId: listPets
-      responses:
-        "204":
-          description: No content
-      security:
-        - svcB_bearerAuth: []
-  /owners:
-    get:
-      operationId: listOwners
-      security:
-        - svcB_bearerAuth: []
-      responses:
-        "204":
-          description: No content
-  /vets:
-    get:
-      operationId: listVets
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: No content
-  /items:
-    get:
-      operationId: listItems
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: No content
-  /things:
-    get:
-      operationId: listThings
-      security:
-        - bearerAuth: []
-      responses:
-        "204":
-          description: No content
+security:
+  - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
