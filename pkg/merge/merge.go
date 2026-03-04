@@ -1472,8 +1472,14 @@ func originalSecurityEqual(a, b originalSecurityInfo) bool {
 //
 // Returns (new mergedDoc security, new doc security, new merged original security info).
 func mergeSecurity(mergedDoc, doc *openapi.OpenAPI, mergedOrig, docOrig originalSecurityInfo) ([]*openapi.SecurityRequirement, []*openapi.SecurityRequirement, originalSecurityInfo) {
-	// Both nil — nothing to do.
+	// Both nil — no global security to reconcile, but if any operations across
+	// either doc have inline security, operations without security should get
+	// explicit empty security [{}] so the merged output is unambiguous.
 	if mergedDoc.Security == nil && doc.Security == nil {
+		if hasAnyOperationInlineSecurity(mergedDoc) || hasAnyOperationInlineSecurity(doc) {
+			setExplicitNoSecurity(mergedDoc)
+			setExplicitNoSecurity(doc)
+		}
 		return nil, nil, mergedOrig
 	}
 
@@ -1554,4 +1560,23 @@ func setExplicitNoSecurity(doc *openapi.OpenAPI) {
 			op.Security = noSecurity
 		}
 	}
+}
+
+// hasAnyOperationInlineSecurity reports whether any operation in the document
+// has an explicit (non-nil) security field.
+func hasAnyOperationInlineSecurity(doc *openapi.OpenAPI) bool {
+	if doc.Paths == nil {
+		return false
+	}
+	for _, pathItem := range doc.Paths.All() {
+		if pathItem.Object == nil {
+			continue
+		}
+		for _, op := range pathItem.Object.All() {
+			if op != nil && op.Security != nil {
+				return true
+			}
+		}
+	}
+	return false
 }
