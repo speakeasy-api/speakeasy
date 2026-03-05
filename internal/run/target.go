@@ -33,6 +33,11 @@ import (
 	"go.uber.org/zap"
 )
 
+type TargetTestResult struct {
+	Success bool
+	URL     string
+}
+
 type TargetResult struct {
 	OutputPath  string
 	GenYamlPath string

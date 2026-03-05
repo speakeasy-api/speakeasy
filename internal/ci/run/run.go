@@ -16,6 +16,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/ci/utils"
 	"github.com/speakeasy-api/speakeasy/internal/ci/versionbumps"
 	"github.com/speakeasy-api/speakeasy/internal/ci/versioninfo"
+	corerun "github.com/speakeasy-api/speakeasy/internal/run"
 	"github.com/speakeasy-api/versioning-reports/versioning"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -46,6 +47,8 @@ type RunResult struct {
 	VersioningInfo       versionbumps.VersioningInfo
 	// key is language, value is release notes
 	ReleaseNotes map[string]string
+	// TestResults captures per-target test outcomes from the generation run.
+	TestResults map[string]corerun.TargetTestResult
 }
 
 type Git interface {
@@ -137,7 +140,21 @@ func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workfl
 		return runbridge.Run(ctx, len(wf.Targets) == 0, installationURLs, repoURL, repoSubdirectories, manualVersioningBump)
 	})
 	if err != nil {
-		return nil, outputs, err
+		result := &RunResult{
+			VersioningInfo: versionbumps.VersioningInfo{
+				VersionReport: changereport,
+				ManualBump:    versionbumps.ManualBumpWasUsed(manualVersioningBump, changereport),
+			},
+		}
+
+		if runRes != nil {
+			result.OpenAPIChangeSummary = runRes.OpenAPIChangeSummary
+			result.LintingReportURL = runRes.LintingReportURL
+			result.ChangesReportURL = runRes.ChangesReportURL
+			result.TestResults = runRes.TestResults
+		}
+
+		return result, outputs, err
 	}
 	if len(changereport.Reports) == 0 {
 		// Assume it's not yet enabled (e.g. CLI version too old)
@@ -155,6 +172,7 @@ func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workfl
 			OpenAPIChangeSummary: runRes.OpenAPIChangeSummary,
 			LintingReportURL:     runRes.LintingReportURL,
 			ChangesReportURL:     runRes.ChangesReportURL,
+			TestResults:          runRes.TestResults,
 		}, outputs, nil
 	}
 
@@ -260,6 +278,7 @@ func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workfl
 		LintingReportURL:     runRes.LintingReportURL,
 		ChangesReportURL:     runRes.ChangesReportURL,
 		ReleaseNotes:         releaseNotes,
+		TestResults:          runRes.TestResults,
 	}, outputs, nil
 }
 

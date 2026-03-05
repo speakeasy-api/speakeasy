@@ -20,6 +20,7 @@ type RunResults struct {
 	LintingReportURL     string
 	ChangesReportURL     string
 	OpenAPIChangeSummary string
+	TestResults          map[string]run.TargetTestResult
 }
 
 // Run executes the speakeasy run workflow directly via the internal run package,
@@ -53,9 +54,7 @@ func Run(ctx context.Context, sourcesOnly bool, installationURLs map[string]stri
 		return nil, fmt.Errorf("error creating workflow: %w", err)
 	}
 
-	if err := wf.Run(ctx); err != nil {
-		return nil, fmt.Errorf("error running workflow: %w", err)
-	}
+	runErr := wf.Run(ctx)
 
 	// Extract report URLs from workflow source results
 	lintingReportURL, changesReportURL := extractReportURLs(wf)
@@ -63,11 +62,18 @@ func Run(ctx context.Context, sourcesOnly bool, installationURLs map[string]stri
 	// Read the change summary file (optional, may not exist on first run)
 	changeSummary, _ := os.ReadFile(changeSummaryFile.Name())
 
-	return &RunResults{
+	results := &RunResults{
 		LintingReportURL:     lintingReportURL,
 		ChangesReportURL:     changesReportURL,
 		OpenAPIChangeSummary: string(changeSummary),
-	}, nil
+		TestResults:          wf.TestResults,
+	}
+
+	if runErr != nil {
+		return results, fmt.Errorf("error running workflow: %w", runErr)
+	}
+
+	return results, nil
 }
 
 func buildWorkflowOpts(sourcesOnly bool, installationURLs map[string]string, repoURL string, repoSubdirectories map[string]string) []run.Opt {

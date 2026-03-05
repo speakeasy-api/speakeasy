@@ -19,6 +19,8 @@ type fanoutFinalizeFlags struct {
 	PostGenerateScript string `json:"post-generate-script"`
 	CommitMessage      string `json:"commit-message"`
 	CleanupWorkers     bool   `json:"cleanup-workers"`
+	CreateRelease      bool   `json:"create-release"`
+	CommentTestResults bool   `json:"comment-test-results"`
 }
 
 var fanoutFinalizeCmd = &model.ExecutableCommand[fanoutFinalizeFlags]{
@@ -75,6 +77,16 @@ force-pushes the PR branch, and creates or updates the PR.`,
 			Description:  "Delete worker branches after successful finalization",
 			DefaultValue: os.Getenv("INPUT_CLEANUP_WORKERS") != "false",
 		},
+		flag.BooleanFlag{
+			Name:         "create-release",
+			Description:  "Create the release commit, push branch, and create/update PR",
+			DefaultValue: os.Getenv("INPUT_CREATE_RELEASE") != "false",
+		},
+		flag.BooleanFlag{
+			Name:         "comment-test-results",
+			Description:  "Post aggregated test results as a comment on the PR",
+			DefaultValue: os.Getenv("INPUT_COMMENT_TEST_RESULTS") == "true",
+		},
 	},
 }
 
@@ -88,6 +100,8 @@ func runFanoutFinalize(ctx context.Context, flags fanoutFinalizeFlags) error {
 	setEnvIfNotEmpty("INPUT_POST_GENERATE_SCRIPT", flags.PostGenerateScript)
 	setEnvIfNotEmpty("INPUT_COMMIT_MESSAGE", flags.CommitMessage)
 	setEnvBool("INPUT_CLEANUP_WORKERS", flags.CleanupWorkers)
+	setEnvBool("INPUT_CREATE_RELEASE", flags.CreateRelease)
+	setEnvBool("INPUT_COMMENT_TEST_RESULTS", flags.CommentTestResults)
 
 	return actions.FanoutFinalize(ctx, actions.FanoutFinalizeInputs{
 		BaseBranch:         flags.BaseBranch,
@@ -98,5 +112,7 @@ func runFanoutFinalize(ctx context.Context, flags fanoutFinalizeFlags) error {
 		PostGenerateScript: flags.PostGenerateScript,
 		CommitMessage:      flags.CommitMessage,
 		CleanupWorkers:     flags.CleanupWorkers,
+		CreateRelease:      flags.CreateRelease,
+		CommentTestResults: flags.CommentTestResults,
 	})
 }

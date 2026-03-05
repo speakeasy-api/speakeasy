@@ -100,6 +100,16 @@ func RunWorkflow(ctx context.Context) error {
 	}
 
 	runRes, outputs, err := run.Run(ctx, g, pr, wf)
+	// Write per-target test report as soon as run results are available so
+	// fanout-finalize can aggregate test outcomes even when the workflow fails.
+	if runRes != nil && len(runRes.TestResults) > 0 {
+		if testReportPath, writeErr := writeTestReports(runRes.TestResults); writeErr != nil {
+			logging.Debug("failed to write test report: %v", writeErr)
+		} else if testReportPath != "" {
+			outputs["test_report_file"] = testReportPath
+		}
+	}
+
 	if err != nil {
 		if err := setOutputs(outputs); err != nil {
 			logging.Debug("failed to set outputs: %v", err)
