@@ -1,8 +1,9 @@
 package merge
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_merge_global_security_inlined_to_operations_when_specs_differ(t *testing.T) {
@@ -91,8 +92,7 @@ paths:
     post:
       operationId: createOwner
       summary: Create an owner
-      security:
-        - {}
+      security: []
       responses:
         "204":
           description: No content
@@ -100,8 +100,7 @@ paths:
     get:
       operationId: listVets
       summary: List all vets
-      security:
-        - {}
+      security: []
       responses:
         "204":
           description: No content
