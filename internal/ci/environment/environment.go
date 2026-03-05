@@ -318,6 +318,38 @@ func GetRef() string {
 	return githubRef
 }
 
+// GetPRNumber extracts the pull request number from the GitHub Actions
+// environment. It first checks GITHUB_REF (refs/pull/<number>/merge), then
+// falls back to the event payload's "number" field.
+func GetPRNumber() int {
+	githubRef := GetGithubRef()
+	if strings.Contains(githubRef, "refs/pull") {
+		parts := strings.Split(githubRef, "/")
+		for i, p := range parts {
+			if p == "pull" && i+1 < len(parts) {
+				if n, err := strconv.Atoi(parts[i+1]); err == nil {
+					return n
+				}
+			}
+		}
+	}
+
+	eventPath := os.Getenv("GITHUB_EVENT_PATH")
+	if eventPath != "" {
+		data, err := os.ReadFile(eventPath)
+		if err == nil {
+			var payload struct {
+				Number int `json:"number"`
+			}
+			if json.Unmarshal(data, &payload) == nil && payload.Number > 0 {
+				return payload.Number
+			}
+		}
+	}
+
+	return 0
+}
+
 func GetWorkingDirectory() string {
 	return os.Getenv("INPUT_WORKING_DIRECTORY")
 }

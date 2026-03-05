@@ -58,6 +58,10 @@ type Workflow struct {
 	AutoYes       bool
 	AllowPrompts  bool
 
+	// TestResults captures per-target test outcomes (target name → result).
+	// Populated when testing is enabled and not skipped.
+	TestResults map[string]TargetTestResult
+
 	// Internal
 	workflowName       string
 	SDKOverviewURLs    map[string]string

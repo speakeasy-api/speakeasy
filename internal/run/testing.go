@@ -59,8 +59,18 @@ func (w *Workflow) runTesting(ctx context.Context, workflowTargetName string, ta
 		return err
 	}
 
-	if _, err := testcmd.ExecuteTargetTesting(testingCtx, generator, target, workflowTargetName, outputDir); err != nil {
-		return fmt.Errorf("error running workflow target %s (%s) testing: %w", workflowTargetName, target.Target, err)
+	testReportURL, testErr := testcmd.ExecuteTargetTesting(testingCtx, generator, target, workflowTargetName, outputDir)
+
+	if w.TestResults == nil {
+		w.TestResults = make(map[string]TargetTestResult)
+	}
+	w.TestResults[workflowTargetName] = TargetTestResult{
+		Success: testErr == nil,
+		URL:     testReportURL,
+	}
+
+	if testErr != nil {
+		return fmt.Errorf("error running workflow target %s (%s) testing: %w", workflowTargetName, target.Target, testErr)
 	}
 
 	testingStep.SucceedWorkflow()

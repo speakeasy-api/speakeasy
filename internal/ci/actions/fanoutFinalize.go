@@ -2,10 +2,12 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -24,6 +26,8 @@ type FanoutFinalizeInputs struct {
 	PostGenerateScript string
 	CommitMessage      string
 	CleanupWorkers     bool
+	CreateRelease      bool
+	CommentTestResults bool
 }
 
 func FanoutFinalize(ctx context.Context, inputs FanoutFinalizeInputs) error {
@@ -88,9 +92,19 @@ func FanoutFinalize(ctx context.Context, inputs FanoutFinalizeInputs) error {
 		}
 	}
 
+	// Collect test results before any cleanup, while cherry-picked files are present.
+	var testReports map[string]TargetTestReportFile
+	if inputs.CommentTestResults {
+		testReportsPath := filepath.Join(g.GetRepoRoot(), resolvePathFromWorkingDirectory(testReportsDir))
+		testReports = collectTestReports(testReportsPath)
+	}
+
 	output, mergedReport, err := GeneratePRFromReports(reportsPath)
-	if err != nil {
+	if err != nil && inputs.CreateRelease {
+		// Report generation is required for release mode.
 		return err
+	} else if err != nil {
+		logging.Info("report generation skipped or failed (non-release mode): %v", err)
 	}
 
 	if strings.TrimSpace(inputs.PostGenerateScript) != "" {
@@ -99,74 +113,79 @@ func FanoutFinalize(ctx context.Context, inputs FanoutFinalizeInputs) error {
 		}
 	}
 
-	if _, err := runGit(repoDir, "reset", "--soft", baseSHA); err != nil {
-		return fmt.Errorf("failed to start squash from %s: %w", baseSHA, err)
-	}
+	branchesToPreserve := []string{baseBranch}
 
-	for _, cleanupPath := range cleanupPaths {
-		cleanupPath = strings.TrimSpace(cleanupPath)
-		if cleanupPath == "" {
-			continue
+	if inputs.CreateRelease {
+		if _, err := runGit(repoDir, "reset", "--soft", baseSHA); err != nil {
+			return fmt.Errorf("failed to start squash from %s: %w", baseSHA, err)
 		}
-		if err := os.RemoveAll(filepath.Join(g.GetRepoRoot(), resolvePathFromWorkingDirectory(cleanupPath))); err != nil {
-			return fmt.Errorf("failed to remove cleanup path %s: %w", cleanupPath, err)
+
+		for _, cleanupPath := range cleanupPaths {
+			cleanupPath = strings.TrimSpace(cleanupPath)
+			if cleanupPath == "" {
+				continue
+			}
+			if err := os.RemoveAll(filepath.Join(g.GetRepoRoot(), resolvePathFromWorkingDirectory(cleanupPath))); err != nil {
+				return fmt.Errorf("failed to remove cleanup path %s: %w", cleanupPath, err)
+			}
 		}
-	}
 
-	if _, err := runGit(repoDir, "add", "-A"); err != nil {
-		return fmt.Errorf("failed to stage squashed changes: %w", err)
-	}
+		if _, err := runGit(repoDir, "add", "-A"); err != nil {
+			return fmt.Errorf("failed to stage squashed changes: %w", err)
+		}
 
-	status, err := runGit(repoDir, "status", "--porcelain")
-	if err != nil {
-		return fmt.Errorf("failed to inspect staged changes: %w", err)
-	}
-	if strings.TrimSpace(status) == "" {
-		return fmt.Errorf("no staged changes found after fanout finalization")
-	}
-
-	commitMessage := strings.TrimSpace(inputs.CommitMessage)
-	if commitMessage == "" && mergedReport != nil {
-		commitMessage = strings.TrimSpace(mergedReport.GetCommitMarkdownSection())
-	}
-	if commitMessage == "" {
-		commitMessage = "ci: regenerated via fanout workflow"
-	}
-
-	if _, err := runGit(repoDir, "commit", "-m", commitMessage); err != nil {
-		return fmt.Errorf("failed to create squashed commit: %w", err)
-	}
-
-	squashSHA, err := gitHeadSHA(repoDir)
-	if err != nil {
-		return err
-	}
-
-	targetBranch := strings.TrimSpace(inputs.TargetBranch)
-	if targetBranch == "" {
-		targetBranch, err = resolveTargetBranchName(g, baseBranch)
+		status, err := runGit(repoDir, "status", "--porcelain")
 		if err != nil {
+			return fmt.Errorf("failed to inspect staged changes: %w", err)
+		}
+		if strings.TrimSpace(status) == "" {
+			return fmt.Errorf("no staged changes found after fanout finalization")
+		}
+
+		commitMessage := strings.TrimSpace(inputs.CommitMessage)
+		if commitMessage == "" && mergedReport != nil {
+			commitMessage = strings.TrimSpace(mergedReport.GetCommitMarkdownSection())
+		}
+		if commitMessage == "" {
+			commitMessage = "ci: regenerated via fanout workflow"
+		}
+
+		if _, err := runGit(repoDir, "commit", "-m", commitMessage); err != nil {
+			return fmt.Errorf("failed to create squashed commit: %w", err)
+		}
+
+		squashSHA, err := gitHeadSHA(repoDir)
+		if err != nil {
+			return err
+		}
+
+		targetBranch := strings.TrimSpace(inputs.TargetBranch)
+		if targetBranch == "" {
+			targetBranch, err = resolveTargetBranchName(g, baseBranch)
+			if err != nil {
+				return err
+			}
+		}
+		branchesToPreserve = append(branchesToPreserve, targetBranch)
+
+		if _, err := runGit(repoDir, "checkout", "-B", targetBranch, "origin/"+baseBranch); err != nil {
+			return fmt.Errorf("failed to checkout target branch %s: %w", targetBranch, err)
+		}
+		if _, err := runGit(repoDir, "cherry-pick", squashSHA); err != nil {
+			return fmt.Errorf("failed to apply squashed commit %s on %s: %w", squashSHA, targetBranch, err)
+		}
+		if _, err := runGit(repoDir, "push", "--force", "origin", targetBranch); err != nil {
+			return fmt.Errorf("failed to force push %s: %w", targetBranch, err)
+		}
+
+		if err := createOrUpdatePRFromGenerated(ctx, targetBranch, output, mergedReport, false); err != nil {
 			return err
 		}
 	}
 
-	if _, err := runGit(repoDir, "checkout", "-B", targetBranch, "origin/"+baseBranch); err != nil {
-		return fmt.Errorf("failed to checkout target branch %s: %w", targetBranch, err)
-	}
-	if _, err := runGit(repoDir, "cherry-pick", squashSHA); err != nil {
-		return fmt.Errorf("failed to apply squashed commit %s on %s: %w", squashSHA, targetBranch, err)
-	}
-	if _, err := runGit(repoDir, "push", "--force", "origin", targetBranch); err != nil {
-		return fmt.Errorf("failed to force push %s: %w", targetBranch, err)
-	}
-
-	if err := createOrUpdatePRFromGenerated(ctx, targetBranch, output, mergedReport, false); err != nil {
-		return err
-	}
-
 	if inputs.CleanupWorkers {
 		for _, workerBranch := range workerBranches {
-			if workerBranch == "" || workerBranch == targetBranch || workerBranch == baseBranch {
+			if workerBranch == "" || slices.Contains(branchesToPreserve, workerBranch) {
 				continue
 			}
 			if err := g.DeleteBranch(workerBranch); err != nil {
@@ -175,7 +194,62 @@ func FanoutFinalize(ctx context.Context, inputs FanoutFinalizeInputs) error {
 		}
 	}
 
+	if inputs.CommentTestResults && len(testReports) > 0 {
+		prNumber := environment.GetPRNumber()
+		if prNumber > 0 {
+			if err := writeTestReportComment(g, &prNumber, convertTestReportsToCommentFormat(testReports)); err != nil {
+				logging.Info("failed to write test report comment: %v", err)
+			}
+		} else {
+			logging.Info("no PR number available, skipping test result comment")
+		}
+	}
+
 	return nil
+}
+
+// collectTestReports reads all test report JSON files from the given directory.
+func collectTestReports(dir string) map[string]TargetTestReportFile {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		logging.Debug("no test reports directory found at %s: %v", dir, err)
+		return nil
+	}
+
+	reports := make(map[string]TargetTestReportFile)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			logging.Debug("failed to read test report %s: %v", entry.Name(), err)
+			continue
+		}
+		var report TargetTestReportFile
+		if err := json.Unmarshal(data, &report); err != nil {
+			logging.Debug("failed to parse test report %s: %v", entry.Name(), err)
+			continue
+		}
+		if report.Target == "" {
+			report.Target = strings.TrimSuffix(entry.Name(), ".json")
+		}
+		reports[report.Target] = report
+	}
+	return reports
+}
+
+// convertTestReportsToCommentFormat converts TargetTestReportFile map to the
+// TestReport map expected by writeTestReportComment.
+func convertTestReportsToCommentFormat(reports map[string]TargetTestReportFile) map[string]TestReport {
+	result := make(map[string]TestReport, len(reports))
+	for target, report := range reports {
+		result[target] = TestReport{
+			Success: report.Success,
+			URL:     report.URL,
+		}
+	}
+	return result
 }
 
 func resolveTargetBranchName(g *cigit.Git, baseBranch string) (string, error) {
