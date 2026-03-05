@@ -1,8 +1,9 @@
 package merge
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_merge_no_global_security_with_mixed_inline_security_marks_unsecured_ops(t *testing.T) {
@@ -87,8 +88,7 @@ paths:
     get:
       operationId: listVets
       summary: List all vets
-      security:
-        - {}
+      security: []
       responses:
         "204":
           description: No content

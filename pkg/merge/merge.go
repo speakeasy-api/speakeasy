@@ -1474,7 +1474,7 @@ func originalSecurityEqual(a, b originalSecurityInfo) bool {
 func mergeSecurity(mergedDoc, doc *openapi.OpenAPI, mergedOrig, docOrig originalSecurityInfo) ([]*openapi.SecurityRequirement, []*openapi.SecurityRequirement, originalSecurityInfo) {
 	// Both nil — no global security to reconcile, but if any operations across
 	// either doc have inline security, operations without security should get
-	// explicit empty security [{}] so the merged output is unambiguous.
+	// explicit empty security [] so the merged output is unambiguous.
 	if mergedDoc.Security == nil && doc.Security == nil {
 		if hasAnyOperationInlineSecurity(mergedDoc) || hasAnyOperationInlineSecurity(doc) {
 			setExplicitNoSecurity(mergedDoc)
@@ -1494,7 +1494,7 @@ func mergeSecurity(mergedDoc, doc *openapi.OpenAPI, mergedOrig, docOrig original
 	setOperationSecurity(doc, doc.Security)
 
 	// For the side that had nil/empty security, operations that were implicitly
-	// inheriting "no security" need an explicit empty security requirement [{}]
+	// inheriting "no security" need an explicit empty security []
 	// to preserve that intent after global security is cleared.
 	if len(mergedDoc.Security) == 0 {
 		setExplicitNoSecurity(mergedDoc)
@@ -1538,16 +1538,18 @@ func setOperationSecurity(doc *openapi.OpenAPI, security []*openapi.SecurityRequ
 	}
 }
 
-// setExplicitNoSecurity sets an explicit empty security requirement ([{}]) on
-// operations that don't already have inline security. This is used when a
-// document had no global security (nil/empty), and we need to preserve the
-// "no security" intent after clearing global security during merge.
+// setExplicitNoSecurity sets an explicit empty security ([]) on operations
+// that don't already have inline security. This is used when a document had
+// no global security (nil/empty), and we need to preserve the "no security"
+// intent after clearing global security during merge.
+// Note: security: [] means "no security required", which is distinct from
+// security: [{}] which means "anonymous auth is an explicit option".
 func setExplicitNoSecurity(doc *openapi.OpenAPI) {
 	if doc.Paths == nil {
 		return
 	}
 
-	noSecurity := []*openapi.SecurityRequirement{openapi.NewSecurityRequirement()}
+	noSecurity := []*openapi.SecurityRequirement{}
 
 	for _, pathItem := range doc.Paths.All() {
 		if pathItem.Object == nil {
