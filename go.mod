@@ -45,7 +45,7 @@ require (
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.19.1
-	github.com/speakeasy-api/openapi-generation/v2 v2.850.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.850.3
 	github.com/speakeasy-api/sdk-gen-config v1.53.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -224,7 +224,7 @@ require (
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
-	github.com/speakeasy-api/easytemplate v0.12.1 // indirect
+	github.com/speakeasy-api/easytemplate v0.12.2 // indirect
 	github.com/speakeasy-api/jsonpath v0.6.3 // indirect
 	github.com/speakeasy-api/openapi/openapi/linter/customrules v0.0.0-20260206023826-2483fb8e98b4 // indirect
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
