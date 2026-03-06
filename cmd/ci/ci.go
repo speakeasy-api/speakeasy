@@ -25,5 +25,6 @@ var CICmd = &model.CommandGroup{
 		tagCmd,
 		ciTestCmd,
 		logResultCmd,
+		validateCmd,
 	},
 }

@@ -15,6 +15,7 @@ replace github.com/dop251/goja/debugger => github.com/speakeasy-api/goja/debugge
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/MichaelMure/go-term-markdown v0.1.4
+	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/charmbracelet/glamour v0.7.0
