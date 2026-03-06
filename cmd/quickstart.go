@@ -57,7 +57,7 @@ type QuickstartFlags struct {
 	// Whether to initialize a git repository in the output directory
 	InitGit bool `json:"init-git"`
 
-	// Hidden flag for bypassing interactive prompts
+	// Flag for bypassing interactive prompts
 	SkipInteractive bool `json:"skip-interactive"`
 
 	// Hidden flag for MCP TypeScript target
@@ -120,11 +120,9 @@ var quickstartCmd = &model.ExecutableCommand[QuickstartFlags]{
 			Name:        "init-git",
 			Description: "initialize a git repository in the output directory",
 		},
-		// Hidden flags for bypassing interactive prompts
 		flag.BooleanFlag{
 			Name:        "skip-interactive",
-			Description: "whether to use defaults - this will skip all prompts",
-			Hidden:      true,
+			Description: "skip all interactive prompts and use defaults (useful for non-interactive environments like CI)",
 		},
 		// Hidden flag for MCP TypeScript target
 		flag.BooleanFlag{
