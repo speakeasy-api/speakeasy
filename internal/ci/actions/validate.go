@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy/internal/ci/git"
@@ -36,19 +37,9 @@ func ValidateSpecs(ctx context.Context, inputs ValidateSpecsInputs) error {
 		MaxWarns:  inputs.MaxValidationWarnings,
 	}
 
-	// Expand globs
-	var specPaths []string
-	for _, pattern := range inputs.Specs {
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			return fmt.Errorf("invalid glob pattern %q: %w", pattern, err)
-		}
-		specPaths = append(specPaths, matches...)
-	}
-
-	if len(specPaths) == 0 {
-		logger.Warnf("No spec files found matching patterns: %s\n", strings.Join(inputs.Specs, ", "))
-		return nil
+	specPaths, err := discoverSpecPaths(inputs.Specs)
+	if err != nil {
+		return err
 	}
 
 	// Deduplicate
@@ -135,6 +126,22 @@ func ValidateSpecs(ctx context.Context, inputs ValidateSpecsInputs) error {
 	}
 
 	return nil
+}
+
+func discoverSpecPaths(patterns []string) ([]string, error) {
+	var specPaths []string
+	for _, pattern := range patterns {
+		matches, err := doublestar.FilepathGlob(pattern)
+		if err != nil {
+			return nil, fmt.Errorf("invalid glob pattern %q: %w", pattern, err)
+		}
+		if len(matches) == 0 {
+			return nil, fmt.Errorf("no spec files found matching pattern %q", pattern)
+		}
+		specPaths = append(specPaths, matches...)
+	}
+
+	return specPaths, nil
 }
 
 func pluralWord(n int, word string) string {

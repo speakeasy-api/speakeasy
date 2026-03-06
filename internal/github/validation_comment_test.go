@@ -37,8 +37,9 @@ func TestBuildValidationComment_AllPassing(t *testing.T) {
 	assert.Contains(t, comment, ":white_check_mark:")
 	assert.NotContains(t, comment, ":x:")
 	assert.NotContains(t, comment, "<details>")
+	assert.Contains(t, comment, "Hints")
 	assert.Contains(t, comment, "Skipped Ops")
-	assert.Contains(t, comment, "| 0 |")
+	assert.Contains(t, comment, "| specs/ai-assistant/openapi.yaml | :white_check_mark: Valid | 0 | 0 | 0 | 0 |")
 }
 
 func TestBuildValidationComment_WithFailures(t *testing.T) {
@@ -101,7 +102,7 @@ func TestBuildValidationComment_WithSkippedOperations(t *testing.T) {
 
 	assert.Contains(t, comment, github.ValidationCommentMarker)
 	assert.Contains(t, comment, ":warning: Skipped Ops")
-	assert.Contains(t, comment, "| 2 |")
+	assert.Contains(t, comment, "| specs/ai-assistant/openapi.yaml | :warning: Skipped Ops | 0 | 0 | 0 | 2 |")
 	assert.Contains(t, comment, "<details>")
 	assert.Contains(t, comment, "2 skipped operations")
 	assert.Contains(t, comment, "`GET /api/v1/users`")
@@ -119,4 +120,44 @@ func TestBuildValidationComment_Empty(t *testing.T) {
 
 	assert.Contains(t, comment, github.ValidationCommentMarker)
 	assert.Contains(t, comment, "No specs found")
+}
+
+func TestBuildValidationComment_WithHints(t *testing.T) {
+	t.Parallel()
+
+	results := []github.SpecValidationResult{
+		{
+			SpecPath: "specs/hints-only/openapi.yaml",
+			Hints: []error{
+				errors.NewValidationHint("missing-example", &yaml.Node{Line: 12, Column: 3}, fmt.Errorf("Consider adding an example")),
+			},
+		},
+	}
+
+	comment := github.BuildValidationComment(results)
+
+	assert.Contains(t, comment, "| specs/hints-only/openapi.yaml | :information_source: Hints | 0 | 0 | 1 | 0 |")
+	assert.Contains(t, comment, "<details>")
+	assert.Contains(t, comment, "1 hint")
+	assert.Contains(t, comment, "| HINT |  | missing-example | 12 |")
+}
+
+func TestBuildValidationComment_WithErrorsAndSkippedOperations(t *testing.T) {
+	t.Parallel()
+
+	results := []github.SpecValidationResult{
+		{
+			SpecPath: "specs/mixed/openapi.yaml",
+			Errors: []error{
+				errors.NewValidationError("invalid-schema", &yaml.Node{Line: 21, Column: 2}, fmt.Errorf("Schema is invalid")),
+			},
+			InvalidOperations: []string{"getMixed"},
+		},
+	}
+
+	comment := github.BuildValidationComment(results)
+
+	assert.Contains(t, comment, "| specs/mixed/openapi.yaml | :x: Invalid | 1 | 0 | 0 | 1 |")
+	assert.Contains(t, comment, "1 error, 1 skipped operation")
+	assert.Contains(t, comment, "**Skipped operations**")
 }
