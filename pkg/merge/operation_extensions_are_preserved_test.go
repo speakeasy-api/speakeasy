@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test_merge_operation_extensions_are_preserved reproduces GEN-2688 where
@@ -50,7 +51,7 @@ paths:
           description: OK`)
 
 		got, err := merge(t.Context(), [][]byte{specA, specB}, nil, true)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		// Should produce a single /users/move path, not fragmented, with extensions
 		// preserved in document order (x-confluence-page-id before x-internal).
 		assert.Equal(t, `openapi: "3.1"
@@ -92,7 +93,7 @@ paths:
           description: OK`)
 
 		got, err := merge(t.Context(), [][]byte{spec, spec}, nil, true)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		// Extensions should be preserved and operation should not be fragmented.
 		assert.Equal(t, `openapi: "3.1"
 paths:
