@@ -224,6 +224,8 @@ func verifyBasicStructure(t *testing.T, generatedDir, target string) {
 func verifyTargetSpecificFiles(t *testing.T, generatedDir, target string) {
 	t.Helper()
 	switch target {
+	case "cli":
+		checkFileExists(t, generatedDir, "go.mod")
 	case "typescript", "mcp-typescript":
 		checkFileExists(t, generatedDir, "package.json")
 		checkFileExists(t, generatedDir, "tsconfig.json")

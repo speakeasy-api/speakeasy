@@ -114,6 +114,32 @@ func NewTargetFormField(
 			case "mcp-typescript":
 				description = "We recommend a descriptive name for your MCP Server. \nThis will be appear as the server name to MCP Clients like " + styles.Emphasized.Render("Cursor, Claude Code.")
 				targetFormField.SetValue(strcase.ToKebab(packageName))
+			case "cli":
+				description = "The Go module path for your CLI (e.g. " + styles.Emphasized.Render("github.com/my-company/my-cli") + ")"
+				targetFormField.SetValue("github.com/my-company/" + strcase.ToKebab(packageName))
+			}
+		case "cliName":
+			if targetName == "cli" {
+				targetFormField.Title = "What should the CLI binary be called?"
+				description = "The name of the binary on the command line. Users will run commands with " + styles.Emphasized.Render("%s <command>")
+			}
+		case "envVarPrefix":
+			if targetName == "cli" {
+				description = "Environment variable prefix for configuration. Variables will be named " + styles.Emphasized.Render("%s_<SETTING>")
+				targetFormField.SuggestionsFunc = func(answeredFields TargetFormFields) []string {
+					cliName := answeredFields.GetField("cliName").GetValueString()
+					if cliName != "" {
+						return []string{strings.ToUpper(strings.ReplaceAll(cliName, "-", "_"))}
+					}
+					return nil
+				}
+				targetFormField.ValueFunc = func(answeredFields TargetFormFields) any {
+					cliName := answeredFields.GetField("cliName").GetValueString()
+					if cliName != "" {
+						return toPointer(strings.ToUpper(strings.ReplaceAll(cliName, "-", "_")))
+					}
+					return toPointer("")
+				}
 			}
 		case "sdkPackageName":
 			sdkPackageName := sdkClassName

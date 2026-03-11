@@ -30,6 +30,12 @@ func getSourcesFromWorkflow(inputWorkflow *workflow.Workflow) []string {
 	return sources
 }
 
+func getCLITargetOptions() []huh.Option[string] {
+	return []huh.Option[string]{
+		huh.NewOption("CLI "+getMaturityDisplay("Alpha"), "cli"),
+	}
+}
+
 func getMCPTargetOptions() []huh.Option[string] {
 	options := []huh.Option[string]{}
 	targets := generate.GetSupportedMCPTargets()
@@ -114,6 +120,8 @@ func HasExistingGeneration(dir string) bool {
 
 func getTargetDisplay(target string) string {
 	switch target {
+	case "cli":
+		return "CLI"
 	case "typescript":
 		return "TypeScript"
 	case "python":
