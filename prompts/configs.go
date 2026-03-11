@@ -23,6 +23,11 @@ var additionalRelevantConfigs = []string{
 
 // During quickstart we ask for a limited subset of configs per language
 var quickstartScopedKeys = map[string][]string{
+	"cli": {
+		"packageName",
+		"cliName",
+		"envVarPrefix",
+	},
 	"go": {
 		"modulePath",
 		"sdkPackageName",
@@ -320,6 +325,7 @@ func saveLanguageConfigValues(
 }
 
 var targetTypeMapping = map[string]string{
+	"cli":            "CLI",
 	"mcp-typescript": "MCP Server",
 	"terraform":      "Terraform Provider",
 }
