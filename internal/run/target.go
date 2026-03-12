@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-version"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
+	"github.com/speakeasy-api/sdk-gen-config/workspace"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/bundler"
 	"github.com/speakeasy-api/speakeasy-core/errors"
@@ -210,6 +211,12 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		log.From(ctx).Infof("New SDK changelog is disabled for SDK %s SDK", utils.CapitalizeFirst(t.Target))
 	}
 
+	// If NoLock is enabled, back up gen.lock so we can restore it after generation
+	var lockBackup genLockBackup
+	if w.NoLock {
+		lockBackup = backupGenLockFile(outDir)
+	}
+
 	genStep := rootStep.NewSubstep(fmt.Sprintf("Generating %s SDK", utils.CapitalizeFirst(t.Target)))
 	go genStep.ListenForSubsteps(logListener)
 
@@ -243,9 +250,17 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		},
 	)
 	if err != nil {
+		if w.NoLock {
+			restoreGenLockFile(outDir, lockBackup)
+		}
 		return sourceRes, nil, err
 	}
 	w.generationAccess = generationAccess
+
+	// Restore gen.lock files to their pre-generation state
+	if w.NoLock {
+		restoreGenLockFile(outDir, lockBackup)
+	}
 
 	if !w.ShouldCompile {
 		log.From(ctx).Warnf("Compilation was skipped. The generated SDK may not be ready for use without manual compilation. To enable compilation DO NOT pass the --skip-compile flag.")
@@ -462,4 +477,44 @@ func (w *Workflow) CancelGeneration() error {
 	}
 
 	return fmt.Errorf("generation is not cancellable")
+}
+
+// genLockBackup holds the state of a gen.lock file before generation.
+type genLockBackup struct {
+	path   string // absolute path where gen.lock was found (empty if it didn't exist)
+	data   []byte // original contents (nil if it didn't exist)
+	existed bool
+}
+
+// backupGenLockFile finds and backs up the gen.lock file using the same workspace
+// search logic that the generator uses to locate it.
+func backupGenLockFile(outDir string) genLockBackup {
+	res, err := workspace.FindWorkspace(outDir, workspace.FindWorkspaceOptions{
+		FindFile: "gen.lock",
+	})
+	if err != nil || res == nil || res.Data == nil {
+		return genLockBackup{}
+	}
+	return genLockBackup{
+		path:    res.Path,
+		data:    res.Data,
+		existed: true,
+	}
+}
+
+// restoreGenLockFile restores gen.lock to its pre-generation state.
+// If it existed before, restore the original contents. If it didn't exist
+// but the generator created one, find and remove it.
+func restoreGenLockFile(outDir string, backup genLockBackup) {
+	if backup.existed {
+		_ = os.WriteFile(backup.path, backup.data, 0o644)
+	} else {
+		// gen.lock didn't exist before — remove it if the generator created one
+		res, err := workspace.FindWorkspace(outDir, workspace.FindWorkspaceOptions{
+			FindFile: "gen.lock",
+		})
+		if err == nil && res != nil && res.Data != nil {
+			_ = os.Remove(res.Path)
+		}
+	}
 }

@@ -220,8 +220,10 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 		w.Cleanup()
 	}
 
-	if err := workflow.SaveLockfile(w.ProjectDir, w.lockfile); err != nil {
-		return err
+	if !w.NoLock {
+		if err := workflow.SaveLockfile(w.ProjectDir, w.lockfile); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -47,6 +47,7 @@ type Workflow struct {
 	BoostrapTests bool
 	AutoYes       bool
 	AllowPrompts  bool
+	NoLock        bool // skip writing lock files (gen.lock + workflow.lock)
 
 	// Internal
 	workflowName       string
@@ -286,6 +287,12 @@ func WithAllowPrompts(allowPrompts bool) Opt {
 	}
 }
 
+func WithNoLock(noLock bool) Opt {
+	return func(w *Workflow) {
+		w.NoLock = noLock
+	}
+}
+
 func WithFromQuickstart(fromQuickstart bool) Opt {
 	return func(w *Workflow) {
 		w.FromQuickstart = fromQuickstart
@@ -372,6 +379,7 @@ func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 				WithSkipSnapshot(w.SkipSnapshot),
 				WithSkipTesting(w.SkipTesting),
 				WithFromQuickstart(w.FromQuickstart),
+				WithNoLock(w.NoLock),
 				WithRepo(w.Repo),
 				WithRepoSubDirs(w.RepoSubDirs),
 				WithInstallationURLs(w.InstallationURLs),

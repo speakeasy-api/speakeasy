@@ -50,6 +50,7 @@ type RunFlags struct {
 	Dependent          string            `json:"dependent"`
 	SourceLocation     string            `json:"source-location"`
 	AutoYes            bool              `json:"auto-yes"`
+	NoLock             bool              `json:"no-lock"`
 }
 
 const runLong = "# Run \n Execute the workflow(s) defined in your `.speakeasy/workflow.yaml` file." + `
@@ -199,6 +200,10 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 			Name:        "auto-yes",
 			Shorthand:   "y",
 			Description: "auto confirm all prompts",
+		},
+		flag.BooleanFlag{
+			Name:        "no-lock",
+			Description: "skip writing lock files (gen.lock and workflow.lock) — useful for feature branch CI where lock file changes cause merge conflicts",
 		},
 	},
 }
@@ -443,6 +448,7 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
 		run.WithAutoYes(flags.AutoYes),
+		run.WithNoLock(flags.NoLock),
 		run.WithAllowPrompts(false), // Non-interactive mode
 	}
 
@@ -508,6 +514,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithSkipCleanup(), // The studio won't work if we clean up before it launches
 		run.WithSourceLocation(flags.SourceLocation),
 		run.WithAutoYes(flags.AutoYes),
+		run.WithNoLock(flags.NoLock),
 	}
 
 	if flags.Minimal {
