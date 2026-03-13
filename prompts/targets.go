@@ -348,9 +348,7 @@ func currentDir(dir string) bool {
 }
 
 // enterpriseOnlyTargets lists targets that require an enterprise account tier.
-var enterpriseOnlyTargets = []string{
-	"cli",
-}
+var enterpriseOnlyTargets = []string{}
 
 // checkTargetAccess validates that the user has the required account tier and
 // that the target maturity allows generation. Enterprise-only targets require
