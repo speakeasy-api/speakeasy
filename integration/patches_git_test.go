@@ -6,14 +6,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/speakeasy-api/speakeasy/internal/patches"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -252,48 +250,6 @@ func (v *GitHistoryVerifier) CollectAllGenerationUUIDs(t *testing.T) []string {
 	return uuids
 }
 
-// extractGeneratedIDsFromDir scans directory for @generated-id headers and returns UUID -> filepath map.
-func extractGeneratedIDsFromDir(t *testing.T, dir string) map[string]string {
-	t.Helper()
-
-	idPattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{12})`)
-	ids := make(map[string]string)
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		// Skip hidden directories and vendor
-		if info.IsDir() && (strings.HasPrefix(info.Name(), ".") || info.Name() == "vendor" || info.Name() == "node_modules") {
-			return filepath.SkipDir
-		}
-		if info.IsDir() {
-			return nil
-		}
-		// Only check source files
-		ext := filepath.Ext(path)
-		if ext != ".go" && ext != ".ts" && ext != ".py" && ext != ".java" && ext != ".cs" && ext != ".rb" && ext != ".php" {
-			return nil
-		}
-
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return nil //nolint:nilerr // Skip files we can't read
-		}
-
-		match := idPattern.FindSubmatch(content)
-		if match != nil {
-			id := string(match[1])
-			ids[id] = path
-		}
-
-		return nil
-	})
-
-	require.NoError(t, err)
-	return ids
-}
-
 // setupPersistentEditsInDir sets up the generation config files in the given directory.
 // This is like setupPersistentEditsTestDir but works on an existing directory.
 func setupPersistentEditsInDir(t *testing.T, dir string) {
@@ -413,11 +369,6 @@ func TestGitArchitecture_GCDoesNotPruneObjects(t *testing.T) {
 	require.NoError(t, err, "Initial generation should succeed")
 	gitCommitAll(t, temp, "generation 1")
 
-	// Get UUIDs from generated files
-	ids := extractGeneratedIDsFromDir(t, temp)
-	require.NotEmpty(t, ids, "Should have generated files with @generated-id")
-	t.Logf("Generation 1: found %d generated files", len(ids))
-
 	// Create verifier
 	verifier := NewGitHistoryVerifier(t, temp)
 
@@ -448,10 +399,6 @@ func TestGitArchitecture_MultiGenerationPreservesHistory(t *testing.T) {
 	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "generation 1")
-
-	ids1 := extractGeneratedIDsFromDir(t, temp)
-	require.NotEmpty(t, ids1)
-	t.Logf("Generation 1: %d files", len(ids1))
 
 	// Generation 2: Update spec to add a field
 	specContent := `openapi: 3.0.3
@@ -505,10 +452,6 @@ components:
 	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
 	require.NoError(t, err)
 	gitCommitAll(t, temp, "generation 2")
-
-	ids2 := extractGeneratedIDsFromDir(t, temp)
-	require.NotEmpty(t, ids2)
-	t.Logf("Generation 2: %d files", len(ids2))
 
 	// Generation 3: Add another endpoint
 	specContent = `openapi: 3.0.3
@@ -816,8 +759,6 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 
 	content, err := os.ReadFile(petFile)
 	require.NoError(t, err)
-	originalID := extractGeneratedIDFromContent(content)
-	require.NotEmpty(t, originalID, "pet.go should have @generated-id")
 
 	// Add a custom method at the end of the file
 	// We append to the very end of the file to avoid conflict with generated getters
@@ -839,10 +780,6 @@ func TestGitArchitecture_ImplicitFetchFromRemote(t *testing.T) {
 		"User modification should be preserved after generation (3-way merge worked)")
 	require.Contains(t, string(finalContent), "func (p *Pet) CustomMethod()",
 		"Custom method should be preserved after generation")
-
-	// Verify ID is preserved
-	finalID := extractGeneratedIDFromContent(finalContent)
-	require.Equal(t, originalID, finalID, "Generated ID should be preserved")
 
 	t.Log("Success: implicit fetch enabled 3-way merge in fresh clone")
 }
@@ -890,7 +827,6 @@ func TestGitArchitecture_HealerOfflineFallback(t *testing.T) {
 
 	content, err := os.ReadFile(sdkFile)
 	require.NoError(t, err)
-	originalID := extractGeneratedIDFromContent(content)
 
 	modifiedContent := strings.Replace(string(content),
 		"package testsdk",
@@ -909,10 +845,6 @@ func TestGitArchitecture_HealerOfflineFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(finalContent), "OFFLINE_USER_EDIT: Made while offline",
 		"User modification should be preserved when working offline")
-
-	// Verify ID is preserved
-	finalID := extractGeneratedIDFromContent(finalContent)
-	require.Equal(t, originalID, finalID, "Generated ID should be preserved")
 
 	// Verify local refs still exist
 	finalRefs := verifier.GetGenerationRefs(t)
@@ -1070,13 +1002,7 @@ components:
 }
 
 // TestGitArchitecture_MultipleTypeScriptTargetsSameRepo verifies that two TypeScript targets
-// in the same repo (one at root, one in a subpackage) have independent non-conflicting IDs.
-//
-// This tests the scenario where:
-// 1. One target outputs to the root of the repo
-// 2. Another target outputs to packages/subpackage
-// 3. Both are TypeScript targets sharing the same source
-// 4. Each should have independent @generated-id tracking
+// in the same repo (one at root, one in a subpackage) work independently.
 func TestGitArchitecture_MultipleTypeScriptTargetsSameRepo(t *testing.T) {
 	t.Parallel()
 	temp := setupDualTypeScriptTargetsTestDir(t)
@@ -1093,61 +1019,11 @@ func TestGitArchitecture_MultipleTypeScriptTargetsSameRepo(t *testing.T) {
 	require.FileExists(t, rootSdkFile, "Root TypeScript SDK file should exist")
 	require.FileExists(t, subpackageSdkFile, "Subpackage TypeScript SDK file should exist")
 
-	// Extract IDs from both SDK files
 	rootContent, err := os.ReadFile(rootSdkFile)
 	require.NoError(t, err)
-	rootID := extractGeneratedIDFromContent(rootContent)
-	require.NotEmpty(t, rootID, "Root SDK should have @generated-id")
-	t.Logf("Root SDK ID: %s", rootID)
 
 	subpackageContent, err := os.ReadFile(subpackageSdkFile)
 	require.NoError(t, err)
-	subpackageID := extractGeneratedIDFromContent(subpackageContent)
-	require.NotEmpty(t, subpackageID, "Subpackage SDK should have @generated-id")
-	t.Logf("Subpackage SDK ID: %s", subpackageID)
-
-	// Verify IDs are different (independent targets should have independent IDs)
-	assert.NotEqual(t, rootID, subpackageID,
-		"Root and subpackage SDKs should have different @generated-id values")
-
-	// Scan both directories and verify no ID collisions
-	rootScanner := patches.NewScanner(temp)
-	rootResult, err := rootScanner.Scan()
-	require.NoError(t, err)
-
-	// Build maps of IDs per target directory
-	rootIDs := make(map[string]string)   // id -> path
-	subpkgIDs := make(map[string]string) // id -> path
-	allIDs := make(map[string][]string)  // id -> list of paths (for collision detection)
-
-	for id, path := range rootResult.UUIDToPath {
-		allIDs[id] = append(allIDs[id], path)
-
-		// Categorize by target
-		if strings.HasPrefix(path, "packages/subpackage/") || strings.HasPrefix(path, "packages\\subpackage\\") {
-			subpkgIDs[id] = path
-		} else {
-			rootIDs[id] = path
-		}
-	}
-
-	t.Logf("Found %d files in root target", len(rootIDs))
-	t.Logf("Found %d files in subpackage target", len(subpkgIDs))
-
-	// Verify no ID appears in both targets (would indicate collision)
-	for id := range rootIDs {
-		if _, existsInSubpkg := subpkgIDs[id]; existsInSubpkg {
-			t.Errorf("ID collision detected: %s appears in both root (%s) and subpackage (%s)",
-				id, rootIDs[id], subpkgIDs[id])
-		}
-	}
-
-	// Verify no duplicate IDs within the whole repo
-	for id, paths := range allIDs {
-		if len(paths) > 1 {
-			t.Errorf("Duplicate ID detected: %s appears in multiple files: %v", id, paths)
-		}
-	}
 
 	// Verify git refs exist for both targets
 	verifier := NewGitHistoryVerifier(t, temp)
@@ -1198,14 +1074,7 @@ func TestGitArchitecture_MultipleTypeScriptTargetsSameRepo(t *testing.T) {
 	require.Contains(t, string(subpkgFinal), "SUBPKG_USER_EDIT: Custom code for subpackage SDK",
 		"Subpackage SDK user modification should be preserved")
 
-	// Verify IDs are still preserved
-	rootFinalID := extractGeneratedIDFromContent(rootFinal)
-	require.Equal(t, rootID, rootFinalID, "Root SDK ID should be preserved after regeneration")
-
-	subpkgFinalID := extractGeneratedIDFromContent(subpkgFinal)
-	require.Equal(t, subpackageID, subpkgFinalID, "Subpackage SDK ID should be preserved after regeneration")
-
-	t.Log("Success: Multiple TypeScript targets have independent non-conflicting IDs")
+	t.Log("Success: Multiple TypeScript targets preserve user edits independently")
 }
 
 // setupDualTypeScriptTargetsTestDir creates a test directory with two TypeScript targets:

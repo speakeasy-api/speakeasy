@@ -312,6 +312,3 @@ func (fs *fileSystem) OpenFile(name string, flag int, perm fs.FileMode) (filesys
 	return os.OpenFile(name, flag, perm)
 }
 
-func (fs *fileSystem) ScanForGeneratedIDs() (map[string]string, error) {
-	return nil, nil
-}

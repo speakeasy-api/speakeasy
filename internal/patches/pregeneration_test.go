@@ -1,7 +1,6 @@
 package patches
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,16 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Helper to create a test file with @generated-id header
-// id should be a 12-char hex string (e.g., "a1b2c3d4e5f6")
-func createTestFileWithID(t *testing.T, dir, relativePath, id, content string) {
+// Helper to create a test file with the given content
+func createTestFile(t *testing.T, dir, relativePath, content string) {
 	t.Helper()
 	fullPath := filepath.Join(dir, relativePath)
 	err := os.MkdirAll(filepath.Dir(fullPath), 0o755)
 	require.NoError(t, err)
 
-	fileContent := fmt.Sprintf("// @generated-id: %s\n%s", id, content)
-	err = os.WriteFile(fullPath, []byte(fileContent), 0o644)
+	err = os.WriteFile(fullPath, []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
@@ -63,9 +60,7 @@ func TestDetectFileChanges_DeletedFile(t *testing.T) {
 
 	// Set up lockfile with a tracked file that doesn't exist on disk
 	lf := lockfile.New()
-	lf.TrackedFiles.Set("src/deleted.go", lockfile.TrackedFile{
-		ID: "aabbccddeeff", // 12 hex chars
-	})
+	lf.TrackedFiles.Set("src/deleted.go", lockfile.TrackedFile{})
 
 	// Detect changes - file doesn't exist, should be marked dirty
 	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
@@ -85,9 +80,8 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 	// Create a temp directory
 	tempDir := t.TempDir()
 
-	id := "223344556677" // 12 hex chars
-	originalContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Original() {}\n"
-	modifiedContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Modified() {}\n"
+	originalContent := "package foo\n\nfunc Original() {}\n"
+	modifiedContent := "package foo\n\nfunc Modified() {}\n"
 
 	// Create file on disk with MODIFIED content
 	fullPath := filepath.Join(tempDir, "src/modified.go")
@@ -99,7 +93,6 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 	// Set up lockfile with checksum of ORIGINAL content
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/modified.go", lockfile.TrackedFile{
-		ID:                id,
 		LastWriteChecksum: computeChecksum(originalContent),
 	})
 
@@ -121,8 +114,7 @@ func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
 	// Create a temp directory
 	tempDir := t.TempDir()
 
-	id := "334455667788" // 12 hex chars
-	content := "// @generated-id: " + id + "\npackage foo\n"
+	content := "package foo\n"
 
 	// Create file on disk
 	fullPath := filepath.Join(tempDir, "src/unchanged.go")
@@ -134,7 +126,6 @@ func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
 	// Set up lockfile with matching checksum
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/unchanged.go", lockfile.TrackedFile{
-		ID:                id,
 		LastWriteChecksum: computeChecksum(content),
 	})
 
@@ -151,15 +142,12 @@ func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 	// Create a temp directory
 	tempDir := t.TempDir()
 
-	id := "445566778899" // 12 hex chars
-
 	// Create file at expected location
-	createTestFileWithID(t, tempDir, "src/restored.go", id, "package foo")
+	createTestFile(t, tempDir, "src/restored.go", "package foo")
 
 	// Set up lockfile with stale Deleted marker
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("src/restored.go", lockfile.TrackedFile{
-		ID:      id,
 		Deleted: true, // Stale marker from previous state
 	})
 
@@ -183,23 +171,19 @@ func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 	// Create a temp directory
 	tempDir := t.TempDir()
 
-	id1 := "556677889900" // 12 hex chars
-	id2 := "667788990011" // 12 hex chars
-	id3 := "778899001122" // 12 hex chars
-
 	// Create file1 at expected location (unchanged)
-	createTestFileWithID(t, tempDir, "src/file1.go", id1, "package foo")
+	createTestFile(t, tempDir, "src/file1.go", "package foo")
 
-	// Create file2 at NEW location (but tracked at old, so old is "deleted")
-	createTestFileWithID(t, tempDir, "src/newdir/file2.go", id2, "package bar")
+	// Create file2 at different location (but tracked at old, so old is "deleted")
+	createTestFile(t, tempDir, "src/newdir/file2.go", "package bar")
 
 	// file3 doesn't exist on disk (deleted)
 
 	// Set up lockfile
 	lf := lockfile.New()
-	lf.TrackedFiles.Set("src/file1.go", lockfile.TrackedFile{ID: id1})
-	lf.TrackedFiles.Set("src/file2.go", lockfile.TrackedFile{ID: id2})
-	lf.TrackedFiles.Set("src/file3.go", lockfile.TrackedFile{ID: id3})
+	lf.TrackedFiles.Set("src/file1.go", lockfile.TrackedFile{})
+	lf.TrackedFiles.Set("src/file2.go", lockfile.TrackedFile{})
+	lf.TrackedFiles.Set("src/file3.go", lockfile.TrackedFile{})
 
 	// Detect changes
 	isDirty, _, err := DetectFileChanges(tempDir, lf)
