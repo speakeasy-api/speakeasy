@@ -50,9 +50,3 @@ func (f *FileSystem) Remove(path string) error {
 func (f *FileSystem) RemoveAll(path string) error {
 	return os.RemoveAll(path)
 }
-
-// ScanForGeneratedIDs implements filesystem.FileSystem.
-// This is a no-op stub; generated-id scanning is no longer used.
-func (f *FileSystem) ScanForGeneratedIDs() (map[string]string, error) {
-	return nil, nil
-}
