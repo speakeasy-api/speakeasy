@@ -4,12 +4,54 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/stretchr/testify/require"
 )
+
+// TestPersistentEdits_BasicHeaderGeneration verifies that @generated-id headers are added to generated files
+func TestPersistentEdits_BasicHeaderGeneration(t *testing.T) {
+	t.Parallel()
+	temp := setupPersistentEditsTestDir(t)
+
+	// Run generation
+	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	require.NoError(t, err, "Initial generation should succeed")
+
+	// Check 3 sample files that should have @generated-id headers
+	sampleFiles := []string{
+		filepath.Join(temp, "sdk.go"),
+		filepath.Join(temp, "models", "components", "pet.go"),
+		filepath.Join(temp, "models", "components", "httpmetadata.go"),
+	}
+
+	idPattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{12})`)
+	seenIDs := make(map[string]string) // id -> filename
+
+	for _, file := range sampleFiles {
+		require.FileExists(t, file, "Sample file should exist")
+
+		content, err := os.ReadFile(file)
+		require.NoError(t, err, "Failed to read file: %s", file)
+
+		match := idPattern.FindSubmatch(content)
+		require.NotNil(t, match, "File %s should have @generated-id header", file)
+
+		id := string(match[1])
+		t.Logf("File %s has ID: %s", filepath.Base(file), id)
+
+		// Verify ID is unique
+		if existingFile, exists := seenIDs[id]; exists {
+			t.Errorf("Duplicate ID %s found in %s and %s", id, existingFile, file)
+		}
+		seenIDs[id] = file
+	}
+
+	require.Len(t, seenIDs, 3, "Should have 3 unique IDs")
+}
 
 // TestPersistentEdits_UserModificationPreserved verifies that user edits are preserved during regeneration
 func TestPersistentEdits_UserModificationPreserved(t *testing.T) {
@@ -31,10 +73,14 @@ func TestPersistentEdits_UserModificationPreserved(t *testing.T) {
 	sdkFile := filepath.Join(temp, "sdk.go")
 	require.FileExists(t, sdkFile)
 
-	// Read original content
+	// Read original content and extract ID
 	originalContent, err := os.ReadFile(sdkFile)
 	require.NoError(t, err)
 	t.Logf("sdk.go after first generation (first 500 chars):\n%s", string(originalContent[:min(500, len(originalContent))]))
+
+	generatedID := extractGeneratedIDFromContent(originalContent)
+	require.NotEmpty(t, generatedID)
+	t.Logf("Generated ID: %s", generatedID)
 
 	// Add a user comment
 	modifiedContent := strings.Replace(string(originalContent), "package testsdk", "package testsdk\n\n// USER_CUSTOM_COMMENT: This is my custom code", 1)
@@ -58,6 +104,10 @@ func TestPersistentEdits_UserModificationPreserved(t *testing.T) {
 	finalContent, err := os.ReadFile(sdkFile)
 	require.NoError(t, err)
 	require.Contains(t, string(finalContent), "USER_CUSTOM_COMMENT: This is my custom code", "User modification should be preserved")
+
+	// Verify @generated-id is still present and unchanged
+	finalID := extractGeneratedIDFromContent(finalContent)
+	require.Equal(t, generatedID, finalID, "Generated ID should remain the same")
 }
 
 // --- Helper functions for persistent edits tests ---
@@ -168,6 +218,16 @@ go.sum
 	return temp
 }
 
+// extractGeneratedIDFromContent extracts the @generated-id from file content
+func extractGeneratedIDFromContent(content []byte) string {
+	pattern := regexp.MustCompile(`@generated-id:\s+([a-f0-9]{12})`)
+	match := pattern.FindSubmatch(content)
+	if len(match) > 1 {
+		return string(match[1])
+	}
+	return ""
+}
+
 // gitInit initializes a git repository
 func gitInit(t *testing.T, dir string) {
 	t.Helper()
@@ -221,9 +281,13 @@ func TestPersistentEdits_MultiTarget(t *testing.T) {
 
 	goContent, err := os.ReadFile(goSdkFile)
 	require.NoError(t, err)
+	goID := extractGeneratedIDFromContent(goContent)
+	require.NotEmpty(t, goID, "Go SDK should have @generated-id")
 
 	tsContent, err := os.ReadFile(tsSdkFile)
 	require.NoError(t, err)
+	tsID := extractGeneratedIDFromContent(tsContent)
+	require.NotEmpty(t, tsID, "TypeScript SDK should have @generated-id")
 
 	// Modify both SDKs with user comments
 	goModified := strings.Replace(string(goContent), "package gosdk", "package gosdk\n\n// GO_USER_COMMENT: Custom Go code", 1)
@@ -249,6 +313,13 @@ func TestPersistentEdits_MultiTarget(t *testing.T) {
 	tsFinal, err := os.ReadFile(tsSdkFile)
 	require.NoError(t, err)
 	require.Contains(t, string(tsFinal), "TS_USER_COMMENT: Custom TypeScript code", "TypeScript user modification should be preserved")
+
+	// Verify IDs are preserved
+	goFinalID := extractGeneratedIDFromContent(goFinal)
+	require.Equal(t, goID, goFinalID, "Go generated ID should remain the same")
+
+	tsFinalID := extractGeneratedIDFromContent(tsFinal)
+	require.Equal(t, tsID, tsFinalID, "TypeScript generated ID should remain the same")
 }
 
 // TestPersistentEdits_SpecChangeWithUserEdits verifies user edits are preserved when spec changes
@@ -267,6 +338,8 @@ func TestPersistentEdits_SpecChangeWithUserEdits(t *testing.T) {
 
 	petContent, err := os.ReadFile(petFile)
 	require.NoError(t, err)
+	petID := extractGeneratedIDFromContent(petContent)
+	require.NotEmpty(t, petID)
 
 	// Add user comment to Pet model
 	petModified := strings.Replace(string(petContent), "type Pet struct", "// PET_USER_COMMENT: Custom validation logic here\ntype Pet struct", 1)
@@ -332,6 +405,10 @@ components:
 	require.NoError(t, err)
 	require.Contains(t, string(petFinal), "PET_USER_COMMENT: Custom validation logic here", "User modification should be preserved after spec change")
 	require.Contains(t, string(petFinal), "Breed", "New field from spec should be added")
+
+	// Verify ID is preserved
+	petFinalID := extractGeneratedIDFromContent(petFinal)
+	require.Equal(t, petID, petFinalID, "Generated ID should remain the same after spec change")
 }
 
 // TestPersistentEdits_MultipleFilesModified verifies multiple user-modified files are all preserved
@@ -351,11 +428,16 @@ func TestPersistentEdits_MultipleFilesModified(t *testing.T) {
 		filepath.Join(temp, "models", "operations", "listpets.go"): "// LISTPETS_CUSTOM: Operation customization",
 	}
 
+	originalIDs := make(map[string]string)
 	for file, comment := range filesToModify {
 		require.FileExists(t, file, "File should exist: %s", file)
 
 		content, err := os.ReadFile(file)
 		require.NoError(t, err)
+
+		id := extractGeneratedIDFromContent(content)
+		require.NotEmpty(t, id, "File should have @generated-id: %s", file)
+		originalIDs[file] = id
 
 		// Add comment after package declaration
 		modified := strings.Replace(string(content), "package ", comment+"\npackage ", 1)
@@ -373,6 +455,9 @@ func TestPersistentEdits_MultipleFilesModified(t *testing.T) {
 		content, err := os.ReadFile(file)
 		require.NoError(t, err)
 		require.Contains(t, string(content), comment, "User modification should be preserved in %s", file)
+
+		finalID := extractGeneratedIDFromContent(content)
+		require.Equal(t, originalIDs[file], finalID, "Generated ID should remain the same in %s", file)
 	}
 }
 
@@ -507,6 +592,64 @@ func stringPtr(s string) *string {
 	return &s
 }
 
+// TestPersistentEdits_FileMove verifies that user edits are preserved when a file is moved
+func TestPersistentEdits_FileMove(t *testing.T) {
+	t.Parallel()
+	temp := setupPersistentEditsTestDir(t)
+
+	// Initial generation
+	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	require.NoError(t, err)
+	gitCommitAll(t, temp, "initial generation")
+
+	// Find the Pet model file
+	originalPath := filepath.Join(temp, "models", "components", "pet.go")
+	require.FileExists(t, originalPath)
+
+	// Read and get the generated ID
+	originalContent, err := os.ReadFile(originalPath)
+	require.NoError(t, err)
+	originalID := extractGeneratedIDFromContent(originalContent)
+	require.NotEmpty(t, originalID, "Pet model should have @generated-id")
+	t.Logf("Original Pet ID: %s", originalID)
+
+	// Add a user comment to the file
+	modifiedContent := strings.Replace(string(originalContent), "type Pet struct", "// PET_MOVED_FILE: This comment should survive the move\ntype Pet struct", 1)
+
+	// Create a new directory and move the file there
+	newDir := filepath.Join(temp, "mymodels")
+	err = os.MkdirAll(newDir, 0o755)
+	require.NoError(t, err)
+
+	newPath := filepath.Join(newDir, "pet.go")
+	err = os.WriteFile(newPath, []byte(modifiedContent), 0o644)
+	require.NoError(t, err)
+
+	// Remove the original file
+	err = os.Remove(originalPath)
+	require.NoError(t, err)
+
+	gitCommitAll(t, temp, "moved pet.go to mymodels/ with user comment")
+
+	// Regenerate
+	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	require.NoError(t, err)
+
+	// The file should be regenerated at the new location (following the UUID)
+	require.FileExists(t, newPath, "File should exist at moved path")
+
+	newContent, err := os.ReadFile(newPath)
+	require.NoError(t, err)
+
+	// UUID tracking should work - ID should be preserved
+	newID := extractGeneratedIDFromContent(newContent)
+	require.Equal(t, originalID, newID, "Generated ID should be preserved after move")
+
+	// User modification should be preserved
+	require.Contains(t, string(newContent), "PET_MOVED_FILE: This comment should survive the move",
+		"User modification should be preserved after file move")
+}
+
 // TestPersistentEdits_FileRemove verifies behavior when user removes a generated file
 func TestPersistentEdits_FileRemove(t *testing.T) {
 	t.Parallel()
@@ -524,8 +667,16 @@ func TestPersistentEdits_FileRemove(t *testing.T) {
 	require.FileExists(t, petFile)
 	require.FileExists(t, sdkFile)
 
+	// Get the IDs before removal
+	petContent, err := os.ReadFile(petFile)
+	require.NoError(t, err)
+	petID := extractGeneratedIDFromContent(petContent)
+	require.NotEmpty(t, petID)
+
 	sdkContent, err := os.ReadFile(sdkFile)
 	require.NoError(t, err)
+	sdkID := extractGeneratedIDFromContent(sdkContent)
+	require.NotEmpty(t, sdkID)
 
 	// Add user modification to sdk.go (to verify it's preserved)
 	sdkModified := strings.Replace(string(sdkContent), "package testsdk", "package testsdk\n\n// SDK_PRESERVED: This should survive", 1)
@@ -549,10 +700,65 @@ func TestPersistentEdits_FileRemove(t *testing.T) {
 	require.Contains(t, string(sdkFinal), "SDK_PRESERVED: This should survive",
 		"User modification in sdk.go should be preserved")
 
+	sdkFinalID := extractGeneratedIDFromContent(sdkFinal)
+	require.Equal(t, sdkID, sdkFinalID, "SDK generated ID should remain the same")
+
 	// pet.go will not be regenerated since the user deleted it
 	_, err = os.Stat(petFile)
 	require.Error(t, err, "pet.go should not be regenerated after user deletion")
 	require.True(t, os.IsNotExist(err), "pet.go should not exist")
+}
+
+// TestPersistentEdits_FileRename verifies that renaming a file preserves edits via @generated-id tracking
+func TestPersistentEdits_FileRename(t *testing.T) {
+	t.Parallel()
+	temp := setupPersistentEditsTestDir(t)
+
+	// Initial generation
+	err := execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	require.NoError(t, err)
+	gitCommitAll(t, temp, "initial generation")
+
+	// Find an operation file
+	originalPath := filepath.Join(temp, "models", "operations", "listpets.go")
+	require.FileExists(t, originalPath)
+
+	// Read and get the generated ID
+	originalContent, err := os.ReadFile(originalPath)
+	require.NoError(t, err)
+	originalID := extractGeneratedIDFromContent(originalContent)
+	require.NotEmpty(t, originalID, "listpets.go should have @generated-id")
+	t.Logf("Original listpets.go ID: %s", originalID)
+
+	// Add a user comment
+	modifiedContent := strings.Replace(string(originalContent), "package operations", "package operations\n\n// RENAMED_FILE_COMMENT: User customization here", 1)
+
+	// Rename the file (same directory, different name)
+	newPath := filepath.Join(temp, "models", "operations", "list_all_pets.go")
+	err = os.WriteFile(newPath, []byte(modifiedContent), 0o644)
+	require.NoError(t, err)
+
+	// Remove the original
+	err = os.Remove(originalPath)
+	require.NoError(t, err)
+
+	gitCommitAll(t, temp, "renamed listpets.go to list_all_pets.go with user comment")
+
+	// Regenerate
+	err = execute(t, temp, "run", "-t", "all", "--pinned", "--skip-compile", "--output", "console").Run()
+	require.NoError(t, err)
+
+	// File should exist at new path with preserved content
+	require.FileExists(t, newPath, "File should exist at renamed location")
+
+	newContent, err := os.ReadFile(newPath)
+	require.NoError(t, err)
+
+	newID := extractGeneratedIDFromContent(newContent)
+	require.Equal(t, originalID, newID, "Generated ID should be preserved after rename")
+
+	require.Contains(t, string(newContent), "RENAMED_FILE_COMMENT: User customization here",
+		"User modification should be preserved after file rename")
 }
 
 // TestPersistentEdits_ConflictMarkers verifies that conflicting changes produce conflict markers
@@ -572,6 +778,9 @@ func TestPersistentEdits_ConflictMarkers(t *testing.T) {
 	// Read original content
 	originalContent, err := os.ReadFile(petFile)
 	require.NoError(t, err)
+	originalID := extractGeneratedIDFromContent(originalContent)
+	require.NotEmpty(t, originalID)
+	t.Logf("Original Pet ID: %s", originalID)
 
 	// User modifies the GetID method to add custom validation
 	// This conflicts because the generator will also want to generate GetID
@@ -653,6 +862,10 @@ components:
 
 	// New field from spec should be present
 	require.Contains(t, string(finalContent), "Species", "New species field should be added")
+
+	// ID should be preserved
+	finalID := extractGeneratedIDFromContent(finalContent)
+	require.Equal(t, originalID, finalID, "Generated ID should remain the same")
 }
 
 // TestPersistentEdits_UserAddedMethodSurvives verifies a realistic scenario where a user adds a method
@@ -719,6 +932,7 @@ func TestPersistentEdits_ConflictSameLineEdit(t *testing.T) {
 
 	originalContent, err := os.ReadFile(petFile)
 	require.NoError(t, err)
+	originalID := extractGeneratedIDFromContent(originalContent)
 
 	// User changes the struct field tag (modifying existing generated code)
 	// Change from the default tag to a custom one
@@ -808,6 +1022,10 @@ components:
 	require.NotContains(t, string(statusOutput), temp,
 		"Git status should not contain absolute path")
 
+	// ID should be preserved regardless
+	finalID := extractGeneratedIDFromContent(finalContent)
+	require.Equal(t, originalID, finalID, "Generated ID should be preserved")
+
 	// Now resolve the conflict by choosing the generated version
 	// We'll keep the required field but restore our custom validate tag
 	resolvedContent := strings.Replace(
@@ -845,6 +1063,10 @@ components:
 	require.NoError(t, err)
 	require.NotContains(t, string(rerunContent), "<<<<<<<", "File should not have conflict markers after successful re-run")
 	require.NotContains(t, string(rerunContent), ">>>>>>>", "File should not have conflict markers after successful re-run")
+
+	// ID should still be preserved
+	rerunID := extractGeneratedIDFromContent(rerunContent)
+	require.Equal(t, originalID, rerunID, "Generated ID should be preserved after re-run")
 }
 
 // TestPersistentEdits_NoConflictAdjacentEdits verifies that adjacent but non-overlapping
@@ -864,6 +1086,7 @@ func TestPersistentEdits_NoConflictAdjacentEdits(t *testing.T) {
 
 	originalContent, err := os.ReadFile(sdkFile)
 	require.NoError(t, err)
+	originalID := extractGeneratedIDFromContent(originalContent)
 
 	// User adds a comment at the beginning (after package declaration)
 	modifiedContent := strings.Replace(
@@ -953,4 +1176,8 @@ components:
 	// No conflict markers should be present (changes are in different areas)
 	require.NotContains(t, string(finalContent), "<<<<<<<",
 		"Adjacent edits should not produce conflict markers")
+
+	// ID should be preserved
+	finalID := extractGeneratedIDFromContent(finalContent)
+	require.Equal(t, originalID, finalID, "Generated ID should be preserved")
 }

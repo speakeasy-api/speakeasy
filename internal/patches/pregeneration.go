@@ -18,12 +18,15 @@ type PromptFunc func(summary string) (prompts.CustomCodeChoice, error)
 // FileChangeSummary contains a summary of detected file changes
 type FileChangeSummary struct {
 	Deleted  []string
+	Moved    map[string]string // original path -> new path
 	Modified []FileDiff
 }
 
 // GetFileChangeSummary extracts a summary of file changes from the lockfile
 func GetFileChangeSummary(lockFile *config.LockFile) FileChangeSummary {
-	summary := FileChangeSummary{}
+	summary := FileChangeSummary{
+		Moved: make(map[string]string),
+	}
 
 	if lockFile == nil || lockFile.TrackedFiles == nil {
 		return summary
@@ -36,6 +39,8 @@ func GetFileChangeSummary(lockFile *config.LockFile) FileChangeSummary {
 		}
 		if tracked.Deleted {
 			summary.Deleted = append(summary.Deleted, path)
+		} else if tracked.MovedTo != "" {
+			summary.Moved[path] = tracked.MovedTo
 		}
 	}
 
@@ -51,6 +56,7 @@ func GetFileChangeSummaryWithDiffs(
 	gitRepo GitRepository,
 ) FileChangeSummary {
 	summary := FileChangeSummary{
+		Moved:    make(map[string]string),
 		Modified: make([]FileDiff, 0, len(modifiedPaths)),
 	}
 
@@ -58,7 +64,7 @@ func GetFileChangeSummaryWithDiffs(
 		return summary
 	}
 
-	// Handle deleted (same as GetFileChangeSummary)
+	// Handle deleted and moved (same as GetFileChangeSummary)
 	for path := range lockFile.TrackedFiles.Keys() {
 		tracked, ok := lockFile.TrackedFiles.Get(path)
 		if !ok {
@@ -66,6 +72,8 @@ func GetFileChangeSummaryWithDiffs(
 		}
 		if tracked.Deleted {
 			summary.Deleted = append(summary.Deleted, path)
+		} else if tracked.MovedTo != "" {
+			summary.Moved[path] = tracked.MovedTo
 		}
 	}
 
@@ -89,6 +97,9 @@ func (s FileChangeSummary) FormatSummary(maxLines int, showDiffs bool) string {
 
 	for _, path := range s.Deleted {
 		lines = append(lines, fmt.Sprintf("  D %s", path))
+	}
+	for from, to := range s.Moved {
+		lines = append(lines, fmt.Sprintf("  R %s -> %s", from, to))
 	}
 	for _, fd := range s.Modified {
 		if showDiffs && fd.Stats.Added+fd.Stats.Removed > 0 {
@@ -119,20 +130,22 @@ func (s FileChangeSummary) FormatSummary(maxLines int, showDiffs bool) string {
 
 // IsEmpty returns true if no changes were detected
 func (s FileChangeSummary) IsEmpty() bool {
-	return len(s.Deleted) == 0 && len(s.Modified) == 0
+	return len(s.Deleted) == 0 && len(s.Moved) == 0 && len(s.Modified) == 0
 }
 
-// DetectFileChanges checks the output directory and updates the lockfile's TrackedFiles
-// with Deleted fields based on the current state of files on disk.
+// DetectFileChanges scans the output directory and updates the lockfile's TrackedFiles
+// with Deleted and MovedTo fields based on the current state of files on disk.
 // Returns:
-//   - isDirty: true if any tracked file has been deleted or has a checksum change
+//   - isDirty: true if any tracked file has been deleted, moved, or has a checksum change
 //   - modifiedPaths: list of paths that have content modifications (checksum mismatch)
 //   - error: any error encountered during scanning
 //
 // The function:
-// 1. Checks if each tracked file still exists on disk
-// 2. Marks files as Deleted if they no longer exist
-// 3. Detects checksum changes for files in their expected location
+// 1. Scans for @generated-id headers in all files
+// 2. Compares UUIDs to the lockfile's TrackedFiles
+// 3. Marks files as Deleted if their UUID is no longer on disk
+// 4. Sets MovedTo if a file's UUID is found at a different path
+// 5. Detects checksum changes for files in their expected location
 func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string, error) {
 	if lockFile == nil || lockFile.TrackedFiles == nil {
 		return false, nil, nil
@@ -141,6 +154,23 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 	isDirty := false
 	var modifiedPaths []string
 
+	// Scan for @generated-id headers on disk
+	scanner := NewScanner(outDir)
+	scanResult, err := scanner.Scan()
+	if err != nil {
+		return false, nil, err
+	}
+
+	// Build a map of UUID -> original path from lockfile
+	uuidToOriginalPath := make(map[string]string)
+	for path := range lockFile.TrackedFiles.Keys() {
+		tracked, ok := lockFile.TrackedFiles.Get(path)
+		if !ok || tracked.ID == "" {
+			continue
+		}
+		uuidToOriginalPath[tracked.ID] = path
+	}
+
 	// Process each tracked file
 	for path := range lockFile.TrackedFiles.Keys() {
 		tracked, ok := lockFile.TrackedFiles.Get(path)
@@ -148,25 +178,37 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 			continue
 		}
 
-		// Check if file exists at its path
+		// Check if file exists at its original path
 		fullPath := filepath.Join(outDir, path)
 		_, fileErr := os.Stat(fullPath)
 		fileExists := fileErr == nil
 
-		if !fileExists {
-			// File was deleted
+		// Check if UUID is found at a different path
+		currentPath, uuidFoundOnDisk := scanResult.UUIDToPath[tracked.ID]
+
+		switch {
+		case !uuidFoundOnDisk && !fileExists:
+			// File was deleted - UUID not found anywhere on disk
 			isDirty = true
 			tracked.Deleted = true
+			tracked.MovedTo = ""
 			lockFile.TrackedFiles.Set(path, tracked)
-		} else {
-			// File is in its expected location, clear any stale delete marker
-			if tracked.Deleted {
+		case uuidFoundOnDisk && currentPath != path:
+			// File was moved - UUID found at different path
+			isDirty = true
+			tracked.Deleted = false
+			// tracked.MovedTo = currentPath
+			lockFile.TrackedFiles.Set(path, tracked)
+		default:
+			// File is in its expected location, clear any stale move/delete markers
+			if tracked.Deleted || tracked.MovedTo != "" {
 				tracked.Deleted = false
+				tracked.MovedTo = ""
 				lockFile.TrackedFiles.Set(path, tracked)
 			}
 
 			// Check for content modification via checksum
-			if tracked.LastWriteChecksum != "" {
+			if tracked.LastWriteChecksum != "" && fileExists {
 				currentChecksum, err := lockfile.ComputeFileChecksum(os.DirFS(outDir), path)
 				if err == nil && currentChecksum != tracked.LastWriteChecksum {
 					isDirty = true
