@@ -29,6 +29,7 @@ const (
 	ActionSuggest            Action = "suggest"
 	ActionFinalize           Action = "finalize"
 	ActionFinalizeSuggestion Action = "finalize-suggestion"
+	ActionChangesetRelease   Action = "changeset-release"
 	ActionRelease            Action = "release"
 	ActionLog                Action = "log-result"
 	ActionPublishEvent       Action = "publish-event"
@@ -235,6 +236,10 @@ func SkipRelease() bool {
 
 func SkipVersioning() bool {
 	return os.Getenv("INPUT_SKIP_VERSIONING") == "true"
+}
+
+func ChangesetUpgrade() bool {
+	return os.Getenv("INPUT_CHANGESET_UPGRADE") == "true"
 }
 
 // GetGithubRef returns the effective GITHUB_REF, checking INPUT_GITHUB_REF first

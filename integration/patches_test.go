@@ -709,8 +709,8 @@ func TestPersistentEdits_FileRemove(t *testing.T) {
 	require.True(t, os.IsNotExist(err), "pet.go should not exist")
 }
 
-// TestPersistentEdits_FileRename verifies that renaming a file preserves edits via @generated-id tracking
-func TestPersistentEdits_FileRename(t *testing.T) {
+// TestPersistentEdits_ExplicitFileMove verifies that an explicitly recorded move preserves edits.
+func TestPersistentEdits_ExplicitFileMove(t *testing.T) {
 	t.Parallel()
 	temp := setupPersistentEditsTestDir(t)
 
@@ -740,6 +740,9 @@ func TestPersistentEdits_FileRename(t *testing.T) {
 
 	// Remove the original
 	err = os.Remove(originalPath)
+	require.NoError(t, err)
+
+	err = execute(t, temp, "patches", "mv", "--file", "models/operations/listpets.go", "--to", "models/operations/list_all_pets.go").Run()
 	require.NoError(t, err)
 
 	gitCommitAll(t, temp, "renamed listpets.go to list_all_pets.go with user comment")

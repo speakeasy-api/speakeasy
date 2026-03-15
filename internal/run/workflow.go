@@ -34,6 +34,9 @@ type Workflow struct {
 	Source                 string
 	Repo                   string
 	SetVersion             string
+	ChangesetUpgrade       bool
+	ChangesetCapture       bool
+	PatchCapture           bool
 	Debug                  bool
 	ShouldCompile          bool
 	Verbose                bool
@@ -226,6 +229,24 @@ func WithSetVersion(version string) Opt {
 	}
 }
 
+func WithChangesetUpgrade(changesetUpgrade bool) Opt {
+	return func(w *Workflow) {
+		w.ChangesetUpgrade = changesetUpgrade
+	}
+}
+
+func WithChangesetCapture(changesetCapture bool) Opt {
+	return func(w *Workflow) {
+		w.ChangesetCapture = changesetCapture
+	}
+}
+
+func WithPatchCapture(patchCapture bool) Opt {
+	return func(w *Workflow) {
+		w.PatchCapture = patchCapture
+	}
+}
+
 func WithDebug(debug bool) Opt {
 	return func(w *Workflow) {
 		w.Debug = debug
@@ -385,6 +406,7 @@ func (w *Workflow) Clone(ctx context.Context, opts ...Opt) (*Workflow, error) {
 				WithSource(w.Source),
 				WithTarget(w.Target),
 				WithSetVersion(w.SetVersion),
+				WithChangesetUpgrade(w.ChangesetUpgrade),
 				WithDebug(w.Debug),
 				WithShouldCompile(w.ShouldCompile),
 				WithSkipLinting(),

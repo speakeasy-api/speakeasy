@@ -38,6 +38,7 @@ const (
 	BranchPrefixDocsRegen  = "speakeasy-sdk-docs-regen"
 	BranchPrefixSuggestion = "speakeasy-openapi-suggestion"
 	BranchPrefixFanout     = "speakeasy-fanout"
+	BranchPrefixChangeset  = "speakeasy-changeset-release"
 )
 
 // IsGeneratedBranch returns true if the branch name is one of our standard generated branches.
@@ -45,10 +46,12 @@ func IsGeneratedBranch(branch string) bool {
 	return strings.HasPrefix(branch, BranchPrefixSDKRegen+"-") ||
 		strings.HasPrefix(branch, BranchPrefixDocsRegen+"-") ||
 		strings.HasPrefix(branch, BranchPrefixSuggestion+"-") ||
+		strings.HasPrefix(branch, BranchPrefixChangeset+"-") ||
 		strings.HasPrefix(branch, BranchPrefixFanout+"-") ||
 		branch == BranchPrefixSDKRegen ||
 		branch == BranchPrefixDocsRegen ||
-		branch == BranchPrefixSuggestion
+		branch == BranchPrefixSuggestion ||
+		branch == BranchPrefixChangeset
 }
 
 type Git struct {
@@ -279,6 +282,8 @@ func expectedBranchPrefix(action environment.Action) string {
 		prefix = BranchPrefixDocsRegen
 	case action == environment.ActionFinalizeSuggestion || action == environment.ActionSuggest:
 		prefix = BranchPrefixSuggestion
+	case action == environment.ActionChangesetRelease:
+		prefix = BranchPrefixChangeset
 	default:
 		prefix = BranchPrefixSDKRegen
 	}
@@ -287,6 +292,10 @@ func expectedBranchPrefix(action environment.Action) string {
 		return prefix
 	}
 	return prefix + "-" + sanitized
+}
+
+func StableBranchName(action environment.Action) string {
+	return expectedBranchPrefix(action)
 }
 
 func (g *Git) FindAndCheckoutBranch(branchName string) (string, error) {
@@ -445,6 +454,8 @@ func (g *Git) FindOrCreateBranch(branchName string, action environment.Action) (
 		prefix = BranchPrefixSDKRegen
 	case action == environment.ActionSuggest:
 		prefix = BranchPrefixSuggestion
+	case action == environment.ActionChangesetRelease:
+		prefix = BranchPrefixChangeset
 	case environment.IsDocsGeneration():
 		prefix = BranchPrefixDocsRegen
 	}
@@ -625,6 +636,8 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 			// For clients using older cli with new sdk-action, GetCommitMarkdownSection would be empty so we will use the old commit message
 			commitMessage = mergedVersionReport.GetCommitMarkdownSection()
 		}
+	case environment.ActionChangesetRelease:
+		commitMessage = fmt.Sprintf("ci: prepared changeset release with Speakeasy CLI %s", speakeasyVersion)
 	case environment.ActionSuggest:
 		commitMessage = fmt.Sprintf("ci: suggestions for OpenAPI doc %s", doc)
 	default:

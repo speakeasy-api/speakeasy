@@ -130,6 +130,11 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 		return sourceRes, nil, err
 	}
 
+	prepResult, err := w.prepareTargetGeneration(ctx, target, outDir, rootStep)
+	if err != nil {
+		return sourceRes, nil, err
+	}
+
 	targetResult := TargetResult{
 		OutputPath:  outDir,
 		GenYamlPath: genConfig.ConfigPath,
@@ -241,6 +246,10 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			Compile:               w.ShouldCompile,
 			TargetName:            target,
 			SkipVersioning:        w.SkipVersioning,
+			ChangesetUpgrade:      w.ChangesetUpgrade,
+			ChangesetCapture:      w.ChangesetCapture,
+			PatchCapture:          w.PatchCapture,
+			TrustedPatchInputs:    prepResult.TrustedPatchInputs,
 			AllowPrompts:          w.AllowPrompts,
 			CancellableGeneration: w.CancellableGeneration,
 			StreamableGeneration:  w.StreamableGeneration,

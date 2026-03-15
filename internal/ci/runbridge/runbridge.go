@@ -118,6 +118,10 @@ func buildWorkflowOpts(sourcesOnly bool, installationURLs map[string]string, rep
 		opts = append(opts, run.WithSkipVersioning(true))
 	}
 
+	if environment.ChangesetUpgrade() {
+		opts = append(opts, run.WithChangesetUpgrade(true))
+	}
+
 	return opts
 }
 

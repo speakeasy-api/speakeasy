@@ -14,6 +14,8 @@ var CICmd = &model.CommandGroup{
 	AllowUnknownFlags: true,
 	Commands: []model.Command{
 		generateCmd,
+		changesetReleaseCmd,
+		changesetValidateCmd,
 		releaseCmd,
 		suggestCmd,
 		finalizeCmd,

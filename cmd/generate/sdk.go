@@ -10,7 +10,9 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/patches"
 	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
+	"github.com/speakeasy-api/speakeasy/prompts"
 )
 
 type GenerateFlags struct {
@@ -84,28 +86,34 @@ var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
 }
 
 func genSDKs(ctx context.Context, flags GenerateFlags) error {
-	_, err := sdkgen.Generate(
+	prepResult, err := patches.PrepareForGeneration(flags.OutDir, flags.AutoYes, false, false, prompts.PromptForCustomCode, func(string, ...any) {})
+	if err != nil {
+		return err
+	}
+
+	_, err = sdkgen.Generate(
 		ctx,
 		sdkgen.GenerateOptions{
-			CustomerID:      config.GetCustomerID(),
-			WorkspaceID:     config.GetWorkspaceID(),
-			Language:        flags.Lang,
-			SchemaPath:      flags.SchemaPath,
-			Header:          flags.Header,
-			Token:           flags.Token,
-			OutDir:          flags.OutDir,
-			CLIVersion:      events.GetSpeakeasyVersionFromContext(ctx),
-			InstallationURL: flags.InstallationURL,
-			Debug:           flags.Debug,
-			AutoYes:         flags.AutoYes,
-			Published:       flags.Published,
-			OutputTests:     flags.OutputTests,
-			Repo:            flags.Repo,
-			RepoSubDir:      flags.RepoSubdir,
-			Verbose:         flags.Verbose,
-			Compile:         false,
-			TargetName:      "",
-			SkipVersioning:  false,
+			CustomerID:         config.GetCustomerID(),
+			WorkspaceID:        config.GetWorkspaceID(),
+			Language:           flags.Lang,
+			SchemaPath:         flags.SchemaPath,
+			Header:             flags.Header,
+			Token:              flags.Token,
+			OutDir:             flags.OutDir,
+			CLIVersion:         events.GetSpeakeasyVersionFromContext(ctx),
+			InstallationURL:    flags.InstallationURL,
+			Debug:              flags.Debug,
+			AutoYes:            flags.AutoYes,
+			Published:          flags.Published,
+			OutputTests:        flags.OutputTests,
+			Repo:               flags.Repo,
+			RepoSubDir:         flags.RepoSubdir,
+			Verbose:            flags.Verbose,
+			Compile:            false,
+			TargetName:         "",
+			SkipVersioning:     false,
+			TrustedPatchInputs: prepResult.TrustedPatchInputs,
 		},
 	)
 

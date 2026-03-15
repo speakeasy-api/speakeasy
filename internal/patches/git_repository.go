@@ -34,6 +34,9 @@ func OpenGitRepository(dir string) (*GitRepositoryWrapper, error) {
 }
 
 func (w *GitRepositoryWrapper) IsNil() bool {
+	if w == nil {
+		return true
+	}
 	return w.repo.IsNil()
 }
 

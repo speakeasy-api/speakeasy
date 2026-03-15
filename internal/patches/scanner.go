@@ -10,8 +10,8 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 )
 
-// Scanner scans a directory for files containing @generated-id UUIDs.
-// This enables tracking file identity across renames/moves.
+// Scanner scans a directory for files containing @generated-id headers.
+// This is used to validate explicit move metadata and preserve stable file IDs.
 type Scanner struct {
 	rootDir string
 }
@@ -25,13 +25,12 @@ func NewScanner(rootDir string) *Scanner {
 // Short IDs are 12 hex chars (e.g., a1b2c3d4e5f6)
 var generatedIDPattern = regexp.MustCompile(`@generated-id:\s*([a-f0-9]{12})`)
 
-// ScanResult contains the mapping of UUIDs to file paths.
+// ScanResult contains the mapping of generated IDs to file paths.
 type ScanResult struct {
-	// UUIDToPath maps file UUIDs to their current relative paths.
-	// Used to detect file moves/renames.
+	// UUIDToPath maps generated IDs to their current relative paths.
 	UUIDToPath map[string]string
 
-	// PathToUUID maps relative paths to their UUIDs.
+	// PathToUUID maps relative paths to their generated IDs.
 	PathToUUID map[string]string
 }
 

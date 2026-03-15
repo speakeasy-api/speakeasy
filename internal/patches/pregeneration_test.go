@@ -77,10 +77,10 @@ func TestDetectFileChanges_DeletedFile(t *testing.T) {
 	tracked, ok := lf.TrackedFiles.Get("src/deleted.go")
 	require.True(t, ok)
 	assert.True(t, tracked.Deleted, "TrackedFile.Deleted should be true")
-	assert.Empty(t, tracked.MovedTo, "TrackedFile.MovedTo should be empty")
+	assert.Empty(t, GetMovedTo(tracked), "TrackedFile.MovedTo should be empty")
 }
 
-func TestDetectFileChanges_MovedFile(t *testing.T) {
+func TestDetectFileChanges_ManualMoveWithoutMetadataIsDeleted(t *testing.T) {
 	t.Parallel()
 
 	// Create a temp directory
@@ -97,17 +97,41 @@ func TestDetectFileChanges_MovedFile(t *testing.T) {
 		ID: id,
 	})
 
-	// Detect changes - ID found at different path
+	// Detect changes - the file was moved on disk, but there is no explicit move metadata
 	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
-	assert.True(t, isDirty, "Should be dirty when file is moved")
+	assert.True(t, isDirty, "Should be dirty when file is missing from its tracked path")
 	assert.Empty(t, modifiedPaths, "No modified paths for moved file")
 
-	// Verify the tracked file has MovedTo set
+	// Verify the tracked file is treated as deleted unless move metadata was recorded explicitly
 	tracked, ok := lf.TrackedFiles.Get("src/oldlocation.go")
 	require.True(t, ok)
-	assert.False(t, tracked.Deleted, "TrackedFile.Deleted should be false")
-	assert.Equal(t, "src/newlocation.go", tracked.MovedTo, "TrackedFile.MovedTo should point to new location")
+	assert.True(t, tracked.Deleted, "TrackedFile.Deleted should be true")
+	assert.Empty(t, GetMovedTo(tracked), "TrackedFile.MovedTo should be empty")
+}
+
+func TestDetectFileChanges_PreservesExplicitMoveMetadata(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	id := "112233445566"
+	createTestFileWithID(t, tempDir, "src/newlocation.go", id, "package foo")
+
+	lf := lockfile.New()
+	tracked := lockfile.TrackedFile{ID: id}
+	SetMovedTo(&tracked, "src/newlocation.go")
+	lf.TrackedFiles.Set("src/oldlocation.go", tracked)
+
+	isDirty, modifiedPaths, err := DetectFileChanges(tempDir, lf)
+	require.NoError(t, err)
+	assert.False(t, isDirty, "Explicit move metadata should be treated as the expected path")
+	assert.Empty(t, modifiedPaths)
+
+	tracked, ok := lf.TrackedFiles.Get("src/oldlocation.go")
+	require.True(t, ok)
+	assert.False(t, tracked.Deleted)
+	assert.Equal(t, "src/newlocation.go", GetMovedTo(tracked))
 }
 
 func TestDetectFileChanges_ModifiedFile(t *testing.T) {
@@ -144,7 +168,7 @@ func TestDetectFileChanges_ModifiedFile(t *testing.T) {
 	tracked, ok := lf.TrackedFiles.Get("src/modified.go")
 	require.True(t, ok)
 	assert.False(t, tracked.Deleted)
-	assert.Empty(t, tracked.MovedTo)
+	assert.Empty(t, GetMovedTo(tracked))
 }
 
 func TestDetectFileChanges_UnchangedFiles(t *testing.T) {
@@ -207,7 +231,7 @@ func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 	tracked, ok := lf.TrackedFiles.Get("src/restored.go")
 	require.True(t, ok)
 	assert.False(t, tracked.Deleted, "Stale Deleted marker should be cleared")
-	assert.Empty(t, tracked.MovedTo, "MovedTo should be empty")
+	assert.Empty(t, GetMovedTo(tracked), "MovedTo should be empty")
 }
 
 func TestDetectFileChanges_MultipleFiles(t *testing.T) {
@@ -223,7 +247,7 @@ func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 	// Create file1 at expected location (unchanged)
 	createTestFileWithID(t, tempDir, "src/file1.go", id1, "package foo")
 
-	// Create file2 at NEW location (moved)
+	// Create file2 at NEW location, but do not record explicit move metadata
 	createTestFileWithID(t, tempDir, "src/newdir/file2.go", id2, "package bar")
 
 	// file3 doesn't exist on disk (deleted)
@@ -237,22 +261,114 @@ func TestDetectFileChanges_MultipleFiles(t *testing.T) {
 	// Detect changes
 	isDirty, _, err := DetectFileChanges(tempDir, lf)
 	require.NoError(t, err)
-	assert.True(t, isDirty, "Should be dirty when some files are moved/deleted")
+	assert.True(t, isDirty, "Should be dirty when some files are missing/deleted")
 
 	// Check file1 - unchanged
 	tracked1, _ := lf.TrackedFiles.Get("src/file1.go")
 	assert.False(t, tracked1.Deleted)
-	assert.Empty(t, tracked1.MovedTo)
+	assert.Empty(t, GetMovedTo(tracked1))
 
-	// Check file2 - moved
+	// Check file2 - without explicit metadata, the move is treated as a deletion
 	tracked2, _ := lf.TrackedFiles.Get("src/file2.go")
-	assert.False(t, tracked2.Deleted)
-	assert.Equal(t, "src/newdir/file2.go", tracked2.MovedTo)
+	assert.True(t, tracked2.Deleted)
+	assert.Empty(t, GetMovedTo(tracked2))
 
 	// Check file3 - deleted
 	tracked3, _ := lf.TrackedFiles.Get("src/file3.go")
 	assert.True(t, tracked3.Deleted)
-	assert.Empty(t, tracked3.MovedTo)
+	assert.Empty(t, GetMovedTo(tracked3))
+}
+
+func TestPrepareForGeneration_RequiresCaptureWhenPatchFilesAreDirty(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(tempDir, ".speakeasy"), 0o755))
+
+	cfg := &config.Configuration{
+		Generation: config.Generation{
+			PersistentEdits: config.PersistentEdits{
+				Enabled:    ptrEnabled(config.PersistentEditsEnabledTrue),
+				PatchFiles: ptrBool(true),
+			},
+		},
+	}
+	require.NoError(t, config.SaveConfig(tempDir, cfg))
+
+	id := "8899aabbccdd"
+	originalContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Original() {}\n"
+	modifiedContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Modified() {}\n"
+
+	fullPath := filepath.Join(tempDir, "src", "modified.go")
+	require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+	require.NoError(t, os.WriteFile(fullPath, []byte(modifiedContent), 0o644))
+
+	lf := lockfile.New()
+	lf.TrackedFiles.Set("src/modified.go", lockfile.TrackedFile{
+		ID:                id,
+		LastWriteChecksum: computeChecksum(originalContent),
+	})
+	require.NoError(t, config.SaveLockFile(tempDir, lf))
+
+	result, err := PrepareForGeneration(tempDir, false, false, false, nil, func(string, ...any) {})
+	require.Error(t, err)
+	assert.True(t, result.TrustedPatchInputs)
+
+	captureErr, ok := IsCaptureRequired(err)
+	require.True(t, ok)
+	assert.Equal(t, CaptureModePatchFiles, captureErr.Mode)
+	assert.Contains(t, captureErr.Error(), "speakeasy patches capture")
+	assert.Contains(t, captureErr.Summary, "src/modified.go")
+}
+
+func TestPrepareForGeneration_RequiresChangesetCaptureWhenChangesetInputsAreDirty(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(tempDir, ".speakeasy"), 0o755))
+
+	cfg := &config.Configuration{
+		Generation: config.Generation{
+			VersioningStrategy: config.VersioningStrategy("changeset"),
+			PersistentEdits: config.PersistentEdits{
+				Enabled: ptrEnabled(config.PersistentEditsEnabledTrue),
+			},
+		},
+	}
+	require.NoError(t, config.SaveConfig(tempDir, cfg))
+
+	id := "8899aabbccdd"
+	originalContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Original() {}\n"
+	modifiedContent := "// @generated-id: " + id + "\npackage foo\n\nfunc Modified() {}\n"
+
+	fullPath := filepath.Join(tempDir, "src", "modified.go")
+	require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+	require.NoError(t, os.WriteFile(fullPath, []byte(modifiedContent), 0o644))
+
+	lf := lockfile.New()
+	lf.TrackedFiles.Set("src/modified.go", lockfile.TrackedFile{
+		ID:                id,
+		LastWriteChecksum: computeChecksum(originalContent),
+	})
+	require.NoError(t, config.SaveLockFile(tempDir, lf))
+
+	result, err := PrepareForGeneration(tempDir, false, false, false, nil, func(string, ...any) {})
+	require.Error(t, err)
+	assert.False(t, result.TrustedPatchInputs)
+
+	captureErr, ok := IsCaptureRequired(err)
+	require.True(t, ok)
+	assert.Equal(t, CaptureModeChangeset, captureErr.Mode)
+	assert.Contains(t, captureErr.Error(), "speakeasy run --auto-yes")
+	assert.Contains(t, captureErr.Summary, "src/modified.go")
+}
+
+func ptrBool(v bool) *bool {
+	return &v
+}
+
+func ptrEnabled(v config.PersistentEditsEnabled) *config.PersistentEditsEnabled {
+	return &v
 }
 
 func TestGetFileChangeSummary_Empty(t *testing.T) {
@@ -271,7 +387,9 @@ func TestGetFileChangeSummary_WithChanges(t *testing.T) {
 	lf := lockfile.New()
 	lf.TrackedFiles.Set("deleted1.go", lockfile.TrackedFile{Deleted: true})
 	lf.TrackedFiles.Set("deleted2.go", lockfile.TrackedFile{Deleted: true})
-	lf.TrackedFiles.Set("moved.go", lockfile.TrackedFile{MovedTo: "newpath/moved.go"})
+	moved := lockfile.TrackedFile{}
+	SetMovedTo(&moved, "newpath/moved.go")
+	lf.TrackedFiles.Set("moved.go", moved)
 	lf.TrackedFiles.Set("unchanged.go", lockfile.TrackedFile{})
 
 	summary := GetFileChangeSummary(lf)

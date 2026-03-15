@@ -29,13 +29,8 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/merge"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
-	"github.com/speakeasy-api/speakeasy/prompts"
 	"go.uber.org/zap"
 )
-
-// PromptForCustomCode is a function variable that can be replaced in tests.
-// It defaults to the real prompt implementation.
-var PromptForCustomCode = prompts.PromptForCustomCode
 
 type GenerationAccess struct {
 	AccessAllowed         bool
@@ -58,26 +53,30 @@ type StreamableGeneration struct {
 }
 
 type GenerateOptions struct {
-	CustomerID      string
-	WorkspaceID     string
-	Language        string
-	SchemaPath      string
-	Header          string
-	Token           string
-	OutDir          string
-	CLIVersion      string
-	InstallationURL string
-	Debug           bool
-	AutoYes         bool
-	Published       bool
-	OutputTests     bool
-	Repo            string
-	RepoSubDir      string
-	Verbose         bool
-	Compile         bool
-	TargetName      string
-	SkipVersioning  bool
-	AllowPrompts    bool
+	CustomerID         string
+	WorkspaceID        string
+	Language           string
+	SchemaPath         string
+	Header             string
+	Token              string
+	OutDir             string
+	CLIVersion         string
+	InstallationURL    string
+	Debug              bool
+	AutoYes            bool
+	Published          bool
+	OutputTests        bool
+	Repo               string
+	RepoSubDir         string
+	Verbose            bool
+	Compile            bool
+	TargetName         string
+	SkipVersioning     bool
+	ChangesetUpgrade   bool
+	ChangesetCapture   bool
+	PatchCapture       bool
+	TrustedPatchInputs bool
+	AllowPrompts       bool
 
 	CancellableGeneration *CancellableGeneration
 	StreamableGeneration  *StreamableGeneration
@@ -183,6 +182,18 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	if opts.SkipVersioning {
 		generatorOpts = append(generatorOpts, generate.WithSkipVersioning(opts.SkipVersioning))
 	}
+	if opts.ChangesetUpgrade {
+		generatorOpts = append(generatorOpts, generate.WithChangesetUpgrade())
+	}
+	if opts.ChangesetCapture {
+		generatorOpts = append(generatorOpts, generate.WithChangesetCapture())
+	}
+	if opts.PatchCapture {
+		generatorOpts = append(generatorOpts, generate.WithPatchCapture())
+	}
+	if opts.TrustedPatchInputs {
+		generatorOpts = append(generatorOpts, generate.WithTrustedPatchInputs())
+	}
 	if opts.RenderUsageSnippets {
 		generatorOpts = append(generatorOpts, generate.WithRenderUsageSnippets())
 	}
@@ -232,21 +243,6 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			generate.WithFileSystem(fs.NewFileSystem(opts.OutDir)),
 		)
 
-		// Pre-generation: detect file moves/deletions, prompt if needed, and update lockfile
-		// Use WorkflowStep for prompts if available (to pause visualizer), otherwise use direct prompts
-		// Pass nil promptFunc if prompts are not allowed (e.g., console output mode, CI)
-		var promptFunc patches.PromptFunc
-		if opts.AllowPrompts {
-			promptFunc = PromptForCustomCode
-			if opts.WorkflowStep != nil {
-				promptFunc = func(summary string) (prompts.CustomCodeChoice, error) {
-					return prompts.PromptForCustomCodeWithStep(summary, opts.WorkflowStep)
-				}
-			}
-		}
-		if err := patches.PrepareForGeneration(opts.OutDir, opts.AutoYes, promptFunc, logger.Warnf); err != nil {
-			logger.Warnf("Error preparing for generation: %v", err)
-		}
 	}
 
 	g, err := generate.New(generatorOpts...)

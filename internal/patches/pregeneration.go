@@ -1,11 +1,14 @@
 package patches
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	generatorpatchfiles "github.com/speakeasy-api/openapi-generation/v2/pkg/patchfiles"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/lockfile"
 	"github.com/speakeasy-api/speakeasy/internal/env"
@@ -14,6 +17,47 @@ import (
 
 // PromptFunc is the function signature for prompting the user for custom code choices.
 type PromptFunc func(summary string) (prompts.CustomCodeChoice, error)
+
+type CaptureMode string
+
+const (
+	CaptureModePatchFiles CaptureMode = "patch_files"
+	CaptureModeChangeset  CaptureMode = "changeset"
+)
+
+type CaptureRequiredError struct {
+	Mode    CaptureMode
+	Summary string
+}
+
+type PreparationResult struct {
+	TrustedPatchInputs bool
+}
+
+func (e *CaptureRequiredError) Error() string {
+	if e == nil {
+		return ""
+	}
+
+	message := "generated SDK files contain unmanaged edits that are not represented by trusted patch state"
+	command := "speakeasy patches capture"
+	if e.Mode == CaptureModeChangeset {
+		command = "speakeasy run --auto-yes"
+	}
+	if strings.TrimSpace(e.Summary) == "" {
+		return message + "\n\nCapture them before generating with:\n\n  " + command
+	}
+
+	return fmt.Sprintf("%s:\n%s\n\nCapture them before generating with:\n\n  %s", message, e.Summary, command)
+}
+
+func IsCaptureRequired(err error) (*CaptureRequiredError, bool) {
+	var captureErr *CaptureRequiredError
+	if errors.As(err, &captureErr) {
+		return captureErr, true
+	}
+	return nil, false
+}
 
 // FileChangeSummary contains a summary of detected file changes
 type FileChangeSummary struct {
@@ -39,8 +83,8 @@ func GetFileChangeSummary(lockFile *config.LockFile) FileChangeSummary {
 		}
 		if tracked.Deleted {
 			summary.Deleted = append(summary.Deleted, path)
-		} else if tracked.MovedTo != "" {
-			summary.Moved[path] = tracked.MovedTo
+		} else if movedTo := GetMovedTo(tracked); movedTo != "" {
+			summary.Moved[path] = movedTo
 		}
 	}
 
@@ -72,8 +116,8 @@ func GetFileChangeSummaryWithDiffs(
 		}
 		if tracked.Deleted {
 			summary.Deleted = append(summary.Deleted, path)
-		} else if tracked.MovedTo != "" {
-			summary.Moved[path] = tracked.MovedTo
+		} else if movedTo := GetMovedTo(tracked); movedTo != "" {
+			summary.Moved[path] = movedTo
 		}
 	}
 
@@ -134,18 +178,17 @@ func (s FileChangeSummary) IsEmpty() bool {
 }
 
 // DetectFileChanges scans the output directory and updates the lockfile's TrackedFiles
-// with Deleted and MovedTo fields based on the current state of files on disk.
+// with Deleted markers and any previously-recorded move metadata.
 // Returns:
-//   - isDirty: true if any tracked file has been deleted, moved, or has a checksum change
+//   - isDirty: true if any tracked file has been deleted or has a checksum change
 //   - modifiedPaths: list of paths that have content modifications (checksum mismatch)
 //   - error: any error encountered during scanning
 //
 // The function:
 // 1. Scans for @generated-id headers in all files
-// 2. Compares UUIDs to the lockfile's TrackedFiles
-// 3. Marks files as Deleted if their UUID is no longer on disk
-// 4. Sets MovedTo if a file's UUID is found at a different path
-// 5. Detects checksum changes for files in their expected location
+// 2. Preserves explicit move metadata already present in gen.lock
+// 3. Marks files as Deleted if their expected path is no longer on disk
+// 4. Detects checksum changes for files in their expected location
 func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string, error) {
 	if lockFile == nil || lockFile.TrackedFiles == nil {
 		return false, nil, nil
@@ -161,16 +204,6 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 		return false, nil, err
 	}
 
-	// Build a map of UUID -> original path from lockfile
-	uuidToOriginalPath := make(map[string]string)
-	for path := range lockFile.TrackedFiles.Keys() {
-		tracked, ok := lockFile.TrackedFiles.Get(path)
-		if !ok || tracked.ID == "" {
-			continue
-		}
-		uuidToOriginalPath[tracked.ID] = path
-	}
-
 	// Process each tracked file
 	for path := range lockFile.TrackedFiles.Keys() {
 		tracked, ok := lockFile.TrackedFiles.Get(path)
@@ -178,38 +211,58 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 			continue
 		}
 
-		// Check if file exists at its original path
-		fullPath := filepath.Join(outDir, path)
-		_, fileErr := os.Stat(fullPath)
-		fileExists := fileErr == nil
+		movedTo := GetMovedTo(tracked)
+		checksumPath := path
+		fileExists := false
 
-		// Check if UUID is found at a different path
-		currentPath, uuidFoundOnDisk := scanResult.UUIDToPath[tracked.ID]
+		if movedTo != "" {
+			movedToFullPath := filepath.Join(outDir, filepath.FromSlash(movedTo))
+			if _, err := os.Stat(movedToFullPath); err == nil {
+				fileExists = true
+				checksumPath = movedTo
+			} else {
+				fullPath := filepath.Join(outDir, path)
+				if _, err := os.Stat(fullPath); err == nil {
+					fileExists = true
+					tracked.Deleted = false
+					SetMovedTo(&tracked, "")
+					lockFile.TrackedFiles.Set(path, tracked)
+					checksumPath = path
+					movedTo = ""
+				}
+			}
+		} else {
+			fullPath := filepath.Join(outDir, path)
+			_, fileErr := os.Stat(fullPath)
+			fileExists = fileErr == nil
+		}
 
 		switch {
-		case !uuidFoundOnDisk && !fileExists:
-			// File was deleted - UUID not found anywhere on disk
+		case !fileExists:
 			isDirty = true
 			tracked.Deleted = true
-			tracked.MovedTo = ""
-			lockFile.TrackedFiles.Set(path, tracked)
-		case uuidFoundOnDisk && currentPath != path:
-			// File was moved - UUID found at different path
-			isDirty = true
-			tracked.Deleted = false
-			tracked.MovedTo = currentPath
+			SetMovedTo(&tracked, "")
 			lockFile.TrackedFiles.Set(path, tracked)
 		default:
-			// File is in its expected location, clear any stale move/delete markers
-			if tracked.Deleted || tracked.MovedTo != "" {
+			// File is in its expected location, clear any stale delete marker.
+			if tracked.Deleted {
 				tracked.Deleted = false
-				tracked.MovedTo = ""
 				lockFile.TrackedFiles.Set(path, tracked)
 			}
 
+			// If an explicit move exists but the same generated ID is no longer at the destination,
+			// treat it as stale and fall back to the original path on the next run.
+			if movedTo != "" && tracked.ID != "" {
+				if destinationID, ok := scanResult.PathToUUID[movedTo]; ok && destinationID != tracked.ID {
+					SetMovedTo(&tracked, "")
+					lockFile.TrackedFiles.Set(path, tracked)
+					checksumPath = path
+				}
+			}
+
 			// Check for content modification via checksum
-			if tracked.LastWriteChecksum != "" && fileExists {
-				currentChecksum, err := lockfile.ComputeFileChecksum(os.DirFS(outDir), path)
+			if tracked.LastWriteChecksum != "" {
+				currentChecksum, err := lockfile.ComputeFileChecksum(os.DirFS(outDir), checksumPath)
 				if err == nil && currentChecksum != tracked.LastWriteChecksum {
 					isDirty = true
 					modifiedPaths = append(modifiedPaths, path)
@@ -231,23 +284,50 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 //   - warnFunc: function to log warnings
 //
 // Returns error only for fatal errors. If config or lockfile is missing, returns nil (opportunistic execution).
-func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, warnFunc func(format string, args ...any)) error {
+func PrepareForGeneration(outDir string, autoYes bool, patchCapture bool, changesetCapture bool, promptFunc PromptFunc, warnFunc func(format string, args ...any)) (PreparationResult, error) {
 	cfg, err := config.Load(outDir)
 	if err != nil {
-		return nil //nolint:nilerr // Ignore error
+		return PreparationResult{}, nil //nolint:nilerr // Ignore error
 	}
 
 	if cfg.LockFile == nil || cfg.Config == nil {
-		return nil
+		return PreparationResult{}, nil
 	}
 
 	persistentEdits := cfg.Config.Generation.PersistentEdits
+	changesetMode := usesChangesetVersioning(cfg.Config)
+	result := PreparationResult{
+		TrustedPatchInputs: persistentEdits.UsesPatchFiles() && !patchCapture && !changesetMode,
+	}
 
 	if persistentEdits.IsEnabled() {
 		// Persistent edits enabled - detect changes and save lockfile
-		if _, _, err := DetectFileChanges(outDir, cfg.LockFile); err != nil {
+		isDirty, modifiedPaths, err := DetectFileChanges(outDir, cfg.LockFile)
+		if err != nil {
 			warnFunc("Failed to detect file changes: %v", err)
 		} else {
+			gitRepo, _ := OpenGitRepository(outDir)
+			if changesetMode && isDirty && !changesetCapture {
+				summary := GetFileChangeSummaryWithDiffs(outDir, cfg.LockFile, modifiedPaths, gitRepo)
+				if summary.IsEmpty() {
+					return result, nil
+				}
+				return result, &CaptureRequiredError{
+					Mode:    CaptureModeChangeset,
+					Summary: summary.FormatSummary(20, gitRepo != nil),
+				}
+			}
+			if cfg.Config.Generation.PersistentEdits.UsesPatchFiles() && isDirty && !patchCapture && !changesetMode {
+				modifiedPaths = filterCapturedPatchPaths(outDir, cfg.LockFile, modifiedPaths, gitRepo)
+				summary := GetFileChangeSummaryWithDiffs(outDir, cfg.LockFile, modifiedPaths, gitRepo)
+				if summary.IsEmpty() {
+					return result, nil
+				}
+				return result, &CaptureRequiredError{
+					Mode:    CaptureModePatchFiles,
+					Summary: summary.FormatSummary(20, gitRepo != nil),
+				}
+			}
 			if err := config.SaveLockFile(outDir, cfg.LockFile); err != nil {
 				warnFunc("Failed to save lockfile with file change markers: %v", err)
 			}
@@ -291,5 +371,71 @@ func PrepareForGeneration(outDir string, autoYes bool, promptFunc PromptFunc, wa
 		}
 	}
 
-	return nil
+	return result, nil
+}
+
+func filterCapturedPatchPaths(outDir string, lockFile *config.LockFile, modifiedPaths []string, gitRepo GitRepository) []string {
+	if lockFile == nil || lockFile.TrackedFiles == nil || gitRepo == nil || gitRepo.IsNil() {
+		return modifiedPaths
+	}
+
+	filtered := make([]string, 0, len(modifiedPaths))
+	for _, path := range modifiedPaths {
+		tracked, ok := lockFile.TrackedFiles.Get(path)
+		if !ok || !pathMatchesTrustedPatchState(outDir, path, tracked, gitRepo) {
+			filtered = append(filtered, path)
+		}
+	}
+
+	return filtered
+}
+
+func pathMatchesTrustedPatchState(outDir, path string, tracked lockfile.TrackedFile, gitRepo GitRepository) bool {
+	pristineHash := strings.TrimSpace(tracked.PristineGitObject)
+	if pristineHash == "" {
+		return false
+	}
+
+	pristine, err := gitRepo.GetBlob(pristineHash)
+	if err != nil {
+		return false
+	}
+
+	expected, used, err := generatorpatchfiles.Apply(outDir, path, pristine)
+	if err != nil || !used {
+		return false
+	}
+
+	actualPath := path
+	if movedTo := GetMovedTo(tracked); movedTo != "" {
+		fullMovedPath := filepath.Join(outDir, filepath.FromSlash(movedTo))
+		if _, err := os.Stat(fullMovedPath); err == nil {
+			actualPath = movedTo
+		}
+	}
+
+	current, err := os.ReadFile(filepath.Join(outDir, filepath.FromSlash(actualPath)))
+	if err != nil {
+		return false
+	}
+
+	return bytes.Equal(expected, current)
+}
+
+func usesChangesetVersioning(cfg *config.Configuration) bool {
+	if cfg == nil {
+		return false
+	}
+
+	if strings.EqualFold(string(cfg.Generation.VersioningStrategy), "changeset") {
+		return true
+	}
+
+	if raw, ok := cfg.Generation.AdditionalProperties["versionStrategy"]; ok {
+		if value, ok := raw.(string); ok && strings.EqualFold(value, "changeset") {
+			return true
+		}
+	}
+
+	return false
 }
