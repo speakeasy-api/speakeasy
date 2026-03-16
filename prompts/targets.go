@@ -350,12 +350,24 @@ func currentDir(dir string) bool {
 // enterpriseOnlyTargets lists targets that require an enterprise account tier.
 var enterpriseOnlyTargets = []string{}
 
+// registryGatedTargets lists targets whose access is controlled server-side by
+// the registry's checkAccess endpoint. These targets bypass all local access
+// checks since the registry is the single source of truth.
+var registryGatedTargets = []string{
+	"cli",
+}
+
 // checkTargetAccess validates that the user has the required account tier and
 // that the target maturity allows generation. Enterprise-only targets require
 // an enterprise account — if the user has enterprise access, generation is
-// allowed regardless of maturity. For all other alpha targets, generation is
-// blocked with an informational message.
+// allowed regardless of maturity. Registry-gated targets skip all local checks.
+// For all other alpha targets, generation is blocked with an informational message.
 func checkTargetAccess(ctx context.Context, target string) error {
+	// Registry-gated targets: access is enforced server-side at generation time.
+	if slices.Contains(registryGatedTargets, target) {
+		return nil
+	}
+
 	// Enterprise-only target check
 	if slices.Contains(enterpriseOnlyTargets, target) {
 		accountType := auth.GetAccountTypeFromContext(ctx)
@@ -371,7 +383,7 @@ func checkTargetAccess(ctx context.Context, target string) error {
 		return nil
 	}
 
-	// Alpha maturity check (non-enterprise targets only)
+	// Alpha maturity check (non-enterprise, non-registry-gated targets only)
 	if getTargetMaturity(target) == "Alpha" {
 		return fmt.Errorf("%s", styles.RenderInfoMessage(
 			"This language is in `Alpha`!",
