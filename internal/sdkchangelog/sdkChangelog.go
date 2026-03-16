@@ -25,6 +25,9 @@ type Requirements struct {
 	Verbose      bool
 	Target       string
 	WorkflowStep *workflowTracking.WorkflowStep
+	// ChangeFilter, when set, is applied to the computed diff before rendering.
+	// Only changes for which the predicate returns true are included in the changelog.
+	ChangeFilter func(changes.MethodDiff) bool
 }
 
 // Result contains the output of SDK changelog computation
@@ -71,6 +74,13 @@ func ComputeAndStoreSDKChangelog(ctx context.Context, changelogRequirements Requ
 		log.From(ctx).Errorf("an error occurred while computing changes between prior generation and current generation for %s target (language: %s). error: %s", changelogRequirements.Target, changelogRequirements.Lang, err.Error())
 		return Result{}, err
 	}
+
+	// Apply target-specific filters to exclude irrelevant operations from the changelog.
+	// For MCP targets, only include operations that are MCP-enabled (not disabled via x-speakeasy-mcp).
+	if changelogRequirements.ChangeFilter != nil {
+		diff = diff.Filter(changelogRequirements.ChangeFilter)
+	}
+
 	if len(diff.Changes) == 0 {
 		log.From(ctx).Infof("0 changes detected for %s target changelog (language: %s)", changelogRequirements.Target, changelogRequirements.Lang)
 		if changelogStep != nil {

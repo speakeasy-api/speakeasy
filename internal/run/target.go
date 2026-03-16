@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
+	changes "github.com/speakeasy-api/openapi-generation/v2/pkg/changes"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	sdkGenConfig "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
@@ -193,7 +194,8 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	if os.Getenv("INPUT_ENABLE_SDK_CHANGELOG") == "true" {
 		// Old & new spec and other details are updated in RunSource method
 		log.From(ctx).Infof("Calculating changelog for SDK %s SDK", utils.CapitalizeFirst(t.Target))
-		result, changelogErr := sdkchangelog.ComputeAndStoreSDKChangelog(ctx, sdkchangelog.Requirements{
+
+		reqs := sdkchangelog.Requirements{
 			OldSpecPath:  w.SourceResults[t.Source].oldSpecPath,
 			NewSpecPath:  w.SourceResults[t.Source].newSpecPath,
 			OutDir:       outDir,
@@ -202,7 +204,14 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 			Verbose:      w.Verbose,
 			Target:       target,
 			WorkflowStep: rootStep,
-		})
+		}
+
+		// For MCP targets, exclude operations disabled via x-speakeasy-mcp from the changelog.
+		if generate.CheckMCPTargetNameSupported(t.Target) {
+			reqs.ChangeFilter = changes.IsOperationMCPEnabled
+		}
+
+		result, changelogErr := sdkchangelog.ComputeAndStoreSDKChangelog(ctx, reqs)
 		changelogContent = result.MarkdownContent
 		if changelogContent == "" {
 			log.From(ctx).Warnf("New Changelog Content was empty for %s SDK. As a result it will not appear in the PR description", utils.CapitalizeFirst(t.Target))
