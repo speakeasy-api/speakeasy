@@ -163,7 +163,7 @@ var configureTargetCmd = &model.ExecutableCommand[ConfigureTargetFlags]{
 		flag.StringFlag{
 			Name:        "target-type",
 			Shorthand:   "t",
-			Description: "target language/type: typescript, python, go, java, csharp, php, ruby, terraform, mcp-typescript; enables non-interactive mode",
+			Description: "target language/type: typescript, python, go, java, csharp, php, ruby, terraform, mcp-typescript, cli; enables non-interactive mode",
 		},
 		flag.StringFlag{
 			Name:        "source",

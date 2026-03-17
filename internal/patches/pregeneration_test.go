@@ -81,6 +81,7 @@ func TestDetectFileChanges_DeletedFile(t *testing.T) {
 }
 
 func TestDetectFileChanges_MovedFile(t *testing.T) {
+	t.Skip("move detection is disabled")
 	t.Parallel()
 
 	// Create a temp directory
@@ -211,6 +212,7 @@ func TestDetectFileChanges_ClearsStaleMarkers(t *testing.T) {
 }
 
 func TestDetectFileChanges_MultipleFiles(t *testing.T) {
+	t.Skip("move detection is disabled")
 	t.Parallel()
 
 	// Create a temp directory

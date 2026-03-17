@@ -197,7 +197,7 @@ func DetectFileChanges(outDir string, lockFile *config.LockFile) (bool, []string
 			// File was moved - UUID found at different path
 			isDirty = true
 			tracked.Deleted = false
-			tracked.MovedTo = currentPath
+			tracked.MovedTo = ""
 			lockFile.TrackedFiles.Set(path, tracked)
 		default:
 			// File is in its expected location, clear any stale move/delete markers

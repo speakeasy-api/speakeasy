@@ -64,6 +64,8 @@ func expectedFilesByLanguage(language string) []string {
 	switch language {
 	case "go":
 		return []string{"README.md", "sdk.go", "go.mod"}
+	case "cli":
+		return []string{"README.md", "go.mod"}
 	case "mcp-typescript", "typescript":
 		return []string{"README.md", "package.json", "tsconfig.json"}
 	case "python":
