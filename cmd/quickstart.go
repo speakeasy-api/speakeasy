@@ -247,6 +247,8 @@ func quickstartCore(ctx context.Context, flags QuickstartFlags) error {
 	}
 	description := "We recommend a git repo per SDK. To use the current directory, leave empty."
 	switch targetType {
+	case "cli":
+		description = "We recommend a git repo per CLI. To use the current directory, leave empty."
 	case "terraform":
 		description = "Terraform providers must be placed in a directory named in the following format terraform-provider-*. according to Hashicorp conventions"
 	case "mcp-typescript":

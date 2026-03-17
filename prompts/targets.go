@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -12,6 +13,8 @@ import (
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/sdk-gen-config/workspace"
+	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -21,6 +24,7 @@ import (
 const (
 	TargetNameDefault = "my-first-target"
 
+	targetGroupCLI       = "cli"
 	targetGroupMCP       = "mcp"
 	targetGroupSDK       = "sdk"
 	targetGroupTerraform = "terraform"
@@ -121,13 +125,8 @@ func targetBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 		return nil, errors.Wrap(err, "failed to validate target")
 	}
 
-	if getTargetMaturity(target.Target) == "Alpha" {
-		msg := styles.RenderInfoMessage(
-			"This language is in `Alpha`!",
-			"Generation is supported but may not be fully featured.",
-			"Chat with us for access: `https://go.speakeasy.com/chat`")
-
-		log.From(ctx).Println(msg)
+	if err := checkTargetAccess(ctx, target.Target); err != nil {
+		log.From(ctx).Println(err.Error())
 		os.Exit(0)
 	}
 
@@ -149,6 +148,7 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 			huh.NewOption("Software Development Kit (SDK)", targetGroupSDK),
 			huh.NewOption("Terraform Provider", targetGroupTerraform),
 			huh.NewOption("Model Context Protocol (MCP) Server", targetGroupMCP),
+			huh.NewOption("Command Line Interface (CLI)", targetGroupCLI),
 		}...).
 		Value(targetGroup)))
 
@@ -163,6 +163,8 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 	targetSelectionForm := huh.NewForm(huh.NewGroup(huh.NewSelect[string]().
 		Title(func() string {
 			switch *targetGroup {
+			case targetGroupCLI:
+				return "Which CLI would you like to generate?"
 			case targetGroupMCP:
 				return "Which MCP Server would you like to generate?"
 			case targetGroupSDK:
@@ -175,6 +177,8 @@ func PromptForNewTarget(currentWorkflow *workflow.Workflow, targetName, targetTy
 		}()).
 		Options(func() []huh.Option[string] {
 			switch *targetGroup {
+			case targetGroupCLI:
+				return getCLITargetOptions()
 			case targetGroupMCP:
 				return getMCPTargetOptions()
 			case targetGroupSDK:
@@ -341,6 +345,53 @@ func moveOutDir(outDir string, previousDir string) error {
 
 func currentDir(dir string) bool {
 	return dir == "" || dir == "." || dir == "./"
+}
+
+// enterpriseOnlyTargets lists targets that require an enterprise account tier.
+var enterpriseOnlyTargets = []string{}
+
+// registryGatedTargets lists targets whose access is controlled server-side by
+// the registry's checkAccess endpoint. These targets bypass all local access
+// checks since the registry is the single source of truth.
+var registryGatedTargets = []string{
+	"cli",
+}
+
+// checkTargetAccess validates that the user has the required account tier and
+// that the target maturity allows generation. Enterprise-only targets require
+// an enterprise account — if the user has enterprise access, generation is
+// allowed regardless of maturity. Registry-gated targets skip all local checks.
+// For all other alpha targets, generation is blocked with an informational message.
+func checkTargetAccess(ctx context.Context, target string) error {
+	// Registry-gated targets: access is enforced server-side at generation time.
+	if slices.Contains(registryGatedTargets, target) {
+		return nil
+	}
+
+	// Enterprise-only target check
+	if slices.Contains(enterpriseOnlyTargets, target) {
+		accountType := auth.GetAccountTypeFromContext(ctx)
+		if accountType == nil || *accountType != shared.AccountTypeEnterprise {
+			return fmt.Errorf("%s", styles.RenderInfoMessage(
+				"Enterprise Feature",
+				fmt.Sprintf("The `%s` target is only available on the Enterprise tier.", target),
+				"Contact us to upgrade: `https://go.speakeasy.com/chat`"))
+		}
+
+		// Enterprise users are allowed to use enterprise-only targets
+		// even if the target is in alpha maturity.
+		return nil
+	}
+
+	// Alpha maturity check (non-enterprise, non-registry-gated targets only)
+	if getTargetMaturity(target) == "Alpha" {
+		return fmt.Errorf("%s", styles.RenderInfoMessage(
+			"This language is in `Alpha`!",
+			"Generation is supported but may not be fully featured.",
+			"Chat with us for access: `https://go.speakeasy.com/chat`"))
+	}
+
+	return nil
 }
 
 func rendersSelectSource(inputWorkflow *workflow.Workflow, sourceName *string) []huh.Field {

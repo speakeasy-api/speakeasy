@@ -51,6 +51,7 @@ var SupportedPublishingTargets = []string{
 }
 
 var SupportedTestingTargets = []string{
+	"cli",
 	"go",
 	"java",
 	"python",

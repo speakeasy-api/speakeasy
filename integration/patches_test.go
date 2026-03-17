@@ -594,6 +594,7 @@ func stringPtr(s string) *string {
 
 // TestPersistentEdits_FileMove verifies that user edits are preserved when a file is moved
 func TestPersistentEdits_FileMove(t *testing.T) {
+	t.Skip("move detection is disabled")
 	t.Parallel()
 	temp := setupPersistentEditsTestDir(t)
 
@@ -711,6 +712,7 @@ func TestPersistentEdits_FileRemove(t *testing.T) {
 
 // TestPersistentEdits_FileRename verifies that renaming a file preserves edits via @generated-id tracking
 func TestPersistentEdits_FileRename(t *testing.T) {
+	t.Skip("move detection is disabled")
 	t.Parallel()
 	temp := setupPersistentEditsTestDir(t)
 

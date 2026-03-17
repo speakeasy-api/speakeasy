@@ -627,6 +627,7 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		run.WithInstallationURLs(flags.InstallationURLs),
 		run.WithDebug(flags.Debug),
 		run.WithShouldCompile(!flags.SkipCompile),
+		run.WithSkipSnapshot(flags.SkipUploadSpec),
 		run.WithVerbose(flags.Verbose),
 		run.WithRegistryTags(flags.RegistryTags),
 		run.WithSetVersion(flags.SetVersion),
