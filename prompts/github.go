@@ -36,9 +36,12 @@ const (
 	gpgPassPhraseDefault             = "JAVA_GPG_PASSPHRASE"
 	terraformGPGPrivateKeyDefault    = "TERRAFORM_GPG_PRIVATE_KEY"
 	terraformGPGPassPhraseDefault    = "TERRAFORM_GPG_PASSPHRASE"
+	cliGPGPrivateKeyDefault          = "CLI_GPG_PRIVATE_KEY"
+	cliGPGPassPhraseDefault          = "CLI_GPG_PASSPHRASE"
 )
 
 var SupportedPublishingTargets = []string{
+	"cli",
 	"csharp",
 	"go",
 	"java",
@@ -151,6 +154,10 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 			if target.Publishing.Java != nil {
 				return target, nil
 			}
+		case "cli":
+			if target.Publishing.CLI != nil {
+				return target, nil
+			}
 		case "terraform":
 			if target.Publishing.Terraform != nil {
 				return target, nil
@@ -211,6 +218,13 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 				OSSHRPassword:     formatWorkflowSecret(ossrhPasswordDefault),
 				OSSRHUsername:     formatWorkflowSecret(osshrUsernameDefault),
 				UseSonatypeLegacy: sonatypeLegacy,
+			},
+		}
+	case "cli":
+		target.Publishing = &workflow.Publishing{
+			CLI: &workflow.CLI{
+				GPGPrivateKey: formatWorkflowSecret(cliGPGPrivateKeyDefault),
+				GPGPassPhrase: formatWorkflowSecret(cliGPGPassPhraseDefault),
 			},
 		}
 	case "terraform":
@@ -394,6 +408,11 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 		secrets = append(secrets, publishing.Java.GPGPassPhrase)
 		secrets = append(secrets, publishing.Java.OSSHRPassword)
 		secrets = append(secrets, publishing.Java.OSSRHUsername)
+	}
+
+	if publishing.CLI != nil {
+		secrets = append(secrets, publishing.CLI.GPGPrivateKey)
+		secrets = append(secrets, publishing.CLI.GPGPassPhrase)
 	}
 
 	if publishing.Terraform != nil {
