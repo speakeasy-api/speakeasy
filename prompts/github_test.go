@@ -23,7 +23,7 @@ func TestConfigurePublishingCLI(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, updated.Publishing)
 	require.NotNil(t, updated.Publishing.CLI)
-	assert.Equal(t, "$cli_gpg_secret_key", updated.Publishing.CLI.GPGPrivateKey)
+	assert.Equal(t, "$cli_gpg_private_key", updated.Publishing.CLI.GPGPrivateKey)
 	assert.Equal(t, "$cli_gpg_passphrase", updated.Publishing.CLI.GPGPassPhrase)
 }
 

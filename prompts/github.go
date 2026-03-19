@@ -36,7 +36,7 @@ const (
 	gpgPassPhraseDefault             = "JAVA_GPG_PASSPHRASE"
 	terraformGPGPrivateKeyDefault    = "TERRAFORM_GPG_PRIVATE_KEY"
 	terraformGPGPassPhraseDefault    = "TERRAFORM_GPG_PASSPHRASE"
-	cliGPGSecretKeyDefault           = "CLI_GPG_SECRET_KEY"
+	cliGPGPrivateKeyDefault          = "CLI_GPG_PRIVATE_KEY"
 	cliGPGPassPhraseDefault          = "CLI_GPG_PASSPHRASE"
 )
 
@@ -223,7 +223,7 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 	case "cli":
 		target.Publishing = &workflow.Publishing{
 			CLI: &workflow.CLI{
-				GPGPrivateKey: formatWorkflowSecret(cliGPGSecretKeyDefault),
+				GPGPrivateKey: formatWorkflowSecret(cliGPGPrivateKeyDefault),
 				GPGPassPhrase: formatWorkflowSecret(cliGPGPassPhraseDefault),
 			},
 		}
