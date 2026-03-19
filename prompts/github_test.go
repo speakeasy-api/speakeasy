@@ -5,10 +5,49 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	git_config "github.com/go-git/go-git/v5/config"
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestConfigurePublishingCLI(t *testing.T) {
+	t.Parallel()
+
+	target := &workflow.Target{
+		Target: "cli",
+		Source: "api",
+	}
+
+	updated, err := prompts.ConfigurePublishing(target, "cli", prompts.ConfigurePublishingOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, updated.Publishing)
+	require.NotNil(t, updated.Publishing.CLI)
+	assert.Equal(t, "$cli_gpg_secret_key", updated.Publishing.CLI.GPGPrivateKey)
+	assert.Equal(t, "$cli_gpg_passphrase", updated.Publishing.CLI.GPGPassPhrase)
+}
+
+func TestConfigurePublishingCLIPreservesExistingConfig(t *testing.T) {
+	t.Parallel()
+
+	target := &workflow.Target{
+		Target: "cli",
+		Source: "api",
+		Publishing: &workflow.Publishing{
+			CLI: &workflow.CLI{
+				GPGPrivateKey: "$existing_key",
+				GPGPassPhrase: "$existing_passphrase",
+			},
+		},
+	}
+
+	updated, err := prompts.ConfigurePublishing(target, "cli", prompts.ConfigurePublishingOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, updated.Publishing)
+	require.NotNil(t, updated.Publishing.CLI)
+	assert.Equal(t, "$existing_key", updated.Publishing.CLI.GPGPrivateKey)
+	assert.Equal(t, "$existing_passphrase", updated.Publishing.CLI.GPGPassPhrase)
+}
 
 func TestParseGithubRemoteURL(t *testing.T) {
 	t.Parallel()
