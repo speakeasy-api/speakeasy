@@ -32,12 +32,12 @@ jobs:
                   chcp 65001 #set code page to utf-8
                   echo ("GOPRIVATE=github.com/speakeasy-api") >> $env:GITHUB_ENV
             - name: Checkout repository
-              uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   fetch-depth: 0
             - name: Conventional Commits
               id: changelog
-              uses: TriPSs/conventional-changelog-action@84dadaf2c367cb52af02737cd9c7e888807219e7 # v6.2.0
+              uses: TriPSs/conventional-changelog-action@91be4f3188da74fe85de9caffcebc80b26d43b5b # v6.3.0
               with:
                   github-token: ${{ secrets.github_token }}
                   skip-commit: "true"
@@ -45,7 +45,7 @@ jobs:
                   skip-on-empty: "false"
                   preset: conventionalcommits
                   pre-release: ${{ inputs.pre_release == true && 'true' || 'false' }}
-            - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+            - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
               with:
                   go-version-file: "go.mod"
                   # Reference: https://github.com/actions/setup-go/issues/495
@@ -86,7 +86,7 @@ jobs:
             IMAGE_NAME: speakeasy-api/speakeasy
         steps:
             - name: Checkout repository
-              uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   fetch-depth: 0
             - name: Download dist artifacts
