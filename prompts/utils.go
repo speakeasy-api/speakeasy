@@ -32,7 +32,7 @@ func getSourcesFromWorkflow(inputWorkflow *workflow.Workflow) []string {
 
 func getCLITargetOptions() []huh.Option[string] {
 	return []huh.Option[string]{
-		huh.NewOption("CLI "+getMaturityDisplay("Alpha"), "cli"),
+		huh.NewOption("CLI "+getMaturityDisplay(getTargetMaturity("cli")), "cli"),
 	}
 }
 
