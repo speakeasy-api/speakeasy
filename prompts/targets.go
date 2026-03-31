@@ -353,9 +353,7 @@ var enterpriseOnlyTargets = []string{}
 // registryGatedTargets lists targets whose access is controlled server-side by
 // the registry's checkAccess endpoint. These targets bypass all local access
 // checks since the registry is the single source of truth.
-var registryGatedTargets = []string{
-	"cli",
-}
+var registryGatedTargets = []string{}
 
 // checkTargetAccess validates that the user has the required account tier and
 // that the target maturity allows generation. Enterprise-only targets require

@@ -35,6 +35,8 @@ go:
   additionalDependencies: {}
   clientServerStatusCodesAsErrors: true
   defaultErrorName: APIError
+  enableCustomCodeRegions: false
+  enableSkipDeserialization: false
   flattenGlobalSecurity: true
   forwardCompatibleEnumsByDefault: true
   forwardCompatibleUnionsByDefault: tagged-and-untagged

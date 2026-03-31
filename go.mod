@@ -45,8 +45,8 @@ require (
 	github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
-	github.com/speakeasy-api/openapi v1.19.5
-	github.com/speakeasy-api/openapi-generation/v2 v2.873.1
+	github.com/speakeasy-api/openapi v1.20.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.879.1
 	github.com/speakeasy-api/sdk-gen-config v1.56.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.0
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -60,7 +60,7 @@ require (
 	go.uber.org/zap v1.27.1
 	goa.design/goa/v3 v3.24.1
 	golang.org/x/oauth2 v0.33.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 	golang.org/x/term v0.39.0
 	golang.org/x/text v0.34.0
 	gopkg.in/yaml.v3 v3.0.1
