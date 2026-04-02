@@ -47,6 +47,10 @@ func (f *FileSystem) Stat(path string) (os.FileInfo, error) {
 	return os.Stat(path)
 }
 
+func (f *FileSystem) ReadDir(name string) ([]fs.DirEntry, error) {
+	return os.ReadDir(name)
+}
+
 func (f *FileSystem) Remove(path string) error {
 	return os.Remove(path)
 }
