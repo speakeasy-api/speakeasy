@@ -312,6 +312,10 @@ func (fs *fileSystem) OpenFile(name string, flag int, perm fs.FileMode) (filesys
 	return os.OpenFile(name, flag, perm)
 }
 
+func (f *fileSystem) ReadDir(name string) ([]fs.DirEntry, error) {
+	return os.ReadDir(name)
+}
+
 func (fs *fileSystem) ScanForGeneratedIDs() (map[string]string, error) {
 	return nil, nil
 }
