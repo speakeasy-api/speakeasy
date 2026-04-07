@@ -1,8 +1,6 @@
 package git
 
 import (
-	"fmt"
-
 	gitHttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
@@ -20,20 +18,7 @@ func BasicAuth(accessToken string) *gitHttp.BasicAuth {
 	}
 }
 
-// ConfigureURLRewrite sets up a local git config url.<auth>.insteadOf rule
-// so that native git commands authenticate using the provided token.
-// This rewrites URLs like https://<host>/ to https://gen:<token>@<host>/
-// making authentication transparent for subprocesses that shell out to git.
-// Does nothing if accessToken is empty.
+// ConfigureURLRewrite avoids persisting access tokens in git config.
 func ConfigureURLRewrite(repoDir, host, accessToken string) error {
-	if accessToken == "" {
-		return nil
-	}
-	authenticatedPrefix := fmt.Sprintf("https://gen:%s@%s/", accessToken, host)
-	originalPrefix := fmt.Sprintf("https://%s/", host)
-	_, err := RunGitCommand(repoDir, "config", "--local",
-		fmt.Sprintf("url.%s.insteadOf", authenticatedPrefix),
-		originalPrefix,
-	)
-	return err
+	return nil
 }
