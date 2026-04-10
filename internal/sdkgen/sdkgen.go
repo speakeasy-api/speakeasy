@@ -188,10 +188,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	}
 
 	// Track the current generation step for error reporting
-	failedStepMessage := ""
+	var failedStep *generate.ProgressStep
 	trackProgress := func(update generate.ProgressUpdate) {
 		if update.Step != nil {
-			failedStepMessage = update.Step.Message
+			failedStep = update.Step
 		}
 		// Forward to user-provided callback if present
 		if opts.StreamableGeneration != nil && opts.StreamableGeneration.OnProgressUpdate != nil {
@@ -276,18 +276,16 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		if len(errs) > 0 {
 			for _, err := range errs {
-				// Check if it's a ConflictsError - render pretty conflict message
-				var conflictErr *merge.ConflictsError
-				if stderrors.As(err, &conflictErr) {
-					renderConflictsError(logger, conflictErr)
-					// Don't log the generic error for conflicts - we rendered a nice message
-					continue
+
+				if pe := handlePersistentEditsError(logger, err); pe != nil {
+					return fmt.Errorf("could not apply persistent edits for %q: %w", opts.Language, pe)
 				}
+
 				logger.Error("", zap.Error(err))
 			}
 
-			if failedStepMessage != "" {
-				return fmt.Errorf("generation failed for %q during step %q", opts.Language, failedStepMessage)
+			if failedStep != nil {
+				return fmt.Errorf("generation failed for %q during step %q", opts.Language, failedStep.Message)
 			}
 
 			return fmt.Errorf("failed to generate %q", opts.Language)
@@ -369,6 +367,22 @@ func GetGenLockID(outDir string) *string {
 		}
 	}
 
+	return nil
+}
+
+// handlePersistentEditsError checks whether err is a persistent-edits failure.
+// If it is a ConflictsError, it renders the instructional message before returning it.
+// Returns nil if err is not a persistent-edits error.
+func handlePersistentEditsError(logger log.Logger, err error) error {
+	var conflictErr *merge.ConflictsError
+	if stderrors.As(err, &conflictErr) {
+		renderConflictsError(logger, conflictErr)
+		return conflictErr
+	}
+	var snapshotRefErr *merge.SnapshotRefError
+	if stderrors.As(err, &snapshotRefErr) {
+		return snapshotRefErr
+	}
 	return nil
 }
 
