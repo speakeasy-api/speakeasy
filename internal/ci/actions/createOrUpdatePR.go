@@ -93,6 +93,7 @@ func GeneratePRFromReports(inputDir string) (*prdescription.Output, *versioning.
 		LintingReportURL: lintingReportURL,
 		ChangesReportURL: changesReportURL,
 		ManualBump:       manualBump,
+		ActionRunURL:     environment.GetActionRunURL(environment.GetRepo()),
 	}
 
 	output, err := prdescription.Generate(input)

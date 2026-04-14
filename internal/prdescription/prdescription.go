@@ -31,6 +31,7 @@ type Input struct {
 	// Version information
 	SpeakeasyVersion string `json:"speakeasy_version,omitempty"`
 	ManualBump       bool   `json:"manual_bump,omitempty"`
+	ActionRunURL     string `json:"action_run_url,omitempty"`
 
 	// Version report data (from SPEAKEASY_VERSION_REPORT_LOCATION)
 	VersionReport *versioning.MergedVersionReport `json:"version_report,omitempty"`
@@ -113,6 +114,16 @@ func buildBody(input Input) string {
 				versionMsg += fmt.Sprintf("\n\nThis PR will stay on the current version until the %s label is removed and/or modified.", bumpType)
 			} else {
 				versionMsg += "\U0001F916 (automated)" // 🤖
+				versionMsg += "\n\n> [!TIP]"
+				switch bumpType {
+				case versioning.BumpPrerelease:
+					versionMsg += "\n> To exit [pre-release versioning](https://www.speakeasy.com/docs/sdks/manage/versioning#pre-release-version-bumps), set a new version or run `speakeasy bump graduate`."
+				case versioning.BumpPatch, versioning.BumpMinor:
+					versionMsg += "\n> If updates to your OpenAPI document introduce breaking changes, be sure to update the `info.version` field to [trigger the correct version bump](https://www.speakeasy.com/docs/sdks/manage/versioning#openapi-document-changes)."
+				default:
+				}
+
+				versionMsg += "\n> Speakeasy supports manual control of SDK versioning through [multiple methods](https://www.speakeasy.com/docs/sdks/manage/versioning#manual-version-bumps)."
 			}
 			body.WriteString(versionMsg + "\n")
 		}
@@ -122,9 +133,14 @@ func buildBody(input Input) string {
 		body.WriteString(stripANSICodes(markdownSection))
 	}
 
-	// Footer with CLI version
-	if !input.SourceGeneration && input.SpeakeasyVersion != "" {
-		body.WriteString(fmt.Sprintf("\nBased on [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy) %s\n", input.SpeakeasyVersion))
+	// Footer
+	if !input.SourceGeneration {
+		if input.SpeakeasyVersion != "" {
+			body.WriteString(fmt.Sprintf("\nBased on [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy) %s\n", input.SpeakeasyVersion))
+		}
+		if input.ActionRunURL != "" {
+			body.WriteString(fmt.Sprintf("\nLast updated by [Speakeasy workflow](%s)\n", input.ActionRunURL))
+		}
 	}
 
 	return body.String()

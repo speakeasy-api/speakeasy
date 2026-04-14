@@ -68,8 +68,9 @@ func EnrichEventWithEnvironmentVariables(event *shared.CliEvent) {
 	event.GhActionOrganization = &ghActionOrg
 	repo := strings.TrimPrefix(ghActionRepoOrg, ghActionOrg+"/")
 	event.GhActionRepository = &repo
-	runLink := fmt.Sprintf("%s/%s/actions/runs/%s", os.Getenv("GITHUB_SERVER_URL"), ghActionRepoOrg, os.Getenv("GITHUB_RUN_ID"))
-	event.GhActionRunLink = &runLink
+	if runLink := environment.GetActionRunURL(ghActionRepoOrg); runLink != "" {
+		event.GhActionRunLink = &runLink
+	}
 
 	ghActionVersion := os.Getenv("GH_ACTION_VERSION")
 	if ghActionVersion != "" {
