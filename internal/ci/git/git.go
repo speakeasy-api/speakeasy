@@ -652,11 +652,13 @@ func (g *Git) CommitAndPush(openAPIDocVersion, speakeasyVersion, doc string, act
 				return "", err
 			}
 		} else {
-			// Default: force push (branch was reset to main at the beginning of the workflow)
-			if err := g.repo.Push(&git.PushOptions{
-				Auth:  sharedgit.BasicAuth(g.accessToken),
-				Force: true,
-			}); err != nil {
+			// Force push: branch was reset to main at workflow start.
+			dir := filepath.Join(g.repoRoot, environment.GetWorkingDirectory())
+			branch, err := g.GetCurrentBranch()
+			if err != nil {
+				return "", fmt.Errorf("error getting current branch for push: %w", err)
+			}
+			if _, err := sharedgit.RunGitCommand(dir, "push", "--force", "origin", branch); err != nil {
 				return "", pushErr(err)
 			}
 		}
