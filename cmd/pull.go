@@ -339,25 +339,25 @@ func (m *pullModel) View() string {
 	switch m.step {
 	case 1:
 		if m.loadingSpecs {
-			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Margin(0, 2).Render("Loading specs..."), m.spinner.View()))
+			fmt.Fprintf(&s, "%s %s", styles.Info.Margin(0, 2).Render("Loading specs..."), m.spinner.View())
 		} else {
 			s.WriteString(m.specsList.View())
 		}
 	case 2:
 		if m.loadingRevisions {
-			s.WriteString(fmt.Sprintf("%s %s", styles.Info.Margin(0, 2).Render("Loading revisions..."), m.spinner.View()))
+			fmt.Fprintf(&s, "%s %s", styles.Info.Margin(0, 2).Render("Loading revisions..."), m.spinner.View())
 		} else {
-			s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
+			fmt.Fprintf(&s, "%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name))
 			s.WriteString(m.revisionsList.View())
 		}
 	case 3:
-		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
-		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
+		fmt.Fprintf(&s, "%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name))
+		fmt.Fprintf(&s, "%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name))
 		s.WriteString(m.outputDir.View())
 	case 4:
-		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name)))
-		s.WriteString(fmt.Sprintf("%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name)))
-		s.WriteString(fmt.Sprintf("%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected output directory:"), styles.Focused.Render(m.selectedOutputDir)))
+		fmt.Fprintf(&s, "%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected spec:"), styles.Focused.Render(m.selectedSpec.Name))
+		fmt.Fprintf(&s, "%s %s\n", styles.Dimmed.Margin(0, 2).Render("Selected revision:"), styles.Focused.Render(m.selectedRevision.Name))
+		fmt.Fprintf(&s, "%s %s\n\n", styles.Dimmed.Margin(0, 2).Render("Selected output directory:"), styles.Focused.Render(m.selectedOutputDir))
 		// add a clickable button to run the pull
 		button := interactivity.Button{
 			Label:    "Pull",

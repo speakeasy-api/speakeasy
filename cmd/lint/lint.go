@@ -500,9 +500,9 @@ func diagnosisToTabContents(diagnosis suggestions.Diagnosis) []interactivity.Ins
 		var details strings.Builder
 		for _, d := range diagnostics {
 			if len(d.SchemaPath) > 0 {
-				details.WriteString(fmt.Sprintf("• %s - %s\n", styles.Dimmed.Render(strings.Join(d.SchemaPath, " > ")), d.Message))
+				fmt.Fprintf(&details, "• %s - %s\n", styles.Dimmed.Render(strings.Join(d.SchemaPath, " > ")), d.Message)
 			} else {
-				details.WriteString(fmt.Sprintf("• %s\n", d.Message))
+				fmt.Fprintf(&details, "• %s\n", d.Message)
 			}
 		}
 

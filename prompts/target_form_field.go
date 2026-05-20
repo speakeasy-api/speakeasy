@@ -254,7 +254,7 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 		// unwrap f.Value
 		unwrap := func(x interface{}) interface{} {
 			rv := reflect.ValueOf(x)
-			for rv.IsValid() && (rv.Kind() == reflect.Interface || rv.Kind() == reflect.Ptr) {
+			for rv.IsValid() && (rv.Kind() == reflect.Interface || rv.Kind() == reflect.Pointer) {
 				if rv.IsNil() {
 					return nil
 				}

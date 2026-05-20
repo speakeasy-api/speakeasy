@@ -391,7 +391,7 @@ func renderConflictsError(logger log.Logger, conflictErr *merge.ConflictsError) 
 	// Build file list with "both modified:" prefix like git status
 	var fileLines strings.Builder
 	for _, file := range conflictErr.Files {
-		fileLines.WriteString(fmt.Sprintf("    both modified:   %s\n", file))
+		fmt.Fprintf(&fileLines, "    both modified:   %s\n", file)
 	}
 
 	// Render instructional error box
