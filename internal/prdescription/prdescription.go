@@ -136,10 +136,10 @@ func buildBody(input Input) string {
 	// Footer
 	if !input.SourceGeneration {
 		if input.SpeakeasyVersion != "" {
-			body.WriteString(fmt.Sprintf("\nBased on [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy) %s\n", input.SpeakeasyVersion))
+			fmt.Fprintf(&body, "\nBased on [Speakeasy CLI](https://github.com/speakeasy-api/speakeasy) %s\n", input.SpeakeasyVersion)
 		}
 		if input.ActionRunURL != "" {
-			body.WriteString(fmt.Sprintf("\nLast updated by [Speakeasy workflow](%s)\n", input.ActionRunURL))
+			fmt.Fprintf(&body, "\nLast updated by [Speakeasy workflow](%s)\n", input.ActionRunURL)
 		}
 	}
 

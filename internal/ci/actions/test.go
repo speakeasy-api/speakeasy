@@ -184,7 +184,7 @@ func writeTestReportComment(g *git.Git, prNumber *int, testReports map[string]Te
 		if !report.Success {
 			statusEmoji = "❌"
 		}
-		tableRows.WriteString(fmt.Sprintf("| %s | <p align='center'>%s</p> | [view report](%s) |\n", target, statusEmoji, report.URL))
+		fmt.Fprintf(&tableRows, "| %s | <p align='center'>%s</p> | [view report](%s) |\n", target, statusEmoji, report.URL)
 	}
 
 	// Combine everything

@@ -208,7 +208,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	var sb strings.Builder
 
 	errAndLine := styles.SeverityToStyle(err.Severity).Render(fmt.Sprintf("%s on line %d:%d", err.Severity, err.GetLineNumber(), err.GetColumnNumber()))
-	sb.WriteString(fmt.Sprintf("%s %s\n", errAndLine, styles.Dimmed.Render(err.Rule)))
+	fmt.Fprintf(&sb, "%s %s\n", errAndLine, styles.Dimmed.Render(err.Rule))
 	sb.WriteString(err.Message)
 	sb.WriteString("\n\n")
 
@@ -248,7 +248,7 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 
 		trimmedContent := strings.TrimPrefix(line, shortestWhitespacePrefix)
 
-		sb.WriteString(fmt.Sprintf("%s %s\n", lineNumString, trimmedContent))
+		fmt.Fprintf(&sb, "%s %s\n", lineNumString, trimmedContent)
 	}
 
 	return sb.String()

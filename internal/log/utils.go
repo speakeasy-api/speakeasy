@@ -52,7 +52,7 @@ func PrettyPrint(ctx context.Context, value interface{}, fieldNameReplacements m
 
 	refVal := reflect.ValueOf(value)
 
-	if refVal.Kind() == reflect.Ptr {
+	if refVal.Kind() == reflect.Pointer {
 		refVal = refVal.Elem()
 	}
 
@@ -65,7 +65,7 @@ func PrettyPrint(ctx context.Context, value interface{}, fieldNameReplacements m
 		fieldName := field.Name
 		val := refVal.Field(i)
 
-		if field.Type.Kind() == reflect.Ptr && !val.IsNil() {
+		if field.Type.Kind() == reflect.Pointer && !val.IsNil() {
 			val = val.Elem()
 		}
 

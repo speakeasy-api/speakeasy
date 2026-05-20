@@ -50,7 +50,7 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int) (string, error) {
 		return nil
 	}
 	writeConnection := func(from, to int) {
-		builder.WriteString(fmt.Sprintf("%d --> %d\n", from, to))
+		fmt.Fprintf(&builder, "%d --> %d\n", from, to)
 	}
 
 	*nodeNum++
@@ -77,9 +77,9 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int) (string, error) {
 	nodeNameDisplay := fmt.Sprintf("%s%s", w.name, statusMessage)
 
 	if len(w.substeps) == 0 {
-		builder.WriteString(fmt.Sprintf("%d(\"%s\"):::%s\n", selfNodeNum, nodeNameDisplay, class))
+		fmt.Fprintf(&builder, "%d(\"%s\"):::%s\n", selfNodeNum, nodeNameDisplay, class)
 	} else {
-		builder.WriteString(fmt.Sprintf("subgraph %d [\"%s\"]\n", selfNodeNum, nodeNameDisplay))
+		fmt.Fprintf(&builder, "subgraph %d [\"%s\"]\n", selfNodeNum, nodeNameDisplay)
 		for i, child := range w.substeps {
 			childNodeNum := *nodeNum + 1
 			if err := writeChildNode(child); err != nil {
@@ -91,7 +91,7 @@ func (w *WorkflowStep) toMermaidInternal(nodeNum *int) (string, error) {
 			}
 		}
 		builder.WriteString("end\n")
-		builder.WriteString(fmt.Sprintf("class %d %s\n", selfNodeNum, class)) // Subgraph class assignment needs to happen after the subgraph is defined
+		fmt.Fprintf(&builder, "class %d %s\n", selfNodeNum, class) // Subgraph class assignment needs to happen after the subgraph is defined
 	}
 
 	return builder.String(), nil

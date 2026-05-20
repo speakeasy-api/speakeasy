@@ -36,14 +36,14 @@ func BuildValidationComment(results []SpecValidationResult) string {
 	md.WriteString("|------|--------|--------|----------|-------|-------------|\n")
 
 	for _, r := range results {
-		md.WriteString(fmt.Sprintf("| %s | %s | %d | %d | %d | %d |\n",
+		fmt.Fprintf(&md, "| %s | %s | %d | %d | %d | %d |\n",
 			r.SpecPath,
 			summaryStatus(r),
 			len(r.Errors),
 			len(r.Warnings),
 			len(r.Hints),
 			len(r.InvalidOperations),
-		))
+		)
 	}
 
 	md.WriteString("\n")
@@ -73,7 +73,7 @@ func BuildValidationComment(results []SpecValidationResult) string {
 		summary := fmt.Sprintf("%s %s — %s", icon, r.SpecPath, strings.Join(parts, ", "))
 
 		md.WriteString("<details>\n")
-		md.WriteString(fmt.Sprintf("<summary>%s</summary>\n\n", summary))
+		fmt.Fprintf(&md, "<summary>%s</summary>\n\n", summary)
 
 		if len(r.Errors) > 0 || len(r.Warnings) > 0 || len(r.Hints) > 0 {
 			md.WriteString("| Severity | Rule | Message | Line |\n")
@@ -85,23 +85,23 @@ func BuildValidationComment(results []SpecValidationResult) string {
 			for _, err := range allErrs {
 				vErr := errors.GetValidationErr(err)
 				if vErr != nil {
-					md.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
+					fmt.Fprintf(&md, "| %s | %s | %s | %s |\n",
 						strings.ToUpper(string(vErr.Severity)),
 						vErr.Rule,
 						vErr.Message,
-						strconv.Itoa(vErr.GetLineNumber())))
+						strconv.Itoa(vErr.GetLineNumber()))
 					continue
 				}
 
 				uErr := errors.GetUnsupportedErr(err)
 				if uErr != nil {
-					md.WriteString(fmt.Sprintf("| WARN | unsupported | %s | %s |\n",
+					fmt.Fprintf(&md, "| WARN | unsupported | %s | %s |\n",
 						uErr.Error(),
-						strconv.Itoa(uErr.GetLineNumber())))
+						strconv.Itoa(uErr.GetLineNumber()))
 					continue
 				}
 
-				md.WriteString(fmt.Sprintf("| UNKNOWN | unknown | %s | |\n", err.Error()))
+				fmt.Fprintf(&md, "| UNKNOWN | unknown | %s | |\n", err.Error())
 			}
 			md.WriteString("\n")
 		}
@@ -109,7 +109,7 @@ func BuildValidationComment(results []SpecValidationResult) string {
 		if len(r.InvalidOperations) > 0 {
 			md.WriteString("**Skipped operations** (would be excluded from generated SDK):\n")
 			for _, op := range r.InvalidOperations {
-				md.WriteString(fmt.Sprintf("- `%s`\n", op))
+				fmt.Fprintf(&md, "- `%s`\n", op)
 			}
 			md.WriteString("\n")
 		}
