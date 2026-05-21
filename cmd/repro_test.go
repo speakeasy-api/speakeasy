@@ -11,26 +11,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/speakeasy-api/speakeasy/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func getReproDir() string {
-	return filepath.Join(testutils.GetTempDir(), "speakeasy-test-repro")
-}
-
-func getOriginalDir() string {
-	return filepath.Join(getReproDir(), "original")
-}
-
-func getReproSubDir() string {
-	return filepath.Join(getReproDir(), "repro")
-}
-
-func getSpeakeasyBinary() string {
-	return filepath.Join(testutils.GetTempDir(), "speakeasy-test")
-}
 
 func TestParseReproTarget(t *testing.T) {
 	t.Parallel()
@@ -95,21 +80,28 @@ func TestParseReproTarget(t *testing.T) {
 }
 
 func TestReproEndToEnd(t *testing.T) {
-	t.Parallel()
-
 	// For now skip on windows - building the temp binary is not working on windows
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping repro test on Windows")
 		return
 	}
 
-	// Create test directories
-	originalDir := getOriginalDir()
-	reproDir := getReproSubDir()
-	speakeasyDir := filepath.Join(originalDir, ".speakeasy")
+	if os.Getenv("SPEAKEASY_API_KEY") == "" {
+		t.Skip("Skipping repro test without SPEAKEASY_API_KEY")
+		return
+	}
 
-	// Clean up any existing test directories
-	_ = os.RemoveAll(getReproDir())
+	t.Parallel()
+
+	testDir := filepath.Join(testutils.GetTempDir(), "speakeasy-test-repro-"+uuid.NewString())
+	t.Cleanup(func() {
+		_ = os.RemoveAll(testDir)
+	})
+
+	// Create test directories
+	originalDir := filepath.Join(testDir, "original")
+	reproDir := filepath.Join(testDir, "repro")
+	speakeasyDir := filepath.Join(originalDir, ".speakeasy")
 	_ = reproDir // Will be used in a full implementation
 
 	// Create the directory structure
@@ -211,13 +203,18 @@ paths:
 	require.NoError(t, err, "Failed to write openapi.yaml")
 
 	// Build the speakeasy CLI binary
-	speakeasyBinary := testutils.BuildTempBinary(t, getSpeakeasyBinary())
+	speakeasyBinary := testutils.BuildTempBinary(t, filepath.Join(testDir, "speakeasy-test"))
+
+	homeDir := filepath.Join(testDir, "home")
+	require.NoError(t, os.MkdirAll(homeDir, 0o755), "Failed to create isolated home directory")
+	subprocessEnv := append(os.Environ(), "HOME="+homeDir, "USERPROFILE="+homeDir)
 
 	// Run speakeasy run command in the original directory
 	t.Logf("Running speakeasy from: %s", originalDir)
 	t.Logf("Speakeasy binary: %s", speakeasyBinary)
 	runCmd := exec.Command(speakeasyBinary, "run", "--output=console", "--pinned")
 	runCmd.Dir = originalDir
+	runCmd.Env = subprocessEnv
 	var runOutput bytes.Buffer
 	runCmd.Stdout = &runOutput
 	runCmd.Stderr = &runOutput
@@ -278,6 +275,7 @@ paths:
 	reproCmd := exec.Command(speakeasyBinary, "repro", reproTarget,
 		"--directory", reproDir)
 	reproCmd.Dir = originalDir
+	reproCmd.Env = subprocessEnv
 	var reproOutput bytes.Buffer
 	reproCmd.Stdout = &reproOutput
 	reproCmd.Stderr = &reproOutput

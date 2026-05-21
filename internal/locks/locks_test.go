@@ -2,21 +2,25 @@ package locks
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func newTestLockName(prefix string) string {
+	return prefix + "-" + uuid.NewString() + ".lock"
+}
 
 func TestCLIUpdateMutex_TryLock(t *testing.T) {
 	t.Parallel()
 
 	// Create a custom lock file name to avoid conflicts with real CLI operations
-	testLockName := fmt.Sprintf("speakeasy-test-%d.lock", time.Now().UnixNano())
+	testLockName := newTestLockName("speakeasy-test")
 
 	// Create a mutex with the test lock name
 	opts := Opts{Name: testLockName}
@@ -44,7 +48,7 @@ func TestCLIUpdateMutex_Contention(t *testing.T) {
 	t.Parallel()
 
 	// Create a custom lock file name to avoid conflicts with real CLI operations
-	testLockName := fmt.Sprintf("speakeasy-test-contention-%d.lock", time.Now().UnixNano())
+	testLockName := newTestLockName("speakeasy-test-contention")
 
 	// Create a mutex with the test lock name
 	opts := Opts{Name: testLockName}
@@ -105,7 +109,7 @@ func TestCLIUpdateMutex_Unlock(t *testing.T) {
 	t.Parallel()
 
 	// Create a custom lock file name to avoid conflicts with real CLI operations
-	testLockName := fmt.Sprintf("speakeasy-test-%d.lock", time.Now().UnixNano())
+	testLockName := newTestLockName("speakeasy-test-unlock")
 
 	// Create a mutex with the test lock name
 	opts := Opts{Name: testLockName}
@@ -134,10 +138,15 @@ func TestCLIUpdateMutex_Unlock(t *testing.T) {
 	defer cancel2()
 
 	resultCh = mutex.TryLock(ctx2, 50*time.Millisecond)
-	result = <-resultCh
+	for {
+		result = <-resultCh
+		require.NoError(t, result.Error, "Should not return an error")
+		if result.Success {
+			break
+		}
+	}
 
 	assert.True(t, result.Success, "Should successfully acquire the lock again")
-	assert.NoError(t, result.Error, "Should not return an error")
 }
 
 func TestCLIUpdateMutex_Singleton(t *testing.T) {
@@ -154,7 +163,7 @@ func TestCLIUpdateMutex_Singleton(t *testing.T) {
 func TestCLIUpdateMutex_ConcurrentUsers(t *testing.T) {
 	t.Parallel()
 
-	testLockName := "concurrent-test.lock"
+	testLockName := newTestLockName("speakeasy-test-concurrent")
 	lockPath := filepath.Join(os.TempDir(), testLockName)
 
 	// Clean up any existing lock file

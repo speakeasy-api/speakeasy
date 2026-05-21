@@ -55,15 +55,14 @@ paths:
 	err = os.WriteFile(mainSchemaPath, []byte(mainSchema), 0o644)
 	require.NoError(t, err)
 
-	outFile, err := os.CreateTemp(t.TempDir(), "out-schema-*.yaml")
-	require.NoError(t, err)
+	outFilePath := filepath.Join(tempDir, "out-schema.yaml")
 
 	// Call the function under test
-	err = MergeByResolvingLocalReferences(ctx, mainSchemaPath, outFile.Name(), tempDir, "", "", false)
+	err = MergeByResolvingLocalReferences(ctx, mainSchemaPath, outFilePath, tempDir, "", "", false)
 	require.NoError(t, err)
 
 	// Read and verify the output
-	outputData, err := os.ReadFile(outFile.Name())
+	outputData, err := os.ReadFile(outFilePath)
 	require.NoError(t, err)
 
 	expectedOutput := `openapi: "3.1"
