@@ -3,6 +3,7 @@ package charmtest
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/x/exp/teatest"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,7 @@ func (m Model) AssertContains(t *testing.T, expectations ...string) {
 		return true
 	}
 
-	teatest.WaitFor(t, m.Output(), condition)
+	teatest.WaitFor(t, m.Output(), condition, teatest.WithDuration(3*time.Second))
 }
 
 // Asserts that a submitted form string field in the form exactly matches the

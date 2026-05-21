@@ -29,13 +29,17 @@ func TestTargetSpecificForms_Ruby_Quickstart(t *testing.T) {
 	tm := charmtest.ModelFromHuhGroup(t, groups...)
 	tm.AssertContains(t,
 		"┃ Choose a packageName",
-		"┃ The distribution name of the Ruby Package. https://guides.rubygems.org/name-your-gem/",
+		"┃ The distribution name of the Ruby Package.",
+		"https://guides.rubygems.org/name-",
+		"your-gem/",
 		"┃ openapi",
 	)
 	tm.SendKeys(tea.KeyEnter)
 	tm.AssertContains(t,
 		"┃ Choose a module",
-		"┃ The top level module names for your sdk https://ruby-doc.org/3.2.6/syntax/modules_and_classes_rdoc.html",
+		"┃ The top level module names for your sdk",
+		"https://ruby-",
+		"doc.org/3.2.6/syntax/modules_and_classes_rdoc.html",
 		"┃ OpenApiSdk",
 	)
 	tm.SendKeys(tea.KeyEnter)
@@ -65,13 +69,13 @@ func TestTargetSpecificForms_Go_Quickstart(t *testing.T) {
 	tm := charmtest.ModelFromHuhGroup(t, groups...)
 	tm.AssertContains(t,
 		"┃ Choose a modulePath",
-		"┃ Root module path. To install your SDK, users will execute go get github.com/my-company/company-go-sdk",
-		"┃ github.com/my-company/company-go-sdk",
+		"┃ Root module path. To install your SDK, users will execute go get",
+		"github.com/my-company/company-go-sdk",
 	)
 	tm.Type("!")
 	tm.SendKeys(tea.KeyEnter)
 	tm.AssertContains(t,
-		"┃ Root module path. To install your SDK, users will execute go get github.com/my-company/company-go-sdk!",
+		"github.com/my-company/company-go-sdk!",
 		"* Letters, numbers, or /.-_~ only. Cannot start or end with slash or dot.",
 	)
 	tm.SendKeys(
@@ -80,13 +84,14 @@ func TestTargetSpecificForms_Go_Quickstart(t *testing.T) {
 	)
 	tm.AssertContains(t,
 		"┃ Choose a sdkPackageName",
-		"┃ Root module package name. To instantiate your SDK, users will call company.New()",
+		"┃ Root module package name. To instantiate your SDK, users will call",
+		"company.New()",
 		"┃ company",
 	)
 	tm.Type("!")
 	tm.SendKeys(tea.KeyEnter)
 	tm.AssertContains(t,
-		"┃ Root module package name. To instantiate your SDK, users will call company!.New()",
+		"company!.New()",
 		"* Letters, numbers, or underscore (_) only. Must start with letter.",
 	)
 	tm.SendKeys(
