@@ -48,7 +48,7 @@ require (
 	github.com/speakeasy-api/openapi v1.20.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.889.1
 	github.com/speakeasy-api/sdk-gen-config v1.57.1
-	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.8
+	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.9
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
 	github.com/speakeasy-api/speakeasy-core v0.22.1
 	github.com/speakeasy-api/versioning-reports v0.6.1
