@@ -45,8 +45,8 @@ require (
 	github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
-	github.com/speakeasy-api/openapi v1.20.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.889.1
+	github.com/speakeasy-api/openapi v1.23.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.892.0
 	github.com/speakeasy-api/sdk-gen-config v1.57.1
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.9
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
@@ -61,8 +61,8 @@ require (
 	goa.design/goa/v3 v3.24.1
 	golang.org/x/oauth2 v0.33.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/term v0.39.0
-	golang.org/x/text v0.34.0
+	golang.org/x/term v0.40.0
+	golang.org/x/text v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go/v2 v2.5.0
 )
@@ -261,13 +261,13 @@ require (
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/image v0.30.0 // indirect
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260114163908-3f89685c29c3 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
