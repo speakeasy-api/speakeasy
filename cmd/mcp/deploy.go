@@ -26,6 +26,7 @@ var deployCmd = &model.ExecutableCommand[DeployFlags]{
 	Run:          deployExec,
 	RequiresAuth: false,
 	Experimental: true,
+	Hidden:       true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
 			Name:        "target",
