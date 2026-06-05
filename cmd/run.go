@@ -83,7 +83,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.StringFlag{
 			Name:        "target",
 			Shorthand:   "t",
-			Description: "target to run. specify 'all' to run all targets, or a comma-separated list (e.g. 'python,typescript') to run a specific subset with --parallel",
+			Description: "target ID to run (as defined under 'targets' in workflow.yaml). specify 'all' to run all targets, or a comma-separated list of target IDs (e.g. 'my-first-target,my-second-target') to run a specific subset with --parallel",
 		},
 		flag.StringFlag{
 			Name:        "source",
