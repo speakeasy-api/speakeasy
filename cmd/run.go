@@ -83,7 +83,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 		flag.StringFlag{
 			Name:        "target",
 			Shorthand:   "t",
-			Description: "target to run. specify 'all' to run all targets",
+			Description: "target ID to run (as defined under 'targets' in workflow.yaml). specify 'all' to run all targets, or a comma-separated list of target IDs (e.g. 'my-first-target,my-second-target') to run a specific subset with --parallel",
 		},
 		flag.StringFlag{
 			Name:        "source",
@@ -434,17 +434,49 @@ var minimalOpts = []run.Opt{
 	run.WithSkipGenerateLintReport(),
 }
 
-func runParallel(ctx context.Context, flags RunFlags) error {
+// resolveParallelTargets returns the set of targets to run in parallel. When no
+// target (or "all") is specified it returns every target in the workflow;
+// otherwise it returns the comma-separated subset, validating each exists.
+func resolveParallelTargets(target string, allTargets []string) ([]string, error) {
+	if target == "" || target == "all" {
+		return allTargets, nil
+	}
+
+	var targets []string
+	seen := make(map[string]bool)
+	for _, t := range strings.Split(target, ",") {
+		t = strings.TrimSpace(t)
+		if t == "" || seen[t] {
+			continue
+		}
+		if !slices.Contains(allTargets, t) {
+			return nil, fmt.Errorf("target %q is not defined in the workflow", t)
+		}
+		seen[t] = true
+		targets = append(targets, t)
+	}
+	return targets, nil
+}
+
+// runParallel runs the requested targets concurrently as subprocesses. It
+// reports whether it actually ran in parallel; when only a single target is
+// resolved it returns (false, nil) so the caller falls back to serial execution.
+func runParallel(ctx context.Context, flags RunFlags) (bool, error) {
 	logger := log.From(ctx)
 
-	_, targets, err := run.ParseSourcesAndTargets()
+	_, allTargets, err := run.ParseSourcesAndTargets()
 	if err != nil {
-		return err
+		return false, err
+	}
+
+	targets, err := resolveParallelTargets(flags.Target, allTargets)
+	if err != nil {
+		return false, err
 	}
 
 	if len(targets) <= 1 {
-		logger.Infof("Only one target found, falling back to serial execution")
-		return nil // caller will continue with normal serial path
+		logger.Infof("Only one target to run, falling back to serial execution")
+		return false, nil // caller will continue with normal serial path
 	}
 
 	logger.Infof("Running %d targets in parallel...\n", len(targets))
@@ -517,10 +549,10 @@ func runParallel(ctx context.Context, flags RunFlags) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("%d of %d targets failed: %w", len(errs), len(results), stdErrors.Join(errs...))
+		return true, fmt.Errorf("%d of %d targets failed: %w", len(errs), len(results), stdErrors.Join(errs...))
 	}
 
-	return nil
+	return true, nil
 }
 
 func runNonInteractive(ctx context.Context, flags RunFlags) error {
@@ -531,15 +563,15 @@ func runNonInteractive(ctx context.Context, flags RunFlags) error {
 		return run.RunGitHub(ctx, flags.Target, flags.SetVersion, flags.Force)
 	}
 
-	if flags.Parallel && (flags.Target == "all" || flags.Target == "") {
-		if err := runParallel(ctx, flags); err != nil {
+	if flags.Parallel {
+		ran, err := runParallel(ctx, flags)
+		if err != nil {
 			return err
 		}
-		// runParallel returns nil without error when there's only 1 target (fallback to serial)
-		// but if it ran successfully with multiple targets, we're done
-		if _, targets, _ := run.ParseSourcesAndTargets(); len(targets) > 1 {
+		if ran {
 			return nil
 		}
+		// only a single target resolved: fall through to serial execution
 	}
 
 	opts := []run.Opt{
@@ -608,13 +640,15 @@ func runInteractive(ctx context.Context, flags RunFlags) error {
 		return run.RunDependent(ctx, flags.Source, flags.Dependent, stringifyFlags(flags, []string{"dependent", "source"}))
 	}
 
-	if flags.Parallel && (flags.Target == "all" || flags.Target == "") {
-		if err := runParallel(ctx, flags); err != nil {
+	if flags.Parallel {
+		ran, err := runParallel(ctx, flags)
+		if err != nil {
 			return err
 		}
-		if _, targets, _ := run.ParseSourcesAndTargets(); len(targets) > 1 {
+		if ran {
 			return nil
 		}
+		// only a single target resolved: fall through to serial execution
 	}
 
 	opts := []run.Opt{
