@@ -443,14 +443,16 @@ func resolveParallelTargets(target string, allTargets []string) ([]string, error
 	}
 
 	var targets []string
+	seen := make(map[string]bool)
 	for _, t := range strings.Split(target, ",") {
 		t = strings.TrimSpace(t)
-		if t == "" {
+		if t == "" || seen[t] {
 			continue
 		}
 		if !slices.Contains(allTargets, t) {
 			return nil, fmt.Errorf("target %q is not defined in the workflow", t)
 		}
+		seen[t] = true
 		targets = append(targets, t)
 	}
 	return targets, nil

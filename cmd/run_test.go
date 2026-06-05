@@ -44,6 +44,11 @@ func TestResolveParallelTargets(t *testing.T) {
 			want:   []string{"python-genai", "typescript-genai"},
 		},
 		{
+			name:   "deduplicates repeated targets",
+			target: "python-genai,python-genai,typescript-genai",
+			want:   []string{"python-genai", "typescript-genai"},
+		},
+		{
 			name:    "unknown target errors",
 			target:  "python-genai,ruby-genai",
 			wantErr: `target "ruby-genai" is not defined in the workflow`,
