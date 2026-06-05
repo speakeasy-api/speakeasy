@@ -7,8 +7,6 @@ import (
 
 const mcpLong = `# MCP
 The ` + "`mcp`" + ` command provides utilities for managing MCP (Model Context Protocol) servers.
-
-Use these commands to manage your generated MCP servers.
 `
 
 var MCPCmd = &model.CommandGroup{
