@@ -88,8 +88,22 @@ func targetOption(target, maturity string) huh.Option[string] {
 	return huh.NewOption(fmt.Sprintf("%s %s", getTargetDisplay(target), getMaturityDisplay(maturity)), target)
 }
 
+// hiddenTargetNames are valid generation targets that are intentionally
+// omitted from user-facing target listings (e.g. the quickstart --target help
+// text, which is published to the docs site). They remain fully supported for
+// generation and validation via generate.GetSupportedTargetNames().
+var hiddenTargetNames = map[string]bool{
+	"unity": true,
+}
+
 func GetSupportedTargetNames() []string {
-	targetNames := generate.GetSupportedTargetNames()
+	var targetNames []string
+	for _, name := range generate.GetSupportedTargetNames() {
+		if hiddenTargetNames[name] {
+			continue
+		}
+		targetNames = append(targetNames, name)
+	}
 
 	slices.Sort(targetNames)
 
