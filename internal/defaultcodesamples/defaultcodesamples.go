@@ -35,7 +35,11 @@ func DefaultCodeSamples(ctx context.Context, flags DefaultCodeSamplesFlags) erro
 	if err != nil {
 		return fmt.Errorf("failed to read default code samples file: %w", err)
 	}
-	tempDir := os.TempDir()
+	tempDir, err := os.MkdirTemp("", "defaultcodesamples-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
 	tempFile := fmt.Sprintf("%s/defaultcodesamples.js", tempDir)
 	err = os.WriteFile(tempFile, result, 0o644)
 	if err != nil {
