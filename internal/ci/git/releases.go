@@ -25,9 +25,10 @@ var tfGoReleaserConfig string
 const PublishingCompletedString = "Publishing Completed"
 const publishingCompletedSuffix = "\n\n" + PublishingCompletedString
 
-// truncateReleaseBody caps the release body on a rune boundary, reserving buffer
-// bytes for text the caller appends afterwards plus the truncation notice. Returns
-// body unchanged if it already fits.
+// truncateReleaseBody caps the release body so it fits GitHub's limit, reserving buffer
+// bytes for text appended subsequently. Returns body unchanged if it fits. The check counts
+// bytes (len), which is conservative even if GitHub's cap were to be in code points since
+// bytes >= runes. The truncation also avoids splitting UTF-8 characters.
 func truncateReleaseBody(body string, buffer int) string {
 	// maxReleaseBodyLen is GitHub's hard limit on release body length. Exceeding it
 	// returns "422 Validation Failed ... body is too long (maximum is 125000 characters)".
