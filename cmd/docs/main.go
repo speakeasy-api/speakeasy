@@ -21,9 +21,10 @@ func main() {
 
 	root.DisableAutoGenTag = true
 
+	// Static, hand-authored pages in the marketing-site docs tree that must be
+	// preserved when the generated CLI reference is regenerated.
 	exclusionList := []string{
 		filepath.Join(*outDir, "getting-started.mdx"),
-		filepath.Join(*outDir, "_meta.tsx"),
 		filepath.Join(*outDir, "mise-toolkit.mdx"),
 		filepath.Join(*outDir, "docker.mdx"),
 	}

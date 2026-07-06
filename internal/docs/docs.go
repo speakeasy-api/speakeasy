@@ -22,6 +22,33 @@ func stripAnsi(s string) string {
 	return ansiEscape.ReplaceAllString(s, "")
 }
 
+// h1Heading matches a top-level markdown heading line ("# Title").
+var h1Heading = regexp.MustCompile(`^# `)
+
+// codeFence matches the start/end of a fenced code block (``` or ~~~),
+// ignoring any leading indentation.
+var codeFence = regexp.MustCompile("^\\s*(```|~~~)")
+
+// demoteHeadings demotes top-level markdown headings ("# ") in a command's Long
+// description to second-level ("## "). Astro Starlight renders the frontmatter
+// `title` as the page's single H1, so an additional H1 in the body produces a
+// competing top-level heading. Headings inside fenced code blocks (e.g. shell
+// comments in usage examples) are left untouched.
+func demoteHeadings(s string) string {
+	lines := strings.Split(s, "\n")
+	inFence := false
+	for i, line := range lines {
+		if codeFence.MatchString(line) {
+			inFence = !inFence
+			continue
+		}
+		if !inFence && h1Heading.MatchString(line) {
+			lines[i] = "#" + line
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 func GenerateDocs(cmd *cobra.Command, outDir string) error {
 	cmd.DisableAutoGenTag = true
 	return genDocs(cmd, outDir)
@@ -58,20 +85,25 @@ func genDoc(cmd *cobra.Command) string {
 
 	builder := &strings.Builder{}
 
-	// ✅ Add frontmatter if this is an index.md page
-	if strings.HasSuffix(getPath(cmd), "index.md") {
-		builder.WriteString("---\nasIndexPage: true\n---\n\n")
-	}
-
 	name := cmd.Name()
 
-	fmt.Fprintf(builder, "# %s  \n", name)
+	// Astro Starlight's docsSchema requires a `title` in the frontmatter of every
+	// page, and renders it as the page's H1 (so we omit a redundant `# name`
+	// heading below). Commands with sub commands are emitted as index pages and
+	// additionally set `asIndexPage: true`.
+	builder.WriteString("---\n")
+	fmt.Fprintf(builder, "title: %q\n", name)
+	if strings.HasSuffix(getPath(cmd), "index.md") {
+		builder.WriteString("asIndexPage: true\n")
+	}
+	builder.WriteString("---\n\n")
+
 	fmt.Fprintf(builder, "`%s`  \n\n\n", cmd.CommandPath())
 	fmt.Fprintf(builder, "%s  \n\n", stripAnsi(cmd.Short))
 
 	if len(cmd.Long) > 0 {
 		builder.WriteString("## Details\n\n")
-		builder.WriteString(stripAnsi(cmd.Long) + "\n\n")
+		builder.WriteString(demoteHeadings(stripAnsi(cmd.Long)) + "\n\n")
 	}
 
 	if cmd.Runnable() {
