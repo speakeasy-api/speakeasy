@@ -544,8 +544,8 @@ github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4 h1:oMiM5kw8Jd9j
 github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4/go.mod h1:ZdhxzEyMG0RE+ZEfqbpL8gvD8nw80UO7KPlf9t+dUCQ=
 github.com/speakeasy-api/jsonpath v0.6.3 h1:c+QPwzAOdrWvzycuc9HFsIZcxKIaWcNpC+xhOW9rJxU=
 github.com/speakeasy-api/jsonpath v0.6.3/go.mod h1:2cXloNuQ+RSXi5HTRaeBh7JEmjRXTiaKpFTdZiL7URI=
-github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed h1:PL/kpBY5vkBmwLjg6l7J4amgSrPf3CNWReGNdwrRqJQ=
-github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed/go.mod h1:Gc8oQkjr2InxwumK0zOBtKN9gIlv9L2VmSVIUk2YxcU=
+github.com/speakeasy-api/libopenapi v0.21.10-fixhiddencomps-fixed h1:ZtuakKtG6x73crANhspQ2CGyZZaBmAHmKUA+Hn2JnpI=
+github.com/speakeasy-api/libopenapi v0.21.10-fixhiddencomps-fixed/go.mod h1:Gc8oQkjr2InxwumK0zOBtKN9gIlv9L2VmSVIUk2YxcU=
 github.com/speakeasy-api/openapi v1.23.0 h1:BlnHqUR/8uIs4tp3d2B4QDN03gw1/QY2R2MHg6fLhRU=
 github.com/speakeasy-api/openapi v1.23.0/go.mod h1:Ih+ZzaTCCPyB2ykiDXaxhqk6jsY84ke3n5p6fobMDXk=
 github.com/speakeasy-api/openapi-generation/v2 v2.916.4 h1:Y3Om+6QqFMpvVJFkoByoeLVPCF7QFbP0KJolMS4Kqug=

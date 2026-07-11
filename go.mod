@@ -4,7 +4,7 @@ go 1.26.2
 
 replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixvacuum
 
-replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.9-fixhiddencomps-fixed
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.10-fixhiddencomps-fixed
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.16.16
 
