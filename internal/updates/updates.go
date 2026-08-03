@@ -583,7 +583,7 @@ func extractTarGZ(archive, dest string) error {
 	for {
 		header, err := t.Next()
 
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 
