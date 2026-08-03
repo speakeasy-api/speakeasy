@@ -107,7 +107,7 @@ func (g *Git) CreateRelease(oldReleaseContent string, languages map[string]relea
 				return fmt.Errorf("failed to create goreleaser config: %w", err)
 			}
 			defer os.Remove(goreleaserCfg.Name())
-			if _, err := goreleaserCfg.Write([]byte(tfGoReleaserConfig)); err != nil {
+			if _, err := goreleaserCfg.WriteString(tfGoReleaserConfig); err != nil {
 				goreleaserCfg.Close()
 				return fmt.Errorf("failed to write goreleaser config: %w", err)
 			}
