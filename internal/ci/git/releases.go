@@ -101,12 +101,20 @@ func (g *Git) CreateRelease(oldReleaseContent string, languages map[string]relea
 			if err != nil {
 				return fmt.Errorf("failed to create tag: %w", err)
 			}
-			// Copy our standard terraform config into /tmp/.goreleaser.yml
-			err = os.WriteFile("/tmp/.goreleaser.yml", []byte(tfGoReleaserConfig), 0644)
+			// Write our standard terraform config to a unique temp file
+			goreleaserCfg, err := os.CreateTemp("", ".goreleaser-*.yml")
 			if err != nil {
+				return fmt.Errorf("failed to create goreleaser config: %w", err)
+			}
+			defer os.Remove(goreleaserCfg.Name())
+			if _, err := goreleaserCfg.Write([]byte(tfGoReleaserConfig)); err != nil {
+				goreleaserCfg.Close()
 				return fmt.Errorf("failed to write goreleaser config: %w", err)
 			}
-			cmd := exec.Command("goreleaser", "release", "--clean", "--config", "/tmp/.goreleaser.yml")
+			if err := goreleaserCfg.Close(); err != nil {
+				return fmt.Errorf("failed to close goreleaser config: %w", err)
+			}
+			cmd := exec.Command("goreleaser", "release", "--clean", "--config", goreleaserCfg.Name())
 			cmd.Dir = g.repoRoot
 			cmd.Env = append(os.Environ(),
 				"GORELEASER_PREVIOUS_TAG="+info.PreviousVersion,

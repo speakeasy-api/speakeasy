@@ -510,6 +510,17 @@ func extract(archive, dest string) error {
 	}
 }
 
+// securePath joins name onto dest and ensures the result stays inside dest,
+// rejecting entries like "../../evil" that would escape via path traversal
+// (zip-slip).
+func securePath(dest, name string) (string, error) {
+	path := filepath.Join(dest, name)
+	if path != filepath.Clean(dest) && !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
+		return "", fmt.Errorf("illegal archive entry path escaping destination: %s", name)
+	}
+	return path, nil
+}
+
 func extractZip(archive, dest string) error {
 	z, err := zip.OpenReader(archive)
 	if err != nil {
@@ -518,7 +529,10 @@ func extractZip(archive, dest string) error {
 	defer func() { _ = z.Close() }()
 
 	for _, file := range z.File {
-		filePath := filepath.Join(dest, file.Name)
+		filePath, err := securePath(dest, file.Name)
+		if err != nil {
+			return err
+		}
 
 		if file.FileInfo().IsDir() {
 			if err := os.MkdirAll(filePath, 0o755); err != nil {
@@ -577,13 +591,21 @@ func extractTarGZ(archive, dest string) error {
 			return err
 		}
 
+		headerPath, err := securePath(dest, header.Name)
+		if err != nil {
+			return err
+		}
+
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(filepath.Join(dest, header.Name), 0o755); err != nil {
+			if err := os.MkdirAll(headerPath, 0o755); err != nil {
 				return err
 			}
 		case tar.TypeReg:
-			outFile, err := os.Create(filepath.Join(dest, header.Name))
+			if err := os.MkdirAll(filepath.Dir(headerPath), 0o755); err != nil {
+				return err
+			}
+			outFile, err := os.Create(headerPath)
 			if err != nil {
 				return err
 			}
