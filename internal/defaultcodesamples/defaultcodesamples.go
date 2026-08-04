@@ -35,16 +35,24 @@ func DefaultCodeSamples(ctx context.Context, flags DefaultCodeSamplesFlags) erro
 	if err != nil {
 		return fmt.Errorf("failed to read default code samples file: %w", err)
 	}
-	tempDir := os.TempDir()
-	tempFile := fmt.Sprintf("%s/defaultcodesamples.js", tempDir)
-	err = os.WriteFile(tempFile, result, 0o644)
+	// Use a unique, owner-only temp file: a fixed world-readable path could be
+	// pre-created or swapped by another local user before node executes it.
+	tempFile, err := os.CreateTemp("", "speakeasy-defaultcodesamples-*.js")
 	if err != nil {
+		return fmt.Errorf("failed to create temp file for default code samples: %w", err)
+	}
+	defer os.Remove(tempFile.Name())
+	if _, err := tempFile.Write(result); err != nil {
+		tempFile.Close()
 		return fmt.Errorf("failed to write default code samples file: %w", err)
+	}
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("failed to close default code samples file: %w", err)
 	}
 
 	cmd := exec.Command(
 		nodeBinary,
-		tempFile,
+		tempFile.Name(),
 		"-s", flags.SchemaPath,
 		"-l", flags.Language,
 	)

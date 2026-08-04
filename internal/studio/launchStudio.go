@@ -83,8 +83,14 @@ func LaunchStudio(ctx context.Context, workflow *run.Workflow) error {
 	}
 
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
+		// Bind to loopback only: the studio is a local dev tool and must not be
+		// reachable from other hosts on the network.
+		Addr:    fmt.Sprintf("127.0.0.1:%d", port),
 		Handler: corsMiddleware(authMiddleware(secret, mux)),
+		// Guard against slow-header (Slowloris-style) connection exhaustion.
+		// No ReadTimeout/WriteTimeout: /run and /health use long-lived SSE streams.
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       2 * time.Minute,
 	}
 
 	serverURL := auth.GetWorkspaceBaseURL(ctx)
@@ -189,7 +195,7 @@ func startServer(ctx context.Context, server *http.Server, workflow *run.Workflo
 
 func searchForAvailablePort() (int, error) {
 	for port := 3333; port < 7000; port++ {
-		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 		if err == nil {
 			_ = l.Close()
 			return port, nil
