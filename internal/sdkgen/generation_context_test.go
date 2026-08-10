@@ -11,6 +11,8 @@ import (
 )
 
 func TestWithGenerationContextSelectsCallerDecidedLicense(t *testing.T) {
+	t.Parallel()
+
 	createdAt := time.Date(2024, time.January, 2, 3, 4, 5, 0, time.UTC)
 	testCases := []struct {
 		name              string
@@ -23,6 +25,7 @@ func TestWithGenerationContextSelectsCallerDecidedLicense(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			legacy := auth.WithAdminSkipLicenseCheck(
 				context.Background(),
 				"workspace-id",
@@ -56,6 +59,8 @@ func TestWithGenerationContextSelectsCallerDecidedLicense(t *testing.T) {
 }
 
 func TestWithGenerationContextPreservesCancellableContext(t *testing.T) {
+	t.Parallel()
+
 	createdAt := time.Now()
 	legacy := auth.WithAdminSkipLicenseCheck(
 		context.Background(), "workspace-id", shared.AccountTypeBusiness, nil, "org", "workspace", createdAt, nil,
@@ -78,6 +83,8 @@ func TestWithGenerationContextPreservesCancellableContext(t *testing.T) {
 }
 
 func TestWithGenerationContextRejectsIncompleteAuthentication(t *testing.T) {
+	t.Parallel()
+
 	original := auth.SetAccountTypeInContext(context.Background(), string(shared.AccountTypeBusiness))
 	ctx, err := withGenerationContext(original, true)
 	if err == nil {

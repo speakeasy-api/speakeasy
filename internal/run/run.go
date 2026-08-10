@@ -179,7 +179,7 @@ func withWorkflowGenerationContext(ctx context.Context) (context.Context, error)
 	}
 
 	if _, err := core.GetWorkspaceIDFromContext(ctx); err != nil {
-		return generationaccess.WithDirect(ctx), nil
+		return generationaccess.WithDirect(ctx), nil //nolint:nilerr // Direct runs do not carry workspace context.
 	}
 
 	// Target-level access checks decide whether authenticated output is commercial.
