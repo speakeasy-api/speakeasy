@@ -7,18 +7,43 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   cd "${SCRIPT_DIR}/.."
   export GOPRIVATE="github.com/speakeasy-api/*"
 
-  read -r CURRENT_OPENAPI_GENERATION_VERSION <<<"$(cat go.mod | grep github.com/speakeasy-api/openapi-generation/v2 | awk '{ print $2 }' | awk '{print substr($1,2); }')"
-  # echo "  => CURRENT_OPENAPI_GENERATION_VERSION=${CURRENT_OPENAPI_GENERATION_VERSION}"
-  START_DATE=$(gh release view "v${CURRENT_OPENAPI_GENERATION_VERSION}" --repo speakeasy-api/openapi-generation --json createdAt | jq -r '.createdAt')
+  MODULE_PATH="github.com/speakeasy-api/openapi-generation/v2"
+  CANONICAL_REPOSITORY="speakeasy-api/openapi-generation"
+  NEXT_MODULE_PATH="github.com/speakeasy-api/openapi-generation-next/v2"
+  NEXT_REPOSITORY="speakeasy-api/openapi-generation-next"
 
-  if [[ -z $START_DATE ]]; then
-    echo "Could not find current version (v${CURRENT_OPENAPI_GENERATION_VERSION}) release"
+  MODULE_JSON=$(go mod edit -json)
+  CURRENT_OPENAPI_GENERATION_VERSION=$(jq -r --arg module "$MODULE_PATH" '.Require[] | select(.Path == $module) | .Version' <<<"$MODULE_JSON")
+  REPLACEMENT_VERSION=$(jq -r --arg module "$MODULE_PATH" --arg next "$NEXT_MODULE_PATH" '.Replace[]? | select(.Old.Path == $module and .New.Path == $next) | .New.Version' <<<"$MODULE_JSON")
+
+  if [[ -z "$CURRENT_OPENAPI_GENERATION_VERSION" || "$CURRENT_OPENAPI_GENERATION_VERSION" == "null" ]]; then
+    echo "Could not find required version for ${MODULE_PATH}"
     exit 1
   fi
 
-  PRS=$(gh pr list --repo speakeasy-api/openapi-generation --state merged --search "merged:>${START_DATE}" --json title,url | jq -r '.[] | .title+"\n > "+.url+"\n"')
+  if [[ -n "$REPLACEMENT_VERSION" && "$REPLACEMENT_VERSION" != "null" ]]; then
+    if [[ "$REPLACEMENT_VERSION" != "$CURRENT_OPENAPI_GENERATION_VERSION" ]]; then
+      echo "Require and replace versions for ${MODULE_PATH} must match"
+      exit 1
+    fi
+    OPENAPI_GENERATION_REPOSITORY="$NEXT_REPOSITORY"
+    OPENAPI_GENERATION_REPLACEMENT_ACTIVE=true
+  else
+    OPENAPI_GENERATION_REPOSITORY="$CANONICAL_REPOSITORY"
+    OPENAPI_GENERATION_REPLACEMENT_ACTIVE=false
+  fi
+
+  CURRENT_OPENAPI_GENERATION_VERSION="${CURRENT_OPENAPI_GENERATION_VERSION#v}"
+  START_DATE=$(gh release view "v${CURRENT_OPENAPI_GENERATION_VERSION}" --repo "$OPENAPI_GENERATION_REPOSITORY" --json createdAt | jq -r '.createdAt')
+
+  if [[ -z "$START_DATE" || "$START_DATE" == "null" ]]; then
+    echo "Could not find current version (v${CURRENT_OPENAPI_GENERATION_VERSION}) release in ${OPENAPI_GENERATION_REPOSITORY}"
+    exit 1
+  fi
+
+  PRS=$(gh pr list --repo "$OPENAPI_GENERATION_REPOSITORY" --state merged --search "merged:>${START_DATE}" --json title,url | jq -r '.[] | .title+"\n > "+.url+"\n"')
 #  echo "  => PRS=${PRS}"
-  LATEST_OPENAPI_GENERATION_VERSION=$(gh release list --limit 1 --repo speakeasy-api/openapi-generation --json tagName | jq -r '.[0].tagName')
+  LATEST_OPENAPI_GENERATION_VERSION=$(gh release list --limit 1 --repo "$OPENAPI_GENERATION_REPOSITORY" --json tagName | jq -r '.[0].tagName')
 #  echo "  => LATEST_OPENAPI_GENERATION_VERSION=${LATEST_OPENAPI_GENERATION_VERSION}"
 
   read -r SEMVER_CHANGE <<<"$("${SCRIPT_DIR}/semver.bash" diff "${CURRENT_OPENAPI_GENERATION_VERSION}" "${LATEST_OPENAPI_GENERATION_VERSION}")"
@@ -41,7 +66,10 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
     read -r -p "Commit Message (please summarize changes above): " SUMMARY
   fi
 
-  go get -v "github.com/speakeasy-api/openapi-generation/v2@${LATEST_OPENAPI_GENERATION_VERSION}"
+  go mod edit -require="${MODULE_PATH}@${LATEST_OPENAPI_GENERATION_VERSION}"
+  if [[ "$OPENAPI_GENERATION_REPLACEMENT_ACTIVE" == true ]]; then
+    go mod edit -replace="${MODULE_PATH}=${NEXT_MODULE_PATH}@${LATEST_OPENAPI_GENERATION_VERSION}"
+  fi
   go mod tidy
 
   echo "$ git add go.mod go.sum"

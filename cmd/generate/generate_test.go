@@ -103,11 +103,10 @@ func TestGetChangelogs(t *testing.T) {
 				Raw: true,
 			},
 			expectError: false,
-			// The latest changelog should contain version headers, GitHub links, and commit info
+			// Bootstrap releases can intentionally contain a generic changelog entry
+			// without predecessor repository links or commit attribution.
 			expectPatterns: []string{
 				`## \[v\d+\.\d+\.\d+\]`,
-				`github\.com/speakeasy-api/openapi-generation`,
-				`\(commit by`,
 			},
 		},
 		{

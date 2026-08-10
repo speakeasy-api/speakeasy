@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/samber/lo"
+	generationaccess "github.com/speakeasy-api/generation-context/access"
 	"gopkg.in/yaml.v3"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
@@ -128,6 +129,11 @@ func (w *Workflow) PrintSuccessSummary(ctx context.Context) {
 }
 
 func (w *Workflow) Run(ctx context.Context) error {
+	ctx, generationContextErr := withWorkflowGenerationContext(ctx)
+	if generationContextErr != nil {
+		return fmt.Errorf("failed to prepare generation context: %w", generationContextErr)
+	}
+
 	startTime := time.Now()
 	err := w.RunInner(ctx)
 	w.Error = err
@@ -165,6 +171,20 @@ func (w *Workflow) Run(ctx context.Context) error {
 	}
 
 	return err
+}
+
+func withWorkflowGenerationContext(ctx context.Context) (context.Context, error) {
+	if _, ok := generationaccess.StateFromContext(ctx); ok {
+		return ctx, nil
+	}
+
+	if _, err := core.GetWorkspaceIDFromContext(ctx); err != nil {
+		return generationaccess.WithDirect(ctx), nil
+	}
+
+	// Target-level access checks decide whether authenticated output is commercial.
+	// The workflow-level state only establishes the authenticated invocation context.
+	return core.WithGenerationContext(ctx, generationaccess.GeneratedLicenseAGPL)
 }
 
 func (w *Workflow) RunInner(ctx context.Context) error {
