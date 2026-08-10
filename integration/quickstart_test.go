@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestQuickstart(t *testing.T) {
+func TestQuickstart(t *testing.T) { //nolint:paralleltest // Windows quickstarts must run serially to avoid child-process hangs.
 	// Concurrent quickstarts leave Windows child processes waiting indefinitely.
 	// Keep all non-skipped targets covered there, but run them serially.
 	if runtime.GOOS != "windows" {
