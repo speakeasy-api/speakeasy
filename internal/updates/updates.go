@@ -297,6 +297,21 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 	return nil
 }
 
+// isStableRelease returns true if the release is a full semver release (not a
+// draft, not marked as pre-release, and has no pre-release component in its tag).
+func isStableRelease(release *github.RepositoryRelease) bool {
+	if release.GetDraft() || release.GetPrerelease() {
+		return false
+	}
+
+	v, err := version.NewVersion(release.GetTagName())
+	if err != nil {
+		return false
+	}
+
+	return v.Prerelease() == ""
+}
+
 func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
 	client := github.NewClient(&http.Client{
 		Timeout: timeout,
@@ -328,6 +343,10 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 	}
 
 	for _, release := range releases {
+		if !isStableRelease(release) {
+			continue
+		}
+
 		for _, asset := range release.Assets {
 			if strings.Contains(strings.ToLower(asset.GetName()), strings.ToLower(artifactArch)) {
 				_ = releaseCache.Store(&ReleaseCache{
