@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
+	generationaccess "github.com/speakeasy-api/generation-context/access"
 	"github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
@@ -101,10 +102,13 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	logger := log.From(ctx).WithAssociatedFile(opts.SchemaPath)
 
-	generationAccess, level, message, _ := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
+	generationAccess, level, message, accessErr := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
 		GenLockID:  GetGenLockID(opts.OutDir),
 		TargetType: &opts.Language,
 	})
+	if accessErr != nil {
+		return &GenerationAccess{}, fmt.Errorf("failed to evaluate generation access: %w", accessErr)
+	}
 
 	if !generationAccess && level != nil && *level == shared.LevelBlocked {
 		msg := styles.RenderErrorMessage(
@@ -118,6 +122,15 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			Message:       message,
 			Level:         level,
 		}, stderrors.New("generation access blocked")
+	}
+
+	ctx, err := withGenerationContext(ctx, generationAccess)
+	if err != nil {
+		return &GenerationAccess{
+			AccessAllowed: generationAccess,
+			Message:       message,
+			Level:         level,
+		}, fmt.Errorf("failed to prepare generation context: %w", err)
 	}
 
 	logger.Infof("Generating SDK for %s...\n", opts.Language)
@@ -263,7 +276,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		var errs []error
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
-			cancelCtx := opts.CancellableGeneration.CancellableContext
+			cancelCtx, err := withGenerationContext(opts.CancellableGeneration.CancellableContext, generationAccess)
+			if err != nil {
+				return fmt.Errorf("failed to prepare cancellable generation context: %w", err)
+			}
 
 			var cancelled bool
 			cancelled, errs = g.GenerateWithCancel(cancelCtx, schema, opts.SchemaPath, opts.Language, opts.OutDir, isRemote, opts.Compile)
@@ -330,6 +346,14 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		Message:               message,
 		RenderedUsageSnippets: g.GetRenderedUsageSnippets(),
 	}, nil
+}
+
+func withGenerationContext(ctx context.Context, generationAllowed bool) (context.Context, error) {
+	generatedLicense := generationaccess.GeneratedLicenseAGPL
+	if generationAllowed {
+		generatedLicense = generationaccess.GeneratedLicenseCommercial
+	}
+	return auth.WithGenerationContext(ctx, generatedLicense)
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {

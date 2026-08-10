@@ -16,8 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestQuickstart(t *testing.T) {
-	t.Parallel()
+func TestQuickstart(t *testing.T) { //nolint:paralleltest // Windows quickstarts must run serially to avoid child-process hangs.
+	// Concurrent quickstarts leave Windows child processes waiting indefinitely.
+	// Keep all non-skipped targets covered there, but run them serially.
+	if runtime.GOOS != "windows" {
+		t.Parallel()
+	}
 
 	now := time.Now()
 	t.Logf("Building binary")
@@ -33,7 +37,9 @@ func TestQuickstart(t *testing.T) {
 	targets := prompts.GetSupportedTargetNames()
 	for _, target := range targets {
 		t.Run(target, func(t *testing.T) {
-			t.Parallel()
+			if runtime.GOOS != "windows" {
+				t.Parallel()
+			}
 
 			if shouldSkipTarget(t, target) {
 				return

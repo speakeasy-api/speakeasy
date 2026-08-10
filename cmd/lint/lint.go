@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	generationaccess "github.com/speakeasy-api/generation-context/access"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
@@ -588,6 +589,12 @@ func warningsToTabContents(warnings []error) []interactivity.InspectableContent 
 
 // runDryRunGeneration runs a dry-run SDK generation for the specified target and returns warnings
 func runDryRunGeneration(ctx context.Context, schemaPath, targetLanguage, workingDir string) ([]error, error) {
+	// Lint is available without authentication, so its optional diagnostic
+	// generation must explicitly use the direct AGPL mode when no caller state exists.
+	if _, ok := generationaccess.StateFromContext(ctx); !ok {
+		ctx = generationaccess.WithDirect(ctx)
+	}
+
 	// Load the OpenAPI schema
 	isRemote, schema, err := openapi.GetSchemaContents(ctx, schemaPath, "", "")
 	if err != nil {

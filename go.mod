@@ -12,6 +12,9 @@ replace github.com/dop251/goja => github.com/speakeasy-api/goja v0.0.0-202602230
 
 replace github.com/dop251/goja/debugger => github.com/speakeasy-api/goja/debugger v0.0.0-20260223084236-ed0328a0a462
 
+// Keep this version aligned with the canonical require below; update both through scripts/upgrade.bash.
+replace github.com/speakeasy-api/openapi-generation/v2 => github.com/speakeasy-api/openapi-generation-next/v2 v2.928.0
+
 require (
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/MichaelMure/go-term-markdown v0.1.4
@@ -41,16 +44,17 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/samber/lo v1.52.0
 	github.com/sethvargo/go-githubactions v1.3.2
+	github.com/speakeasy-api/generation-context v1.0.0
 	github.com/speakeasy-api/git-diff-parser v0.2.0
 	github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.23.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.927.0
+	github.com/speakeasy-api/openapi-generation/v2 v2.928.0
 	github.com/speakeasy-api/sdk-gen-config v1.57.1
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.22.1
+	github.com/speakeasy-api/speakeasy-core v0.22.2
 	github.com/speakeasy-api/versioning-reports v0.6.1
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.9
