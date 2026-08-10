@@ -12,6 +12,7 @@ replace github.com/dop251/goja => github.com/speakeasy-api/goja v0.0.0-202602230
 
 replace github.com/dop251/goja/debugger => github.com/speakeasy-api/goja/debugger v0.0.0-20260223084236-ed0328a0a462
 
+// Keep this version aligned with the canonical require below; update both through scripts/upgrade.bash.
 replace github.com/speakeasy-api/openapi-generation/v2 => github.com/speakeasy-api/openapi-generation-next/v2 v2.928.0
 
 require (
