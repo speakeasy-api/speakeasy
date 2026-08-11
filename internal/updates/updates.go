@@ -314,6 +314,16 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 	return nil
 }
 
+// githubToken returns the first GitHub token set in the environment, or "".
+func githubToken() string {
+	for _, key := range []string{"SPEAKEASY_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
+		if token := os.Getenv(key); token != "" {
+			return token
+		}
+	}
+	return ""
+}
+
 // githubClient returns a GitHub API client, authenticated when a token is
 // available in the environment. Unauthenticated requests share a 60/hour rate
 // limit per IP, which shared CI runners exhaust quickly.
@@ -321,10 +331,8 @@ func githubClient(timeout time.Duration) *github.Client {
 	client := github.NewClient(&http.Client{
 		Timeout: timeout,
 	})
-	for _, key := range []string{"SPEAKEASY_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
-		if token := os.Getenv(key); token != "" {
-			return client.WithAuthToken(token)
-		}
+	if token := githubToken(); token != "" {
+		return client.WithAuthToken(token)
 	}
 	return client
 }
@@ -344,7 +352,19 @@ func describeGitHubError(err error) error {
 	}
 	var abuseErr *github.AbuseRateLimitError
 	if errors.As(err, &abuseErr) {
-		return fmt.Errorf("GitHub API rate limit exceeded (secondary limit; set GITHUB_TOKEN to authenticate): %w", err)
+		// Secondary limits can hit authenticated clients too, so only suggest a
+		// token when the request was actually anonymous.
+		var remedies []string
+		if githubToken() == "" {
+			remedies = append(remedies, "set GITHUB_TOKEN to authenticate")
+		}
+		if abuseErr.RetryAfter != nil {
+			remedies = append(remedies, "retry after "+abuseErr.RetryAfter.String())
+		}
+		if len(remedies) > 0 {
+			return fmt.Errorf("GitHub API rate limit exceeded (secondary limit; %s): %w", strings.Join(remedies, ", or "), err)
+		}
+		return fmt.Errorf("GitHub API rate limit exceeded (secondary limit): %w", err)
 	}
 	return err
 }

@@ -106,9 +106,23 @@ func TestDescribeGitHubError(t *testing.T) {
 	})
 
 	t.Run("abuse rate limit error mentions GITHUB_TOKEN", func(t *testing.T) {
+		clearGitHubTokenEnv(t)
 		got := describeGitHubError(&github.AbuseRateLimitError{Message: "abuse"})
 		if !strings.Contains(got.Error(), "GITHUB_TOKEN") {
 			t.Errorf("expected error to mention GITHUB_TOKEN, got: %v", got)
+		}
+	})
+
+	t.Run("authenticated abuse rate limit reports retry delay without suggesting GITHUB_TOKEN", func(t *testing.T) {
+		clearGitHubTokenEnv(t)
+		t.Setenv("GITHUB_TOKEN", "github-token")
+		retryAfter := 2 * time.Minute
+		got := describeGitHubError(&github.AbuseRateLimitError{Message: "abuse", RetryAfter: &retryAfter})
+		if !strings.Contains(got.Error(), "retry after 2m0s") {
+			t.Errorf("expected error to report the retry delay, got: %v", got)
+		}
+		if strings.Contains(got.Error(), "GITHUB_TOKEN") {
+			t.Errorf("expected no GITHUB_TOKEN suggestion when already authenticated, got: %v", got)
 		}
 	})
 
@@ -118,6 +132,15 @@ func TestDescribeGitHubError(t *testing.T) {
 			t.Errorf("expected passthrough, got: %v", got)
 		}
 	})
+}
+
+// clearGitHubTokenEnv unsets every token env var githubToken consults, so a
+// token in the test environment can't leak into token-sensitive assertions.
+func clearGitHubTokenEnv(t *testing.T) {
+	t.Helper()
+	for _, key := range []string{"SPEAKEASY_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
+		t.Setenv(key, "")
+	}
 }
 
 // recordingTransport captures the Authorization header of each request and
@@ -151,22 +174,15 @@ func TestGithubClientTokenSelection(t *testing.T) {
 		return recorder.lastAuthHeader
 	}
 
-	clearTokenEnv := func(t *testing.T) {
-		t.Helper()
-		for _, key := range []string{"SPEAKEASY_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
-			t.Setenv(key, "")
-		}
-	}
-
 	t.Run("no token env vars yields unauthenticated requests", func(t *testing.T) {
-		clearTokenEnv(t)
+		clearGitHubTokenEnv(t)
 		if got := sentAuthHeader(t); got != "" {
 			t.Errorf("expected no Authorization header, got %q", got)
 		}
 	})
 
 	t.Run("SPEAKEASY_GITHUB_TOKEN takes precedence over GITHUB_TOKEN and GH_TOKEN", func(t *testing.T) {
-		clearTokenEnv(t)
+		clearGitHubTokenEnv(t)
 		t.Setenv("SPEAKEASY_GITHUB_TOKEN", "speakeasy-token")
 		t.Setenv("GITHUB_TOKEN", "github-token")
 		t.Setenv("GH_TOKEN", "gh-token")
@@ -176,7 +192,7 @@ func TestGithubClientTokenSelection(t *testing.T) {
 	})
 
 	t.Run("GITHUB_TOKEN takes precedence over GH_TOKEN", func(t *testing.T) {
-		clearTokenEnv(t)
+		clearGitHubTokenEnv(t)
 		t.Setenv("GITHUB_TOKEN", "github-token")
 		t.Setenv("GH_TOKEN", "gh-token")
 		if got := sentAuthHeader(t); got != "Bearer github-token" {
@@ -185,7 +201,7 @@ func TestGithubClientTokenSelection(t *testing.T) {
 	})
 
 	t.Run("GH_TOKEN is honored when others are unset", func(t *testing.T) {
-		clearTokenEnv(t)
+		clearGitHubTokenEnv(t)
 		t.Setenv("GH_TOKEN", "gh-token")
 		if got := sentAuthHeader(t); got != "Bearer gh-token" {
 			t.Errorf("expected GH_TOKEN to be used, got Authorization %q", got)
