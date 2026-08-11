@@ -174,6 +174,9 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 				case errors.Is(err, ErrPinned):
 					logger.Debug("Using pinned version (skipping blue/green speakeasy CLI upgrade)")
 				case errors.Is(err, ErrInstallFailed): // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
+					if env.FailOnVersionMismatch() {
+						return fmt.Errorf("failed to install the Speakeasy version specified in workflow.yaml (failing instead of falling back to the local version because SPEAKEASY_FAIL_ON_VERSION_MISMATCH is set): %w", err)
+					}
 					logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
 					logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
 				default:
@@ -335,7 +338,10 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	switch desiredVersion {
 	case "latest":
 		latest, err := updates.GetLatestVersion(ctx, artifactArch)
-		if err != nil {
+		// latest can be nil without an error when no release (or no asset
+		// matching this artifactArch) is found; treat it as an install failure
+		// rather than dereferencing nil.
+		if err != nil || latest == nil {
 			return ErrInstallFailed
 		}
 		desiredVersion = latest.String()

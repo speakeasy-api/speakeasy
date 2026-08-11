@@ -33,6 +33,15 @@ func IsLocalDev() bool {
 	return os.Getenv("SPEAKEASY_ENVIRONMENT") == "local"
 }
 
+// FailOnVersionMismatch returns true if SPEAKEASY_FAIL_ON_VERSION_MISMATCH is
+// set, turning the fallback to the locally installed CLI version (when the
+// version pinned in workflow.yaml cannot be installed) into a hard error
+// instead of a warning. Intended for CI, where silently generating with an
+// unpinned version produces spurious diffs.
+func FailOnVersionMismatch() bool {
+	return os.Getenv("SPEAKEASY_FAIL_ON_VERSION_MISMATCH") == "true"
+}
+
 func IsCI() bool {
 	return os.Getenv("CI") == "true" || IsGithubAction() || utils.IsRunningInCI()
 }
