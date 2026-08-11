@@ -80,6 +80,24 @@ func TestDescribeGitHubError(t *testing.T) {
 		}
 	})
 
+	t.Run("authenticated rate limit reports actual limit without suggesting GITHUB_TOKEN", func(t *testing.T) {
+		rateLimitErr := &github.RateLimitError{
+			Rate: github.Rate{
+				Limit:     5000,
+				Remaining: 0,
+				Reset:     github.Timestamp{Time: time.Now().Add(30 * time.Minute)},
+			},
+			Message: "API rate limit exceeded",
+		}
+		got := describeGitHubError(rateLimitErr)
+		if !strings.Contains(got.Error(), "5000 requests/hour") {
+			t.Errorf("expected error to report the actual limit, got: %v", got)
+		}
+		if strings.Contains(got.Error(), "GITHUB_TOKEN") {
+			t.Errorf("expected no GITHUB_TOKEN suggestion when already authenticated, got: %v", got)
+		}
+	})
+
 	t.Run("wrapped rate limit error is still detected", func(t *testing.T) {
 		wrapped := fmt.Errorf("outer: %w", &github.RateLimitError{})
 		if !strings.Contains(describeGitHubError(wrapped).Error(), "rate limit") {

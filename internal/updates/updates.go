@@ -162,11 +162,11 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 	// API, whose unauthenticated 60 requests/hour rate limit is easily
 	// exhausted on shared CI runner IPs. Asset downloads are not subject to
 	// that limit. If this fails for any reason, fall back to the API lookup.
-	if err := install(artifactArch, directAssetURL(v, artifactArch), dst, timeout); err == nil {
+	directErr := install(artifactArch, directAssetURL(v, artifactArch), dst, timeout)
+	if directErr == nil {
 		return dst, nil
-	} else {
-		log.From(ctx).Debug(fmt.Sprintf("direct download of version %s failed, falling back to GitHub release lookup: %s", v.String(), err.Error()))
 	}
+	log.From(ctx).Debug(fmt.Sprintf("direct download of version %s failed, falling back to GitHub release lookup: %s", v.String(), directErr.Error()))
 
 	release, asset, err := getReleaseForVersion(ctx, *v, artifactArch, 30*time.Second)
 	if err != nil || release == nil {
@@ -335,7 +335,12 @@ func githubClient(timeout time.Duration) *github.Client {
 func describeGitHubError(err error) error {
 	var rateLimitErr *github.RateLimitError
 	if errors.As(err, &rateLimitErr) {
-		return fmt.Errorf("GitHub API rate limit exceeded (anonymous requests are limited to 60/hour per IP; set GITHUB_TOKEN to authenticate, or retry after %s): %w", rateLimitErr.Rate.Reset.Format(time.RFC1123), err)
+		remedy := "retry after " + rateLimitErr.Rate.Reset.Format(time.RFC1123)
+		if rateLimitErr.Rate.Limit <= 60 {
+			// The anonymous per-IP limit; authenticating raises it substantially.
+			remedy = "set GITHUB_TOKEN to authenticate, or " + remedy
+		}
+		return fmt.Errorf("GitHub API rate limit exceeded (%d requests/hour; %s): %w", rateLimitErr.Rate.Limit, remedy, err)
 	}
 	var abuseErr *github.AbuseRateLimitError
 	if errors.As(err, &abuseErr) {

@@ -175,7 +175,7 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 					logger.Debug("Using pinned version (skipping blue/green speakeasy CLI upgrade)")
 				case errors.Is(err, ErrInstallFailed): // Don't fail on download failure. Proceed using the current CLI version, as if it was run with --pinned
 					if env.FailOnVersionMismatch() {
-						return fmt.Errorf("failed to install the Speakeasy version specified in workflow.yaml (failing instead of falling back to the local version because SPEAKEASY_FAIL_ON_VERSION_MISMATCH is set): %w", err)
+						return fmt.Errorf("SPEAKEASY_FAIL_ON_VERSION_MISMATCH is set, failing instead of falling back to the locally installed version: %w", err)
 					}
 					logger.PrintfStyled(styles.DimmedItalic, "Failed to download latest Speakeasy version: %s", err.Error())
 					logger.PrintfStyled(styles.DimmedItalic, "Running with local version. This might result in inconsistencies between environments\n")
