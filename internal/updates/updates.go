@@ -143,11 +143,6 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 		return os.Executable()
 	}
 
-	release, asset, err := getReleaseForVersion(ctx, *v, artifactArch, 30*time.Second)
-	if err != nil || release == nil {
-		return "", fmt.Errorf("failed to find release for version %s: %w", v.String(), err)
-	}
-
 	dst, err := getVersionInstallLocation(artifactArch, v)
 	if err != nil {
 		return "", err
@@ -162,7 +157,29 @@ func InstallVersion(ctx context.Context, desiredVersion, artifactArch string, ti
 	// It's important that these logs remain. We rely on them as part of `run` output
 	log.From(ctx).PrintfStyled(styles.DimmedItalic, "Downloading Speakeasy version %s\n", desiredVersion)
 
+	// Release asset URLs are deterministic, so a known version can be
+	// downloaded without first resolving release metadata through the GitHub
+	// API, whose unauthenticated 60 requests/hour rate limit is easily
+	// exhausted on shared CI runner IPs. Asset downloads are not subject to
+	// that limit. If this fails for any reason, fall back to the API lookup.
+	directErr := install(artifactArch, directAssetURL(v, artifactArch), dst, timeout)
+	if directErr == nil {
+		return dst, nil
+	}
+	log.From(ctx).Debug(fmt.Sprintf("direct download of version %s failed, falling back to GitHub release lookup: %s", v.String(), directErr.Error()))
+
+	release, asset, err := getReleaseForVersion(ctx, *v, artifactArch, 30*time.Second)
+	if err != nil || release == nil {
+		return "", fmt.Errorf("failed to find release for version %s: %w", v.String(), err)
+	}
+
 	return dst, install(artifactArch, asset.GetBrowserDownloadURL(), dst, timeout)
+}
+
+// directAssetURL returns the conventional GitHub release asset URL for a CLI
+// version. Asset names follow the goreleaser convention speakeasy_{os}_{arch}.zip.
+func directAssetURL(v *version.Version, artifactArch string) string {
+	return fmt.Sprintf("https://github.com/speakeasy-api/speakeasy/releases/download/v%s/speakeasy_%s.zip", v.String(), strings.ToLower(artifactArch))
 }
 
 func getVersionInstallLocation(artifactArch string, v *version.Version) (string, error) {
@@ -297,10 +314,63 @@ func install(artifactArch, downloadURL, installLocation string, timeout int) err
 	return nil
 }
 
-func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
+// githubToken returns the first GitHub token set in the environment, or "".
+func githubToken() string {
+	for _, key := range []string{"SPEAKEASY_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
+		if token := os.Getenv(key); token != "" {
+			return token
+		}
+	}
+	return ""
+}
+
+// githubClient returns a GitHub API client, authenticated when a token is
+// available in the environment. Unauthenticated requests share a 60/hour rate
+// limit per IP, which shared CI runners exhaust quickly.
+func githubClient(timeout time.Duration) *github.Client {
 	client := github.NewClient(&http.Client{
 		Timeout: timeout,
 	})
+	if token := githubToken(); token != "" {
+		return client.WithAuthToken(token)
+	}
+	return client
+}
+
+// describeGitHubError surfaces rate limiting explicitly: without this, a
+// rate-limited lookup for a pinned version bubbles up as "release not found",
+// which misleadingly points at the version pin rather than the real cause.
+func describeGitHubError(err error) error {
+	var rateLimitErr *github.RateLimitError
+	if errors.As(err, &rateLimitErr) {
+		remedy := "retry after " + rateLimitErr.Rate.Reset.Format(time.RFC1123)
+		if rateLimitErr.Rate.Limit <= 60 {
+			// The anonymous per-IP limit; authenticating raises it substantially.
+			remedy = "set GITHUB_TOKEN to authenticate, or " + remedy
+		}
+		return fmt.Errorf("GitHub API rate limit exceeded (%d requests/hour; %s): %w", rateLimitErr.Rate.Limit, remedy, err)
+	}
+	var abuseErr *github.AbuseRateLimitError
+	if errors.As(err, &abuseErr) {
+		// Secondary limits can hit authenticated clients too, so only suggest a
+		// token when the request was actually anonymous.
+		var remedies []string
+		if githubToken() == "" {
+			remedies = append(remedies, "set GITHUB_TOKEN to authenticate")
+		}
+		if abuseErr.RetryAfter != nil {
+			remedies = append(remedies, "retry after "+abuseErr.RetryAfter.String())
+		}
+		if len(remedies) > 0 {
+			return fmt.Errorf("GitHub API rate limit exceeded (secondary limit; %s): %w", strings.Join(remedies, ", or "), err)
+		}
+		return fmt.Errorf("GitHub API rate limit exceeded (secondary limit): %w", err)
+	}
+	return err
+}
+
+func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
+	client := githubClient(timeout)
 
 	releaseCache, _ := cache.NewFileCache[ReleaseCache](ctx, cache.CacheSettings{
 		Key:               artifactArch,
@@ -319,7 +389,7 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 		var fallbackErr error
 		releases, fallbackErr = fetchReleasesFromFallback(timeout)
 		if fallbackErr != nil {
-			return nil, nil, err // return original error
+			return nil, nil, describeGitHubError(err) // return original error
 		}
 	}
 
@@ -343,9 +413,7 @@ func getLatestRelease(ctx context.Context, artifactArch string, timeout time.Dur
 }
 
 func getReleaseForVersion(ctx context.Context, version version.Version, artifactArch string, timeout time.Duration) (*github.RepositoryRelease, *github.ReleaseAsset, error) {
-	client := github.NewClient(&http.Client{
-		Timeout: timeout,
-	})
+	client := githubClient(timeout)
 
 	tag := "v" + version.String()
 
@@ -364,7 +432,7 @@ func getReleaseForVersion(ctx context.Context, version version.Version, artifact
 			// Fall back to the caching proxy and filter by tag.
 			releases, fallbackErr := fetchReleasesFromFallback(timeout)
 			if fallbackErr != nil {
-				return nil, nil, err // return original error
+				return nil, nil, describeGitHubError(err) // return original error
 			}
 			for _, r := range releases {
 				if r.GetTagName() == tag {
@@ -373,7 +441,10 @@ func getReleaseForVersion(ctx context.Context, version version.Version, artifact
 				}
 			}
 			if release == nil {
-				return nil, nil, fmt.Errorf("release %s not found", tag)
+				// The fallback only serves recent releases, so an older tag
+				// missing from it is not evidence the release doesn't exist.
+				// Preserve the original GitHub error rather than discarding it.
+				return nil, nil, fmt.Errorf("release %s not found in fallback cache (which only holds recent releases); GitHub API lookup failed: %w", tag, describeGitHubError(err))
 			}
 		}
 		_ = cache.Store(release)
