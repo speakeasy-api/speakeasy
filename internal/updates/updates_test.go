@@ -102,34 +102,75 @@ func TestDescribeGitHubError(t *testing.T) {
 	})
 }
 
+// recordingTransport captures the Authorization header of each request and
+// returns a canned response without touching the network.
+type recordingTransport struct {
+	lastAuthHeader string
+}
+
+func (rt *recordingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	rt.lastAuthHeader = r.Header.Get("Authorization")
+	return &http.Response{StatusCode: http.StatusNoContent, Body: http.NoBody, Request: r}, nil
+}
+
 func TestGithubClientTokenSelection(t *testing.T) {
-	t.Run("no token env vars yields unauthenticated client", func(t *testing.T) {
+	// githubClient builds its client with a nil Transport, so WithAuthToken
+	// wraps http.DefaultTransport. Swap in a recorder to observe which token
+	// (if any) is actually sent.
+	recorder := &recordingTransport{}
+	original := http.DefaultTransport
+	http.DefaultTransport = recorder
+	t.Cleanup(func() { http.DefaultTransport = original })
+
+	sentAuthHeader := func(t *testing.T) string {
+		t.Helper()
+		client := githubClient(time.Second)
+		resp, err := client.Client().Get("https://api.github.com/rate_limit")
+		if err != nil {
+			t.Fatalf("stubbed request failed: %v", err)
+		}
+		resp.Body.Close()
+		return recorder.lastAuthHeader
+	}
+
+	clearTokenEnv := func(t *testing.T) {
+		t.Helper()
 		for _, key := range []string{"SPEAKEASY_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"} {
 			t.Setenv(key, "")
 		}
-		client := githubClient(time.Second)
-		if _, ok := client.Client().Transport.(*http.Transport); client.Client().Transport != nil && !ok {
-			t.Errorf("expected default transport when no token is set, got %T", client.Client().Transport)
+	}
+
+	t.Run("no token env vars yields unauthenticated requests", func(t *testing.T) {
+		clearTokenEnv(t)
+		if got := sentAuthHeader(t); got != "" {
+			t.Errorf("expected no Authorization header, got %q", got)
 		}
 	})
 
-	t.Run("SPEAKEASY_GITHUB_TOKEN takes precedence", func(t *testing.T) {
+	t.Run("SPEAKEASY_GITHUB_TOKEN takes precedence over GITHUB_TOKEN and GH_TOKEN", func(t *testing.T) {
+		clearTokenEnv(t)
 		t.Setenv("SPEAKEASY_GITHUB_TOKEN", "speakeasy-token")
 		t.Setenv("GITHUB_TOKEN", "github-token")
-		client := githubClient(time.Second)
-		if client.Client().Transport == nil {
-			t.Fatalf("expected auth transport to be installed when token env var is set")
+		t.Setenv("GH_TOKEN", "gh-token")
+		if got := sentAuthHeader(t); got != "Bearer speakeasy-token" {
+			t.Errorf("expected SPEAKEASY_GITHUB_TOKEN to win, got Authorization %q", got)
+		}
+	})
+
+	t.Run("GITHUB_TOKEN takes precedence over GH_TOKEN", func(t *testing.T) {
+		clearTokenEnv(t)
+		t.Setenv("GITHUB_TOKEN", "github-token")
+		t.Setenv("GH_TOKEN", "gh-token")
+		if got := sentAuthHeader(t); got != "Bearer github-token" {
+			t.Errorf("expected GITHUB_TOKEN to win, got Authorization %q", got)
 		}
 	})
 
 	t.Run("GH_TOKEN is honored when others are unset", func(t *testing.T) {
-		for _, key := range []string{"SPEAKEASY_GITHUB_TOKEN", "GITHUB_TOKEN"} {
-			t.Setenv(key, "")
-		}
+		clearTokenEnv(t)
 		t.Setenv("GH_TOKEN", "gh-token")
-		client := githubClient(time.Second)
-		if client.Client().Transport == nil {
-			t.Fatalf("expected auth transport to be installed when GH_TOKEN is set")
+		if got := sentAuthHeader(t); got != "Bearer gh-token" {
+			t.Errorf("expected GH_TOKEN to be used, got Authorization %q", got)
 		}
 	})
 }

@@ -338,10 +338,13 @@ func runWithVersionFromWorkflowFile(cmd *cobra.Command) error {
 	switch desiredVersion {
 	case "latest":
 		latest, err := updates.GetLatestVersion(ctx, artifactArch)
+		if err != nil {
+			return ErrInstallFailed.Wrap(err)
+		}
 		// latest can be nil without an error when no release (or no asset
 		// matching this artifactArch) is found; treat it as an install failure
 		// rather than dereferencing nil.
-		if err != nil || latest == nil {
+		if latest == nil {
 			return ErrInstallFailed
 		}
 		desiredVersion = latest.String()
