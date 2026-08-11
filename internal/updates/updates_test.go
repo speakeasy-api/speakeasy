@@ -13,6 +13,7 @@ import (
 )
 
 func TestDirectAssetURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		version      string
@@ -47,6 +48,7 @@ func TestDirectAssetURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			v, err := version.NewVersion(tt.version)
 			if err != nil {
 				t.Fatalf("version.NewVersion(%q): %v", tt.version, err)
@@ -58,6 +60,10 @@ func TestDirectAssetURL(t *testing.T) {
 	}
 }
 
+// describeGitHubError reads the token env vars, so subtests control them with
+// t.Setenv, which is incompatible with t.Parallel (including on this parent).
+//
+//nolint:paralleltest
 func TestDescribeGitHubError(t *testing.T) {
 	t.Run("rate limit error mentions rate limiting and GITHUB_TOKEN", func(t *testing.T) {
 		rateLimitErr := &github.RateLimitError{
@@ -128,6 +134,7 @@ func TestDescribeGitHubError(t *testing.T) {
 
 	t.Run("other errors pass through unchanged", func(t *testing.T) {
 		orig := errors.New("connection refused")
+		//nolint:errorlint // identity comparison is the point: the error must pass through unwrapped
 		if got := describeGitHubError(orig); got != orig {
 			t.Errorf("expected passthrough, got: %v", got)
 		}
@@ -174,6 +181,7 @@ func TestGithubClientTokenSelection(t *testing.T) {
 		return recorder.lastAuthHeader
 	}
 
+	//nolint:paralleltest // clearGitHubTokenEnv uses t.Setenv, which is incompatible with t.Parallel
 	t.Run("no token env vars yields unauthenticated requests", func(t *testing.T) {
 		clearGitHubTokenEnv(t)
 		if got := sentAuthHeader(t); got != "" {
