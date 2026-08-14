@@ -11,7 +11,11 @@ import (
 )
 
 func TestWithValidationGenerationContext(t *testing.T) {
+	t.Parallel()
+
 	t.Run("adds direct access when caller state is absent", func(t *testing.T) {
+		t.Parallel()
+
 		ctx := withValidationGenerationContext(context.Background())
 
 		state, ok := generationaccess.StateFromContext(ctx)
@@ -20,6 +24,8 @@ func TestWithValidationGenerationContext(t *testing.T) {
 	})
 
 	t.Run("preserves caller-supplied authenticated access", func(t *testing.T) {
+		t.Parallel()
+
 		createdAt := time.Date(2024, time.January, 2, 3, 4, 5, 0, time.UTC)
 		original, err := generationaccess.WithAuthenticated(context.Background(), generationaccess.AuthenticatedInfo{
 			AccountType:        shared.AccountTypeBusiness,
