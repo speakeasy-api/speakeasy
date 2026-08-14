@@ -10,6 +10,7 @@ import (
 
 	"github.com/speakeasy-api/sdk-gen-config/lint"
 
+	generationaccess "github.com/speakeasy-api/generation-context/access"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	"github.com/speakeasy-api/speakeasy/internal/reports"
@@ -254,8 +255,20 @@ func getDetailedView(lines []string, err errors.ValidationError) string {
 	return sb.String()
 }
 
+func withValidationGenerationContext(ctx context.Context) context.Context {
+	if _, ok := generationaccess.StateFromContext(ctx); ok {
+		return ctx
+	}
+
+	// Validation is available without authentication, so it runs in direct OSS
+	// mode when no caller-supplied generation access state exists.
+	return generationaccess.WithDirect(ctx)
+}
+
 // Validate returns (validation errors, validation warnings, validation info, error)
 func Validate(ctx context.Context, outputLogger log.Logger, schema []byte, schemaPath string, limits *OutputLimits, isRemote bool, defaultRuleset, workingDir string, parseValidOperations bool, skipGenerateReport bool, target string) (*ValidationResult, error) {
+	ctx = withValidationGenerationContext(ctx)
+
 	l := log.From(ctx).WithFormatter(log.PrefixedFormatter)
 
 	opts := []generate.GeneratorOptions{
