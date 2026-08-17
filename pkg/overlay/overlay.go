@@ -120,6 +120,8 @@ func apply(document *yaml.Node, o *overlay.Overlay, sourceLocation string, yamlI
 		}
 	}
 
+	stabilizeFoldedScalars(document)
+
 	bytes, err := schemas.RenderDocument(document, sourceLocation, yamlIn, yamlOut)
 	if err != nil {
 		return fmt.Errorf("failed to Render document: %w", err)
