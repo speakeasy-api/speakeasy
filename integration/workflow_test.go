@@ -666,14 +666,15 @@ func TestFallbackCodeSamplesWorkflow(t *testing.T) {
 	fmt.Println(string(rawWorkflow))
 
 	args := []string{"run", "-s", "all", "--pinned"}
-	reports, _, cmdErr := versioning.WithVersionReportCapture[bool](context.Background(), func(ctx context.Context) (bool, error) {
+	reportCapture, _, cmdErr := versioning.WithVersionReportCapture[bool](context.Background(), func(ctx context.Context) (bool, error) {
 		err := execute(t, temp, args...).Run()
 		return true, err
 	})
 	require.NoError(t, cmdErr)
-	require.NotNil(t, reports)
-	require.NotEmpty(t, reports.Reports, "must have version reports")
-	require.Truef(t, reports.MustGenerate(), "must have gen.lock")
+	require.NotNil(t, reportCapture)
+	require.NotNil(t, reportCapture.V1)
+	require.NotEmpty(t, reportCapture.V1.Reports, "must have version reports")
+	require.Truef(t, reportCapture.V1.MustGenerate(), "must have gen.lock")
 
 	require.NoError(t, cmdErr)
 
