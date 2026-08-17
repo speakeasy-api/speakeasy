@@ -132,13 +132,17 @@ func Run(ctx context.Context, g Git, pr *github.PullRequest, wf *workflow.Workfl
 
 	// Run the workflow
 	var runRes *runbridge.RunResults
-	var changereport *versioning.MergedVersionReport
+	var reportCapture *versioning.VersionReportCapture
 	var err error
 
 	runCtx := events.SetSpeakeasyVersionInContext(ctx, speakeasyVersion)
-	changereport, runRes, err = versioning.WithVersionReportCapture(runCtx, func(ctx context.Context) (*runbridge.RunResults, error) {
+	reportCapture, runRes, err = versioning.WithVersionReportCapture(runCtx, func(ctx context.Context) (*runbridge.RunResults, error) {
 		return runbridge.Run(ctx, len(wf.Targets) == 0, installationURLs, repoURL, repoSubdirectories, manualVersioningBump)
 	})
+	var changereport *versioning.MergedVersionReport
+	if reportCapture != nil {
+		changereport = reportCapture.V1
+	}
 	if err != nil {
 		result := &RunResult{
 			VersioningInfo: versionbumps.VersioningInfo{
