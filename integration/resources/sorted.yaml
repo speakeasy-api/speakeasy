@@ -1,0 +1,31 @@
+paths:
+  /z:
+    get:
+      responses:
+        "200":
+          description: ok
+      operationId: z
+  /a:
+    get:
+      responses:
+        "200":
+          description: ok
+      operationId: a
+openapi: 3.0.0
+info:
+  version: "1"
+  title: T
+components:
+  schemas:
+    Z:
+      type: object
+      required:
+        - z
+        - a
+      properties:
+        z:
+          type: string
+        a:
+          type: string
+    A:
+      type: string

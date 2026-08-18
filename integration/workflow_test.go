@@ -336,6 +336,59 @@ func (c *cmdRunner) Run() error { //nolint:unused // Reserved for executeI debug
 	return c.rootCmd.Execute()
 }
 
+const sortedFormattedJSON = `{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "T",
+    "version": "1"
+  },
+  "paths": {
+    "/a": {
+      "get": {
+        "operationId": "a",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/z": {
+      "get": {
+        "operationId": "z",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "A": {
+        "type": "string"
+      },
+      "Z": {
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "string"
+          },
+          "z": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "a",
+          "z"
+        ]
+      }
+    }
+  }
+}
+`
+
 func TestSpecWorkflows(t *testing.T) {
 	t.Parallel()
 
@@ -345,6 +398,7 @@ func TestSpecWorkflows(t *testing.T) {
 		overlays        []string
 		transformations []workflow.Transformation
 		out             string
+		expectedContent string
 		expectedPaths   []string
 		unexpectedPaths []string
 	}{
@@ -471,6 +525,28 @@ func TestSpecWorkflows(t *testing.T) {
 			},
 		},
 		{
+			name:      "test sorted JSON formatting",
+			inputDocs: []string{"sorted.json"},
+			transformations: []workflow.Transformation{
+				{
+					Format: &workflow.FormatOptions{Style: workflow.FormatStyleSorted},
+				},
+			},
+			out:             "output.json",
+			expectedContent: sortedFormattedJSON,
+		},
+		{
+			name:      "test sorted YAML formatting",
+			inputDocs: []string{"sorted.yaml"},
+			transformations: []workflow.Transformation{
+				{
+					Format: &workflow.FormatOptions{Style: workflow.FormatStyleSorted},
+				},
+			},
+			out:             "output.json",
+			expectedContent: sortedFormattedJSON,
+		},
+		{
 			name:      "test json conversion with overlay",
 			inputDocs: []string{"part1.yaml"},
 			overlays:  []string{"renameOperationOverlay.yaml"},
@@ -550,6 +626,9 @@ func TestSpecWorkflows(t *testing.T) {
 
 			content, err := os.ReadFile(filepath.Join(temp, tt.out))
 			require.NoError(t, err, "No readable file %s exists", filepath.Join(temp, tt.out))
+			if tt.expectedContent != "" {
+				require.Equal(t, tt.expectedContent, string(content), "output should match expected formatting")
+			}
 
 			if len(tt.overlays) > 0 {
 				if !strings.Contains(string(content), "x-codeSamples") {
