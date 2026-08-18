@@ -51,7 +51,7 @@ require (
 	github.com/speakeasy-api/sdk-gen-config v1.57.1
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.22.2
+	github.com/speakeasy-api/speakeasy-core v0.22.3-0.20260818145429-594a5bd0b43e
 	github.com/speakeasy-api/versioning-reports v0.7.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
