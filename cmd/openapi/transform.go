@@ -2,8 +2,11 @@ package openapi
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 
+	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	charm_internal "github.com/speakeasy-api/speakeasy/internal/charm"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
@@ -89,12 +92,25 @@ var cleanupCmd = &model.ExecutableCommand[basicFlagsI]{
 	Flags: basicFlags,
 }
 
-var formatCmd = &model.ExecutableCommand[basicFlagsI]{
+type formatFlags struct {
+	Schema string `json:"schema"`
+	Out    string `json:"out"`
+	Style  string `json:"style"`
+}
+
+var formatCmd = &model.ExecutableCommand[formatFlags]{
 	Usage: "format",
-	Short: "Format an OpenAPI document to be more human-readable",
-	Long:  "Format an OpenAPI document to be more human-readable by sorting the keys in a specific order best suited for each level in the OpenAPI specification",
-	Run:   runFormat,
-	Flags: basicFlags,
+	Short: "Format an OpenAPI document using a selected output style",
+	Long: "Format an OpenAPI document using either the readable style or the sorted style. " +
+		"The sorted style accepts JSON or YAML, emits deterministic JSON, and reorders arrays under required, parameters, oneOf, anyOf, and allOf; " +
+		"those array orders can affect generated method signatures, union ordering, or order-sensitive tooling.",
+	Run: runFormat,
+	Flags: append(basicFlags, flag.EnumFlag{
+		Name:          "style",
+		Description:   "formatting style to apply (readable or sorted)",
+		DefaultValue:  string(workflow.FormatStyleReadable),
+		AllowedValues: []string{string(workflow.FormatStyleReadable), string(workflow.FormatStyleSorted)},
+	}),
 }
 
 var normalizeCmd = &model.ExecutableCommand[normalizeFlags]{
@@ -166,18 +182,30 @@ func runCleanup(ctx context.Context, flags basicFlagsI) error {
 	return transform.CleanupDocument(ctx, flags.Schema, yamlOut, out)
 }
 
-func runFormat(ctx context.Context, flags basicFlagsI) error {
+func runFormat(ctx context.Context, flags formatFlags) error {
+	style := workflow.FormatStyle(flags.Style)
+	if style != workflow.FormatStyleReadable && style != workflow.FormatStyleSorted {
+		return fmt.Errorf("unsupported format style %q", flags.Style)
+	}
+	if style == workflow.FormatStyleSorted && utils.HasYAMLExt(strings.ToLower(flags.Out)) {
+		return fmt.Errorf("sorted formatting only supports JSON output")
+	}
+
 	out, yamlOut, err := setupOutput(ctx, flags.Out)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	return transform.FormatDocument(ctx, flags.Schema, yamlOut, out)
+	if style == workflow.FormatStyleReadable {
+		return transform.FormatDocument(ctx, flags.Schema, yamlOut, out)
+	}
+
+	return transform.FormatSortedDocument(flags.Schema, yamlOut, out)
 }
 
 func setupOutput(_ context.Context, out string) (*os.File, bool, error) {
-	yamlOut := utils.HasYAMLExt(out)
+	yamlOut := utils.HasYAMLExt(strings.ToLower(out))
 
 	if out != "" {
 		file, err := os.Create(out)

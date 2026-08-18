@@ -84,10 +84,21 @@ func (t Transform) Do(ctx context.Context, inputPath string) (string, error) {
 				return "", err
 			}
 		case transformation.Format != nil:
-			transformStep.NewSubstep("Formatting document")
+			switch transformation.Format.GetStyle() {
+			case workflow.FormatStyleReadable:
+				transformStep.NewSubstep("Formatting document")
 
-			if err := transform.FormatFromReader(ctx, in, inputPath, out, yamlOut); err != nil {
-				return "", err
+				if err := transform.FormatFromReader(ctx, in, inputPath, out, yamlOut); err != nil {
+					return "", err
+				}
+			case workflow.FormatStyleSorted:
+				transformStep.NewSubstep("Applying sorted formatting")
+
+				if err := transform.FormatSortedFromReader(in, out, yamlOut); err != nil {
+					return "", err
+				}
+			default:
+				return "", fmt.Errorf("unsupported format style %q", transformation.Format.GetStyle())
 			}
 		case transformation.Normalize != nil:
 			transformStep.NewSubstep("Normalizing document")
