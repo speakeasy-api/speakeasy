@@ -50,8 +50,8 @@ require (
 	github.com/speakeasy-api/openapi-generation/v2 v2.932.0
 	github.com/speakeasy-api/sdk-gen-config v1.57.1
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.22.3-0.20260818145429-594a5bd0b43e
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.8-0.20260819133250-c00535192fe8
+	github.com/speakeasy-api/speakeasy-core v0.22.3-0.20260819133721-d68ffbf3a0a1
 	github.com/speakeasy-api/versioning-reports v0.7.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
@@ -233,6 +233,7 @@ require (
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
+	github.com/spyzhov/ajson v0.8.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/swaggest/jsonschema-go v0.3.79 // indirect
 	github.com/swaggest/refl v1.4.0 // indirect
