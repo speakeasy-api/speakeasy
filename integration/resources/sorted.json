@@ -1,0 +1,1 @@
+{"paths":{"/z":{"get":{"operationId":"z","responses":{"200":{"description":"ok"}}}},"/a":{"get":{"operationId":"a","responses":{"200":{"description":"ok"}}}}},"openapi":"3.0.0","info":{"version":"1","title":"T"},"components":{"schemas":{"Z":{"type":"object","required":["z","a"],"properties":{"z":{"type":"string"},"a":{"type":"string"}}},"A":{"type":"string"}}}}
