@@ -50,14 +50,14 @@ require (
 	github.com/speakeasy-api/openapi-generation/v2 v2.932.10
 	github.com/speakeasy-api/sdk-gen-config v1.58.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12
-	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.26.7
-	github.com/speakeasy-api/speakeasy-core v0.22.2
+	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.28.0
+	github.com/speakeasy-api/speakeasy-core v0.23.0
 	github.com/speakeasy-api/versioning-reports v0.7.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/spf13/viper v1.19.0
 	github.com/stoewer/go-strcase v1.3.1
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	go.uber.org/zap v1.28.0
 	goa.design/goa/v3 v3.24.1
 	golang.org/x/oauth2 v0.36.0
@@ -233,6 +233,7 @@ require (
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
+	github.com/spyzhov/ajson v0.8.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/swaggest/jsonschema-go v0.3.79 // indirect
 	github.com/swaggest/refl v1.4.0 // indirect
@@ -262,6 +263,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect

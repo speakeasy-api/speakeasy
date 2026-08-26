@@ -161,6 +161,15 @@ func TestRegistryFlow(t *testing.T) {
 	// Re-run the generation. It should work.
 	cmdErr = execute(t, temp, initialArgs...).Run()
 	require.NoError(t, cmdErr)
+
+	// Tag the pushed revision through the platform API. Unlike the push/pull
+	// above (which authenticate via oras/ocicommon), `tag promote` goes through
+	// the generated client SDK (Artifacts.PostTags), so this guards against the
+	// SDK silently dropping auth on registry operations — client-sdk-go v3.27.0
+	// did exactly that (403s on every tag command, CLI v1.795.2, reverted in
+	// #2120) and no test noticed.
+	cmdErr = execute(t, temp, "tag", "promote", "-s", "test-source", "-t", "e2e-test").Run()
+	require.NoError(t, cmdErr)
 }
 
 func TestRegistryFlow_JSON(t *testing.T) {
