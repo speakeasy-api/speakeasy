@@ -558,8 +558,8 @@ github.com/speakeasy-api/sdk-gen-config v1.58.0 h1:JrDgDU3XBIidv+TXFqYBvIomfeGEQ
 github.com/speakeasy-api/sdk-gen-config v1.58.0/go.mod h1:kD0NPNX5yaG4j+dcCpLL0hHKQbFk6X93obp+v1XlK5E=
 github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12 h1:dGONbW8WLNc4uSox1/k8O4JFggHoQy1v6R9cLqbTf5M=
 github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12/go.mod h1:AiZRZLL+sv9uwtTHIECc1dcTgfJrXrEB5QxcAGifMkI=
-github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.27.1-0.20260824163359-0e1b713b1512 h1:o1Ufm/9UlcT+g+7hJrKHHcFOJI+x2gH2J/ETERKe2Xo=
-github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.27.1-0.20260824163359-0e1b713b1512/go.mod h1:u+RMkW/w6JXMZI181XpGmcqszcmaD8sSI464D4eiUDk=
+github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.28.0 h1:IaPKp8UFXeei8LGuPQUAzAtZlrAWGfjAeygWAikrPCA=
+github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.28.0/go.mod h1:u+RMkW/w6JXMZI181XpGmcqszcmaD8sSI464D4eiUDk=
 github.com/speakeasy-api/speakeasy-core v0.23.0 h1:QhyPovIUhLzl/97yJmLTqYEe3vVPVBU4XyRL9rlMC08=
 github.com/speakeasy-api/speakeasy-core v0.23.0/go.mod h1:2tl8YXzZCDlAxaPvF4ILBsWpzgGg+1ZA4XH7+Vwcnh0=
 github.com/speakeasy-api/versioning-reports v0.7.0 h1:Q2uI1RrEiOkuudoILSu7Mtkg8+ObT/hZakAG9CD+8f0=
