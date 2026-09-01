@@ -103,7 +103,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	logger := log.From(ctx).WithAssociatedFile(opts.SchemaPath)
 
-	accessResult, licenseToken, accessErr := evaluateGenerationAccess(ctx, &access.GenerationAccessArgs{
+	accessResult, accessErr := access.CheckGenerationAccess(ctx, &access.GenerationAccessArgs{
 		GenLockID:  GetGenLockID(opts.OutDir),
 		TargetType: &opts.Language,
 	})
@@ -111,6 +111,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		return &GenerationAccess{}, fmt.Errorf("failed to evaluate generation access: %w", accessErr)
 	}
 	generationAccess, level, message := accessResult.Allowed, accessResult.Level, accessResult.Message
+	licenseToken, _ := auth.GetLicenseTokenFromContext(ctx)
 
 	if !generationAccess && level != nil && *level == shared.LevelBlocked {
 		msg := styles.RenderErrorMessage(
@@ -360,18 +361,6 @@ func WithCommercialGenerationContext(ctx context.Context) (context.Context, erro
 	}
 	licenseToken, _ := auth.GetLicenseTokenFromContext(ctx)
 	return withGenerationContext(ctx, licenseToken)
-}
-
-func evaluateGenerationAccess(ctx context.Context, args *access.GenerationAccessArgs) (*access.GenerationAccess, []byte, error) {
-	accessResult, err := access.CheckGenerationAccess(ctx, args)
-	if err != nil {
-		return nil, nil, err
-	}
-	licenseToken, _ := auth.GetLicenseTokenFromContext(ctx)
-	if len(accessResult.LicenseToken) > 0 {
-		licenseToken = accessResult.LicenseToken
-	}
-	return accessResult, licenseToken, nil
 }
 
 // withGenerationContext elects the commercial license — the AGPL election is a

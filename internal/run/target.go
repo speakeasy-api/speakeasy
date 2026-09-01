@@ -336,8 +336,6 @@ func (w *Workflow) runCodeSamples(ctx context.Context, codeSamplesStep *workflow
 	if preRendered != nil && preRendered.RawOutput != "" {
 		overlayString, err = codesamples.GenerateOverlayFromRawSnippets(ctx, preRendered.RawOutput, target, sourcePath, writeFileLocation, true, codeSamples)
 	} else {
-		// The usage-snippet fallback runs the generator directly, so it needs
-		// the commercial election that Generate establishes only locally.
 		overlayCtx, ctxErr := sdkgen.WithCommercialGenerationContext(ctx)
 		if ctxErr != nil {
 			return "", "", ctxErr
