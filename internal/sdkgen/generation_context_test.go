@@ -109,3 +109,45 @@ func TestWithGenerationContextRejectsIncompleteAuthentication(t *testing.T) {
 		t.Fatal("failure inserted partial shared state")
 	}
 }
+
+func TestWithCommercialGenerationContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("preserves existing state", func(t *testing.T) {
+		t.Parallel()
+		original := generationaccess.WithDirect(context.Background())
+		ctx, err := WithCommercialGenerationContext(original)
+		if err != nil {
+			t.Fatalf("with commercial generation context: %v", err)
+		}
+		if ctx != original {
+			t.Fatal("existing state must be returned unchanged")
+		}
+	})
+
+	t.Run("elects commercial with the context token for an authenticated caller", func(t *testing.T) {
+		t.Parallel()
+		legacy := auth.WithAdminSkipLicenseCheck(
+			context.Background(), "workspace-id", shared.AccountTypeBusiness, nil, "org", "workspace", time.Now(), nil,
+		)
+		legacy = context.WithValue(legacy, auth.LicenseTokenKey, []byte("license-token"))
+		ctx, err := WithCommercialGenerationContext(legacy)
+		if err != nil {
+			t.Fatalf("with commercial generation context: %v", err)
+		}
+		state, ok := generationaccess.StateFromContext(ctx)
+		if !ok || state.GeneratedLicense() != generationaccess.GeneratedLicenseCommercial {
+			t.Fatalf("expected a commercial election, got %#v", state)
+		}
+		if _, _, err := licensetoken.ResolveGenerationAccess(ctx); !errors.Is(err, licensetoken.ErrInvalidLicenseToken) {
+			t.Fatalf("expected the attached token to reach the validator, got %v", err)
+		}
+	})
+
+	t.Run("errors for an unauthenticated caller", func(t *testing.T) {
+		t.Parallel()
+		if _, err := WithCommercialGenerationContext(context.Background()); err == nil {
+			t.Fatal("expected an error without authentication")
+		}
+	})
+}

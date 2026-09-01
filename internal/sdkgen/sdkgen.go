@@ -353,6 +353,19 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	}, nil
 }
 
+// WithCommercialGenerationContext elects the commercial license with the
+// context's license token when no generation-access state exists. Workflow
+// steps that run the generator outside Generate (e.g. the code-samples
+// usage-snippet fallback) use it to establish the election Generate would
+// otherwise make only locally.
+func WithCommercialGenerationContext(ctx context.Context) (context.Context, error) {
+	if _, ok := generationaccess.StateFromContext(ctx); ok {
+		return ctx, nil
+	}
+	licenseToken, _ := auth.GetLicenseTokenFromContext(ctx)
+	return withGenerationContext(ctx, licenseToken)
+}
+
 func evaluateGenerationAccess(ctx context.Context, args *access.GenerationAccessArgs) (*access.GenerationAccess, []byte, error) {
 	accessResult, err := access.CheckGenerationAccess(ctx, args)
 	if err != nil {

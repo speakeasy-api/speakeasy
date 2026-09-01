@@ -9,10 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	generationaccess "github.com/speakeasy-api/generation-context/access"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
-	"github.com/speakeasy-api/openapi-generation/v2/pkg/licensetoken"
-	coreauth "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
 	"github.com/speakeasy-api/speakeasy/internal/arazzo"
@@ -597,13 +594,9 @@ func warningsToTabContents(warnings []error) []interactivity.InspectableContent 
 func runDryRunGeneration(ctx context.Context, schemaPath, targetLanguage, workingDir string) ([]error, error) {
 	// The CLI only elects the commercial license; unauthenticated lint cannot
 	// elect one, and the returned error skips the target's dry-run diagnostics.
-	if _, ok := generationaccess.StateFromContext(ctx); !ok {
-		licenseToken, _ := coreauth.GetLicenseTokenFromContext(ctx)
-		commercialCtx, err := coreauth.WithGenerationContext(ctx, generationaccess.GeneratedLicenseCommercial)
-		if err != nil {
-			return nil, err
-		}
-		ctx = licensetoken.WithToken(commercialCtx, licenseToken)
+	ctx, err := sdkgen.WithCommercialGenerationContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Load the OpenAPI schema
