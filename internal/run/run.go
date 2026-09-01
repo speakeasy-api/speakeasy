@@ -19,6 +19,7 @@ import (
 	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/errors"
 	"github.com/speakeasy-api/speakeasy-core/events"
+	cliauth "github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/github"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -28,6 +29,11 @@ import (
 )
 
 const ErrNoRollback = errors.Error("failed with error that shouldn't be rolled back")
+
+var (
+	ensureTargets  = cliauth.EnsureTargets
+	ensurePlatform = cliauth.EnsurePlatform
+)
 
 type SourceStep interface {
 	Do(ctx context.Context, inputPath string) (string, error)
@@ -128,6 +134,11 @@ func (w *Workflow) PrintSuccessSummary(ctx context.Context) {
 }
 
 func (w *Workflow) Run(ctx context.Context) error {
+	ctx, workflowContextErr := w.prepareWorkflowContext(ctx)
+	if workflowContextErr != nil {
+		return fmt.Errorf("failed to prepare workflow context: %w", workflowContextErr)
+	}
+
 	startTime := time.Now()
 	err := w.RunInner(ctx)
 	w.Error = err
@@ -167,11 +178,110 @@ func (w *Workflow) Run(ctx context.Context) error {
 	return err
 }
 
-func (w *Workflow) RunInner(ctx context.Context) error {
+func (w *Workflow) prepareWorkflowContext(ctx context.Context) (context.Context, error) {
+	targetTypes, err := w.selectedTargetTypes()
+	if err != nil {
+		return ctx, err
+	}
+	ctx, err = ensureTargets(ctx, targetTypes)
+	if err != nil {
+		return ctx, err
+	}
+	if w.requiresRegistry() {
+		ctx, err = ensurePlatform(ctx)
+		if err != nil {
+			return ctx, err
+		}
+	}
+	return ctx, nil
+}
+
+// requiresRegistry covers hard registry dependencies of the selected sources
+// and targets only; best-effort interactions (source tracking, change reports,
+// source publishing) skip when the registry is disabled.
+func (w *Workflow) requiresRegistry() bool {
+	if w.FrozenWorkflowLock {
+		return true
+	}
+	targetIDs := []string{w.Target}
+	if w.Target == "all" {
+		targetIDs = lo.Keys(w.workflow.Targets)
+	}
+	sourceIDs := []string{w.Source}
+	if w.Source == "all" {
+		sourceIDs = lo.Keys(w.workflow.Sources)
+	}
+	for _, targetID := range targetIDs {
+		if targetID == "" {
+			continue
+		}
+		target, ok := w.workflow.Targets[targetID]
+		if !ok {
+			continue
+		}
+		if target.CodeSamples != nil && target.CodeSamples.Registry != nil &&
+			(target.CodeSamples.Blocking == nil || *target.CodeSamples.Blocking) {
+			return true
+		}
+		sourceIDs = append(sourceIDs, target.Source)
+	}
+	seenSources := make(map[string]struct{}, len(sourceIDs))
+	for _, sourceID := range sourceIDs {
+		if sourceID == "" {
+			continue
+		}
+		if _, ok := seenSources[sourceID]; ok {
+			continue
+		}
+		seenSources[sourceID] = struct{}{}
+		source, ok := w.workflow.Sources[sourceID]
+		if !ok {
+			continue
+		}
+		for _, input := range source.Inputs {
+			if input.IsSpeakeasyRegistry() {
+				return true
+			}
+		}
+		for _, overlay := range source.Overlays {
+			if overlay.Document != nil && overlay.Document.IsSpeakeasyRegistry() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (w *Workflow) selectedTargetTypes() ([]string, error) {
 	if w.Source != "" && w.Target != "" {
-		return fmt.Errorf("cannot specify both a target and a source")
+		return nil, fmt.Errorf("cannot specify both a target and a source")
 	}
 
+	targetIDs := []string{w.Target}
+	if w.Target == "all" {
+		targetIDs = lo.Keys(w.workflow.Targets)
+	}
+	targetTypes := make([]string, 0, len(targetIDs))
+	seenTargetTypes := make(map[string]struct{}, len(targetIDs))
+	for _, targetID := range targetIDs {
+		if targetID == "" {
+			continue
+		}
+		target, ok := w.workflow.Targets[targetID]
+		if !ok {
+			return nil, fmt.Errorf("target '%s' not found", targetID)
+		}
+		if _, ok := seenTargetTypes[target.Target]; ok {
+			continue
+		}
+		seenTargetTypes[target.Target] = struct{}{}
+		targetTypes = append(targetTypes, target.Target)
+	}
+	slices.Sort(targetTypes)
+	return targetTypes, nil
+}
+
+func (w *Workflow) RunInner(ctx context.Context) error {
 	sourceIDs := []string{w.Source}
 	if w.Source == "all" {
 		sourceIDs = lo.Keys(w.workflow.Sources)
@@ -180,7 +290,6 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	if w.Target == "all" {
 		targetIDs = lo.Keys(w.workflow.Targets)
 	}
-
 	if w.SetVersion != "" && len(targetIDs) > 1 {
 		return fmt.Errorf("cannot manually apply a version when more than one target is specified ")
 	}
@@ -205,9 +314,6 @@ func (w *Workflow) RunInner(ctx context.Context) error {
 	for _, targetID := range targetIDs {
 		if targetID == "" {
 			continue
-		}
-		if _, ok := w.workflow.Targets[targetID]; !ok {
-			return fmt.Errorf("target '%s' not found", targetID)
 		}
 		_, _, err := w.runTarget(ctx, targetID)
 		if err != nil {

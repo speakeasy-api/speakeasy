@@ -11,13 +11,14 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	generationaccess "github.com/speakeasy-api/generation-context/access"
-	"github.com/speakeasy-api/speakeasy-core/auth"
+	coreauth "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/access"
 	"github.com/speakeasy-api/speakeasy-core/events"
+	cliauth "github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/env"
 	"github.com/speakeasy-api/speakeasy/internal/fs"
@@ -38,6 +39,12 @@ import (
 // PromptForCustomCode is a function variable that can be replaced in tests.
 // It defaults to the real prompt implementation.
 var PromptForCustomCode = prompts.PromptForCustomCode
+
+var (
+	checkGenerationAccess = access.CheckGenerationAccess
+	ensureTargets         = cliauth.EnsureTargets
+	hasOfflineLicense     = cliauth.HasOfflineLicense
+)
 
 type GenerationAccess struct {
 	AccessAllowed         bool
@@ -103,15 +110,14 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	logger := log.From(ctx).WithAssociatedFile(opts.SchemaPath)
 
-	accessResult, accessErr := access.CheckGenerationAccess(ctx, &access.GenerationAccessArgs{
+	ctx, accessResult, licenseToken, accessErr := evaluateGenerationAccess(ctx, &access.GenerationAccessArgs{
 		GenLockID:  GetGenLockID(opts.OutDir),
 		TargetType: &opts.Language,
-	})
+	}, opts.Language)
 	if accessErr != nil {
 		return &GenerationAccess{}, fmt.Errorf("failed to evaluate generation access: %w", accessErr)
 	}
 	generationAccess, level, message := accessResult.Allowed, accessResult.Level, accessResult.Message
-	licenseToken, _ := auth.GetLicenseTokenFromContext(ctx)
 
 	if !generationAccess && level != nil && *level == shared.LevelBlocked {
 		msg := styles.RenderErrorMessage(
@@ -164,7 +170,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		runLocation = "cli"
 	}
 
-	workspaceUri := auth.GetWorkspaceBaseURL(ctx)
+	workspaceUri := coreauth.GetWorkspaceBaseURL(ctx)
 
 	generatorOpts := []generate.GeneratorOptions{
 		generate.WithLogger(logger.WithFormatter(log.PrefixedFormatter)),
@@ -322,10 +328,10 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	sdkDocsLink := "https://www.speakeasy.com/docs/customize-sdks"
 
 	cliEvent := events.GetTelemetryEventFromContext(ctx)
-	if cliEvent != nil && cliEvent.ExecutionID != "" {
+	if cliEvent != nil && cliEvent.ExecutionID != "" && !coreauth.IsTelemetryDisabled(ctx) {
 		// Get org and workspace slugs from context
-		orgSlug := auth.GetOrgSlugFromContext(ctx)
-		workspaceSlug := auth.GetWorkspaceSlugFromContext(ctx)
+		orgSlug := coreauth.GetOrgSlugFromContext(ctx)
+		workspaceSlug := coreauth.GetWorkspaceSlugFromContext(ctx)
 
 		if orgSlug != "" && workspaceSlug != "" {
 			logger.Successf("speakeasy repro %s_%s_%s", orgSlug, workspaceSlug, cliEvent.ExecutionID)
@@ -359,15 +365,41 @@ func WithCommercialGenerationContext(ctx context.Context) (context.Context, erro
 	if _, ok := generationaccess.StateFromContext(ctx); ok {
 		return ctx, nil
 	}
-	licenseToken, _ := auth.GetLicenseTokenFromContext(ctx)
+	licenseToken, _ := coreauth.GetLicenseTokenFromContext(ctx)
 	return withGenerationContext(ctx, licenseToken)
+}
+
+func evaluateGenerationAccess(ctx context.Context, args *access.GenerationAccessArgs, target string) (context.Context, *access.GenerationAccess, []byte, error) {
+	ctx, err := ensureTargets(ctx, []string{target})
+	if err != nil {
+		return ctx, nil, nil, err
+	}
+
+	licenseToken, _ := coreauth.GetLicenseTokenFromContext(ctx)
+	// An offline-license context may still carry an SDK client; the license,
+	// not the platform access check, decides generation access.
+	if hasOfflineLicense(ctx) && len(licenseToken) > 0 {
+		return ctx, &access.GenerationAccess{Allowed: true}, licenseToken, nil
+	}
+	if _, err := coreauth.GetSDKFromContext(ctx); err != nil {
+		if len(licenseToken) == 0 {
+			return ctx, nil, nil, err
+		}
+		return ctx, &access.GenerationAccess{Allowed: true}, licenseToken, nil
+	}
+
+	accessResult, err := checkGenerationAccess(ctx, args)
+	if err != nil {
+		return ctx, nil, nil, err
+	}
+	return ctx, accessResult, licenseToken, nil
 }
 
 // withGenerationContext elects the commercial license — the AGPL election is a
 // source-build fallback in the generator, never used by the CLI. An absent
 // token fails generator validation as unproven rather than downgrading.
 func withGenerationContext(ctx context.Context, licenseToken []byte) (context.Context, error) {
-	ctx, err := auth.WithGenerationContext(ctx, generationaccess.GeneratedLicenseCommercial)
+	ctx, err := coreauth.WithGenerationContext(ctx, generationaccess.GeneratedLicenseCommercial)
 	if err != nil {
 		return ctx, err
 	}
