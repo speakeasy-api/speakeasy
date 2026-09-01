@@ -263,6 +263,13 @@ func (w *Workflow) runTarget(ctx context.Context, target string) (*SourceResult,
 	}
 	w.generationAccess = generationAccess
 
+	// The access check inside Generate may resolve a fresh license token;
+	// carry it in the context so later steps (e.g. the code-samples fallback)
+	// validate with the same token the generation did.
+	if len(generationAccess.LicenseToken) > 0 {
+		ctx = context.WithValue(ctx, auth.LicenseTokenKey, generationAccess.LicenseToken)
+	}
+
 	if !w.ShouldCompile {
 		log.From(ctx).Warnf("Compilation was skipped. The generated SDK may not be ready for use without manual compilation. To enable compilation DO NOT pass the --skip-compile flag.")
 	}
