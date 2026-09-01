@@ -41,13 +41,13 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/samber/lo v1.52.0
 	github.com/sethvargo/go-githubactions v1.3.2
-	github.com/speakeasy-api/generation-context v1.0.0
+	github.com/speakeasy-api/generation-context v1.1.0
 	github.com/speakeasy-api/git-diff-parser v0.2.0
 	github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929
 	github.com/speakeasy-api/huh v1.1.2
 	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
 	github.com/speakeasy-api/openapi v1.25.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.933.1
+	github.com/speakeasy-api/openapi-generation/v2 v2.934.0
 	github.com/speakeasy-api/sdk-gen-config v1.58.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.28.1

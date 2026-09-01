@@ -27,6 +27,7 @@ import (
 
 	changelog "github.com/speakeasy-api/openapi-generation/v2"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
+	"github.com/speakeasy-api/openapi-generation/v2/pkg/licensetoken"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/merge"
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/utils"
@@ -102,13 +103,14 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 	logger := log.From(ctx).WithAssociatedFile(opts.SchemaPath)
 
-	generationAccess, level, message, accessErr := access.HasGenerationAccess(ctx, &access.GenerationAccessArgs{
+	accessResult, licenseToken, accessErr := evaluateGenerationAccess(ctx, &access.GenerationAccessArgs{
 		GenLockID:  GetGenLockID(opts.OutDir),
 		TargetType: &opts.Language,
 	})
 	if accessErr != nil {
 		return &GenerationAccess{}, fmt.Errorf("failed to evaluate generation access: %w", accessErr)
 	}
+	generationAccess, level, message := accessResult.Allowed, accessResult.Level, accessResult.Message
 
 	if !generationAccess && level != nil && *level == shared.LevelBlocked {
 		msg := styles.RenderErrorMessage(
@@ -124,13 +126,16 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		}, stderrors.New("generation access blocked")
 	}
 
-	ctx, err := withGenerationContext(ctx, generationAccess)
+	ctx, err := withGenerationContext(ctx, licenseToken)
 	if err != nil {
 		return &GenerationAccess{
 			AccessAllowed: generationAccess,
 			Message:       message,
 			Level:         level,
 		}, fmt.Errorf("failed to prepare generation context: %w", err)
+	}
+	if len(licenseToken) == 0 {
+		logger.Warnf("No license token was issued for this generation; the platform may need to be updated to issue commercial license tokens.")
 	}
 
 	logger.Infof("Generating SDK for %s...\n", opts.Language)
@@ -276,7 +281,7 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 
 		var errs []error
 		if opts.CancellableGeneration != nil && opts.CancellableGeneration.CancellableContext != nil {
-			cancelCtx, err := withGenerationContext(opts.CancellableGeneration.CancellableContext, generationAccess)
+			cancelCtx, err := withGenerationContext(opts.CancellableGeneration.CancellableContext, licenseToken)
 			if err != nil {
 				return fmt.Errorf("failed to prepare cancellable generation context: %w", err)
 			}
@@ -348,12 +353,27 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 	}, nil
 }
 
-func withGenerationContext(ctx context.Context, generationAllowed bool) (context.Context, error) {
-	generatedLicense := generationaccess.GeneratedLicenseAGPL
-	if generationAllowed {
-		generatedLicense = generationaccess.GeneratedLicenseCommercial
+func evaluateGenerationAccess(ctx context.Context, args *access.GenerationAccessArgs) (*access.GenerationAccess, []byte, error) {
+	accessResult, err := access.CheckGenerationAccess(ctx, args)
+	if err != nil {
+		return nil, nil, err
 	}
-	return auth.WithGenerationContext(ctx, generatedLicense)
+	licenseToken, _ := auth.GetLicenseTokenFromContext(ctx)
+	if len(accessResult.LicenseToken) > 0 {
+		licenseToken = accessResult.LicenseToken
+	}
+	return accessResult, licenseToken, nil
+}
+
+// withGenerationContext elects the commercial license — the AGPL election is a
+// source-build fallback in the generator, never used by the CLI. An absent
+// token fails generator validation as unproven rather than downgrading.
+func withGenerationContext(ctx context.Context, licenseToken []byte) (context.Context, error) {
+	ctx, err := auth.WithGenerationContext(ctx, generationaccess.GeneratedLicenseCommercial)
+	if err != nil {
+		return ctx, err
+	}
+	return licensetoken.WithToken(ctx, licenseToken), nil
 }
 
 func ValidateConfig(ctx context.Context, outDir string) error {
