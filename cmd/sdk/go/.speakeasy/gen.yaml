@@ -40,7 +40,6 @@ go:
   flattenGlobalSecurity: true
   forwardCompatibleEnumsByDefault: true
   forwardCompatibleUnionsByDefault: tagged-and-untagged
-  idiomaticMethodCollisionNames: true
   imports:
     option: openapi
     paths:
@@ -57,11 +56,9 @@ go:
   modulePath: ""
   multipartArrayFormat: standard
   nullableOptionalWrapper: true
-  optionalMethodArguments: pointers
   outputModelSuffix: output
   respectRequiredFields: false
   respectTitlesForPrimitiveUnionMembers: true
   responseFormat: envelope-http
   sdkPackageName: ""
-  unionGenerics: false
   unionStrategy: populated-fields
