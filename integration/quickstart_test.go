@@ -1,6 +1,7 @@
 package integration_tests
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,15 +96,23 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 	// Run quickstart
 	now := time.Now()
 	t.Logf("Running quickstart for target %s", target)
-	quickstartCmd := exec.Command(tempBinary,
+	// A per-child timeout keeps a hung CLI from eating the whole suite's
+	// 30m budget and, unlike the suite timeout, preserves the child's output.
+	quickstartCtx, cancelQuickstart := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancelQuickstart()
+	quickstartCmd := exec.CommandContext(quickstartCtx, tempBinary,
 		"quickstart",
 		"--skip-interactive",
 		"--target", target,
 		"--output", "console",
 	)
 	quickstartCmd.Dir = testDir
+	quickstartCmd.WaitDelay = 30 * time.Second
 
 	quickstartOutput, err := quickstartCmd.CombinedOutput()
+	if quickstartCtx.Err() != nil {
+		t.Fatalf("Quickstart timed out for target %s; output so far:\n%s", target, string(quickstartOutput))
+	}
 	if err != nil {
 		t.Logf("Quickstart output for %s: %s", target, string(quickstartOutput))
 		t.Fatalf("Quickstart failed for target %s: %v", target, err)
@@ -122,9 +131,15 @@ func testQuickstartForTarget(t *testing.T, target string, tempBinary string) {
 	// Run speakeasy run
 	now = time.Now()
 	t.Logf("Running speakeasy run for target %s", target)
-	runCmd := exec.Command(tempBinary, "run", "--output", "console", "--pinned")
+	runCtx, cancelRun := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancelRun()
+	runCmd := exec.CommandContext(runCtx, tempBinary, "run", "--output", "console", "--pinned")
 	runCmd.Dir = generatedDir
+	runCmd.WaitDelay = 30 * time.Second
 	runOutput, err := runCmd.CombinedOutput()
+	if runCtx.Err() != nil {
+		t.Fatalf("Speakeasy run timed out for target %s; output so far:\n%s", target, string(runOutput))
+	}
 
 	if err != nil {
 		t.Logf("Run output for %s: %s", target, string(runOutput))
