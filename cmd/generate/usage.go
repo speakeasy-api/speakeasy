@@ -9,6 +9,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/config"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 	"github.com/speakeasy-api/speakeasy/internal/usagegen"
 )
 
@@ -78,6 +79,11 @@ You can also select to write to a file or write to a formatted output directory.
 }
 
 func genUsageSnippets(ctx context.Context, flags GenerateUsageSnippetFlags) error {
+	ctx, err := sdkgen.WithCommercialGenerationContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	return usagegen.Generate(
 		ctx,
 		config.GetCustomerID(),

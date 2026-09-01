@@ -620,17 +620,15 @@ func runDryRunGeneration(ctx context.Context, schemaPath, targetLanguage, workin
 		return nil, fmt.Errorf("failed to create generator: %w", err)
 	}
 
-	// Dry-run the generation
+	// Dry-run the generation; its errors are ignored for lint purposes as long
+	// as warnings were produced. A run that fails before producing any (e.g.
+	// license establishment) is reported so callers skip the target instead of
+	// presenting it as clean.
 	errs := g.Generate(ctx, schema, schemaPath, targetLanguage, workingDir, isRemote, false)
-	if len(errs) > 0 {
-		// Generation had errors, but we still want to collect warnings
-		// We'll ignore generation errors for lint purposes
-		// TODO: do we want to also show the errors?
-		_ = errs // explicitly ignore errors for now
-	}
-
-	// Collect warnings from the generator
 	warnings := g.GetWarnings()
+	if len(warnings) == 0 && len(errs) > 0 {
+		return nil, errs[0]
+	}
 
 	return warnings, nil
 }
