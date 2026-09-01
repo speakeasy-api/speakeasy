@@ -272,6 +272,7 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 
 	// Try to get workflow file to run target-specific dry-run generations (if requested)
 	targetWarnings := make(map[string][]error)
+	var skippedTargets []string
 	if runDryRun {
 		wf, projectDir, _ := utils.GetWorkflowAndDir()
 
@@ -280,6 +281,7 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 			for targetName, target := range wf.Targets {
 				warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
 				if err != nil {
+					skippedTargets = append(skippedTargets, targetName)
 					log.From(ctx).Debug(fmt.Sprintf("Skipping dry-run generation diagnostics for target %s: %s", targetName, err))
 				}
 				if err == nil && len(warnings) > 0 {
@@ -318,7 +320,11 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 	}
 
 	if totalDiagnostics == 0 && totalWarnings == 0 {
-		logger.Successf("No SDK generation warnings found ✓\n")
+		if len(skippedTargets) > 0 {
+			logger.Warnf("SDK generation dry-run skipped for %s (authentication required)\n", strings.Join(skippedTargets, ", "))
+		} else {
+			logger.Successf("No SDK generation warnings found ✓\n")
+		}
 		return nil
 	}
 
