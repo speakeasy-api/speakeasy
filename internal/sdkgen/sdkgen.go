@@ -44,7 +44,6 @@ type GenerationAccess struct {
 	Message               string
 	Level                 *shared.Level
 	RenderedUsageSnippets *generate.RenderedUsageSnippets // pre-rendered snippets from SDK generation (nil if not requested)
-	LicenseToken          []byte                          // the token the generation was validated with; may come from the access check rather than the caller's context
 }
 
 type CancellableGeneration struct {
@@ -135,10 +134,6 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 			Level:         level,
 		}, fmt.Errorf("failed to prepare generation context: %w", err)
 	}
-	if len(licenseToken) == 0 {
-		logger.Warnf("No license token was issued for this generation; the platform may need to be updated to issue commercial license tokens.")
-	}
-
 	logger.Infof("Generating SDK for %s...\n", opts.Language)
 
 	if strings.TrimSpace(opts.OutDir) == "." {
@@ -351,7 +346,6 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerationAccess, err
 		AccessAllowed:         generationAccess,
 		Message:               message,
 		RenderedUsageSnippets: g.GetRenderedUsageSnippets(),
-		LicenseToken:          licenseToken,
 	}, nil
 }
 
