@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -26,6 +25,9 @@ const (
 type License struct {
 	Token []byte
 	Info  licensetoken.TokenInfo
+	// Source is the environment variable the token was resolved from; empty
+	// when it came from the CLI config.
+	Source string
 }
 
 var inspect = licensetoken.Inspect
@@ -36,7 +38,7 @@ func Resolve(getenv func(string) string, configToken string, workspaceID string)
 		token = []byte(strings.TrimSpace(string(token)))
 		info, err := inspect(token)
 		if err == nil && usable(info, workspaceID) {
-			return &License{Token: token, Info: info}, ""
+			return &License{Token: token, Info: info, Source: source}, ""
 		}
 		if source == "" {
 			return nil, ""
@@ -119,11 +121,12 @@ func ContextFromLicense(ctx context.Context, lic *License, apiKey string) (conte
 
 	if apiKey != "" {
 		security := shared.Security{APIKey: &apiKey}
+		// The SDK's default HTTP client keeps its built-in timeout, matching
+		// the client core auth stores after an online authentication.
 		sdk := speakeasy.New(
 			speakeasy.WithSecurity(security),
 			speakeasy.WithServerURL(core.GetServerURL()),
 			speakeasy.WithWorkspaceID(lic.Info.WorkspaceID),
-			speakeasy.WithClient(http.DefaultClient),
 		)
 		ctx = context.WithValue(ctx, core.SpeakeasySDKKey, sdk)
 	}

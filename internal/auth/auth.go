@@ -61,11 +61,18 @@ func commandContext(ctx context.Context, authenticateOnline authenticateWithHint
 	if warning != "" {
 		log.From(ctx).Warn(warning)
 	}
-	// With no persisted workspace there is no proof the license belongs to the
-	// configured API key's workspace; authenticate online once to establish it.
+	// With no persisted workspace there is no proof a config-stored license
+	// belongs to the configured API key's workspace; authenticate online once
+	// to establish it. An env-supplied license is an explicit choice and is
+	// honored (air-gapped environments cannot go online), with a warning that
+	// the pairing is unverified.
 	if lic != nil && config.GetSpeakeasyAPIKey() != "" && config.GetWorkspaceID() == "" {
-		log.From(ctx).Warn("Ignoring the offline license: the configured API key's workspace is not known yet; authenticating online")
-		lic = nil
+		if lic.Source == "" {
+			log.From(ctx).Warn("Ignoring the stored offline license: the configured API key's workspace is not known yet; authenticating online")
+			lic = nil
+		} else {
+			log.From(ctx).Warn(fmt.Sprintf("Using %s for workspace %s; unable to verify it matches the configured API key's workspace", lic.Source, lic.Info.WorkspaceSlug))
+		}
 	}
 	if lic != nil {
 		licenseCtx, err := license.ContextFromLicense(ctx, lic, config.GetSpeakeasyAPIKey())

@@ -84,6 +84,23 @@ func TestPrepareWorkflowContextEnsuresPlatformForRegistryWorkflows(t *testing.T)
 			}},
 			wantPlatform: false,
 		},
+		{
+			name: "transitive source reference to a registry source",
+			workflow: &Workflow{Source: "top", workflow: workflow.Workflow{
+				Sources: map[string]workflow.Source{
+					"top":  {Inputs: []workflow.Document{{Location: "source:base"}}},
+					"base": registryInputSource,
+				},
+			}},
+			wantPlatform: true,
+		},
+		{
+			name: "source location override replaces registry inputs",
+			workflow: &Workflow{Source: "s", SourceLocation: "local-openapi.yaml", workflow: workflow.Workflow{
+				Sources: map[string]workflow.Source{"s": registryInputSource},
+			}},
+			wantPlatform: false,
+		},
 	}
 	for _, tt := range tests { //nolint:paralleltest
 		t.Run(tt.name, func(t *testing.T) {

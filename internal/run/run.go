@@ -226,7 +226,8 @@ func (w *Workflow) requiresRegistry() bool {
 		sourceIDs = append(sourceIDs, target.Source)
 	}
 	seenSources := make(map[string]struct{}, len(sourceIDs))
-	for _, sourceID := range sourceIDs {
+	for i := 0; i < len(sourceIDs); i++ {
+		sourceID := sourceIDs[i]
 		if sourceID == "" {
 			continue
 		}
@@ -238,9 +239,17 @@ func (w *Workflow) requiresRegistry() bool {
 		if !ok {
 			continue
 		}
-		for _, input := range source.Inputs {
-			if input.IsSpeakeasyRegistry() {
-				return true
+		// A --source-location override replaces the source's inputs, so they
+		// impose no registry requirement; overlays still apply.
+		if w.SourceLocation == "" {
+			for _, input := range source.Inputs {
+				if input.IsSourceRef() {
+					sourceIDs = append(sourceIDs, input.SourceRefName())
+					continue
+				}
+				if input.IsSpeakeasyRegistry() {
+					return true
+				}
 			}
 		}
 		for _, overlay := range source.Overlays {
