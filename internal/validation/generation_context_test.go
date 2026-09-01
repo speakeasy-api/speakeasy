@@ -7,6 +7,7 @@ import (
 
 	generationaccess "github.com/speakeasy-api/generation-context/access"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	coreauth "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,6 +22,29 @@ func TestWithValidationGenerationContext(t *testing.T) {
 		state, ok := generationaccess.StateFromContext(ctx)
 		require.True(t, ok)
 		require.Equal(t, generationaccess.ModeDirect, state.Mode())
+	})
+
+	t.Run("elects authenticated commercial for an authenticated caller", func(t *testing.T) {
+		t.Parallel()
+
+		createdAt := time.Date(2024, time.January, 2, 3, 4, 5, 0, time.UTC)
+		authedCtx := coreauth.WithAdminSkipLicenseCheck(
+			context.Background(),
+			"validation-workspace",
+			shared.AccountTypeBusiness,
+			nil,
+			"org",
+			"workspace",
+			createdAt,
+			nil,
+		)
+
+		ctx := withValidationGenerationContext(authedCtx)
+
+		state, ok := generationaccess.StateFromContext(ctx)
+		require.True(t, ok)
+		require.Equal(t, generationaccess.ModeAuthenticated, state.Mode())
+		require.Equal(t, generationaccess.GeneratedLicenseCommercial, state.GeneratedLicense())
 	})
 
 	t.Run("preserves caller-supplied authenticated access", func(t *testing.T) {

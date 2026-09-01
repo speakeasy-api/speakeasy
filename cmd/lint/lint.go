@@ -282,6 +282,9 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 			// Run a dry-run generation for each target to collect target-specific warnings
 			for targetName, target := range wf.Targets {
 				warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
+				if err != nil {
+					log.From(ctx).Debug(fmt.Sprintf("Skipping dry-run generation diagnostics for target %s: %s", targetName, err))
+				}
 				if err == nil && len(warnings) > 0 {
 					// Filter out warnings we've already seen
 					newWarnings := []error{}
@@ -456,6 +459,7 @@ func displayAllResultsInTabs(ctx context.Context, schemaPath string, schema []by
 				warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
 				if err != nil {
 					// If we can't run generation for this target, skip it
+					log.From(ctx).Debug(fmt.Sprintf("Skipping dry-run generation diagnostics for target %s: %s", targetName, err))
 					continue
 				}
 
