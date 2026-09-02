@@ -13,6 +13,7 @@ import (
 	"github.com/speakeasy-api/speakeasy/internal/log"
 	"github.com/speakeasy-api/speakeasy/internal/model"
 	"github.com/speakeasy-api/speakeasy/internal/model/flag"
+	"github.com/speakeasy-api/speakeasy/internal/sdkgen"
 )
 
 type codeSamplesFlags struct {
@@ -64,6 +65,11 @@ var codeSamplesCmd = &model.ExecutableCommand[codeSamplesFlags]{
 }
 
 func runCodeSamples(ctx context.Context, flags codeSamplesFlags) error {
+	ctx, err := sdkgen.WithCommercialGenerationContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	var opts workflow.CodeSamples
 	if flags.Style == "readme" {
 		opts.Style = pointer.From("readme")

@@ -198,11 +198,12 @@ func sourceBaseForm(ctx context.Context, quickstart *Quickstart) (*QuickstartSta
 	// If --from or --schema is provided, we will not check for recent generations.
 	hasRecentGenerations := !hasTemplate && !hasSchemaPath && err == nil && len(recentGenerations) > 0
 
-	// Determine if we should use a remote source. Defaults to true before the user
-	// has interacted with the form.
-	useRemoteSource := hasRecentGenerations
+	// Determine if we should use a remote source. Defaults to true before the
+	// user has interacted with the form. Selecting a remote source requires
+	// the interactive picker, so --skip-interactive never uses one.
+	useRemoteSource := hasRecentGenerations && !quickstart.SkipInteractive
 
-	if hasRecentGenerations && !quickstart.SkipInteractive {
+	if useRemoteSource {
 		prompt := charm_internal.NewBranchPrompt(
 			"Do you want to base your SDK on an existing SDK?",
 			"Selecting 'Yes' will allow you to pick from the most recently used SDKs in your workspace",

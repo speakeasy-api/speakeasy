@@ -11,6 +11,7 @@ import (
 	"github.com/speakeasy-api/sdk-gen-config/lint"
 
 	generationaccess "github.com/speakeasy-api/generation-context/access"
+	coreauth "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 
 	"github.com/speakeasy-api/speakeasy/internal/reports"
@@ -260,8 +261,13 @@ func withValidationGenerationContext(ctx context.Context) context.Context {
 		return ctx
 	}
 
-	// Validation is available without authentication, so it runs in direct OSS
-	// mode when no caller-supplied generation access state exists.
+	// An authenticated caller keeps authenticated state so SDK access (e.g.
+	// link shortening) still works; unauthenticated validation runs in direct
+	// OSS mode. No license token is attached: validation produces no licensed
+	// output and must not fail on an invalid token.
+	if commercialCtx, err := coreauth.WithGenerationContext(ctx, generationaccess.GeneratedLicenseCommercial); err == nil {
+		return commercialCtx
+	}
 	return generationaccess.WithDirect(ctx)
 }
 

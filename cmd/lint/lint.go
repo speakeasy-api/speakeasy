@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strings"
 
-	generationaccess "github.com/speakeasy-api/generation-context/access"
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/generate"
 	"github.com/speakeasy-api/speakeasy-core/openapi"
 	"github.com/speakeasy-api/speakeasy-core/suggestions"
@@ -273,6 +272,7 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 
 	// Try to get workflow file to run target-specific dry-run generations (if requested)
 	targetWarnings := make(map[string][]error)
+	var skippedTargets []string
 	if runDryRun {
 		wf, projectDir, _ := utils.GetWorkflowAndDir()
 
@@ -280,6 +280,10 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 			// Run a dry-run generation for each target to collect target-specific warnings
 			for targetName, target := range wf.Targets {
 				warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
+				if err != nil {
+					skippedTargets = append(skippedTargets, fmt.Sprintf("%s (%s)", targetName, err))
+					log.From(ctx).Debug(fmt.Sprintf("Skipping dry-run generation diagnostics for target %s: %s", targetName, err))
+				}
 				if err == nil && len(warnings) > 0 {
 					// Filter out warnings we've already seen
 					newWarnings := []error{}
@@ -316,7 +320,11 @@ func runAndDisplayDiagnostics(ctx context.Context, schemaPath string, validation
 	}
 
 	if totalDiagnostics == 0 && totalWarnings == 0 {
-		logger.Successf("No SDK generation warnings found ✓\n")
+		if len(skippedTargets) > 0 {
+			logger.Warnf("SDK generation dry-run skipped for %s\n", strings.Join(skippedTargets, ", "))
+		} else {
+			logger.Successf("No SDK generation warnings found ✓\n")
+		}
 		return nil
 	}
 
@@ -454,6 +462,7 @@ func displayAllResultsInTabs(ctx context.Context, schemaPath string, schema []by
 				warnings, err := runDryRunGeneration(ctx, schemaPath, target.Target, projectDir)
 				if err != nil {
 					// If we can't run generation for this target, skip it
+					log.From(ctx).Debug(fmt.Sprintf("Skipping dry-run generation diagnostics for target %s: %s", targetName, err))
 					continue
 				}
 
@@ -589,10 +598,11 @@ func warningsToTabContents(warnings []error) []interactivity.InspectableContent 
 
 // runDryRunGeneration runs a dry-run SDK generation for the specified target and returns warnings
 func runDryRunGeneration(ctx context.Context, schemaPath, targetLanguage, workingDir string) ([]error, error) {
-	// Lint is available without authentication, so its optional diagnostic
-	// generation must explicitly use the direct AGPL mode when no caller state exists.
-	if _, ok := generationaccess.StateFromContext(ctx); !ok {
-		ctx = generationaccess.WithDirect(ctx)
+	// The CLI only elects the commercial license; unauthenticated lint cannot
+	// elect one, and the returned error skips the target's dry-run diagnostics.
+	ctx, err := sdkgen.WithCommercialGenerationContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Load the OpenAPI schema
@@ -616,17 +626,15 @@ func runDryRunGeneration(ctx context.Context, schemaPath, targetLanguage, workin
 		return nil, fmt.Errorf("failed to create generator: %w", err)
 	}
 
-	// Dry-run the generation
+	// Dry-run the generation; its errors are ignored for lint purposes as long
+	// as warnings were produced. A run that fails before producing any (e.g.
+	// license establishment) is reported so callers skip the target instead of
+	// presenting it as clean.
 	errs := g.Generate(ctx, schema, schemaPath, targetLanguage, workingDir, isRemote, false)
-	if len(errs) > 0 {
-		// Generation had errors, but we still want to collect warnings
-		// We'll ignore generation errors for lint purposes
-		// TODO: do we want to also show the errors?
-		_ = errs // explicitly ignore errors for now
-	}
-
-	// Collect warnings from the generator
 	warnings := g.GetWarnings()
+	if len(warnings) == 0 && len(errs) > 0 {
+		return nil, errs[0]
+	}
 
 	return warnings, nil
 }
