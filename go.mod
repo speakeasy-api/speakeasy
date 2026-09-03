@@ -45,9 +45,9 @@ require (
 	github.com/speakeasy-api/git-diff-parser v0.2.0
 	github.com/speakeasy-api/gram v0.0.0-20260121234743-5a36906a8929
 	github.com/speakeasy-api/huh v1.1.2
-	github.com/speakeasy-api/jq v0.1.1-0.20251107233444-84d7e49e84a4
+	github.com/speakeasy-api/jq v0.13.0
 	github.com/speakeasy-api/openapi v1.25.0
-	github.com/speakeasy-api/openapi-generation/v2 v2.935.2
+	github.com/speakeasy-api/openapi-generation/v2 v2.936.0
 	github.com/speakeasy-api/sdk-gen-config v1.58.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.28.1
@@ -106,8 +106,7 @@ require (
 	github.com/charmbracelet/x/exp/golden v0.0.0-20240815200342-61de596daa2b // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240617190524-788ec55faed1 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/clipperhouse/stringish v0.1.1 // indirect
-	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
+	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/console v1.0.4 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -178,9 +177,9 @@ require (
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.19 // indirect
+	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -219,7 +218,7 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
