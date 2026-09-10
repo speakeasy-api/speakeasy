@@ -110,6 +110,7 @@ components:
                   type: string
         id:
           type: string
+          nullable: true
       required:
         - id
 `
@@ -181,8 +182,10 @@ components:
                 type: string
               title:
                 type: string
+          nullable: true
         total:
           type: integer
+          nullable: true
       required:
         - hasMore
         - items
@@ -233,6 +236,7 @@ components:
       properties:
         name:
           type: string
+          nullable: true
         total:
           type: number
       required:
@@ -340,8 +344,10 @@ components:
       properties:
         id:
           type: integer
+          nullable: true
         name:
           type: string
+          nullable: true
         tier:
           type: string
           enum:
