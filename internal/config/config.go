@@ -62,6 +62,10 @@ func GetWorkspaceID() string {
 	return vCfg.GetString("speakeasy_workspace_id")
 }
 
+func GetOfflineLicenseToken() string {
+	return vCfg.GetString("offline_license_token")
+}
+
 func GetStudioSecret() string {
 	return vCfg.GetString("speakeasy_studio_secret")
 }
@@ -103,7 +107,18 @@ func SetStudioSecret(secret string) error {
 
 func SetSpeakeasyAuthInfo(ctx context.Context, info core.SpeakeasyAuthInfo) error {
 	// Keep speakeasy-self as default workspace
-	if vCfg.GetString("speakeasy_workspace_id") != "self" {
+	defaultWorkspaceID := vCfg.GetString("speakeasy_workspace_id")
+	if defaultWorkspaceID != "self" {
+		// Only replace the stored offline license when this authentication
+		// issued one; drop it when the workspace changes.
+		if token, ok := core.GetLicenseTokenFromContext(ctx); ok {
+			vCfg.Set("offline_license_token", string(token))
+		} else if defaultWorkspaceID != info.WorkspaceID {
+			if vCfg.GetString("offline_license_token") != "" {
+				println(styles.DimmedItalic.Render("Clearing the offline license stored for the previous workspace"))
+			}
+			vCfg.Set("offline_license_token", "")
+		}
 		vCfg.Set("speakeasy_api_key", info.APIKey)
 		vCfg.Set("speakeasy_workspace_id", info.WorkspaceID)
 		vCfg.Set("speakeasy_customer_id", info.CustomerID)
@@ -128,6 +143,7 @@ func ClearSpeakeasyAuthInfo() error {
 	vCfg.Set("speakeasy_workspace_id", "")
 	vCfg.Set("speakeasy_customer_id", "")
 	vCfg.Set("speakeasy_studio_secret", "")
+	vCfg.Set("offline_license_token", "")
 	return save()
 }
 

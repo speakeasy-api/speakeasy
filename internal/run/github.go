@@ -11,6 +11,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/operations"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
 	"github.com/speakeasy-api/speakeasy-core/auth"
+	cliauth "github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
 	"github.com/speakeasy-api/speakeasy/internal/interactivity"
 	"github.com/speakeasy-api/speakeasy/internal/log"
@@ -31,6 +32,10 @@ func isRunning(status string) bool {
 }
 
 func RunGitHub(ctx context.Context, target, version string, force bool) error {
+	ctx, err := cliauth.EnsurePlatform(ctx)
+	if err != nil {
+		return err
+	}
 	sdk, err := auth.GetSDKFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get sdk from context: %w", err)
@@ -128,6 +133,10 @@ func RunGitHub(ctx context.Context, target, version string, force bool) error {
 }
 
 func RunGitHubRepos(ctx context.Context, target, version string, force bool, githubRepos string) error {
+	ctx, err := cliauth.EnsurePlatform(ctx)
+	if err != nil {
+		return err
+	}
 	if githubRepos == "all" {
 		return runGitHubReposAll(ctx, target, version, force)
 	}
