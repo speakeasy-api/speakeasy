@@ -29,9 +29,9 @@ func TestTargetSpecificForms_Ruby_Quickstart(t *testing.T) {
 	tm := charmtest.ModelFromHuhGroup(t, groups...)
 	tm.AssertContains(t,
 		"┃ Choose a packageName",
-		"┃ The distribution name of the Ruby Package.",
-		"https://guides.rubygems.org/name-",
-		"your-gem/",
+		"┃ The distribution name of the Ruby Package. https://guides.rubygems.org/name-your-gem/ Use a lowercase",
+		"┃ name: a name that differs from its snake_case form only by case gets no gem-name entry file, so",
+		"┃ Bundler will not autoload it on case-sensitive filesystems.",
 		"┃ openapi",
 	)
 	tm.SendKeys(tea.KeyEnter)

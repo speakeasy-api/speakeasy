@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
+	"github.com/muesli/reflow/wordwrap"
 	"github.com/speakeasy-api/huh"
 	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/speakeasy/internal/charm"
@@ -215,9 +216,9 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 
 		if f.DescriptionFunc != nil {
 			fn := func() string {
-				return f.DescriptionFunc(*value)
+				return wordwrap.String(f.DescriptionFunc(*value), 100)
 			}
-			input = input.DescriptionFunc(fn, value).Inline(false).Prompt("")
+			input = input.Description(fn()).DescriptionFunc(fn, value).Inline(false).Prompt("")
 		}
 
 		if f.SuggestionsFunc != nil {
@@ -278,9 +279,9 @@ func (f *TargetFormField) HuhField(targetFormFields TargetFormFields) huh.Field 
 
 			if f.DescriptionFunc != nil {
 				fn := func() string {
-					return f.DescriptionFunc(intValue)
+					return wordwrap.String(f.DescriptionFunc(intValue), 100)
 				}
-				input = input.DescriptionFunc(fn, &intValue).Inline(false).Prompt("")
+				input = input.Description(fn()).DescriptionFunc(fn, &intValue).Inline(false).Prompt("")
 			}
 
 			if f.SuggestionsFunc != nil {
