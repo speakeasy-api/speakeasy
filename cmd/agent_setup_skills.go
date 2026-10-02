@@ -37,7 +37,7 @@ var agentSetupSkillsCmd = &model.ExecutableCommand[AgentSetupSkillsFlags]{
 
 const (
 	skillsOwner = "speakeasy-api"
-	skillsRepo  = "skills"
+	skillsRepo  = "sdk-generation-skills"
 	skillsPath  = "skills" // directory in the repo containing skills
 )
 
