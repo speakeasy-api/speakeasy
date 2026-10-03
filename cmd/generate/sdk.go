@@ -31,11 +31,12 @@ type GenerateFlags struct {
 }
 
 var genSDKCmd = &model.ExecutableCommand[GenerateFlags]{
-	Usage:        "sdk",
-	Short:        fmt.Sprintf("One-off SDK generation from OpenAPI specs (%s)", strings.Join(GeneratorSupportedTargetNames(), ", ")),
-	Long:         generateLongDesc,
-	Run:          genSDKs,
-	RequiresAuth: true,
+	Usage:          "sdk",
+	Short:          fmt.Sprintf("One-off SDK generation from OpenAPI specs (%s)", strings.Join(GeneratorSupportedTargetNames(), ", ")),
+	Long:           generateLongDesc,
+	Run:            genSDKs,
+	RequiresAuth:   true,
+	OfflineCapable: true,
 	Flags: []flag.Flag{
 		flag.EnumFlag{
 			Name:          "lang",
