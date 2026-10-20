@@ -22,11 +22,12 @@ type transformer[Args interface{}] struct {
 
 func (t transformer[Args]) Do(ctx context.Context) error {
 	if t.r == nil {
-		var err error
-		t.r, err = os.Open(t.schemaPath)
+		f, err := os.Open(t.schemaPath)
 		if err != nil {
 			return err
 		}
+		defer f.Close()
+		t.r = f
 	}
 
 	doc, _, err := openapi.Unmarshal(ctx, t.r, openapi.WithSkipValidation())
