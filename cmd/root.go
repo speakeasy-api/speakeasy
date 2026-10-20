@@ -127,6 +127,11 @@ func CmdForTest(version, artifactArch string) *cobra.Command {
 func Execute(version, artifactArch string) {
 	setupRootCmd(version, artifactArch)
 
+	if err := controlPlaneCommandError(rootCmd, os.Args[1:]); err != nil {
+		l.Error("", zap.Error(err))
+		os.Exit(1)
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		l.Error("", zap.Error(err))
 		os.Exit(1)
