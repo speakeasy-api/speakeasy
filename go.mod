@@ -1,6 +1,6 @@
 module github.com/speakeasy-api/speakeasy
 
-go 1.26.8
+go 1.26.10
 
 replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixvacuum
 
