@@ -82,6 +82,19 @@ jobs:
           ruby-version: "3.2"
           bundler-cache: true
 
+      - name: Set up PHP
+        # The quickstart test skips php on Windows. setup-php reuses the runner's
+        # preinstalled 8.3.x unless update is set, and the generated SDK's
+        # roave/security-advisories dependency rejects PHP patch releases with
+        # open advisories, so always install the latest 8.3 patch.
+        if: runner.os == 'Linux'
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: "8.3"
+          extensions: mbstring, xml, curl
+        env:
+          update: true
+
       - name: Set up .NET
         if: runner.os == 'Windows'
         uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
