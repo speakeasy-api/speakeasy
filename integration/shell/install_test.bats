@@ -371,6 +371,52 @@ EOF
 }
 
 # =============================================================================
+# Speakeasy AI Control Plane CLI guard tests
+# =============================================================================
+
+@test "is_control_plane_cli succeeds when the binary prints the marker" {
+    create_mock "control-plane" 0 "speakeasy-ai-control-plane-cli"
+    run is_control_plane_cli "$MOCK_DIR/control-plane"
+    [ "$status" -eq 0 ]
+}
+
+@test "is_control_plane_cli fails when the binary rejects the flag" {
+    printf '#!/bin/sh\necho "unknown flag: --control-plane-cli" >&2\nexit 1\n' > "$MOCK_DIR/sdk-cli"
+    chmod +x "$MOCK_DIR/sdk-cli"
+    run is_control_plane_cli "$MOCK_DIR/sdk-cli"
+    [ "$status" -ne 0 ]
+    [ "$output" = "" ]
+}
+
+@test "is_control_plane_cli fails when the output only contains the marker" {
+    create_mock "other" 0 "not speakeasy-ai-control-plane-cli"
+    run is_control_plane_cli "$MOCK_DIR/other"
+    [ "$status" -ne 0 ]
+}
+
+@test "check_install_path refuses to overwrite the Speakeasy AI Control Plane CLI" {
+    create_mock "speakeasy" 0 "speakeasy-ai-control-plane-cli"
+    install_path="$MOCK_DIR/speakeasy"
+    run check_install_path
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"$MOCK_DIR/speakeasy is the Speakeasy AI Control Plane CLI"* ]]
+    [[ "$output" == *"BINARY_NAME=speakeasy-sdks sh"* ]]
+}
+
+@test "check_install_path allows a path that does not exist" {
+    install_path="$MOCK_DIR/missing"
+    run check_install_path
+    [ "$status" -eq 0 ]
+}
+
+@test "check_install_path allows replacing another binary" {
+    create_mock "speakeasy" 1
+    install_path="$MOCK_DIR/speakeasy"
+    run check_install_path
+    [ "$status" -eq 0 ]
+}
+
+# =============================================================================
 # Integration-style tests
 # =============================================================================
 
