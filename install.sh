@@ -8,9 +8,18 @@ set -e
 #
 # Designed for quick installs over the network and CI/CD
 #   curl -fsSL https://raw.githubusercontent.com/speakeasy-api/speakeasy/main/install.sh | sh
+#
+# INSTALL_DIR sets the directory to install into. BINARY_NAME sets the name of
+# the installed binary, for example to install next to the Speakeasy AI Control
+# Plane CLI, which also installs a binary named speakeasy:
+#   curl -fsSL https://go.speakeasy.com/cli-install.sh | BINARY_NAME=speakeasy-sdks sh
 
 INSTALL_DIR=${INSTALL_DIR:-"/usr/local/bin"}
 BINARY_NAME=${BINARY_NAME:-"speakeasy"}
+
+# Printed by `speakeasy --control-plane-cli` from the Speakeasy AI Control Plane
+# CLI. This CLI rejects that flag.
+CONTROL_PLANE_MARKER="speakeasy-ai-control-plane-cli"
 
 REPO_NAME="speakeasy-api/speakeasy"
 ISSUE_URL="https://github.com/speakeasy-api/speakeasy/issues/new"
@@ -132,6 +141,20 @@ command_exists() {
   command -v "$@" >/dev/null 2>&1
 }
 
+# Report whether the binary at $1 is the Speakeasy AI Control Plane CLI.
+is_control_plane_cli() {
+  "$1" --control-plane-cli </dev/null 2>/dev/null | grep -qx "$CONTROL_PLANE_MARKER"
+}
+
+# Never overwrite the Speakeasy AI Control Plane CLI, which also installs a
+# binary named speakeasy.
+check_install_path() {
+  if [ -e "$install_path" ] && is_control_plane_cli "$install_path"; then
+    fmt_error "$install_path is the Speakeasy AI Control Plane CLI, which also installs a binary named speakeasy. Install the Speakeasy SDK generator under its own name instead: curl -fsSL https://go.speakeasy.com/cli-install.sh | BINARY_NAME=speakeasy-sdks sh (or set INSTALL_DIR to another directory)."
+    exit 1
+  fi
+}
+
 check_dependencies() {
   command_exists curl || {
     fmt_error "curl is not installed"
@@ -232,15 +255,19 @@ do_install_binary() {
   # Extract download
   (cd "$tmp_dir" && unzip -q "$asset_name")
 
-  # Install binary
-  sudo_cmd='mv '"$tmp_dir/$BINARY_NAME"' '"$INSTALL_DIR"' && chmod a+x '"$INSTALL_DIR/$BINARY_NAME"
-  sudo -p "sudo password required for installing to $INSTALL_DIR: " -- sh -c "$sudo_cmd"
-  echo "Installed speakeasy to $INSTALL_DIR"
+  # Install binary. The archive always holds a binary named speakeasy.
+  # BINARY_NAME only sets the name of the installed file.
+  sudo -p "sudo password required for installing to $INSTALL_DIR: " -- \
+    sh -c 'mv "$1" "$2" && chmod a+x "$2"' sh "$tmp_dir/speakeasy" "$install_path"
+  echo "Installed speakeasy to $install_path"
 }
 
 main() {
   setup_color
   check_dependencies
+
+  install_path="$INSTALL_DIR/$BINARY_NAME"
+  check_install_path
 
   tmp_dir="$(mktemp -d)"
   trap 'rm -rf "$tmp_dir"' EXIT
@@ -280,10 +307,14 @@ main() {
 EOF
   printf "%s" "${RESET}"
 
+  if [ "$BINARY_NAME" != "speakeasy" ]; then
+    echo "This CLI is installed as $BINARY_NAME. Run $BINARY_NAME where the docs say speakeasy."
+  fi
+
   # Offer to install agent skills if running in an interactive terminal
   if [ -t 0 ] && [ -t 1 ]; then
     echo ""
-    "$INSTALL_DIR/$BINARY_NAME" agent setup-skills || true
+    "$install_path" agent setup-skills || true
   fi
 
 }
