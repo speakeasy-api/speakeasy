@@ -78,6 +78,7 @@ var runCmd = &model.ExecutableCommand[RunFlags]{
 	Run:              runNonInteractive,
 	RunInteractive:   runInteractive,
 	RequiresAuth:     true,
+	OfflineCapable:   true,
 	UsesWorkflowFile: true,
 	Flags: []flag.Flag{
 		flag.StringFlag{
