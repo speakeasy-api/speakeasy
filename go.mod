@@ -4,7 +4,7 @@ go 1.26.10
 
 replace github.com/pb33f/doctor => github.com/speakeasy-api/doctor v0.20.0-fixvacuum
 
-replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.10-fixhiddencomps-fixed
+replace github.com/pb33f/libopenapi => github.com/speakeasy-api/libopenapi v0.21.11-fixhiddencomps-fixed
 
 replace github.com/daveshanley/vacuum => github.com/speakeasy-api/vacuum v0.16.16
 
@@ -49,7 +49,7 @@ require (
 	github.com/speakeasy-api/jq v0.13.0
 	github.com/speakeasy-api/openapi v1.25.0
 	github.com/speakeasy-api/openapi-generation/v2 v2.956.1
-	github.com/speakeasy-api/sdk-gen-config v1.60.0
+	github.com/speakeasy-api/sdk-gen-config v1.61.0
 	github.com/speakeasy-api/speakeasy-agent-mode-content v0.2.12
 	github.com/speakeasy-api/speakeasy-client-sdk-go/v3 v3.28.1
 	github.com/speakeasy-api/speakeasy-core v0.24.0
