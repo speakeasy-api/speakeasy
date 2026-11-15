@@ -165,3 +165,21 @@ func TestSnip_NonExistentOperation(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, snippedDoc)
 }
+
+func TestParseOperationIdentifiers_PathWithColon(t *testing.T) {
+	t.Parallel()
+
+	ids, err := parseOperationIdentifiers([]string{
+		"/v1/projects:search:POST",
+		"/users/{id}:GET",
+		"getUserById",
+	})
+	require.NoError(t, err)
+	require.Len(t, ids, 3)
+
+	assert.Equal(t, "/v1/projects:search", ids[0].Path)
+	assert.Equal(t, "POST", ids[0].Method)
+	assert.Equal(t, "/users/{id}", ids[1].Path)
+	assert.Equal(t, "GET", ids[1].Method)
+	assert.Equal(t, "getUserById", ids[2].OperationID)
+}
