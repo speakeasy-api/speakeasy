@@ -158,6 +158,21 @@ func TestAddTargetPublishOutputs(t *testing.T) {
 				"use_pypi_trusted_publishing": "true",
 			},
 		},
+		"csharp-trusted-publishing": {
+			target: workflow.Target{
+				Publishing: &workflow.Publishing{
+					Nuget: &workflow.Nuget{
+						Username:             "$NUGET_USERNAME",
+						UseTrustedPublishing: ptr(true),
+					},
+				},
+				Target: "csharp",
+			},
+			expectedOutputs: map[string]string{
+				"publish_csharp":               "true",
+				"use_nuget_trusted_publishing": "true",
+			},
+		},
 		"ruby-no-publishing": {
 			target: workflow.Target{
 				Publishing: nil, // intentionally no publishing config

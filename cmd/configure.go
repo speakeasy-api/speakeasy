@@ -208,8 +208,9 @@ type ConfigureGithubFlags struct {
 }
 
 type ConfigurePublishingFlags struct {
-	WorkflowDirectory     string `json:"workflow-directory"`
-	PyPITrustedPublishing bool   `json:"pypi-trusted-publishing"`
+	WorkflowDirectory      string `json:"workflow-directory"`
+	PyPITrustedPublishing  bool   `json:"pypi-trusted-publishing"`
+	NuGetTrustedPublishing bool   `json:"nuget-trusted-publishing"`
 }
 
 var configureGithubCmd = &model.ExecutableCommand[ConfigureGithubFlags]{
@@ -241,6 +242,10 @@ var configurePublishingCmd = &model.ExecutableCommand[ConfigurePublishingFlags]{
 		flag.BooleanFlag{
 			Name:        "pypi-trusted-publishing",
 			Description: "use PyPI trusted publishing instead of API tokens for Python targets",
+		},
+		flag.BooleanFlag{
+			Name:        "nuget-trusted-publishing",
+			Description: "use NuGet trusted publishing instead of API keys for C# targets",
 		},
 	},
 	RequiresAuth: true,
@@ -853,7 +858,8 @@ func configurePublishing(ctx context.Context, flags ConfigurePublishingFlags) er
 	for _, name := range chosenTargets {
 		target := workflowFile.Targets[name]
 		modifiedTarget, err := prompts.ConfigurePublishing(&target, name, prompts.ConfigurePublishingOptions{
-			PyPITrustedPublishing: flags.PyPITrustedPublishing,
+			PyPITrustedPublishing:  flags.PyPITrustedPublishing,
+			NuGetTrustedPublishing: flags.NuGetTrustedPublishing,
 		})
 		if err != nil {
 			return err
@@ -932,99 +938,29 @@ func configurePublishing(ctx context.Context, flags ConfigurePublishingFlags) er
 
 	agenda = append(agenda, fmt.Sprintf("• Push your repository to GitHub and navigate to %s to kick off your first publish!", actionPath))
 
-	// Add instructions for NPM Trusted Publishing (typescript/mcp-typescript)
-	npmTrustedPublishingConfigs := make(map[string]NPMTrustedPublishingConfig)
-	for name, wfp := range workflowPaths {
-		target := workflowFile.Targets[name]
-		if target.Publishing != nil && target.Publishing.NPM != nil {
-			var publishPath string
-			switch len(wfp.publishWorkflowPaths) {
-			case 0:
-				// No publish path means generation and publishing are combined into a single workflow
-				publishPath = wfp.generationWorkflowPath
-			case 1:
-				publishPath = wfp.publishWorkflowPaths[0]
-			default:
-				// For typescript/mcp-typescript, if the publish and generation workflow files
-				// are distinct (pr mode), then we only expect a single publish path.
-				return errors.Wrapf(err, "multiple publish workflow paths found for target %s", name)
-			}
-
-			// Get the packageName from the config file
-			packageName := "<packageName>"
-			outDir := ""
-			if target.Output != nil {
-				outDir = *target.Output
-			}
-			workflowDir := filepath.Join(rootDir, actionWorkingDir)
-			configPath := filepath.Join(workflowDir, outDir)
-			cfg, err := config.Load(configPath)
-			if err == nil {
-				if langCfg, ok := cfg.Config.Languages[target.Target]; ok {
-					if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
-						packageName = pkgName
-					}
-				}
-			}
-
-			npmTrustedPublishingConfigs[name] = NPMTrustedPublishingConfig{
-				target:          target,
-				workflowDir:     filepath.Join(rootDir, actionWorkingDir),
-				actionPath:      actionPath,
-				publishFileName: filepath.Base(publishPath),
-				packageName:     packageName,
-				remoteURL:       remoteURL,
-			}
-		}
+	npmTrustedPublishingConfigs, err := collectTrustedPublishingConfigs(workflowPaths, workflowFile, rootDir, actionWorkingDir, actionPath, remoteURL, func(target workflow.Target) bool {
+		return target.Publishing != nil && target.Publishing.NPM != nil
+	})
+	if err != nil {
+		return err
 	}
 	agenda = append(agenda, getNPMTrustedPublishingInstructions(ctx, npmTrustedPublishingConfigs)...)
 
-	// Add instructions for PyPI Trusted Publishing (python)
-	pypiTrustedPublishingConfigs := make(map[string]PyPITrustedPublishingConfig)
-	for name, wfp := range workflowPaths {
-		target := workflowFile.Targets[name]
-		if target.Publishing != nil && target.Publishing.PyPi != nil && target.Publishing.PyPi.UseTrustedPublishing != nil && *target.Publishing.PyPi.UseTrustedPublishing {
-			var publishPath string
-			switch len(wfp.publishWorkflowPaths) {
-			case 0:
-				// No publish path means generation and publishing are combined into a single workflow
-				publishPath = wfp.generationWorkflowPath
-			case 1:
-				publishPath = wfp.publishWorkflowPaths[0]
-			default:
-				// For python, if the publish and generation workflow files
-				// are distinct (pr mode), then we only expect a single publish path.
-				return errors.Wrapf(err, "multiple publish workflow paths found for target %s", name)
-			}
-
-			// Get the packageName from the config file
-			packageName := "<packageName>"
-			outDir := ""
-			if target.Output != nil {
-				outDir = *target.Output
-			}
-			workflowDir := filepath.Join(rootDir, actionWorkingDir)
-			configPath := filepath.Join(workflowDir, outDir)
-			cfg, err := config.Load(configPath)
-			if err == nil {
-				if langCfg, ok := cfg.Config.Languages[target.Target]; ok {
-					if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
-						packageName = pkgName
-					}
-				}
-			}
-
-			pypiTrustedPublishingConfigs[name] = PyPITrustedPublishingConfig{
-				target:          target,
-				workflowDir:     filepath.Join(rootDir, actionWorkingDir),
-				actionPath:      actionPath,
-				publishFileName: filepath.Base(publishPath),
-				packageName:     packageName,
-				remoteURL:       remoteURL,
-			}
-		}
+	pypiTrustedPublishingConfigs, err := collectTrustedPublishingConfigs(workflowPaths, workflowFile, rootDir, actionWorkingDir, actionPath, remoteURL, func(target workflow.Target) bool {
+		return target.Publishing != nil && target.Publishing.PyPi != nil && target.Publishing.PyPi.UseTrustedPublishing != nil && *target.Publishing.PyPi.UseTrustedPublishing
+	})
+	if err != nil {
+		return err
 	}
 	agenda = append(agenda, getPyPITrustedPublishingInstructions(ctx, pypiTrustedPublishingConfigs)...)
+
+	nugetTrustedPublishingConfigs, err := collectTrustedPublishingConfigs(workflowPaths, workflowFile, rootDir, actionWorkingDir, actionPath, remoteURL, func(target workflow.Target) bool {
+		return target.Publishing != nil && target.Publishing.Nuget != nil && target.Publishing.Nuget.UseTrustedPublishing != nil && *target.Publishing.Nuget.UseTrustedPublishing
+	})
+	if err != nil {
+		return err
+	}
+	agenda = append(agenda, getNuGetTrustedPublishingInstructions(ctx, nugetTrustedPublishingConfigs)...)
 
 	logger.Println(styles.Info.Render("Files successfully generated!\n"))
 	for _, statusMsg := range status {
@@ -1039,7 +975,7 @@ func configurePublishing(ctx context.Context, flags ConfigurePublishingFlags) er
 	return nil
 }
 
-type NPMTrustedPublishingConfig struct {
+type TrustedPublishingConfig struct {
 	target          workflow.Target
 	workflowDir     string
 	actionPath      string
@@ -1048,16 +984,111 @@ type NPMTrustedPublishingConfig struct {
 	remoteURL       string
 }
 
-type PyPITrustedPublishingConfig struct {
-	target          workflow.Target
-	workflowDir     string
-	actionPath      string
-	publishFileName string
-	packageName     string
-	remoteURL       string
+func collectTrustedPublishingConfigs(workflowPaths map[string]targetWorkflowPaths, workflowFile *workflow.Workflow, rootDir, actionWorkingDir, actionPath, remoteURL string, enabled func(workflow.Target) bool) (map[string]TrustedPublishingConfig, error) {
+	configs := make(map[string]TrustedPublishingConfig)
+	for name, wfp := range workflowPaths {
+		target := workflowFile.Targets[name]
+		if !enabled(target) {
+			continue
+		}
+
+		var publishPath string
+		switch len(wfp.publishWorkflowPaths) {
+		case 0:
+			publishPath = wfp.generationWorkflowPath
+		case 1:
+			publishPath = wfp.publishWorkflowPaths[0]
+		default:
+			return nil, errors.Errorf("multiple publish workflow paths found for target %s", name)
+		}
+
+		configs[name] = TrustedPublishingConfig{
+			target:          target,
+			workflowDir:     filepath.Join(rootDir, actionWorkingDir),
+			actionPath:      actionPath,
+			publishFileName: filepath.Base(publishPath),
+			packageName:     packageNameForTarget(target, rootDir, actionWorkingDir),
+			remoteURL:       remoteURL,
+		}
+	}
+	return configs, nil
 }
 
-func getNPMTrustedPublishingInstructions(_ context.Context, npmConfigs map[string]NPMTrustedPublishingConfig) []string {
+func packageNameForTarget(target workflow.Target, rootDir, actionWorkingDir string) string {
+	outDir := ""
+	if target.Output != nil {
+		outDir = *target.Output
+	}
+	cfg, err := config.Load(filepath.Join(rootDir, actionWorkingDir, outDir))
+	if err != nil {
+		return "<packageName>"
+	}
+	if langCfg, ok := cfg.Config.Languages[target.Target]; ok {
+		if pkgName, ok := langCfg.Cfg["packageName"].(string); ok {
+			return pkgName
+		}
+	}
+	return "<packageName>"
+}
+
+func getNuGetTrustedPublishingInstructions(_ context.Context, nugetConfigs map[string]TrustedPublishingConfig) []string {
+	var agenda []string
+
+	if len(nugetConfigs) == 0 {
+		return agenda
+	}
+
+	actionPaths := make(map[string][]string)
+	for _, nugetConfig := range nugetConfigs {
+		actionPaths[nugetConfig.actionPath] = append(actionPaths[nugetConfig.actionPath], nugetConfig.packageName)
+	}
+
+	for targetName, nugetConfig := range nugetConfigs {
+		repoOwner := "<user>"
+		repoName := "<repository>"
+		if nugetConfig.remoteURL != "" {
+			re := regexp.MustCompile(`^https://github\.com/([^/]+)/([^/]+)/?$`)
+			matches := re.FindStringSubmatch(nugetConfig.remoteURL)
+			if len(matches) == 3 {
+				repoOwner = matches[1]
+				repoName = matches[2]
+			}
+		}
+
+		if len(nugetConfigs) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Configure trusted publishing for your NuGet package '%s':", nugetConfig.packageName))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• [%s] Configure trusted publishing for NuGet package '%s':", targetName, nugetConfig.packageName))
+		}
+
+		if username := nugetConfig.target.Publishing.Nuget.Username; strings.HasPrefix(username, "$") {
+			agenda = append(agenda, fmt.Sprintf("\t◦ Set the %s secret to the nuget.org username (profile name, not email) that owns the package", strings.ToUpper(strings.TrimPrefix(username, "$"))))
+		}
+		agenda = append(agenda, "\t◦ Sign in to https://www.nuget.org as that user, open the profile menu and choose 'Trusted Publishing'")
+
+		configLines := []string{
+			fmt.Sprintf("\t\t- Repository Owner: %s", repoOwner),
+			fmt.Sprintf("\t\t- Repository: %s", repoName),
+			fmt.Sprintf("\t\t- Workflow File: %s", nugetConfig.publishFileName),
+			"\t\t- Environment: <Leave Blank>",
+			"\t\t- Scopes: allow publishing new versions of the package",
+		}
+		agenda = append(agenda, fmt.Sprintf("\t◦ Add a new trusted publishing policy for GitHub Actions with the following configuration:\n%s", strings.Join(configLines, "\n")))
+	}
+
+	for actionPath, packageNames := range actionPaths {
+		if len(packageNames) == 1 {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish a new version of the %s package.", actionPath, packageNames[0]))
+			agenda = append(agenda, fmt.Sprintf("• Verify the new version at https://www.nuget.org/packages/%s", packageNames[0]))
+		} else {
+			agenda = append(agenda, fmt.Sprintf("• Navigate to %s to regenerate and publish new versions of your packages.", actionPath))
+		}
+	}
+
+	return agenda
+}
+
+func getNPMTrustedPublishingInstructions(_ context.Context, npmConfigs map[string]TrustedPublishingConfig) []string {
 	var agenda []string
 
 	// Collect unique action paths
@@ -1110,7 +1141,7 @@ func getNPMTrustedPublishingInstructions(_ context.Context, npmConfigs map[strin
 	return agenda
 }
 
-func getPyPITrustedPublishingInstructions(_ context.Context, pypiConfigs map[string]PyPITrustedPublishingConfig) []string {
+func getPyPITrustedPublishingInstructions(_ context.Context, pypiConfigs map[string]TrustedPublishingConfig) []string {
 	var agenda []string
 
 	if len(pypiConfigs) == 0 {

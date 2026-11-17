@@ -1,10 +1,13 @@
 package prompts_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	git_config "github.com/go-git/go-git/v5/config"
+	config "github.com/speakeasy-api/sdk-gen-config"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy/prompts"
 	"github.com/stretchr/testify/assert"
@@ -120,4 +123,112 @@ func TestParseGithubRemoteURL(t *testing.T) {
 			assert.Equal(t, tt.expectedURL, result)
 		})
 	}
+}
+
+func TestConfigurePublishingCSharpTrustedPublishing(t *testing.T) {
+	t.Parallel()
+
+	target := &workflow.Target{
+		Target: "csharp",
+		Source: "api",
+	}
+
+	updated, err := prompts.ConfigurePublishing(target, "csharp", prompts.ConfigurePublishingOptions{NuGetTrustedPublishing: true})
+	require.NoError(t, err)
+	require.NotNil(t, updated.Publishing)
+	require.NotNil(t, updated.Publishing.Nuget)
+	assert.Empty(t, updated.Publishing.Nuget.APIKey)
+	assert.Equal(t, "$nuget_username", updated.Publishing.Nuget.Username)
+	require.NotNil(t, updated.Publishing.Nuget.UseTrustedPublishing)
+	assert.True(t, *updated.Publishing.Nuget.UseTrustedPublishing)
+}
+
+func TestConfigurePublishingCSharpTrustedPublishingReplacesAPIKeyConfig(t *testing.T) {
+	t.Parallel()
+
+	target := &workflow.Target{
+		Target: "csharp",
+		Source: "api",
+		Publishing: &workflow.Publishing{
+			Nuget: &workflow.Nuget{
+				APIKey: "$nuget_api_key",
+			},
+		},
+	}
+
+	updated, err := prompts.ConfigurePublishing(target, "csharp", prompts.ConfigurePublishingOptions{NuGetTrustedPublishing: true})
+	require.NoError(t, err)
+	require.NotNil(t, updated.Publishing.Nuget)
+	assert.Empty(t, updated.Publishing.Nuget.APIKey)
+	assert.Equal(t, "$nuget_username", updated.Publishing.Nuget.Username)
+	require.NotNil(t, updated.Publishing.Nuget.UseTrustedPublishing)
+	assert.True(t, *updated.Publishing.Nuget.UseTrustedPublishing)
+}
+
+func TestWritePublishingCSharpTrustedPublishingAddsCallerJob(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	workflowsDir := filepath.Join(dir, ".github", "workflows")
+	require.NoError(t, os.MkdirAll(workflowsDir, 0o755))
+	existingPublishing := `name: Publish
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+  statuses: write
+"on":
+  push:
+    branches:
+      - main
+    paths:
+      - sdk/.speakeasy/gen.lock
+jobs:
+  publish:
+    uses: speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15
+    with:
+      target: csharp
+    secrets:
+      github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      nuget_api_key: ${{ secrets.NUGET_API_KEY }}
+      speakeasy_api_key: ${{ secrets.SPEAKEASY_API_KEY }}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(workflowsDir, "sdk_publish.yaml"), []byte(existingPublishing), 0o644))
+	useTrustedPublishing := true
+	target := workflow.Target{
+		Target: "csharp",
+		Source: "api",
+		Publishing: &workflow.Publishing{
+			Nuget: &workflow.Nuget{
+				Username:             "$nuget_username",
+				UseTrustedPublishing: &useTrustedPublishing,
+			},
+		},
+	}
+	wf := &workflow.Workflow{Targets: map[string]workflow.Target{"csharp": target}}
+	genWorkflow := &config.GenerateWorkflow{
+		Jobs: config.Jobs{
+			Generate: config.Job{
+				With:    map[string]any{config.Mode: "pr"},
+				Secrets: map[string]string{},
+			},
+		},
+	}
+
+	paths, err := prompts.WritePublishing(wf, genWorkflow, "csharp", dir, "", target)
+	require.NoError(t, err)
+	require.Len(t, paths, 1)
+
+	contents, err := os.ReadFile(paths[0])
+	require.NoError(t, err)
+	publishing := string(contents)
+
+	assert.Contains(t, publishing, "id-token: write")
+	assert.Contains(t, publishing, "nuget_username: ${{ secrets.NUGET_USERNAME }}")
+	assert.NotContains(t, publishing, "nuget_api_key")
+	assert.Contains(t, publishing, "publish-nuget:")
+	assert.Contains(t, publishing, "needs.publish.outputs.use_nuget_trusted_publishing == 'true'")
+	assert.Contains(t, publishing, "uses: speakeasy-api/sdk-generation-action/publish-nuget@v15")
+	assert.Contains(t, publishing, "csharp-directory: ${{ needs.publish.outputs.csharp_directory }}")
+	assert.Contains(t, publishing, "nuget-username: ${{ secrets.NUGET_USERNAME }}")
 }

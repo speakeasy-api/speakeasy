@@ -27,6 +27,7 @@ const (
 	npmTokenDefault                  = "NPM_TOKEN"
 	pypiTokenDefault                 = "PYPI_TOKEN"
 	nugetTokenDefault                = "NUGET_API_KEY"
+	nugetUsernameDefault             = "NUGET_USERNAME"
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
 	packagistTokenDefault            = "PACKAGIST_TOKEN"
 	packagistUsernameDefault         = "PACKAGIST_USERNAME"
@@ -118,7 +119,8 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 }
 
 type ConfigurePublishingOptions struct {
-	PyPITrustedPublishing bool
+	PyPITrustedPublishing  bool
+	NuGetTrustedPublishing bool
 }
 
 func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePublishingOptions) (*workflow.Target, error) {
@@ -139,7 +141,7 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 				return target, nil
 			}
 		case "csharp":
-			if target.Publishing.Nuget != nil {
+			if target.Publishing.Nuget != nil && (!opts.NuGetTrustedPublishing || usesNuGetTrustedPublishing(target.Publishing.Nuget)) {
 				return target, nil
 			}
 		case "ruby":
@@ -188,10 +190,20 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 			}
 		}
 	case "csharp":
-		target.Publishing = &workflow.Publishing{
-			Nuget: &workflow.Nuget{
-				APIKey: formatWorkflowSecret(nugetTokenDefault),
-			},
+		if opts.NuGetTrustedPublishing {
+			useTrustedPublishing := true
+			target.Publishing = &workflow.Publishing{
+				Nuget: &workflow.Nuget{
+					Username:             formatWorkflowSecret(nugetUsernameDefault),
+					UseTrustedPublishing: &useTrustedPublishing,
+				},
+			}
+		} else {
+			target.Publishing = &workflow.Publishing{
+				Nuget: &workflow.Nuget{
+					APIKey: formatWorkflowSecret(nugetTokenDefault),
+				},
+			}
 		}
 	case "ruby":
 		target.Publishing = &workflow.Publishing{
@@ -376,6 +388,10 @@ func ParseGithubRemoteURL(repo *git.Repository) string {
 	return url
 }
 
+func usesNuGetTrustedPublishing(nuget *workflow.Nuget) bool {
+	return nuget != nil && nuget.UseTrustedPublishing != nil && *nuget.UseTrustedPublishing
+}
+
 func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	secrets := []string{}
 
@@ -395,7 +411,13 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	}
 
 	if publishing.Nuget != nil {
-		secrets = append(secrets, publishing.Nuget.APIKey)
+		if usesNuGetTrustedPublishing(publishing.Nuget) {
+			if strings.HasPrefix(publishing.Nuget.Username, "$") {
+				secrets = append(secrets, publishing.Nuget.Username)
+			}
+		} else {
+			secrets = append(secrets, publishing.Nuget.APIKey)
+		}
 	}
 
 	if publishing.Packagist != nil {
@@ -567,6 +589,32 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 						Uses: "speakeasy-api/sdk-generation-action/publish-pypi@v15",
 						With: map[string]any{
 							"python-directory":    "${{ needs.publish.outputs.python_directory }}",
+							"speakeasy_api_key":   formatGithubSecretName(defaultSpeakeasyAPIKeySecretName),
+							"github_access_token": formatGithubSecretName(defaultGithubTokenSecretName),
+						},
+					},
+				},
+			}
+		}
+
+		if target.Target == "csharp" && target.Publishing != nil && usesNuGetTrustedPublishing(target.Publishing.Nuget) {
+			nugetUsername := target.Publishing.Nuget.Username
+			if strings.HasPrefix(nugetUsername, "$") {
+				nugetUsername = formatGithubSecretName(nugetUsername)
+			}
+			publishingFile.Jobs.PublishNuget = &config.PublishJob{
+				Needs:  []string{"publish"},
+				If:     "${{ needs.publish.outputs.csharp_regenerated == 'true' && needs.publish.outputs.publish_csharp == 'true' && needs.publish.outputs.use_nuget_trusted_publishing == 'true' }}",
+				RunsOn: "ubuntu-latest",
+				Steps: []config.PublishStep{
+					{
+						Uses: "actions/checkout@v4",
+					},
+					{
+						Uses: "speakeasy-api/sdk-generation-action/publish-nuget@v15",
+						With: map[string]any{
+							"csharp-directory":    "${{ needs.publish.outputs.csharp_directory }}",
+							"nuget-username":      nugetUsername,
 							"speakeasy_api_key":   formatGithubSecretName(defaultSpeakeasyAPIKeySecretName),
 							"github_access_token": formatGithubSecretName(defaultGithubTokenSecretName),
 						},
