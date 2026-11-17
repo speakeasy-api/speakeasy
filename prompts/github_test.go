@@ -143,11 +143,57 @@ func TestConfigurePublishingCSharpTrustedPublishing(t *testing.T) {
 	assert.True(t, *updated.Publishing.Nuget.UseTrustedPublishing)
 }
 
+func TestConfigurePublishingCSharpTrustedPublishingReplacesAPIKeyConfig(t *testing.T) {
+	t.Parallel()
+
+	target := &workflow.Target{
+		Target: "csharp",
+		Source: "api",
+		Publishing: &workflow.Publishing{
+			Nuget: &workflow.Nuget{
+				APIKey: "$nuget_api_key",
+			},
+		},
+	}
+
+	updated, err := prompts.ConfigurePublishing(target, "csharp", prompts.ConfigurePublishingOptions{NuGetTrustedPublishing: true})
+	require.NoError(t, err)
+	require.NotNil(t, updated.Publishing.Nuget)
+	assert.Empty(t, updated.Publishing.Nuget.APIKey)
+	assert.Equal(t, "$nuget_username", updated.Publishing.Nuget.Username)
+	require.NotNil(t, updated.Publishing.Nuget.UseTrustedPublishing)
+	assert.True(t, *updated.Publishing.Nuget.UseTrustedPublishing)
+}
+
 func TestWritePublishingCSharpTrustedPublishingAddsCallerJob(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".github", "workflows"), 0o755))
+	workflowsDir := filepath.Join(dir, ".github", "workflows")
+	require.NoError(t, os.MkdirAll(workflowsDir, 0o755))
+	existingPublishing := `name: Publish
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+  statuses: write
+"on":
+  push:
+    branches:
+      - main
+    paths:
+      - sdk/.speakeasy/gen.lock
+jobs:
+  publish:
+    uses: speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15
+    with:
+      target: csharp
+    secrets:
+      github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      nuget_api_key: ${{ secrets.NUGET_API_KEY }}
+      speakeasy_api_key: ${{ secrets.SPEAKEASY_API_KEY }}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(workflowsDir, "sdk_publish.yaml"), []byte(existingPublishing), 0o644))
 	useTrustedPublishing := true
 	target := workflow.Target{
 		Target: "csharp",

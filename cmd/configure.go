@@ -1136,7 +1136,7 @@ func getNuGetTrustedPublishingInstructions(_ context.Context, nugetConfigs map[s
 		if len(nugetConfigs) == 1 {
 			agenda = append(agenda, fmt.Sprintf("• Configure trusted publishing for your NuGet package '%s':", nugetConfig.packageName))
 		} else {
-			agenda = append(agenda, fmt.Sprintf("• [%s] Configure trusted publishing for NuGet package '%s':", strings.ToUpper(nugetConfig.target.Target), targetName))
+			agenda = append(agenda, fmt.Sprintf("• [%s] Configure trusted publishing for NuGet package '%s':", targetName, nugetConfig.packageName))
 		}
 
 		agenda = append(agenda, fmt.Sprintf("\t◦ Set the %s secret to the nuget.org username (profile name, not email) that owns the package", strings.ToUpper(strings.TrimPrefix(nugetConfig.target.Publishing.Nuget.Username, "$"))))

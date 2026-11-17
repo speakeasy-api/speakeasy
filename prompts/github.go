@@ -141,7 +141,7 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 				return target, nil
 			}
 		case "csharp":
-			if target.Publishing.Nuget != nil {
+			if target.Publishing.Nuget != nil && (!opts.NuGetTrustedPublishing || usesNuGetTrustedPublishing(target.Publishing.Nuget)) {
 				return target, nil
 			}
 		case "ruby":
