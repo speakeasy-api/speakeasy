@@ -173,6 +173,20 @@ func TestAddTargetPublishOutputs(t *testing.T) {
 				"use_nuget_trusted_publishing": "true",
 			},
 		},
+		"ruby-trusted-publishing": {
+			target: workflow.Target{
+				Publishing: &workflow.Publishing{
+					RubyGems: &workflow.RubyGems{
+						UseTrustedPublishing: ptr(true),
+					},
+				},
+				Target: "ruby",
+			},
+			expectedOutputs: map[string]string{
+				"publish_ruby":                    "true",
+				"use_rubygems_trusted_publishing": "true",
+			},
+		},
 		"ruby-no-publishing": {
 			target: workflow.Target{
 				Publishing: nil, // intentionally no publishing config

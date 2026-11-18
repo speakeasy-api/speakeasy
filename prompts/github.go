@@ -29,6 +29,7 @@ const (
 	nugetTokenDefault                = "NUGET_API_KEY"
 	nugetUsernameDefault             = "NUGET_USERNAME"
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
+	rubyGemsOwnerDefault             = "RUBYGEMS_OWNER"
 	packagistTokenDefault            = "PACKAGIST_TOKEN"
 	packagistUsernameDefault         = "PACKAGIST_USERNAME"
 	ossrhPasswordDefault             = "OSSRH_PASSWORD"
@@ -119,8 +120,9 @@ func ConfigureGithub(githubWorkflow *config.GenerateWorkflow, workflow *workflow
 }
 
 type ConfigurePublishingOptions struct {
-	PyPITrustedPublishing  bool
-	NuGetTrustedPublishing bool
+	PyPITrustedPublishing     bool
+	NuGetTrustedPublishing    bool
+	RubyGemsTrustedPublishing bool
 }
 
 func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePublishingOptions) (*workflow.Target, error) {
@@ -145,7 +147,7 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 				return target, nil
 			}
 		case "ruby":
-			if target.Publishing.RubyGems != nil {
+			if target.Publishing.RubyGems != nil && (!opts.RubyGemsTrustedPublishing || usesRubyGemsTrustedPublishing(target.Publishing.RubyGems)) {
 				return target, nil
 			}
 		case "php":
@@ -206,10 +208,20 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 			}
 		}
 	case "ruby":
-		target.Publishing = &workflow.Publishing{
-			RubyGems: &workflow.RubyGems{
-				Token: formatWorkflowSecret(rubyGemsTokenDefault),
-			},
+		if opts.RubyGemsTrustedPublishing {
+			useTrustedPublishing := true
+			target.Publishing = &workflow.Publishing{
+				RubyGems: &workflow.RubyGems{
+					Owner:                formatWorkflowSecret(rubyGemsOwnerDefault),
+					UseTrustedPublishing: &useTrustedPublishing,
+				},
+			}
+		} else {
+			target.Publishing = &workflow.Publishing{
+				RubyGems: &workflow.RubyGems{
+					Token: formatWorkflowSecret(rubyGemsTokenDefault),
+				},
+			}
 		}
 	case "php":
 		target.Publishing = &workflow.Publishing{
@@ -392,6 +404,27 @@ func usesNuGetTrustedPublishing(nuget *workflow.Nuget) bool {
 	return nuget != nil && nuget.UseTrustedPublishing != nil && *nuget.UseTrustedPublishing
 }
 
+func usesRubyGemsTrustedPublishing(rubygems *workflow.RubyGems) bool {
+	return rubygems != nil && rubygems.UseTrustedPublishing != nil && *rubygems.UseTrustedPublishing
+}
+
+func secretsSupersededByTrustedPublishing(publishing *workflow.Publishing) []string {
+	if publishing == nil {
+		return nil
+	}
+	var names []string
+	if publishing.PyPi != nil && publishing.PyPi.UseTrustedPublishing != nil && *publishing.PyPi.UseTrustedPublishing {
+		names = append(names, formatGithubSecret(pypiTokenDefault))
+	}
+	if usesNuGetTrustedPublishing(publishing.Nuget) {
+		names = append(names, formatGithubSecret(nugetTokenDefault))
+	}
+	if usesRubyGemsTrustedPublishing(publishing.RubyGems) {
+		names = append(names, formatGithubSecret(rubyGemsTokenDefault))
+	}
+	return names
+}
+
 func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	secrets := []string{}
 
@@ -407,7 +440,13 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	}
 
 	if publishing.RubyGems != nil {
-		secrets = append(secrets, publishing.RubyGems.Token)
+		if usesRubyGemsTrustedPublishing(publishing.RubyGems) {
+			if strings.HasPrefix(publishing.RubyGems.Owner, "$") {
+				secrets = append(secrets, publishing.RubyGems.Owner)
+			}
+		} else {
+			secrets = append(secrets, publishing.RubyGems.Token)
+		}
 	}
 
 	if publishing.Nuget != nil {
@@ -515,6 +554,9 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 	for name, value := range publishingSecrets {
 		genSecrets[name] = value
 	}
+	for _, name := range secretsSupersededByTrustedPublishing(target.Publishing) {
+		delete(genSecrets, name)
+	}
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
 	if target.Target == "terraform" {
@@ -615,6 +657,32 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 						With: map[string]any{
 							"csharp-directory":    "${{ needs.publish.outputs.csharp_directory }}",
 							"nuget-username":      nugetUsername,
+							"speakeasy_api_key":   formatGithubSecretName(defaultSpeakeasyAPIKeySecretName),
+							"github_access_token": formatGithubSecretName(defaultGithubTokenSecretName),
+						},
+					},
+				},
+			}
+		}
+
+		if target.Target == "ruby" && target.Publishing != nil && usesRubyGemsTrustedPublishing(target.Publishing.RubyGems) {
+			rubygemsOwner := target.Publishing.RubyGems.Owner
+			if strings.HasPrefix(rubygemsOwner, "$") {
+				rubygemsOwner = formatGithubSecretName(rubygemsOwner)
+			}
+			publishingFile.Jobs.PublishRubygems = &config.PublishJob{
+				Needs:  []string{"publish"},
+				If:     "${{ needs.publish.outputs.ruby_regenerated == 'true' && needs.publish.outputs.publish_ruby == 'true' && needs.publish.outputs.use_rubygems_trusted_publishing == 'true' }}",
+				RunsOn: "ubuntu-latest",
+				Steps: []config.PublishStep{
+					{
+						Uses: "actions/checkout@v4",
+					},
+					{
+						Uses: "speakeasy-api/sdk-generation-action/publish-rubygems@v15",
+						With: map[string]any{
+							"ruby-directory":      "${{ needs.publish.outputs.ruby_directory }}",
+							"rubygems-owner":      rubygemsOwner,
 							"speakeasy_api_key":   formatGithubSecretName(defaultSpeakeasyAPIKeySecretName),
 							"github_access_token": formatGithubSecretName(defaultGithubTokenSecretName),
 						},
