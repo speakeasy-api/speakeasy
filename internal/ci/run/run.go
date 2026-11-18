@@ -401,4 +401,9 @@ func AddTargetPublishOutputs(target workflow.Target, outputs map[string]string, 
 		target.Publishing.Nuget.UseTrustedPublishing != nil && *target.Publishing.Nuget.UseTrustedPublishing {
 		outputs["use_nuget_trusted_publishing"] = "true"
 	}
+
+	if lang == "ruby" && target.Publishing != nil && target.Publishing.RubyGems != nil &&
+		target.Publishing.RubyGems.UseTrustedPublishing != nil && *target.Publishing.RubyGems.UseTrustedPublishing {
+		outputs["use_rubygems_trusted_publishing"] = "true"
+	}
 }
