@@ -1141,6 +1141,10 @@ func getRubyGemsTrustedPublishingInstructions(_ context.Context, rubygemsConfigs
 			"\t\t- Environment: <Leave Blank>",
 		}
 		agenda = append(agenda, fmt.Sprintf("\t◦ Create a new trusted publisher for GitHub Actions with the following configuration:\n%s", strings.Join(configLines, "\n")))
+
+		if owner := rubygemsConfig.target.Publishing.RubyGems.Owner; strings.HasPrefix(owner, "$") {
+			agenda = append(agenda, fmt.Sprintf("\t◦ If the gem has not been published yet, set the %s secret to the rubygems.org username (or account ID shown on the pending trusted publisher) that should own it; an existing gem does not need it", strings.ToUpper(strings.TrimPrefix(owner, "$"))))
+		}
 	}
 
 	for actionPath, packageNames := range actionPaths {

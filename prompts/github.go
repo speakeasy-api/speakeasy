@@ -29,6 +29,7 @@ const (
 	nugetTokenDefault                = "NUGET_API_KEY"
 	nugetUsernameDefault             = "NUGET_USERNAME"
 	rubyGemsTokenDefault             = "RUBYGEMS_AUTH_TOKEN"
+	rubyGemsOwnerDefault             = "RUBYGEMS_OWNER"
 	packagistTokenDefault            = "PACKAGIST_TOKEN"
 	packagistUsernameDefault         = "PACKAGIST_USERNAME"
 	ossrhPasswordDefault             = "OSSRH_PASSWORD"
@@ -211,6 +212,7 @@ func ConfigurePublishing(target *workflow.Target, name string, opts ConfigurePub
 			useTrustedPublishing := true
 			target.Publishing = &workflow.Publishing{
 				RubyGems: &workflow.RubyGems{
+					Owner:                formatWorkflowSecret(rubyGemsOwnerDefault),
 					UseTrustedPublishing: &useTrustedPublishing,
 				},
 			}
@@ -420,8 +422,14 @@ func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 		secrets = append(secrets, publishing.NPM.Token)
 	}
 
-	if publishing.RubyGems != nil && !usesRubyGemsTrustedPublishing(publishing.RubyGems) {
-		secrets = append(secrets, publishing.RubyGems.Token)
+	if publishing.RubyGems != nil {
+		if usesRubyGemsTrustedPublishing(publishing.RubyGems) {
+			if strings.HasPrefix(publishing.RubyGems.Owner, "$") {
+				secrets = append(secrets, publishing.RubyGems.Owner)
+			}
+		} else {
+			secrets = append(secrets, publishing.RubyGems.Token)
+		}
 	}
 
 	if publishing.Nuget != nil {
@@ -638,6 +646,10 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 		}
 
 		if target.Target == "ruby" && target.Publishing != nil && usesRubyGemsTrustedPublishing(target.Publishing.RubyGems) {
+			rubygemsOwner := target.Publishing.RubyGems.Owner
+			if strings.HasPrefix(rubygemsOwner, "$") {
+				rubygemsOwner = formatGithubSecretName(rubygemsOwner)
+			}
 			publishingFile.Jobs.PublishRubygems = &config.PublishJob{
 				Needs:  []string{"publish"},
 				If:     "${{ needs.publish.outputs.ruby_regenerated == 'true' && needs.publish.outputs.publish_ruby == 'true' && needs.publish.outputs.use_rubygems_trusted_publishing == 'true' }}",
@@ -650,6 +662,7 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 						Uses: "speakeasy-api/sdk-generation-action/publish-rubygems@v15",
 						With: map[string]any{
 							"ruby-directory":      "${{ needs.publish.outputs.ruby_directory }}",
+							"rubygems-owner":      rubygemsOwner,
 							"speakeasy_api_key":   formatGithubSecretName(defaultSpeakeasyAPIKeySecretName),
 							"github_access_token": formatGithubSecretName(defaultGithubTokenSecretName),
 						},
