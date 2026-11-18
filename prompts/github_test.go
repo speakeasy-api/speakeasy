@@ -326,7 +326,7 @@ jobs:
 	require.NoError(t, err)
 	require.Len(t, paths, 1)
 	assert.NotContains(t, genWorkflow.Jobs.Generate.Secrets, "rubygems_auth_token")
-	assert.Contains(t, genWorkflow.Jobs.Generate.Secrets, "rubygems_owner")
+	assert.Equal(t, "${{ secrets.RUBYGEMS_OWNER }}", genWorkflow.Jobs.Generate.Secrets["rubygems_owner"])
 
 	contents, err := os.ReadFile(paths[0])
 	require.NoError(t, err)
