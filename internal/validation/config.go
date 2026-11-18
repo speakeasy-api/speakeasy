@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/speakeasy-api/openapi-generation/v2/pkg/errors"
@@ -62,7 +63,7 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 
 	err := events.Telemetry(ctx, shared.InteractionTypeTargetGenerate, func(ctx context.Context, event *shared.CliEvent) error {
 		event.GenerateTargetName = &targetName
-		errs := ValidateConfig(target, cfg, publishingEnabled)
+		errs := ValidateConfig(target, cfg, publishingEnabled, logger)
 		if len(errs) > 0 {
 			if errors.Is(errs[0], ErrNoConfigFound) {
 				return ErrNoConfigFound
@@ -82,17 +83,17 @@ func ValidateConfigAndPrintErrors(ctx context.Context, target string, cfg *sdkGe
 }
 
 // ValidateConfig validates the generation config for a target and returns a list of errors
-func ValidateConfig(target string, cfg *sdkGenConfig.Config, publishingEnabled bool) []error {
+func ValidateConfig(target string, cfg *sdkGenConfig.Config, publishingEnabled bool, logger log.Logger) []error {
 	if cfg == nil || cfg.Config == nil || len(cfg.Config.Languages) == 0 {
 		return []error{ErrNoConfigFound}
 	} else if _, ok := cfg.Config.Languages[target]; !ok {
 		return []error{fmt.Errorf("target %s not found in configuration", target)}
 	}
 
-	return ValidateTarget(target, cfg.Config.Languages[target].Cfg, publishingEnabled)
+	return ValidateTarget(target, cfg.Config.Languages[target].Cfg, publishingEnabled, logger)
 }
 
-func ValidateTarget(target string, config map[string]any, publishingEnabled bool) []error {
+func ValidateTarget(target string, config map[string]any, publishingEnabled bool, logger log.Logger) []error {
 	t, err := generate.GetTargetFromTargetString(target)
 	if err != nil {
 		return []error{err}
@@ -177,5 +178,30 @@ func ValidateTarget(target string, config map[string]any, publishingEnabled bool
 		}
 	}
 
+	warnUnknownFields(target, config, fields, logger)
+
 	return errs
+}
+
+// warnUnknownFields warns on every gen.yaml key that no known config field
+// reads. The generator ignores these keys, so they are usually stale or
+// misspelled. A forward-only pass never sees them, which hides the problem
+// from customers who audit their gen.yaml.
+func warnUnknownFields(target string, config map[string]any, fields []sdkGenConfig.SDKGenConfigField, logger log.Logger) {
+	knownFields := make(map[string]bool, len(fields))
+	for _, field := range fields {
+		knownFields[field.Name] = true
+	}
+
+	var unknownKeys []string
+	for key := range config {
+		if !knownFields[key] {
+			unknownKeys = append(unknownKeys, key)
+		}
+	}
+	sort.Strings(unknownKeys)
+
+	for _, key := range unknownKeys {
+		logger.Warnf("field '%s' in gen.yaml matches no known config field for target %s. The generator ignores it. Remove the field or correct its spelling.", key, target)
+	}
 }
