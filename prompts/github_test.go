@@ -246,6 +246,7 @@ func TestConfigurePublishingRubyTrustedPublishing(t *testing.T) {
 	require.NotNil(t, updated.Publishing)
 	require.NotNil(t, updated.Publishing.RubyGems)
 	assert.Empty(t, updated.Publishing.RubyGems.Token)
+	assert.Equal(t, "$rubygems_owner", updated.Publishing.RubyGems.Owner)
 	require.NotNil(t, updated.Publishing.RubyGems.UseTrustedPublishing)
 	assert.True(t, *updated.Publishing.RubyGems.UseTrustedPublishing)
 }
@@ -306,6 +307,7 @@ jobs:
 		Source: "api",
 		Publishing: &workflow.Publishing{
 			RubyGems: &workflow.RubyGems{
+				Owner:                "$rubygems_owner",
 				UseTrustedPublishing: &useTrustedPublishing,
 			},
 		},
@@ -334,4 +336,6 @@ jobs:
 	assert.Contains(t, publishing, "needs.publish.outputs.use_rubygems_trusted_publishing == 'true'")
 	assert.Contains(t, publishing, "uses: speakeasy-api/sdk-generation-action/publish-rubygems@v15")
 	assert.Contains(t, publishing, "ruby-directory: ${{ needs.publish.outputs.ruby_directory }}")
+	assert.Contains(t, publishing, "rubygems_owner: ${{ secrets.RUBYGEMS_OWNER }}")
+	assert.Contains(t, publishing, "rubygems-owner: ${{ secrets.RUBYGEMS_OWNER }}")
 }
