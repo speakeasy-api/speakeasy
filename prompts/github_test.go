@@ -317,7 +317,7 @@ jobs:
 		Jobs: config.Jobs{
 			Generate: config.Job{
 				With:    map[string]any{config.Mode: "pr"},
-				Secrets: map[string]string{},
+				Secrets: map[string]string{"rubygems_auth_token": "${{ secrets.RUBYGEMS_AUTH_TOKEN }}"},
 			},
 		},
 	}
@@ -325,6 +325,8 @@ jobs:
 	paths, err := prompts.WritePublishing(wf, genWorkflow, "ruby", dir, "", target)
 	require.NoError(t, err)
 	require.Len(t, paths, 1)
+	assert.NotContains(t, genWorkflow.Jobs.Generate.Secrets, "rubygems_auth_token")
+	assert.Contains(t, genWorkflow.Jobs.Generate.Secrets, "rubygems_owner")
 
 	contents, err := os.ReadFile(paths[0])
 	require.NoError(t, err)

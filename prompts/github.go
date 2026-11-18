@@ -408,6 +408,23 @@ func usesRubyGemsTrustedPublishing(rubygems *workflow.RubyGems) bool {
 	return rubygems != nil && rubygems.UseTrustedPublishing != nil && *rubygems.UseTrustedPublishing
 }
 
+func secretsSupersededByTrustedPublishing(publishing *workflow.Publishing) []string {
+	if publishing == nil {
+		return nil
+	}
+	var names []string
+	if publishing.PyPi != nil && publishing.PyPi.UseTrustedPublishing != nil && *publishing.PyPi.UseTrustedPublishing {
+		names = append(names, formatGithubSecret(pypiTokenDefault))
+	}
+	if usesNuGetTrustedPublishing(publishing.Nuget) {
+		names = append(names, formatGithubSecret(nugetTokenDefault))
+	}
+	if usesRubyGemsTrustedPublishing(publishing.RubyGems) {
+		names = append(names, formatGithubSecret(rubyGemsTokenDefault))
+	}
+	return names
+}
+
 func getSecretsValuesFromPublishing(publishing workflow.Publishing) []string {
 	secrets := []string{}
 
@@ -536,6 +553,9 @@ func WritePublishing(wf *workflow.Workflow, genWorkflow *config.GenerateWorkflow
 	genSecrets := genWorkflow.Jobs.Generate.Secrets
 	for name, value := range publishingSecrets {
 		genSecrets[name] = value
+	}
+	for _, name := range secretsSupersededByTrustedPublishing(target.Publishing) {
+		delete(genSecrets, name)
 	}
 
 	mode := genWorkflow.Jobs.Generate.With[config.Mode].(string)
