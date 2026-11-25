@@ -936,9 +936,10 @@ func configurePublishing(ctx context.Context, flags ConfigurePublishingFlags) er
 		fmt.Sprintf("• On GitHub navigate to %s and set up the following repository secrets:", secretPath),
 	}
 
+	optionalSecrets := prompts.OptionalPublishingSecrets(workflowFile)
 	for key := range secrets {
 		if key != config.GithubAccessToken {
-			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
+			agenda = append(agenda, secretAgendaLine(key, optionalSecrets[key]))
 		}
 	}
 
@@ -1591,9 +1592,10 @@ func configureGithub(ctx context.Context, flags ConfigureGithubFlags) error {
 		agenda = append(agenda, fmt.Sprintf("• On GitHub navigate to %s and set up the following repository secrets:", secretPath))
 	}
 
+	optionalSecrets := prompts.OptionalPublishingSecrets(workflowFile)
 	for key := range secrets {
 		if key != config.GithubAccessToken && (key != config.SpeakeasyApiKey || !autoConfigureRepoSuccess) {
-			agenda = append(agenda, fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key))))
+			agenda = append(agenda, secretAgendaLine(key, optionalSecrets[key]))
 		}
 	}
 	if isPRMode {
@@ -1820,4 +1822,12 @@ func renderAndPrintWorkflowNotFound(cmd string, logger log.Logger) error {
 		}...)
 	logger.Println(msg)
 	return ErrWorkflowFileNotFound
+}
+
+func secretAgendaLine(key string, optional bool) string {
+	line := fmt.Sprintf("\t◦ Provide a secret with name %s", styles.MakeBold(strings.ToUpper(key)))
+	if optional {
+		line += " (optional: only needed for the first publish of a new gem)"
+	}
+	return line
 }

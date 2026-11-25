@@ -408,6 +408,19 @@ func usesRubyGemsTrustedPublishing(rubygems *workflow.RubyGems) bool {
 	return rubygems != nil && rubygems.UseTrustedPublishing != nil && *rubygems.UseTrustedPublishing
 }
 
+func OptionalPublishingSecrets(wf *workflow.Workflow) map[string]bool {
+	optional := map[string]bool{}
+	for _, target := range wf.Targets {
+		if target.Publishing == nil || !usesRubyGemsTrustedPublishing(target.Publishing.RubyGems) {
+			continue
+		}
+		if owner := target.Publishing.RubyGems.Owner; strings.HasPrefix(owner, "$") {
+			optional[strings.ToLower(strings.TrimPrefix(owner, "$"))] = true
+		}
+	}
+	return optional
+}
+
 func secretsSupersededByTrustedPublishing(publishing *workflow.Publishing) []string {
 	if publishing == nil {
 		return nil

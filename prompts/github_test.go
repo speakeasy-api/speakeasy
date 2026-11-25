@@ -327,6 +327,7 @@ jobs:
 	require.Len(t, paths, 1)
 	assert.NotContains(t, genWorkflow.Jobs.Generate.Secrets, "rubygems_auth_token")
 	assert.Equal(t, "${{ secrets.RUBYGEMS_OWNER }}", genWorkflow.Jobs.Generate.Secrets["rubygems_owner"])
+	assert.Equal(t, map[string]bool{"rubygems_owner": true}, prompts.OptionalPublishingSecrets(wf))
 
 	contents, err := os.ReadFile(paths[0])
 	require.NoError(t, err)
