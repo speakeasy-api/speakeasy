@@ -232,3 +232,113 @@ jobs:
 	assert.Contains(t, publishing, "csharp-directory: ${{ needs.publish.outputs.csharp_directory }}")
 	assert.Contains(t, publishing, "nuget-username: ${{ secrets.NUGET_USERNAME }}")
 }
+
+func TestConfigurePublishingRubyTrustedPublishing(t *testing.T) {
+	t.Parallel()
+
+	target := &workflow.Target{
+		Target: "ruby",
+		Source: "api",
+	}
+
+	updated, err := prompts.ConfigurePublishing(target, "ruby", prompts.ConfigurePublishingOptions{RubyGemsTrustedPublishing: true})
+	require.NoError(t, err)
+	require.NotNil(t, updated.Publishing)
+	require.NotNil(t, updated.Publishing.RubyGems)
+	assert.Empty(t, updated.Publishing.RubyGems.Token)
+	assert.Equal(t, "$rubygems_owner", updated.Publishing.RubyGems.Owner)
+	require.NotNil(t, updated.Publishing.RubyGems.UseTrustedPublishing)
+	assert.True(t, *updated.Publishing.RubyGems.UseTrustedPublishing)
+}
+
+func TestConfigurePublishingRubyTrustedPublishingReplacesTokenConfig(t *testing.T) {
+	t.Parallel()
+
+	target := &workflow.Target{
+		Target: "ruby",
+		Source: "api",
+		Publishing: &workflow.Publishing{
+			RubyGems: &workflow.RubyGems{
+				Token: "$rubygems_auth_token",
+			},
+		},
+	}
+
+	updated, err := prompts.ConfigurePublishing(target, "ruby", prompts.ConfigurePublishingOptions{RubyGemsTrustedPublishing: true})
+	require.NoError(t, err)
+	require.NotNil(t, updated.Publishing.RubyGems)
+	assert.Empty(t, updated.Publishing.RubyGems.Token)
+	require.NotNil(t, updated.Publishing.RubyGems.UseTrustedPublishing)
+	assert.True(t, *updated.Publishing.RubyGems.UseTrustedPublishing)
+}
+
+func TestWritePublishingRubyTrustedPublishingAddsCallerJob(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	workflowsDir := filepath.Join(dir, ".github", "workflows")
+	require.NoError(t, os.MkdirAll(workflowsDir, 0o755))
+	existingPublishing := `name: Publish
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+  statuses: write
+"on":
+  push:
+    branches:
+      - main
+    paths:
+      - sdk/.speakeasy/gen.lock
+jobs:
+  publish:
+    uses: speakeasy-api/sdk-generation-action/.github/workflows/sdk-publish.yaml@v15
+    with:
+      target: ruby
+    secrets:
+      github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      rubygems_auth_token: ${{ secrets.RUBYGEMS_AUTH_TOKEN }}
+      speakeasy_api_key: ${{ secrets.SPEAKEASY_API_KEY }}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(workflowsDir, "sdk_publish.yaml"), []byte(existingPublishing), 0o644))
+	useTrustedPublishing := true
+	target := workflow.Target{
+		Target: "ruby",
+		Source: "api",
+		Publishing: &workflow.Publishing{
+			RubyGems: &workflow.RubyGems{
+				Owner:                "$rubygems_owner",
+				UseTrustedPublishing: &useTrustedPublishing,
+			},
+		},
+	}
+	wf := &workflow.Workflow{Targets: map[string]workflow.Target{"ruby": target}}
+	genWorkflow := &config.GenerateWorkflow{
+		Jobs: config.Jobs{
+			Generate: config.Job{
+				With:    map[string]any{config.Mode: "pr"},
+				Secrets: map[string]string{"rubygems_auth_token": "${{ secrets.RUBYGEMS_AUTH_TOKEN }}"},
+			},
+		},
+	}
+
+	paths, err := prompts.WritePublishing(wf, genWorkflow, "ruby", dir, "", target)
+	require.NoError(t, err)
+	require.Len(t, paths, 1)
+	assert.NotContains(t, genWorkflow.Jobs.Generate.Secrets, "rubygems_auth_token")
+	assert.Equal(t, "${{ secrets.RUBYGEMS_OWNER }}", genWorkflow.Jobs.Generate.Secrets["rubygems_owner"])
+	assert.Equal(t, map[string]bool{"rubygems_owner": true}, prompts.OptionalPublishingSecrets(wf))
+
+	contents, err := os.ReadFile(paths[0])
+	require.NoError(t, err)
+	publishing := string(contents)
+
+	assert.Contains(t, publishing, "id-token: write")
+	assert.NotContains(t, publishing, "rubygems_auth_token")
+	assert.Contains(t, publishing, "publish-rubygems:")
+	assert.Contains(t, publishing, "needs.publish.outputs.use_rubygems_trusted_publishing == 'true'")
+	assert.Contains(t, publishing, "uses: speakeasy-api/sdk-generation-action/publish-rubygems@v15")
+	assert.Contains(t, publishing, "ruby-directory: ${{ needs.publish.outputs.ruby_directory }}")
+	assert.Contains(t, publishing, "rubygems_owner: ${{ secrets.RUBYGEMS_OWNER }}")
+	assert.Contains(t, publishing, "rubygems-owner: ${{ secrets.RUBYGEMS_OWNER }}")
+}
