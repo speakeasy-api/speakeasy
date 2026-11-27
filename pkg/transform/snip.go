@@ -100,13 +100,12 @@ func parseOperationIdentifiers(operations []string) ([]openapi.OperationIdentifi
 
 		// Check if it's in path:method format
 		if strings.Contains(op, ":") {
-			parts := strings.SplitN(op, ":", 2)
-			if len(parts) != 2 {
-				return nil, fmt.Errorf("invalid operation format: %s (expected path:METHOD or operationId)", op)
-			}
+			// Split on the last colon so paths containing colons
+			// (e.g. "/v1/projects:search:POST") are kept intact.
+			idx := strings.LastIndex(op, ":")
 
-			path := parts[0]
-			method := strings.ToUpper(parts[1])
+			path := op[:idx]
+			method := strings.ToUpper(op[idx+1:])
 
 			if path == "" || method == "" {
 				return nil, fmt.Errorf("invalid operation format: %s (path and method cannot be empty)", op)
