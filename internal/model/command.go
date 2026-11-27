@@ -21,6 +21,7 @@ import (
 	"github.com/sethvargo/go-githubactions"
 	"github.com/speakeasy-api/sdk-gen-config/workflow"
 	"github.com/speakeasy-api/speakeasy-client-sdk-go/v3/pkg/models/shared"
+	core "github.com/speakeasy-api/speakeasy-core/auth"
 	"github.com/speakeasy-api/speakeasy-core/events"
 	"github.com/speakeasy-api/speakeasy/internal/auth"
 	"github.com/speakeasy-api/speakeasy/internal/charm/styles"
@@ -100,6 +101,11 @@ type ExecutableCommand[F interface{}] struct {
 	// context.
 	RequiresAuth bool
 
+	// When enabled alongside RequiresAuth, a usable offline license
+	// authenticates the command without reaching the platform; commands that
+	// unconditionally call platform APIs must leave this unset.
+	OfflineCapable bool
+
 	// When enabled, the command uses a workflow file. If the "pinned" CLI flag
 	// is not present or set to false and the execution environment is not
 	// local, run using the CLI version specified in the workflow file.
@@ -136,16 +142,24 @@ func (c ExecutableCommand[F]) Init() (*cobra.Command, error) {
 		}
 
 		if c.RequiresAuth {
-			authCtx, err := auth.Authenticate(cmd.Context(), false)
+			var authCtx context.Context
+			var err error
+			if c.OfflineCapable {
+				authCtx, err = auth.CommandContext(cmd.Context())
+			} else {
+				authCtx, err = auth.Authenticate(cmd.Context(), false)
+			}
 			if err != nil {
 				cmd.SilenceUsage = true
 				return err
 			}
 			cmd.SetContext(authCtx)
 
-			if err := auth.ConfirmWorkspace(authCtx); err != nil {
-				cmd.SilenceUsage = true
-				return err
+			if _, err := core.GetSDKFromContext(authCtx); err == nil {
+				if err := auth.ConfirmWorkspace(authCtx); err != nil {
+					cmd.SilenceUsage = true
+					return err
+				}
 			}
 		} else {
 			authCtx, err := auth.UseExistingAPIKeyIfAvailable(cmd.Context())
